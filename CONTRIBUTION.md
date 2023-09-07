@@ -47,4 +47,5 @@ In the main.tf file location, initialize Terraform by running the following:
 ```
 terraform init -reconfigure -upgrade -backend-config="access_key=<STORAGE_BUCKET_ACCESS_KEY>" -backend-config="secret_key=<STORAGE_BUCKET_SECRET_KEY>"
 ```
+
 This will throw an error ("Failed to query available provider packages") which can be ignored since we are using the local provider build.
