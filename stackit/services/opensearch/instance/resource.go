@@ -33,19 +33,19 @@ var (
 )
 
 type Model struct {
-	Id               types.String `tfsdk:"id"` // needed by TF
-	InstanceId       types.String `tfsdk:"instance_id"`
-	ProjectId        types.String `tfsdk:"project_id"`
-	CfGuid           types.String `tfsdk:"cf_guid"`
-	CfSpaceGuid      types.String `tfsdk:"cf_space_guid"`
-	DashboardUrl     types.String `tfsdk:"dashboard_url"`
-	ImageUrl         types.String `tfsdk:"image_url"`
-	Name             types.String `tfsdk:"name"`
-	OrganizationGuid types.String `tfsdk:"organization_guid"`
-	Parameters       types.Object `tfsdk:"parameters"`
-	Version          types.String `tfsdk:"version"`
-	PlanName         types.String `tfsdk:"plan_name"`
-	PlanId           types.String `tfsdk:"plan_id"`
+	Id                 types.String `tfsdk:"id"` // needed by TF
+	InstanceId         types.String `tfsdk:"instance_id"`
+	ProjectId          types.String `tfsdk:"project_id"`
+	CfGuid             types.String `tfsdk:"cf_guid"`
+	CfSpaceGuid        types.String `tfsdk:"cf_space_guid"`
+	DashboardUrl       types.String `tfsdk:"dashboard_url"`
+	ImageUrl           types.String `tfsdk:"image_url"`
+	Name               types.String `tfsdk:"name"`
+	CfOrganizationGuid types.String `tfsdk:"cf_organization_guid"`
+	Parameters         types.Object `tfsdk:"parameters"`
+	Version            types.String `tfsdk:"version"`
+	PlanName           types.String `tfsdk:"plan_name"`
+	PlanId             types.String `tfsdk:"plan_id"`
 }
 
 // Struct corresponding to DataSourceModel.Parameters
@@ -197,7 +197,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"image_url": schema.StringAttribute{
 				Computed: true,
 			},
-			"organization_guid": schema.StringAttribute{
+			"cf_organization_guid": schema.StringAttribute{
 				Computed: true,
 			},
 		},
@@ -436,7 +436,7 @@ func mapFields(instance *opensearch.Instance, model *Model) error {
 	model.DashboardUrl = types.StringPointerValue(instance.DashboardUrl)
 	model.ImageUrl = types.StringPointerValue(instance.ImageUrl)
 	model.Name = types.StringPointerValue(instance.Name)
-	model.OrganizationGuid = types.StringPointerValue(instance.OrganizationGuid)
+	model.CfOrganizationGuid = types.StringPointerValue(instance.CfOrganizationGuid)
 	if instance.Parameters == nil {
 		model.Parameters = types.ObjectNull(parametersTypes)
 	} else {

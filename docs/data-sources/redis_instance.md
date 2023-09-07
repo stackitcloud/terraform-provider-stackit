@@ -35,7 +35,7 @@ data "stackit_redis_instance" "example" {
 - `id` (String) Terraform's internal resource identifier.
 - `image_url` (String)
 - `name` (String) Instance name.
-- `organization_guid` (String)
+- `cf_organization_guid` (String)
 - `parameters` (Attributes) (see [below for nested schema](#nestedatt--parameters))
 - `plan_id` (String) The selected plan ID.
 - `plan_name` (String) The selected plan name.

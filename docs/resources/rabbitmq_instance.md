@@ -46,7 +46,7 @@ resource "stackit_rabbitmq_instance" "example" {
 - `id` (String) Terraform's internal resource ID.
 - `image_url` (String)
 - `instance_id` (String) ID of the RabbitMQ instance.
-- `organization_guid` (String)
+- `cf_organization_guid` (String)
 - `plan_id` (String) The selected plan ID.
 
 <a id="nestedatt--parameters"></a>

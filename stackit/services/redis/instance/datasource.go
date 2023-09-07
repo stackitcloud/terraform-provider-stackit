@@ -143,7 +143,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"image_url": schema.StringAttribute{
 				Computed: true,
 			},
-			"organization_guid": schema.StringAttribute{
+			"cf_organization_guid": schema.StringAttribute{
 				Computed: true,
 			},
 		},
