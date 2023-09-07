@@ -186,6 +186,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 				},
 				Optional: true,
+				Computed: true,
 			},
 			"cf_guid": schema.StringAttribute{
 				Computed: true,
