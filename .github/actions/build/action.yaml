@@ -1,0 +1,15 @@
+name: Build
+inputs:
+  go-version:
+    description: "Go version to install"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Install Go ${{ inputs.go-version }}
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ inputs.go-version }}
+    - name: Install project tools and dependencies
+      shell: bash
+      run: make project-tools

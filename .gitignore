@@ -1,0 +1,10 @@
+# Binaries
+bin/
+
+## IDE
+*.idea/
+*.vscode/
+
+# Terraform
+**/.terraform
+**/terraform.tfstate**

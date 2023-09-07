@@ -1,0 +1,100 @@
+# This file contains all available configuration options
+# with their default values.
+
+# options for analysis running
+run:
+  # default concurrency is a available CPU number
+  concurrency: 4
+
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 5m
+linters-settings:
+  goimports:
+    # put imports beginning with prefix after 3rd-party packages;
+    # it's a comma-separated list of prefixes
+    local-prefixes: github.com/freiheit-com/nmww
+  depguard:
+    list-type: blacklist
+    include-go-root: false
+    packages:
+      - github.com/stretchr/testify
+    packages-with-error-message:
+      # specify an error message to output when a blacklisted package is used
+      - github.com/stretchr/testify: "do not use a testing framework"
+  misspell:
+    # Correct spellings using locale preferences for US or UK.
+    # Default is to use a neutral variety of English.
+    # Setting locale to US will correct the British spelling of 'colour' to 'color'.
+    locale: US
+  golint:
+    min-confidence: 0.8
+  gosec:
+    excludes:
+    # Suppressions: (see https://github.com/securego/gosec#available-rules for details)
+      - G104 # "Audit errors not checked" -> which we don't need and is a badly implemented version of errcheck
+      - G102 # "Bind to all interfaces" -> since this is normal in k8s
+      - G304 # "File path provided as taint input" -> too many false positives
+      - G307 # "Deferring unsafe method "Close" on type "io.ReadCloser" -> false positive when calling defer resp.Body.Close()
+  nakedret:
+    max-func-lines: 0
+  revive:
+    ignore-generated-header: true
+    severity: error
+    # https://github.com/mgechev/revive
+    rules:
+      - name: errorf
+      - name: context-as-argument
+      - name: error-return
+      - name: increment-decrement
+      - name: indent-error-flow
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+      - name: atomic
+      - name: empty-lines
+      - name: early-return
+  gocritic:
+    enabled-tags:
+      - performance
+      - style
+      - experimental
+    disabled-checks:
+      - wrapperFunc
+      - typeDefFirst
+      - ifElseChain
+      - dupImport # https://github.com/go-critic/go-critic/issues/845
+linters:
+  enable:
+    # https://golangci-lint.run/usage/linters/
+    # default linters
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    # additional linters
+    - errorlint
+    - exportloopref
+    - gochecknoinits
+    - gocritic
+    - gofmt
+    - goimports
+    - gosec
+    - misspell
+    - nakedret
+    - revive
+    - depguard
+    - bodyclose
+    - sqlclosecheck
+    - wastedassign
+    - forcetypeassert
+    - errcheck
+  disable:
+    - structcheck # deprecated
+    - deadcode # deprecated
+    - varcheck # deprecated
+    - noctx # false positive: finds errors with http.NewRequest that dont make sense
+    - unparam # false positives
+issues:
+  exclude-use-default: false

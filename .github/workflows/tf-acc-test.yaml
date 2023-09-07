@@ -1,0 +1,33 @@
+name: TF Acceptance Tests
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  main:
+    name: Main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install project tools and dependencies
+        run: make project-tools
+      - name: Run tests
+        run: make test-acceptance-tf TF_ACC_PROJECT_ID=$${{ secrets.TF_ACC_PROJECT_ID }}
+        env:
+          TF_ACC_ARGUS_CUSTOM_ENDPOINT: ${{ secrets.TF_ACC_ARGUS_CUSTOM_ENDPOINT }}
+          TF_ACC_DNS_CUSTOM_ENDPOINT: ${{ secrets.TF_ACC_DNS_CUSTOM_ENDPOINT }}
+          TF_ACC_LOGME_CUSTOM_ENDPOINT: ${{ secrets.TF_ACC_LOGME_CUSTOM_ENDPOINT }}
+          TF_ACC_MARIADB_CUSTOM_ENDPOINT: ${{ secrets.TF_ACC_MARIADB_CUSTOM_ENDPOINT }}
+          TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT: ${{ secrets.TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT }}
+          TF_ACC_POSTGRESFLEX_CUSTOM_ENDPOINT: ${{ secrets.TF_ACC_POSTGRESFLEX_CUSTOM_ENDPOINT }}
+          TF_ACC_POSTGRESQL_CUSTOM_ENDPOINT: ${{ secrets.TF_ACC_POSTGRESQL_CUSTOM_ENDPOINT }}
+          TF_ACC_RABBITMQ_CUSTOM_ENDPOINT: ${{ secrets.TF_ACC_RABBITMQ_CUSTOM_ENDPOINT }}
+          TF_ACC_REDIS_CUSTOM_ENDPOINT: ${{ secrets.TF_ACC_REDIS_CUSTOM_ENDPOINT }}
+          TF_ACC_RESOURCEMANAGER_CUSTOM_ENDPOINT: ${{ secrets.TF_ACC_RESOURCEMANAGER_CUSTOM_ENDPOINT }}
+          TF_ACC_SERVICE_ACCOUNT_TOKEN: ${{ secrets.TF_ACC_SERVICE_ACCOUNT_TOKEN }}
+          TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL: ${{ secrets.TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL }}
+          TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN: ${{ secrets.TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN }}
