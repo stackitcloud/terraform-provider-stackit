@@ -1,4 +1,5 @@
 name: Build
+description: "Build pipeline"
 inputs:
   go-version:
     description: "Go version to install"
