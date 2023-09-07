@@ -7,7 +7,7 @@ env:
 
 jobs:
   main:
-    name: Main
+    name: CI
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
