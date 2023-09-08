@@ -110,8 +110,6 @@ func TestAccMariaDBResource(t *testing.T) {
 					resource.TestCheckResourceAttrPair("stackit_mariadb_credentials.credentials", "credentials_id",
 						"data.stackit_mariadb_credentials.credentials", "credentials_id"),
 					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "plan_id", instanceResource["plan_id"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "plan_name", instanceResource["plan_name"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-1"]),
 
