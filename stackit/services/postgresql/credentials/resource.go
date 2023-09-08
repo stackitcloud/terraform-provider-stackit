@@ -100,7 +100,7 @@ func (r *credentialsResource) Configure(ctx context.Context, req resource.Config
 func (r *credentialsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":           "PostgreSQL credentials resource schema.",
-		"id":             "Terraform's internal resource identifier.",
+		"id":             "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
 		"credentials_id": "The credentials ID.",
 		"instance_id":    "ID of the PostgreSQL instance.",
 		"project_id":     "STACKIT Project ID to which the instance is associated.",

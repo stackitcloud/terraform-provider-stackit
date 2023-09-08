@@ -181,7 +181,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		Description: "SKE Cluster Resource schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID.",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`name`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),

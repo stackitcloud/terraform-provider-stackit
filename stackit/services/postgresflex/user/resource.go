@@ -100,7 +100,7 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "PostgresFlex user resource schema.",
-		"id":          "Terraform's internal resource ID.",
+		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the PostgresFlex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",

@@ -75,7 +75,7 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "LogMe instance data source schema.",
-		"id":          "Terraform's internal resource identifier.",
+		"id":          "Terraform's internal resource identifier. It is structured as \"`project_id`,`zone_id`\".",
 		"instance_id": "ID of the LogMe instance.",
 		"project_id":  "STACKIT Project ID to which the instance is associated.",
 		"name":        "Instance name.",

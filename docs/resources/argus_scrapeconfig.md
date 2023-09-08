@@ -53,7 +53,7 @@ resource "stackit_argus_scrapeconfig" "example" {
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID.
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`,`name`".
 
 <a id="nestedatt--targets"></a>
 ### Nested Schema for `targets`

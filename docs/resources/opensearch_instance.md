@@ -41,12 +41,12 @@ resource "stackit_opensearch_instance" "example" {
 ### Read-Only
 
 - `cf_guid` (String)
+- `cf_organization_guid` (String)
 - `cf_space_guid` (String)
 - `dashboard_url` (String)
-- `id` (String) Terraform's internal resource ID.
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
 - `image_url` (String)
 - `instance_id` (String) ID of the OpenSearch instance.
-- `cf_organization_guid` (String)
 - `plan_id` (String) The selected plan ID.
 
 <a id="nestedatt--parameters"></a>
