@@ -21,6 +21,8 @@ var instanceResource = map[string]string{
 	"project_id":      testutil.ProjectId,
 	"name":            testutil.ResourceNameWithDateTime("rabbitmq"),
 	"plan_id":         "7e1f8394-5dd5-40b1-8608-16b4344eb51b",
+	"plan_name":       "stackit-qa-rabbitmq-2.4.10-single",
+	"version":         "3.10",
 	"sgw_acl_invalid": "1.2.3.4/4",
 	"sgw_acl_valid":   "1.2.3.4/31",
 }
@@ -35,8 +37,9 @@ func resourceConfig(acls *string) string {
 
 				resource "stackit_rabbitmq_instance" "instance" {
 					project_id = "%s"
-					name    = "%s"
-					plan_id = "%s"
+					name       = "%s"
+					plan_name  = "%s"
+ 				 	version    = "%s"
 					parameters = {
 						%s
 						metrics_frequency = "%s"
@@ -48,7 +51,8 @@ func resourceConfig(acls *string) string {
 		testutil.RabbitMQProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
-		instanceResource["plan_id"],
+		instanceResource["plan_name"],
+		instanceResource["version"],
 		aclsLine,
 		instanceResource["metrics_frequency"],
 		resourceConfigCredentials(),
@@ -62,7 +66,8 @@ func resourceConfigWithUpdate() string {
 				resource "stackit_rabbitmq_instance" "instance" {
 					project_id = "%s"
 					name    = "%s"
-					plan_id = "%s"
+					plan_name  = "%s"
+ 				 	version    = "%s"
 					parameters = {
 						sgw_acl = "%s"
 					}
@@ -73,7 +78,8 @@ func resourceConfigWithUpdate() string {
 		testutil.RabbitMQProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
-		instanceResource["plan_id"],
+		instanceResource["plan_name"],
+		instanceResource["version"],
 		instanceResource["sgw_acl_valid"],
 		resourceConfigCredentials(),
 	)
@@ -107,6 +113,8 @@ func TestAccRabbitMQResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_rabbitmq_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "plan_id", instanceResource["plan_id"]),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "plan_name", instanceResource["plan_name"]),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttrSet("stackit_rabbitmq_instance.instance", "parameters.sgw_acl"),
 
@@ -143,15 +151,11 @@ func TestAccRabbitMQResource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("data.stackit_rabbitmq_instance.instance", "project_id", instanceResource["project_id"]),
-
 					resource.TestCheckResourceAttrPair("stackit_rabbitmq_instance.instance", "instance_id",
 						"data.stackit_rabbitmq_credentials.credentials", "instance_id"),
-
 					resource.TestCheckResourceAttrPair("data.stackit_rabbitmq_instance.instance", "instance_id",
 						"data.stackit_rabbitmq_credentials.credentials", "instance_id"),
-
 					resource.TestCheckResourceAttr("data.stackit_rabbitmq_instance.instance", "plan_id", instanceResource["plan_id"]),
-
 					resource.TestCheckResourceAttr("data.stackit_rabbitmq_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttrSet("data.stackit_rabbitmq_instance.instance", "parameters.sgw_acl"),
 
@@ -175,11 +179,11 @@ func TestAccRabbitMQResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
-
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"plan_name", "version"},
 			},
 			{
 				ResourceName: "stackit_rabbitmq_credentials.credentials",
@@ -196,7 +200,6 @@ func TestAccRabbitMQResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credentials_id")
 					}
-
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialsId), nil
 				},
 				ImportState:       true,
@@ -210,6 +213,8 @@ func TestAccRabbitMQResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_rabbitmq_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "plan_id", instanceResource["plan_id"]),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "plan_name", instanceResource["plan_name"]),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl_valid"]),
 				),
