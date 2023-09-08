@@ -77,7 +77,7 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "PostgresFlex instance data source schema.",
-		"id":          "Terraform's internal resource ID.",
+		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
 		"instance_id": "ID of the PostgresFlex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
 		"name":        "Instance name.",
