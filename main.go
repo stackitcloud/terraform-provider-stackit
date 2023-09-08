@@ -15,7 +15,7 @@ var (
 
 func main() {
 	err := providerserver.Serve(context.Background(), stackit.New(version), providerserver.ServeOpts{
-		Address: "registry.terraform.io/providers/stackitcloud/stackit",
+		Address: "registry.terraform.io/stackitcloud/stackit",
 	})
 	if err != nil {
 		log.Fatal(err.Error())
