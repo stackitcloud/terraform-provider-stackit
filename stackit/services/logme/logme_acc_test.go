@@ -19,7 +19,9 @@ import (
 var instanceResource = map[string]string{
 	"project_id": testutil.ProjectId,
 	"name":       testutil.ResourceNameWithDateTime("logme"),
-	"plan_id":    "7a54492c-8a2e-4d3c-b6c2-a4f20cb65912",
+	"plan_id":    "201d743c-0f06-4af2-8f20-649baf4819ae",
+	"plan_name":  "stackit-qa-logme2-1.2.50-replica",
+	"version":    "2",
 	"sgw_acl-1":  "192.168.0.0/16",
 	"sgw_acl-2":  "192.168.0.0/24",
 }
@@ -30,8 +32,9 @@ func resourceConfig(acls string) string {
 
 				resource "stackit_logme_instance" "instance" {
 					project_id = "%s"
-					name    = "%s"
-					plan_id = "%s"
+					name       = "%s"
+					plan_name  = "%s"
+ 				 	version    = "%s"
 					parameters = {
 						sgw_acl = "%s"
 					}
@@ -45,7 +48,8 @@ func resourceConfig(acls string) string {
 		testutil.LogMeProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
-		instanceResource["plan_id"],
+		instanceResource["plan_name"],
+		instanceResource["version"],
 		acls,
 	)
 }
@@ -63,6 +67,8 @@ func TestAccLogMeResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_logme_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "plan_id", instanceResource["plan_id"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "plan_name", instanceResource["plan_name"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-1"]),
 
@@ -102,12 +108,9 @@ func TestAccLogMeResource(t *testing.T) {
 
 					resource.TestCheckResourceAttrPair("stackit_logme_instance.instance", "instance_id",
 						"data.stackit_logme_instance.instance", "instance_id"),
-
 					resource.TestCheckResourceAttrPair("stackit_logme_credentials.credentials", "credentials_id",
 						"data.stackit_logme_credentials.credentials", "credentials_id"),
-
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "plan_id", instanceResource["plan_id"]),
-
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-1"]),
 
@@ -131,11 +134,11 @@ func TestAccLogMeResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
-
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"plan_name", "version"},
 			},
 			{
 				ResourceName: "stackit_logme_credentials.credentials",
@@ -165,6 +168,8 @@ func TestAccLogMeResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_logme_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "plan_id", instanceResource["plan_id"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "plan_name", instanceResource["plan_name"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-2"]),
 				),

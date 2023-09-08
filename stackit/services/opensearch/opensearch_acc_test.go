@@ -20,6 +20,8 @@ var instanceResource = map[string]string{
 	"project_id": testutil.ProjectId,
 	"name":       testutil.ResourceNameWithDateTime("opensearch"),
 	"plan_id":    "9e4eac4b-b03d-4d7b-b01b-6d1224aa2d68",
+	"plan_name":  "stackit-qa-opensearch-1.2.10-replica",
+	"version":    "2",
 	"sgw_acl":    "192.168.0.0/24",
 }
 
@@ -30,7 +32,8 @@ func resourceConfig() string {
 				resource "stackit_opensearch_instance" "instance" {
 					project_id = "%s"
 					name    = "%s"
-					plan_id = "%s"
+					plan_name  = "%s"
+ 				 	version    = "%s"
 				}
 
 				resource "stackit_opensearch_credentials" "credentials" {
@@ -41,7 +44,8 @@ func resourceConfig() string {
 		testutil.OpenSearchProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
-		instanceResource["plan_id"],
+		instanceResource["plan_name"],
+		instanceResource["version"],
 	)
 }
 
@@ -52,7 +56,8 @@ func resourceConfigUpdate() string {
 				resource "stackit_opensearch_instance" "instance" {
 					project_id = "%s"
 					name    = "%s"
-					plan_id = "%s"
+					plan_name  = "%s"
+ 				 	version    = "%s"
 					parameters = {
 						sgw_acl = "%s"
 					}
@@ -66,7 +71,8 @@ func resourceConfigUpdate() string {
 		testutil.OpenSearchProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
-		instanceResource["plan_id"],
+		instanceResource["plan_name"],
+		instanceResource["version"],
 		instanceResource["sgw_acl"],
 	)
 }
@@ -85,6 +91,8 @@ func TestAccOpenSearchResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_opensearch_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "plan_id", instanceResource["plan_id"]),
+					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "plan_name", instanceResource["plan_name"]),
+					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttrSet("stackit_opensearch_instance.instance", "parameters.sgw_acl"),
 
@@ -121,15 +129,11 @@ func TestAccOpenSearchResource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "project_id", instanceResource["project_id"]),
-
 					resource.TestCheckResourceAttrPair("stackit_opensearch_instance.instance", "instance_id",
 						"data.stackit_opensearch_instance.instance", "instance_id"),
-
 					resource.TestCheckResourceAttrPair("stackit_opensearch_credentials.credentials", "credentials_id",
 						"data.stackit_opensearch_credentials.credentials", "credentials_id"),
-
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "plan_id", instanceResource["plan_id"]),
-
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttrSet("data.stackit_opensearch_instance.instance", "parameters.sgw_acl"),
 
@@ -156,8 +160,9 @@ func TestAccOpenSearchResource(t *testing.T) {
 
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"plan_name", "version"},
 			},
 			{
 				ResourceName: "stackit_opensearch_credentials.credentials",
@@ -187,6 +192,8 @@ func TestAccOpenSearchResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_opensearch_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "plan_id", instanceResource["plan_id"]),
+					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "plan_name", instanceResource["plan_name"]),
+					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl"]),
 				),

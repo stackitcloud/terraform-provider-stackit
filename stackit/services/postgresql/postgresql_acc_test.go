@@ -20,6 +20,8 @@ var instanceResource = map[string]string{
 	"project_id":        testutil.ProjectId,
 	"name":              testutil.ResourceNameWithDateTime("postgresql"),
 	"plan_id":           "57d40175-0f4c-4bcc-b52d-cf5d2ee9f5a7",
+	"plan_name":         "stackit-qa-postgresql-1.4.10-single",
+	"version":           "13",
 	"sgw_acl":           "192.168.0.0/16",
 	"metrics_frequency": "34",
 	"plugins":           "foo-bar",
@@ -31,8 +33,9 @@ func resourceConfig(acls, frequency, plugins string) string {
 
 				resource "stackit_postgresql_instance" "instance" {
 					project_id = "%s"
-					name    = "%s"
-					plan_id = "%s"
+					name       = "%s"
+					plan_name  = "%s"
+ 				 	version    = "%s"
 					parameters = {
 						sgw_acl = "%s"
 						plugins = ["%s"] 
@@ -51,7 +54,8 @@ func resourceConfig(acls, frequency, plugins string) string {
 		testutil.PostgreSQLProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
-		instanceResource["plan_id"],
+		instanceResource["plan_name"],
+		instanceResource["version"],
 		acls,
 		plugins,
 		frequency,
@@ -71,6 +75,8 @@ func TestAccPostgreSQLResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_postgresql_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "plan_id", instanceResource["plan_id"]),
+					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "plan_name", instanceResource["plan_name"]),
+					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl"]),
 
@@ -106,15 +112,11 @@ func TestAccPostgreSQLResource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("data.stackit_postgresql_instance.instance", "project_id", instanceResource["project_id"]),
-
 					resource.TestCheckResourceAttrPair("stackit_postgresql_instance.instance", "instance_id",
 						"data.stackit_postgresql_instance.instance", "instance_id"),
-
 					resource.TestCheckResourceAttrPair("stackit_postgresql_credentials.credentials", "credentials_id",
 						"data.stackit_postgresql_credentials.credentials", "credentials_id"),
-
 					resource.TestCheckResourceAttr("data.stackit_postgresql_instance.instance", "plan_id", instanceResource["plan_id"]),
-
 					resource.TestCheckResourceAttr("data.stackit_postgresql_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_postgresql_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl"]),
 					resource.TestCheckResourceAttr("data.stackit_postgresql_instance.instance", "parameters.plugins.#", "1"),
@@ -140,11 +142,11 @@ func TestAccPostgreSQLResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
-
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"plan_name", "version"},
 			},
 			{
 				ResourceName: "stackit_postgresql_credentials.credentials",
@@ -161,7 +163,6 @@ func TestAccPostgreSQLResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credentials_id")
 					}
-
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialsId), nil
 				},
 				ImportState:       true,
@@ -175,6 +176,8 @@ func TestAccPostgreSQLResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_postgresql_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "plan_id", instanceResource["plan_id"]),
+					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "plan_name", instanceResource["plan_name"]),
+					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl"]),
 					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "parameters.plugins.0", fmt.Sprintf("%s-baz", instanceResource["plugins"])),
