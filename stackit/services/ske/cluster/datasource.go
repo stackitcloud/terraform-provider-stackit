@@ -76,7 +76,7 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 		Description: "SKE Cluster data source schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID.",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`name`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
