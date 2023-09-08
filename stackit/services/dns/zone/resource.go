@@ -118,7 +118,7 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 		Description: "DNS Zone resource schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID.",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`zone_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),

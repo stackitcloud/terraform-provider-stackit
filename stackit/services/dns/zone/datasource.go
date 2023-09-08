@@ -78,7 +78,7 @@ func (d *zoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 		Description: "DNS Zone resource schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID.",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`zone_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
