@@ -290,8 +290,7 @@ func TestToPayloadUpdate(t *testing.T) {
 				Name: types.StringValue("Name"),
 			},
 			&dns.UpdateZonePayload{
-				Name:      utils.Ptr("Name"),
-				Primaries: &[]string{},
+				Name: utils.Ptr("Name"),
 			},
 			true,
 		},
@@ -321,7 +320,6 @@ func TestToPayloadUpdate(t *testing.T) {
 				Acl:           utils.Ptr("Acl"),
 				Description:   utils.Ptr("Description"),
 				ContactEmail:  utils.Ptr("ContactEmail"),
-				Primaries:     &[]string{"Primary"},
 				RetryTime:     utils.Ptr(int32(3)),
 				RefreshTime:   utils.Ptr(int32(4)),
 				ExpireTime:    utils.Ptr(int32(5)),
