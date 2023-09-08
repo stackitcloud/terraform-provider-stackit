@@ -8,6 +8,11 @@ description: |-
 
 # stackit Provider
 
+The STACKIT provider is the official Terraform provider to integrate all the resources developed by STACKIT.
+
+# Authentication
+
+Currently, only the *token flow* is supported. The Terraform provider will first try to find a token in the `STACKIT_SERVICE_ACCOUNT_TOKEN` env var. If not present, it will check the credentials file located in the path defined by the `STACKIT_CREDENTIALS_PATH` env var, if specified, or in `$HOME/.stackit/credentials.json` as a fallback. If the token is found, all the requests are authenticated using that token.
 
 
 ## Example Usage
