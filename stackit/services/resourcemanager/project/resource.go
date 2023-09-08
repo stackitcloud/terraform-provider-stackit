@@ -104,7 +104,7 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                "Resource Manager project resource schema.",
-		"id":                  "Terraform's internal unique identifier of the project, equivalent to the container ID",
+		"id":                  "Terraform's internal resource ID. It is structured as \"`container_id`\".",
 		"container_id":        "Project container ID. Globally unique, user-friendly identifier.",
 		"parent_container_id": "Parent container ID",
 		"name":                "Project name.",

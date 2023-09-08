@@ -28,7 +28,7 @@ data "stackit_resourcemanager_project" "example" {
 
 ### Read-Only
 
-- `id` (String) Terraform's internal unique identifier of the project, equivalent to the container ID
+- `id` (String) Terraform's internal resource ID. It is structured as "`container_id`".
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}
 - `name` (String) Project name.
 - `parent_container_id` (String) Parent container ID

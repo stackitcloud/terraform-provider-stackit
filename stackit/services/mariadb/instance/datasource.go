@@ -75,7 +75,7 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "MariaDB instance data source schema.",
-		"id":          "Terraform's internal resource identifier.",
+		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
 		"instance_id": "ID of the MariaDB instance.",
 		"project_id":  "STACKIT Project ID to which the instance is associated.",
 		"name":        "Instance name.",
