@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -228,6 +229,9 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Optional:    true,
 				Computed:    true,
 				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.RequiresReplace(),
+				},
 				Validators: []validator.List{
 					listvalidator.SizeAtMost(10),
 				},
@@ -585,14 +589,6 @@ func toUpdatePayload(model *Model) (*dns.UpdateZonePayload, error) {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	modelPrimaries := []string{}
-	for _, primary := range model.Primaries.Elements() {
-		primaryString, ok := primary.(types.String)
-		if !ok {
-			return nil, fmt.Errorf("type assertion failed")
-		}
-		modelPrimaries = append(modelPrimaries, primaryString.ValueString())
-	}
 	return &dns.UpdateZonePayload{
 		Name:          model.Name.ValueStringPointer(),
 		ContactEmail:  model.ContactEmail.ValueStringPointer(),
@@ -603,6 +599,6 @@ func toUpdatePayload(model *Model) (*dns.UpdateZonePayload, error) {
 		RefreshTime:   conversion.ToPtrInt32(model.RefreshTime),
 		RetryTime:     conversion.ToPtrInt32(model.RetryTime),
 		NegativeCache: conversion.ToPtrInt32(model.NegativeCache),
-		Primaries:     &modelPrimaries,
+		Primaries:     nil, // API returns error if this field is set, even if nothing changes
 	}, nil
 }

@@ -18,23 +18,24 @@ import (
 
 // Zone resource data
 var zoneResource = map[string]string{
-	"project_id":      testutil.ProjectId,
-	"name":            testutil.ResourceNameWithDateTime("zone"),
-	"dns_name":        fmt.Sprintf("www.%s.com", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha)),
-	"dns_name_min":    fmt.Sprintf("www.%s.com", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha)),
-	"description":     "my description",
-	"acl":             "192.168.0.0/24",
-	"active":          "true",
-	"contact_email":   "aa@bb.cc",
-	"ttl":             "12",
-	"ttl_updated":     "4440",
-	"expire_time":     "123456",
-	"is_reverse_zone": "false",
-	"negative_cache":  "60",
-	"primaries":       "1.2.3.4",
-	"refresh_time":    "500",
-	"retry_time":      "700",
-	"type":            "primary",
+	"project_id":          testutil.ProjectId,
+	"name":                testutil.ResourceNameWithDateTime("zone"),
+	"dns_name":            fmt.Sprintf("www.%s.com", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha)),
+	"dns_name_min":        fmt.Sprintf("www.%s.com", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha)),
+	"description":         "my description",
+	"description_updated": "my description updated",
+	"acl":                 "192.168.0.0/24",
+	"active":              "true",
+	"contact_email":       "aa@bb.cc",
+	"ttl":                 "120",
+	"ttl_updated":         "4440",
+	"expire_time":         "123456",
+	"is_reverse_zone":     "false",
+	"negative_cache":      "60",
+	"primaries":           "1.2.3.4",
+	"refresh_time":        "500",
+	"retry_time":          "700",
+	"type":                "primary",
 }
 
 // Record set resource data
@@ -49,7 +50,7 @@ var recordSetResource = map[string]string{
 	"comment":         "a comment",
 }
 
-func inputConfig(zoneName, ttl, records string) string {
+func inputConfig(zoneName, description, ttl, records string) string {
 	return fmt.Sprintf(`
 		%s
 
@@ -87,7 +88,7 @@ func inputConfig(zoneName, ttl, records string) string {
 		zoneResource["project_id"],
 		zoneName,
 		zoneResource["dns_name"],
-		zoneResource["description"],
+		description,
 		zoneResource["acl"],
 		zoneResource["active"],
 		zoneResource["contact_email"],
@@ -115,7 +116,7 @@ func TestAccDnsResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: inputConfig(zoneResource["name"], zoneResource["ttl"], recordSetResource["records"]),
+				Config: inputConfig(zoneResource["name"], zoneResource["description"], zoneResource["ttl"], recordSetResource["records"]),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Zone data
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "project_id", zoneResource["project_id"]),
@@ -174,7 +175,7 @@ func TestAccDnsResource(t *testing.T) {
 						zone_id    = stackit_dns_zone.zone.zone_id
 						record_set_id = stackit_dns_record_set.record_set.record_set_id
 					}`,
-					inputConfig(zoneResource["name"], zoneResource["ttl"], recordSetResource["records"]),
+					inputConfig(zoneResource["name"], zoneResource["description"], zoneResource["ttl"], recordSetResource["records"]),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Zone data
@@ -268,14 +269,14 @@ func TestAccDnsResource(t *testing.T) {
 			},
 			// Update. The zone ttl should not be updated according to the DNS API.
 			{
-				Config: inputConfig(zoneResource["name"], zoneResource["ttl"], recordSetResource["records_updated"]),
+				Config: inputConfig(zoneResource["name"], zoneResource["description_updated"], zoneResource["ttl"], recordSetResource["records_updated"]),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Zone data
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "project_id", zoneResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "zone_id"),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "name", zoneResource["name"]),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "dns_name", zoneResource["dns_name"]),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "description", zoneResource["description"]),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "description", zoneResource["description_updated"]),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "acl", zoneResource["acl"]),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "active", zoneResource["active"]),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "contact_email", zoneResource["contact_email"]),
