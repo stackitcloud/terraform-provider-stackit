@@ -22,6 +22,6 @@ description: |-
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID.
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`,`username`".
 - `password` (String, Sensitive) Credential password
 - `username` (String) Credential username

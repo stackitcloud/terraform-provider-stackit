@@ -40,4 +40,4 @@ resource "stackit_resourcemanager_project" "example" {
 ### Read-Only
 
 - `container_id` (String) Project container ID. Globally unique, user-friendly identifier.
-- `id` (String) Terraform's internal unique identifier of the project, equivalent to the container ID
+- `id` (String) Terraform's internal resource ID. It is structured as "`container_id`".

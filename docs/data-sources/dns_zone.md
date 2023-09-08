@@ -36,7 +36,7 @@ data "stackit_dns_zone" "example" {
 - `description` (String) Description of the zone.
 - `dns_name` (String) The zone name. E.g. `example.com`
 - `expire_time` (Number) Expire time.
-- `id` (String) Terraform's internal resource ID.
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`zone_id`".
 - `is_reverse_zone` (Boolean) Specifies, if the zone is a reverse zone or not.
 - `name` (String) The user given name of the zone.
 - `negative_cache` (Number) Negative caching.

@@ -51,7 +51,7 @@ resource "stackit_dns_zone" "example" {
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID.
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`zone_id`".
 - `primary_name_server` (String) Primary name server. FQDN.
 - `record_count` (Number) Record count how many records are in the zone.
 - `serial_number` (Number) Serial number. E.g. `2022111400`.

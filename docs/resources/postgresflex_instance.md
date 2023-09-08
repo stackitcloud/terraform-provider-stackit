@@ -47,7 +47,7 @@ resource "stackit_postgresflex_instance" "example" {
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID.
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
 - `instance_id` (String) ID of the PostgresFlex instance.
 
 <a id="nestedatt--flavor"></a>

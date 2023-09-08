@@ -17,7 +17,7 @@ resource "stackit_postgresflex_user" "example" {
   project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   instance_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   username    = "username"
-  roles = ["role"]
+  roles       = ["role"]
 }
 ```
 
@@ -34,7 +34,7 @@ resource "stackit_postgresflex_user" "example" {
 ### Read-Only
 
 - `host` (String)
-- `id` (String) Terraform's internal resource ID.
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`,`user_id`".
 - `password` (String, Sensitive)
 - `port` (Number)
 - `user_id` (String) User ID.

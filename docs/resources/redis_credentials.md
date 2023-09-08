@@ -33,7 +33,7 @@ resource "stackit_redis_credentials" "example" {
 - `host` (String)
 - `hosts` (List of String)
 - `http_api_uri` (String)
-- `id` (String) Terraform's internal resource identifier.
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`instance_id`,`credentials_id`".
 - `name` (String)
 - `password` (String, Sensitive)
 - `port` (Number)

@@ -41,7 +41,7 @@ resource "stackit_argus_instance" "example" {
 - `grafana_initial_admin_user` (String) Specifies an initial Grafana admin username.
 - `grafana_public_read_access` (Boolean) If true, anyone can access Grafana dashboards without logging in.
 - `grafana_url` (String) Specifies Grafana URL.
-- `id` (String) Terraform's internal resource ID.
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
 - `instance_id` (String) The Argus instance ID.
 - `is_updatable` (Boolean) Specifies if the instance can be updated.
 - `jaeger_traces_url` (String)
