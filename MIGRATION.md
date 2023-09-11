@@ -11,6 +11,8 @@ For existing resources created with the old provider, you'll need to import them
 
 Once the configuration is generated, compare the generated file with your existing configuration. Be aware that field names may have changed so you should consider that when comparing. However, possibly not all attributes from the generated configuration will be needed for managing the infrastructure, as the generator seems to create configurations containing read-only (computed-only) attributes (that make the `terraform apply` fail). Check the Terraform plan for the imported resource to identify any differences.
 
+If you encounter any other issues or have additional questions, don't hesitate to raise them by [opening an issue](https://github.com/stackitcloud/terraform-provider-stackit/issues/new/choose).
+
 ### Example (SKE service)
 Import configuration:
 ```terraform
