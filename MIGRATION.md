@@ -78,5 +78,44 @@ resource "stackit_ske_cluster" "cluster-example" {
   ]
   project_id = "project_id"
 }
-
 ```
+
+### Example (LogMe service)
+
+Import configuration:
+```terraform
+import {
+  id = "project_id,instance_id"
+  to = stackit_logme_instance.example-instance
+}
+
+import {
+  id = "project_id,instance_id,credentials_id"
+  to = stackit_logme_credentials.example-credentials
+}
+```
+
+Generated configuration:
+```terraform
+# __generated__ by Terraform
+# Please review these resources and move them into your main configuration files.
+
+# __generated__ by Terraform
+resource "stackit_logme_instance" "example-instance" {
+  name = "example-instance"
+  parameters = {
+    sgw_acl = "0.0.0.0/0"
+  }
+  plan_name  = null
+  project_id = "project_id"
+  version    = null
+}
+
+# __generated__ by Terraform from "project_id,instance_id,credentials_id"
+resource "stackit_logme_credentials" "example-credentials" {
+  instance_id = "instance_id"
+  project_id  = "project_id"
+}
+```
+
+**_Note:_** Currently, when importing the LogMe (or any other DSA), you will see a `Missing Configuration for Required Attribute` error. This issue refers to the `plan_name` and `version` attributes, which are not returned by the API, and currently are solely used by the TFP to calculate the corresponding `plan_id`. We plan to enhance the provider's functionality soon to perform the reverse operation, generating the `plan_name` and `version` correctly. However, for the time being, you'll need to retrieve these values from an alternative source, e.g., the Portal.
