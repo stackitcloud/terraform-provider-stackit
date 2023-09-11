@@ -11,17 +11,18 @@ For existing resources created with the old provider, you'll need to import them
 
 Once the configuration is generated, compare the generated file with your existing configuration. Be aware that field names may have changed so you should adapt the configuration accordingly. However, not all attributes from the generated configuration are needed for managing the infrastructure, meaning this set of fields can be reduced to the relevant ones from your previous configuration. Check the Terraform plan for the imported resource to identify any differences.
 
-### Example (DNS service)
+### Example (SKE service)
 Import configuration:
 ```terraform
+# Import
 import {
-  id = "project_id,zone_id"
-  to = stackit_dns_zone.zone_resource_example
+  id = "project_id"
+  to = stackit_ske_project.project-example
 }
 
 import {
-  id = "project_id,zone_id,record_set_id"
-  to = stackit_dns_record_set.record_set_resource_example
+  id = "project_id,example-cluster"
+  to = stackit_ske_cluster.cluster-example
 }
 ```
 
@@ -30,34 +31,52 @@ Generated configuration:
 # __generated__ by Terraform
 # Please review these resources and move them into your main configuration files.
 
-# __generated__ by Terraform from "project_id,zone_id"
-resource "stackit_dns_zone" "zone_resource" {
-  acl             = "0.0.0.0/0"
-  active          = true
-  contact_email   = "example@mail.com"
-  default_ttl     = 123
-  description     = "This is a description"
-  dns_name        = "example.com"
-  expire_time     = 1209600
-  is_reverse_zone = false
-  name            = "example-zone"
-  negative_cache  = 60
-  primaries       = [""]
-  project_id      = "project_id"
-  refresh_time    = 3600
-  retry_time      = 600
-  type            = "primary"
+# __generated__ by Terraform from "project_id"
+resource "stackit_ske_project" "project-example" {
+  project_id = "project_id"
 }
 
-# __generated__ by Terraform from "project_id,zone_id,record_set_id"
-resource "stackit_dns_record_set" "record_set_resource" {
-  active     = true
-  comment    = "This is a comment"
-  name       = "example.com"
+# __generated__ by Terraform from "project_id,example-cluster"
+resource "stackit_ske_cluster" "cluster-example" {
+  allow_privileged_containers = null
+  extensions                  = null
+  hibernations                = null
+  kubernetes_version          = "1.25"
+  maintenance = {
+    enable_kubernetes_version_updates    = true
+    enable_machine_image_version_updates = true
+    end                                  = "09:47:00Z"
+    start                                = "08:47:00Z"
+  }
+  name = "example-cluster"
+  node_pools = [
+    {
+      availability_zones = ["region-a", "region-b"]
+      cri                = "containerd"
+      labels = {
+        l1 = "value1"
+        l2 = "value2"
+      }
+      machine_type    = "b1.2"
+      max_surge       = 1
+      max_unavailable = 1
+      maximum         = 10
+      minimum         = 3
+      name            = "example-np"
+      os_name         = "flatcar"
+      os_version      = "3510.2.3"
+      taints = [
+        {
+          effect = "PreferNoSchedule"
+          key    = "tk"
+          value  = "tkv"
+        },
+      ]
+      volume_size = 40
+      volume_type = "example-type"
+    },
+  ]
   project_id = "project_id"
-  records    = ["1.2.3.4"]
-  ttl        = 123
-  type       = "A"
-  zone_id    = "zone_id"
 }
+
 ```
