@@ -9,7 +9,7 @@ Before you begin the migration process, please ensure that you have done the nec
 
 For existing resources created with the old provider, you'll need to import them into your new configuration. Terraform provides a feature for importing existing resources and auto-generating new Terraform configuration files. To generate configuration code for the imported resources, refer to the official [Terraform documentation](https://developer.hashicorp.com/terraform/language/import/generating-configuration) for step-by-step guidance.
 
-Once the configuration is generated, compare the generated file with your existing configuration. Be aware that field names may have changed so you should adapt the configuration accordingly. However, not all attributes from the generated configuration are needed for managing the infrastructure, meaning this set of fields can be reduced to the relevant ones from your previous configuration. Check the Terraform plan for the imported resource to identify any differences.
+Once the configuration is generated, compare the generated file with your existing configuration. Be aware that field names may have changed so you should consider that when comparing. However, possibly not all attributes from the generated configuration will be needed for managing the infrastructure, as the generator seems to create configurations containing read-only (computed-only) attributes (that make the `terraform apply` fail). Check the Terraform plan for the imported resource to identify any differences.
 
 ### Example (SKE service)
 Import configuration:
