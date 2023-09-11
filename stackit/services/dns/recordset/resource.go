@@ -104,7 +104,7 @@ func (r *recordSetResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 		Description: "DNS Record Set Resource schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`record_set_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`zone_id`,`record_set_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
