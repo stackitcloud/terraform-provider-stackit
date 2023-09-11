@@ -76,7 +76,7 @@ func (d *recordSetDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 		Description: "DNS Record Set Resource schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`record_set_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`zone_id`,`record_set_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
