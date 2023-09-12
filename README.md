@@ -10,7 +10,7 @@ Check one of the examples in the [examples](examples/) folder.
 
 Currently, only the *token flow* is supported. The Terraform provider will first try to find a token in the `STACKIT_SERVICE_ACCOUNT_TOKEN` env var. If not present, it will check the credentials file located in the path defined by the `STACKIT_CREDENTIALS_PATH` env var, if specified, or in `$HOME/.stackit/credentials.json` as a fallback. If the token is found, all the requests are authenticated using that token.
 
-## Acceptance tests
+## Acceptance Tests
 
 Terraform acceptance tests are run using the command `make test-acceptance-tf`. For all services, 
 - The env var `TF_ACC_PROJECT_ID` must be set with the ID of the STACKIT test project to test it.
@@ -25,7 +25,10 @@ Additionally, for the Resource Manager service,
 
 **WARNING:** Acceptance tests will create real resources, which may incur in costs.
 
-## Reporting issues
+## Migration
+For guidance on how to migrate to using this provider, please see our [Migration Guide](./MIGRATION.md).
+
+## Reporting Issues
 If you encounter any issues or have suggestions for improvements, please open an issue in the repository.
 
 ## Contribute
