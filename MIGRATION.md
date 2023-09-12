@@ -1,6 +1,6 @@
-# Migration from the Terraform community provider
+# Migration Guide
 
-In this guide, we want to offer some strategy for a migration of configurations from the [Terraform community provider](https://github.com/SchwarzIT/terraform-provider-stackit) to this new official provider. In this provider, some attribute names and structure have changed, as well as the internal resource ID structure.
+In this guide we want to offer some strategy for a migration of configurations or existing resources to the STACKIT official provider. In relation to the [Terraform community provider](https://github.com/SchwarzIT/terraform-provider-stackit), some attribute names and structure have changed, as well as the internal resource ID structure.
 
 To import your existing infrastructure resources to the new provider, you'll need the internal ID of each resource. The structure of the new provider's internal ID can be located in the [documentation](./docs/resources) file for each resource, specifically within the description of the `id` attribute.
 
