@@ -86,7 +86,7 @@ To make your contribution, follow these steps:
 7. The pull request will be reviewed by the repo maintainers. If you need to make further changes, make additional commits to keep commit history. When the PR is merged, commits will be squashed.
 
 ## Bug Reports
-If you would like to report a bug, please open a [GitHub issue](https://github.com/stackitcloud/terraform-provider-stackit/issues).
+If you would like to report a bug, please open a [GitHub issue](https://github.com/stackitcloud/terraform-provider-stackit/issues/new).
 
 To ensure we can provide the best support to your issue, follow these guidelines:
 
