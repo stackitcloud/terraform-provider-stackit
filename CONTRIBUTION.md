@@ -76,14 +76,12 @@ This will throw an error ("Failed to query available provider packages") which c
 ## Code Contributions
 
 To make your contribution, follow these steps:
-
-1. Make sure you are working on the latest version of the `main` branch.
-2. Check open or recently closed [Pull Requests](https://github.com/stackitcloud/terraform-provider-stackit/pulls) and [Issues](https://github.com/stackitcloud/terraform-provider-stackit/issues)to make sure the contribution you are making has not been already tackled by someone else.
-3. Fork the repo.
-4. Make your changes in a branch that is up-to-date with the original repo.
-5. Commit your changes including a descriptive message
-6. Create a pull request with your changes.
-7. The pull request will be reviewed by the repo maintainers. If you need to make further changes, make additional commits to keep commit history. When the PR is merged, commits will be squashed.
+1. Check open or recently closed [Pull Requests](https://github.com/stackitcloud/terraform-provider-stackit/pulls) and [Issues](https://github.com/stackitcloud/terraform-provider-stackit/issues)to make sure the contribution you are making has not been already tackled by someone else.
+2. Fork the repo. 
+3. Make your changes in a branch that is up-to-date with the original repo's `main` branch.
+4. Commit your changes including a descriptive message
+5. Create a pull request with your changes.
+6. The pull request will be reviewed by the repo maintainers. If you need to make further changes, make additional commits to keep commit history. When the PR is merged, commits will be squashed.
 
 ## Bug Reports
 If you would like to report a bug, please open a [GitHub issue](https://github.com/stackitcloud/terraform-provider-stackit/issues/new).
