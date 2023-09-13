@@ -78,7 +78,7 @@ This will throw an error ("Failed to query available provider packages") which c
 To make your contribution, follow these steps:
 
 1. Make sure you are working on the latest version of the `main` branch.
-2. Check open or recently closed [Pull Requests](https://github.com/stackitcloud/terraform-provider-stackit/pulls) to make sure the contribution you are making has not been already tackled by someone else.
+2. Check open or recently closed [Pull Requests](https://github.com/stackitcloud/terraform-provider-stackit/pulls) and [Issues](https://github.com/stackitcloud/terraform-provider-stackit/issues)to make sure the contribution you are making has not been already tackled by someone else.
 3. Fork the repo.
 4. Make your changes in a branch that is up-to-date with the original repo.
 5. Commit your changes including a descriptive message
