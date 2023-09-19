@@ -647,5 +647,5 @@ func loadPlanNameAndVersion(ctx context.Context, client *mariadb.APIClient, diag
 		}
 	}
 
-	diags.AddError("Failed to get plan_name and version", fmt.Sprintf("Couldn't find plan_name and version for plan_id = %s", planId))
+	diags.AddWarning("Failed to get plan_name and version", fmt.Sprintf("Couldn't find plan_name and version for plan_id = %s", planId))
 }
