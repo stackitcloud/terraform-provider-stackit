@@ -291,7 +291,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
 		return
-
 	}
 
 	// Compute and store values not present in the API response
