@@ -291,7 +291,12 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
 		return
+
 	}
+
+	// Compute and store values not present in the API response
+	r.loadPlanNameAndVersion(ctx, &diags, &state)
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
@@ -621,4 +626,26 @@ func (r *instanceResource) loadPlanId(ctx context.Context, diags *diag.Diagnosti
 		return
 	}
 	diags.AddError("Invalid plan_name", fmt.Sprintf("Couldn't find plan_name '%s' for version %s, available names are:%s", planName, version, availablePlanNames))
+}
+
+func (r *instanceResource) loadPlanNameAndVersion(ctx context.Context, diags *diag.Diagnostics, model *Model) {
+	projectId := model.ProjectId.ValueString()
+	planId := model.PlanId.ValueString()
+	res, err := r.client.GetOfferings(ctx, projectId).Execute()
+	if err != nil {
+		diags.AddError("Failed to list MariaDB offerings", err.Error())
+		return
+	}
+
+	for _, offer := range *res.Offerings {
+		for _, plan := range *offer.Plans {
+			if strings.EqualFold(*plan.Id, planId) && plan.Id != nil {
+				model.PlanName = types.StringPointerValue(plan.Name)
+				model.Version = types.StringPointerValue(offer.Version)
+				return
+			}
+		}
+	}
+
+	diags.AddWarning("Could not get plan name and version for plan ID in use", "")
 }

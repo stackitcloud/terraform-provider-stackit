@@ -3,9 +3,12 @@ package mariadb
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/validate"
@@ -174,8 +177,33 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping fields", err.Error())
 		return
 	}
+
+	// Compute and store values not present in the API response
+	r.loadPlanNameAndVersion(ctx, &diags, &state)
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	tflog.Info(ctx, "MariaDB instance read")
+}
+
+func (r *instanceDataSource) loadPlanNameAndVersion(ctx context.Context, diags *diag.Diagnostics, model *Model) {
+	projectId := model.ProjectId.ValueString()
+	planId := model.PlanId.ValueString()
+	res, err := r.client.GetOfferings(ctx, projectId).Execute()
+	if err != nil {
+		diags.AddError("Failed to list MariaDB offerings", err.Error())
+		return
+	}
+
+	for _, offer := range *res.Offerings {
+		for _, plan := range *offer.Plans {
+			if strings.EqualFold(*plan.Id, planId) && plan.Id != nil {
+				model.PlanName = types.StringPointerValue(plan.Name)
+				model.Version = types.StringPointerValue(offer.Version)
+			}
+		}
+	}
+
+	diags.AddWarning("Could not get plan name and version for plan ID in use", "")
 }
