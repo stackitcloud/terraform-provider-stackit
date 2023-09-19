@@ -234,8 +234,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	r.loadPlanId(ctx, &resp.Diagnostics, &model)
-	if diags.HasError() {
-		core.LogAndAddError(ctx, &diags, "Failed to load LogMe service plan", "plan "+model.PlanName.ValueString())
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -310,6 +309,13 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
 		return
 	}
+
+	// Compute and store values not present in the API response
+	loadPlanNameAndVersion(ctx, r.client, &resp.Diagnostics, &state)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
@@ -330,8 +336,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	r.loadPlanId(ctx, &resp.Diagnostics, &model)
-	if diags.HasError() {
-		core.LogAndAddError(ctx, &diags, "Failed to load LogMe service plan", "plan "+model.PlanName.ValueString())
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -640,4 +645,26 @@ func (r *instanceResource) loadPlanId(ctx context.Context, diags *diag.Diagnosti
 		return
 	}
 	diags.AddError("Invalid plan_name", fmt.Sprintf("Couldn't find plan_name '%s' for version %s, available names are:%s", planName, version, availablePlanNames))
+}
+
+func loadPlanNameAndVersion(ctx context.Context, client *logme.APIClient, diags *diag.Diagnostics, model *Model) {
+	projectId := model.ProjectId.ValueString()
+	planId := model.PlanId.ValueString()
+	res, err := client.GetOfferings(ctx, projectId).Execute()
+	if err != nil {
+		diags.AddError("Failed to list LogMe offerings", err.Error())
+		return
+	}
+
+	for _, offer := range *res.Offerings {
+		for _, plan := range *offer.Plans {
+			if strings.EqualFold(*plan.Id, planId) && plan.Id != nil {
+				model.PlanName = types.StringPointerValue(plan.Name)
+				model.Version = types.StringPointerValue(offer.Version)
+				return
+			}
+		}
+	}
+
+	diags.AddWarning("Failed to get plan_name and version", fmt.Sprintf("Couldn't find plan_name and version for plan_id = %s", planId))
 }
