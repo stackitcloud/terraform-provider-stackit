@@ -181,9 +181,8 @@ func TestAccRedisResource(t *testing.T) {
 					}
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"plan_name", "version"},
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			{
 				ResourceName: "stackit_redis_credentials.credentials",
