@@ -89,8 +89,8 @@ func NoSeparator() *Validator {
 	}
 }
 
-func SemanticMinorVersion() *Validator {
-	description := "value must be a major + minor version number, without a leading 'v': '[MAJOR].[MINOR]'"
+func MinorVersionNumber() *Validator {
+	description := "value must be a minor version number, without a leading 'v': '[MAJOR].[MINOR]'"
 
 	return &Validator{
 		description: description,

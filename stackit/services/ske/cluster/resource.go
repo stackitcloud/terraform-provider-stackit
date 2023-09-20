@@ -213,7 +213,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "Kubernetes version. Must only contain major and minor version (e.g. 1.22)",
 				Required:    true,
 				Validators: []validator.String{
-					validate.SemanticMinorVersion(),
+					validate.MinorVersionNumber(),
 				},
 			},
 			"kubernetes_version_used": schema.StringAttribute{
