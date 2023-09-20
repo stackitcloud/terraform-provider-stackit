@@ -639,7 +639,7 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	res, err := r.client.GetOfferings(ctx, projectId).Execute()
 	if err != nil {
-		return fmt.Errorf("getting LogMe offerings: %v", err)
+		return fmt.Errorf("getting LogMe offerings: %w", err)
 	}
 
 	version := model.Version.ValueString()
@@ -677,7 +677,7 @@ func loadPlanNameAndVersion(ctx context.Context, client *logme.APIClient, model 
 	planId := model.PlanId.ValueString()
 	res, err := client.GetOfferings(ctx, projectId).Execute()
 	if err != nil {
-		return fmt.Errorf("getting LogMe offerings: %v", err)
+		return fmt.Errorf("getting LogMe offerings: %w", err)
 	}
 
 	for _, offer := range *res.Offerings {
