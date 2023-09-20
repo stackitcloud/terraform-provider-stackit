@@ -109,6 +109,9 @@ func (r *zoneResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	}
 
 	tflog.Info(ctx, "DNS zone client configured")
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	r.client = apiClient
 }
 
@@ -345,6 +348,9 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "DNS zone created")
 }
 
@@ -376,6 +382,9 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "DNS zone read")
 }
 
@@ -429,6 +438,9 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "DNS zone updated")
 }
 

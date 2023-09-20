@@ -256,6 +256,9 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "DNS record set created")
 }
 
@@ -290,6 +293,9 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "DNS record set read")
 }
 
@@ -346,6 +352,9 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 	}
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "DNS record set updated")
 }
 
