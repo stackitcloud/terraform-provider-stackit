@@ -174,6 +174,13 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping fields", err.Error())
 		return
 	}
+
+	// Compute and store values not present in the API response
+	loadPlanNameAndVersion(ctx, r.client, &resp.Diagnostics, &state)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
