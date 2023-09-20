@@ -45,7 +45,7 @@ func (r *credentialsDataSource) Configure(ctx context.Context, req datasource.Co
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Data Source Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -64,21 +64,21 @@ func (r *credentialsDataSource) Configure(ctx context.Context, req datasource.Co
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "Postgresql zone client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "mariadb credentials client configured")
 }
 
 // Schema defines the schema for the resource.
 func (r *credentialsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":           "MariaDB credentials data source schema.",
-		"id":             "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
+		"main":           "mariadb credentials data source schema.",
+		"id":             "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
 		"credentials_id": "The credentials ID.",
-		"instance_id":    "ID of the MariaDB instance.",
+		"instance_id":    "ID of the mariadb instance.",
 		"project_id":     "STACKIT project ID to which the instance is associated.",
 	}
 
@@ -160,19 +160,22 @@ func (r *credentialsDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	recordSetResp, err := r.client.GetCredentials(ctx, projectId, instanceId, credentialsId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(recordSetResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "MariaDB credentials read")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "mariadb credentials read")
 }

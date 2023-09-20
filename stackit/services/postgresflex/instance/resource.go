@@ -99,7 +99,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Data Source Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -118,12 +118,12 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "Postgresflex instance client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "PostgresFlex instance client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -286,10 +286,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	if createResp == nil || createResp.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Didn't get ID of created instance. An instance might have been created")
-		return
-	}
 	instanceId := *createResp.Id
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	wr, err := postgresflex.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
@@ -303,42 +299,45 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(got, &model, flavor, storage)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "Postgresflex instance created")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "PostgresFlex instance created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var state Model
-	diags := req.State.Get(ctx, &state)
+	var model Model
+	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	projectId := state.ProjectId.ValueString()
-	instanceId := state.InstanceId.ValueString()
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	var flavor = &flavorModel{}
-	if !(state.Flavor.IsNull() || state.Flavor.IsUnknown()) {
-		diags = state.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
+	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
+		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 	var storage = &storageModel{}
-	if !(state.Storage.IsNull() || state.Storage.IsUnknown()) {
-		diags = state.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
+	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
+		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -351,16 +350,19 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
-	err = mapFields(instanceResp, &state, flavor, storage)
+	// Map response body to schema
+	err = mapFields(instanceResp, &model, flavor, storage)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	// Set refreshed state
-	diags = resp.State.Set(ctx, state)
+	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "Postgresflex instance read")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "PostgresFlex instance read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -409,7 +411,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	// Generate API request body from model
 	payload, err := toUpdatePayload(&model, acl, flavor, storage)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Could not create API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 	// Update existing instance
@@ -429,7 +431,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(got, &model, flavor, storage)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields in update", err.Error())
@@ -437,6 +439,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "Postgresflex instance updated")
 }
 
@@ -457,7 +462,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	// Delete existing instance
 	err := r.client.DeleteInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	_, err = postgresflex.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
@@ -465,7 +470,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
-	tflog.Info(ctx, "Postgresflex instance deleted")
+	tflog.Info(ctx, "PostgresFlex instance deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -474,8 +479,8 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	idParts := strings.Split(req.ID, core.Separator)
 
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
-		resp.Diagnostics.AddError(
-			"Unexpected Import Identifier",
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Unexpected import identifier",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[instance_id]  Got: %q", req.ID),
 		)
 		return

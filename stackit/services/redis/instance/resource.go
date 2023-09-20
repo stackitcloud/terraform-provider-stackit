@@ -8,8 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -83,7 +81,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -102,12 +100,12 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "redis client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "Redis instance client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -129,6 +127,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"instance_id": schema.StringAttribute{
 				Description: descriptions["instance_id"],
@@ -181,34 +182,40 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"sgw_acl": schema.StringAttribute{
 						Optional: true,
 						Computed: true,
-						Validators: []validator.String{
-							stringvalidator.LengthAtLeast(1),
-						},
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
 					},
 				},
 				Optional: true,
 				Computed: true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"cf_guid": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"cf_space_guid": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"dashboard_url": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"image_url": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"cf_organization_guid": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -225,11 +232,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	r.loadPlanId(ctx, &resp.Diagnostics, &model)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	var parameters = &parametersModel{}
 	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
 		diags = model.Parameters.As(ctx, parameters, basetypes.ObjectAsOptions{})
@@ -237,6 +239,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
+	}
+
+	err := r.loadPlanId(ctx, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading service plan: %v", err))
+		return
 	}
 
 	// Generate API request body from model
@@ -264,75 +272,69 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(got, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
+	// Compute and store values not present in the API response
+	err = loadPlanNameAndVersion(ctx, r.client, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan details: %v", err))
+		return
+	}
+
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
-	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "redis instance created")
-}
-
-func toCreatePayload(model *Model, parameters *parametersModel) (*redis.CreateInstancePayload, error) {
-	if model == nil {
-		return nil, fmt.Errorf("nil model")
-	}
-	if parameters == nil {
-		return &redis.CreateInstancePayload{
-			InstanceName: model.Name.ValueStringPointer(),
-			PlanId:       model.PlanId.ValueStringPointer(),
-		}, nil
-	}
-	payloadParams := &redis.InstanceParameters{}
-	if parameters.SgwAcl.ValueString() != "" {
-		payloadParams.SgwAcl = parameters.SgwAcl.ValueStringPointer()
-	}
-	return &redis.CreateInstancePayload{
-		InstanceName: model.Name.ValueStringPointer(),
-		Parameters:   payloadParams,
-		PlanId:       model.PlanId.ValueStringPointer(),
-	}, nil
-}
-
-// Read refreshes the Terraform state with the latest data.
-func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var state Model
-	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	projectId := state.ProjectId.ValueString()
-	instanceId := state.InstanceId.ValueString()
+	tflog.Info(ctx, "Redis instance created")
+}
+
+// Read refreshes the Terraform state with the latest data.
+func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.State.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instances", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
-	err = mapFields(instanceResp, &state)
+	// Map response body to schema
+	err = mapFields(instanceResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
 	// Compute and store values not present in the API response
-	loadPlanNameAndVersion(ctx, r.client, &resp.Diagnostics, &state)
-	if resp.Diagnostics.HasError() {
+	err = loadPlanNameAndVersion(ctx, r.client, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan details: %v", err))
 		return
 	}
 
 	// Set refreshed state
-	diags = resp.State.Set(ctx, state)
+	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "redis instance read")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Redis instance read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -348,11 +350,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	r.loadPlanId(ctx, &resp.Diagnostics, &model)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	var parameters = &parametersModel{}
 	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
 		diags = model.Parameters.As(ctx, parameters, basetypes.ObjectAsOptions{})
@@ -362,16 +359,22 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
+	err := r.loadPlanId(ctx, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading service plan: %v", err))
+		return
+	}
+
 	// Generate API request body from model
 	payload, err := toUpdatePayload(&model, parameters)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Could not create API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 	// Update existing instance
 	err = r.client.UpdateInstance(ctx, projectId, instanceId).UpdateInstancePayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	wr, err := redis.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
@@ -385,37 +388,31 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(got, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields in update", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
+	// Compute and store values not present in the API response
+	err = loadPlanNameAndVersion(ctx, r.client, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan details: %v", err))
+		return
+	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "redis instance updated")
-}
-
-func toUpdatePayload(model *Model, parameters *parametersModel) (*redis.UpdateInstancePayload, error) {
-	if model == nil {
-		return nil, fmt.Errorf("nil model")
+	if resp.Diagnostics.HasError() {
+		return
 	}
-
-	if parameters == nil {
-		return &redis.UpdateInstancePayload{
-			PlanId: model.PlanId.ValueStringPointer(),
-		}, nil
-	}
-	return &redis.UpdateInstancePayload{
-		Parameters: &redis.InstanceParameters{
-			SgwAcl: parameters.SgwAcl.ValueStringPointer(),
-		},
-		PlanId: model.PlanId.ValueStringPointer(),
-	}, nil
+	tflog.Info(ctx, "Redis instance updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -430,7 +427,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	// Delete existing instance
 	err := r.client.DeleteInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	_, err = redis.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
@@ -438,7 +435,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
-	tflog.Info(ctx, "redis instance deleted")
+	tflog.Info(ctx, "Redis instance deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -447,8 +444,8 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	idParts := strings.Split(req.ID, core.Separator)
 
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
-		resp.Diagnostics.AddError(
-			"Unexpected Import Identifier",
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Unexpected import identifier",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[instance_id]  Got: %q", req.ID),
 		)
 		return
@@ -599,12 +596,50 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 	return output, nil
 }
 
-func (r *instanceResource) loadPlanId(ctx context.Context, diags *diag.Diagnostics, model *Model) {
+func toCreatePayload(model *Model, parameters *parametersModel) (*redis.CreateInstancePayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
+	if parameters == nil {
+		return &redis.CreateInstancePayload{
+			InstanceName: model.Name.ValueStringPointer(),
+			PlanId:       model.PlanId.ValueStringPointer(),
+		}, nil
+	}
+	payloadParams := &redis.InstanceParameters{}
+	if parameters.SgwAcl.ValueString() != "" {
+		payloadParams.SgwAcl = parameters.SgwAcl.ValueStringPointer()
+	}
+	return &redis.CreateInstancePayload{
+		InstanceName: model.Name.ValueStringPointer(),
+		Parameters:   payloadParams,
+		PlanId:       model.PlanId.ValueStringPointer(),
+	}, nil
+}
+
+func toUpdatePayload(model *Model, parameters *parametersModel) (*redis.UpdateInstancePayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
+
+	if parameters == nil {
+		return &redis.UpdateInstancePayload{
+			PlanId: model.PlanId.ValueStringPointer(),
+		}, nil
+	}
+	return &redis.UpdateInstancePayload{
+		Parameters: &redis.InstanceParameters{
+			SgwAcl: parameters.SgwAcl.ValueStringPointer(),
+		},
+		PlanId: model.PlanId.ValueStringPointer(),
+	}, nil
+}
+
+func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	res, err := r.client.GetOfferings(ctx, projectId).Execute()
 	if err != nil {
-		diags.AddError("Failed to list Redis offerings", err.Error())
-		return
+		return fmt.Errorf("getting Redis offerings: %v", err)
 	}
 
 	version := model.Version.ValueString()
@@ -625,26 +660,24 @@ func (r *instanceResource) loadPlanId(ctx context.Context, diags *diag.Diagnosti
 			}
 			if strings.EqualFold(*plan.Name, planName) && plan.Id != nil {
 				model.PlanId = types.StringPointerValue(plan.Id)
-				return
+				return nil
 			}
 			availablePlanNames = fmt.Sprintf("%s\n- %s", availablePlanNames, *plan.Name)
 		}
 	}
 
 	if !isValidVersion {
-		diags.AddError("Invalid version", fmt.Sprintf("Couldn't find version '%s', available versions are:%s", version, availableVersions))
-		return
+		return fmt.Errorf("couldn't find version '%s', available versions are: %s", version, availableVersions)
 	}
-	diags.AddError("Invalid plan_name", fmt.Sprintf("Couldn't find plan_name '%s' for version %s, available names are:%s", planName, version, availablePlanNames))
+	return fmt.Errorf("couldn't find plan_name '%s' for version %s, available names are: %s", planName, version, availablePlanNames)
 }
 
-func loadPlanNameAndVersion(ctx context.Context, client *redis.APIClient, diags *diag.Diagnostics, model *Model) {
+func loadPlanNameAndVersion(ctx context.Context, client *redis.APIClient, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	planId := model.PlanId.ValueString()
 	res, err := client.GetOfferings(ctx, projectId).Execute()
 	if err != nil {
-		diags.AddError("Failed to list Redis offerings", err.Error())
-		return
+		return fmt.Errorf("getting Redis offerings: %v", err)
 	}
 
 	for _, offer := range *res.Offerings {
@@ -652,10 +685,10 @@ func loadPlanNameAndVersion(ctx context.Context, client *redis.APIClient, diags 
 			if strings.EqualFold(*plan.Id, planId) && plan.Id != nil {
 				model.PlanName = types.StringPointerValue(plan.Name)
 				model.Version = types.StringPointerValue(offer.Version)
-				return
+				return nil
 			}
 		}
 	}
 
-	diags.AddWarning("Failed to get plan_name and version", fmt.Sprintf("Couldn't find plan_name and version for plan_id = %s", planId))
+	return fmt.Errorf("couldn't find plan_name and version for plan_id '%s'", planId)
 }

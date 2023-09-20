@@ -25,9 +25,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &mariaDBCredentialsResource{}
-	_ resource.ResourceWithConfigure   = &mariaDBCredentialsResource{}
-	_ resource.ResourceWithImportState = &mariaDBCredentialsResource{}
+	_ resource.Resource                = &mariadbCredentialsResource{}
+	_ resource.ResourceWithConfigure   = &mariadbCredentialsResource{}
+	_ resource.ResourceWithImportState = &mariadbCredentialsResource{}
 )
 
 type Model struct {
@@ -45,23 +45,23 @@ type Model struct {
 	Username      types.String `tfsdk:"username"`
 }
 
-// NewPostgreSQLCredentialsResource is a helper function to simplify the provider implementation.
+// NewCredentialsResource is a helper function to simplify the provider implementation.
 func NewCredentialsResource() resource.Resource {
-	return &mariaDBCredentialsResource{}
+	return &mariadbCredentialsResource{}
 }
 
 // credentialsResource is the resource implementation.
-type mariaDBCredentialsResource struct {
+type mariadbCredentialsResource struct {
 	client *mariadb.APIClient
 }
 
 // Metadata returns the resource type name.
-func (r *mariaDBCredentialsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *mariadbCredentialsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_mariadb_credentials"
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *mariaDBCredentialsResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *mariadbCredentialsResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -69,7 +69,7 @@ func (r *mariaDBCredentialsResource) Configure(ctx context.Context, req resource
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -88,19 +88,19 @@ func (r *mariaDBCredentialsResource) Configure(ctx context.Context, req resource
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "MariaDB client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "MariaDB credentials client configured")
 }
 
 // Schema defines the schema for the resource.
-func (r *mariaDBCredentialsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *mariadbCredentialsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":           "MariaDB credentials resource schema.",
-		"id":             "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
+		"id":             "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
 		"credentials_id": "The credentials ID.",
 		"instance_id":    "ID of the MariaDB instance.",
 		"project_id":     "STACKIT Project ID to which the instance is associated.",
@@ -182,7 +182,7 @@ func (r *mariaDBCredentialsResource) Schema(_ context.Context, _ resource.Schema
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *mariaDBCredentialsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *mariadbCredentialsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -218,19 +218,22 @@ func (r *mariaDBCredentialsResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(got, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "MariaDB credentials created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *mariaDBCredentialsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *mariadbCredentialsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -246,31 +249,34 @@ func (r *mariaDBCredentialsResource) Read(ctx context.Context, req resource.Read
 
 	recordSetResp, err := r.client.GetCredentials(ctx, projectId, instanceId, credentialsId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(recordSetResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "MariaDB credentials read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *mariaDBCredentialsResource) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *mariadbCredentialsResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
-	resp.Diagnostics.AddError("Error updating credentials", "credentials can't be updated")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credentials", "Credentials can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *mariaDBCredentialsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *mariadbCredentialsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -288,7 +294,7 @@ func (r *mariaDBCredentialsResource) Delete(ctx context.Context, req resource.De
 	// Delete existing record set
 	err := r.client.DeleteCredentials(ctx, projectId, instanceId, credentialsId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials", fmt.Sprintf("Calling API: %v", err))
 	}
 	_, err = mariadb.DeleteCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialsId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
@@ -299,12 +305,12 @@ func (r *mariaDBCredentialsResource) Delete(ctx context.Context, req resource.De
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is:  project_id,instance_id,credentials_id
-func (r *mariaDBCredentialsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+// The expected format of the resource import identifier is: project_id,instance_id,credentials_id
+func (r *mariadbCredentialsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			"Unexpected Import Identifier",
+			"Unexpected import identifier",
 			fmt.Sprintf("Expected import identifier with format [project_id],[instance_id],[credentials_id], got %q", req.ID),
 		)
 		return
@@ -313,7 +319,7 @@ func (r *mariaDBCredentialsResource) ImportState(ctx context.Context, req resour
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials_id"), idParts[2])...)
-	tflog.Info(ctx, "Postgresql credentials state imported")
+	tflog.Info(ctx, "MariaDB credentials state imported")
 }
 
 func mapFields(credentialsResp *mariadb.CredentialsResponse, model *Model) error {

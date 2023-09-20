@@ -6,12 +6,12 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresql"
 )
@@ -45,7 +45,7 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Data Source Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -64,19 +64,19 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "Postgresql zone client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "PostgreSQL zone client configured")
 }
 
 // Schema defines the schema for the resource.
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "PostgreSQL instance data source schema.",
-		"id":          "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`\".",
+		"id":          "Terraform's internal resource identifier. It is structured as \"`project_id`,`zone_id`\".",
 		"instance_id": "ID of the PostgreSQL instance.",
 		"project_id":  "STACKIT Project ID to which the instance is associated.",
 		"name":        "Instance name.",
@@ -169,37 +169,41 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 
 // Read refreshes the Terraform state with the latest data.
 func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var state Model
-	diags := req.Config.Get(ctx, &state)
+	var model Model
+	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	projectId := state.ProjectId.ValueString()
-	instanceId := state.InstanceId.ValueString()
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+
 	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Unable to read instance", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	err = mapFields(instanceResp, &state)
+	err = mapFields(instanceResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
 	// Compute and store values not present in the API response
-	loadPlanNameAndVersion(ctx, r.client, &resp.Diagnostics, &state)
-	if resp.Diagnostics.HasError() {
+	err = loadPlanNameAndVersion(ctx, r.client, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan details: %v", err))
 		return
 	}
 
 	// Set refreshed state
-	diags = resp.State.Set(ctx, &state)
+	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "Postgresql instance read")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "PostgreSQL instance read")
 }

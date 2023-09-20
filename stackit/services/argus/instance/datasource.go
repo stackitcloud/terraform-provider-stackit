@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/argus"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/core"
@@ -35,7 +36,7 @@ func (d *instanceDataSource) Metadata(_ context.Context, req datasource.Metadata
 	resp.TypeName = req.ProviderTypeName + "_argus_instance"
 }
 
-func (d *instanceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -46,7 +47,7 @@ func (d *instanceDataSource) Configure(_ context.Context, req datasource.Configu
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Data Source Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -62,13 +63,11 @@ func (d *instanceDataSource) Configure(_ context.Context, req datasource.Configu
 		)
 	}
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Could not Configure API Client",
-			err.Error(),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 	d.client = apiClient
+	tflog.Info(ctx, "Argus instance client configured")
 }
 
 // Schema defines the schema for the data source.
@@ -202,28 +201,29 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 
 // Read refreshes the Terraform state with the latest data.
 func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var state Model
-	diags := req.Config.Get(ctx, &state)
+	var model Model
+	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	projectId := state.ProjectId.ValueString()
-	instanceId := state.InstanceId.ValueString()
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
 	instanceResponse, err := d.client.GetInstance(ctx, instanceId, projectId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &diags, "Unable to read instance", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	err = mapFields(ctx, instanceResponse, &state)
+	err = mapFields(ctx, instanceResponse, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &diags, "Mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-	diags = resp.State.Set(ctx, state)
+	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	tflog.Info(ctx, "Argus instance read")
 }

@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -17,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/argus"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/core"
@@ -75,7 +75,7 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *instanceResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -83,7 +83,7 @@ func (r *instanceResource) Configure(_ context.Context, req resource.ConfigureRe
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -102,10 +102,12 @@ func (r *instanceResource) Configure(_ context.Context, req resource.ConfigureRe
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
+
 	r.client = apiClient
+	tflog.Info(ctx, "Argus instance client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -264,48 +266,50 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	projectId := model.ProjectId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	r.loadPlanId(ctx, &resp.Diagnostics, &model)
-	if diags.HasError() {
-		core.LogAndAddError(ctx, &diags, "Failed to load argus service plan", "plan "+model.PlanName.ValueString())
+	err := r.loadPlanId(ctx, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading service plan: %v", err))
 		return
 	}
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 	createResp, err := r.client.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating instance", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	instanceId := createResp.InstanceId
-	if instanceId == nil || *instanceId == "" {
-		resp.Diagnostics.AddError("Error creating instance", "API didn't return an instance id")
-		return
-	}
+	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	wr, err := argus.CreateInstanceWaitHandler(ctx, r.client, *instanceId, projectId).SetTimeout(20 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
 	got, ok := wr.(*argus.InstanceResponse)
 	if !ok {
-		resp.Diagnostics.AddError("Error creating instance", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Wait result conversion, got %+v", got))
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(ctx, got, &model)
 	if err != nil {
-		resp.Diagnostics.AddError("Error mapping fields", fmt.Sprintf("Project id %s, instance id %s: %v", projectId, *instanceId, err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Argus instance created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -318,22 +322,28 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	instanceResp, err := r.client.GetInstance(ctx, instanceId, projectId).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading instance", fmt.Sprintf("Project id = %s, instance id = %s: %v", projectId, instanceId, err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(ctx, instanceResp, &model)
 	if err != nil {
-		resp.Diagnostics.AddError("Error mapping fields", fmt.Sprintf("Project id %s, instance id %s: %v", projectId, instanceId, err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	// Set refreshed model
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Argus instance created")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -348,42 +358,46 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 
-	r.loadPlanId(ctx, &resp.Diagnostics, &model)
-	if diags.HasError() {
-		core.LogAndAddError(ctx, &diags, "Failed to load argus service plan", "plan "+model.PlanName.ValueString())
+	err := r.loadPlanId(ctx, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading service plan: %v", err))
 		return
 	}
 
 	// Generate API request body from model
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating instance", fmt.Sprintf("Could not create API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 	// Update existing instance
 	_, err = r.client.UpdateInstance(ctx, instanceId, projectId).UpdateInstancePayload(*payload).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating instance", "project id = "+projectId+", instance Id = "+instanceId+", "+err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	wr, err := argus.UpdateInstanceWaitHandler(ctx, r.client, instanceId, projectId).SetTimeout(20 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
 	got, ok := wr.(*argus.InstanceResponse)
 	if !ok {
-		resp.Diagnostics.AddError("Error updating instance", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Wait result conversion, got %+v", got))
 		return
 	}
 
 	err = mapFields(ctx, got, &model)
 	if err != nil {
-		resp.Diagnostics.AddError("Error mapping fields in update", "project id = "+projectId+", instance Id = "+instanceId+", "+err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Argus instance updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -402,14 +416,16 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	// Delete existing instance
 	_, err := r.client.DeleteInstance(ctx, instanceId, projectId).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting instance", "project id = "+projectId+", instance Id = "+instanceId+", "+err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	_, err = argus.DeleteInstanceWaitHandler(ctx, r.client, instanceId, projectId).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
+
+	tflog.Info(ctx, "Argus instance deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -418,8 +434,8 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	idParts := strings.Split(req.ID, core.Separator)
 
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
-		resp.Diagnostics.AddError(
-			"Unexpected Import Identifier",
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Unexpected import identifier",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[instance_id]  Got: %q", req.ID),
 		)
 		return
@@ -427,6 +443,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
+	tflog.Info(ctx, "Argus instance state imported")
 }
 
 func mapFields(ctx context.Context, r *argus.InstanceResponse, model *Model) error {
@@ -529,12 +546,11 @@ func toUpdatePayload(model *Model) (*argus.UpdateInstancePayload, error) {
 	}, nil
 }
 
-func (r *instanceResource) loadPlanId(ctx context.Context, diags *diag.Diagnostics, model *Model) {
+func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	res, err := r.client.GetPlans(ctx, projectId).Execute()
 	if err != nil {
-		diags.AddError("Failed to list argus plans", err.Error())
-		return
+		return err
 	}
 
 	planName := model.PlanName.ValueString()
@@ -552,7 +568,7 @@ func (r *instanceResource) loadPlanId(ctx context.Context, diags *diag.Diagnosti
 		avl = fmt.Sprintf("%s\n- %s", avl, *p.Name)
 	}
 	if model.PlanId.ValueString() == "" {
-		diags.AddError("Invalid plan_name", fmt.Sprintf("Couldn't find plan_name '%s', available names are:%s", planName, avl))
-		return
+		return fmt.Errorf("couldn't find plan_name '%s', available names are: %s", planName, avl)
 	}
+	return nil
 }

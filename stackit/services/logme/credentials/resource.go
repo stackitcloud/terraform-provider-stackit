@@ -45,8 +45,8 @@ type Model struct {
 	Username      types.String `tfsdk:"username"`
 }
 
-// NewlogmeCredentialsResource is a helper function to simplify the provider implementation.
-func NewlogmeCredentialsResource() resource.Resource {
+// NewCredentialsResource is a helper function to simplify the provider implementation.
+func NewCredentialsResource() resource.Resource {
 	return &logmeCredentialsResource{}
 }
 
@@ -69,7 +69,7 @@ func (r *logmeCredentialsResource) Configure(ctx context.Context, req resource.C
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -88,12 +88,12 @@ func (r *logmeCredentialsResource) Configure(ctx context.Context, req resource.C
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "logme zone client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "LogMe credentials client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -218,14 +218,17 @@ func (r *logmeCredentialsResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(got, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "LogMe credentials created")
 }
 
@@ -246,27 +249,30 @@ func (r *logmeCredentialsResource) Read(ctx context.Context, req resource.ReadRe
 
 	recordSetResp, err := r.client.GetCredentials(ctx, projectId, instanceId, credentialsId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(recordSetResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "LogMe credentials read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *logmeCredentialsResource) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *logmeCredentialsResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
-	resp.Diagnostics.AddError("Error updating credentials", "credentials can't be updated")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credentials", "Credentials can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -288,7 +294,7 @@ func (r *logmeCredentialsResource) Delete(ctx context.Context, req resource.Dele
 	// Delete existing record set
 	err := r.client.DeleteCredentials(ctx, projectId, instanceId, credentialsId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials", fmt.Sprintf("Calling API: %v", err))
 	}
 	_, err = logme.DeleteCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialsId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
@@ -304,7 +310,7 @@ func (r *logmeCredentialsResource) ImportState(ctx context.Context, req resource
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			"Unexpected Import Identifier",
+			"Unexpected import identifier",
 			fmt.Sprintf("Expected import identifier with format [project_id],[instance_id],[credentials_id], got %q", req.ID),
 		)
 		return

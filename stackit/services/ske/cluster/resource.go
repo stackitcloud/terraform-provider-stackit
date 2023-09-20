@@ -148,7 +148,7 @@ func (r *clusterResource) Configure(ctx context.Context, req resource.ConfigureR
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -167,12 +167,12 @@ func (r *clusterResource) Configure(ctx context.Context, req resource.ConfigureR
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "SKE cluster client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "SKE cluster client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -502,18 +502,13 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", clusterName)
 
-	availableVersions := r.loadAvaiableVersions(ctx, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	availableVersions, err := r.loadAvaiableVersions(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Loading available Kubernetes versions: %v", err))
 		return
 	}
 
 	r.createOrUpdateCluster(ctx, &resp.Diagnostics, &model, availableVersions)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// handle credential
-	r.getCredential(ctx, &resp.Diagnostics, &model)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -523,23 +518,22 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SKE cluster created")
 }
 
-func (r *clusterResource) loadAvaiableVersions(ctx context.Context, diags *diag.Diagnostics) []ske.KubernetesVersion {
+func (r *clusterResource) loadAvaiableVersions(ctx context.Context) ([]ske.KubernetesVersion, error) {
 	c := r.client
 	res, err := c.GetOptions(ctx).Execute()
 	if err != nil {
-		diags.AddError("Failed loading cluster available versions: getting cluster options", err.Error())
-		return nil
+		return nil, fmt.Errorf("calling API: %v", err)
 	}
 
 	if res.KubernetesVersions == nil {
-		diags.AddError("Failed loading cluster available versions: nil kubernetesVersions", err.Error())
-		return nil
+		return nil, fmt.Errorf("API response has nil kubernetesVersions")
 	}
 
-	return *res.KubernetesVersions
+	return *res.KubernetesVersions, nil
 }
 
 func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag.Diagnostics, model *Cluster, availableVersions []ske.KubernetesVersion) {
@@ -548,23 +542,22 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	name := model.Name.ValueString()
 	kubernetes, hasDeprecatedVersion, err := toKubernetesPayload(model, availableVersions)
 	if err != nil {
-		diags.AddError("Failed to create cluster config payload", err.Error())
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating cluster config API payload: %v", err))
 		return
 	}
 	if hasDeprecatedVersion {
-		warningMessage := fmt.Sprintf("Using deprecated kubernetes version %s", *kubernetes.Version)
-		diags.AddWarning(warningMessage, "")
+		diags.AddWarning("Deprecated Kubernetes version", fmt.Sprintf("Version %s of Kubernetes is deprecated, please update it", *kubernetes.Version))
 	}
 	nodePools := toNodepoolsPayload(ctx, model)
 	maintenance, err := toMaintenancePayload(ctx, model)
 	if err != nil {
-		diags.AddError("Failed to create maintenance payload", err.Error())
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating maintenance API payload: %v", err))
 		return
 	}
 	hibernations := toHibernationsPayload(model)
 	extensions, err := toExtensionsPayload(ctx, model)
 	if err != nil {
-		diags.AddError("Failed to create extension payload", err.Error())
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating extension API payload: %v", err))
 		return
 	}
 
@@ -577,35 +570,42 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	}
 	_, err = r.client.CreateOrUpdateCluster(ctx, projectId, name).CreateOrUpdateClusterPayload(payload).Execute()
 	if err != nil {
-		diags.AddError("failed during SKE create/update", err.Error())
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	wr, err := ske.CreateOrUpdateClusterWaitHandler(ctx, r.client, projectId, name).SetTimeout(30 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
-		diags.AddError("Error creating cluster", fmt.Sprintf("Cluster creation waiting: %v", err))
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Cluster creation waiting: %v", err))
 		return
 	}
 	got, ok := wr.(*ske.ClusterResponse)
 	if !ok {
-		diags.AddError("Error creating cluster", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Wait result conversion, got %+v", got))
 		return
 	}
 	err = mapFields(ctx, got, model)
 	if err != nil {
-		diags.AddError("Mapping cluster fields", err.Error())
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	// Handle credential
+	err = r.getCredential(ctx, model)
+	if err != nil {
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Getting credential: %v", err))
 		return
 	}
 }
 
-func (r *clusterResource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Cluster) {
+func (r *clusterResource) getCredential(ctx context.Context, model *Cluster) error {
 	c := r.client
 	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute()
 	if err != nil {
-		diags.AddError("failed fetching cluster credentials", err.Error())
-		return
+		return fmt.Errorf("fetching cluster credentials: %v", err)
 	}
 	model.KubeConfig = types.StringPointerValue(res.Kubeconfig)
+	return nil
 }
 
 func toNodepoolsPayload(ctx context.Context, m *Cluster) []ske.Nodepool {
@@ -1079,17 +1079,20 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	clResp, err := r.client.GetCluster(ctx, projectId, name).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Unable to read cluster, project_id = %s, name = %s", projectId, name), err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	err = mapFields(ctx, clResp, &state)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "SKE cluster read")
 }
 
@@ -1105,8 +1108,9 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", clName)
 
-	availableVersions := r.loadAvaiableVersions(ctx, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	availableVersions, err := r.loadAvaiableVersions(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating cluster", fmt.Sprintf("Loading available Kubernetes versions: %v", err))
 		return
 	}
 
@@ -1115,14 +1119,11 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	// handle credential
-	r.getCredential(ctx, &resp.Diagnostics, &model)
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	diags = resp.State.Set(ctx, model)
-	resp.Diagnostics.Append(diags...)
 	tflog.Info(ctx, "SKE cluster updated")
 }
 
@@ -1140,7 +1141,7 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 	c := r.client
 	_, err := c.DeleteCluster(ctx, projectId, name).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("failed deleting cluster", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	_, err = ske.DeleteClusterWaitHandler(ctx, r.client, projectId, name).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
@@ -1157,8 +1158,8 @@ func (r *clusterResource) ImportState(ctx context.Context, req resource.ImportSt
 	idParts := strings.Split(req.ID, core.Separator)
 
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
-		resp.Diagnostics.AddError(
-			"Unexpected Import Identifier",
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Unexpected import identifier",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[name]  Got: %q", req.ID),
 		)
 		return
