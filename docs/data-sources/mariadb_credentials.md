@@ -3,12 +3,12 @@
 page_title: "stackit_mariadb_credentials Data Source - stackit"
 subcategory: ""
 description: |-
-  mariadb credentials data source schema.
+  MariaDB credentials data source schema.
 ---
 
 # stackit_mariadb_credentials (Data Source)
 
-mariadb credentials data source schema.
+MariaDB credentials data source schema.
 
 ## Example Usage
 

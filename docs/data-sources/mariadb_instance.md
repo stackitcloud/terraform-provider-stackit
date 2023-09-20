@@ -33,7 +33,7 @@ data "stackit_mariadb_instance" "example" {
 - `cf_organization_guid` (String)
 - `cf_space_guid` (String)
 - `dashboard_url` (String)
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`zone_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`instance_id`".
 - `image_url` (String)
 - `name` (String) Instance name.
 - `parameters` (Attributes) (see [below for nested schema](#nestedatt--parameters))

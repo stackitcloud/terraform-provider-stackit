@@ -75,7 +75,7 @@ func (r *credentialsDataSource) Configure(ctx context.Context, req datasource.Co
 // Schema defines the schema for the resource.
 func (r *credentialsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":           "mariadb credentials data source schema.",
+		"main":           "MariaDB credentials data source schema.",
 		"id":             "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
 		"credentials_id": "The credentials ID.",
 		"instance_id":    "ID of the mariadb instance.",
