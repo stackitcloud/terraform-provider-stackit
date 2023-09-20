@@ -78,7 +78,7 @@ func (r *credentialsDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 		"main":           "MariaDB credentials data source schema.",
 		"id":             "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
 		"credentials_id": "The credentials ID.",
-		"instance_id":    "ID of the mariadb instance.",
+		"instance_id":    "ID of the MariaDB instance.",
 		"project_id":     "STACKIT project ID to which the instance is associated.",
 	}
 

@@ -26,7 +26,7 @@ data "stackit_mariadb_credentials" "example" {
 ### Required
 
 - `credentials_id` (String) The credentials ID.
-- `instance_id` (String) ID of the mariadb instance.
+- `instance_id` (String) ID of the MariaDB instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 
 ### Read-Only
