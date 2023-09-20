@@ -526,7 +526,7 @@ func (r *clusterResource) loadAvaiableVersions(ctx context.Context) ([]ske.Kuber
 	c := r.client
 	res, err := c.GetOptions(ctx).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("calling API: %v", err)
+		return nil, fmt.Errorf("calling API: %w", err)
 	}
 
 	if res.KubernetesVersions == nil {
@@ -602,7 +602,7 @@ func (r *clusterResource) getCredential(ctx context.Context, model *Cluster) err
 	c := r.client
 	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute()
 	if err != nil {
-		return fmt.Errorf("fetching cluster credentials: %v", err)
+		return fmt.Errorf("fetching cluster credentials: %w", err)
 	}
 	model.KubeConfig = types.StringPointerValue(res.Kubeconfig)
 	return nil
