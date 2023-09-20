@@ -25,9 +25,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &mariadbCredentialsResource{}
-	_ resource.ResourceWithConfigure   = &mariadbCredentialsResource{}
-	_ resource.ResourceWithImportState = &mariadbCredentialsResource{}
+	_ resource.Resource                = &mariaDBCredentialsResource{}
+	_ resource.ResourceWithConfigure   = &mariaDBCredentialsResource{}
+	_ resource.ResourceWithImportState = &mariaDBCredentialsResource{}
 )
 
 type Model struct {
@@ -47,21 +47,21 @@ type Model struct {
 
 // NewCredentialsResource is a helper function to simplify the provider implementation.
 func NewCredentialsResource() resource.Resource {
-	return &mariadbCredentialsResource{}
+	return &mariaDBCredentialsResource{}
 }
 
 // credentialsResource is the resource implementation.
-type mariadbCredentialsResource struct {
+type mariaDBCredentialsResource struct {
 	client *mariadb.APIClient
 }
 
 // Metadata returns the resource type name.
-func (r *mariadbCredentialsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *mariaDBCredentialsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_mariadb_credentials"
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *mariadbCredentialsResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *mariaDBCredentialsResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -97,7 +97,7 @@ func (r *mariadbCredentialsResource) Configure(ctx context.Context, req resource
 }
 
 // Schema defines the schema for the resource.
-func (r *mariadbCredentialsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *mariaDBCredentialsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":           "MariaDB credentials resource schema.",
 		"id":             "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
@@ -182,7 +182,7 @@ func (r *mariadbCredentialsResource) Schema(_ context.Context, _ resource.Schema
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *mariadbCredentialsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *mariaDBCredentialsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -233,7 +233,7 @@ func (r *mariadbCredentialsResource) Create(ctx context.Context, req resource.Cr
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *mariadbCredentialsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *mariaDBCredentialsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -270,13 +270,13 @@ func (r *mariadbCredentialsResource) Read(ctx context.Context, req resource.Read
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *mariadbCredentialsResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *mariaDBCredentialsResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credentials", "Credentials can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *mariadbCredentialsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *mariaDBCredentialsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -306,7 +306,7 @@ func (r *mariadbCredentialsResource) Delete(ctx context.Context, req resource.De
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: project_id,instance_id,credentials_id
-func (r *mariadbCredentialsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *mariaDBCredentialsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
