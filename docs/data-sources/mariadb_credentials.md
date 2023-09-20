@@ -3,12 +3,12 @@
 page_title: "stackit_mariadb_credentials Data Source - stackit"
 subcategory: ""
 description: |-
-  MariaDB credentials data source schema.
+  mariadb credentials data source schema.
 ---
 
 # stackit_mariadb_credentials (Data Source)
 
-MariaDB credentials data source schema.
+mariadb credentials data source schema.
 
 ## Example Usage
 
@@ -26,7 +26,7 @@ data "stackit_mariadb_credentials" "example" {
 ### Required
 
 - `credentials_id` (String) The credentials ID.
-- `instance_id` (String) ID of the MariaDB instance.
+- `instance_id` (String) ID of the mariadb instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 
 ### Read-Only
@@ -34,7 +34,7 @@ data "stackit_mariadb_credentials" "example" {
 - `host` (String)
 - `hosts` (List of String)
 - `http_api_uri` (String)
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`,`credentials_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`instance_id`,`credentials_id`".
 - `name` (String)
 - `password` (String, Sensitive)
 - `port` (Number)
