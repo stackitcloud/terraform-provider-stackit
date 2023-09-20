@@ -52,5 +52,5 @@ func DiagsToError(diags diag.Diagnostics) error {
 // LogAndAddError Logs the error and adds it to the diags
 func LogAndAddError(ctx context.Context, diags *diag.Diagnostics, summary, detail string) {
 	tflog.Error(ctx, summary)
-	(*diags).AddError(summary, detail)
+	diags.AddError(summary, detail)
 }
