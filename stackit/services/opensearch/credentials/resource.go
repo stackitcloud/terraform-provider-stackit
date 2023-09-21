@@ -25,9 +25,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &opensearchCredentialsResource{}
-	_ resource.ResourceWithConfigure   = &opensearchCredentialsResource{}
-	_ resource.ResourceWithImportState = &opensearchCredentialsResource{}
+	_ resource.Resource                = &openSearchCredentialsResource{}
+	_ resource.ResourceWithConfigure   = &openSearchCredentialsResource{}
+	_ resource.ResourceWithImportState = &openSearchCredentialsResource{}
 )
 
 type Model struct {
@@ -47,21 +47,21 @@ type Model struct {
 
 // NewCredentialsResource is a helper function to simplify the provider implementation.
 func NewCredentialsResource() resource.Resource {
-	return &opensearchCredentialsResource{}
+	return &openSearchCredentialsResource{}
 }
 
 // credentialsResource is the resource implementation.
-type opensearchCredentialsResource struct {
+type openSearchCredentialsResource struct {
 	client *opensearch.APIClient
 }
 
 // Metadata returns the resource type name.
-func (r *opensearchCredentialsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *openSearchCredentialsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_opensearch_credentials"
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *opensearchCredentialsResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *openSearchCredentialsResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -97,7 +97,7 @@ func (r *opensearchCredentialsResource) Configure(ctx context.Context, req resou
 }
 
 // Schema defines the schema for the resource.
-func (r *opensearchCredentialsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *openSearchCredentialsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":           "OpenSearch credentials resource schema.",
 		"id":             "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
@@ -182,7 +182,7 @@ func (r *opensearchCredentialsResource) Schema(_ context.Context, _ resource.Sch
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *opensearchCredentialsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *openSearchCredentialsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -233,7 +233,7 @@ func (r *opensearchCredentialsResource) Create(ctx context.Context, req resource
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *opensearchCredentialsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *openSearchCredentialsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -270,13 +270,13 @@ func (r *opensearchCredentialsResource) Read(ctx context.Context, req resource.R
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *opensearchCredentialsResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *openSearchCredentialsResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credentials", "Credentials can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *opensearchCredentialsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *openSearchCredentialsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -306,7 +306,7 @@ func (r *opensearchCredentialsResource) Delete(ctx context.Context, req resource
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: project_id,instance_id,credentials_id
-func (r *opensearchCredentialsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *openSearchCredentialsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
