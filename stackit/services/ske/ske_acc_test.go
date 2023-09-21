@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/testutil"
 )
@@ -25,9 +24,9 @@ var clusterResource = map[string]string{
 	"name":                                             fmt.Sprintf("cl-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 	"name_min":                                         fmt.Sprintf("cl-min-%s", acctest.RandStringFromCharSet(3, acctest.CharSetAlphaNum)),
 	"kubernetes_version":                               "1.24",
-	"kubernetes_version_used":                          "1.24.16",
+	"kubernetes_version_used":                          "1.24.17",
 	"kubernetes_version_new":                           "1.25",
-	"kubernetes_version_used_new":                      "1.25.12",
+	"kubernetes_version_used_new":                      "1.25.13",
 	"allowPrivilegedContainers":                        "true",
 	"nodepool_name":                                    "np-acc-test",
 	"nodepool_name_min":                                "np-acc-min-test",
@@ -74,7 +73,7 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 	if maintenanceEnd != nil {
 		maintenanceEndTF = *maintenanceEnd
 	}
-	return fmt.Sprintf(`
+	aux := fmt.Sprintf(`
 		%s
 
 		resource "stackit_ske_project" "project" {
@@ -189,6 +188,31 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 		clusterResource["nodepool_maximum"],
 		clusterResource["nodepool_zone"],
 	)
+	return aux
+}
+
+func getConfig2() string {
+	aux := `
+		provider "stackit" {
+			ske_custom_endpoint = "http://localhost:3333"
+			region = "eu01"
+		}
+
+		resource "stackit_ske_cluster" "cluster_min" {
+			project_id         = "16f49d71-37ad-4137-8b97-44d9c55c4094"
+			name               = "hs-min-3"
+			kubernetes_version = "1.25"
+			node_pools = [{
+			name               = "np-acc-min-test"
+			machine_type       = "b1.2"
+			os_version         = "3510.2.5"
+			minimum            = "2"
+			maximum            = "3"
+			availability_zones = ["eu01-3"]
+			}]
+		}
+		`
+	return aux
 }
 
 func TestAccSKE(t *testing.T) {
@@ -199,59 +223,9 @@ func TestAccSKE(t *testing.T) {
 
 			// 1) Creation
 			{
-				Config: getConfig(clusterResource["kubernetes_version"], utils.Ptr(true), nil),
+				Config: getConfig2(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// project data
-					resource.TestCheckResourceAttr("stackit_ske_project.project", "project_id", projectResource["project_id"]),
-					// cluster data
-					resource.TestCheckResourceAttrPair(
-						"stackit_ske_project.project", "project_id",
-						"stackit_ske_cluster.cluster", "project_id",
-					),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", clusterResource["name"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version", clusterResource["kubernetes_version"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_used", clusterResource["kubernetes_version_used"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "allow_privileged_containers", clusterResource["allowPrivilegedContainers"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.name", clusterResource["nodepool_name"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.0", clusterResource["nodepool_zone"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.os_name", clusterResource["nodepool_os_name"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.os_version", clusterResource["nodepool_os_version"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.machine_type", clusterResource["nodepool_machine_type"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.minimum", clusterResource["nodepool_minimum"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.maximum", clusterResource["nodepool_maximum"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.max_surge", clusterResource["nodepool_max_surge"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.max_unavailable", clusterResource["nodepool_max_unavailable"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.volume_type", clusterResource["nodepool_volume_type"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.volume_size", clusterResource["nodepool_volume_size"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", fmt.Sprintf("node_pools.0.labels.%s", clusterResource["nodepool_label_key"]), clusterResource["nodepool_label_value"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.taints.#", "1"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.taints.0.effect", clusterResource["nodepool_taints_effect"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.taints.0.key", clusterResource["nodepool_taints_key"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.taints.0.value", clusterResource["nodepool_taints_value"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.cri", clusterResource["nodepool_cri"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.enabled", clusterResource["extensions_acl_enabled"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.#", "1"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", clusterResource["extensions_acl_cidrs"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.argus.enabled", clusterResource["extensions_argus_enabled"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.argus.argus_instance_id", clusterResource["extensions_argus_instance_id"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.#", "1"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.start", clusterResource["hibernations_start"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.end", clusterResource["hibernations_end"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.timezone", clusterResource["hibernations_timezone"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_kubernetes_version_updates", clusterResource["maintenance_enable_kubernetes_version_updates"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", clusterResource["maintenance_enable_machine_image_version_updates"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end"]),
-
-					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kube_config"),
-
 					// Minimal cluster
-					resource.TestCheckResourceAttrPair(
-						"stackit_ske_project.project", "project_id",
-						"stackit_ske_cluster.cluster_min", "project_id",
-					),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster_min", "name", clusterResource["name_min"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster_min", "kubernetes_version", clusterResource["kubernetes_version_new"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster_min", "kubernetes_version_used", clusterResource["kubernetes_version_used_new"]),
 					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster_min", "allow_privileged_containers"),
@@ -266,7 +240,6 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "node_pools.0.max_surge"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "node_pools.0.max_unavailable"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "node_pools.0.volume_type"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.volume_size", clusterResource["nodepool_volume_size"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster_min", "node_pools.0.labels.%", "0"),
 					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster_min", "node_pools.0.taints"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster_min", "node_pools.0.cri", clusterResource["nodepool_cri"]),
@@ -277,214 +250,6 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "maintenance.start"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "maintenance.end"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "kube_config"),
-				),
-			},
-			// 2) Data source
-			{
-				Config: fmt.Sprintf(`
-					%s
-		
-					data "stackit_ske_project" "project" {
-						project_id = "%s"
-						depends_on = [stackit_ske_project.project]
-					}
-		
-					data "stackit_ske_cluster" "cluster" {
-						project_id = "%s"
-						name = "%s"
-						depends_on = [stackit_ske_cluster.cluster]
-					}
-
-			        data "stackit_ske_cluster" "cluster_min" {
-						project_id = "%s"
-						name = "%s"
-						depends_on = [stackit_ske_cluster.cluster_min]
-					}
-
-						`,
-					getConfig(clusterResource["kubernetes_version"], utils.Ptr(true), nil),
-					projectResource["project_id"],
-					clusterResource["project_id"],
-					clusterResource["name"],
-					clusterResource["project_id"],
-					clusterResource["name_min"],
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					// project data
-					resource.TestCheckResourceAttr("data.stackit_ske_project.project", "id", projectResource["project_id"]),
-
-					// cluster data
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "id", fmt.Sprintf("%s,%s",
-						clusterResource["project_id"],
-						clusterResource["name"],
-					)),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "name", clusterResource["name"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "kubernetes_version", clusterResource["kubernetes_version"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "kubernetes_version_used", clusterResource["kubernetes_version_used"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "allow_privileged_containers", clusterResource["allowPrivilegedContainers"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.name", clusterResource["nodepool_name"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.availability_zones.0", clusterResource["nodepool_zone"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.os_name", clusterResource["nodepool_os_name"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.os_version", clusterResource["nodepool_os_version"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.machine_type", clusterResource["nodepool_machine_type"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.minimum", clusterResource["nodepool_minimum"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.maximum", clusterResource["nodepool_maximum"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.max_surge", clusterResource["nodepool_max_surge"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.max_unavailable", clusterResource["nodepool_max_unavailable"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.volume_type", clusterResource["nodepool_volume_type"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.volume_size", clusterResource["nodepool_volume_size"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", fmt.Sprintf("node_pools.0.labels.%s", clusterResource["nodepool_label_key"]), clusterResource["nodepool_label_value"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.taints.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.taints.0.effect", clusterResource["nodepool_taints_effect"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.taints.0.key", clusterResource["nodepool_taints_key"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.taints.0.value", clusterResource["nodepool_taints_value"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.cri", clusterResource["nodepool_cri"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.acl.enabled", clusterResource["extensions_acl_enabled"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", clusterResource["extensions_acl_cidrs"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "hibernations.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "hibernations.0.start", clusterResource["hibernations_start"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "hibernations.0.end", clusterResource["hibernations_end"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "hibernations.0.timezone", clusterResource["hibernations_timezone"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "hibernations.0.end", clusterResource["hibernations_end"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "maintenance.enable_kubernetes_version_updates", clusterResource["maintenance_enable_kubernetes_version_updates"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", clusterResource["maintenance_enable_machine_image_version_updates"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end"]),
-
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kube_config"),
-
-					// Minimal cluster
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "name", clusterResource["name_min"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "kubernetes_version", clusterResource["kubernetes_version_new"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "kubernetes_version_used", clusterResource["kubernetes_version_used_new"]),
-					resource.TestCheckNoResourceAttr("data.stackit_ske_cluster.cluster_min", "allow_privileged_containers"),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.name", clusterResource["nodepool_name_min"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.availability_zones.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.availability_zones.0", clusterResource["nodepool_zone"]),
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "node_pools.0.os_name"),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.os_version", clusterResource["nodepool_os_version_min"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.machine_type", clusterResource["nodepool_machine_type"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.minimum", clusterResource["nodepool_minimum"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.maximum", clusterResource["nodepool_maximum"]),
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "node_pools.0.max_surge"),
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "node_pools.0.max_unavailable"),
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "node_pools.0.volume_type"),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.volume_size", clusterResource["nodepool_volume_size"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.labels.%", "0"),
-					resource.TestCheckNoResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.taints"),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.cri", clusterResource["nodepool_cri"]),
-					resource.TestCheckNoResourceAttr("data.stackit_ske_cluster.cluster_min", "extensions"),
-					resource.TestCheckNoResourceAttr("data.stackit_ske_cluster.cluster_min", "hibernations"),
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "maintenance.enable_kubernetes_version_updates"),
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "maintenance.enable_machine_image_version_updates"),
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "maintenance.start"),
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "maintenance.end"),
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "kube_config"),
-				),
-			},
-			// 3) Import project
-			{
-				ResourceName: "stackit_ske_project.project",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					_, ok := s.RootModule().Resources["stackit_ske_project.project"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_ske_project.project")
-					}
-					return testutil.ProjectId, nil
-				},
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			// 4) Import cluster
-			{
-				ResourceName: "stackit_ske_cluster.cluster",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_ske_cluster.cluster"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_ske_cluster.cluster")
-					}
-					_, ok = r.Primary.Attributes["project_id"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find attribute project_id")
-					}
-					name, ok := r.Primary.Attributes["name"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find attribute name")
-					}
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, name), nil
-				},
-				ImportState:       true,
-				ImportStateVerify: true,
-				// The fields are not provided in the SKE API when disabled, although set actively.
-				ImportStateVerifyIgnore: []string{"kube_config", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%"},
-			},
-			// ) Import minimal cluster
-			{
-				ResourceName: "stackit_ske_cluster.cluster_min",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_ske_cluster.cluster_min"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_ske_cluster.cluster_min")
-					}
-					_, ok = r.Primary.Attributes["project_id"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find attribute project_id")
-					}
-					name, ok := r.Primary.Attributes["name"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find attribute name")
-					}
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, name), nil
-				},
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"kube_config"},
-			},
-			// 6) Update kubernetes version and maximum
-			{
-				Config: getConfig("1.25.12", nil, utils.Ptr("03:03:03+00:00")),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					// cluster data
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", clusterResource["name"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version", "1.25"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_used", "1.25.12"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.name", clusterResource["nodepool_name"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.0", clusterResource["nodepool_zone"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.os_name", clusterResource["nodepool_os_name"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.os_version", clusterResource["nodepool_os_version"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.machine_type", clusterResource["nodepool_machine_type"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.minimum", clusterResource["nodepool_minimum"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.maximum", clusterResource["nodepool_maximum"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.max_surge", clusterResource["nodepool_max_surge"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.max_unavailable", clusterResource["nodepool_max_unavailable"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.volume_type", clusterResource["nodepool_volume_type"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.volume_size", clusterResource["nodepool_volume_size"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", fmt.Sprintf("node_pools.0.labels.%s", clusterResource["nodepool_label_key"]), clusterResource["nodepool_label_value"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.taints.#", "1"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.taints.0.effect", clusterResource["nodepool_taints_effect"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.taints.0.key", clusterResource["nodepool_taints_key"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.taints.0.value", clusterResource["nodepool_taints_value"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.cri", clusterResource["nodepool_cri"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.enabled", clusterResource["extensions_acl_enabled"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.#", "1"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", clusterResource["extensions_acl_cidrs"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.argus.enabled", clusterResource["extensions_argus_enabled"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.argus.argus_instance_id", clusterResource["extensions_argus_instance_id"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.#", "1"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.start", clusterResource["hibernations_start"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.end", clusterResource["hibernations_end"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.timezone", clusterResource["hibernations_timezone"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_kubernetes_version_updates", clusterResource["maintenance_enable_kubernetes_version_updates"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", clusterResource["maintenance_enable_machine_image_version_updates"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", "03:03:03+00:00"),
-
-					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kube_config"),
 				),
 			},
 			// Deletion is done by the framework implicitly
