@@ -14,7 +14,8 @@
         "gomod",
         "github-actions"
     ],
-    "postUpgradeOptions": [
-        "gomodTidy"
+    "postUpdateOptions": [
+        "gomodTidy",
+        "gomodUpdateImportPaths"
     ]
 }
