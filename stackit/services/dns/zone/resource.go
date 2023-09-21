@@ -328,7 +328,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 	got, ok := wr.(*dns.ZoneResponse)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 
@@ -412,9 +412,9 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Zone update waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*dns.ZoneResponse)
+	_, ok := wr.(*dns.ZoneResponse)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 

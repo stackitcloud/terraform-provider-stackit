@@ -214,7 +214,7 @@ func (r *mariaDBCredentialsResource) Create(ctx context.Context, req resource.Cr
 	}
 	got, ok := wr.(*mariadb.CredentialsResponse)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 

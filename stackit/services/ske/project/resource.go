@@ -129,9 +129,9 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Project creation waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*ske.ProjectResponse)
+	_, ok := wr.(*ske.ProjectResponse)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 	diags := resp.State.Set(ctx, model)

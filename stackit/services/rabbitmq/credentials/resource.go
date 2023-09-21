@@ -214,7 +214,7 @@ func (r *rabbitmqCredentialsResource) Create(ctx context.Context, req resource.C
 	}
 	got, ok := wr.(*rabbitmq.CredentialsResponse)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 

@@ -214,7 +214,7 @@ func (r *logmeCredentialsResource) Create(ctx context.Context, req resource.Crea
 	}
 	got, ok := wr.(*logme.CredentialsResponse)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 

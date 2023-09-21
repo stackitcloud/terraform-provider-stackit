@@ -581,7 +581,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	}
 	got, ok := wr.(*ske.ClusterResponse)
 	if !ok {
-		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 	err = mapFields(ctx, got, model)

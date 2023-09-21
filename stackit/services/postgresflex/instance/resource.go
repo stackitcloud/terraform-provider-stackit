@@ -295,7 +295,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	got, ok := wr.(*postgresflex.InstanceResponse)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 
@@ -427,7 +427,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 	got, ok := wr.(*postgresflex.InstanceResponse)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 

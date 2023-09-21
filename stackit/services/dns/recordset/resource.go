@@ -243,7 +243,7 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 	}
 	got, ok := wr.(*dns.RecordSetResponse)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 
@@ -333,9 +333,9 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*dns.RecordSetResponse)
+	_, ok := wr.(*dns.RecordSetResponse)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 
