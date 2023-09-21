@@ -14,7 +14,7 @@
         "gomod",
         "github-actions"
     ],
-    "postUpgradeOptions": [
+    "postUpdateOptions": [
         "gomodTidy"
     ]
 }
