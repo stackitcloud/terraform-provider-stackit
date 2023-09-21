@@ -202,7 +202,7 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 1 || idParts[0] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			"Unexpected import identifier",
+			"Error importing project",
 			fmt.Sprintf("Expected import identifier with format: [project_id]  Got: %q", req.ID),
 		)
 		return

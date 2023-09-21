@@ -310,7 +310,7 @@ func (r *credentialsResource) ImportState(ctx context.Context, req resource.Impo
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			"Unexpected import identifier",
+			"Error importing credentials",
 			fmt.Sprintf("Expected import identifier with format [project_id],[instance_id],[credentials_id], got %q", req.ID),
 		)
 		return

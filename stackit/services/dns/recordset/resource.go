@@ -394,7 +394,7 @@ func (r *recordSetResource) ImportState(ctx context.Context, req resource.Import
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			"Unexpected import identifier",
+			"Error importing record set",
 			fmt.Sprintf("Expected import identifier with format [project_id],[zone_id],[record_set_id], got %q", req.ID),
 		)
 		return

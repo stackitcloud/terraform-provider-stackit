@@ -445,7 +445,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			"Unexpected import identifier",
+			"Error importing instance",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[instance_id]  Got: %q", req.ID),
 		)
 		return

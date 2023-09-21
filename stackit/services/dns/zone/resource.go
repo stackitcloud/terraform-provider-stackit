@@ -474,7 +474,7 @@ func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportState
 
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			"Unexpected import identifier",
+			"Error importing zone",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[zone_id]  Got: %q", req.ID),
 		)
 		return
