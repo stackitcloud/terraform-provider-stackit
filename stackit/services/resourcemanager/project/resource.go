@@ -70,7 +70,7 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -92,12 +92,12 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "Resource Manager project client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "Resource Manager project client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -186,7 +186,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	serviceAccountEmail := r.client.GetConfig().ServiceAccountEmail
 	if serviceAccountEmail == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", "The service account e-mail cannot be empty: set it in the provider configuration or through the STACKIT_SERVICE_ACCOUNT_EMAIL or in your credentials file (default filepath is ~/stackit/.credentials.json)")
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", "The service account e-mail cannot be empty: set it in the provider configuration or through the STACKIT_SERVICE_ACCOUNT_EMAIL or in your credentials file (default filepath is ~/.stackit/credentials.json)")
 		return
 	}
 
@@ -203,10 +203,6 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 	respContainerId := *createResp.ContainerId
-	if respContainerId == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", "API didn't return project id")
-		return
-	}
 
 	// If the request has not been processed yet and the containerId doesnt exist,
 	// the waiter will fail with authentication error, so wait some time before checking the creation
@@ -221,44 +217,50 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(ctx, got, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "Resource Manager project created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var state = &Model{}
-	diags := req.State.Get(ctx, state)
+	var model Model
+	diags := req.State.Get(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	containerId := state.ContainerId.ValueString()
+	containerId := model.ContainerId.ValueString()
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	projectResp, err := r.client.GetProject(ctx, containerId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
-	err = mapFields(ctx, projectResp, state)
+	// Map response body to schema
+	err = mapFields(ctx, projectResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-	// Set refreshed state
-	diags = resp.State.Set(ctx, *state)
+	// Set refreshed model
+	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "Resource Manager project read")
 }
 
@@ -277,18 +279,32 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	// Generate API request body from model
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Could not create API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 	// Update existing project
 	_, err = r.client.UpdateProject(ctx, containerId).UpdateProjectPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	diags = resp.State.Set(ctx, &model)
+	// Fetch updated zone
+	projectResp, err := r.client.GetProject(ctx, containerId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Calling API for updated data: %v", err))
+		return
+	}
+	err = mapFields(ctx, projectResp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "Resource Manager project updated")
 }
 
@@ -308,7 +324,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	// Delete existing project
 	err := r.client.DeleteProject(ctx, containerId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
@@ -326,8 +342,8 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 func (r *projectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 1 || idParts[0] == "" {
-		resp.Diagnostics.AddError(
-			"Unexpected Import Identifier",
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing project",
 			fmt.Sprintf("Expected import identifier with format: [container_id]  Got: %q", req.ID),
 		)
 		return

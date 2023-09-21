@@ -2,6 +2,7 @@ package stackit
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -225,10 +226,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	}
 	roundTripper, err := sdkauth.SetupAuth(sdkConfig)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Setup SDK",
-			err.Error(),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up authentication: %v", err))
 		return
 	}
 
@@ -274,7 +272,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		postgresInstance.NewInstanceResource,
 		postgresCredentials.NewCredentialsResource,
 		logMeInstance.NewInstanceResource,
-		logMeCredentials.NewlogmeCredentialsResource,
+		logMeCredentials.NewCredentialsResource,
 		mariaDBInstance.NewInstanceResource,
 		mariaDBCredentials.NewCredentialsResource,
 		openSearchInstance.NewInstanceResource,

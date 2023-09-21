@@ -26,7 +26,7 @@ var (
 	_ datasource.DataSource = &projectDataSource{}
 )
 
-type ProjectData struct {
+type ModelData struct {
 	Id                types.String `tfsdk:"id"` // needed by TF
 	ContainerId       types.String `tfsdk:"container_id"`
 	ContainerParentId types.String `tfsdk:"parent_container_id"`
@@ -60,7 +60,7 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Data Source Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -78,15 +78,12 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 		)
 	}
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Could not Configure API Client",
-			err.Error(),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "Resource Manager project client configured")
 	d.client = apiClient
+	tflog.Info(ctx, "Resource Manager project client configured")
 }
 
 // Schema defines the schema for the data source.
@@ -152,7 +149,7 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 
 // Read refreshes the Terraform state with the latest data.
 func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var state ProjectData
+	var state ModelData
 	diags := req.Config.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -163,13 +160,13 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	projectResp, err := d.client.GetProject(ctx, containerId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Unable to Read Project", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	err = mapDataFields(ctx, projectResp, &state)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, &state)
@@ -180,7 +177,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	tflog.Info(ctx, "Resource Manager project read")
 }
 
-func mapDataFields(ctx context.Context, projectResp *resourcemanager.ProjectResponseWithParents, model *ProjectData) (err error) {
+func mapDataFields(ctx context.Context, projectResp *resourcemanager.ProjectResponseWithParents, model *ModelData) (err error) {
 	if projectResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
