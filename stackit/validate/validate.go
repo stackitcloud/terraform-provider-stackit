@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/core"
 )
@@ -38,47 +39,71 @@ func (v *Validator) ValidateString(ctx context.Context, req validator.StringRequ
 }
 
 func UUID() *Validator {
+	description := "value must be an UUID"
+
 	return &Validator{
-		description: "validate string is UUID",
+		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			if _, err := uuid.Parse(req.ConfigValue.ValueString()); err != nil {
-				resp.Diagnostics.AddError("not a valid UUID", err.Error())
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
 			}
 		},
 	}
 }
 
 func IP() *Validator {
+	description := "value must be an IP address"
+
 	return &Validator{
-		description: "validate string is IP address",
+		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			if net.ParseIP(req.ConfigValue.ValueString()) == nil {
-				resp.Diagnostics.AddError("not a valid IP address", "")
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
 			}
 		},
 	}
 }
 
 func NoSeparator() *Validator {
+	description := fmt.Sprintf("value must not contain identifier separator '%s'", core.Separator)
+
 	return &Validator{
-		description: "validate string does not contain internal separator",
+		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			if strings.Contains(req.ConfigValue.ValueString(), core.Separator) {
-				resp.Diagnostics.AddError("Invalid character found.", fmt.Sprintf("The string should not contain a '%s'", core.Separator))
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
 			}
 		},
 	}
 }
 
-func SemanticMinorVersion() *Validator {
+func MinorVersionNumber() *Validator {
+	description := "value must be a minor version number, without a leading 'v': '[MAJOR].[MINOR]'"
+
 	return &Validator{
-		description: "validate string does not contain internal separator",
+		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			exp := `^\d+\.\d+?$`
 			r := regexp.MustCompile(exp)
 			version := req.ConfigValue.ValueString()
 			if !r.MatchString(version) {
-				resp.Diagnostics.AddError("Invalid version.", "The version should be a valid semantic version only containing major and minor version. The version should not contain a leading `v`. Got "+version)
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
 			}
 		},
 	}

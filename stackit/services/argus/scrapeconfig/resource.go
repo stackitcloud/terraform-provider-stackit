@@ -86,7 +86,7 @@ func (r *scrapeConfigResource) Metadata(_ context.Context, req resource.Metadata
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *scrapeConfigResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *scrapeConfigResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -94,7 +94,7 @@ func (r *scrapeConfigResource) Configure(_ context.Context, req resource.Configu
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -113,10 +113,11 @@ func (r *scrapeConfigResource) Configure(_ context.Context, req resource.Configu
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", err.Error())
 		return
 	}
 	r.client = apiClient
+	tflog.Info(ctx, "Argus scrape config client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -277,33 +278,36 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating scrape config", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 	_, err = r.client.CreateScrapeConfig(ctx, instanceId, projectId).CreateScrapeConfigPayload(*payload).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating scrape config", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	_, err = argus.CreateScrapeConfigWaitHandler(ctx, r.client, instanceId, scName, projectId).SetTimeout(3 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating scrape config", fmt.Sprintf("ScrapeConfig creation waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Scrape config creation waiting: %v", err))
 		return
 	}
 	got, err := r.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating scrape config", fmt.Sprintf("ScrapeConfig creation waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Calling API for updated data: %v", err))
 		return
 	}
 	err = mapFields(got.Data, &model)
 	if err != nil {
-		resp.Diagnostics.AddError("Error mapping fields", fmt.Sprintf("Project id %s, ScrapeConfig id %s: %v", projectId, scName, err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "ARGUS scrape config created")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Argus scrape config created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -320,20 +324,23 @@ func (r *scrapeConfigResource) Read(ctx context.Context, req resource.ReadReques
 
 	scResp, err := r.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading scrape config", fmt.Sprintf("Project id = %s, instance id = %s, scrape config name = %s: %v", projectId, instanceId, scName, err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading scrape config", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(scResp.Data, &model)
 	if err != nil {
-		resp.Diagnostics.AddError("Error mapping fields", fmt.Sprintf("Project id = %s, instance id = %s, sc name = %s: %v", projectId, instanceId, scName, err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading scrape config", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	// Set refreshed model
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "ARGUS scrape config read")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Argus scrape config read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -352,12 +359,12 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 	// Generate API request body from model
 	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating scrape config", fmt.Sprintf("Could not create API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 	_, err = r.client.UpdateScrapeConfig(ctx, instanceId, scName, projectId).UpdateScrapeConfigPayload(*payload).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating scrape config", fmt.Sprintf("Project id = %s, instance id = %s, scrape config name = %s: %v", projectId, instanceId, scName, err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	// We do not have an update status provided by the argus scrape config api, so we cannot use a waiter here, hence a simple sleep is used.
@@ -366,17 +373,20 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 	// Fetch updated ScrapeConfig
 	scResp, err := r.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading updated data", fmt.Sprintf("Project id %s, instance id %s, jo name %s: %v", projectId, instanceId, scName, err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Calling API for updated data: %v", err))
 		return
 	}
 	err = mapFields(scResp.Data, &model)
 	if err != nil {
-		resp.Diagnostics.AddError("Error mapping fields in update", "project id = "+projectId+", instance id = "+instanceId+", scrape config name = "+scName+", "+err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "ARGUS scrape config updated")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Argus scrape config updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -396,15 +406,16 @@ func (r *scrapeConfigResource) Delete(ctx context.Context, req resource.DeleteRe
 	// Delete existing ScrapeConfig
 	_, err := r.client.DeleteScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting scrape config", "project id = "+projectId+", instance id = "+instanceId+", scrape config name = "+scName+", "+err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting scrape config", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	_, err = argus.DeleteScrapeConfigWaitHandler(ctx, r.client, instanceId, scName, projectId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting scrape config", fmt.Sprintf("ScrapeConfig deletion waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting scrape config", fmt.Sprintf("Scrape config deletion waiting: %v", err))
 		return
 	}
-	tflog.Info(ctx, "ARGUS scrape config deleted")
+
+	tflog.Info(ctx, "Argus scrape config deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -413,8 +424,8 @@ func (r *scrapeConfigResource) ImportState(ctx context.Context, req resource.Imp
 	idParts := strings.Split(req.ID, core.Separator)
 
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
-		resp.Diagnostics.AddError(
-			"Unexpected Import Identifier",
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing scrape config",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[instance_id],[name]  Got: %q", req.ID),
 		)
 		return
@@ -423,7 +434,7 @@ func (r *scrapeConfigResource) ImportState(ctx context.Context, req resource.Imp
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[2])...)
-	tflog.Info(ctx, "ARGUS scrape config state imported")
+	tflog.Info(ctx, "Argus scrape config state imported")
 }
 
 func mapFields(sc *argus.Job, model *Model) error {

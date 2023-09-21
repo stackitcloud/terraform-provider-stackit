@@ -37,7 +37,7 @@ func (d *scrapeConfigDataSource) Metadata(_ context.Context, req datasource.Meta
 	resp.TypeName = req.ProviderTypeName + "_argus_scrapeconfig"
 }
 
-func (d *scrapeConfigDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -48,7 +48,7 @@ func (d *scrapeConfigDataSource) Configure(_ context.Context, req datasource.Con
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Data Source Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -64,10 +64,7 @@ func (d *scrapeConfigDataSource) Configure(_ context.Context, req datasource.Con
 		)
 	}
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Could not Configure API Client",
-			err.Error(),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 	d.client = apiClient
@@ -204,13 +201,13 @@ func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	scResp, err := d.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &diags, "Unable to read scrape config", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Unable to read scrape config", err.Error())
 		return
 	}
 
 	err = mapFields(scResp.Data, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &diags, "Mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping fields", err.Error())
 		return
 	}
 	diags = resp.State.Set(ctx, model)

@@ -46,7 +46,7 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Data Source Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -65,12 +65,12 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "Postgresflex instance client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "PostgresFlex instance client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -159,47 +159,50 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 
 // Read refreshes the Terraform state with the latest data.
 func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var state Model
-	diags := req.Config.Get(ctx, &state)
+	var model Model
+	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	projectId := state.ProjectId.ValueString()
-	instanceId := state.InstanceId.ValueString()
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Unable to read instance", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	var flavor = &flavorModel{}
-	if !(state.Flavor.IsNull() || state.Flavor.IsUnknown()) {
-		diags = state.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
+	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
+		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 	var storage = &storageModel{}
-	if !(state.Storage.IsNull() || state.Storage.IsUnknown()) {
-		diags = state.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
+	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
+		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
-	err = mapFields(instanceResp, &state, flavor, storage)
+	err = mapFields(instanceResp, &model, flavor, storage)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	// Set refreshed state
-	diags = resp.State.Set(ctx, state)
+	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "Postgresql instance read")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "PostgresFlex instance read")
 }

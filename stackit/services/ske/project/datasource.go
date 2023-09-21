@@ -44,7 +44,7 @@ func (r *projectDataSource) Configure(ctx context.Context, req datasource.Config
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Data Source Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -63,12 +63,12 @@ func (r *projectDataSource) Configure(ctx context.Context, req datasource.Config
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "SKE client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "SKE client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -93,23 +93,26 @@ func (r *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 
 // Read refreshes the Terraform state with the latest data.
 func (r *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var state Model
-	diags := req.Config.Get(ctx, &state)
+	var model Model
+	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	projectId := state.ProjectId.ValueString()
+	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	_, err := r.client.GetProject(ctx, projectId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Unable to read project", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	state.Id = types.StringValue(projectId)
-	state.ProjectId = types.StringValue(projectId)
-	diags = resp.State.Set(ctx, state)
+	model.Id = types.StringValue(projectId)
+	model.ProjectId = types.StringValue(projectId)
+	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "SKE project read")
 }
