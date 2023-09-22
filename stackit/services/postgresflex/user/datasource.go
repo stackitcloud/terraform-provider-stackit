@@ -59,7 +59,7 @@ func (r *userDataSource) Configure(ctx context.Context, req datasource.Configure
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Data Source Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -78,12 +78,12 @@ func (r *userDataSource) Configure(ctx context.Context, req datasource.Configure
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "Postgresflex user client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "PostgresFlex user client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -160,21 +160,24 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	recordSetResp, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	// Map response body to schema and populate Computed attribute values
-	err = mapDataSourceFields(recordSetResp, &model)
+	err = mapFields(recordSetResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "Postgresql user read")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "PostgresFlex user read")
 }
 
 func mapDataSourceFields(userResp *postgresflex.UserResponse, model *DataSourceModel) error {

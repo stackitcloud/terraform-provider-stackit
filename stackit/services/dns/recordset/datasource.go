@@ -44,7 +44,7 @@ func (d *recordSetDataSource) Configure(ctx context.Context, req datasource.Conf
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Data Source Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -62,12 +62,12 @@ func (d *recordSetDataSource) Configure(ctx context.Context, req datasource.Conf
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "DNS record set client configured")
 	d.client = apiClient
+	tflog.Info(ctx, "DNS record set client configured")
 }
 
 // Schema defines the schema for the data source.
@@ -142,33 +142,33 @@ func (d *recordSetDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 
 // Read refreshes the Terraform state with the latest data.
 func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var state Model
-	diags := req.Config.Get(ctx, &state)
+	var model Model
+	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	projectId := state.ProjectId.ValueString()
-	zoneId := state.ZoneId.ValueString()
-	recordSetId := state.RecordSetId.ValueString()
+	projectId := model.ProjectId.ValueString()
+	zoneId := model.ZoneId.ValueString()
+	recordSetId := model.RecordSetId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 	ctx = tflog.SetField(ctx, "record_set_id", recordSetId)
 	zoneResp, err := d.client.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Unable to Read record set", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	err = mapFields(zoneResp, &state)
+	err = mapFields(zoneResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-	diags = resp.State.Set(ctx, state)
+	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "DNS record set created")
+	tflog.Info(ctx, "DNS record set read")
 }

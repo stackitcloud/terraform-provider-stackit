@@ -145,7 +145,7 @@ func TestNoSeparator(t *testing.T) {
 	}
 }
 
-func TestSemanticMinorVersion(t *testing.T) {
+func TestMinorVersionNumber(t *testing.T) {
 	tests := []struct {
 		description string
 		input       string
@@ -195,7 +195,7 @@ func TestSemanticMinorVersion(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			r := validator.StringResponse{}
-			SemanticMinorVersion().ValidateString(context.Background(), validator.StringRequest{
+			MinorVersionNumber().ValidateString(context.Background(), validator.StringRequest{
 				ConfigValue: types.StringValue(tt.input),
 			}, &r)
 

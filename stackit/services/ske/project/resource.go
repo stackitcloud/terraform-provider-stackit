@@ -56,7 +56,7 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -75,12 +75,12 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "SKE project client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "SKE project client configured")
 }
 
 // Schema returns the Terraform schema structure
@@ -119,19 +119,19 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	projectId := model.ProjectId.ValueString()
 	_, err := r.client.CreateProject(ctx, projectId).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("failed during SKE project creation", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	model.Id = types.StringValue(projectId)
 	wr, err := ske.CreateProjectWaitHandler(ctx, r.client, projectId).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating cluster", fmt.Sprintf("Project creation waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Project creation waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*ske.ProjectResponse)
+	_, ok := wr.(*ske.ProjectResponse)
 	if !ok {
-		resp.Diagnostics.AddError("Error creating cluster", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 	diags := resp.State.Set(ctx, model)
@@ -139,7 +139,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "SKE project created or updated")
+	tflog.Info(ctx, "SKE project created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -151,23 +151,25 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	// read
 	_, err := r.client.GetProject(ctx, projectId).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("failed during SKE project read", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	model.Id = types.StringValue(projectId)
 	model.ProjectId = types.StringValue(projectId)
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "SKE project read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *projectResource) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *projectResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
-	resp.Diagnostics.AddError("Error updating ", "project can't be updated")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", "Project can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -183,12 +185,12 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	c := r.client
 	_, err := c.DeleteProject(ctx, projectId).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("failed deleting project", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	_, err = ske.DeleteProjectWaitHandler(ctx, r.client, projectId).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Project deletion waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Project deletion waiting: %v", err))
 		return
 	}
 	tflog.Info(ctx, "SKE project deleted")
@@ -199,8 +201,8 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 func (r *projectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) { // nolint:gocritic // function signature required by Terraform
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 1 || idParts[0] == "" {
-		resp.Diagnostics.AddError(
-			"Unexpected Import Identifier",
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing project",
 			fmt.Sprintf("Expected import identifier with format: [project_id]  Got: %q", req.ID),
 		)
 		return

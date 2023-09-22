@@ -72,7 +72,7 @@ func (r *recordSetResource) Configure(ctx context.Context, req resource.Configur
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -90,12 +90,12 @@ func (r *recordSetResource) Configure(ctx context.Context, req resource.Configur
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Debug(ctx, "DNS record set client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "DNS record set client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -225,37 +225,40 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating recordset", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 	// Create new recordset
 	recordSetResp, err := r.client.CreateRecordSet(ctx, projectId, zoneId).CreateRecordSetPayload(*payload).Execute()
 	if err != nil || recordSetResp.Rrset == nil || recordSetResp.Rrset.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating recordset", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	ctx = tflog.SetField(ctx, "record_set_id", *recordSetResp.Rrset.Id)
 
 	wr, err := dns.CreateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, *recordSetResp.Rrset.Id).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating recordset", fmt.Sprintf("Instance creation waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
 	got, ok := wr.(*dns.RecordSetResponse)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating recordset", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(got, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "DNS record set created")
 }
 
@@ -276,20 +279,23 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	recordSetResp, err := r.client.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zones", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(recordSetResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "DNS record set read")
 }
 
@@ -313,39 +319,42 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 	// Generate API request body from model
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating recordset", fmt.Sprintf("Could not create API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 	// Update recordset
 	_, err = r.client.UpdateRecordSet(ctx, projectId, zoneId, recordSetId).UpdateRecordSetPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating recordset", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", err.Error())
 		return
 	}
 	wr, err := dns.UpdateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating recordset", fmt.Sprintf("Instance update waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*dns.RecordSetResponse)
+	_, ok := wr.(*dns.RecordSetResponse)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating recordset", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 
 	// Fetch updated record set
 	recordSetResp, err := r.client.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading updated data", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Calling API for updated data: %v", err))
 		return
 	}
 	err = mapFields(recordSetResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields in update", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "DNS record set updated")
 }
 
@@ -369,7 +378,7 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 	// Delete existing record set
 	_, err := r.client.DeleteRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting recordset", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Calling API: %v", err))
 	}
 	_, err = dns.DeleteRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
@@ -384,8 +393,8 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 func (r *recordSetResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
-		resp.Diagnostics.AddError(
-			"Unexpected Import Identifier",
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing record set",
 			fmt.Sprintf("Expected import identifier with format [project_id],[zone_id],[record_set_id], got %q", req.ID),
 		)
 		return

@@ -69,7 +69,7 @@ func (r *credentialsResource) Configure(ctx context.Context, req resource.Config
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T. Please report this issue to the provider developers.", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -88,12 +88,12 @@ func (r *credentialsResource) Configure(ctx context.Context, req resource.Config
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "Postgresql zone client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "PostgreSQL credentials client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -214,19 +214,22 @@ func (r *credentialsResource) Create(ctx context.Context, req resource.CreateReq
 	}
 	got, ok := wr.(*postgresql.CredentialsResponse)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Wait result conversion, got %+v", got))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(got, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "Postgresql credentials created")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "PostgreSQL credentials created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -246,27 +249,30 @@ func (r *credentialsResource) Read(ctx context.Context, req resource.ReadRequest
 
 	recordSetResp, err := r.client.GetCredentials(ctx, projectId, instanceId, credentialsId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(recordSetResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "Postgresql credentials read")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "PostgreSQL credentials read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *credentialsResource) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialsResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
-	resp.Diagnostics.AddError("Error updating credentials", "credentials can't be updated")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credentials", "Credentials can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -288,14 +294,14 @@ func (r *credentialsResource) Delete(ctx context.Context, req resource.DeleteReq
 	// Delete existing record set
 	err := r.client.DeleteCredentials(ctx, projectId, instanceId, credentialsId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials", fmt.Sprintf("Calling API: %v", err))
 	}
 	_, err = postgresql.DeleteCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialsId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
-	tflog.Info(ctx, "Postgresql credentials deleted")
+	tflog.Info(ctx, "PostgreSQL credentials deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -304,7 +310,7 @@ func (r *credentialsResource) ImportState(ctx context.Context, req resource.Impo
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			"Unexpected Import Identifier",
+			"Error importing credentials",
 			fmt.Sprintf("Expected import identifier with format [project_id],[instance_id],[credentials_id], got %q", req.ID),
 		)
 		return
@@ -313,7 +319,7 @@ func (r *credentialsResource) ImportState(ctx context.Context, req resource.Impo
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials_id"), idParts[2])...)
-	tflog.Info(ctx, "Postgresql credentials state imported")
+	tflog.Info(ctx, "PostgreSQL credentials state imported")
 }
 
 func mapFields(credentialsResp *postgresql.CredentialsResponse, model *Model) error {

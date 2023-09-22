@@ -1,0 +1,21 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended"
+    ],
+    "prHourlyLimit": 10,
+    "labels": [
+        "renovate"
+    ],
+    "repositories": [
+        "stackitcloud/terraform-provider-stackit"
+    ],
+    "enabledManagers": [
+        "gomod",
+        "github-actions"
+    ],
+    "postUpdateOptions": [
+        "gomodTidy",
+        "gomodUpdateImportPaths"
+    ]
+}

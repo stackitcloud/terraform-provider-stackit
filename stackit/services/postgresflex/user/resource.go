@@ -69,7 +69,7 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Data Source Configure Type", fmt.Sprintf("Expected stackit.ProviderData, got %T", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -88,12 +88,12 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	}
 
 	if err != nil {
-		resp.Diagnostics.AddError("Could not Configure API Client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "Postgresflex user client configured")
 	r.client = apiClient
+	tflog.Info(ctx, "PostgresFlex user client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -217,22 +217,25 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	if userResp == nil || userResp.Item == nil || userResp.Item.Id == nil || *userResp.Item.Id == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", "Didn't get ID of created user. A user might have been created")
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", "API didn't return user Id. A user might have been created")
 		return
 	}
 	userId := *userResp.Item.Id
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFieldsCreate(userResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "Postgresflex user created")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "PostgresFlex user created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -252,27 +255,30 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	recordSetResp, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	// Map response body to schema and populate Computed attribute values
+	// Map response body to schema
 	err = mapFields(recordSetResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "Postgresflex user read")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "PostgresFlex user read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *userResource) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *userResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
-	resp.Diagnostics.AddError("Error updating user", "user can't be updated")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", "User can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -295,14 +301,14 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	// Delete existing record set
 	err := r.client.DeleteUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
 	}
 	_, err = postgresflex.DeleteUserWaitHandler(ctx, r.client, projectId, instanceId, userId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
-	tflog.Info(ctx, "Postgresflex user deleted")
+	tflog.Info(ctx, "PostgresFlex user deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -311,7 +317,7 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			"Unexpected Import Identifier",
+			"Error importing user",
 			fmt.Sprintf("Expected import identifier with format [project_id],[instance_id],[user_id], got %q", req.ID),
 		)
 		return
