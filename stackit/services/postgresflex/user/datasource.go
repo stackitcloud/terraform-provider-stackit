@@ -165,7 +165,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	}
 
 	// Map response body to schema and populate Computed attribute values
-	err = mapFields(recordSetResp, &model)
+	err = mapDataSourceFields(recordSetResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
 		return
