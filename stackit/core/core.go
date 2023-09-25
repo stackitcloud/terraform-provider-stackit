@@ -54,3 +54,9 @@ func LogAndAddError(ctx context.Context, diags *diag.Diagnostics, summary, detai
 	tflog.Error(ctx, summary)
 	diags.AddError(summary, detail)
 }
+
+// LogAndAddWarning Logs the warning and adds it to the diags
+func LogAndAddWarning(ctx context.Context, diags *diag.Diagnostics, summary, detail string) {
+	tflog.Warn(ctx, summary)
+	diags.AddWarning(summary, detail)
+}

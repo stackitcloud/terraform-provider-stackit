@@ -3,10 +3,13 @@ package postgresflex
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/validate"
 
@@ -20,6 +23,17 @@ import (
 var (
 	_ datasource.DataSource = &userDataSource{}
 )
+
+type DataSourceModel struct {
+	Id         types.String `tfsdk:"id"` // needed by TF
+	UserId     types.String `tfsdk:"user_id"`
+	InstanceId types.String `tfsdk:"instance_id"`
+	ProjectId  types.String `tfsdk:"project_id"`
+	Username   types.String `tfsdk:"username"`
+	Roles      types.Set    `tfsdk:"roles"`
+	Host       types.String `tfsdk:"host"`
+	Port       types.Int64  `tfsdk:"port"`
+}
 
 // NewUserDataSource is a helper function to simplify the provider implementation.
 func NewUserDataSource() datasource.DataSource {
@@ -119,10 +133,6 @@ func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				ElementType: types.StringType,
 				Computed:    true,
 			},
-			"password": schema.StringAttribute{
-				Computed:  true,
-				Sensitive: true,
-			},
 			"host": schema.StringAttribute{
 				Computed: true,
 			},
@@ -135,7 +145,7 @@ func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 
 // Read refreshes the Terraform state with the latest data.
 func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -154,8 +164,8 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	// Map response body to schema
-	err = mapFields(recordSetResp, &model)
+	// Map response body to schema and populate Computed attribute values
+	err = mapDataSourceFields(recordSetResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -168,4 +178,50 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 	tflog.Info(ctx, "PostgresFlex user read")
+}
+
+func mapDataSourceFields(userResp *postgresflex.UserResponse, model *DataSourceModel) error {
+	if userResp == nil || userResp.Item == nil {
+		return fmt.Errorf("response is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+	user := userResp.Item
+
+	var userId string
+	if model.UserId.ValueString() != "" {
+		userId = model.UserId.ValueString()
+	} else if user.Id != nil {
+		userId = *user.Id
+	} else {
+		return fmt.Errorf("user id not present")
+	}
+	idParts := []string{
+		model.ProjectId.ValueString(),
+		model.InstanceId.ValueString(),
+		userId,
+	}
+	model.Id = types.StringValue(
+		strings.Join(idParts, core.Separator),
+	)
+	model.UserId = types.StringValue(userId)
+	model.Username = types.StringPointerValue(user.Username)
+
+	if user.Roles == nil {
+		model.Roles = types.SetNull(types.StringType)
+	} else {
+		roles := []attr.Value{}
+		for _, role := range *user.Roles {
+			roles = append(roles, types.StringValue(role))
+		}
+		rolesSet, diags := types.SetValue(types.StringType, roles)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map roles: %w", core.DiagsToError(diags))
+		}
+		model.Roles = rolesSet
+	}
+	model.Host = types.StringPointerValue(user.Host)
+	model.Port = conversion.ToTypeInt64(user.Port)
+	return nil
 }

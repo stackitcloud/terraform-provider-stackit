@@ -5,6 +5,7 @@ In this guide we want to offer some strategy for a migration of configurations o
 To import your existing infrastructure resources to the new provider, you'll need the internal ID of each resource. The structure of the new provider's internal ID can be located in the [documentation](./docs/resources) file for each resource, specifically within the description of the `id` attribute.
 
 ## How-to
+
 Before you begin the migration process, please ensure that you have done the necessary steps for the [authentication](./README.md#authentication).
 
 For existing resources created with the old provider, you'll need to import them into your new configuration. Terraform provides a feature for importing existing resources and auto-generating new Terraform configuration files. To generate configuration code for the imported resources, refer to the official [Terraform documentation](https://developer.hashicorp.com/terraform/language/import/generating-configuration) for step-by-step guidance.
@@ -14,7 +15,9 @@ Once the configuration is generated, compare the generated file with your existi
 If you encounter any other issues or have additional questions, don't hesitate to raise them by [opening an issue](https://github.com/stackitcloud/terraform-provider-stackit/issues/new/choose).
 
 ### Example (SKE service)
+
 Import configuration:
+
 ```terraform
 # Import
 import {
@@ -29,6 +32,7 @@ import {
 ```
 
 Generated configuration:
+
 ```terraform
 # __generated__ by Terraform
 # Please review these resources and move them into your main configuration files.
@@ -85,6 +89,7 @@ resource "stackit_ske_cluster" "cluster-example" {
 ### Example (LogMe service)
 
 Import configuration:
+
 ```terraform
 import {
   id = "project_id,instance_id"
@@ -98,6 +103,7 @@ import {
 ```
 
 Generated configuration:
+
 ```terraform
 # __generated__ by Terraform
 # Please review these resources and move them into your main configuration files.
@@ -120,4 +126,11 @@ resource "stackit_logme_credentials" "example-credentials" {
 }
 ```
 
-**_Note:_** Currently, when importing the LogMe (or any other DSA), you will see a `Missing Configuration for Required Attribute` error. This issue refers to the `plan_name` and `version` attributes, which are not returned by the API, and currently are solely used by the TFP to calculate the corresponding `plan_id`. We plan to enhance the provider's functionality soon to perform the reverse operation, generating the `plan_name` and `version` correctly. However, for the time being, you'll need to retrieve these values from an alternative source, e.g., the Portal.
+## Notes
+
+### Import credentials
+
+There are some resources which provide fields **only** upon creation, such as users or credentials, which cannot be imported. Here is the list of the resources for which that happens:
+
+- Argus credentials: `import` is not available
+- PostgresFlex user: `import` is available but the `password` field will be empty

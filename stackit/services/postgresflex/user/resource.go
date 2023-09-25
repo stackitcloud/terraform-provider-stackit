@@ -326,6 +326,10 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), idParts[2])...)
+	core.LogAndAddWarning(ctx, &resp.Diagnostics,
+		"Postgresflex user imported with empty password",
+		"The user password is not imported as it is only available upon creation of a new user. The password field will be empty.",
+	)
 	tflog.Info(ctx, "Postgresflex user state imported")
 }
 
