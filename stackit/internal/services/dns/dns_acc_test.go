@@ -13,7 +13,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/testutil"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
 // Zone resource data
