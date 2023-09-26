@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.18.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.5.1
-	github.com/stackitcloud/stackit-sdk-go/core v0.1.0
+	github.com/stackitcloud/stackit-sdk-go/core v0.1.1
 	github.com/stackitcloud/stackit-sdk-go/services/argus v0.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.2.0
@@ -21,7 +21,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.1.0
-	github.com/stackitcloud/stackit-sdk-go/services/ske v0.1.0
+	github.com/stackitcloud/stackit-sdk-go/services/ske v0.1.1
 	golang.org/x/mod v0.12.0
 )
 
@@ -65,18 +65,18 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/zclconf/go-cty v1.13.3 // indirect
-	golang.org/x/crypto v0.12.0 // indirect
+	golang.org/x/crypto v0.13.0 // indirect
 	golang.org/x/exp v0.0.0-20230809150735-7b3493d9a819 // indirect
-	golang.org/x/net v0.14.0 // indirect
-	golang.org/x/oauth2 v0.11.0 // indirect
-	golang.org/x/sys v0.11.0 // indirect
-	golang.org/x/text v0.12.0 // indirect
+	golang.org/x/net v0.15.0 // indirect
+	golang.org/x/oauth2 v0.12.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	google.golang.org/grpc v1.56.1 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
-	k8s.io/apimachinery v0.28.1 // indirect
+	k8s.io/apimachinery v0.28.2 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 )
