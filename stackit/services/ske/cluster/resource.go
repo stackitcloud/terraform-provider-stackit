@@ -585,7 +585,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		return
 	}
 	if got.Status.Error != nil && got.Status.Error.Message != nil && *got.Status.Error.Code == ske.InvalidArgusInstanceErrorCode {
-		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster in Impaired state due to invalid argus instance id: %s", *got.Status.Error.Message))
+		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid argus instance id, the cluster is usable but metrics won't be forwarded: %s", *got.Status.Error.Message))
 	}
 
 	err = mapFields(ctx, got, model)
