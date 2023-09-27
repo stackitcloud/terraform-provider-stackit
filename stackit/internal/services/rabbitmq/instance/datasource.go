@@ -68,7 +68,7 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "RabbitMQ zone client configured")
+	tflog.Info(ctx, "RabbitMQ instance client configured")
 }
 
 // Schema defines the schema for the resource.

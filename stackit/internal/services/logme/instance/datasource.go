@@ -68,7 +68,7 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "LogMe zone client configured")
+	tflog.Info(ctx, "LogMe instance client configured")
 }
 
 // Schema defines the schema for the resource.
