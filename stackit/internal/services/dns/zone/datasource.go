@@ -66,7 +66,7 @@ func (d *zoneDataSource) Configure(ctx context.Context, req datasource.Configure
 	}
 
 	d.client = apiClient
-	tflog.Info(ctx, "DNS instance client configured")
+	tflog.Info(ctx, "DNS zone client configured")
 }
 
 // Schema defines the schema for the data source.
