@@ -84,13 +84,13 @@ func (r *bucketResource) Configure(ctx context.Context, req resource.ConfigureRe
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "ObjectStorage credentials client configured")
+	tflog.Info(ctx, "ObjectStorage bucket client configured")
 }
 
 // Schema defines the schema for the resource.
 func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                     "ObjectStorage credentials resource schema.",
+		"main":                     "ObjectStorage bucket resource schema.",
 		"id":                       "Terraform's internal resource identifier. It is structured as \"`project_id`,`bucket_name`\".",
 		"bucket_name":              "The bucket name. Has to be DNS conform.",
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
