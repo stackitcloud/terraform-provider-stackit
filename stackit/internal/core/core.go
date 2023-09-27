@@ -51,12 +51,12 @@ func DiagsToError(diags diag.Diagnostics) error {
 
 // LogAndAddError Logs the error and adds it to the diags
 func LogAndAddError(ctx context.Context, diags *diag.Diagnostics, summary, detail string) {
-	tflog.Error(ctx, summary)
+	tflog.Error(ctx, fmt.Sprintf("%s | %s", summary, detail))
 	diags.AddError(summary, detail)
 }
 
 // LogAndAddWarning Logs the warning and adds it to the diags
 func LogAndAddWarning(ctx context.Context, diags *diag.Diagnostics, summary, detail string) {
-	tflog.Warn(ctx, summary)
+	tflog.Warn(ctx, fmt.Sprintf("%s | %s", summary, detail))
 	diags.AddWarning(summary, detail)
 }
