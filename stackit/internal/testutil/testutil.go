@@ -40,6 +40,7 @@ var (
 	LogMeCustomEndpoint           = os.Getenv("TF_ACC_LOGME_CUSTOM_ENDPOINT")
 	MariaDBCustomEndpoint         = os.Getenv("TF_ACC_MARIADB_CUSTOM_ENDPOINT")
 	OpenSearchCustomEndpoint      = os.Getenv("TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT")
+	ObjectStorageCustomEndpoint   = os.Getenv("TF_ACC_OBJECTSTORAGE_CUSTOM_ENDPOINT")
 	PostgreSQLCustomEndpoint      = os.Getenv("TF_ACC_POSTGRESQL_CUSTOM_ENDPOINT")
 	PostgresFlexCustomEndpoint    = os.Getenv("TF_ACC_POSTGRESFLEX_CUSTOM_ENDPOINT")
 	RabbitMQCustomEndpoint        = os.Getenv("TF_ACC_RABBITMQ_CUSTOM_ENDPOINT")
