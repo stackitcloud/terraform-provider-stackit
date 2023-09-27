@@ -120,8 +120,8 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=
 github.com/sergi/go-diff v1.2.0 h1:XU+rvMAioB0UC3q1MFrIQy4Vo5/4VsRDQQXHsEya6xQ=
 github.com/skeema/knownhosts v1.1.0 h1:Wvr9V0MxhjRbl3f9nMnKnFfiWTJmtECJ9Njkea3ysW0=
-github.com/stackitcloud/stackit-sdk-go/core v0.1.1 h1:zePWTYnLi0HKViCRSDSF5u10zXH1yAk2yI+0N7phSbA=
-github.com/stackitcloud/stackit-sdk-go/core v0.1.1/go.mod h1:2LEfP04fooOahpKVwPTUSMNvBC1Cc0ky5FKtgN7pJ4M=
+github.com/stackitcloud/stackit-sdk-go/core v0.2.0 h1:dv9pMtGN6p5HbbpaB1PjncOdDPDyP4mXfXBxk7j9x0c=
+github.com/stackitcloud/stackit-sdk-go/core v0.2.0/go.mod h1:Bne56SlX8V2GbONcofEmZz5lVLuuZgsc015FPIUYXy4=
 github.com/stackitcloud/stackit-sdk-go/services/argus v0.1.0 h1:kjAYf7WnjhQ2JlYiUBH34n51KBej8a7rVbKF7+4UpNQ=
 github.com/stackitcloud/stackit-sdk-go/services/argus v0.1.0/go.mod h1:9Y9MzEOos9xFFCs6YdYWb0k8Ij4JrJYfYGro9b1pVUY=
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.1.0 h1:PEfzbpktaK7Fj8O8zxLM3bpXwazmGhG59D15Vi8z/sE=
