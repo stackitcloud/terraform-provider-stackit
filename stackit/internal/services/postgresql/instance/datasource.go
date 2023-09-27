@@ -69,7 +69,7 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "PostgreSQL zone client configured")
+	tflog.Info(ctx, "PostgreSQL instance client configured")
 }
 
 // Schema defines the schema for the resource.
