@@ -130,8 +130,8 @@ github.com/stackitcloud/stackit-sdk-go/services/logme v0.2.0 h1:DzG8h4irPUWUxa+s
 github.com/stackitcloud/stackit-sdk-go/services/logme v0.2.0/go.mod h1:KkWI0vWfBHRepIrH0VT2e1xwf1WaaNb/zPfSTRXAXjs=
 github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.2.0 h1:lnqYVQ1kjMDJSVvKJjZW8eY1adWXlCiX5jIXyn2lOzg=
 github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.2.0/go.mod h1:uTotoums0lfsmlTQVP5bYz4wWmfWlLuFx9i1ZzAyAkA=
-github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.2.0 h1:pONEMH+p9xR1ACDEH6E1Jl5dnU1DixoJGD2iPWQOVuI=
-github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.2.0/go.mod h1:pTTPSxx/BpcAm0ttcH+g4AiovC+oT7lXqca2C1XOxzY=
+github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.3.0 h1:32mjinxJ7xfdlTKShmyvfMU7BXI11DiV+W4SdkRL63o=
+github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.3.0/go.mod h1:syCy6+8GsJu9lHyhN0Qeg66AgTv5LjlgtppbOVFIaPc=
 github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.1.0 h1:vm3AgvTA6TaHd0WpmzKT6HY6fSLOJUNPslqeLByO5P4=
 github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.1.0/go.mod h1:sPEBUNRxaEsyhVOQKZrUdebexVX/z1RbvUFXxXOrICo=
 github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.3.0 h1:svBOTZ4yOG3LFqBQbUoSkY1v4GWH9fG3VqyO5hQqGVQ=
