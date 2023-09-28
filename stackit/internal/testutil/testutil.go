@@ -105,6 +105,21 @@ func MariaDBProviderConfig() string {
 	)
 }
 
+func ObjectStorageProviderConfig() string {
+	if ObjectStorageCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			objectstorage_custom_endpoint = "%s"
+		}`,
+		ObjectStorageCustomEndpoint,
+	)
+}
+
 func OpenSearchProviderConfig() string {
 	if OpenSearchCustomEndpoint == "" {
 		return `
