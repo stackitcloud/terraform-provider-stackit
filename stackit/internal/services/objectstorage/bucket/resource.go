@@ -48,7 +48,7 @@ type bucketResource struct {
 
 // Metadata returns the resource type name.
 func (r *bucketResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_objectsotrage_bucket"
+	resp.TypeName = req.ProviderTypeName + "_objectstorage_bucket"
 }
 
 // Configure adds the provider configured client to the resource.
