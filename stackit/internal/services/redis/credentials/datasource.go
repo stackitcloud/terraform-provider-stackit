@@ -31,12 +31,12 @@ type credentialsDataSource struct {
 	client *redis.APIClient
 }
 
-// Metadata returns the resource type name.
+// Metadata returns the data source type name.
 func (r *credentialsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_redis_credentials"
 }
 
-// Configure adds the provider configured client to the resource.
+// Configure adds the provider configured client to the data source.
 func (r *credentialsDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -72,11 +72,11 @@ func (r *credentialsDataSource) Configure(ctx context.Context, req datasource.Co
 	tflog.Info(ctx, "Redis credentials client configured")
 }
 
-// Schema defines the schema for the resource.
+// Schema defines the schema for the data source.
 func (r *credentialsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":           "Redis credentials data source schema.",
-		"id":             "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
+		"id":             "Terraform's internal data source. identifier. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
 		"credentials_id": "The credentials ID.",
 		"instance_id":    "ID of the Redis instance.",
 		"project_id":     "STACKIT project ID to which the instance is associated.",

@@ -35,7 +35,7 @@ func (d *recordSetDataSource) Metadata(_ context.Context, req datasource.Metadat
 	resp.TypeName = req.ProviderTypeName + "_dns_record_set"
 }
 
-// Configure adds the provider configured client to the resource.
+// Configure adds the provider configured client to the data source.
 func (d *recordSetDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -76,7 +76,7 @@ func (d *recordSetDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 		Description: "DNS Record Set Resource schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`zone_id`,`record_set_id`\".",
+				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`zone_id`,`record_set_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{

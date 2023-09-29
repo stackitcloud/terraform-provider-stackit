@@ -75,7 +75,7 @@ func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`name`\".",
+				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`,`name`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{

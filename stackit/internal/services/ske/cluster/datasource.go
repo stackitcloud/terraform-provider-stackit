@@ -31,12 +31,12 @@ type clusterDataSource struct {
 	client *ske.APIClient
 }
 
-// Metadata returns the resource type name.
+// Metadata returns the data source type name.
 func (r *clusterDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_ske_cluster"
 }
 
-// Configure adds the provider configured client to the resource.
+// Configure adds the provider configured client to the data source.
 func (r *clusterDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -76,7 +76,7 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 		Description: "SKE Cluster data source schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`name`\".",
+				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`name`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
