@@ -18,6 +18,7 @@ import (
 	logMeInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/instance"
 	mariaDBCredentials "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credentials"
 	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
+	objectStorageBucket "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/bucket"
 	openSearchCredentials "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/credentials"
 	openSearchInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/instance"
 	postgresFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/instance"
@@ -73,6 +74,7 @@ type providerModel struct {
 	LogMeCustomEndpoint           types.String `tfsdk:"logme_custom_endpoint"`
 	RabbitMQCustomEndpoint        types.String `tfsdk:"rabbitmq_custom_endpoint"`
 	MariaDBCustomEndpoint         types.String `tfsdk:"mariadb_custom_endpoint"`
+	ObjectStorageCustomEndpoint   types.String `tfsdk:"objectstorage_custom_endpoint"`
 	OpenSearchCustomEndpoint      types.String `tfsdk:"opensearch_custom_endpoint"`
 	RedisCustomEndpoint           types.String `tfsdk:"redis_custom_endpoint"`
 	ArgusCustomEndpoint           types.String `tfsdk:"argus_custom_endpoint"`
@@ -93,6 +95,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"logme_custom_endpoint":           "Custom endpoint for the LogMe service",
 		"rabbitmq_custom_endpoint":        "Custom endpoint for the RabbitMQ service",
 		"mariadb_custom_endpoint":         "Custom endpoint for the MariaDB service",
+		"objectstorage_custom_endpoint":   "Custom endpoint for the Object Storage service",
 		"opensearch_custom_endpoint":      "Custom endpoint for the OpenSearch service",
 		"argus_custom_endpoint":           "Custom endpoint for the Argus service",
 		"ske_custom_endpoint":             "Custom endpoint for the Kubernetes Engine (SKE) service",
@@ -140,6 +143,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"mariadb_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["mariadb_custom_endpoint"],
+			},
+			"objectstorage_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["objectstorage_custom_endpoint"],
 			},
 			"opensearch_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -209,6 +216,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.MariaDBCustomEndpoint.IsUnknown() || providerConfig.MariaDBCustomEndpoint.IsNull()) {
 		providerData.MariaDBCustomEndpoint = providerConfig.MariaDBCustomEndpoint.ValueString()
 	}
+	if !(providerConfig.ObjectStorageCustomEndpoint.IsUnknown() || providerConfig.ObjectStorageCustomEndpoint.IsNull()) {
+		providerData.ObjectStorageCustomEndpoint = providerConfig.ObjectStorageCustomEndpoint.ValueString()
+	}
 	if !(providerConfig.OpenSearchCustomEndpoint.IsUnknown() || providerConfig.OpenSearchCustomEndpoint.IsNull()) {
 		providerData.OpenSearchCustomEndpoint = providerConfig.OpenSearchCustomEndpoint.ValueString()
 	}
@@ -248,6 +258,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		logMeCredentials.NewCredentialsDataSource,
 		mariaDBInstance.NewInstanceDataSource,
 		mariaDBCredentials.NewCredentialsDataSource,
+		objectStorageBucket.NewBucketDataSource,
 		openSearchInstance.NewInstanceDataSource,
 		openSearchCredentials.NewCredentialsDataSource,
 		rabbitMQInstance.NewInstanceDataSource,
@@ -275,6 +286,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		logMeCredentials.NewCredentialsResource,
 		mariaDBInstance.NewInstanceResource,
 		mariaDBCredentials.NewCredentialsResource,
+		objectStorageBucket.NewBucketResource,
 		openSearchInstance.NewInstanceResource,
 		openSearchCredentials.NewCredentialsResource,
 		rabbitMQInstance.NewInstanceResource,
