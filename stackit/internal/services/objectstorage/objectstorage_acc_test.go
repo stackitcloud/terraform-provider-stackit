@@ -110,7 +110,9 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 	var client *objectstorage.APIClient
 	var err error
 	if testutil.ObjectStorageCustomEndpoint == "" {
-		client, err = objectstorage.NewAPIClient()
+		client, err = objectstorage.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
 	} else {
 		client, err = objectstorage.NewAPIClient(
 			config.WithEndpoint(testutil.ObjectStorageCustomEndpoint),
