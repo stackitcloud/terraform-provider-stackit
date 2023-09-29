@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.5.1
 	github.com/stackitcloud/stackit-sdk-go/core v0.2.0
-	github.com/stackitcloud/stackit-sdk-go/services/argus v0.1.0
+	github.com/stackitcloud/stackit-sdk-go/services/argus v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.2.0
