@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -148,7 +149,7 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 			if err != nil {
 				return fmt.Errorf("destroying bucket %s during CheckDestroy: %w", bucketName, err)
 			}
-			_, err = objectstorage.DeleteBucketWaitHandler(ctx, client, testutil.ProjectId, bucketName).WaitWithContext(ctx)
+			_, err = objectstorage.DeleteBucketWaitHandler(ctx, client, testutil.ProjectId, bucketName).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", bucketName, err)
 			}
