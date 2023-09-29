@@ -126,8 +126,8 @@ github.com/stackitcloud/stackit-sdk-go/services/argus v0.1.0 h1:kjAYf7WnjhQ2JlYi
 github.com/stackitcloud/stackit-sdk-go/services/argus v0.1.0/go.mod h1:9Y9MzEOos9xFFCs6YdYWb0k8Ij4JrJYfYGro9b1pVUY=
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.2.0 h1:T5GlA8cDdSxG4kuq+qyUDEAINT2gb2ZwvjLSaas33WQ=
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.2.0/go.mod h1:dKJZ/WKs3Wt2syz9fz58ULupa1SoXA2VH/J4PpICR+s=
-github.com/stackitcloud/stackit-sdk-go/services/logme v0.2.0 h1:DzG8h4irPUWUxa+s2HHXEfsanVmlcX2t+hQ4d4IcaXU=
-github.com/stackitcloud/stackit-sdk-go/services/logme v0.2.0/go.mod h1:KkWI0vWfBHRepIrH0VT2e1xwf1WaaNb/zPfSTRXAXjs=
+github.com/stackitcloud/stackit-sdk-go/services/logme v0.3.0 h1:Lue+9txP1VshaWiGd33bOVds+UeLdGFa9gTiKGuINYw=
+github.com/stackitcloud/stackit-sdk-go/services/logme v0.3.0/go.mod h1:CG5G3FlJVksfnhcxb8nXYAFxn4lnUBWkDMGNW+6jq2w=
 github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.2.0 h1:lnqYVQ1kjMDJSVvKJjZW8eY1adWXlCiX5jIXyn2lOzg=
 github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.2.0/go.mod h1:uTotoums0lfsmlTQVP5bYz4wWmfWlLuFx9i1ZzAyAkA=
 github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.3.0 h1:32mjinxJ7xfdlTKShmyvfMU7BXI11DiV+W4SdkRL63o=
