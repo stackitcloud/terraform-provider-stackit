@@ -85,7 +85,7 @@ func TestAccObjectStorageResource(t *testing.T) {
 					}
 					bucketName, ok := r.Primary.Attributes["bucket_name"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find attribute instance_id")
+						return "", fmt.Errorf("couldn't find attribute bucket_name")
 					}
 
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, bucketName), nil
