@@ -142,8 +142,8 @@ github.com/stackitcloud/stackit-sdk-go/services/redis v0.2.0 h1:pAX6rmvs/Z1BV+2T
 github.com/stackitcloud/stackit-sdk-go/services/redis v0.2.0/go.mod h1:7n6KxrNErscuXKGvXK93qEqd9jg9X9IT4tSGR2TsSg8=
 github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.1.0 h1:3kvXPm9EeJQA3xe3nV4GQu+dPLoAeErza2g0xjWPMJo=
 github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.1.0/go.mod h1:VhGU0mhxY7FQj02evme9Xxtyo/H5iOlrU38i3wY7krw=
-github.com/stackitcloud/stackit-sdk-go/services/ske v0.1.1 h1:BbsW0o37owWyVWmtH1MJPIVPxuH8adMd3jr4KSP81QI=
-github.com/stackitcloud/stackit-sdk-go/services/ske v0.1.1/go.mod h1:3v4L7c97l4MY4ZZzqVKZ4ESFHOC0Wm/ckxGepAxcQWk=
+github.com/stackitcloud/stackit-sdk-go/services/ske v0.2.0 h1:5jAVhaLHd4ayVOCJyn5Ebpmtk4ZEIr2fYXT+cOrqjLk=
+github.com/stackitcloud/stackit-sdk-go/services/ske v0.2.0/go.mod h1:pVb/CaolkqaicGbHpXWUOXk5+s731TpXbx6RMyYjV1Q=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=

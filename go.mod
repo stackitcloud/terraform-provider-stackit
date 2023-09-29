@@ -21,7 +21,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.1.0
-	github.com/stackitcloud/stackit-sdk-go/services/ske v0.1.1
+	github.com/stackitcloud/stackit-sdk-go/services/ske v0.2.0
 	golang.org/x/mod v0.12.0
 )
 
