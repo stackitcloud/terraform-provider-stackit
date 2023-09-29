@@ -30,12 +30,12 @@ type bucketDataSource struct {
 	client *objectstorage.APIClient
 }
 
-// Metadata returns the resource type name.
+// Metadata returns the data source type name.
 func (r *bucketDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_objectstorage_bucket"
 }
 
-// Configure adds the provider configured client to the resource.
+// Configure adds the provider configured client to the data source.
 func (r *bucketDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -71,11 +71,11 @@ func (r *bucketDataSource) Configure(ctx context.Context, req datasource.Configu
 	tflog.Info(ctx, "ObjectStorage bucket client configured")
 }
 
-// Schema defines the schema for the resource.
+// Schema defines the schema for the data source.
 func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                     "ObjectStorage credentials data source schema.",
-		"id":                       "Terraform's internal resource identifier. It is structured as \"`project_id`,`bucket_name`\".",
+		"id":                       "Terraform's internal data source identifier. It is structured as \"`project_id`,`bucket_name`\".",
 		"bucket_name":              "The bucket name. It must be DNS conform.",
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
 		"url_path_style":           "URL in path style.",
