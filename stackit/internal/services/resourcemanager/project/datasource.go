@@ -90,7 +90,7 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                "Resource Manager project data source schema.",
-		"id":                  "Terraform's internal resource ID. It is structured as \"`container_id`\".",
+		"id":                  "Terraform's internal data source. ID. It is structured as \"`container_id`\".",
 		"container_id":        "Project container ID.",
 		"parent_container_id": "Parent container ID",
 		"name":                "Project name.",

@@ -75,7 +75,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
+				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{

@@ -30,12 +30,12 @@ type projectDataSource struct {
 	client *ske.APIClient
 }
 
-// Metadata returns the resource type name.
+// Metadata returns the data source type name.
 func (r *projectDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_ske_project"
 }
 
-// Configure adds the provider configured client to the resource.
+// Configure adds the provider configured client to the data source.
 func (r *projectDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -71,12 +71,12 @@ func (r *projectDataSource) Configure(ctx context.Context, req datasource.Config
 	tflog.Info(ctx, "SKE client configured")
 }
 
-// Schema defines the schema for the resource.
+// Schema defines the schema for the data source.
 func (r *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`\".",
+				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
