@@ -92,7 +92,7 @@ func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 	descriptions := map[string]string{
 		"main":                     "ObjectStorage bucket resource schema.",
 		"id":                       "Terraform's internal resource identifier. It is structured as \"`project_id`,`bucket_name`\".",
-		"bucket_name":              "The bucket name. Has to be DNS conform.",
+		"bucket_name":              "The bucket name. It must be DNS conform.",
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
 		"url_path_style":           "URL in path style.",
 		"url_virtual_hosted_style": "URL in virtual hosted style.",
