@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	oapiError "github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -517,11 +518,11 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 	for _, projectId := range projectsToDestroy {
 		_, err := client.GetProject(ctx, projectId).Execute()
 		if err != nil {
-			oapiErr, ok := err.(*ske.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+			oapiErr, ok := err.(*oapiError.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 			if !ok {
 				return fmt.Errorf("could not convert error to GenericOpenApiError in acc test destruction, %w", err)
 			}
-			if oapiErr.StatusCode() == http.StatusNotFound || oapiErr.StatusCode() == http.StatusForbidden {
+			if oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden {
 				// Already gone
 				continue
 			}
