@@ -565,7 +565,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*argus.CreateScrapeConf
 
 	if model.BasicAuth != nil {
 		if sc.BasicAuth == nil {
-			sc.BasicAuth = &argus.UpdateScrapeConfigPayloadBasicAuth{
+			sc.BasicAuth = &argus.CreateScrapeConfigPayloadBasicAuth{
 				Username: model.BasicAuth.Username.ValueStringPointer(),
 				Password: model.BasicAuth.Password.ValueStringPointer(),
 			}
@@ -644,7 +644,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*argus.UpdateScrapeConf
 
 	if model.BasicAuth != nil {
 		if sc.BasicAuth == nil {
-			sc.BasicAuth = &argus.UpdateScrapeConfigPayloadBasicAuth{
+			sc.BasicAuth = &argus.CreateScrapeConfigPayloadBasicAuth{
 				Username: model.BasicAuth.Username.ValueStringPointer(),
 				Password: model.BasicAuth.Password.ValueStringPointer(),
 			}
