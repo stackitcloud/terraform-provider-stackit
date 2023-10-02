@@ -13,10 +13,10 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/core v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/argus v0.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.2.0
-	github.com/stackitcloud/stackit-sdk-go/services/logme v0.2.0
+	github.com/stackitcloud/stackit-sdk-go/services/logme v0.3.0
+	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.2.0
-	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.3.0
