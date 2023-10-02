@@ -23,6 +23,7 @@ type ProviderData struct {
 	LogMeCustomEndpoint           string
 	RabbitMQCustomEndpoint        string
 	MariaDBCustomEndpoint         string
+	ObjectStorageCustomEndpoint   string
 	OpenSearchCustomEndpoint      string
 	RedisCustomEndpoint           string
 	ArgusCustomEndpoint           string

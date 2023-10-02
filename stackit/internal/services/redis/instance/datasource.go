@@ -30,12 +30,12 @@ type instanceDataSource struct {
 	client *redis.APIClient
 }
 
-// Metadata returns the resource type name.
+// Metadata returns the data source type name.
 func (r *instanceDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_redis_instance"
 }
 
-// Configure adds the provider configured client to the resource.
+// Configure adds the provider configured client to the data source.
 func (r *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -71,11 +71,11 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	tflog.Info(ctx, "Redis instance client configured")
 }
 
-// Schema defines the schema for the resource.
+// Schema defines the schema for the data source.
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "Redis instance data source schema.",
-		"id":          "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`\".",
+		"id":          "Terraform's internal data source. identifier. It is structured as \"`project_id`,`instance_id`\".",
 		"instance_id": "ID of the Redis instance.",
 		"project_id":  "STACKIT Project ID to which the instance is associated.",
 		"name":        "Instance name.",
