@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
+	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -303,7 +304,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
 	}
-	_, err = postgresflex.DeleteUserWaitHandler(ctx, r.client, projectId, instanceId, userId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteUserWaitHandler(ctx, r.client, projectId, instanceId, userId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return

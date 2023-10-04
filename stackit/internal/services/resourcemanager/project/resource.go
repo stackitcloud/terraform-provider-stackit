@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
+	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -206,7 +207,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// If the request has not been processed yet and the containerId doesnt exist,
 	// the waiter will fail with authentication error, so wait some time before checking the creation
-	wr, err := resourcemanager.CreateProjectWaitHandler(ctx, r.client, respContainerId).SetSleepBeforeWait(1 * time.Minute).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
+	wr, err := wait.CreateProjectWaitHandler(ctx, r.client, respContainerId).SetSleepBeforeWait(1 * time.Minute).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -328,7 +329,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	_, err = resourcemanager.DeleteProjectWaitHandler(ctx, r.client, containerId).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteProjectWaitHandler(ctx, r.client, containerId).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return

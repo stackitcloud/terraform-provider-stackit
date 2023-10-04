@@ -12,6 +12,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/argus"
+	"github.com/stackitcloud/stackit-sdk-go/services/argus/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -337,12 +338,12 @@ func testAccCheckArgusDestroy(s *terraform.State) error {
 	instances := *instancesResp.Instances
 	for i := range instances {
 		if utils.Contains(instancesToDestroy, *instances[i].Id) {
-			if *instances[i].Status != argus.DeleteSuccess {
+			if *instances[i].Status != wait.DeleteSuccess {
 				_, err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *instances[i].Id)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].Id, err)
 				}
-				_, err = argus.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].Id).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].Id).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].Id, err)
 				}

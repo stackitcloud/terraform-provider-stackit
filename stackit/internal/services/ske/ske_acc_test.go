@@ -14,6 +14,7 @@ import (
 	oapiError "github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+	"github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -533,7 +534,7 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 		if err != nil {
 			return fmt.Errorf("destroying project %s during CheckDestroy: %w", projectId, err)
 		}
-		_, err = ske.DeleteProjectWaitHandler(ctx, client, projectId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
+		_, err = wait.DeleteProjectWaitHandler(ctx, client, projectId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
 		if err != nil {
 			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", projectId, err)
 		}

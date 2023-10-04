@@ -12,6 +12,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
+	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -548,7 +549,7 @@ func testAccCheckDnsDestroy(s *terraform.State) error {
 			if err != nil {
 				return fmt.Errorf("destroying zone %s during CheckDestroy: %w", *zones[i].Id, err)
 			}
-			_, err = dns.DeleteZoneWaitHandler(ctx, client, testutil.ProjectId, id).WaitWithContext(ctx)
+			_, err = wait.DeleteZoneWaitHandler(ctx, client, testutil.ProjectId, id).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying zone %s during CheckDestroy: waiting for deletion %w", *zones[i].Id, err)
 			}
