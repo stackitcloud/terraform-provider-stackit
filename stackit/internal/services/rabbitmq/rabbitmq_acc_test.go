@@ -12,6 +12,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq"
+	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -264,7 +265,7 @@ func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
-				_, err = rabbitmq.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
 				}
@@ -275,12 +276,12 @@ func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 }
 
 func checkInstanceDeleteSuccess(i *rabbitmq.Instance) bool {
-	if *i.LastOperation.Type != rabbitmq.InstanceTypeDelete {
+	if *i.LastOperation.Type != wait.InstanceTypeDelete {
 		return false
 	}
 
-	if *i.LastOperation.Type == rabbitmq.InstanceTypeDelete {
-		if *i.LastOperation.State != rabbitmq.InstanceStateSuccess {
+	if *i.LastOperation.Type == wait.InstanceTypeDelete {
+		if *i.LastOperation.State != wait.InstanceStateSuccess {
 			return false
 		} else if strings.Contains(*i.LastOperation.Description, "DeleteFailed") || strings.Contains(*i.LastOperation.Description, "failed") {
 			return false

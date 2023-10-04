@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/logme"
+	"github.com/stackitcloud/stackit-sdk-go/services/logme/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -207,7 +208,7 @@ func (r *credentialsResource) Create(ctx context.Context, req resource.CreateReq
 	credentialsId := *credentialsResp.Id
 	ctx = tflog.SetField(ctx, "credentials_id", credentialsId)
 
-	wr, err := logme.CreateCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialsId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
+	wr, err := wait.CreateCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialsId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -296,7 +297,7 @@ func (r *credentialsResource) Delete(ctx context.Context, req resource.DeleteReq
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials", fmt.Sprintf("Calling API: %v", err))
 	}
-	_, err = logme.DeleteCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialsId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialsId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return

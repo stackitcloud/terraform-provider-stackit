@@ -11,6 +11,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
+	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -160,7 +161,7 @@ func testAccCheckResourceManagerDestroy(s *terraform.State) error {
 			if err != nil {
 				return fmt.Errorf("destroying project %s during CheckDestroy: %w", *items[i].ContainerId, err)
 			}
-			_, err = resourcemanager.DeleteProjectWaitHandler(ctx, client, *items[i].ContainerId).WaitWithContext(ctx)
+			_, err = wait.DeleteProjectWaitHandler(ctx, client, *items[i].ContainerId).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", *items[i].ContainerId, err)
 			}

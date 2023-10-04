@@ -13,6 +13,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
+	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -149,7 +150,7 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 			if err != nil {
 				return fmt.Errorf("destroying bucket %s during CheckDestroy: %w", bucketName, err)
 			}
-			_, err = objectstorage.DeleteBucketWaitHandler(ctx, client, testutil.ProjectId, bucketName).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
+			_, err = wait.DeleteBucketWaitHandler(ctx, client, testutil.ProjectId, bucketName).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", bucketName, err)
 			}
