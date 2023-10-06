@@ -27,4 +27,4 @@ data "stackit_ske_project" "example" {
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`".
+- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`".

@@ -32,8 +32,7 @@ data "stackit_postgresflex_user" "example" {
 ### Read-Only
 
 - `host` (String)
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`,`user_id`".
-- `password` (String, Sensitive)
+- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`instance_id`,`user_id`".
 - `port` (Number)
 - `roles` (Set of String)
 - `username` (String)
