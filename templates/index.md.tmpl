@@ -44,10 +44,7 @@ To configure it, follow this steps:
 
 2.  Save the content of the service account key and the corresponding private key by copying them or saving them in a file.
 
-    **Hint:** if you have generated the RSA key-pair using the Portal, to save the private key in a PEM encoded file follow these steps:
-
-    - Download the service account key as a PEM file
-    - Extract the private key from the service account key using this command: `openssl storeutl -keys <path/to/sa_key_pem_file> > private.key`
+    **Hint:** If you have generated the RSA key-pair using the Portal, you can save the private key in a PEM encoded file by downloading the service account key as a PEM file and using `openssl storeutl -keys <path/to/sa_key_pem_file> > private.key` to extract the private key from the service account key.
 
 The expected format of the service account key is a **json** with the following structure:
 
