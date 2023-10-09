@@ -66,6 +66,10 @@ func (p *Provider) Metadata(_ context.Context, _ provider.MetadataRequest, resp 
 type providerModel struct {
 	CredentialsFilePath           types.String `tfsdk:"credentials_path"`
 	ServiceAccountEmail           types.String `tfsdk:"service_account_email"`
+	ServiceAccountKey             types.String `tfsdk:"service_account_key"`
+	ServiceAccountKeyPath         types.String `tfsdk:"service_account_key_path"`
+	PrivateKey                    types.String `tfsdk:"private_key"`
+	PrivateKeyPath                types.String `tfsdk:"private_key_path"`
 	Token                         types.String `tfsdk:"service_account_token"`
 	Region                        types.String `tfsdk:"region"`
 	DNSCustomEndpoint             types.String `tfsdk:"dns_custom_endpoint"`
@@ -80,6 +84,8 @@ type providerModel struct {
 	ArgusCustomEndpoint           types.String `tfsdk:"argus_custom_endpoint"`
 	SKECustomEndpoint             types.String `tfsdk:"ske_custom_endpoint"`
 	ResourceManagerCustomEndpoint types.String `tfsdk:"resourcemanager_custom_endpoint"`
+	TokenCustomEndpoint           types.String `tfsdk:"token_custom_endpoint"`
+	JWKSCustomEndpoint            types.String `tfsdk:"jwks_custom_endpoint"`
 }
 
 // Schema defines the provider-level schema for configuration data.
@@ -87,6 +93,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 	descriptions := map[string]string{
 		"credentials_path":                "Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.",
 		"service_account_token":           "Token used for authentication. If set, the token flow will be used to authenticate all operations.",
+		"service_account_key_path":        "Path for the service account key used for authentication. If set alongside the private key, the key flow will be used to authenticate all operations.",
+		"service_account_key":             "Service account key used for authentication. If set alongside private key, the key flow will be used to authenticate all operations.",
+		"private_key_path":                "Path for the private RSA key used for authentication. If set alongside the service account key, the key flow will be used to authenticate all operations.",
+		"private_key":                     "Private RSA key used for authentication. If set alongside the service account key, the key flow will be used to authenticate all operations.",
 		"service_account_email":           "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL",
 		"region":                          "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"dns_custom_endpoint":             "Custom endpoint for the DNS service",
@@ -100,6 +110,8 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"argus_custom_endpoint":           "Custom endpoint for the Argus service",
 		"ske_custom_endpoint":             "Custom endpoint for the Kubernetes Engine (SKE) service",
 		"resourcemanager_custom_endpoint": "Custom endpoint for the Resource Manager service",
+		"token_custom_endpoint":           "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
+		"jwks_custom_endpoint":            "Custom endpoint for the jwks API, which is used to get the json web key sets (jwks) to validate tokens when using the key flow",
 	}
 
 	resp.Schema = schema.Schema{
@@ -115,6 +127,22 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"service_account_token": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["service_account_token"],
+			},
+			"service_account_key_path": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["service_account_key_path"],
+			},
+			"service_account_key": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["service_account_key"],
+			},
+			"private_key": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["private_key"],
+			},
+			"private_key_path": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["private_key_path"],
 			},
 			"region": schema.StringAttribute{
 				Optional:    true,
@@ -168,6 +196,14 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["resourcemanager_custom_endpoint"],
 			},
+			"token_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["token_custom_endpoint"],
+			},
+			"jwks_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["jwks_custom_endpoint"],
+			},
 		},
 	}
 }
@@ -191,6 +227,18 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.ServiceAccountEmail.IsUnknown() || providerConfig.ServiceAccountEmail.IsNull()) {
 		providerData.ServiceAccountEmail = providerConfig.ServiceAccountEmail.ValueString()
 		sdkConfig.ServiceAccountEmail = providerConfig.ServiceAccountEmail.ValueString()
+	}
+	if !(providerConfig.ServiceAccountKey.IsUnknown() || providerConfig.ServiceAccountKey.IsNull()) {
+		sdkConfig.ServiceAccountKey = providerConfig.ServiceAccountKey.ValueString()
+	}
+	if !(providerConfig.ServiceAccountKeyPath.IsUnknown() || providerConfig.ServiceAccountKeyPath.IsNull()) {
+		sdkConfig.ServiceAccountKeyPath = providerConfig.ServiceAccountKeyPath.ValueString()
+	}
+	if !(providerConfig.PrivateKey.IsUnknown() || providerConfig.PrivateKey.IsNull()) {
+		sdkConfig.PrivateKey = providerConfig.PrivateKey.ValueString()
+	}
+	if !(providerConfig.PrivateKeyPath.IsUnknown() || providerConfig.PrivateKeyPath.IsNull()) {
+		sdkConfig.PrivateKeyPath = providerConfig.PrivateKeyPath.ValueString()
 	}
 	if !(providerConfig.Token.IsUnknown() || providerConfig.Token.IsNull()) {
 		sdkConfig.Token = providerConfig.Token.ValueString()
@@ -233,6 +281,12 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	}
 	if !(providerConfig.ResourceManagerCustomEndpoint.IsUnknown() || providerConfig.ResourceManagerCustomEndpoint.IsNull()) {
 		providerData.ResourceManagerCustomEndpoint = providerConfig.ResourceManagerCustomEndpoint.ValueString()
+	}
+	if !(providerConfig.TokenCustomEndpoint.IsUnknown() || providerConfig.TokenCustomEndpoint.IsNull()) {
+		sdkConfig.TokenCustomUrl = providerConfig.TokenCustomEndpoint.ValueString()
+	}
+	if !(providerConfig.JWKSCustomEndpoint.IsUnknown() || providerConfig.JWKSCustomEndpoint.IsNull()) {
+		sdkConfig.JWKSCustomUrl = providerConfig.JWKSCustomEndpoint.ValueString()
 	}
 	roundTripper, err := sdkauth.SetupAuth(sdkConfig)
 	if err != nil {

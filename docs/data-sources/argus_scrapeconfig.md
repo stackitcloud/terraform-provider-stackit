@@ -32,7 +32,7 @@ data "stackit_argus_scrapeconfig" "example" {
 ### Read-Only
 
 - `basic_auth` (Attributes) A basic authentication block. (see [below for nested schema](#nestedatt--basic_auth))
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`,`name`".
+- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`instance_id`,`name`".
 - `metrics_path` (String) Specifies the job scraping url path.
 - `saml2` (Attributes) A SAML2 configuration block (see [below for nested schema](#nestedatt--saml2))
 - `scheme` (String) Specifies the http scheme.
