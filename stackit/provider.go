@@ -14,7 +14,7 @@ import (
 	argusScrapeConfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/scrapeconfig"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
-	logMeCredentials "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credentials"
+	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
 	logMeInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/instance"
 	mariaDBCredentials "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credentials"
 	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
@@ -309,7 +309,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		postgresInstance.NewInstanceDataSource,
 		postgresCredentials.NewCredentialsDataSource,
 		logMeInstance.NewInstanceDataSource,
-		logMeCredentials.NewCredentialsDataSource,
+		logMeCredential.NewCredentialDataSource,
 		mariaDBInstance.NewInstanceDataSource,
 		mariaDBCredentials.NewCredentialsDataSource,
 		objectStorageBucket.NewBucketDataSource,
@@ -337,7 +337,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		postgresInstance.NewInstanceResource,
 		postgresCredentials.NewCredentialsResource,
 		logMeInstance.NewInstanceResource,
-		logMeCredentials.NewCredentialsResource,
+		logMeCredential.NewCredentialResource,
 		mariaDBInstance.NewInstanceResource,
 		mariaDBCredentials.NewCredentialsResource,
 		objectStorageBucket.NewBucketResource,
