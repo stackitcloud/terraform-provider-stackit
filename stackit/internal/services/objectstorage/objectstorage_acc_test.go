@@ -41,7 +41,7 @@ func resourceConfig() string {
 
 				resource "stackit_objectstorage_credentials_group" "credentials_group" {
 					project_id = "%s"
-					bucket_name    = "%s"
+					name    = "%s"
 				}
 				`,
 		testutil.ObjectStorageProviderConfig(),

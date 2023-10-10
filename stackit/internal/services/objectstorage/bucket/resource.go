@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -157,7 +156,7 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 	ctx = tflog.SetField(ctx, "bucket_name", bucketName)
 
 	// handle project init
-	err := r.enableProject(ctx, &resp.Diagnostics, &model)
+	err := r.enableProject(ctx, &model)
 	if resp.Diagnostics.HasError() {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
@@ -304,7 +303,7 @@ func mapFields(bucketResp *objectstorage.GetBucketResponse, model *Model) error 
 }
 
 // enableProject enables object storage for the specified project. If the project already exists, nothing happens
-func (r *bucketResource) enableProject(ctx context.Context, diags *diag.Diagnostics, model *Model) error {
+func (r *bucketResource) enableProject(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 
 	// From the object storage OAS: Creation will also be successful if the project already exists, but will not create a duplicate
