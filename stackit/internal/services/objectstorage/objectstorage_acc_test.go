@@ -24,6 +24,12 @@ var bucketResource = map[string]string{
 	"bucket_name": fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha)),
 }
 
+// Credentials group resource data
+var credentialsGroupResource = map[string]string{
+	"project_id":             testutil.ProjectId,
+	"credentials_group_name": fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha)),
+}
+
 func resourceConfig() string {
 	return fmt.Sprintf(`
 				%s
@@ -32,10 +38,17 @@ func resourceConfig() string {
 					project_id = "%s"
 					bucket_name    = "%s"
 				}
+
+				resource "stackit_objectstorage_credentials_group" "credentials_group" {
+					project_id = "%s"
+					bucket_name    = "%s"
+				}
 				`,
 		testutil.ObjectStorageProviderConfig(),
 		bucketResource["project_id"],
 		bucketResource["bucket_name"],
+		credentialsGroupResource["project_id"],
+		credentialsGroupResource["credentials_group_name"],
 	)
 }
 
@@ -49,11 +62,17 @@ func TestAccObjectStorageResource(t *testing.T) {
 			{
 				Config: resourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Instance data
+					// Bucket data
 					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket", "project_id", bucketResource["project_id"]),
 					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket", "bucket_name", bucketResource["bucket_name"]),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_bucket.bucket", "url_path_style"),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_bucket.bucket", "url_virtual_hosted_style"),
+
+					// Credentials group data
+					resource.TestCheckResourceAttr("stackit_objectstorage_credentials_group.credentials_group", "project_id", credentialsGroupResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_objectstorage_credentials_group.credentials_group", "credentials_group_name", credentialsGroupResource["credentials_group_name"]),
+					resource.TestCheckResourceAttrSet("stackit_objectstorage_credentials_group.credentials_group", "credentials_group_id"),
+					resource.TestCheckResourceAttrSet("stackit_objectstorage_credentials_group.credentials_group", "urn"),
 				),
 			},
 			// Data source
@@ -64,11 +83,16 @@ func TestAccObjectStorageResource(t *testing.T) {
 					data "stackit_objectstorage_bucket" "bucket" {
 						project_id  = stackit_objectstorage_bucket.bucket.project_id
 						bucket_name = stackit_objectstorage_bucket.bucket.bucket_name
+					}
+					
+					data "stackit_objectstorage_credentials_group" "credentials_group" {
+						project_id  = stackit_objectstorage_credentials_group.credentials_group.project_id
+						bucket_name = stackit_objectstorage_credentials_group.credentials_group.credentials_group_id
 					}`,
 					resourceConfig(),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Instance data
+					// Bucket data
 					resource.TestCheckResourceAttr("data.stackit_objectstorage_bucket.bucket", "project_id", bucketResource["project_id"]),
 					resource.TestCheckResourceAttrPair(
 						"stackit_objectstorage_bucket.bucket", "bucket_name",
@@ -82,22 +106,37 @@ func TestAccObjectStorageResource(t *testing.T) {
 						"stackit_objectstorage_bucket.bucket", "url_virtual_hosted_style",
 						"data.stackit_objectstorage_bucket.bucket", "url_virtual_hosted_style",
 					),
+
+					// Credentials group data
+					resource.TestCheckResourceAttr("data.stackit_objectstorage_credentials_group.credentials_group", "project_id", credentialsGroupResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credentials_group.credentials_group", "credentials_group_id",
+						"data.stackit_objectstorage_credentials_group.credentials_group", "credentials_group_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credentials_group.credentials_group", "credentials_group_name",
+						"data.stackit_objectstorage_credentials_group.credentials_group", "credentials_group_name",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credentials_group.credentials_group", "urn",
+						"data.stackit_objectstorage_credentials_group.credentials_group", "urn",
+					),
 				),
 			},
 			// Import
 			{
-				ResourceName: "stackit_objectstorage_bucket.bucket",
+				ResourceName: "stackit_objectstorage_credentials_group.credentials_group",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_objectstorage_bucket.bucket"]
+					r, ok := s.RootModule().Resources["stackit_objectstorage_credentials_group.credentials_group"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_objectstorage_bucket.bucket")
+						return "", fmt.Errorf("couldn't find resource stackit_objectstorage_credentials_group.credentials_group")
 					}
-					bucketName, ok := r.Primary.Attributes["bucket_name"]
+					credentialsGroupId, ok := r.Primary.Attributes["credentials_group_id"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find attribute bucket_name")
+						return "", fmt.Errorf("couldn't find attribute credentials_group_id")
 					}
 
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, bucketName), nil
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, credentialsGroupId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -145,7 +184,7 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 			continue
 		}
 		bucketName := *bucket.Name
-		if utils.Contains(bucketsToDestroy, *bucket.Name) {
+		if utils.Contains(bucketsToDestroy, bucketName) {
 			_, err := client.DeleteBucketExecute(ctx, testutil.ProjectId, bucketName)
 			if err != nil {
 				return fmt.Errorf("destroying bucket %s during CheckDestroy: %w", bucketName, err)
@@ -153,6 +192,35 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 			_, err = wait.DeleteBucketWaitHandler(ctx, client, testutil.ProjectId, bucketName).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", bucketName, err)
+			}
+		}
+	}
+
+	credentialsGroupsToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_objectstorage_credentials_group" {
+			continue
+		}
+		// credentials group terraform ID: "[project_id],[credentials_group_id]"
+		credentialsGroupId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		credentialsGroupsToDestroy = append(credentialsGroupsToDestroy, credentialsGroupId)
+	}
+
+	credentialsGroupsResp, err := client.GetCredentialsGroups(ctx, testutil.ProjectId).Execute()
+	if err != nil {
+		return fmt.Errorf("getting bucketsResp: %w", err)
+	}
+
+	groups := *credentialsGroupsResp.CredentialsGroups
+	for _, group := range groups {
+		if group.CredentialsGroupId == nil {
+			continue
+		}
+		groupId := *group.CredentialsGroupId
+		if utils.Contains(credentialsGroupsToDestroy, groupId) {
+			_, err := client.DeleteCredentialsGroupExecute(ctx, testutil.ProjectId, groupId)
+			if err != nil {
+				return fmt.Errorf("destroying credentials group %s during CheckDestroy: %w", groupId, err)
 			}
 		}
 	}

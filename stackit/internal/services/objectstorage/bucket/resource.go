@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -94,7 +95,7 @@ func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		"main":                     "ObjectStorage bucket resource schema.",
 		"id":                       "Terraform's internal resource identifier. It is structured as \"`project_id`,`bucket_name`\".",
 		"bucket_name":              "The bucket name. It must be DNS conform.",
-		"project_id":               "STACKIT Project ID to which the bucket is associated.",
+		"project_id":               "STACKIT Project ID to which the bucket is associated to.",
 		"url_path_style":           "URL in path style.",
 		"url_virtual_hosted_style": "URL in virtual hosted style.",
 	}
@@ -155,8 +156,15 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "bucket_name", bucketName)
 
-	// Create new recordset
-	_, err := r.client.CreateBucket(ctx, projectId, bucketName).Execute()
+	// handle project init
+	err := r.enableProject(ctx, &resp.Diagnostics, &model)
+	if resp.Diagnostics.HasError() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Enabling object storage project before creation: %v", err))
+		return
+	}
+
+	// Create new bucket
+	_, err = r.client.CreateBucket(ctx, projectId, bucketName).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -292,5 +300,17 @@ func mapFields(bucketResp *objectstorage.GetBucketResponse, model *Model) error 
 	)
 	model.URLPathStyle = types.StringPointerValue(bucket.UrlPathStyle)
 	model.URLVirtualHostedStyle = types.StringPointerValue(bucket.UrlVirtualHostedStyle)
+	return nil
+}
+
+// enableProject enables object storage for the specified project. If the project already exists, nothing happens
+func (r *bucketResource) enableProject(ctx context.Context, diags *diag.Diagnostics, model *Model) error {
+	projectId := model.ProjectId.ValueString()
+
+	// From the object storage OAS: Creation will also be successful if the project already exists, but will not create a duplicate
+	_, err := r.client.CreateProject(ctx, projectId).Execute()
+	if err != nil {
+		return fmt.Errorf("failed to create object storage project: %w", err)
+	}
 	return nil
 }
