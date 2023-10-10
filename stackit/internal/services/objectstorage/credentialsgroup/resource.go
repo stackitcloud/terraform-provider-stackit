@@ -28,6 +28,11 @@ var (
 	_ resource.ResourceWithImportState = &credentialsGroupResource{}
 )
 
+// needed for testing
+type objectStorageClient interface {
+	GetCredentialsGroupsExecute(ctx context.Context, projectId string) (*objectstorage.GetCredentialsGroupsResponse, error)
+}
+
 type Model struct {
 	Id                 types.String `tfsdk:"id"` // needed by TF
 	CredentialsGroupId types.String `tfsdk:"credentials_group_id"`
@@ -302,14 +307,14 @@ func (r *credentialsGroupResource) enableProject(ctx context.Context, model *Mod
 
 // readCredentialsGroups gets all the existing credentials groups for the specified project,
 // finds the credentials group that is being read and updates the state. If the credentials group cannot be found, it throws an error
-func readCredentialsGroups(ctx context.Context, model *Model, projectId string, client *objectstorage.APIClient) error {
+func readCredentialsGroups(ctx context.Context, model *Model, projectId string, client objectStorageClient) error {
 	found := false
 
 	if model.CredentialsGroupId.ValueString() == "" && model.Name.ValueString() == "" {
 		return fmt.Errorf("missing configuration: either name or credentials group id must be provided")
 	}
 
-	credentialsGroupsResp, err := client.GetCredentialsGroups(ctx, projectId).Execute()
+	credentialsGroupsResp, err := client.GetCredentialsGroupsExecute(ctx, projectId)
 	if err != nil {
 		return fmt.Errorf("getting credentials groups: %w", err)
 	}
