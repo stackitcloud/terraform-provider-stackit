@@ -236,7 +236,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	err := r.readCredentials(ctx, &model)
+	err := readCredentials(ctx, &model, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Finding credential: %v", err))
 		return
@@ -371,12 +371,12 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 // readCredentials gets all the existing credentials for the specified credentials group,
 // finds the credential that is being read and updates the state.
 // If the credential cannot be found, it throws an error
-func (r *credentialResource) readCredentials(ctx context.Context, model *Model) error {
+func readCredentials(ctx context.Context, model *Model, client *objectstorage.APIClient) error {
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	credentialId := model.CredentialId.ValueString()
 
-	credentialsGroupResp, err := r.client.GetAccessKeys(ctx, projectId).CredentialsGroup(credentialsGroupId).Execute()
+	credentialsGroupResp, err := client.GetAccessKeys(ctx, projectId).CredentialsGroup(credentialsGroupId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting credentials groups: %w", err)
 	}
