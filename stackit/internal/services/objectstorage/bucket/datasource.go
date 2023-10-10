@@ -74,7 +74,7 @@ func (r *bucketDataSource) Configure(ctx context.Context, req datasource.Configu
 // Schema defines the schema for the data source.
 func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                     "ObjectStorage buckets data source schema.",
+		"main":                     "ObjectStorage bucket data source schema.",
 		"id":                       "Terraform's internal data source identifier. It is structured as \"`project_id`,`bucket_name`\".",
 		"bucket_name":              "The bucket name. It must be DNS conform.",
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
