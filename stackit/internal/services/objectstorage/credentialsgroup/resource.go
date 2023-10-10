@@ -280,7 +280,6 @@ func mapFields(credentialsGroupResp *objectstorage.CreateCredentialsGroupRespons
 }
 
 func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model *Model) {
-	model.CredentialsGroupId = types.StringPointerValue(credentialsGroup.CredentialsGroupId)
 	model.URN = types.StringPointerValue(credentialsGroup.Urn)
 	model.Name = types.StringPointerValue(credentialsGroup.DisplayName)
 
