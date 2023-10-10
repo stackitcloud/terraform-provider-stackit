@@ -58,9 +58,9 @@ func TestMapFields(t *testing.T) {
 		{
 			"empty_strings",
 			&objectstorage.CreateAccessKeyResponse{
-				AccessKey:       utils.Ptr("key"),
-				DisplayName:     utils.Ptr("name"),
-				SecretAccessKey: utils.Ptr("secret-key"),
+				AccessKey:       utils.Ptr(""),
+				DisplayName:     utils.Ptr(""),
+				SecretAccessKey: utils.Ptr(""),
 			},
 			Model{
 				Id:                  types.StringValue("pid,cgid,cid"),
@@ -94,6 +94,7 @@ func TestMapFields(t *testing.T) {
 			model := &Model{
 				ProjectId:          tt.expected.ProjectId,
 				CredentialsGroupId: tt.expected.CredentialsGroupId,
+				CredentialId:       tt.expected.CredentialId,
 			}
 			err := mapFields(tt.input, model)
 			if !tt.isValid && err == nil {
