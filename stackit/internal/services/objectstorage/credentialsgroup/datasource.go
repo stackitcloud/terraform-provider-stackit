@@ -128,7 +128,7 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 
-	err := readCredentialsGroups(ctx, &model, projectId, r.client)
+	err := readCredentialsGroups(ctx, &model, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentialsGroup", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
 		return

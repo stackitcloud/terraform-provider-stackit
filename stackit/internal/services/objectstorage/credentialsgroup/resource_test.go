@@ -229,7 +229,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 				ProjectId:          tt.expected.ProjectId,
 				CredentialsGroupId: tt.expected.CredentialsGroupId,
 			}
-			err := readCredentialsGroups(context.Background(), model, "pid", client)
+			err := readCredentialsGroups(context.Background(), model, client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
