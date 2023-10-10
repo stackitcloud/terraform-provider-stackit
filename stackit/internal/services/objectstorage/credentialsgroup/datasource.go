@@ -32,7 +32,7 @@ type credentialsGroupDataSource struct {
 
 // Metadata returns the data source type name.
 func (r *credentialsGroupDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_objectstorage_credentialsgroup"
+	resp.TypeName = req.ProviderTypeName + "_objectstorage_credentials_group"
 }
 
 // Configure adds the provider configured client to the data source.
@@ -78,7 +78,7 @@ func (r *credentialsGroupDataSource) Schema(_ context.Context, _ datasource.Sche
 		"id":                   "Terraform's internal data source identifier. It is structured as \"`project_id`,`credentials_group_id`\".",
 		"credentials_group_id": "The credentials group ID",
 		"name":                 "The credentials group's display name.",
-		"project_id":           "Object Storage Project ID to which the credentials group is associated to. It can be retrieved from `stackit_object_storage_project` ",
+		"project_id":           "Object Storage Project ID to which the credentials group is associated.",
 		"urn":                  "Credentials group uniform resource name (URN)",
 	}
 

@@ -94,7 +94,7 @@ func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		"main":                     "ObjectStorage bucket resource schema.",
 		"id":                       "Terraform's internal resource identifier. It is structured as \"`project_id`,`bucket_name`\".",
 		"bucket_name":              "The bucket name. It must be DNS conform.",
-		"project_id":               "STACKIT Project ID to which the bucket is associated to.",
+		"project_id":               "STACKIT Project ID to which the bucket is associated.",
 		"url_path_style":           "URL in path style.",
 		"url_virtual_hosted_style": "URL in virtual hosted style.",
 	}
@@ -158,7 +158,7 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 	// handle project init
 	err := r.enableProject(ctx, &model)
 	if resp.Diagnostics.HasError() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Enabling object storage project before creation: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
 	}
 

@@ -94,7 +94,7 @@ func (r *credentialsGroupResource) Schema(_ context.Context, _ resource.SchemaRe
 		"id":                   "Terraform's internal data source identifier. It is structured as \"`project_id`,`credentials_group_id`\".",
 		"credentials_group_id": "The credentials group ID",
 		"name":                 "The credentials group's display name.",
-		"project_id":           "Project ID to which the credentials group is associated to.",
+		"project_id":           "Project ID to which the credentials group is associated.",
 		"urn":                  "Credentials group uniform resource name (URN)",
 	}
 
@@ -270,7 +270,7 @@ func mapFields(credentialsGroupResp *objectstorage.CreateCredentialsGroupRespons
 	}
 	credentialsGroup := credentialsGroupResp.CredentialsGroup
 
-	model.Name = types.StringPointerValue(credentialsGroup.DisplayName)
+	model.CredentialsGroupId = types.StringPointerValue(credentialsGroup.CredentialsGroupId)
 	model.URN = types.StringPointerValue(credentialsGroup.Urn)
 
 	idParts := []string{

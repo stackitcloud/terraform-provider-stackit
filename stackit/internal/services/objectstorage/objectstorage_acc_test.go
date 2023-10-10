@@ -26,8 +26,8 @@ var bucketResource = map[string]string{
 
 // Credentials group resource data
 var credentialsGroupResource = map[string]string{
-	"project_id":             testutil.ProjectId,
-	"credentials_group_name": fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha)),
+	"project_id": testutil.ProjectId,
+	"name":       fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha)),
 }
 
 func resourceConfig() string {
@@ -48,7 +48,7 @@ func resourceConfig() string {
 		bucketResource["project_id"],
 		bucketResource["bucket_name"],
 		credentialsGroupResource["project_id"],
-		credentialsGroupResource["credentials_group_name"],
+		credentialsGroupResource["name"],
 	)
 }
 
@@ -70,7 +70,7 @@ func TestAccObjectStorageResource(t *testing.T) {
 
 					// Credentials group data
 					resource.TestCheckResourceAttr("stackit_objectstorage_credentials_group.credentials_group", "project_id", credentialsGroupResource["project_id"]),
-					resource.TestCheckResourceAttr("stackit_objectstorage_credentials_group.credentials_group", "credentials_group_name", credentialsGroupResource["credentials_group_name"]),
+					resource.TestCheckResourceAttr("stackit_objectstorage_credentials_group.credentials_group", "name", credentialsGroupResource["name"]),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_credentials_group.credentials_group", "credentials_group_id"),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_credentials_group.credentials_group", "urn"),
 				),
@@ -87,7 +87,7 @@ func TestAccObjectStorageResource(t *testing.T) {
 					
 					data "stackit_objectstorage_credentials_group" "credentials_group" {
 						project_id  = stackit_objectstorage_credentials_group.credentials_group.project_id
-						bucket_name = stackit_objectstorage_credentials_group.credentials_group.credentials_group_id
+						credentials_group_id = stackit_objectstorage_credentials_group.credentials_group.credentials_group_id
 					}`,
 					resourceConfig(),
 				),
@@ -114,8 +114,8 @@ func TestAccObjectStorageResource(t *testing.T) {
 						"data.stackit_objectstorage_credentials_group.credentials_group", "credentials_group_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_objectstorage_credentials_group.credentials_group", "credentials_group_name",
-						"data.stackit_objectstorage_credentials_group.credentials_group", "credentials_group_name",
+						"stackit_objectstorage_credentials_group.credentials_group", "name",
+						"data.stackit_objectstorage_credentials_group.credentials_group", "name",
 					),
 					resource.TestCheckResourceAttrPair(
 						"stackit_objectstorage_credentials_group.credentials_group", "urn",
