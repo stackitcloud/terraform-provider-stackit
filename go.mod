@@ -23,7 +23,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v0.3.0
-	golang.org/x/mod v0.12.0
+	golang.org/x/mod v0.13.0
 )
 
 require (
