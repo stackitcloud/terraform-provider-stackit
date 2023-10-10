@@ -270,8 +270,14 @@ func mapFields(credentialsGroupResp *objectstorage.CreateCredentialsGroupRespons
 	}
 	credentialsGroup := credentialsGroupResp.CredentialsGroup
 
+	mapCredentialsGroup(credentialsGroup, model)
+	return nil
+}
+
+func mapCredentialsGroup(credentialsGroup *objectstorage.CredentialsGroup, model *Model) {
 	model.CredentialsGroupId = types.StringPointerValue(credentialsGroup.CredentialsGroupId)
 	model.URN = types.StringPointerValue(credentialsGroup.Urn)
+	model.Name = types.StringPointerValue(credentialsGroup.DisplayName)
 
 	idParts := []string{
 		model.ProjectId.ValueString(),
@@ -280,7 +286,6 @@ func mapFields(credentialsGroupResp *objectstorage.CreateCredentialsGroupRespons
 	model.Id = types.StringValue(
 		strings.Join(idParts, core.Separator),
 	)
-	return nil
 }
 
 // enableProject enables object storage for the specified project. If the project already exists, nothing happens
@@ -318,17 +323,7 @@ func readCredentialsGroups(ctx context.Context, model *Model, projectId string, 
 			continue
 		}
 		found = true
-		model.CredentialsGroupId = types.StringValue(*credentialsGroup.CredentialsGroupId)
-		model.Name = types.StringValue(*credentialsGroup.DisplayName)
-		model.URN = types.StringValue(*credentialsGroup.Urn)
-
-		idParts := []string{
-			model.ProjectId.ValueString(),
-			model.CredentialsGroupId.ValueString(),
-		}
-		model.Id = types.StringValue(
-			strings.Join(idParts, core.Separator),
-		)
+		mapCredentialsGroup(&credentialsGroup, model)
 		break
 	}
 
