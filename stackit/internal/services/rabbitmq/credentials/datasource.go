@@ -18,26 +18,26 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ datasource.DataSource = &credentialsDataSource{}
+	_ datasource.DataSource = &credentialDataSource{}
 )
 
-// NewCredentialsDataSource is a helper function to simplify the provider implementation.
-func NewCredentialsDataSource() datasource.DataSource {
-	return &credentialsDataSource{}
+// NewCredentialDataSource is a helper function to simplify the provider implementation.
+func NewCredentialDataSource() datasource.DataSource {
+	return &credentialDataSource{}
 }
 
-// credentialsDataSource is the data source implementation.
-type credentialsDataSource struct {
+// credentialDataSource is the data source implementation.
+type credentialDataSource struct {
 	client *rabbitmq.APIClient
 }
 
 // Metadata returns the data source type name.
-func (r *credentialsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_rabbitmq_credentials"
+func (r *credentialDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_rabbitmq_credential"
 }
 
 // Configure adds the provider configured client to the data source.
-func (r *credentialsDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (r *credentialDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -73,9 +73,9 @@ func (r *credentialsDataSource) Configure(ctx context.Context, req datasource.Co
 }
 
 // Schema defines the schema for the data source.
-func (r *credentialsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":           "RabbitMQ credentials data source schema.",
+		"main":           "RabbitMQ credential data source schema.",
 		"id":             "Terraform's internal data source. identifier. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
 		"credentials_id": "The credentials ID.",
 		"instance_id":    "ID of the RabbitMQ instance.",
@@ -144,7 +144,7 @@ func (r *credentialsDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *credentialsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)

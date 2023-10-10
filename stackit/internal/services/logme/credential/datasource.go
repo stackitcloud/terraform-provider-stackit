@@ -69,7 +69,7 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "LogMe credential client configured")
+	tflog.Info(ctx, "LogMe credentials client configured")
 }
 
 // Schema defines the schema for the data source.
@@ -177,5 +177,5 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "LogMe credential read")
+	tflog.Info(ctx, "LogMe credentials read")
 }

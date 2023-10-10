@@ -3,12 +3,12 @@
 page_title: "stackit_logme_credential Data Source - stackit"
 subcategory: ""
 description: |-
-  LogMe credentials data source schema.
+  LogMe credential data source schema.
 ---
 
 # stackit_logme_credential (Data Source)
 
-LogMe credentials data source schema.
+LogMe credential data source schema.
 
 
 

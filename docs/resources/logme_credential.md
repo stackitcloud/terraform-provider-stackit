@@ -3,12 +3,12 @@
 page_title: "stackit_logme_credential Resource - stackit"
 subcategory: ""
 description: |-
-  LogMe credentials resource schema.
+  LogMe credential resource schema.
 ---
 
 # stackit_logme_credential (Resource)
 
-LogMe credentials resource schema.
+LogMe credential resource schema.
 
 
 

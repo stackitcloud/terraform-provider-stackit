@@ -26,9 +26,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &redisCredentialsResource{}
-	_ resource.ResourceWithConfigure   = &redisCredentialsResource{}
-	_ resource.ResourceWithImportState = &redisCredentialsResource{}
+	_ resource.Resource                = &credentialResource{}
+	_ resource.ResourceWithConfigure   = &credentialResource{}
+	_ resource.ResourceWithImportState = &credentialResource{}
 )
 
 type Model struct {
@@ -46,23 +46,23 @@ type Model struct {
 	Username      types.String `tfsdk:"username"`
 }
 
-// NewCredentialsResource is a helper function to simplify the provider implementation.
-func NewCredentialsResource() resource.Resource {
-	return &redisCredentialsResource{}
+// NewCredentialResource is a helper function to simplify the provider implementation.
+func NewCredentialResource() resource.Resource {
+	return &credentialResource{}
 }
 
-// credentialsResource is the resource implementation.
-type redisCredentialsResource struct {
+// credentialResource is the resource implementation.
+type credentialResource struct {
 	client *redis.APIClient
 }
 
 // Metadata returns the resource type name.
-func (r *redisCredentialsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_redis_credentials"
+func (r *credentialResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_redis_credential"
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *redisCredentialsResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *credentialResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -98,9 +98,9 @@ func (r *redisCredentialsResource) Configure(ctx context.Context, req resource.C
 }
 
 // Schema defines the schema for the resource.
-func (r *redisCredentialsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":           "Redis credentials resource schema.",
+		"main":           "Redis credential resource schema.",
 		"id":             "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
 		"credentials_id": "The credentials ID.",
 		"instance_id":    "ID of the Redis instance.",
@@ -183,7 +183,7 @@ func (r *redisCredentialsResource) Schema(_ context.Context, _ resource.SchemaRe
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *redisCredentialsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -234,7 +234,7 @@ func (r *redisCredentialsResource) Create(ctx context.Context, req resource.Crea
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *redisCredentialsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -271,13 +271,13 @@ func (r *redisCredentialsResource) Read(ctx context.Context, req resource.ReadRe
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *redisCredentialsResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credentials", "Credentials can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *redisCredentialsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -307,7 +307,7 @@ func (r *redisCredentialsResource) Delete(ctx context.Context, req resource.Dele
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: project_id,instance_id,credentials_id
-func (r *redisCredentialsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *credentialResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,

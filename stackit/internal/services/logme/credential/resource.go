@@ -94,7 +94,7 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "LogMe credential client configured")
+	tflog.Info(ctx, "LogMe credentials client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -230,7 +230,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "LogMe credential created")
+	tflog.Info(ctx, "LogMe credentials created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -267,7 +267,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "LogMe credential read")
+	tflog.Info(ctx, "LogMe credentials read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -302,7 +302,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
-	tflog.Info(ctx, "LogMe credential deleted")
+	tflog.Info(ctx, "LogMe credentials deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -320,7 +320,7 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials_id"), idParts[2])...)
-	tflog.Info(ctx, "LogMe credential state imported")
+	tflog.Info(ctx, "LogMe credentials state imported")
 }
 
 func mapFields(credentialsResp *logme.CredentialsResponse, model *Model) error {

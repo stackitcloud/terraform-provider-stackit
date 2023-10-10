@@ -124,7 +124,7 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 		{
-			"nil_raw_credentials",
+			"nil_raw_credential",
 			&logme.CredentialsResponse{
 				Id: utils.Ptr("cid"),
 			},
