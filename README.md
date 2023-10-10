@@ -39,7 +39,11 @@ To configure it, follow this steps:
     The following instructions assume that you have created a service account and assigned it the necessary permissions, e.g. project.owner.
 
 1. In the Portal, go to `Service Account -> Service Account Keys` and create a key.
+
    - You can create your own RSA key-pair or have the Portal generate one for you.
+
+   **Disclaimer:** as of now, creation of a service account key in the Portal is only available in DEV and QA environments. You can use this flow in these environments by using the options `config.WithWithTokenEndpoint` and `config.WithWithJWKSEndpoint` to configure the corresponding endpoints.
+
 2. Save the content of the service account key and the corresponding private key by copying them or saving them in a file. The expected format of the service account key is the following:
    ```json
    {
