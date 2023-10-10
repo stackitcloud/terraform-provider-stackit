@@ -203,7 +203,7 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 
-	err := readCredentialsGroups(ctx, &model, projectId, r.client)
+	err := readCredentialsGroups(ctx, &model, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentialsGroup", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
 		return
@@ -307,14 +307,14 @@ func (r *credentialsGroupResource) enableProject(ctx context.Context, model *Mod
 
 // readCredentialsGroups gets all the existing credentials groups for the specified project,
 // finds the credentials group that is being read and updates the state. If the credentials group cannot be found, it throws an error
-func readCredentialsGroups(ctx context.Context, model *Model, projectId string, client objectStorageClient) error {
+func readCredentialsGroups(ctx context.Context, model *Model, client objectStorageClient) error {
 	found := false
 
 	if model.CredentialsGroupId.ValueString() == "" && model.Name.ValueString() == "" {
 		return fmt.Errorf("missing configuration: either name or credentials group id must be provided")
 	}
 
-	credentialsGroupsResp, err := client.GetCredentialsGroupsExecute(ctx, projectId)
+	credentialsGroupsResp, err := client.GetCredentialsGroupsExecute(ctx, model.ProjectId.ValueString())
 	if err != nil {
 		return fmt.Errorf("getting credentials groups: %w", err)
 	}
