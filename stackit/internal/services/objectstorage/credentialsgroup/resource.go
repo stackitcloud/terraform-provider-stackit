@@ -275,11 +275,11 @@ func mapFields(credentialsGroupResp *objectstorage.CreateCredentialsGroupRespons
 	}
 	credentialsGroup := credentialsGroupResp.CredentialsGroup
 
-	mapCredentialsGroup(credentialsGroup, model)
+	mapCredentialsGroup(*credentialsGroup, model)
 	return nil
 }
 
-func mapCredentialsGroup(credentialsGroup *objectstorage.CredentialsGroup, model *Model) {
+func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model *Model) {
 	model.CredentialsGroupId = types.StringPointerValue(credentialsGroup.CredentialsGroupId)
 	model.URN = types.StringPointerValue(credentialsGroup.Urn)
 	model.Name = types.StringPointerValue(credentialsGroup.DisplayName)
@@ -328,7 +328,7 @@ func readCredentialsGroups(ctx context.Context, model *Model, projectId string, 
 			continue
 		}
 		found = true
-		mapCredentialsGroup(&credentialsGroup, model)
+		mapCredentialsGroup(credentialsGroup, model)
 		break
 	}
 

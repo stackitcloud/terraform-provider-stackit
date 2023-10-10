@@ -16,7 +16,7 @@ type objectStorageClientMocked struct {
 	getCredentialsGroupsResponse *objectstorage.GetCredentialsGroupsResponse
 }
 
-func (c *objectStorageClientMocked) GetCredentialsGroupsExecute(ctx context.Context, projectId string) (*objectstorage.GetCredentialsGroupsResponse, error) {
+func (c *objectStorageClientMocked) GetCredentialsGroupsExecute(_ context.Context, _ string) (*objectstorage.GetCredentialsGroupsResponse, error) {
 	if c.getCredentialsGroupsFails {
 		return c.getCredentialsGroupsResponse, fmt.Errorf("get credentials groups failed")
 	}
@@ -221,7 +221,6 @@ func TestReadCredentialsGroups(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			client := &objectStorageClientMocked{
 				getCredentialsGroupsFails:    tt.getCredentialsGroupsFails,
 				getCredentialsGroupsResponse: tt.mockedResp,
