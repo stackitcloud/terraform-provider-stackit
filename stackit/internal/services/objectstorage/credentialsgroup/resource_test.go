@@ -182,6 +182,9 @@ func TestReadCredentialsGroups(t *testing.T) {
 					{
 						CredentialsGroupId: utils.Ptr("cid"),
 					},
+					{
+						CredentialsGroupId: utils.Ptr("foo-id"),
+					},
 				},
 			},
 			Model{
@@ -202,6 +205,11 @@ func TestReadCredentialsGroups(t *testing.T) {
 						CredentialsGroupId: utils.Ptr("cid"),
 						DisplayName:        utils.Ptr("name"),
 						Urn:                utils.Ptr("urn"),
+					},
+					{
+						CredentialsGroupId: utils.Ptr("foo-cid"),
+						DisplayName:        utils.Ptr("foo-name"),
+						Urn:                utils.Ptr("urnfoo-"),
 					},
 				},
 			},
@@ -245,9 +253,9 @@ func TestReadCredentialsGroups(t *testing.T) {
 			&objectstorage.GetCredentialsGroupsResponse{
 				CredentialsGroups: &[]objectstorage.CredentialsGroup{
 					{
-						CredentialsGroupId: utils.Ptr("other_id"),
-						DisplayName:        utils.Ptr("name"),
-						Urn:                utils.Ptr("urn"),
+						CredentialsGroupId: utils.Ptr("foo-other"),
+						DisplayName:        utils.Ptr("foo-name"),
+						Urn:                utils.Ptr("foo-urn"),
 					},
 				},
 			},
