@@ -198,11 +198,11 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	// Create new recordset
 	credentialsResp, err := r.client.CreateCredentials(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	if credentialsResp.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", "Got empty credentials id")
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", "Got empty credentials id")
 		return
 	}
 	credentialsId := *credentialsResp.Id
@@ -210,19 +210,19 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	wr, err := wait.CreateCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialsId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Instance creation waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
 	got, ok := wr.(*logme.CredentialsResponse)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Wait result conversion, got %+v", wr))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 
 	// Map response body to schema
 	err = mapFields(got, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
@@ -250,14 +250,14 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	recordSetResp, err := r.client.GetCredentials(ctx, projectId, instanceId, credentialsId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	// Map response body to schema
 	err = mapFields(recordSetResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -273,7 +273,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *credentialResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credentials", "credential can't be updated")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credential", "Credential can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -295,11 +295,11 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	// Delete existing record set
 	err := r.client.DeleteCredentials(ctx, projectId, instanceId, credentialsId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
 	}
 	_, err = wait.DeleteCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialsId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials", fmt.Sprintf("Instance deletion waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
 	tflog.Info(ctx, "LogMe credentials deleted")
@@ -311,7 +311,7 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			"Error importing credentials",
+			"Error importing credential",
 			fmt.Sprintf("Expected import identifier with format [project_id],[instance_id],[credentials_id], got %q", req.ID),
 		)
 		return
