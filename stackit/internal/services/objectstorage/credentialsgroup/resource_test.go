@@ -19,7 +19,7 @@ type objectStorageClientMocked struct {
 
 func (c *objectStorageClientMocked) CreateProjectExecute(_ context.Context, _ string) (*objectstorage.GetProjectResponse, error) {
 	if c.returnError {
-		return nil, fmt.Errorf("get credentials groups failed")
+		return nil, fmt.Errorf("create project failed")
 	}
 
 	return c.createProjectExecuteResp, nil
