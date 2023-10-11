@@ -28,11 +28,6 @@ var (
 	_ resource.ResourceWithImportState = &credentialsGroupResource{}
 )
 
-// needed for testing
-type objectStorageClient interface {
-	GetCredentialsGroupsExecute(ctx context.Context, projectId string) (*objectstorage.GetCredentialsGroupsResponse, error)
-}
-
 type Model struct {
 	Id                 types.String `tfsdk:"id"` // needed by TF
 	CredentialsGroupId types.String `tfsdk:"credentials_group_id"`
@@ -162,8 +157,8 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 		DisplayName: utils.Ptr(credentialsGroupName),
 	}
 
-	// handle project init
-	err := r.enableProject(ctx, &model)
+	// Handle project init
+	err := enableProject(ctx, &model, r.client)
 	if resp.Diagnostics.HasError() {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
@@ -292,12 +287,17 @@ func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model 
 	)
 }
 
-// enableProject enables object storage for the specified project. If the project already exists, nothing happens
-func (r *credentialsGroupResource) enableProject(ctx context.Context, model *Model) error {
+type objectStorageClient interface {
+	CreateProjectExecute(ctx context.Context, projectId string) (*objectstorage.GetProjectResponse, error)
+	GetCredentialsGroupsExecute(ctx context.Context, projectId string) (*objectstorage.GetCredentialsGroupsResponse, error)
+}
+
+// enableProject enables object storage for the specified project. If the project is already enabled, nothing happens
+func enableProject(ctx context.Context, model *Model, client objectStorageClient) error {
 	projectId := model.ProjectId.ValueString()
 
-	// From the object storage OAS: Creation will also be successful if the project already exists, but will not create a duplicate
-	_, err := r.client.CreateProject(ctx, projectId).Execute()
+	// From the object storage OAS: Creation will also be successful if the project is already enabled, but will not create a duplicate
+	_, err := client.CreateProjectExecute(ctx, projectId)
 	if err != nil {
 		return fmt.Errorf("failed to create object storage project: %w", err)
 	}

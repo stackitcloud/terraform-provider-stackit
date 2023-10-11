@@ -12,16 +12,25 @@ import (
 )
 
 type objectStorageClientMocked struct {
-	getCredentialsGroupsFails    bool
-	getCredentialsGroupsResponse *objectstorage.GetCredentialsGroupsResponse
+	returnError              bool
+	createProjectExecuteResp *objectstorage.GetProjectResponse
+	getCredentialsGroupsResp *objectstorage.GetCredentialsGroupsResponse
+}
+
+func (c *objectStorageClientMocked) CreateProjectExecute(_ context.Context, _ string) (*objectstorage.GetProjectResponse, error) {
+	if c.returnError {
+		return nil, fmt.Errorf("get credentials groups failed")
+	}
+
+	return c.createProjectExecuteResp, nil
 }
 
 func (c *objectStorageClientMocked) GetCredentialsGroupsExecute(_ context.Context, _ string) (*objectstorage.GetCredentialsGroupsResponse, error) {
-	if c.getCredentialsGroupsFails {
-		return c.getCredentialsGroupsResponse, fmt.Errorf("get credentials groups failed")
+	if c.returnError {
+		return nil, fmt.Errorf("get credentials groups failed")
 	}
 
-	return c.getCredentialsGroupsResponse, nil
+	return c.getCredentialsGroupsResp, nil
 }
 
 func TestMapFields(t *testing.T) {
@@ -110,6 +119,75 @@ func TestMapFields(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
+			}
+		})
+	}
+}
+
+func TestEnableProject(t *testing.T) {
+	tests := []struct {
+		description string
+		mockedResp  *objectstorage.GetProjectResponse
+		expected    Model
+		enableFails bool
+		isValid     bool
+	}{
+		{
+			"default_values",
+			&objectstorage.GetProjectResponse{},
+			Model{
+				Id:                 types.StringValue("pid,cid"),
+				Name:               types.StringNull(),
+				ProjectId:          types.StringValue("pid"),
+				CredentialsGroupId: types.StringValue("cid"),
+				URN:                types.StringNull(),
+			},
+			false,
+			true,
+		},
+		{
+			"nil_response",
+			nil,
+			Model{
+				Id:                 types.StringValue("pid,cid"),
+				Name:               types.StringNull(),
+				ProjectId:          types.StringValue("pid"),
+				CredentialsGroupId: types.StringValue("cid"),
+				URN:                types.StringNull(),
+			},
+			false,
+			true,
+		},
+		{
+			"error_response",
+			&objectstorage.GetProjectResponse{},
+			Model{
+				Id:                 types.StringValue("pid,cid"),
+				Name:               types.StringNull(),
+				ProjectId:          types.StringValue("pid"),
+				CredentialsGroupId: types.StringValue("cid"),
+				URN:                types.StringNull(),
+			},
+			true,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			client := &objectStorageClientMocked{
+				returnError:              tt.enableFails,
+				createProjectExecuteResp: tt.mockedResp,
+			}
+			model := &Model{
+				ProjectId:          tt.expected.ProjectId,
+				CredentialsGroupId: tt.expected.CredentialsGroupId,
+			}
+			err := enableProject(context.Background(), model, client)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
 			}
 		})
 	}
@@ -222,8 +300,8 @@ func TestReadCredentialsGroups(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			client := &objectStorageClientMocked{
-				getCredentialsGroupsFails:    tt.getCredentialsGroupsFails,
-				getCredentialsGroupsResponse: tt.mockedResp,
+				returnError:              tt.getCredentialsGroupsFails,
+				getCredentialsGroupsResp: tt.mockedResp,
 			}
 			model := &Model{
 				ProjectId:          tt.expected.ProjectId,
