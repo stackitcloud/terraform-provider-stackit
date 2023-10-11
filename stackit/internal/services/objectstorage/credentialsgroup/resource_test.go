@@ -128,46 +128,24 @@ func TestEnableProject(t *testing.T) {
 	tests := []struct {
 		description string
 		mockedResp  *objectstorage.GetProjectResponse
-		expected    Model
 		enableFails bool
 		isValid     bool
 	}{
 		{
 			"default_values",
 			&objectstorage.GetProjectResponse{},
-			Model{
-				Id:                 types.StringValue("pid,cid"),
-				Name:               types.StringNull(),
-				ProjectId:          types.StringValue("pid"),
-				CredentialsGroupId: types.StringValue("cid"),
-				URN:                types.StringNull(),
-			},
 			false,
 			true,
 		},
 		{
 			"nil_response",
 			nil,
-			Model{
-				Id:                 types.StringValue("pid,cid"),
-				Name:               types.StringNull(),
-				ProjectId:          types.StringValue("pid"),
-				CredentialsGroupId: types.StringValue("cid"),
-				URN:                types.StringNull(),
-			},
 			false,
 			true,
 		},
 		{
 			"error_response",
 			&objectstorage.GetProjectResponse{},
-			Model{
-				Id:                 types.StringValue("pid,cid"),
-				Name:               types.StringNull(),
-				ProjectId:          types.StringValue("pid"),
-				CredentialsGroupId: types.StringValue("cid"),
-				URN:                types.StringNull(),
-			},
 			true,
 			false,
 		},
@@ -178,11 +156,7 @@ func TestEnableProject(t *testing.T) {
 				returnError:              tt.enableFails,
 				createProjectExecuteResp: tt.mockedResp,
 			}
-			model := &Model{
-				ProjectId:          tt.expected.ProjectId,
-				CredentialsGroupId: tt.expected.CredentialsGroupId,
-			}
-			err := enableProject(context.Background(), model, client)
+			err := enableProject(context.Background(), &Model{}, client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
