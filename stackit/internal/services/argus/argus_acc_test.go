@@ -33,7 +33,7 @@ var scrapeConfigResource = map[string]string{
 	"saml2_enable_url_parameters": "false",
 }
 
-var credentialsResource = map[string]string{
+var credentialResource = map[string]string{
 	"project_id": testutil.ProjectId,
 }
 
@@ -129,7 +129,7 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "saml2.enable_url_parameters", scrapeConfigResource["saml2_enable_url_parameters"]),
 
 					// credentials
-					resource.TestCheckResourceAttr("stackit_argus_credential.credential", "project_id", credentialsResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_argus_credential.credential", "project_id", credentialResource["project_id"]),
 					resource.TestCheckResourceAttrPair(
 						"stackit_argus_instance.instance", "instance_id",
 						"stackit_argus_credential.credential", "instance_id",

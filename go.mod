@@ -5,13 +5,13 @@ go 1.20
 require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.1
-	github.com/hashicorp/terraform-plugin-framework v1.4.0
+	github.com/hashicorp/terraform-plugin-framework v1.4.1
 	github.com/hashicorp/terraform-plugin-framework-validators v0.12.0
 	github.com/hashicorp/terraform-plugin-go v0.19.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.5.1
 	github.com/stackitcloud/stackit-sdk-go/core v0.3.0
-	github.com/stackitcloud/stackit-sdk-go/services/argus v0.3.0
+	github.com/stackitcloud/stackit-sdk-go/services/argus v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.4.0
@@ -23,7 +23,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v0.3.0
-	golang.org/x/mod v0.12.0
+	golang.org/x/mod v0.13.0
 )
 
 require (

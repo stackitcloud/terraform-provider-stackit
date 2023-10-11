@@ -14,21 +14,21 @@ import (
 	argusScrapeConfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/scrapeconfig"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
-	logMeCredentials "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credentials"
+	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
 	logMeInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/instance"
-	mariaDBCredentials "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credentials"
+	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
 	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
 	objectStorageBucket "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/bucket"
 	objecStorageCredentialsGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credentialsgroup"
-	openSearchCredentials "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/credentials"
+	openSearchCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/credential"
 	openSearchInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/instance"
 	postgresFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/instance"
 	postgresFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/user"
-	postgresCredentials "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresql/credentials"
+	postgresCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresql/credential"
 	postgresInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresql/instance"
-	rabbitMQCredentials "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/credentials"
+	rabbitMQCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/credential"
 	rabbitMQInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/instance"
-	redisCredentials "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/credentials"
+	redisCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/credential"
 	redisInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/instance"
 	resourceManagerProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/project"
 	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
@@ -308,19 +308,19 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
 		postgresInstance.NewInstanceDataSource,
-		postgresCredentials.NewCredentialsDataSource,
+		postgresCredential.NewCredentialDataSource,
 		logMeInstance.NewInstanceDataSource,
-		logMeCredentials.NewCredentialsDataSource,
+		logMeCredential.NewCredentialDataSource,
 		mariaDBInstance.NewInstanceDataSource,
-		mariaDBCredentials.NewCredentialsDataSource,
+		mariaDBCredential.NewCredentialDataSource,
 		objectStorageBucket.NewBucketDataSource,
 		objecStorageCredentialsGroup.NewCredentialsGroupDataSource,
 		openSearchInstance.NewInstanceDataSource,
-		openSearchCredentials.NewCredentialsDataSource,
+		openSearchCredential.NewCredentialDataSource,
 		rabbitMQInstance.NewInstanceDataSource,
-		rabbitMQCredentials.NewCredentialsDataSource,
+		rabbitMQCredential.NewCredentialDataSource,
 		redisInstance.NewInstanceDataSource,
-		redisCredentials.NewCredentialsDataSource,
+		redisCredential.NewCredentialDataSource,
 		argusInstance.NewInstanceDataSource,
 		argusScrapeConfig.NewScrapeConfigDataSource,
 		resourceManagerProject.NewProjectDataSource,
@@ -337,19 +337,19 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
 		postgresInstance.NewInstanceResource,
-		postgresCredentials.NewCredentialsResource,
+		postgresCredential.NewCredentialResource,
 		logMeInstance.NewInstanceResource,
-		logMeCredentials.NewCredentialsResource,
+		logMeCredential.NewCredentialResource,
 		mariaDBInstance.NewInstanceResource,
-		mariaDBCredentials.NewCredentialsResource,
+		mariaDBCredential.NewCredentialResource,
 		objectStorageBucket.NewBucketResource,
 		objecStorageCredentialsGroup.NewCredentialsGroupResource,
 		openSearchInstance.NewInstanceResource,
-		openSearchCredentials.NewCredentialsResource,
+		openSearchCredential.NewCredentialResource,
 		rabbitMQInstance.NewInstanceResource,
-		rabbitMQCredentials.NewCredentialsResource,
+		rabbitMQCredential.NewCredentialResource,
 		redisInstance.NewInstanceResource,
-		redisCredentials.NewCredentialsResource,
+		redisCredential.NewCredentialResource,
 		argusInstance.NewInstanceResource,
 		argusScrapeConfig.NewScrapeConfigResource,
 		resourceManagerProject.NewProjectResource,
