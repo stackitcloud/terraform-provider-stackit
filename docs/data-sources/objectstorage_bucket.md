@@ -3,12 +3,12 @@
 page_title: "stackit_objectstorage_bucket Data Source - stackit"
 subcategory: ""
 description: |-
-  ObjectStorage credentials data source schema.
+  ObjectStorage credential data source schema.
 ---
 
 # stackit_objectstorage_bucket (Data Source)
 
-ObjectStorage credentials data source schema.
+ObjectStorage credential data source schema.
 
 
 

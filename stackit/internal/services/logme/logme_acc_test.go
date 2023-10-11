@@ -41,7 +41,7 @@ func resourceConfig(acls string) string {
 					}
 				}
 
-				resource "stackit_logme_credentials" "credentials" {
+				resource "stackit_logme_credential" "credentials" {
 					project_id = stackit_logme_instance.instance.project_id
 					instance_id = stackit_logme_instance.instance.instance_id
 				}
@@ -75,15 +75,15 @@ func TestAccLogMeResource(t *testing.T) {
 
 					// Credentials data
 					resource.TestCheckResourceAttrPair(
-						"stackit_logme_credentials.credentials", "project_id",
+						"stackit_logme_credential.credentials", "project_id",
 						"stackit_logme_instance.instance", "project_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_logme_credentials.credentials", "instance_id",
+						"stackit_logme_credential.credentials", "instance_id",
 						"stackit_logme_instance.instance", "instance_id",
 					),
-					resource.TestCheckResourceAttrSet("stackit_logme_credentials.credentials", "credentials_id"),
-					resource.TestCheckResourceAttrSet("stackit_logme_credentials.credentials", "host"),
+					resource.TestCheckResourceAttrSet("stackit_logme_credential.credentials", "credentials_id"),
+					resource.TestCheckResourceAttrSet("stackit_logme_credential.credentials", "host"),
 				),
 			},
 			// Data source
@@ -96,10 +96,10 @@ func TestAccLogMeResource(t *testing.T) {
 						instance_id = stackit_logme_instance.instance.instance_id
 					}
 
-					data "stackit_logme_credentials" "credentials" {
-						project_id     = stackit_logme_credentials.credentials.project_id
-						instance_id    = stackit_logme_credentials.credentials.instance_id
-					    credentials_id = stackit_logme_credentials.credentials.credentials_id
+					data "stackit_logme_credential" "credentials" {
+						project_id     = stackit_logme_credential.credentials.project_id
+						instance_id    = stackit_logme_credential.credentials.instance_id
+					    credentials_id = stackit_logme_credential.credentials.credentials_id
 					}`,
 					resourceConfig(instanceResource["sgw_acl-1"]),
 				),
@@ -109,18 +109,18 @@ func TestAccLogMeResource(t *testing.T) {
 
 					resource.TestCheckResourceAttrPair("stackit_logme_instance.instance", "instance_id",
 						"data.stackit_logme_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttrPair("stackit_logme_credentials.credentials", "credentials_id",
-						"data.stackit_logme_credentials.credentials", "credentials_id"),
+					resource.TestCheckResourceAttrPair("stackit_logme_credential.credentials", "credentials_id",
+						"data.stackit_logme_credential.credentials", "credentials_id"),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "plan_id", instanceResource["plan_id"]),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-1"]),
 
 					// Credentials data
-					resource.TestCheckResourceAttr("data.stackit_logme_credentials.credentials", "project_id", instanceResource["project_id"]),
-					resource.TestCheckResourceAttrSet("data.stackit_logme_credentials.credentials", "credentials_id"),
-					resource.TestCheckResourceAttrSet("data.stackit_logme_credentials.credentials", "host"),
-					resource.TestCheckResourceAttrSet("data.stackit_logme_credentials.credentials", "port"),
-					resource.TestCheckResourceAttrSet("data.stackit_logme_credentials.credentials", "uri"),
+					resource.TestCheckResourceAttr("data.stackit_logme_credential.credentials", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrSet("data.stackit_logme_credential.credentials", "credentials_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_logme_credential.credentials", "host"),
+					resource.TestCheckResourceAttrSet("data.stackit_logme_credential.credentials", "port"),
+					resource.TestCheckResourceAttrSet("data.stackit_logme_credential.credentials", "uri"),
 				),
 			},
 			// Import
@@ -141,11 +141,11 @@ func TestAccLogMeResource(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				ResourceName: "stackit_logme_credentials.credentials",
+				ResourceName: "stackit_logme_credential.credentials",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_logme_credentials.credentials"]
+					r, ok := s.RootModule().Resources["stackit_logme_credential.credentials"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_logme_credentials.credentials")
+						return "", fmt.Errorf("couldn't find resource stackit_logme_credential.credentials")
 					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
