@@ -12,12 +12,12 @@ import (
 )
 
 type objectStorageClientMocked struct {
-	enableFails              bool
+	returnError              bool
 	createProjectExecuteResp *objectstorage.GetProjectResponse
 }
 
 func (c *objectStorageClientMocked) CreateProjectExecute(_ context.Context, _ string) (*objectstorage.GetProjectResponse, error) {
-	if c.enableFails {
+	if c.returnError {
 		return nil, fmt.Errorf("create project failed")
 	}
 
@@ -166,7 +166,7 @@ func TestEnableProject(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			client := &objectStorageClientMocked{
-				enableFails:              tt.enableFails,
+				returnError:              tt.enableFails,
 				createProjectExecuteResp: tt.mockedResp,
 			}
 			model := &Model{
