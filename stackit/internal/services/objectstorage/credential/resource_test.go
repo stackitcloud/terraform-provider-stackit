@@ -18,16 +18,17 @@ import (
 )
 
 type objectStorageClientMocked struct {
-	returnError              bool
-	createProjectExecuteResp *objectstorage.GetProjectResponse
+	returnError bool
 }
 
-func (c *objectStorageClientMocked) CreateProjectExecute(_ context.Context, _ string) (*objectstorage.GetProjectResponse, error) {
+func (c *objectStorageClientMocked) CreateProjectExecute(_ context.Context, projectId string) (*objectstorage.GetProjectResponse, error) {
 	if c.returnError {
-		return nil, fmt.Errorf("get credentials groups failed")
+		return nil, fmt.Errorf("create project failed")
 	}
 
-	return c.createProjectExecuteResp, nil
+	return &objectstorage.GetProjectResponse{
+		Project: utils.Ptr(projectId),
+	}, nil
 }
 
 func TestMapFields(t *testing.T) {
@@ -135,30 +136,12 @@ func TestMapFields(t *testing.T) {
 func TestEnableProject(t *testing.T) {
 	tests := []struct {
 		description string
-		mockedResp  *objectstorage.GetProjectResponse
 		expected    Model
 		enableFails bool
 		isValid     bool
 	}{
 		{
 			"default_values",
-			&objectstorage.GetProjectResponse{},
-			Model{
-				Id:                  types.StringValue("pid,cgid,cid"),
-				ProjectId:           types.StringValue("pid"),
-				CredentialsGroupId:  types.StringValue("cgid"),
-				CredentialId:        types.StringValue("cid"),
-				Name:                types.StringNull(),
-				AccessKey:           types.StringNull(),
-				SecretAccessKey:     types.StringNull(),
-				ExpirationTimestamp: timetypes.NewRFC3339Null(),
-			},
-			false,
-			true,
-		},
-		{
-			"nil_response",
-			nil,
 			Model{
 				Id:                  types.StringValue("pid,cgid,cid"),
 				ProjectId:           types.StringValue("pid"),
@@ -174,7 +157,6 @@ func TestEnableProject(t *testing.T) {
 		},
 		{
 			"error_response",
-			&objectstorage.GetProjectResponse{},
 			Model{
 				Id:                  types.StringValue("pid,cgid,cid"),
 				ProjectId:           types.StringValue("pid"),
@@ -192,8 +174,7 @@ func TestEnableProject(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			client := &objectStorageClientMocked{
-				returnError:              tt.enableFails,
-				createProjectExecuteResp: tt.mockedResp,
+				returnError: tt.enableFails,
 			}
 			model := &Model{
 				ProjectId:          tt.expected.ProjectId,
