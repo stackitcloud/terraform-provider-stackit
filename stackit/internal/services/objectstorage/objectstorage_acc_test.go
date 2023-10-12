@@ -140,6 +140,21 @@ func TestAccObjectStorageResource(t *testing.T) {
 						"data.stackit_objectstorage_bucket.bucket", "url_virtual_hosted_style",
 					),
 
+					// Credentials group data
+					resource.TestCheckResourceAttr("data.stackit_objectstorage_credentials_group.credentials_group", "project_id", credentialsGroupResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credentials_group.credentials_group", "credentials_group_id",
+						"data.stackit_objectstorage_credentials_group.credentials_group", "credentials_group_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credentials_group.credentials_group", "name",
+						"data.stackit_objectstorage_credentials_group.credentials_group", "name",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credentials_group.credentials_group", "urn",
+						"data.stackit_objectstorage_credentials_group.credentials_group", "urn",
+					),
+
 					// Credential group data
 					resource.TestCheckResourceAttrPair(
 						"stackit_objectstorage_credential.credential", "project_id",
