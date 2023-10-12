@@ -124,7 +124,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			},
 			"credentials_group_id": schema.StringAttribute{
 				Description: descriptions["credentials_group_id"],
-				Computed:    true,
+				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
