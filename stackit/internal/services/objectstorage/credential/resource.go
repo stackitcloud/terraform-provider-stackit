@@ -31,7 +31,7 @@ var (
 
 type Model struct {
 	Id                  types.String      `tfsdk:"id"` // needed by TF
-	CredentialId        types.String      `tfsdk:"credentials_id"`
+	CredentialId        types.String      `tfsdk:"credential_id"`
 	CredentialsGroupId  types.String      `tfsdk:"credentials_group_id"`
 	ProjectId           types.String      `tfsdk:"project_id"`
 	Name                types.String      `tfsdk:"name"`
@@ -283,7 +283,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,instance_id,credentials_id
+// The expected format of the resource import identifier is: project_id,instance_id,credential_id
 func (r *credentialResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
