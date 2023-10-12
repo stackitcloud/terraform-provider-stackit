@@ -50,8 +50,8 @@ func resourceConfig() string {
 				}
 
 				resource "stackit_objectstorage_credential" "credential" {
-					project_id = stackit_objectstorage_credential.credentials_group.project_id
-					credentials_group_id = stackit_objectstorage_credential.credentials_group.credentials_group_id
+					project_id = stackit_objectstorage_credentials_group.credentials_group.project_id
+					credentials_group_id = stackit_objectstorage_credentials_group.credentials_group.credentials_group_id
 					expiration_timestamp    = "%s"
 				}
 				`,
