@@ -344,6 +344,7 @@ func TestReadCredentials(t *testing.T) {
 			mockedServer := httptest.NewServer(handler)
 			defer mockedServer.Close()
 			client, err := objectstorage.NewAPIClient(
+				config.WithoutAuthentication(),
 				config.WithEndpoint(mockedServer.URL),
 			)
 			if err != nil {
