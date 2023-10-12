@@ -209,7 +209,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 					{
 						CredentialsGroupId: utils.Ptr("foo-cid"),
 						DisplayName:        utils.Ptr("foo-name"),
-						Urn:                utils.Ptr("urnfoo-"),
+						Urn:                utils.Ptr("foo-urn"),
 					},
 				},
 			},
