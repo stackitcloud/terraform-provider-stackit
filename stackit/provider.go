@@ -19,6 +19,7 @@ import (
 	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
 	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
 	objectStorageBucket "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/bucket"
+	objecStorageCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credential"
 	objecStorageCredentialsGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credentialsgroup"
 	openSearchCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/credential"
 	openSearchInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/instance"
@@ -315,6 +316,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		mariaDBCredential.NewCredentialDataSource,
 		objectStorageBucket.NewBucketDataSource,
 		objecStorageCredentialsGroup.NewCredentialsGroupDataSource,
+		objecStorageCredential.NewCredentialDataSource,
 		openSearchInstance.NewInstanceDataSource,
 		openSearchCredential.NewCredentialDataSource,
 		rabbitMQInstance.NewInstanceDataSource,
@@ -344,6 +346,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		mariaDBCredential.NewCredentialResource,
 		objectStorageBucket.NewBucketResource,
 		objecStorageCredentialsGroup.NewCredentialsGroupResource,
+		objecStorageCredential.NewCredentialResource,
 		openSearchInstance.NewInstanceResource,
 		openSearchCredential.NewCredentialResource,
 		rabbitMQInstance.NewInstanceResource,

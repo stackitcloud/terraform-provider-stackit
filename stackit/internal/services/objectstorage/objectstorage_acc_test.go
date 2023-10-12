@@ -30,6 +30,11 @@ var credentialsGroupResource = map[string]string{
 	"name":       fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha)),
 }
 
+// Credential resource data
+var credentialResource = map[string]string{
+	"expiration_timestamp": "2345-06-07T08:09:10.110Z",
+}
+
 func resourceConfig() string {
 	return fmt.Sprintf(`
 				%s
@@ -43,12 +48,19 @@ func resourceConfig() string {
 					project_id = "%s"
 					name    = "%s"
 				}
+
+				resource "stackit_objectstorage_credential" "credential" {
+					project_id = stackit_objectstorage_credential.credentials_group.project_id
+					credentials_group_id = stackit_objectstorage_credential.credentials_group.credentials_group_id
+					expiration_timestamp    = "%s"
+				}
 				`,
 		testutil.ObjectStorageProviderConfig(),
 		bucketResource["project_id"],
 		bucketResource["bucket_name"],
 		credentialsGroupResource["project_id"],
 		credentialsGroupResource["name"],
+		credentialResource["expiration_timestamp"],
 	)
 }
 
@@ -73,6 +85,21 @@ func TestAccObjectStorageResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_objectstorage_credentials_group.credentials_group", "name", credentialsGroupResource["name"]),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_credentials_group.credentials_group", "credentials_group_id"),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_credentials_group.credentials_group", "urn"),
+
+					// Credential data
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credential.credential", "project_id",
+						"stackit_objectstorage_credentials_group.credentials_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credential.credential", "credentials_group_id",
+						"stackit_objectstorage_credentials_group.credentials_group", "credentials_group_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_objectstorage_credential.credential", "credential_id"),
+					resource.TestCheckResourceAttr("stackit_objectstorage_credential.credential", "expiration_timestamp", credentialResource["expiration_timestamp"]),
+					resource.TestCheckResourceAttrSet("stackit_objectstorage_credential.credential", "name"),
+					resource.TestCheckResourceAttrSet("stackit_objectstorage_credential.credential", "access_key"),
+					resource.TestCheckResourceAttrSet("stackit_objectstorage_credential.credential", "secret_access_key"),
 				),
 			},
 			// Data source
@@ -88,6 +115,12 @@ func TestAccObjectStorageResource(t *testing.T) {
 					data "stackit_objectstorage_credentials_group" "credentials_group" {
 						project_id  = stackit_objectstorage_credentials_group.credentials_group.project_id
 						credentials_group_id = stackit_objectstorage_credentials_group.credentials_group.credentials_group_id
+					}
+					
+					data "stackit_objectstorage_credential" "credential" {
+						project_id  = stackit_objectstorage_credential.credential.project_id
+						credentials_group_id = stackit_objectstorage_credential.credential.credentials_group_id
+						credential_id  = stackit_objectstorage_credential.credential.credential_id
 					}`,
 					resourceConfig(),
 				),
@@ -121,6 +154,36 @@ func TestAccObjectStorageResource(t *testing.T) {
 						"stackit_objectstorage_credentials_group.credentials_group", "urn",
 						"data.stackit_objectstorage_credentials_group.credentials_group", "urn",
 					),
+
+					// Credential data
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credential.credential", "project_id",
+						"data.stackit_objectstorage_credential.credential", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credential.credential", "credentials_group_id",
+						"data.stackit_objectstorage_credential.credential", "credentials_group_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credential.credential", "credential_id",
+						"data.stackit_objectstorage_credential.credential", "credential_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credential.credential", "access_key",
+						"data.stackit_objectstorage_credential.credential", "access_key",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credential.credential", "secret_access_key",
+						"data.stackit_objectstorage_credential.credential", "secret_access_key",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credential.credential", "name",
+						"data.stackit_objectstorage_credential.credential", "name",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_credential.credential", "expiration_timestamp",
+						"data.stackit_objectstorage_credential.credential", "expiration_timestamp",
+					),
 				),
 			},
 			// Import
@@ -137,6 +200,26 @@ func TestAccObjectStorageResource(t *testing.T) {
 					}
 
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, credentialsGroupId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName: "stackit_objectstorage_credential.credential",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_objectstorage_credential.credential"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_objectstorage_credential.credential")
+					}
+					credentialsGroupId, ok := r.Primary.Attributes["credentials_group_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute credentials_group_id")
+					}
+					credentialId, ok := r.Primary.Attributes["credential_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute credential_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, credentialsGroupId, credentialId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
