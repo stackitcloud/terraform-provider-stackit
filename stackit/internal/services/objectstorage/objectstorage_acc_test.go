@@ -155,7 +155,7 @@ func TestAccObjectStorageResource(t *testing.T) {
 						"data.stackit_objectstorage_credentials_group.credentials_group", "urn",
 					),
 
-					// Credential group data
+					// Credential data
 					resource.TestCheckResourceAttrPair(
 						"stackit_objectstorage_credential.credential", "project_id",
 						"data.stackit_objectstorage_credential.credential", "project_id",
