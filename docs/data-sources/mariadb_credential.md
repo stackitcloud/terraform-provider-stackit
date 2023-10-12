@@ -14,9 +14,9 @@ MariaDB credential data source schema.
 
 ```terraform
 data "stackit_mariadb_credential" "example" {
-  project_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  instance_id    = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  credentials_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  project_id    = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  instance_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  credential_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 ```
 
@@ -25,7 +25,7 @@ data "stackit_mariadb_credential" "example" {
 
 ### Required
 
-- `credentials_id` (String) The credentials ID.
+- `credential_id` (String) The credential's ID.
 - `instance_id` (String) ID of the MariaDB instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 
@@ -34,7 +34,7 @@ data "stackit_mariadb_credential" "example" {
 - `host` (String)
 - `hosts` (List of String)
 - `http_api_uri` (String)
-- `id` (String) Terraform's internal data source. identifier. It is structured as "`project_id`,`instance_id`,`credentials_id`".
+- `id` (String) Terraform's internal data source. identifier. It is structured as "`project_id`,`instance_id`,`credential_id`".
 - `name` (String)
 - `password` (String, Sensitive)
 - `port` (Number)

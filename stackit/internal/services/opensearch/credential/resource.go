@@ -32,18 +32,18 @@ var (
 )
 
 type Model struct {
-	Id            types.String `tfsdk:"id"` // needed by TF
-	CredentialsId types.String `tfsdk:"credentials_id"`
-	InstanceId    types.String `tfsdk:"instance_id"`
-	ProjectId     types.String `tfsdk:"project_id"`
-	Host          types.String `tfsdk:"host"`
-	Hosts         types.List   `tfsdk:"hosts"`
-	HttpAPIURI    types.String `tfsdk:"http_api_uri"`
-	Name          types.String `tfsdk:"name"`
-	Password      types.String `tfsdk:"password"`
-	Port          types.Int64  `tfsdk:"port"`
-	Uri           types.String `tfsdk:"uri"`
-	Username      types.String `tfsdk:"username"`
+	Id           types.String `tfsdk:"id"` // needed by TF
+	CredentialId types.String `tfsdk:"credential_id"`
+	InstanceId   types.String `tfsdk:"instance_id"`
+	ProjectId    types.String `tfsdk:"project_id"`
+	Host         types.String `tfsdk:"host"`
+	Hosts        types.List   `tfsdk:"hosts"`
+	HttpAPIURI   types.String `tfsdk:"http_api_uri"`
+	Name         types.String `tfsdk:"name"`
+	Password     types.String `tfsdk:"password"`
+	Port         types.Int64  `tfsdk:"port"`
+	Uri          types.String `tfsdk:"uri"`
+	Username     types.String `tfsdk:"username"`
 }
 
 // NewCredentialResource is a helper function to simplify the provider implementation.
@@ -94,17 +94,17 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "OpenSearch credentials client configured")
+	tflog.Info(ctx, "OpenSearch credential client configured")
 }
 
 // Schema defines the schema for the resource.
 func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":           "OpenSearch credential resource schema.",
-		"id":             "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
-		"credentials_id": "The credentials ID.",
-		"instance_id":    "ID of the OpenSearch instance.",
-		"project_id":     "STACKIT Project ID to which the instance is associated.",
+		"main":          "OpenSearch credential resource schema.",
+		"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credential_id`\".",
+		"credential_id": "The credential's ID.",
+		"instance_id":   "ID of the OpenSearch instance.",
+		"project_id":    "STACKIT Project ID to which the instance is associated.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -117,8 +117,8 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"credentials_id": schema.StringAttribute{
-				Description: descriptions["credentials_id"],
+			"credential_id": schema.StringAttribute{
+				Description: descriptions["credential_id"],
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -202,13 +202,13 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 	if credentialsResp.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", "Got empty credentials id")
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", "Got empty credential id")
 		return
 	}
-	credentialsId := *credentialsResp.Id
-	ctx = tflog.SetField(ctx, "credentials_id", credentialsId)
+	credentialId := *credentialsResp.Id
+	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	wr, err := wait.CreateCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialsId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
+	wr, err := wait.CreateCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -230,7 +230,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "OpenSearch credentials created")
+	tflog.Info(ctx, "OpenSearch credential created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -243,12 +243,12 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	credentialsId := model.CredentialsId.ValueString()
+	credentialId := model.CredentialId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	ctx = tflog.SetField(ctx, "credentials_id", credentialsId)
+	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	recordSetResp, err := r.client.GetCredentials(ctx, projectId, instanceId, credentialsId).Execute()
+	recordSetResp, err := r.client.GetCredentials(ctx, projectId, instanceId, credentialId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -267,7 +267,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "OpenSearch credentials read")
+	tflog.Info(ctx, "OpenSearch credential read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -287,40 +287,40 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	credentialsId := model.CredentialsId.ValueString()
+	credentialId := model.CredentialId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	ctx = tflog.SetField(ctx, "credentials_id", credentialsId)
+	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
 	// Delete existing record set
-	err := r.client.DeleteCredentials(ctx, projectId, instanceId, credentialsId).Execute()
+	err := r.client.DeleteCredentials(ctx, projectId, instanceId, credentialId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
 	}
-	_, err = wait.DeleteCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialsId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
-	tflog.Info(ctx, "OpenSearch credentials deleted")
+	tflog.Info(ctx, "OpenSearch credential deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,instance_id,credentials_id
+// The expected format of the resource import identifier is: project_id,instance_id,credential_id
 func (r *credentialResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing credential",
-			fmt.Sprintf("Expected import identifier with format [project_id],[instance_id],[credentials_id], got %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format [project_id],[instance_id],[credential_id], got %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials_id"), idParts[2])...)
-	tflog.Info(ctx, "OpenSearch credentials state imported")
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credential_id"), idParts[2])...)
+	tflog.Info(ctx, "OpenSearch credential state imported")
 }
 
 func mapFields(credentialsResp *opensearch.CredentialsResponse, model *Model) error {
@@ -335,11 +335,11 @@ func mapFields(credentialsResp *opensearch.CredentialsResponse, model *Model) er
 	}
 	credentials := credentialsResp.Raw.Credentials
 
-	var credentialsId string
-	if model.CredentialsId.ValueString() != "" {
-		credentialsId = model.CredentialsId.ValueString()
+	var credentialId string
+	if model.CredentialId.ValueString() != "" {
+		credentialId = model.CredentialId.ValueString()
 	} else if credentialsResp.Id != nil {
-		credentialsId = *credentialsResp.Id
+		credentialId = *credentialsResp.Id
 	} else {
 		return fmt.Errorf("credentials id not present")
 	}
@@ -347,12 +347,12 @@ func mapFields(credentialsResp *opensearch.CredentialsResponse, model *Model) er
 	idParts := []string{
 		model.ProjectId.ValueString(),
 		model.InstanceId.ValueString(),
-		credentialsId,
+		credentialId,
 	}
 	model.Id = types.StringValue(
 		strings.Join(idParts, core.Separator),
 	)
-	model.CredentialsId = types.StringValue(credentialsId)
+	model.CredentialId = types.StringValue(credentialId)
 	model.Hosts = types.ListNull(types.StringType)
 	if credentials != nil {
 		if credentials.Hosts != nil {

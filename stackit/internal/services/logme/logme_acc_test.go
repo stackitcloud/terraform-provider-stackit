@@ -82,7 +82,7 @@ func TestAccLogMeResource(t *testing.T) {
 						"stackit_logme_credential.credentials", "instance_id",
 						"stackit_logme_instance.instance", "instance_id",
 					),
-					resource.TestCheckResourceAttrSet("stackit_logme_credential.credentials", "credentials_id"),
+					resource.TestCheckResourceAttrSet("stackit_logme_credential.credentials", "credential_id"),
 					resource.TestCheckResourceAttrSet("stackit_logme_credential.credentials", "host"),
 				),
 			},
@@ -99,7 +99,7 @@ func TestAccLogMeResource(t *testing.T) {
 					data "stackit_logme_credential" "credentials" {
 						project_id     = stackit_logme_credential.credentials.project_id
 						instance_id    = stackit_logme_credential.credentials.instance_id
-					    credentials_id = stackit_logme_credential.credentials.credentials_id
+					    credential_id = stackit_logme_credential.credentials.credential_id
 					}`,
 					resourceConfig(instanceResource["sgw_acl-1"]),
 				),
@@ -109,15 +109,15 @@ func TestAccLogMeResource(t *testing.T) {
 
 					resource.TestCheckResourceAttrPair("stackit_logme_instance.instance", "instance_id",
 						"data.stackit_logme_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttrPair("stackit_logme_credential.credentials", "credentials_id",
-						"data.stackit_logme_credential.credentials", "credentials_id"),
+					resource.TestCheckResourceAttrPair("stackit_logme_credential.credentials", "credential_id",
+						"data.stackit_logme_credential.credentials", "credential_id"),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "plan_id", instanceResource["plan_id"]),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-1"]),
 
 					// Credentials data
 					resource.TestCheckResourceAttr("data.stackit_logme_credential.credentials", "project_id", instanceResource["project_id"]),
-					resource.TestCheckResourceAttrSet("data.stackit_logme_credential.credentials", "credentials_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_logme_credential.credentials", "credential_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_logme_credential.credentials", "host"),
 					resource.TestCheckResourceAttrSet("data.stackit_logme_credential.credentials", "port"),
 					resource.TestCheckResourceAttrSet("data.stackit_logme_credential.credentials", "uri"),
@@ -151,11 +151,11 @@ func TestAccLogMeResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
-					credentialsId, ok := r.Primary.Attributes["credentials_id"]
+					credentialId, ok := r.Primary.Attributes["credential_id"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find attribute credentials_id")
+						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialsId), nil
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,

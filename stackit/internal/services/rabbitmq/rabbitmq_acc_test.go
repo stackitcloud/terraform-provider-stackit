@@ -128,7 +128,7 @@ func TestAccRabbitMQResource(t *testing.T) {
 						"stackit_rabbitmq_credential.credentials", "instance_id",
 						"stackit_rabbitmq_instance.instance", "instance_id",
 					),
-					resource.TestCheckResourceAttrSet("stackit_rabbitmq_credential.credentials", "credentials_id"),
+					resource.TestCheckResourceAttrSet("stackit_rabbitmq_credential.credentials", "credential_id"),
 					resource.TestCheckResourceAttrSet("stackit_rabbitmq_credential.credentials", "host"),
 				),
 			},
@@ -145,7 +145,7 @@ func TestAccRabbitMQResource(t *testing.T) {
 					data "stackit_rabbitmq_credential" "credentials" {
 						project_id     = stackit_rabbitmq_credential.credentials.project_id
 						instance_id    = stackit_rabbitmq_credential.credentials.instance_id
-					    credentials_id = stackit_rabbitmq_credential.credentials.credentials_id
+					    credential_id = stackit_rabbitmq_credential.credentials.credential_id
 					}`,
 					resourceConfig(nil),
 				),
@@ -162,7 +162,7 @@ func TestAccRabbitMQResource(t *testing.T) {
 
 					// Credentials data
 					resource.TestCheckResourceAttr("data.stackit_rabbitmq_credential.credentials", "project_id", instanceResource["project_id"]),
-					resource.TestCheckResourceAttrSet("data.stackit_rabbitmq_credential.credentials", "credentials_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_rabbitmq_credential.credentials", "credential_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_rabbitmq_credential.credentials", "host"),
 					resource.TestCheckResourceAttrSet("data.stackit_rabbitmq_credential.credentials", "port"),
 					resource.TestCheckResourceAttrSet("data.stackit_rabbitmq_credential.credentials", "uri"),
@@ -196,11 +196,11 @@ func TestAccRabbitMQResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
-					credentialsId, ok := r.Primary.Attributes["credentials_id"]
+					credentialId, ok := r.Primary.Attributes["credential_id"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find attribute credentials_id")
+						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialsId), nil
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,

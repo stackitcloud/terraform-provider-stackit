@@ -29,11 +29,11 @@ resource "stackit_opensearch_credential" "example" {
 
 ### Read-Only
 
-- `credentials_id` (String) The credentials ID.
+- `credential_id` (String) The credential's ID.
 - `host` (String)
 - `hosts` (List of String)
 - `http_api_uri` (String)
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`instance_id`,`credentials_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`instance_id`,`credential_id`".
 - `name` (String)
 - `password` (String, Sensitive)
 - `port` (Number)

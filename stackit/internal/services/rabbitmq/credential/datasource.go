@@ -69,17 +69,17 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "RabbitMQ credentials client configured")
+	tflog.Info(ctx, "RabbitMQ credential client configured")
 }
 
 // Schema defines the schema for the data source.
 func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":           "RabbitMQ credential data source schema.",
-		"id":             "Terraform's internal data source. identifier. It is structured as \"`project_id`,`instance_id`,`credentials_id`\".",
-		"credentials_id": "The credentials ID.",
-		"instance_id":    "ID of the RabbitMQ instance.",
-		"project_id":     "STACKIT project ID to which the instance is associated.",
+		"main":          "RabbitMQ credential data source schema.",
+		"id":            "Terraform's internal data source. identifier. It is structured as \"`project_id`,`instance_id`,`credential_id`\".",
+		"credential_id": "The credential's ID.",
+		"instance_id":   "ID of the RabbitMQ instance.",
+		"project_id":    "STACKIT project ID to which the instance is associated.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -89,8 +89,8 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Description: descriptions["id"],
 				Computed:    true,
 			},
-			"credentials_id": schema.StringAttribute{
-				Description: descriptions["credentials_id"],
+			"credential_id": schema.StringAttribute{
+				Description: descriptions["credential_id"],
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -153,12 +153,12 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	}
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	credentialsId := model.CredentialsId.ValueString()
+	credentialId := model.CredentialId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	ctx = tflog.SetField(ctx, "credentials_id", credentialsId)
+	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	recordSetResp, err := r.client.GetCredentials(ctx, projectId, instanceId, credentialsId).Execute()
+	recordSetResp, err := r.client.GetCredentials(ctx, projectId, instanceId, credentialId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -177,5 +177,5 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "RabbitMQ credentials read")
+	tflog.Info(ctx, "RabbitMQ credential read")
 }
