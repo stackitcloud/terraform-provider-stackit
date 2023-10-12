@@ -17,26 +17,26 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ datasource.DataSource = &bucketDataSource{}
+	_ datasource.DataSource = &credentialsGroupDataSource{}
 )
 
-// NewBucketDataSource is a helper function to simplify the provider implementation.
-func NewBucketDataSource() datasource.DataSource {
-	return &bucketDataSource{}
+// NewCredentialsGroupDataSource is a helper function to simplify the provider implementation.
+func NewCredentialsGroupDataSource() datasource.DataSource {
+	return &credentialsGroupDataSource{}
 }
 
-// bucketDataSource is the data source implementation.
-type bucketDataSource struct {
+// credentialsGroupDataSource is the data source implementation.
+type credentialsGroupDataSource struct {
 	client *objectstorage.APIClient
 }
 
 // Metadata returns the data source type name.
-func (r *bucketDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_objectstorage_bucket"
+func (r *credentialsGroupDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_objectstorage_credentials_group"
 }
 
 // Configure adds the provider configured client to the data source.
-func (r *bucketDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (r *credentialsGroupDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -68,18 +68,18 @@ func (r *bucketDataSource) Configure(ctx context.Context, req datasource.Configu
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "ObjectStorage bucket client configured")
+	tflog.Info(ctx, "ObjectStorage credentials group client configured")
 }
 
 // Schema defines the schema for the data source.
-func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (r *credentialsGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                     "ObjectStorage bucket data source schema.",
-		"id":                       "Terraform's internal data source identifier. It is structured as \"`project_id`,`bucket_name`\".",
-		"bucket_name":              "The bucket name. It must be DNS conform.",
-		"project_id":               "STACKIT Project ID to which the bucket is associated.",
-		"url_path_style":           "URL in path style.",
-		"url_virtual_hosted_style": "URL in virtual hosted style.",
+		"main":                 "ObjectStorage credentials group data source schema.",
+		"id":                   "Terraform's internal data source identifier. It is structured as \"`project_id`,`credentials_group_id`\".",
+		"credentials_group_id": "The credentials group ID",
+		"name":                 "The credentials group's display name.",
+		"project_id":           "Object Storage Project ID to which the credentials group is associated.",
+		"urn":                  "Credentials group uniform resource name (URN)",
 	}
 
 	resp.Schema = schema.Schema{
@@ -89,12 +89,10 @@ func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Description: descriptions["id"],
 				Computed:    true,
 			},
-			"bucket_name": schema.StringAttribute{
-				Description: descriptions["bucket_name"],
-				Required:    true,
-				Validators: []validator.String{
-					validate.NoSeparator(),
-				},
+			"credentials_group_id": schema.StringAttribute{
+				Description: descriptions["id"],
+				Optional:    true,
+				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
 				Description: descriptions["project_id"],
@@ -104,18 +102,21 @@ func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 					validate.NoSeparator(),
 				},
 			},
-			"url_path_style": schema.StringAttribute{
-				Computed: true,
+			"name": schema.StringAttribute{
+				Description: descriptions["name"],
+				Optional:    true,
+				Computed:    true,
 			},
-			"url_virtual_hosted_style": schema.StringAttribute{
-				Computed: true,
+			"urn": schema.StringAttribute{
+				Computed:    true,
+				Description: descriptions["urn"],
 			},
 		},
 	}
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -123,20 +124,13 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	bucketName := model.BucketName.ValueString()
+	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "bucket_name", bucketName)
+	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 
-	bucketResp, err := r.client.GetBucket(ctx, projectId, bucketName).Execute()
+	err := readCredentialsGroups(ctx, &model, r.client)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading bucket", fmt.Sprintf("Calling API: %v", err))
-		return
-	}
-
-	// Map response body to schema
-	err = mapFields(bucketResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading bucket", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentialsGroup", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
 		return
 	}
 
@@ -146,5 +140,5 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "ObjectStorage bucket read")
+	tflog.Info(ctx, "ObjectStorage credentials group read")
 }

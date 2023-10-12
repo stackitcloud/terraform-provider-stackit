@@ -155,8 +155,15 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "bucket_name", bucketName)
 
-	// Create new recordset
-	_, err := r.client.CreateBucket(ctx, projectId, bucketName).Execute()
+	// Handle project init
+	err := enableProject(ctx, &model, r.client)
+	if resp.Diagnostics.HasError() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Enabling object storage project before creation: %v", err))
+		return
+	}
+
+	// Create new bucket
+	_, err = r.client.CreateBucket(ctx, projectId, bucketName).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -292,5 +299,21 @@ func mapFields(bucketResp *objectstorage.GetBucketResponse, model *Model) error 
 	)
 	model.URLPathStyle = types.StringPointerValue(bucket.UrlPathStyle)
 	model.URLVirtualHostedStyle = types.StringPointerValue(bucket.UrlVirtualHostedStyle)
+	return nil
+}
+
+type objectStorageClient interface {
+	CreateProjectExecute(ctx context.Context, projectId string) (*objectstorage.GetProjectResponse, error)
+}
+
+// enableProject enables object storage for the specified project. If the project is already enabled, nothing happens
+func enableProject(ctx context.Context, model *Model, client objectStorageClient) error {
+	projectId := model.ProjectId.ValueString()
+
+	// From the object storage OAS: Creation will also be successful if the project is already enabled, but will not create a duplicate
+	_, err := client.CreateProjectExecute(ctx, projectId)
+	if err != nil {
+		return fmt.Errorf("failed to create object storage project: %w", err)
+	}
 	return nil
 }

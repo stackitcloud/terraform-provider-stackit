@@ -19,6 +19,7 @@ import (
 	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
 	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
 	objectStorageBucket "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/bucket"
+	objecStorageCredentialsGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credentialsgroup"
 	openSearchCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/credential"
 	openSearchInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/instance"
 	postgresFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/instance"
@@ -313,6 +314,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		mariaDBInstance.NewInstanceDataSource,
 		mariaDBCredential.NewCredentialDataSource,
 		objectStorageBucket.NewBucketDataSource,
+		objecStorageCredentialsGroup.NewCredentialsGroupDataSource,
 		openSearchInstance.NewInstanceDataSource,
 		openSearchCredential.NewCredentialDataSource,
 		rabbitMQInstance.NewInstanceDataSource,
@@ -341,6 +343,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		mariaDBInstance.NewInstanceResource,
 		mariaDBCredential.NewCredentialResource,
 		objectStorageBucket.NewBucketResource,
+		objecStorageCredentialsGroup.NewCredentialsGroupResource,
 		openSearchInstance.NewInstanceResource,
 		openSearchCredential.NewCredentialResource,
 		rabbitMQInstance.NewInstanceResource,
