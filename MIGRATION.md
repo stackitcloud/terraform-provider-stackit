@@ -97,7 +97,7 @@ import {
 }
 
 import {
-  id = "project_id,instance_id,credentials_id"
+  id = "project_id,instance_id,credential_id"
   to = stackit_logme_credential.example-credential
 }
 ```
@@ -119,7 +119,7 @@ resource "stackit_logme_instance" "example-instance" {
   version    = null
 }
 
-# __generated__ by Terraform from "project_id,instance_id,credentials_id"
+# __generated__ by Terraform from "project_id,instance_id,credential_id"
 resource "stackit_logme_credential" "example-credential" {
   instance_id = "instance_id"
   project_id  = "project_id"
