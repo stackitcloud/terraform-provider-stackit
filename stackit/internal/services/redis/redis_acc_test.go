@@ -25,7 +25,7 @@ var instanceResource = map[string]string{
 	"plan_name":       "stackit-qa-redis-1.4.10-single",
 	"version":         "6",
 	"sgw_acl_invalid": "1.2.3.4/4",
-	"sgw_acl_valid":   "1.2.3.4/31",
+	"sgw_acl_valid":   "192.168.0.0/16",
 }
 
 func resourceConfig(acls *string) string {
