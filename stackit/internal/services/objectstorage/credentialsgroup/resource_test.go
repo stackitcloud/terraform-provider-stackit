@@ -13,16 +13,17 @@ import (
 
 type objectStorageClientMocked struct {
 	returnError              bool
-	createProjectExecuteResp *objectstorage.GetProjectResponse
 	getCredentialsGroupsResp *objectstorage.GetCredentialsGroupsResponse
 }
 
-func (c *objectStorageClientMocked) CreateProjectExecute(_ context.Context, _ string) (*objectstorage.GetProjectResponse, error) {
+func (c *objectStorageClientMocked) CreateProjectExecute(_ context.Context, projectId string) (*objectstorage.GetProjectResponse, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("create project failed")
 	}
 
-	return c.createProjectExecuteResp, nil
+	return &objectstorage.GetProjectResponse{
+		Project: utils.Ptr(projectId),
+	}, nil
 }
 
 func (c *objectStorageClientMocked) GetCredentialsGroupsExecute(_ context.Context, _ string) (*objectstorage.GetCredentialsGroupsResponse, error) {
@@ -127,25 +128,16 @@ func TestMapFields(t *testing.T) {
 func TestEnableProject(t *testing.T) {
 	tests := []struct {
 		description string
-		mockedResp  *objectstorage.GetProjectResponse
 		enableFails bool
 		isValid     bool
 	}{
 		{
 			"default_values",
-			&objectstorage.GetProjectResponse{},
-			false,
-			true,
-		},
-		{
-			"nil_response",
-			nil,
 			false,
 			true,
 		},
 		{
 			"error_response",
-			&objectstorage.GetProjectResponse{},
 			true,
 			false,
 		},
@@ -153,8 +145,7 @@ func TestEnableProject(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			client := &objectStorageClientMocked{
-				returnError:              tt.enableFails,
-				createProjectExecuteResp: tt.mockedResp,
+				returnError: tt.enableFails,
 			}
 			err := enableProject(context.Background(), &Model{}, client)
 			if !tt.isValid && err == nil {
