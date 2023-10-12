@@ -370,5 +370,4 @@ func TestReadCredentials(t *testing.T) {
 			}
 		})
 	}
-
 }
