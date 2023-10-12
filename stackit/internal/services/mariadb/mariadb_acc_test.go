@@ -41,7 +41,7 @@ func resourceConfig(acls string) string {
 					}
 				}
 
-				resource "stackit_mariadb_credential" "credentials" {
+				resource "stackit_mariadb_credential" "credential" {
 					project_id = stackit_mariadb_instance.instance.project_id
 					instance_id = stackit_mariadb_instance.instance.instance_id
 				}
@@ -73,17 +73,17 @@ func TestAccMariaDBResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-1"]),
 
-					// Credentials data
+					// Credential data
 					resource.TestCheckResourceAttrPair(
-						"stackit_mariadb_credential.credentials", "project_id",
+						"stackit_mariadb_credential.credential", "project_id",
 						"stackit_mariadb_instance.instance", "project_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_mariadb_credential.credentials", "instance_id",
+						"stackit_mariadb_credential.credential", "instance_id",
 						"stackit_mariadb_instance.instance", "instance_id",
 					),
-					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credentials", "credential_id"),
-					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credentials", "host"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "credential_id"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "host"),
 				),
 			},
 			// Data source
@@ -96,10 +96,10 @@ func TestAccMariaDBResource(t *testing.T) {
 						instance_id = stackit_mariadb_instance.instance.instance_id
 					}
 
-					data "stackit_mariadb_credential" "credentials" {
-						project_id     = stackit_mariadb_credential.credentials.project_id
-						instance_id    = stackit_mariadb_credential.credentials.instance_id
-					    credential_id = stackit_mariadb_credential.credentials.credential_id
+					data "stackit_mariadb_credential" "credential" {
+						project_id     = stackit_mariadb_credential.credential.project_id
+						instance_id    = stackit_mariadb_credential.credential.instance_id
+					    credential_id = stackit_mariadb_credential.credential.credential_id
 					}`,
 					resourceConfig(instanceResource["sgw_acl-1"]),
 				),
@@ -108,18 +108,18 @@ func TestAccMariaDBResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrPair("stackit_mariadb_instance.instance", "instance_id",
 						"data.stackit_mariadb_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttrPair("stackit_mariadb_credential.credentials", "credential_id",
-						"data.stackit_mariadb_credential.credentials", "credential_id"),
+					resource.TestCheckResourceAttrPair("stackit_mariadb_credential.credential", "credential_id",
+						"data.stackit_mariadb_credential.credential", "credential_id"),
 					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "plan_id", instanceResource["plan_id"]),
 					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-1"]),
 
-					// Credentials data
-					resource.TestCheckResourceAttr("data.stackit_mariadb_credential.credentials", "project_id", instanceResource["project_id"]),
-					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credentials", "credential_id"),
-					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credentials", "host"),
-					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credentials", "port"),
-					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credentials", "uri"),
+					// Credential data
+					resource.TestCheckResourceAttr("data.stackit_mariadb_credential.credential", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "credential_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "host"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "port"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "uri"),
 				),
 			},
 			// Import
@@ -140,11 +140,11 @@ func TestAccMariaDBResource(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				ResourceName: "stackit_mariadb_credential.credentials",
+				ResourceName: "stackit_mariadb_credential.credential",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_mariadb_credential.credentials"]
+					r, ok := s.RootModule().Resources["stackit_mariadb_credential.credential"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_mariadb_credential.credentials")
+						return "", fmt.Errorf("couldn't find resource stackit_mariadb_credential.credential")
 					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {

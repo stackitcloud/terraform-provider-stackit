@@ -37,7 +37,7 @@ func resourceConfig() string {
  				 	version    = "%s"
 				}
 
-				resource "stackit_opensearch_credential" "credentials" {
+				resource "stackit_opensearch_credential" "credential" {
 					project_id = stackit_opensearch_instance.instance.project_id
 					instance_id = stackit_opensearch_instance.instance.instance_id
 				}
@@ -64,7 +64,7 @@ func resourceConfigUpdate() string {
 					}
 				}
 
-				resource "stackit_opensearch_credential" "credentials" {
+				resource "stackit_opensearch_credential" "credential" {
 					project_id = stackit_opensearch_instance.instance.project_id
 					instance_id = stackit_opensearch_instance.instance.instance_id
 				}
@@ -97,17 +97,17 @@ func TestAccOpenSearchResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttrSet("stackit_opensearch_instance.instance", "parameters.sgw_acl"),
 
-					// Credentials data
+					// Credential data
 					resource.TestCheckResourceAttrPair(
-						"stackit_opensearch_credential.credentials", "project_id",
+						"stackit_opensearch_credential.credential", "project_id",
 						"stackit_opensearch_instance.instance", "project_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_opensearch_credential.credentials", "instance_id",
+						"stackit_opensearch_credential.credential", "instance_id",
 						"stackit_opensearch_instance.instance", "instance_id",
 					),
-					resource.TestCheckResourceAttrSet("stackit_opensearch_credential.credentials", "credential_id"),
-					resource.TestCheckResourceAttrSet("stackit_opensearch_credential.credentials", "host"),
+					resource.TestCheckResourceAttrSet("stackit_opensearch_credential.credential", "credential_id"),
+					resource.TestCheckResourceAttrSet("stackit_opensearch_credential.credential", "host"),
 				),
 			},
 			// Data source
@@ -120,10 +120,10 @@ func TestAccOpenSearchResource(t *testing.T) {
 						instance_id = stackit_opensearch_instance.instance.instance_id
 					}
 
-					data "stackit_opensearch_credential" "credentials" {
-						project_id     = stackit_opensearch_credential.credentials.project_id
-						instance_id    = stackit_opensearch_credential.credentials.instance_id
-					    credential_id = stackit_opensearch_credential.credentials.credential_id
+					data "stackit_opensearch_credential" "credential" {
+						project_id     = stackit_opensearch_credential.credential.project_id
+						instance_id    = stackit_opensearch_credential.credential.instance_id
+					    credential_id = stackit_opensearch_credential.credential.credential_id
 					}`,
 					resourceConfig(),
 				),
@@ -132,18 +132,18 @@ func TestAccOpenSearchResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrPair("stackit_opensearch_instance.instance", "instance_id",
 						"data.stackit_opensearch_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttrPair("stackit_opensearch_credential.credentials", "credential_id",
-						"data.stackit_opensearch_credential.credentials", "credential_id"),
+					resource.TestCheckResourceAttrPair("stackit_opensearch_credential.credential", "credential_id",
+						"data.stackit_opensearch_credential.credential", "credential_id"),
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "plan_id", instanceResource["plan_id"]),
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttrSet("data.stackit_opensearch_instance.instance", "parameters.sgw_acl"),
 
-					// Credentials data
-					resource.TestCheckResourceAttr("data.stackit_opensearch_credential.credentials", "project_id", instanceResource["project_id"]),
-					resource.TestCheckResourceAttrSet("data.stackit_opensearch_credential.credentials", "credential_id"),
-					resource.TestCheckResourceAttrSet("data.stackit_opensearch_credential.credentials", "host"),
-					resource.TestCheckResourceAttrSet("data.stackit_opensearch_credential.credentials", "port"),
-					resource.TestCheckResourceAttrSet("data.stackit_opensearch_credential.credentials", "uri"),
+					// Credential data
+					resource.TestCheckResourceAttr("data.stackit_opensearch_credential.credential", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrSet("data.stackit_opensearch_credential.credential", "credential_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_opensearch_credential.credential", "host"),
+					resource.TestCheckResourceAttrSet("data.stackit_opensearch_credential.credential", "port"),
+					resource.TestCheckResourceAttrSet("data.stackit_opensearch_credential.credential", "uri"),
 				),
 			},
 			// Import
@@ -165,11 +165,11 @@ func TestAccOpenSearchResource(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				ResourceName: "stackit_opensearch_credential.credentials",
+				ResourceName: "stackit_opensearch_credential.credential",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_opensearch_credential.credentials"]
+					r, ok := s.RootModule().Resources["stackit_opensearch_credential.credential"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_opensearch_credential.credentials")
+						return "", fmt.Errorf("couldn't find resource stackit_opensearch_credential.credential")
 					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
