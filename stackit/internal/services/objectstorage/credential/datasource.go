@@ -111,7 +111,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			},
 			"expiration_timestamp": schema.StringAttribute{
 				CustomType: timetypes.RFC3339Type{},
-				Required:   true,
+				Computed:   true,
 			},
 		},
 	}
