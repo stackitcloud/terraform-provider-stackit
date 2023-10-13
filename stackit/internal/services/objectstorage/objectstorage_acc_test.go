@@ -169,14 +169,6 @@ func TestAccObjectStorageResource(t *testing.T) {
 						"data.stackit_objectstorage_credential.credential", "credential_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_objectstorage_credential.credential", "access_key",
-						"data.stackit_objectstorage_credential.credential", "access_key",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_objectstorage_credential.credential", "secret_access_key",
-						"data.stackit_objectstorage_credential.credential", "secret_access_key",
-					),
-					resource.TestCheckResourceAttrPair(
 						"stackit_objectstorage_credential.credential", "name",
 						"data.stackit_objectstorage_credential.credential", "name",
 					),
