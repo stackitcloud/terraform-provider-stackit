@@ -270,21 +270,34 @@ func mapFields(credentialsGroupResp *objectstorage.CreateCredentialsGroupRespons
 	}
 	credentialsGroup := credentialsGroupResp.CredentialsGroup
 
-	mapCredentialsGroup(*credentialsGroup, model)
+	err := mapCredentialsGroup(*credentialsGroup, model)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model *Model) {
-	model.URN = types.StringPointerValue(credentialsGroup.Urn)
-	model.Name = types.StringPointerValue(credentialsGroup.DisplayName)
+func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model *Model) error {
+	var credentialsGroupId string
+	if model.CredentialsGroupId.ValueString() != "" {
+		credentialsGroupId = model.CredentialsGroupId.ValueString()
+	} else if credentialsGroup.CredentialsGroupId != nil {
+		credentialsGroupId = *credentialsGroup.CredentialsGroupId
+	} else {
+		return fmt.Errorf("credential id not present")
+	}
 
 	idParts := []string{
 		model.ProjectId.ValueString(),
-		model.CredentialsGroupId.ValueString(),
+		credentialsGroupId,
 	}
 	model.Id = types.StringValue(
 		strings.Join(idParts, core.Separator),
 	)
+	model.CredentialsGroupId = types.StringValue(credentialsGroupId)
+	model.URN = types.StringPointerValue(credentialsGroup.Urn)
+	model.Name = types.StringPointerValue(credentialsGroup.DisplayName)
+	return nil
 }
 
 type objectStorageClient interface {
@@ -327,7 +340,10 @@ func readCredentialsGroups(ctx context.Context, model *Model, client objectStora
 			continue
 		}
 		found = true
-		mapCredentialsGroup(credentialsGroup, model)
+		err = mapCredentialsGroup(credentialsGroup, model)
+		if err != nil {
+			return err
+		}
 		break
 	}
 

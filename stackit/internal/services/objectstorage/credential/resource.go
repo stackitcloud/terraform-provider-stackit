@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/hashicorp/terraform-plugin-framework-timetypes/timetypes"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -30,14 +29,14 @@ var (
 )
 
 type Model struct {
-	Id                  types.String      `tfsdk:"id"` // needed by TF
-	CredentialId        types.String      `tfsdk:"credential_id"`
-	CredentialsGroupId  types.String      `tfsdk:"credentials_group_id"`
-	ProjectId           types.String      `tfsdk:"project_id"`
-	Name                types.String      `tfsdk:"name"`
-	AccessKey           types.String      `tfsdk:"access_key"`
-	SecretAccessKey     types.String      `tfsdk:"secret_access_key"`
-	ExpirationTimestamp timetypes.RFC3339 `tfsdk:"expiration_timestamp"`
+	Id                  types.String `tfsdk:"id"` // needed by TF
+	CredentialId        types.String `tfsdk:"credential_id"`
+	CredentialsGroupId  types.String `tfsdk:"credentials_group_id"`
+	ProjectId           types.String `tfsdk:"project_id"`
+	Name                types.String `tfsdk:"name"`
+	AccessKey           types.String `tfsdk:"access_key"`
+	SecretAccessKey     types.String `tfsdk:"secret_access_key"`
+	ExpirationTimestamp types.String `tfsdk:"expiration_timestamp"`
 }
 
 // NewCredentialResource is a helper function to simplify the provider implementation.
@@ -99,6 +98,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		"credential_id":        "The credential ID.",
 		"credentials_group_id": "The credential group ID.",
 		"project_id":           "STACKIT Project ID to which the credential group is associated.",
+		"expiration_timestamp": "Expiration timestamp, in RFC339 format without fractional seconds. Example: \"2025-01-01T00:00:00Z\". If not set, the credential never expires.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -124,7 +124,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			},
 			"credentials_group_id": schema.StringAttribute{
 				Description: descriptions["credentials_group_id"],
-				Computed:    true,
+				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -156,9 +156,12 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Sensitive: true,
 			},
 			"expiration_timestamp": schema.StringAttribute{
-				CustomType: timetypes.RFC3339Type{},
-				Optional:   true,
-				Computed:   true,
+				Description: descriptions["expiration_timestamp"],
+				Optional:    true,
+				Computed:    true,
+				Validators: []validator.String{
+					validate.RFC3339SecondsOnly(),
+				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -325,9 +328,13 @@ func toCreatePayload(model *Model) (*objectstorage.CreateAccessKeyPayload, error
 		return &objectstorage.CreateAccessKeyPayload{}, nil
 	}
 
-	expirationTimestamp, diags := model.ExpirationTimestamp.ValueRFC3339Time()
-	if diags.HasError() {
-		return nil, fmt.Errorf("unable to fecth expiration timestamp: %w", core.DiagsToError(diags))
+	expirationTimestampValue := model.ExpirationTimestamp.ValueStringPointer()
+	if expirationTimestampValue == nil {
+		return &objectstorage.CreateAccessKeyPayload{}, nil
+	}
+	expirationTimestamp, err := time.Parse(time.RFC3339, *expirationTimestampValue)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse expiration timestamp '%v': %w", *expirationTimestampValue, err)
 	}
 	return &objectstorage.CreateAccessKeyPayload{
 		Expires: &expirationTimestamp,
@@ -351,7 +358,17 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 		return fmt.Errorf("credential id not present")
 	}
 
-	var diags diag.Diagnostics
+	if credentialResp.Expires == nil {
+		model.ExpirationTimestamp = types.StringNull()
+	} else {
+		// Harmonize the timestamp format
+		// Eg. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
+		expirationTimestamp, err := time.Parse(time.RFC3339, *credentialResp.Expires)
+		if err != nil {
+			return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credentialResp.Expires, err)
+		}
+		model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
+	}
 
 	idParts := []string{
 		model.ProjectId.ValueString(),
@@ -365,10 +382,6 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 	model.Name = types.StringPointerValue(credentialResp.DisplayName)
 	model.AccessKey = types.StringPointerValue(credentialResp.AccessKey)
 	model.SecretAccessKey = types.StringPointerValue(credentialResp.SecretAccessKey)
-	model.ExpirationTimestamp, diags = timetypes.NewRFC3339PointerValue(credentialResp.Expires)
-	if diags.HasError() {
-		return fmt.Errorf("parsing expiration timestamp: %w", core.DiagsToError(diags))
-	}
 	return nil
 }
 
@@ -396,8 +409,6 @@ func readCredentials(ctx context.Context, model *Model, client *objectstorage.AP
 
 		foundCredential = true
 
-		var diags diag.Diagnostics
-
 		idParts := []string{
 			projectId,
 			credentialsGroupId,
@@ -407,9 +418,17 @@ func readCredentials(ctx context.Context, model *Model, client *objectstorage.AP
 			strings.Join(idParts, core.Separator),
 		)
 		model.Name = types.StringPointerValue(credential.DisplayName)
-		model.ExpirationTimestamp, diags = timetypes.NewRFC3339PointerValue(credential.Expires)
-		if diags.HasError() {
-			return fmt.Errorf("parsing expiration timestamp: %w", core.DiagsToError(diags))
+
+		if credential.Expires == nil {
+			model.ExpirationTimestamp = types.StringNull()
+		} else {
+			// Harmonize the timestamp format
+			// Eg. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
+			expirationTimestamp, err := time.Parse(time.RFC3339, *credential.Expires)
+			if err != nil {
+				return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credential.Expires, err)
+			}
+			model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
 		}
 		break
 	}

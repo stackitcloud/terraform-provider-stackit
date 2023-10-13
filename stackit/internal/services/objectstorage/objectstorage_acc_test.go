@@ -32,7 +32,7 @@ var credentialsGroupResource = map[string]string{
 
 // Credential resource data
 var credentialResource = map[string]string{
-	"expiration_timestamp": "2345-06-07T08:09:10.110Z",
+	"expiration_timestamp": "2027-01-02T03:04:05Z",
 }
 
 func resourceConfig() string {
@@ -50,8 +50,8 @@ func resourceConfig() string {
 				}
 
 				resource "stackit_objectstorage_credential" "credential" {
-					project_id = stackit_objectstorage_credential.credentials_group.project_id
-					credentials_group_id = stackit_objectstorage_credential.credentials_group.credentials_group_id
+					project_id = stackit_objectstorage_credentials_group.credentials_group.project_id
+					credentials_group_id = stackit_objectstorage_credentials_group.credentials_group.credentials_group_id
 					expiration_timestamp    = "%s"
 				}
 				`,
@@ -169,14 +169,6 @@ func TestAccObjectStorageResource(t *testing.T) {
 						"data.stackit_objectstorage_credential.credential", "credential_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_objectstorage_credential.credential", "access_key",
-						"data.stackit_objectstorage_credential.credential", "access_key",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_objectstorage_credential.credential", "secret_access_key",
-						"data.stackit_objectstorage_credential.credential", "secret_access_key",
-					),
-					resource.TestCheckResourceAttrPair(
 						"stackit_objectstorage_credential.credential", "name",
 						"data.stackit_objectstorage_credential.credential", "name",
 					),
@@ -221,8 +213,9 @@ func TestAccObjectStorageResource(t *testing.T) {
 					}
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, credentialsGroupId, credentialId), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"access_key", "secret_access_key"},
 			},
 			// Deletion is done by the framework implicitly
 		},

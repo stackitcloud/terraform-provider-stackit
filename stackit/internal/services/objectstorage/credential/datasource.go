@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 
-	"github.com/hashicorp/terraform-plugin-framework-timetypes/timetypes"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
@@ -110,8 +109,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Sensitive: true,
 			},
 			"expiration_timestamp": schema.StringAttribute{
-				CustomType: timetypes.RFC3339Type{},
-				Required:   true,
+				Computed: true,
 			},
 		},
 	}

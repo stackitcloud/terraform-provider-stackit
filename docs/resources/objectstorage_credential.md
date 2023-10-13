@@ -17,17 +17,17 @@ ObjectStorage credential resource schema.
 
 ### Required
 
+- `credentials_group_id` (String) The credential group ID.
 - `project_id` (String) STACKIT Project ID to which the credential group is associated.
 
 ### Optional
 
-- `expiration_timestamp` (String)
+- `expiration_timestamp` (String) Expiration timestamp, in RFC339 format without fractional seconds. Example: "2025-01-01T00:00:00Z". If not set, the credential never expires.
 
 ### Read-Only
 
 - `access_key` (String)
 - `credential_id` (String) The credential ID.
-- `credentials_group_id` (String) The credential group ID.
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`credentials_group_id`,`credential_id`".
 - `name` (String)
 - `secret_access_key` (String, Sensitive)

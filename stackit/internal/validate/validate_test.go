@@ -208,3 +208,57 @@ func TestMinorVersionNumber(t *testing.T) {
 		})
 	}
 }
+
+func TestRFC3339SecondsOnly(t *testing.T) {
+	tests := []struct {
+		description string
+		input       string
+		isValid     bool
+	}{
+		{
+			"ok",
+			"9999-01-02T03:04:05Z",
+			true,
+		},
+		{
+			"ok_2",
+			"9999-01-02T03:04:05+06:00",
+			true,
+		},
+		{
+			"empty",
+			"",
+			false,
+		},
+		{
+			"not_ok",
+			"foo-bar",
+			false,
+		},
+		{
+			"with_sub_seconds",
+			"9999-01-02T03:04:05.678Z",
+			false,
+		},
+		{
+			"with_sub_seconds_2",
+			"9999-01-02T03:04:05.678+06:00",
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			r := validator.StringResponse{}
+			RFC3339SecondsOnly().ValidateString(context.Background(), validator.StringRequest{
+				ConfigValue: types.StringValue(tt.input),
+			}, &r)
+
+			if !tt.isValid && !r.Diagnostics.HasError() {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && r.Diagnostics.HasError() {
+				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
+			}
+		})
+	}
+}
