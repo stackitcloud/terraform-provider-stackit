@@ -6,6 +6,7 @@ import (
 	"net"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
@@ -102,6 +103,34 @@ func MinorVersionNumber() *Validator {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
 					description,
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
+
+func RFC3339SecondsOnly() *Validator {
+	description := "value must be in RFC339 format (seconds only)"
+
+	return &Validator{
+		description: description,
+		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			t, err := time.Parse(time.RFC3339, req.ConfigValue.ValueString())
+			if err != nil {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
+				return
+			}
+
+			// Check if it failed because it has nanoseconds
+			if t.Nanosecond() != 0 {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					"value can't have fractional seconds",
 					req.ConfigValue.ValueString(),
 				))
 			}
