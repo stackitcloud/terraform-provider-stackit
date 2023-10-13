@@ -83,6 +83,7 @@ type providerModel struct {
 	ObjectStorageCustomEndpoint   types.String `tfsdk:"objectstorage_custom_endpoint"`
 	OpenSearchCustomEndpoint      types.String `tfsdk:"opensearch_custom_endpoint"`
 	RedisCustomEndpoint           types.String `tfsdk:"redis_custom_endpoint"`
+	SecretsManagerCustomEndpoint  types.String `tfsdk:"secretsmanager_custom_endpoint"`
 	ArgusCustomEndpoint           types.String `tfsdk:"argus_custom_endpoint"`
 	SKECustomEndpoint             types.String `tfsdk:"ske_custom_endpoint"`
 	ResourceManagerCustomEndpoint types.String `tfsdk:"resourcemanager_custom_endpoint"`
@@ -112,6 +113,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"argus_custom_endpoint":           "Custom endpoint for the Argus service",
 		"ske_custom_endpoint":             "Custom endpoint for the Kubernetes Engine (SKE) service",
 		"resourcemanager_custom_endpoint": "Custom endpoint for the Resource Manager service",
+		"secretsmanager_custom_endpoint":  "Custom endpoint for the Secrets Manager service",
 		"token_custom_endpoint":           "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
 		"jwks_custom_endpoint":            "Custom endpoint for the jwks API, which is used to get the json web key sets (jwks) to validate tokens when using the key flow",
 	}
@@ -185,6 +187,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"redis_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["redis_custom_endpoint"],
+			},
+			"secretsmanager_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["secretsmanager_custom_endpoint"],
 			},
 			"argus_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -283,6 +289,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	}
 	if !(providerConfig.ResourceManagerCustomEndpoint.IsUnknown() || providerConfig.ResourceManagerCustomEndpoint.IsNull()) {
 		providerData.ResourceManagerCustomEndpoint = providerConfig.ResourceManagerCustomEndpoint.ValueString()
+	}
+	if !(providerConfig.SecretsManagerCustomEndpoint.IsUnknown() || providerConfig.SecretsManagerCustomEndpoint.IsNull()) {
+		providerData.SecretsManagerCustomEndpoint = providerConfig.SecretsManagerCustomEndpoint.ValueString()
 	}
 	if !(providerConfig.TokenCustomEndpoint.IsUnknown() || providerConfig.TokenCustomEndpoint.IsNull()) {
 		sdkConfig.TokenCustomUrl = providerConfig.TokenCustomEndpoint.ValueString()
