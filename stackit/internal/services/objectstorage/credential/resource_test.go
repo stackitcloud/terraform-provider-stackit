@@ -209,7 +209,6 @@ func TestEnableProject(t *testing.T) {
 
 func TestReadCredentials(t *testing.T) {
 	timeNow := time.Now()
-	timeNowString := timeNow.Format(time.RFC3339)
 
 	tests := []struct {
 		description         string
@@ -275,7 +274,41 @@ func TestReadCredentials(t *testing.T) {
 				Name:                types.StringValue("name"),
 				AccessKey:           types.StringNull(),
 				SecretAccessKey:     types.StringNull(),
-				ExpirationTimestamp: types.StringValue(timeNowString),
+				ExpirationTimestamp: types.StringValue(timeNow.Format(time.RFC3339)),
+			},
+			false,
+			true,
+		},
+		{
+			"expiration_timestamp_with_fractional_seconds",
+			&objectstorage.GetAccessKeysResponse{
+				AccessKeys: &[]objectstorage.AccessKey{
+					{
+						KeyId:       utils.Ptr("foo-cid"),
+						DisplayName: utils.Ptr("foo-name"),
+						Expires:     utils.Ptr(timeNow.Add(time.Hour).Format(time.RFC3339Nano)),
+					},
+					{
+						KeyId:       utils.Ptr("bar-cid"),
+						DisplayName: utils.Ptr("bar-name"),
+						Expires:     utils.Ptr(timeNow.Add(time.Minute).Format(time.RFC3339Nano)),
+					},
+					{
+						KeyId:       utils.Ptr("cid"),
+						DisplayName: utils.Ptr("name"),
+						Expires:     utils.Ptr(timeNow.Format(time.RFC3339Nano)),
+					},
+				},
+			},
+			Model{
+				Id:                  types.StringValue("pid,cgid,cid"),
+				ProjectId:           types.StringValue("pid"),
+				CredentialsGroupId:  types.StringValue("cgid"),
+				CredentialId:        types.StringValue("cid"),
+				Name:                types.StringValue("name"),
+				AccessKey:           types.StringNull(),
+				SecretAccessKey:     types.StringNull(),
+				ExpirationTimestamp: types.StringValue(timeNow.Format(time.RFC3339)),
 			},
 			false,
 			true,
