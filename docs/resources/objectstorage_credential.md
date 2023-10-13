@@ -22,7 +22,7 @@ ObjectStorage credential resource schema.
 
 ### Optional
 
-- `expiration_timestamp` (String) Expiration timestamp, in RFC339 format (seconds only). If null, the credential never expires.
+- `expiration_timestamp` (String) Expiration timestamp, in RFC339 format without fractional seconds. Example: "2025-01-01T00:00:00Z". If not set, the credential never expires.
 
 ### Read-Only
 
