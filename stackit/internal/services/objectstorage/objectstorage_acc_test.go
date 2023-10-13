@@ -32,7 +32,7 @@ var credentialsGroupResource = map[string]string{
 
 // Credential resource data
 var credentialResource = map[string]string{
-	"expiration_timestamp": "2345-06-07T08:09:10.110Z",
+	"expiration_timestamp": "2027-01-02T03:04:05.678Z",
 }
 
 func resourceConfig() string {
