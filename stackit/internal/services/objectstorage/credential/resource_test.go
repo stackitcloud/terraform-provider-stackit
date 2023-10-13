@@ -31,8 +31,7 @@ func (c *objectStorageClientMocked) CreateProjectExecute(_ context.Context, proj
 }
 
 func TestMapFields(t *testing.T) {
-	timeNow := time.Now()
-	timeNowString := timeNow.Format(time.RFC3339)
+	now := time.Now()
 
 	tests := []struct {
 		description string
@@ -60,7 +59,7 @@ func TestMapFields(t *testing.T) {
 			&objectstorage.CreateAccessKeyResponse{
 				AccessKey:       utils.Ptr("key"),
 				DisplayName:     utils.Ptr("name"),
-				Expires:         utils.Ptr(timeNow.Format(time.RFC3339)),
+				Expires:         utils.Ptr(now.Format(time.RFC3339)),
 				SecretAccessKey: utils.Ptr("secret-key"),
 			},
 			Model{
@@ -71,7 +70,7 @@ func TestMapFields(t *testing.T) {
 				Name:                types.StringValue("name"),
 				AccessKey:           types.StringValue("key"),
 				SecretAccessKey:     types.StringValue("secret-key"),
-				ExpirationTimestamp: types.StringValue(timeNowString),
+				ExpirationTimestamp: types.StringValue(now.Format(time.RFC3339)),
 			},
 			true,
 		},
@@ -91,6 +90,22 @@ func TestMapFields(t *testing.T) {
 				AccessKey:           types.StringValue(""),
 				SecretAccessKey:     types.StringValue(""),
 				ExpirationTimestamp: types.StringNull(),
+			},
+			true,
+		},
+		{
+			"expiration_timestamp_with_fractional_seconds",
+			&objectstorage.CreateAccessKeyResponse{
+				Expires: utils.Ptr(now.Format(time.RFC3339Nano)),
+			},
+			Model{
+				Id:                  types.StringValue("pid,cgid,cid"),
+				ProjectId:           types.StringValue("pid"),
+				CredentialsGroupId:  types.StringValue("cgid"),
+				CredentialId:        types.StringValue("cid"),
+				Name:                types.StringNull(),
+				AccessKey:           types.StringNull(),
+				ExpirationTimestamp: types.StringValue(now.Format(time.RFC3339)),
 			},
 			true,
 		},
