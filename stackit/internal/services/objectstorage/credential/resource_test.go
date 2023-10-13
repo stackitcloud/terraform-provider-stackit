@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/hashicorp/terraform-plugin-framework-timetypes/timetypes"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
@@ -32,7 +31,8 @@ func (c *objectStorageClientMocked) CreateProjectExecute(_ context.Context, proj
 }
 
 func TestMapFields(t *testing.T) {
-	timeValue := time.Now()
+	timeNow := time.Now()
+	timeNowString := timeNow.Format(time.RFC3339)
 
 	tests := []struct {
 		description string
@@ -51,7 +51,7 @@ func TestMapFields(t *testing.T) {
 				Name:                types.StringNull(),
 				AccessKey:           types.StringNull(),
 				SecretAccessKey:     types.StringNull(),
-				ExpirationTimestamp: timetypes.NewRFC3339Null(),
+				ExpirationTimestamp: types.StringNull(),
 			},
 			true,
 		},
@@ -60,7 +60,7 @@ func TestMapFields(t *testing.T) {
 			&objectstorage.CreateAccessKeyResponse{
 				AccessKey:       utils.Ptr("key"),
 				DisplayName:     utils.Ptr("name"),
-				Expires:         utils.Ptr(timeValue.Format(time.RFC3339)),
+				Expires:         utils.Ptr(timeNow.Format(time.RFC3339)),
 				SecretAccessKey: utils.Ptr("secret-key"),
 			},
 			Model{
@@ -71,7 +71,7 @@ func TestMapFields(t *testing.T) {
 				Name:                types.StringValue("name"),
 				AccessKey:           types.StringValue("key"),
 				SecretAccessKey:     types.StringValue("secret-key"),
-				ExpirationTimestamp: timetypes.NewRFC3339TimeValue(timeValue),
+				ExpirationTimestamp: types.StringValue(timeNowString),
 			},
 			true,
 		},
@@ -90,7 +90,7 @@ func TestMapFields(t *testing.T) {
 				Name:                types.StringValue(""),
 				AccessKey:           types.StringValue(""),
 				SecretAccessKey:     types.StringValue(""),
-				ExpirationTimestamp: timetypes.NewRFC3339Null(),
+				ExpirationTimestamp: types.StringNull(),
 			},
 			true,
 		},
@@ -150,7 +150,7 @@ func TestEnableProject(t *testing.T) {
 				Name:                types.StringNull(),
 				AccessKey:           types.StringNull(),
 				SecretAccessKey:     types.StringNull(),
-				ExpirationTimestamp: timetypes.NewRFC3339Null(),
+				ExpirationTimestamp: types.StringNull(),
 			},
 			false,
 			true,
@@ -165,7 +165,7 @@ func TestEnableProject(t *testing.T) {
 				Name:                types.StringNull(),
 				AccessKey:           types.StringNull(),
 				SecretAccessKey:     types.StringNull(),
-				ExpirationTimestamp: timetypes.NewRFC3339Null(),
+				ExpirationTimestamp: types.StringNull(),
 			},
 			true,
 			false,
@@ -193,7 +193,8 @@ func TestEnableProject(t *testing.T) {
 }
 
 func TestReadCredentials(t *testing.T) {
-	timeValue := time.Now()
+	timeNow := time.Now()
+	timeNowString := timeNow.Format(time.RFC3339)
 
 	tests := []struct {
 		description         string
@@ -225,7 +226,7 @@ func TestReadCredentials(t *testing.T) {
 				Name:                types.StringNull(),
 				AccessKey:           types.StringNull(),
 				SecretAccessKey:     types.StringNull(),
-				ExpirationTimestamp: timetypes.NewRFC3339Null(),
+				ExpirationTimestamp: types.StringNull(),
 			},
 			false,
 			true,
@@ -237,17 +238,17 @@ func TestReadCredentials(t *testing.T) {
 					{
 						KeyId:       utils.Ptr("foo-cid"),
 						DisplayName: utils.Ptr("foo-name"),
-						Expires:     utils.Ptr(timeValue.Add(time.Hour).Format(time.RFC3339)),
+						Expires:     utils.Ptr(timeNow.Add(time.Hour).Format(time.RFC3339)),
 					},
 					{
 						KeyId:       utils.Ptr("bar-cid"),
 						DisplayName: utils.Ptr("bar-name"),
-						Expires:     utils.Ptr(timeValue.Add(time.Minute).Format(time.RFC3339)),
+						Expires:     utils.Ptr(timeNow.Add(time.Minute).Format(time.RFC3339)),
 					},
 					{
 						KeyId:       utils.Ptr("cid"),
 						DisplayName: utils.Ptr("name"),
-						Expires:     utils.Ptr(timeValue.Format(time.RFC3339)),
+						Expires:     utils.Ptr(timeNow.Format(time.RFC3339)),
 					},
 				},
 			},
@@ -259,7 +260,7 @@ func TestReadCredentials(t *testing.T) {
 				Name:                types.StringValue("name"),
 				AccessKey:           types.StringNull(),
 				SecretAccessKey:     types.StringNull(),
-				ExpirationTimestamp: timetypes.NewRFC3339TimeValue(timeValue),
+				ExpirationTimestamp: types.StringValue(timeNowString),
 			},
 			false,
 			true,
@@ -287,12 +288,12 @@ func TestReadCredentials(t *testing.T) {
 					{
 						KeyId:       utils.Ptr("foo-cid"),
 						DisplayName: utils.Ptr("foo-name"),
-						Expires:     utils.Ptr(timeValue.Add(time.Hour).Format(time.RFC3339)),
+						Expires:     utils.Ptr(timeNow.Add(time.Hour).Format(time.RFC3339)),
 					},
 					{
 						KeyId:       utils.Ptr("bar-cid"),
 						DisplayName: utils.Ptr("bar-name"),
-						Expires:     utils.Ptr(timeValue.Add(time.Minute).Format(time.RFC3339)),
+						Expires:     utils.Ptr(timeNow.Add(time.Minute).Format(time.RFC3339)),
 					},
 				},
 			},
@@ -307,7 +308,7 @@ func TestReadCredentials(t *testing.T) {
 					{
 						KeyId:       utils.Ptr("cid"),
 						DisplayName: utils.Ptr("name"),
-						Expires:     utils.Ptr(timeValue.Format(time.RFC3339)),
+						Expires:     utils.Ptr(timeNow.Format(time.RFC3339)),
 					},
 				},
 			},
