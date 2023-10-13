@@ -31,7 +31,7 @@ var (
 
 type Model struct {
 	Id                    types.String `tfsdk:"id"` // needed by TF
-	BucketName            types.String `tfsdk:"bucket_name"`
+	Name                  types.String `tfsdk:"name"`
 	ProjectId             types.String `tfsdk:"project_id"`
 	URLPathStyle          types.String `tfsdk:"url_path_style"`
 	URLVirtualHostedStyle types.String `tfsdk:"url_virtual_hosted_style"`
@@ -92,8 +92,8 @@ func (r *bucketResource) Configure(ctx context.Context, req resource.ConfigureRe
 func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                     "ObjectStorage bucket resource schema.",
-		"id":                       "Terraform's internal resource identifier. It is structured as \"`project_id`,`bucket_name`\".",
-		"bucket_name":              "The bucket name. It must be DNS conform.",
+		"id":                       "Terraform's internal resource identifier. It is structured as \"`project_id`,`name`\".",
+		"name":                     "The bucket name. It must be DNS conform.",
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
 		"url_path_style":           "URL in path style.",
 		"url_virtual_hosted_style": "URL in virtual hosted style.",
@@ -109,8 +109,8 @@ func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"bucket_name": schema.StringAttribute{
-				Description: descriptions["bucket_name"],
+			"name": schema.StringAttribute{
+				Description: descriptions["name"],
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -151,9 +151,9 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	bucketName := model.BucketName.ValueString()
+	bucketName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "bucket_name", bucketName)
+	ctx = tflog.SetField(ctx, "name", bucketName)
 
 	// Handle project init
 	err := enableProject(ctx, &model, r.client)
@@ -203,9 +203,9 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	bucketName := model.BucketName.ValueString()
+	bucketName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "bucket_name", bucketName)
+	ctx = tflog.SetField(ctx, "name", bucketName)
 
 	bucketResp, err := r.client.GetBucket(ctx, projectId, bucketName).Execute()
 	if err != nil {
@@ -244,9 +244,9 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	bucketName := model.BucketName.ValueString()
+	bucketName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "bucket_name", bucketName)
+	ctx = tflog.SetField(ctx, "name", bucketName)
 
 	// Delete existing bucket
 	_, err := r.client.DeleteBucket(ctx, projectId, bucketName).Execute()
@@ -262,19 +262,19 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,bucket_name
+// The expected format of the resource import identifier is: project_id,name
 func (r *bucketResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing bucket",
-			fmt.Sprintf("Expected import identifier with format [project_id],[bucket_name], got %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format [project_id],[name], got %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("bucket_name"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[1])...)
 	tflog.Info(ctx, "ObjectStorage bucket state imported")
 }
 
@@ -292,7 +292,7 @@ func mapFields(bucketResp *objectstorage.GetBucketResponse, model *Model) error 
 
 	idParts := []string{
 		model.ProjectId.ValueString(),
-		model.BucketName.ValueString(),
+		model.Name.ValueString(),
 	}
 	model.Id = types.StringValue(
 		strings.Join(idParts, core.Separator),

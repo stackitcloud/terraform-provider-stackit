@@ -20,8 +20,8 @@ import (
 
 // Bucket resource data
 var bucketResource = map[string]string{
-	"project_id":  testutil.ProjectId,
-	"bucket_name": fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha)),
+	"project_id": testutil.ProjectId,
+	"name":       fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha)),
 }
 
 // Credentials group resource data
@@ -41,7 +41,7 @@ func resourceConfig() string {
 
 				resource "stackit_objectstorage_bucket" "bucket" {
 					project_id = "%s"
-					bucket_name    = "%s"
+					name    = "%s"
 				}
 
 				resource "stackit_objectstorage_credentials_group" "credentials_group" {
@@ -57,7 +57,7 @@ func resourceConfig() string {
 				`,
 		testutil.ObjectStorageProviderConfig(),
 		bucketResource["project_id"],
-		bucketResource["bucket_name"],
+		bucketResource["name"],
 		credentialsGroupResource["project_id"],
 		credentialsGroupResource["name"],
 		credentialResource["expiration_timestamp"],
@@ -76,7 +76,7 @@ func TestAccObjectStorageResource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Bucket data
 					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket", "project_id", bucketResource["project_id"]),
-					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket", "bucket_name", bucketResource["bucket_name"]),
+					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket", "name", bucketResource["name"]),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_bucket.bucket", "url_path_style"),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_bucket.bucket", "url_virtual_hosted_style"),
 
@@ -109,7 +109,7 @@ func TestAccObjectStorageResource(t *testing.T) {
 
 					data "stackit_objectstorage_bucket" "bucket" {
 						project_id  = stackit_objectstorage_bucket.bucket.project_id
-						bucket_name = stackit_objectstorage_bucket.bucket.bucket_name
+						name = stackit_objectstorage_bucket.bucket.name
 					}
 					
 					data "stackit_objectstorage_credentials_group" "credentials_group" {
@@ -128,8 +128,8 @@ func TestAccObjectStorageResource(t *testing.T) {
 					// Bucket data
 					resource.TestCheckResourceAttr("data.stackit_objectstorage_bucket.bucket", "project_id", bucketResource["project_id"]),
 					resource.TestCheckResourceAttrPair(
-						"stackit_objectstorage_bucket.bucket", "bucket_name",
-						"data.stackit_objectstorage_bucket.bucket", "bucket_name",
+						"stackit_objectstorage_bucket.bucket", "name",
+						"data.stackit_objectstorage_bucket.bucket", "name",
 					),
 					resource.TestCheckResourceAttrPair(
 						"stackit_objectstorage_bucket.bucket", "url_path_style",
@@ -244,7 +244,7 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_objectstorage_bucket" {
 			continue
 		}
-		// bucket terraform ID: "[project_id],[bucket_name]"
+		// bucket terraform ID: "[project_id],[name]"
 		bucketName := strings.Split(rs.Primary.ID, core.Separator)[1]
 		bucketsToDestroy = append(bucketsToDestroy, bucketName)
 	}

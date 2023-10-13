@@ -17,11 +17,11 @@ ObjectStorage bucket resource schema.
 
 ### Required
 
-- `bucket_name` (String) The bucket name. It must be DNS conform.
+- `name` (String) The bucket name. It must be DNS conform.
 - `project_id` (String) STACKIT Project ID to which the bucket is associated.
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`bucket_name`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`name`".
 - `url_path_style` (String)
 - `url_virtual_hosted_style` (String)
