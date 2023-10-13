@@ -75,8 +75,8 @@ func (r *bucketDataSource) Configure(ctx context.Context, req datasource.Configu
 func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                     "ObjectStorage bucket data source schema.",
-		"id":                       "Terraform's internal data source identifier. It is structured as \"`project_id`,`bucket_name`\".",
-		"bucket_name":              "The bucket name. It must be DNS conform.",
+		"id":                       "Terraform's internal data source identifier. It is structured as \"`project_id`,`name`\".",
+		"name":                     "The bucket name. It must be DNS conform.",
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
 		"url_path_style":           "URL in path style.",
 		"url_virtual_hosted_style": "URL in virtual hosted style.",
@@ -89,8 +89,8 @@ func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Description: descriptions["id"],
 				Computed:    true,
 			},
-			"bucket_name": schema.StringAttribute{
-				Description: descriptions["bucket_name"],
+			"name": schema.StringAttribute{
+				Description: descriptions["name"],
 				Required:    true,
 				Validators: []validator.String{
 					validate.NoSeparator(),
@@ -123,9 +123,9 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	bucketName := model.BucketName.ValueString()
+	bucketName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "bucket_name", bucketName)
+	ctx = tflog.SetField(ctx, "name", bucketName)
 
 	bucketResp, err := r.client.GetBucket(ctx, projectId, bucketName).Execute()
 	if err != nil {

@@ -39,7 +39,7 @@ func TestMapFields(t *testing.T) {
 			},
 			Model{
 				Id:                    types.StringValue("pid,bname"),
-				BucketName:            types.StringValue("bname"),
+				Name:                  types.StringValue("bname"),
 				ProjectId:             types.StringValue("pid"),
 				URLPathStyle:          types.StringNull(),
 				URLVirtualHostedStyle: types.StringNull(),
@@ -56,7 +56,7 @@ func TestMapFields(t *testing.T) {
 			},
 			Model{
 				Id:                    types.StringValue("pid,bname"),
-				BucketName:            types.StringValue("bname"),
+				Name:                  types.StringValue("bname"),
 				ProjectId:             types.StringValue("pid"),
 				URLPathStyle:          types.StringValue("url/path/style"),
 				URLVirtualHostedStyle: types.StringValue("url/virtual/hosted/style"),
@@ -73,7 +73,7 @@ func TestMapFields(t *testing.T) {
 			},
 			Model{
 				Id:                    types.StringValue("pid,bname"),
-				BucketName:            types.StringValue("bname"),
+				Name:                  types.StringValue("bname"),
 				ProjectId:             types.StringValue("pid"),
 				URLPathStyle:          types.StringValue(""),
 				URLVirtualHostedStyle: types.StringValue(""),
@@ -96,8 +96,8 @@ func TestMapFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			model := &Model{
-				ProjectId:  tt.expected.ProjectId,
-				BucketName: tt.expected.BucketName,
+				ProjectId: tt.expected.ProjectId,
+				Name:      tt.expected.Name,
 			}
 			err := mapFields(tt.input, model)
 			if !tt.isValid && err == nil {
