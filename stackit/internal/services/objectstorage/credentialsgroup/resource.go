@@ -340,7 +340,10 @@ func readCredentialsGroups(ctx context.Context, model *Model, client objectStora
 			continue
 		}
 		found = true
-		mapCredentialsGroup(credentialsGroup, model)
+		err = mapCredentialsGroup(credentialsGroup, model)
+		if err != nil {
+			return err
+		}
 		break
 	}
 
