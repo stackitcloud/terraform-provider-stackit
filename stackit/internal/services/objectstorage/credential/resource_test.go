@@ -345,8 +345,9 @@ func TestReadCredentials(t *testing.T) {
 			mockedServer := httptest.NewServer(handler)
 			defer mockedServer.Close()
 			client, err := objectstorage.NewAPIClient(
-				config.WithoutAuthentication(),
 				config.WithEndpoint(mockedServer.URL),
+				config.WithoutAuthentication(),
+				config.WithRetryTimeout(time.Millisecond),
 			)
 			if err != nil {
 				t.Fatalf("Failed to initialize client: %v", err)
