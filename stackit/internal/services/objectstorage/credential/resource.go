@@ -98,7 +98,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		"credential_id":        "The credential ID.",
 		"credentials_group_id": "The credential group ID.",
 		"project_id":           "STACKIT Project ID to which the credential group is associated.",
-		"expiration_timestamp": "Expiration timestamp, in RFC339 format (seconds only). If null, the credential never expires.",
+		"expiration_timestamp": "Expiration timestamp, in RFC339 format without fractional seconds. Example: \"2025-01-01T00:00:00Z\". If not set, the credential never expires.",
 	}
 
 	resp.Schema = schema.Schema{
