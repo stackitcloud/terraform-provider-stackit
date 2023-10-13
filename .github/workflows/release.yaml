@@ -18,9 +18,6 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-      - name: Check if tag belongs to main branch
-        if: endsWith(github.ref, 'main') == false
-        run: exit -1
       - uses: actions/checkout@v4
         with:
           # Allow goreleaser to access older tag information.
