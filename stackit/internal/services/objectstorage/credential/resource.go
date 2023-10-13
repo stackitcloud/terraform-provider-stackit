@@ -358,6 +358,18 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 		return fmt.Errorf("credential id not present")
 	}
 
+	if credentialResp.Expires == nil {
+		model.ExpirationTimestamp = types.StringNull()
+	} else {
+		// Harmonize the timestamp format
+		// Eg. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
+		expirationTimestamp, err := time.Parse(time.RFC3339, *credentialResp.Expires)
+		if err != nil {
+			return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credentialResp.Expires, err)
+		}
+		model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
+	}
+
 	idParts := []string{
 		model.ProjectId.ValueString(),
 		model.CredentialsGroupId.ValueString(),
@@ -370,7 +382,6 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 	model.Name = types.StringPointerValue(credentialResp.DisplayName)
 	model.AccessKey = types.StringPointerValue(credentialResp.AccessKey)
 	model.SecretAccessKey = types.StringPointerValue(credentialResp.SecretAccessKey)
-	model.ExpirationTimestamp = types.StringPointerValue(credentialResp.Expires)
 	return nil
 }
 
@@ -407,7 +418,18 @@ func readCredentials(ctx context.Context, model *Model, client *objectstorage.AP
 			strings.Join(idParts, core.Separator),
 		)
 		model.Name = types.StringPointerValue(credential.DisplayName)
-		model.ExpirationTimestamp = types.StringPointerValue(credential.Expires)
+
+		if credential.Expires == nil {
+			model.ExpirationTimestamp = types.StringNull()
+		} else {
+			// Harmonize the timestamp format
+			// Eg. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
+			expirationTimestamp, err := time.Parse(time.RFC3339, *credential.Expires)
+			if err != nil {
+				return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credential.Expires, err)
+			}
+			model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
+		}
 		break
 	}
 	if !foundCredential {
