@@ -46,6 +46,7 @@ type Model struct {
 	Replicas       types.Int64  `tfsdk:"replicas"`
 	Storage        types.Object `tfsdk:"storage"`
 	Version        types.String `tfsdk:"version"`
+	Options        types.Object `tfsdk:"options"`
 }
 
 // Struct corresponding to Model.Flavor
@@ -74,6 +75,16 @@ type storageModel struct {
 var storageTypes = map[string]attr.Type{
 	"class": basetypes.StringType{},
 	"size":  basetypes.Int64Type{},
+}
+
+// Struct corresponding to Model.Object
+type optionsModel struct {
+	Type types.String `tfsdk:"type"`
+}
+
+// Types corresponding to optionsModel
+var optionsTypes = map[string]attr.Type{
+	"type": basetypes.StringType{},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -136,6 +147,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"project_id":  "STACKIT project ID to which the instance is associated.",
 		"name":        "Instance name.",
 		"acl":         "The Access Control List (ACL) for the MongoDB Flex instance.",
+		"options":     "Custom parameteres for the MongoDB Flex instance.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -230,6 +242,14 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"version": schema.StringAttribute{
 				Required: true,
 			},
+			"options": schema.SingleNestedAttribute{
+				Required: true,
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						Required: true,
+					},
+				},
+			},
 		},
 	}
 }
@@ -275,8 +295,17 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
+	var options = &optionsModel{}
+	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
+		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	// Generate API request body from model
-	payload, err := toCreatePayload(&model, acl, flavor, storage)
+	payload, err := toCreatePayload(&model, acl, flavor, storage, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -301,7 +330,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(got, &model, flavor, storage)
+	err = mapFields(got, &model, flavor, storage, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -345,6 +374,15 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		}
 	}
 
+	var options = &optionsModel{}
+	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
+		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", err.Error())
@@ -352,7 +390,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(instanceResp, &model, flavor, storage)
+	err = mapFields(instanceResp, &model, flavor, storage, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -409,8 +447,17 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
+	var options = &optionsModel{}
+	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
+		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	// Generate API request body from model
-	payload, err := toUpdatePayload(&model, acl, flavor, storage)
+	payload, err := toUpdatePayload(&model, acl, flavor, storage, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -433,7 +480,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(got, &model, flavor, storage)
+	err = mapFields(got, &model, flavor, storage, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields in update", err.Error())
 		return
@@ -492,7 +539,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "MongoDB Flex instance state imported")
 }
 
-func mapFields(resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flavorModel, storage *storageModel) error {
+func mapFields(resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flavorModel, storage *storageModel, options *optionsModel) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -566,6 +613,21 @@ func mapFields(resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flav
 		return fmt.Errorf("failed to create storage: %w", core.DiagsToError(diags))
 	}
 
+	var optionsValues map[string]attr.Value
+	if instance.Options == nil {
+		optionsValues = map[string]attr.Value{
+			"type": options.Type,
+		}
+	} else {
+		optionsValues = map[string]attr.Value{
+			"type": types.StringValue((*instance.Options)["type"]),
+		}
+	}
+	optionsObject, diags := types.ObjectValue(optionsTypes, optionsValues)
+	if diags.HasError() {
+		return fmt.Errorf("failed to create options: %w", core.DiagsToError(diags))
+	}
+
 	idParts := []string{
 		model.ProjectId.ValueString(),
 		instanceId,
@@ -597,10 +659,11 @@ func mapFields(resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flav
 	} else {
 		model.Version = types.StringValue(*instance.Version)
 	}
+	model.Options = optionsObject
 	return nil
 }
 
-func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel) (*mongodbflex.CreateInstancePayload, error) {
+func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel, options *optionsModel) (*mongodbflex.CreateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -612,6 +675,9 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}
 	if storage == nil {
 		return nil, fmt.Errorf("nil storage")
+	}
+	if options == nil {
+		return nil, fmt.Errorf("nil options")
 	}
 
 	return &mongodbflex.CreateInstancePayload{
@@ -627,10 +693,13 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 			Size:  conversion.ToPtrInt32(storage.Size),
 		},
 		Version: model.Version.ValueStringPointer(),
+		Options: &map[string]string{
+			"type": options.Type.ValueString(),
+		},
 	}, nil
 }
 
-func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel) (*mongodbflex.UpdateInstancePayload, error) {
+func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel, options *optionsModel) (*mongodbflex.UpdateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -657,6 +726,9 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 			Size:  conversion.ToPtrInt32(storage.Size),
 		},
 		Version: model.Version.ValueStringPointer(),
+		Options: &map[string]string{
+			"type": options.Type.ValueString(),
+		},
 	}, nil
 }
 
