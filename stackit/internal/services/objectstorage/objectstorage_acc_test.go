@@ -213,8 +213,9 @@ func TestAccObjectStorageResource(t *testing.T) {
 					}
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, credentialsGroupId, credentialId), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"access_key", "secret_access_key"},
 			},
 			// Deletion is done by the framework implicitly
 		},
