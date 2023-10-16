@@ -46,6 +46,7 @@ var (
 	RabbitMQCustomEndpoint        = os.Getenv("TF_ACC_RABBITMQ_CUSTOM_ENDPOINT")
 	RedisCustomEndpoint           = os.Getenv("TF_ACC_REDIS_CUSTOM_ENDPOINT")
 	ResourceManagerCustomEndpoint = os.Getenv("TF_ACC_RESOURCEMANAGER_CUSTOM_ENDPOINT")
+	SecretsManagerCustomEndpoint  = os.Getenv("TF_ACC_SECRETSMANAGER_CUSTOM_ENDPOINT")
 	SKECustomEndpoint             = os.Getenv("TF_ACC_SKE_CUSTOM_ENDPOINT")
 )
 
@@ -216,6 +217,21 @@ func ResourceManagerProviderConfig() string {
 		ResourceManagerCustomEndpoint,
 		TestProjectServiceAccountEmail,
 		token,
+	)
+}
+
+func SecretsManagerProviderConfig() string {
+	if SecretsManagerCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			secretsmanager_custom_endpoint = "%s"
+		}`,
+		SecretsManagerCustomEndpoint,
 	)
 }
 

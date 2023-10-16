@@ -26,6 +26,7 @@ type ProviderData struct {
 	ObjectStorageCustomEndpoint   string
 	OpenSearchCustomEndpoint      string
 	RedisCustomEndpoint           string
+	SecretsManagerCustomEndpoint  string
 	ArgusCustomEndpoint           string
 	SKECustomEndpoint             string
 	ResourceManagerCustomEndpoint string
