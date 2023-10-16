@@ -137,3 +137,21 @@ func RFC3339SecondsOnly() *Validator {
 		},
 	}
 }
+
+func CIDR() *Validator {
+	description := "value must be in CIDR notation"
+
+	return &Validator{
+		description: description,
+		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			_, _, err := net.ParseCIDR(req.ConfigValue.ValueString())
+			if err != nil {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					fmt.Sprintf("parsing value in CIDR notation: %s", err.Error()),
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
