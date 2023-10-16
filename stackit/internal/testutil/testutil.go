@@ -229,7 +229,7 @@ func SecretsManagerProviderConfig() string {
 	}
 	return fmt.Sprintf(`
 		provider "stackit" {
-			redis_custom_endpoint = "%s"
+			secretsmanager_custom_endpoint = "%s"
 		}`,
 		SecretsManagerCustomEndpoint,
 	)
