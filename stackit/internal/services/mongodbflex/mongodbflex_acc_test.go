@@ -35,7 +35,7 @@ var instanceResource = map[string]string{
 	"flavor_id":          "2.4",
 }
 
-func configResources() string {
+func configResources(version string) string {
 	return fmt.Sprintf(`
 				%s
 
@@ -67,7 +67,7 @@ func configResources() string {
 		instanceResource["replicas"],
 		instanceResource["storage_class"],
 		instanceResource["storage_size"],
-		instanceResource["version"],
+		version,
 		instanceResource["options_type"],
 	)
 }
@@ -79,7 +79,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: configResources(),
+				Config: configResources(instanceResource["version"]),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "project_id", instanceResource["project_id"]),
@@ -108,7 +108,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 						instance_id    = stackit_mongodbflex_instance.instance.instance_id
 					}
 					`,
-					configResources(),
+					configResources(instanceResource["version"]),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -153,40 +153,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: fmt.Sprintf(`
-				%s
-
-				resource "stackit_mongodbflex_instance" "instance" {
-					project_id = "%s"
-					name    = "%s"
-					acl = ["%s"]
-					flavor = {
-						cpu = %s
-						ram = %s
-					}
-					replicas = %s
-					storage = {
-						class = "%s"
-						size = %s
-					}
-					version = "%s"
-					options = {
-						type = "%s"
-					}
-				}
-				`,
-					testutil.MongoDBFlexProviderConfig(),
-					instanceResource["project_id"],
-					instanceResource["name"],
-					instanceResource["acl"],
-					instanceResource["flavor_cpu"],
-					instanceResource["flavor_ram"],
-					instanceResource["replicas"],
-					instanceResource["storage_class"],
-					instanceResource["storage_size"],
-					instanceResource["version_updated"],
-					instanceResource["options_type"],
-				),
+				Config: configResources(instanceResource["version_updated"]),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "project_id", instanceResource["project_id"]),

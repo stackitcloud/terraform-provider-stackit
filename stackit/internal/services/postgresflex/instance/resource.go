@@ -64,7 +64,7 @@ var flavorTypes = map[string]attr.Type{
 	"ram":         basetypes.Int64Type{},
 }
 
-// Struct corresponding to DataSourceModel.Storage
+// Struct corresponding to Model.Storage
 type storageModel struct {
 	Class types.String `tfsdk:"class"`
 	Size  types.Int64  `tfsdk:"size"`
@@ -261,8 +261,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		r.loadFlavorId(ctx, &resp.Diagnostics, &model, flavor)
-		if resp.Diagnostics.HasError() {
+		err := loadFlavorId(ctx, r.client, &model, flavor)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error loading flavor ID", fmt.Sprintf("getting flavor ID from CPU and RAM specifications: %v", err))
 			return
 		}
 	}
@@ -395,8 +396,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		r.loadFlavorId(ctx, &resp.Diagnostics, &model, flavor)
-		if resp.Diagnostics.HasError() {
+		err := loadFlavorId(ctx, r.client, &model, flavor)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error loading flavor ID", fmt.Sprintf("getting flavor ID from CPU and RAM specifications: %v", err))
 			return
 		}
 	}
@@ -435,7 +437,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	// Map response body to schema
 	err = mapFields(got, &model, flavor, storage)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields in update", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
@@ -531,8 +533,8 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 	var flavorValues map[string]attr.Value
 	if instance.Flavor == nil {
 		flavorValues = map[string]attr.Value{
-			"id":          types.StringNull(),
-			"description": types.StringNull(),
+			"id":          flavor.Id,
+			"description": flavor.Description,
 			"cpu":         flavor.CPU,
 			"ram":         flavor.RAM,
 		}
@@ -574,17 +576,9 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 		strings.Join(idParts, core.Separator),
 	)
 	model.InstanceId = types.StringValue(instanceId)
-	if instance.Name == nil {
-		model.Name = types.StringNull()
-	} else {
-		model.Name = types.StringValue(*instance.Name)
-	}
+	model.Name = types.StringPointerValue(instance.Name)
 	model.ACL = aclList
-	if instance.BackupSchedule == nil {
-		model.BackupSchedule = types.StringNull()
-	} else {
-		model.BackupSchedule = types.StringValue(*instance.BackupSchedule)
-	}
+	model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
 	model.Flavor = flavorObject
 	if instance.Replicas == nil {
 		model.Replicas = types.Int64Null()
@@ -592,11 +586,7 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 		model.Replicas = types.Int64Value(int64(*instance.Replicas))
 	}
 	model.Storage = storageObject
-	if instance.Version == nil {
-		model.Version = types.StringNull()
-	} else {
-		model.Version = types.StringValue(*instance.Version)
-	}
+	model.Version = types.StringPointerValue(instance.Version)
 	return nil
 }
 
@@ -660,37 +650,35 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}, nil
 }
 
-func (r *instanceResource) loadFlavorId(ctx context.Context, diags *diag.Diagnostics, model *Model, flavor *flavorModel) {
+type postgresFlexClient interface {
+	GetFlavorsExecute(ctx context.Context, projectId string) (*postgresflex.FlavorsResponse, error)
+}
+
+func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, flavor *flavorModel) error {
 	if model == nil {
-		diags.AddError("invalid model", "nil model")
-		return
+		return fmt.Errorf("invalid (nil) model")
 	}
 	if flavor == nil {
-		diags.AddError("invalid flavor", "nil flavor")
-		return
+		return fmt.Errorf("invalid (nil) flavor")
 	}
 	cpu := conversion.ToPtrInt32(flavor.CPU)
 	if cpu == nil {
-		diags.AddError("invalid flavor", "nil CPU")
-		return
+		return fmt.Errorf("invalid (nil) CPU")
 	}
 	ram := conversion.ToPtrInt32(flavor.RAM)
 	if ram == nil {
-		diags.AddError("invalid flavor", "nil RAM")
-		return
+		return fmt.Errorf("invalid (nil) RAM")
 	}
 
 	projectId := model.ProjectId.ValueString()
-	res, err := r.client.GetFlavors(ctx, projectId).Execute()
+	res, err := client.GetFlavorsExecute(ctx, projectId)
 	if err != nil {
-		diags.AddError("failed to list postgresflex flavors", err.Error())
-		return
+		return fmt.Errorf("failed to list postgresflex flavors: %w", err)
 	}
 
 	avl := ""
 	if res.Flavors == nil {
-		diags.AddError("no flavors", fmt.Sprintf("couldn't find flavors for id %s", flavor.Id.ValueString()))
-		return
+		return fmt.Errorf("couldn't find flavors for project %s", projectId)
 	}
 	for _, f := range *res.Flavors {
 		if f.Id == nil || f.Cpu == nil || f.Memory == nil {
@@ -698,12 +686,14 @@ func (r *instanceResource) loadFlavorId(ctx context.Context, diags *diag.Diagnos
 		}
 		if *f.Cpu == *cpu && *f.Memory == *ram {
 			flavor.Id = types.StringValue(*f.Id)
+			flavor.Description = types.StringValue(*f.Description)
 			break
 		}
 		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, *f.Cpu, *f.Cpu)
 	}
 	if flavor.Id.ValueString() == "" {
-		diags.AddError("invalid flavor", fmt.Sprintf("couldn't find flavor.\navailable specs are:%s", avl))
-		return
+		return fmt.Errorf("couldn't find flavor, available specs are:%s", avl)
 	}
+
+	return nil
 }

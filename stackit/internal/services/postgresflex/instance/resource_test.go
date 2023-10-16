@@ -1,6 +1,8 @@
 package postgresflex
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -9,6 +11,19 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
 )
+
+type postgresFlexClientMocked struct {
+	returnError    bool
+	getFlavorsResp *postgresflex.FlavorsResponse
+}
+
+func (c *postgresFlexClientMocked) GetFlavorsExecute(_ context.Context, _ string) (*postgresflex.FlavorsResponse, error) {
+	if c.returnError {
+		return nil, fmt.Errorf("get flavors failed")
+	}
+
+	return c.getFlavorsResp, nil
+}
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
@@ -500,6 +515,159 @@ func TestToUpdatePayload(t *testing.T) {
 			}
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestLoadFlavorId(t *testing.T) {
+	tests := []struct {
+		description     string
+		inputFlavor     *flavorModel
+		mockedResp      *postgresflex.FlavorsResponse
+		expected        *flavorModel
+		getFlavorsFails bool
+		isValid         bool
+	}{
+		{
+			"ok_flavor",
+			&flavorModel{
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
+			},
+			&postgresflex.FlavorsResponse{
+				Flavors: &[]postgresflex.InstanceFlavor{
+					{
+						Id:          utils.Ptr("fid-1"),
+						Cpu:         utils.Ptr(int32(2)),
+						Description: utils.Ptr("description"),
+						Memory:      utils.Ptr(int32(8)),
+					},
+				},
+			},
+			&flavorModel{
+				Id:          types.StringValue("fid-1"),
+				Description: types.StringValue("description"),
+				CPU:         types.Int64Value(2),
+				RAM:         types.Int64Value(8),
+			},
+			false,
+			true,
+		},
+		{
+			"ok_flavor_2",
+			&flavorModel{
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
+			},
+			&postgresflex.FlavorsResponse{
+				Flavors: &[]postgresflex.InstanceFlavor{
+					{
+						Id:          utils.Ptr("fid-1"),
+						Cpu:         utils.Ptr(int32(2)),
+						Description: utils.Ptr("description"),
+						Memory:      utils.Ptr(int32(8)),
+					},
+					{
+						Id:          utils.Ptr("fid-2"),
+						Cpu:         utils.Ptr(int32(1)),
+						Description: utils.Ptr("description"),
+						Memory:      utils.Ptr(int32(4)),
+					},
+				},
+			},
+			&flavorModel{
+				Id:          types.StringValue("fid-1"),
+				Description: types.StringValue("description"),
+				CPU:         types.Int64Value(2),
+				RAM:         types.Int64Value(8),
+			},
+			false,
+			true,
+		},
+		{
+			"no_matching_flavor",
+			&flavorModel{
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
+			},
+			&postgresflex.FlavorsResponse{
+				Flavors: &[]postgresflex.InstanceFlavor{
+					{
+						Id:          utils.Ptr("fid-1"),
+						Cpu:         utils.Ptr(int32(1)),
+						Description: utils.Ptr("description"),
+						Memory:      utils.Ptr(int32(8)),
+					},
+					{
+						Id:          utils.Ptr("fid-2"),
+						Cpu:         utils.Ptr(int32(1)),
+						Description: utils.Ptr("description"),
+						Memory:      utils.Ptr(int32(4)),
+					},
+				},
+			},
+			&flavorModel{
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
+			},
+			false,
+			false,
+		},
+		{
+			"nil_response",
+			&flavorModel{
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
+			},
+			&postgresflex.FlavorsResponse{},
+			&flavorModel{
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
+			},
+			false,
+			false,
+		},
+		{
+			"error_response",
+			&flavorModel{
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
+			},
+			&postgresflex.FlavorsResponse{},
+			&flavorModel{
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
+			},
+			true,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			client := &postgresFlexClientMocked{
+				returnError:    tt.getFlavorsFails,
+				getFlavorsResp: tt.mockedResp,
+			}
+			model := Model{
+				ProjectId: types.StringValue("pid"),
+			}
+			flavorModel := &flavorModel{
+				CPU: tt.inputFlavor.CPU,
+				RAM: tt.inputFlavor.RAM,
+			}
+			err := loadFlavorId(context.Background(), client, &model, flavorModel)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(flavorModel, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
