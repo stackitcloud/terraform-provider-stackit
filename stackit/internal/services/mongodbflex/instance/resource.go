@@ -21,11 +21,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/wait"
+)
+
+const (
+	DefaultBackupSchedule = "0 0/6 * * *"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -141,13 +146,14 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "MongoDB Flex instance resource schema.",
-		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
-		"instance_id": "ID of the MongoDB Flex instance.",
-		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"name":        "Instance name.",
-		"acl":         "The Access Control List (ACL) for the MongoDB Flex instance.",
-		"options":     "Custom parameteres for the MongoDB Flex instance.",
+		"main":            "MongoDB Flex instance resource schema.",
+		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
+		"instance_id":     "ID of the MongoDB Flex instance.",
+		"project_id":      "STACKIT project ID to which the instance is associated.",
+		"name":            "Instance name.",
+		"acl":             "The Access Control List (ACL) for the MongoDB Flex instance.",
+		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
+		"options":         "Custom parameteres for the MongoDB Flex instance.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -200,7 +206,11 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Required:    true,
 			},
 			"backup_schedule": schema.StringAttribute{
-				Required: true,
+				Computed: true, // Update functionality for this field is currently not working properly on the API side
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Default: stringdefault.StaticString(DefaultBackupSchedule), // Using the same default value as the Portal, as the field is required
 			},
 			"flavor": schema.SingleNestedAttribute{
 				Required: true,
@@ -247,6 +257,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
 						Required: true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
 					},
 				},
 			},
@@ -463,7 +476,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	_, err = r.client.UpdateInstance(ctx, projectId, instanceId).UpdateInstancePayload(*payload).Execute()
+	_, err = r.client.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
@@ -680,6 +693,11 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		return nil, fmt.Errorf("nil options")
 	}
 
+	payloadOptions := make(map[string]string)
+	if options.Type.ValueString() != "" {
+		payloadOptions["type"] = options.Type.ValueString()
+	}
+
 	return &mongodbflex.CreateInstancePayload{
 		Acl: &mongodbflex.InstanceAcl{
 			Items: &acl,
@@ -693,13 +711,11 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 			Size:  conversion.ToPtrInt32(storage.Size),
 		},
 		Version: model.Version.ValueStringPointer(),
-		Options: &map[string]string{
-			"type": options.Type.ValueString(),
-		},
+		Options: &payloadOptions,
 	}, nil
 }
 
-func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel, options *optionsModel) (*mongodbflex.UpdateInstancePayload, error) {
+func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel, options *optionsModel) (*mongodbflex.PartialUpdateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -712,8 +728,16 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	if storage == nil {
 		return nil, fmt.Errorf("nil storage")
 	}
+	if options == nil {
+		return nil, fmt.Errorf("nil options")
+	}
 
-	return &mongodbflex.UpdateInstancePayload{
+	payloadOptions := make(map[string]string)
+	if options.Type.ValueString() != "" {
+		payloadOptions["type"] = options.Type.ValueString()
+	}
+
+	return &mongodbflex.PartialUpdateInstancePayload{
 		Acl: &mongodbflex.InstanceAcl{
 			Items: &acl,
 		},
@@ -726,9 +750,7 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 			Size:  conversion.ToPtrInt32(storage.Size),
 		},
 		Version: model.Version.ValueStringPointer(),
-		Options: &map[string]string{
-			"type": options.Type.ValueString(),
-		},
+		Options: &payloadOptions,
 	}, nil
 }
 

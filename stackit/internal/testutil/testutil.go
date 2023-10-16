@@ -39,6 +39,7 @@ var (
 	DnsCustomEndpoint             = os.Getenv("TF_ACC_DNS_CUSTOM_ENDPOINT")
 	LogMeCustomEndpoint           = os.Getenv("TF_ACC_LOGME_CUSTOM_ENDPOINT")
 	MariaDBCustomEndpoint         = os.Getenv("TF_ACC_MARIADB_CUSTOM_ENDPOINT")
+	MongoDBFlexCustomEndpoint     = os.Getenv("TF_ACC_MONGODBFLEX_CUSTOM_ENDPOINT")
 	OpenSearchCustomEndpoint      = os.Getenv("TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT")
 	ObjectStorageCustomEndpoint   = os.Getenv("TF_ACC_OBJECTSTORAGE_CUSTOM_ENDPOINT")
 	PostgreSQLCustomEndpoint      = os.Getenv("TF_ACC_POSTGRESQL_CUSTOM_ENDPOINT")
@@ -103,6 +104,21 @@ func MariaDBProviderConfig() string {
 			mariadb_custom_endpoint = "%s"
 		}`,
 		MariaDBCustomEndpoint,
+	)
+}
+
+func MongoDBFlexProviderConfig() string {
+	if MongoDBFlexCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			mongodbflex_custom_endpoint = "%s"
+		}`,
+		MongoDBFlexCustomEndpoint,
 	)
 }
 
