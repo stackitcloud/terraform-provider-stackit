@@ -725,14 +725,14 @@ func TestLoadFlavorId(t *testing.T) {
 				returnError:    tt.getFlavorsFails,
 				getFlavorsResp: tt.mockedResp,
 			}
-			model := Model{
+			model := &Model{
 				ProjectId: types.StringValue("pid"),
 			}
 			flavorModel := &flavorModel{
 				CPU: tt.inputFlavor.CPU,
 				RAM: tt.inputFlavor.RAM,
 			}
-			err := loadFlavorId(context.Background(), client, &model, flavorModel)
+			err := loadFlavorId(context.Background(), client, model, flavorModel)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
