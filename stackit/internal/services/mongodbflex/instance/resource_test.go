@@ -410,7 +410,7 @@ func TestToUpdatePayload(t *testing.T) {
 		inputFlavor  *flavorModel
 		inputStorage *storageModel
 		inputOptions *optionsModel
-		expected     *mongodbflex.UpdateInstancePayload
+		expected     *mongodbflex.PartialUpdateInstancePayload
 		isValid      bool
 	}{
 		{
@@ -420,7 +420,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&flavorModel{},
 			&storageModel{},
 			&optionsModel{},
-			&mongodbflex.UpdateInstancePayload{
+			&mongodbflex.PartialUpdateInstancePayload{
 				Acl: &mongodbflex.InstanceAcl{
 					Items: &[]string{},
 				},
@@ -451,7 +451,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&optionsModel{
 				Type: types.StringValue("type"),
 			},
-			&mongodbflex.UpdateInstancePayload{
+			&mongodbflex.PartialUpdateInstancePayload{
 				Acl: &mongodbflex.InstanceAcl{
 					Items: &[]string{
 						"ip_1",
@@ -492,7 +492,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&optionsModel{
 				Type: types.StringNull(),
 			},
-			&mongodbflex.UpdateInstancePayload{
+			&mongodbflex.PartialUpdateInstancePayload{
 				Acl: &mongodbflex.InstanceAcl{
 					Items: &[]string{
 						"",
