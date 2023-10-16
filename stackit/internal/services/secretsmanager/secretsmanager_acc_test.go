@@ -25,7 +25,7 @@ func resourceConfig() string {
 	return fmt.Sprintf(`
 				%s
 
-				resource "stackit_resourcemanager_instance" "instance" {
+				resource "stackit_secretsmanager_instance" "instance" {
 					project_id = "%s"
 					name       = "%s"
 				}
@@ -46,38 +46,38 @@ func TestAccPostgreSQLResource(t *testing.T) {
 				Config: resourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
-					resource.TestCheckResourceAttr("stackit_resourcemanager_instance.instance", "project_id", instanceResource["project_id"]),
-					resource.TestCheckResourceAttrSet("stackit_resourcemanager_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_secretsmanager_instance.instance", "instance_id"),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", instanceResource["name"]),
 				),
 			},
 			{ // Data source
 				Config: fmt.Sprintf(`
 					%s
 
-					data "stackit_resourcemanager_instance" "instance" {
-						project_id  = stackit_resourcemanager_instance.instance.project_id
-						instance_id = stackit_resourcemanager_instance.instance.instance_id
+					data "stackit_secretsmanager_instance" "instance" {
+						project_id  = stackit_secretsmanager_instance.instance.project_id
+						instance_id = stackit_secretsmanager_instance.instance.instance_id
 					}`,
 					resourceConfig(),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
-					resource.TestCheckResourceAttr("data.stackit_resourcemanager_instance.instance", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrPair(
-						"stackit_resourcemanager_instance.instance", "instance_id",
-						"data.stackit_resourcemanager_instance.instance", "instance_id",
+						"stackit_secretsmanager_instance.instance", "instance_id",
+						"data.stackit_secretsmanager_instance.instance", "instance_id",
 					),
-					resource.TestCheckResourceAttr("data.stackit_resourcemanager_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "name", instanceResource["name"]),
 				),
 			},
 			// Import
 			{
-				ResourceName: "stackit_resourcemanager_instance.instance",
+				ResourceName: "stackit_secretsmanager_instance.instance",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_resourcemanager_instance.instance"]
+					r, ok := s.RootModule().Resources["stackit_secretsmanager_instance.instance"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_resourcemanager_instance.instance")
+						return "", fmt.Errorf("couldn't find resource stackit_secretsmanager_instance.instance")
 					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
