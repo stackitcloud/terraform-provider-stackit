@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
@@ -18,7 +19,7 @@ import (
 // Instance resource data
 var instanceResource = map[string]string{
 	"project_id": testutil.ProjectId,
-	"name":       testutil.ResourceNameWithDateTime("secretsmanager"),
+	"name":       fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 }
 
 func resourceConfig() string {
