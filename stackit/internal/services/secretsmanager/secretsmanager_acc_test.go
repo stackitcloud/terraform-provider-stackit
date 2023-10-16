@@ -35,7 +35,7 @@ func resourceConfig() string {
 		instanceResource["name"],
 	)
 }
-func TestAccPostgreSQLResource(t *testing.T) {
+func TestAccSecretsManager(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckSecretsManagerDestroy,
