@@ -30,6 +30,7 @@ var instanceResource = map[string]string{
 	"storage_class":      "premium-perf2-mongodb",
 	"storage_size":       "10",
 	"version":            "5.0",
+	"version_updated":    "6.0",
 	"options_type":       "Single",
 	"flavor_id":          "2.4",
 }
@@ -183,7 +184,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					instanceResource["replicas"],
 					instanceResource["storage_class"],
 					instanceResource["storage_size"],
-					instanceResource["version"],
+					instanceResource["version_updated"],
 					instanceResource["options_type"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -200,7 +201,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "replicas", instanceResource["replicas"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.class", instanceResource["storage_class"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.size", instanceResource["storage_size"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "version", instanceResource["version"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "version", instanceResource["version_updated"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.type", instanceResource["options_type"]),
 				),
 			},
