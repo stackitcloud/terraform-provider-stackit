@@ -32,6 +32,7 @@ import (
 	redisCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/credential"
 	redisInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/instance"
 	resourceManagerProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/project"
+	secretsManagerInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/instance"
 	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
 	skeProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/project"
 
@@ -335,6 +336,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		argusInstance.NewInstanceDataSource,
 		argusScrapeConfig.NewScrapeConfigDataSource,
 		resourceManagerProject.NewProjectDataSource,
+		secretsManagerInstance.NewInstanceDataSource,
 		skeProject.NewProjectDataSource,
 		skeCluster.NewClusterDataSource,
 		postgresFlexInstance.NewInstanceDataSource,
@@ -366,6 +368,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		argusScrapeConfig.NewScrapeConfigResource,
 		resourceManagerProject.NewProjectResource,
 		argusCredential.NewCredentialResource,
+		secretsManagerInstance.NewInstanceResource,
 		skeProject.NewProjectResource,
 		skeCluster.NewClusterResource,
 		postgresFlexInstance.NewInstanceResource,
