@@ -334,6 +334,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		logMeCredential.NewCredentialDataSource,
 		mariaDBInstance.NewInstanceDataSource,
 		mariaDBCredential.NewCredentialDataSource,
+		mongoDBFlexInstance.NewInstanceDataSource,
 		objectStorageBucket.NewBucketDataSource,
 		objecStorageCredentialsGroup.NewCredentialsGroupDataSource,
 		objecStorageCredential.NewCredentialDataSource,
