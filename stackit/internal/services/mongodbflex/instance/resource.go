@@ -153,7 +153,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"name":            "Instance name.",
 		"acl":             "The Access Control List (ACL) for the MongoDB Flex instance.",
 		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
-		"options":         "Custom parameteres for the MongoDB Flex instance.",
+		"options":         "Custom parameters for the MongoDB Flex instance.",
 	}
 
 	resp.Schema = schema.Schema{
