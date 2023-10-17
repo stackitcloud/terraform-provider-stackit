@@ -155,7 +155,7 @@ func TestMapFieldsCreate(t *testing.T) {
 	}
 }
 
-func TestMapCreate(t *testing.T) {
+func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *mongodbflex.GetUserResponse

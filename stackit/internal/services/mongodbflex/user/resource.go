@@ -103,6 +103,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 		"user_id":     "User ID.",
 		"instance_id": "ID of the MongoDB Flex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
+		"roles":       "Database access levels for the user.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -157,6 +158,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"roles": schema.SetAttribute{
+				Description: descriptions["roles"],
 				ElementType: types.StringType,
 				Required:    true,
 				Validators: []validator.Set{
@@ -167,6 +169,9 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			},
 			"database": schema.StringAttribute{
 				Required: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"password": schema.StringAttribute{
 				Computed:  true,
