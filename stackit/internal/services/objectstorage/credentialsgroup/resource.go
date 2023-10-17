@@ -90,7 +90,7 @@ func (r *credentialsGroupResource) Configure(ctx context.Context, req resource.C
 // Schema defines the schema for the resource.
 func (r *credentialsGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                 "ObjectStorage credentials group resource schema.",
+		"main":                 "ObjectStorage credentials group resource schema. Must have a `region` specified in the provider configuration.",
 		"id":                   "Terraform's internal data source identifier. It is structured as \"`project_id`,`credentials_group_id`\".",
 		"credentials_group_id": "The credentials group ID",
 		"name":                 "The credentials group's display name.",

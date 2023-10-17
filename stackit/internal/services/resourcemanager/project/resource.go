@@ -104,7 +104,7 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 // Schema defines the schema for the resource.
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                "Resource Manager project resource schema.",
+		"main":                "Resource Manager project resource schema. Must have a `region` specified in the provider configuration.",
 		"id":                  "Terraform's internal resource ID. It is structured as \"`container_id`\".",
 		"container_id":        "Project container ID. Globally unique, user-friendly identifier.",
 		"parent_container_id": "Parent container ID",
