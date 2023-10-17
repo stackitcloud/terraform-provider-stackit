@@ -3,12 +3,12 @@
 page_title: "stackit_logme_credential Data Source - stackit"
 subcategory: ""
 description: |-
-  LogMe credential data source schema.
+  LogMe credential data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_logme_credential (Data Source)
 
-LogMe credential data source schema.
+LogMe credential data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

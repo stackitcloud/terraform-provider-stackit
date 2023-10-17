@@ -3,12 +3,12 @@
 page_title: "stackit_postgresql_credential Resource - stackit"
 subcategory: ""
 description: |-
-  PostgreSQL credential resource schema.
+  PostgreSQL credential resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_postgresql_credential (Resource)
 
-PostgreSQL credential resource schema.
+PostgreSQL credential resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

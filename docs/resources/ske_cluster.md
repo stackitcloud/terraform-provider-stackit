@@ -3,12 +3,12 @@
 page_title: "stackit_ske_cluster Resource - stackit"
 subcategory: ""
 description: |-
-  SKE Cluster Resource schema.
+  SKE Cluster Resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_ske_cluster (Resource)
 
-SKE Cluster Resource schema.
+SKE Cluster Resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

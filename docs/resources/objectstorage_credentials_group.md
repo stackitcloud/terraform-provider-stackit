@@ -3,12 +3,12 @@
 page_title: "stackit_objectstorage_credentials_group Resource - stackit"
 subcategory: ""
 description: |-
-  ObjectStorage credentials group resource schema.
+  ObjectStorage credentials group resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_objectstorage_credentials_group (Resource)
 
-ObjectStorage credentials group resource schema.
+ObjectStorage credentials group resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

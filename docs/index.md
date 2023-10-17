@@ -120,6 +120,7 @@ Using this flow is less secure since the token is long-lived. You can provide th
 - `jwks_custom_endpoint` (String) Custom endpoint for the jwks API, which is used to get the json web key sets (jwks) to validate tokens when using the key flow
 - `logme_custom_endpoint` (String) Custom endpoint for the LogMe service
 - `mariadb_custom_endpoint` (String) Custom endpoint for the MariaDB service
+- `mongodbflex_custom_endpoint` (String) Custom endpoint for the MongoDB Flex service
 - `objectstorage_custom_endpoint` (String) Custom endpoint for the Object Storage service
 - `opensearch_custom_endpoint` (String) Custom endpoint for the OpenSearch service
 - `postgresflex_custom_endpoint` (String) Custom endpoint for the PostgresFlex service
@@ -130,6 +131,7 @@ Using this flow is less secure since the token is long-lived. You can provide th
 - `redis_custom_endpoint` (String)
 - `region` (String) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `resourcemanager_custom_endpoint` (String) Custom endpoint for the Resource Manager service
+- `secretsmanager_custom_endpoint` (String) Custom endpoint for the Secrets Manager service
 - `service_account_email` (String) Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL
 - `service_account_key` (String) Service account key used for authentication. If set alongside private key, the key flow will be used to authenticate all operations.
 - `service_account_key_path` (String) Path for the service account key used for authentication. If set alongside the private key, the key flow will be used to authenticate all operations.

@@ -3,12 +3,12 @@
 page_title: "stackit_objectstorage_credential Data Source - stackit"
 subcategory: ""
 description: |-
-  ObjectStorage credential data source schema.
+  ObjectStorage credential data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_objectstorage_credential (Data Source)
 
-ObjectStorage credential data source schema.
+ObjectStorage credential data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

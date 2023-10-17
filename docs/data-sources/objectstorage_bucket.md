@@ -3,12 +3,12 @@
 page_title: "stackit_objectstorage_bucket Data Source - stackit"
 subcategory: ""
 description: |-
-  ObjectStorage bucket data source schema.
+  ObjectStorage bucket data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_objectstorage_bucket (Data Source)
 
-ObjectStorage bucket data source schema.
+ObjectStorage bucket data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

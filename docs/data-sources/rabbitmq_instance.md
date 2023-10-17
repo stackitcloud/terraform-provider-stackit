@@ -3,12 +3,12 @@
 page_title: "stackit_rabbitmq_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  RabbitMQ instance data source schema.
+  RabbitMQ instance data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_rabbitmq_instance (Data Source)
 
-RabbitMQ instance data source schema.
+RabbitMQ instance data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

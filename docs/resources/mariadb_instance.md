@@ -3,12 +3,12 @@
 page_title: "stackit_mariadb_instance Resource - stackit"
 subcategory: ""
 description: |-
-  MariaDB instance resource schema.
+  MariaDB instance resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_mariadb_instance (Resource)
 
-MariaDB instance resource schema.
+MariaDB instance resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

@@ -3,12 +3,12 @@
 page_title: "stackit_logme_credential Resource - stackit"
 subcategory: ""
 description: |-
-  LogMe credential resource schema.
+  LogMe credential resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_logme_credential (Resource)
 
-LogMe credential resource schema.
+LogMe credential resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

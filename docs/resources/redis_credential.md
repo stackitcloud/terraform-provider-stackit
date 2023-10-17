@@ -3,12 +3,12 @@
 page_title: "stackit_redis_credential Resource - stackit"
 subcategory: ""
 description: |-
-  Redis credential resource schema.
+  Redis credential resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_redis_credential (Resource)
 
-Redis credential resource schema.
+Redis credential resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

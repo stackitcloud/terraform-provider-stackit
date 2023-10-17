@@ -3,12 +3,12 @@
 page_title: "stackit_mariadb_credential Resource - stackit"
 subcategory: ""
 description: |-
-  MariaDB credential resource schema.
+  MariaDB credential resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_mariadb_credential (Resource)
 
-MariaDB credential resource schema.
+MariaDB credential resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

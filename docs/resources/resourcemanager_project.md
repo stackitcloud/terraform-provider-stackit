@@ -3,12 +3,12 @@
 page_title: "stackit_resourcemanager_project Resource - stackit"
 subcategory: ""
 description: |-
-  Resource Manager project resource schema.
+  Resource Manager project resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_resourcemanager_project (Resource)
 
-Resource Manager project resource schema.
+Resource Manager project resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

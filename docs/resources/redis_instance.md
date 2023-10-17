@@ -3,12 +3,12 @@
 page_title: "stackit_redis_instance Resource - stackit"
 subcategory: ""
 description: |-
-  Redis instance resource schema.
+  Redis instance resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_redis_instance (Resource)
 
-Redis instance resource schema.
+Redis instance resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

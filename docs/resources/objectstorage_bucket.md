@@ -3,12 +3,12 @@
 page_title: "stackit_objectstorage_bucket Resource - stackit"
 subcategory: ""
 description: |-
-  ObjectStorage bucket resource schema.
+  ObjectStorage bucket resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_objectstorage_bucket (Resource)
 
-ObjectStorage bucket resource schema.
+ObjectStorage bucket resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
