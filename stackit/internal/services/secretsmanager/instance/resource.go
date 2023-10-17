@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
 )
 
@@ -33,6 +35,7 @@ type Model struct {
 	InstanceId types.String `tfsdk:"instance_id"`
 	ProjectId  types.String `tfsdk:"project_id"`
 	Name       types.String `tfsdk:"name"`
+	ACLs       types.Set    `tfsdk:"acls"`
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -94,6 +97,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"instance_id": "ID of the Secrets Manager instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
 		"name":        "Instance name.",
+		"acls":        "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation",
 	}
 
 	resp.Schema = schema.Schema{
@@ -138,6 +142,15 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
+			"acls": schema.SetAttribute{
+				Description: descriptions["acls"],
+				Optional:    true,
+				Validators: []validator.Set{
+					setvalidator.ValueStringsAre(
+						validate.CIDR(),
+					),
+				},
+			},
 		},
 	}
 }
@@ -152,6 +165,15 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+
+	var acls []string
+	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
+		diags = model.ACLs.ElementsAs(ctx, &acls, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
@@ -172,6 +194,13 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err = mapFields(createResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	// Create ACLs
+	err = syncACLs(ctx, &model, r.client)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACLs: %v", err))
 		return
 	}
 
@@ -303,4 +332,65 @@ func toCreatePayload(model *Model) (*secretsmanager.CreateInstancePayload, error
 	return &secretsmanager.CreateInstancePayload{
 		Name: model.Name.ValueStringPointer(),
 	}, nil
+}
+
+// syncACLs creates and deletes ACLs so that the instance's ACLs are the ones in the model
+func syncACLs(ctx context.Context, model *Model, client *secretsmanager.APIClient) error {
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
+
+	// Get ACLs current state
+	var modelCIDRs []string
+	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
+		diags := model.ACLs.ElementsAs(ctx, &modelCIDRs, false)
+		if diags.HasError() {
+			return fmt.Errorf("reading ACLs from model: %w", core.DiagsToError(diags))
+		}
+	}
+	currentACLsResp, err := client.GetAcls(ctx, projectId, instanceId).Execute()
+	if err != nil {
+		return fmt.Errorf("fetching current ACLs: %w", err)
+	}
+
+	type cidrState struct {
+		isInModel bool
+		isCreated bool
+		id        string
+	}
+	aclsState := make(map[string]*cidrState)
+	for _, cidr := range modelCIDRs {
+		aclsState[cidr] = &cidrState{
+			isInModel: true,
+		}
+	}
+	for _, acl := range *currentACLsResp.Acls {
+		cidr := *acl.Cidr
+		if _, ok := aclsState[cidr]; !ok {
+			aclsState[cidr] = &cidrState{}
+		}
+		aclsState[cidr].isCreated = true
+		aclsState[cidr].id = *acl.Id
+	}
+
+	// Create/delete ACLs
+	for cidr, state := range aclsState {
+		if state.isInModel && !state.isCreated {
+			payload := secretsmanager.CreateAclPayload{
+				Cidr: utils.Ptr(cidr),
+			}
+			_, err := client.CreateAcl(ctx, projectId, instanceId).CreateAclPayload(payload).Execute()
+			if err != nil {
+				return fmt.Errorf("creating ACL '%v': %w", cidr, err)
+			}
+		}
+
+		if !state.isInModel && state.isCreated {
+			err := client.DeleteAcl(ctx, projectId, instanceId, state.id).Execute()
+			if err != nil {
+				return fmt.Errorf("deleting ACL '%v': %w", cidr, err)
+			}
+		}
+	}
+
+	return nil
 }
