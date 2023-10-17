@@ -340,9 +340,9 @@ func updateACLs(ctx context.Context, model *Model, client *secretsmanager.APICli
 	instanceId := model.InstanceId.ValueString()
 
 	// Get ACLs current state
-	var modelCIDRs []string
+	var modelACLs []string
 	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
-		diags := model.ACLs.ElementsAs(ctx, &modelCIDRs, false)
+		diags := model.ACLs.ElementsAs(ctx, &modelACLs, false)
 		if diags.HasError() {
 			return fmt.Errorf("reading ACLs from model: %w", core.DiagsToError(diags))
 		}
@@ -352,21 +352,21 @@ func updateACLs(ctx context.Context, model *Model, client *secretsmanager.APICli
 		return fmt.Errorf("fetching current ACLs: %w", err)
 	}
 
-	type cidrState struct {
+	type aclState struct {
 		isInModel bool
 		isCreated bool
 		id        string
 	}
-	aclsState := make(map[string]*cidrState)
-	for _, cidr := range modelCIDRs {
-		aclsState[cidr] = &cidrState{
+	aclsState := make(map[string]*aclState)
+	for _, cidr := range modelACLs {
+		aclsState[cidr] = &aclState{
 			isInModel: true,
 		}
 	}
 	for _, acl := range *currentACLsResp.Acls {
 		cidr := *acl.Cidr
 		if _, ok := aclsState[cidr]; !ok {
-			aclsState[cidr] = &cidrState{}
+			aclsState[cidr] = &aclState{}
 		}
 		aclsState[cidr].isCreated = true
 		aclsState[cidr].id = *acl.Id
