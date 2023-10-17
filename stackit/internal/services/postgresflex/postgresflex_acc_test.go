@@ -20,19 +20,19 @@ import (
 
 // Instance resource data
 var instanceResource = map[string]string{
-	"project_id":             testutil.ProjectId,
-	"name":                   fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
-	"acl":                    "192.168.0.0/16",
-	"backup_schedule":        "00 16 * * *",
-	"backup_schedule_update": "00 12 * * *",
-	"flavor_cpu":             "2",
-	"flavor_ram":             "4",
-	"flavor_description":     "Small, Compute optimized",
-	"replicas":               "1",
-	"storage_class":          "premium-perf12-stackit",
-	"storage_size":           "5",
-	"version":                "14",
-	"flavor_id":              "2.4",
+	"project_id":              testutil.ProjectId,
+	"name":                    fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
+	"acl":                     "192.168.0.0/16",
+	"backup_schedule":         "00 16 * * *",
+	"backup_schedule_updated": "00 12 * * *",
+	"flavor_cpu":              "2",
+	"flavor_ram":              "4",
+	"flavor_description":      "Small, Compute optimized",
+	"replicas":                "1",
+	"storage_class":           "premium-perf12-stackit",
+	"storage_size":            "5",
+	"version":                 "14",
+	"flavor_id":               "2.4",
 }
 
 // User resource data
@@ -42,7 +42,7 @@ var userResource = map[string]string{
 	"project_id": instanceResource["project_id"],
 }
 
-func configResources() string {
+func configResources(backupSchedule string) string {
 	return fmt.Sprintf(`
 				%s
 
@@ -74,7 +74,7 @@ func configResources() string {
 		instanceResource["project_id"],
 		instanceResource["name"],
 		instanceResource["acl"],
-		instanceResource["backup_schedule"],
+		backupSchedule,
 		instanceResource["flavor_cpu"],
 		instanceResource["flavor_ram"],
 		instanceResource["replicas"],
@@ -93,7 +93,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: configResources(),
+				Config: configResources(instanceResource["backup_schedule"]),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "project_id", instanceResource["project_id"]),
@@ -140,7 +140,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 						user_id        = stackit_postgresflex_user.user.user_id
 					}
 					`,
-					configResources(),
+					configResources(instanceResource["backup_schedule"]),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -220,38 +220,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: fmt.Sprintf(`
-				%s
-
-				resource "stackit_postgresflex_instance" "instance" {
-					project_id = "%s"
-					name    = "%s"
-					acl = ["%s"]
-					backup_schedule = "%s"
-					flavor = {
-						cpu = %s
-						ram = %s
-					}
-					replicas = %s
-					storage = {
-						class = "%s"
-						size = %s
-					}
-					version = "%s"
-				}
-				`,
-					testutil.PostgresFlexProviderConfig(),
-					instanceResource["project_id"],
-					instanceResource["name"],
-					instanceResource["acl"],
-					instanceResource["backup_schedule_update"],
-					instanceResource["flavor_cpu"],
-					instanceResource["flavor_ram"],
-					instanceResource["replicas"],
-					instanceResource["storage_class"],
-					instanceResource["storage_size"],
-					instanceResource["version"],
-				),
+				Config: configResources(instanceResource["backup_schedule_updated"]),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "project_id", instanceResource["project_id"]),
@@ -259,7 +228,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "acl.#", "1"),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "acl.0", instanceResource["acl"]),
-					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "backup_schedule", instanceResource["backup_schedule_update"]),
+					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "backup_schedule", instanceResource["backup_schedule_updated"]),
 					resource.TestCheckResourceAttrSet("stackit_postgresflex_instance.instance", "flavor.id"),
 					resource.TestCheckResourceAttrSet("stackit_postgresflex_instance.instance", "flavor.description"),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "flavor.cpu", instanceResource["flavor_cpu"]),

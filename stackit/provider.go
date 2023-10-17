@@ -18,6 +18,7 @@ import (
 	logMeInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/instance"
 	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
 	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
+	mongoDBFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/instance"
 	objectStorageBucket "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/bucket"
 	objecStorageCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credential"
 	objecStorageCredentialsGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credentialsgroup"
@@ -78,6 +79,7 @@ type providerModel struct {
 	DNSCustomEndpoint             types.String `tfsdk:"dns_custom_endpoint"`
 	PostgreSQLCustomEndpoint      types.String `tfsdk:"postgresql_custom_endpoint"`
 	PostgresFlexCustomEndpoint    types.String `tfsdk:"postgresflex_custom_endpoint"`
+	MongoDBFlexCustomEndpoint     types.String `tfsdk:"mongodbflex_custom_endpoint"`
 	LogMeCustomEndpoint           types.String `tfsdk:"logme_custom_endpoint"`
 	RabbitMQCustomEndpoint        types.String `tfsdk:"rabbitmq_custom_endpoint"`
 	MariaDBCustomEndpoint         types.String `tfsdk:"mariadb_custom_endpoint"`
@@ -106,6 +108,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"dns_custom_endpoint":             "Custom endpoint for the DNS service",
 		"postgresql_custom_endpoint":      "Custom endpoint for the PostgreSQL service",
 		"postgresflex_custom_endpoint":    "Custom endpoint for the PostgresFlex service",
+		"mongodbflex_custom_endpoint":     "Custom endpoint for the MongoDB Flex service",
 		"logme_custom_endpoint":           "Custom endpoint for the LogMe service",
 		"rabbitmq_custom_endpoint":        "Custom endpoint for the RabbitMQ service",
 		"mariadb_custom_endpoint":         "Custom endpoint for the MariaDB service",
@@ -164,6 +167,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"postgresflex_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["postgresflex_custom_endpoint"],
+			},
+			"mongodbflex_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["mongodbflex_custom_endpoint"],
 			},
 			"logme_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -264,6 +271,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.PostgresFlexCustomEndpoint.IsUnknown() || providerConfig.PostgresFlexCustomEndpoint.IsNull()) {
 		providerData.PostgresFlexCustomEndpoint = providerConfig.PostgresFlexCustomEndpoint.ValueString()
 	}
+	if !(providerConfig.MongoDBFlexCustomEndpoint.IsUnknown() || providerConfig.MongoDBFlexCustomEndpoint.IsNull()) {
+		providerData.MongoDBFlexCustomEndpoint = providerConfig.MongoDBFlexCustomEndpoint.ValueString()
+	}
 	if !(providerConfig.LogMeCustomEndpoint.IsUnknown() || providerConfig.LogMeCustomEndpoint.IsNull()) {
 		providerData.LogMeCustomEndpoint = providerConfig.LogMeCustomEndpoint.ValueString()
 	}
@@ -324,6 +334,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		logMeCredential.NewCredentialDataSource,
 		mariaDBInstance.NewInstanceDataSource,
 		mariaDBCredential.NewCredentialDataSource,
+		mongoDBFlexInstance.NewInstanceDataSource,
 		objectStorageBucket.NewBucketDataSource,
 		objecStorageCredentialsGroup.NewCredentialsGroupDataSource,
 		objecStorageCredential.NewCredentialDataSource,
@@ -355,6 +366,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		logMeCredential.NewCredentialResource,
 		mariaDBInstance.NewInstanceResource,
 		mariaDBCredential.NewCredentialResource,
+		mongoDBFlexInstance.NewInstanceResource,
 		objectStorageBucket.NewBucketResource,
 		objecStorageCredentialsGroup.NewCredentialsGroupResource,
 		objecStorageCredential.NewCredentialResource,

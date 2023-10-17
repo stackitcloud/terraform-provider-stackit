@@ -17,19 +17,20 @@ type ProviderData struct {
 	RoundTripper                  http.RoundTripper
 	ServiceAccountEmail           string
 	Region                        string
+	ArgusCustomEndpoint           string
 	DnsCustomEndpoint             string
-	PostgreSQLCustomEndpoint      string
-	PostgresFlexCustomEndpoint    string
 	LogMeCustomEndpoint           string
-	RabbitMQCustomEndpoint        string
 	MariaDBCustomEndpoint         string
+	MongoDBFlexCustomEndpoint     string
 	ObjectStorageCustomEndpoint   string
 	OpenSearchCustomEndpoint      string
+	PostgresFlexCustomEndpoint    string
+	PostgreSQLCustomEndpoint      string
+	RabbitMQCustomEndpoint        string
 	RedisCustomEndpoint           string
-	SecretsManagerCustomEndpoint  string
-	ArgusCustomEndpoint           string
-	SKECustomEndpoint             string
 	ResourceManagerCustomEndpoint string
+	SecretsManagerCustomEndpoint  string
+	SKECustomEndpoint             string
 }
 
 // DiagsToError Converts TF diagnostics' errors into an error with a human-readable description.

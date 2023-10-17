@@ -1,4 +1,4 @@
-package postgresflex
+package mongodbflex
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -17,15 +18,19 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
+	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/wait"
+)
+
+const (
+	DefaultBackupSchedule = "0 0/6 * * *"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -46,6 +51,7 @@ type Model struct {
 	Replicas       types.Int64  `tfsdk:"replicas"`
 	Storage        types.Object `tfsdk:"storage"`
 	Version        types.String `tfsdk:"version"`
+	Options        types.Object `tfsdk:"options"`
 }
 
 // Struct corresponding to Model.Flavor
@@ -76,6 +82,16 @@ var storageTypes = map[string]attr.Type{
 	"size":  basetypes.Int64Type{},
 }
 
+// Struct corresponding to Model.Options
+type optionsModel struct {
+	Type types.String `tfsdk:"type"`
+}
+
+// Types corresponding to optionsModel
+var optionsTypes = map[string]attr.Type{
+	"type": basetypes.StringType{},
+}
+
 // NewInstanceResource is a helper function to simplify the provider implementation.
 func NewInstanceResource() resource.Resource {
 	return &instanceResource{}
@@ -83,12 +99,12 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client *postgresflex.APIClient
+	client *mongodbflex.APIClient
 }
 
 // Metadata returns the resource type name.
 func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_postgresflex_instance"
+	resp.TypeName = req.ProviderTypeName + "_mongodbflex_instance"
 }
 
 // Configure adds the provider configured client to the resource.
@@ -104,15 +120,15 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	var apiClient *postgresflex.APIClient
+	var apiClient *mongodbflex.APIClient
 	var err error
-	if providerData.PostgresFlexCustomEndpoint != "" {
-		apiClient, err = postgresflex.NewAPIClient(
+	if providerData.MongoDBFlexCustomEndpoint != "" {
+		apiClient, err = mongodbflex.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.PostgresFlexCustomEndpoint),
+			config.WithEndpoint(providerData.MongoDBFlexCustomEndpoint),
 		)
 	} else {
-		apiClient, err = postgresflex.NewAPIClient(
+		apiClient, err = mongodbflex.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -124,18 +140,20 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "PostgresFlex instance client configured")
+	tflog.Info(ctx, "MongoDB Flex instance client configured")
 }
 
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "PostgresFlex instance resource schema.",
-		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
-		"instance_id": "ID of the PostgresFlex instance.",
-		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"name":        "Instance name.",
-		"acl":         "The Access Control List (ACL) for the PostgresFlex instance.",
+		"main":            "MongoDB Flex instance resource schema.",
+		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
+		"instance_id":     "ID of the MongoDB Flex instance.",
+		"project_id":      "STACKIT project ID to which the instance is associated.",
+		"name":            "Instance name.",
+		"acl":             "The Access Control List (ACL) for the MongoDB Flex instance.",
+		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
+		"options":         "Custom parameters for the MongoDB Flex instance.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -188,22 +206,20 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Required:    true,
 			},
 			"backup_schedule": schema.StringAttribute{
-				Required: true,
+				Computed: true, // Update functionality for this field is currently not working properly on the API side
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Default: stringdefault.StaticString(DefaultBackupSchedule), // Using the same default value as the Portal, as the field is required
 			},
 			"flavor": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
 					},
 					"description": schema.StringAttribute{
 						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
 					},
 					"cpu": schema.Int64Attribute{
 						Required: true,
@@ -229,6 +245,17 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"version": schema.StringAttribute{
 				Required: true,
+			},
+			"options": schema.SingleNestedAttribute{
+				Required: true,
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						Required: true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+				},
 			},
 		},
 	}
@@ -276,8 +303,17 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
+	var options = &optionsModel{}
+	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
+		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	// Generate API request body from model
-	payload, err := toCreatePayload(&model, acl, flavor, storage)
+	payload, err := toCreatePayload(&model, acl, flavor, storage, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -295,14 +331,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*postgresflex.InstanceResponse)
+	got, ok := wr.(*mongodbflex.GetInstanceResponse)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(got, &model, flavor, storage)
+	err = mapFields(got, &model, flavor, storage, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -313,7 +349,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "PostgresFlex instance created")
+	tflog.Info(ctx, "MongoDB Flex instance created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -346,6 +382,15 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		}
 	}
 
+	var options = &optionsModel{}
+	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
+		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", err.Error())
@@ -353,7 +398,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(instanceResp, &model, flavor, storage)
+	err = mapFields(instanceResp, &model, flavor, storage, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -364,7 +409,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "PostgresFlex instance read")
+	tflog.Info(ctx, "MongoDB Flex instance read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -411,14 +456,23 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
+	var options = &optionsModel{}
+	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
+		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	// Generate API request body from model
-	payload, err := toUpdatePayload(&model, acl, flavor, storage)
+	payload, err := toUpdatePayload(&model, acl, flavor, storage, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 	// Update existing instance
-	_, err = r.client.UpdateInstance(ctx, projectId, instanceId).UpdateInstancePayload(*payload).Execute()
+	_, err = r.client.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
@@ -428,14 +482,14 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*postgresflex.InstanceResponse)
+	got, ok := wr.(*mongodbflex.GetInstanceResponse)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(got, &model, flavor, storage)
+	err = mapFields(got, &model, flavor, storage, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -445,7 +499,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Postgresflex instance updated")
+	tflog.Info(ctx, "MongoDB Flex instance updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -473,7 +527,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
-	tflog.Info(ctx, "PostgresFlex instance deleted")
+	tflog.Info(ctx, "MongoDB Flex instance deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -491,10 +545,10 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
-	tflog.Info(ctx, "Postgresql instance state imported")
+	tflog.Info(ctx, "MongoDB Flex instance state imported")
 }
 
-func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavorModel, storage *storageModel) error {
+func mapFields(resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flavorModel, storage *storageModel, options *optionsModel) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -568,6 +622,21 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 		return fmt.Errorf("creating storage: %w", core.DiagsToError(diags))
 	}
 
+	var optionsValues map[string]attr.Value
+	if instance.Options == nil {
+		optionsValues = map[string]attr.Value{
+			"type": options.Type,
+		}
+	} else {
+		optionsValues = map[string]attr.Value{
+			"type": types.StringValue((*instance.Options)["type"]),
+		}
+	}
+	optionsObject, diags := types.ObjectValue(optionsTypes, optionsValues)
+	if diags.HasError() {
+		return fmt.Errorf("creating options: %w", core.DiagsToError(diags))
+	}
+
 	idParts := []string{
 		model.ProjectId.ValueString(),
 		instanceId,
@@ -583,10 +652,11 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 	model.Replicas = conversion.ToTypeInt64(instance.Replicas)
 	model.Storage = storageObject
 	model.Version = types.StringPointerValue(instance.Version)
+	model.Options = optionsObject
 	return nil
 }
 
-func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel) (*postgresflex.CreateInstancePayload, error) {
+func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel, options *optionsModel) (*mongodbflex.CreateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -599,24 +669,33 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	if storage == nil {
 		return nil, fmt.Errorf("nil storage")
 	}
+	if options == nil {
+		return nil, fmt.Errorf("nil options")
+	}
 
-	return &postgresflex.CreateInstancePayload{
-		Acl: &postgresflex.InstanceAcl{
+	payloadOptions := make(map[string]string)
+	if options.Type.ValueString() != "" {
+		payloadOptions["type"] = options.Type.ValueString()
+	}
+
+	return &mongodbflex.CreateInstancePayload{
+		Acl: &mongodbflex.InstanceAcl{
 			Items: &acl,
 		},
 		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
 		FlavorId:       flavor.Id.ValueStringPointer(),
 		Name:           model.Name.ValueStringPointer(),
 		Replicas:       conversion.ToPtrInt32(model.Replicas),
-		Storage: &postgresflex.InstanceStorage{
+		Storage: &mongodbflex.InstanceStorage{
 			Class: storage.Class.ValueStringPointer(),
 			Size:  conversion.ToPtrInt32(storage.Size),
 		},
 		Version: model.Version.ValueStringPointer(),
+		Options: &payloadOptions,
 	}, nil
 }
 
-func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel) (*postgresflex.UpdateInstancePayload, error) {
+func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel, options *optionsModel) (*mongodbflex.PartialUpdateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -629,28 +708,37 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	if storage == nil {
 		return nil, fmt.Errorf("nil storage")
 	}
+	if options == nil {
+		return nil, fmt.Errorf("nil options")
+	}
 
-	return &postgresflex.UpdateInstancePayload{
-		Acl: &postgresflex.InstanceAcl{
+	payloadOptions := make(map[string]string)
+	if options.Type.ValueString() != "" {
+		payloadOptions["type"] = options.Type.ValueString()
+	}
+
+	return &mongodbflex.PartialUpdateInstancePayload{
+		Acl: &mongodbflex.InstanceAcl{
 			Items: &acl,
 		},
 		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
 		FlavorId:       flavor.Id.ValueStringPointer(),
 		Name:           model.Name.ValueStringPointer(),
 		Replicas:       conversion.ToPtrInt32(model.Replicas),
-		Storage: &postgresflex.InstanceStorage{
+		Storage: &mongodbflex.InstanceStorage{
 			Class: storage.Class.ValueStringPointer(),
 			Size:  conversion.ToPtrInt32(storage.Size),
 		},
 		Version: model.Version.ValueStringPointer(),
+		Options: &payloadOptions,
 	}, nil
 }
 
-type postgresFlexClient interface {
-	GetFlavorsExecute(ctx context.Context, projectId string) (*postgresflex.FlavorsResponse, error)
+type mongoDBFlexClient interface {
+	GetFlavorsExecute(ctx context.Context, projectId string) (*mongodbflex.GetFlavorsResponse, error)
 }
 
-func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, flavor *flavorModel) error {
+func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, flavor *flavorModel) error {
 	if model == nil {
 		return fmt.Errorf("nil model")
 	}
@@ -669,7 +757,7 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 	projectId := model.ProjectId.ValueString()
 	res, err := client.GetFlavorsExecute(ctx, projectId)
 	if err != nil {
-		return fmt.Errorf("listing postgresflex flavors: %w", err)
+		return fmt.Errorf("listing mongodbflex flavors: %w", err)
 	}
 
 	avl := ""
