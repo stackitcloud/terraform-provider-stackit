@@ -42,6 +42,7 @@ func resourceConfig(acl2 string) string {
 		acl2,
 	)
 }
+
 func TestAccSecretsManager(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
