@@ -395,7 +395,7 @@ func mapACLs(aclList *secretsmanager.AclList, model *Model) error {
 	if aclList == nil {
 		return fmt.Errorf("nil ACL list")
 	}
-	if aclList.Acls == nil {
+	if aclList.Acls == nil || len(*aclList.Acls) == 0 {
 		model.ACLs = types.SetNull(types.StringType)
 		return nil
 	}
