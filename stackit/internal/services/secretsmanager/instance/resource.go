@@ -260,9 +260,49 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *instanceResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Update shouldn't be called
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", "Instance can't be updated")
+func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+
+	// Update ACLs
+	err := updateACLs(ctx, &model, r.client)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACLs: %v", err))
+		return
+	}
+
+	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+	aclList, err := r.client.GetAcls(ctx, projectId, instanceId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapFields(instanceResp, aclList, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Secrets Manager instance updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
