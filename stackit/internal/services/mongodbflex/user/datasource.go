@@ -79,7 +79,7 @@ func (r *userDataSource) Configure(ctx context.Context, req datasource.Configure
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the data source configuration", err))
 		return
 	}
 
@@ -91,7 +91,7 @@ func (r *userDataSource) Configure(ctx context.Context, req datasource.Configure
 func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "PostgresFlex user data source schema.",
-		"id":          "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
+		"id":          "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`,`user_id`\". Must have a `region` specified in the provider configuration.",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the PostgresFlex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
