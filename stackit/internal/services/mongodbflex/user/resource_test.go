@@ -1,4 +1,4 @@
-package postgresflex
+package mongodbflex
 
 import (
 	"testing"
@@ -7,20 +7,20 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
+	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
 )
 
 func TestMapFieldsCreate(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *postgresflex.CreateUserResponse
+		input       *mongodbflex.CreateUserResponse
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_values",
-			&postgresflex.CreateUserResponse{
-				Item: &postgresflex.InstanceUser{
+			&mongodbflex.CreateUserResponse{
+				Item: &mongodbflex.InstanceUser{
 					Id:       utils.Ptr("uid"),
 					Password: utils.Ptr(""),
 				},
@@ -31,6 +31,7 @@ func TestMapFieldsCreate(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Username:   types.StringNull(),
+				Database:   types.StringNull(),
 				Roles:      types.SetNull(types.StringType),
 				Password:   types.StringValue(""),
 				Host:       types.StringNull(),
@@ -40,8 +41,8 @@ func TestMapFieldsCreate(t *testing.T) {
 		},
 		{
 			"simple_values",
-			&postgresflex.CreateUserResponse{
-				Item: &postgresflex.InstanceUser{
+			&mongodbflex.CreateUserResponse{
+				Item: &mongodbflex.InstanceUser{
 					Id: utils.Ptr("uid"),
 					Roles: &[]string{
 						"role_1",
@@ -49,6 +50,7 @@ func TestMapFieldsCreate(t *testing.T) {
 						"",
 					},
 					Username: utils.Ptr("username"),
+					Database: utils.Ptr("database"),
 					Password: utils.Ptr("password"),
 					Host:     utils.Ptr("host"),
 					Port:     utils.Ptr(int32(1234)),
@@ -60,6 +62,7 @@ func TestMapFieldsCreate(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Username:   types.StringValue("username"),
+				Database:   types.StringValue("database"),
 				Roles: types.SetValueMust(types.StringType, []attr.Value{
 					types.StringValue("role_1"),
 					types.StringValue("role_2"),
@@ -73,11 +76,12 @@ func TestMapFieldsCreate(t *testing.T) {
 		},
 		{
 			"null_fields_and_int_conversions",
-			&postgresflex.CreateUserResponse{
-				Item: &postgresflex.InstanceUser{
+			&mongodbflex.CreateUserResponse{
+				Item: &mongodbflex.InstanceUser{
 					Id:       utils.Ptr("uid"),
 					Roles:    &[]string{},
 					Username: nil,
+					Database: nil,
 					Password: utils.Ptr(""),
 					Host:     nil,
 					Port:     utils.Ptr(int32(2123456789)),
@@ -89,6 +93,7 @@ func TestMapFieldsCreate(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Username:   types.StringNull(),
+				Database:   types.StringNull(),
 				Roles:      types.SetValueMust(types.StringType, []attr.Value{}),
 				Password:   types.StringValue(""),
 				Host:       types.StringNull(),
@@ -104,22 +109,22 @@ func TestMapFieldsCreate(t *testing.T) {
 		},
 		{
 			"nil_response_2",
-			&postgresflex.CreateUserResponse{},
+			&mongodbflex.CreateUserResponse{},
 			Model{},
 			false,
 		},
 		{
 			"no_resource_id",
-			&postgresflex.CreateUserResponse{
-				Item: &postgresflex.InstanceUser{},
+			&mongodbflex.CreateUserResponse{
+				Item: &mongodbflex.InstanceUser{},
 			},
 			Model{},
 			false,
 		},
 		{
 			"no_password",
-			&postgresflex.CreateUserResponse{
-				Item: &postgresflex.InstanceUser{
+			&mongodbflex.CreateUserResponse{
+				Item: &mongodbflex.InstanceUser{
 					Id: utils.Ptr("uid"),
 				},
 			},
@@ -153,14 +158,14 @@ func TestMapFieldsCreate(t *testing.T) {
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *postgresflex.UserResponse
+		input       *mongodbflex.GetUserResponse
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_values",
-			&postgresflex.UserResponse{
-				Item: &postgresflex.UserResponseUser{},
+			&mongodbflex.GetUserResponse{
+				Item: &mongodbflex.InstanceResponseUser{},
 			},
 			Model{
 				Id:         types.StringValue("pid,iid,uid"),
@@ -168,6 +173,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Username:   types.StringNull(),
+				Database:   types.StringNull(),
 				Roles:      types.SetNull(types.StringType),
 				Host:       types.StringNull(),
 				Port:       types.Int64Null(),
@@ -176,14 +182,15 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"simple_values",
-			&postgresflex.UserResponse{
-				Item: &postgresflex.UserResponseUser{
+			&mongodbflex.GetUserResponse{
+				Item: &mongodbflex.InstanceResponseUser{
 					Roles: &[]string{
 						"role_1",
 						"role_2",
 						"",
 					},
 					Username: utils.Ptr("username"),
+					Database: utils.Ptr("database"),
 					Host:     utils.Ptr("host"),
 					Port:     utils.Ptr(int32(1234)),
 				},
@@ -194,6 +201,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Username:   types.StringValue("username"),
+				Database:   types.StringValue("database"),
 				Roles: types.SetValueMust(types.StringType, []attr.Value{
 					types.StringValue("role_1"),
 					types.StringValue("role_2"),
@@ -206,11 +214,12 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"null_fields_and_int_conversions",
-			&postgresflex.UserResponse{
-				Item: &postgresflex.UserResponseUser{
+			&mongodbflex.GetUserResponse{
+				Item: &mongodbflex.InstanceResponseUser{
 					Id:       utils.Ptr("uid"),
 					Roles:    &[]string{},
 					Username: nil,
+					Database: nil,
 					Host:     nil,
 					Port:     utils.Ptr(int32(2123456789)),
 				},
@@ -221,6 +230,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Username:   types.StringNull(),
+				Database:   types.StringNull(),
 				Roles:      types.SetValueMust(types.StringType, []attr.Value{}),
 				Host:       types.StringNull(),
 				Port:       types.Int64Value(2123456789),
@@ -235,14 +245,14 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"nil_response_2",
-			&postgresflex.UserResponse{},
+			&mongodbflex.GetUserResponse{},
 			Model{},
 			false,
 		},
 		{
 			"no_resource_id",
-			&postgresflex.UserResponse{
-				Item: &postgresflex.UserResponseUser{},
+			&mongodbflex.GetUserResponse{
+				Item: &mongodbflex.InstanceResponseUser{},
 			},
 			Model{},
 			false,
@@ -277,16 +287,17 @@ func TestToCreatePayload(t *testing.T) {
 		description string
 		input       *Model
 		inputRoles  []string
-		expected    *postgresflex.CreateUserPayload
+		expected    *mongodbflex.CreateUserPayload
 		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
 			[]string{},
-			&postgresflex.CreateUserPayload{
+			&mongodbflex.CreateUserPayload{
 				Roles:    &[]string{},
 				Username: nil,
+				Database: nil,
 			},
 			true,
 		},
@@ -294,17 +305,19 @@ func TestToCreatePayload(t *testing.T) {
 			"default_values",
 			&Model{
 				Username: types.StringValue("username"),
+				Database: types.StringValue("database"),
 			},
 			[]string{
 				"role_1",
 				"role_2",
 			},
-			&postgresflex.CreateUserPayload{
+			&mongodbflex.CreateUserPayload{
 				Roles: &[]string{
 					"role_1",
 					"role_2",
 				},
 				Username: utils.Ptr("username"),
+				Database: utils.Ptr("database"),
 			},
 			true,
 		},
@@ -312,15 +325,17 @@ func TestToCreatePayload(t *testing.T) {
 			"null_fields_and_int_conversions",
 			&Model{
 				Username: types.StringNull(),
+				Database: types.StringNull(),
 			},
 			[]string{
 				"",
 			},
-			&postgresflex.CreateUserPayload{
+			&mongodbflex.CreateUserPayload{
 				Roles: &[]string{
 					"",
 				},
 				Username: nil,
+				Database: nil,
 			},
 			true,
 		},
