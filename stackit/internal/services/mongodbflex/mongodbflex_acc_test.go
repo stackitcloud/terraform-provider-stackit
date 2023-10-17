@@ -35,6 +35,14 @@ var instanceResource = map[string]string{
 	"flavor_id":          "2.4",
 }
 
+// User resource data
+var userResource = map[string]string{
+	"username":   fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha)),
+	"role":       "read",
+	"database":   "default",
+	"project_id": instanceResource["project_id"],
+}
+
 func configResources(version string) string {
 	return fmt.Sprintf(`
 				%s
@@ -57,6 +65,14 @@ func configResources(version string) string {
 						type = "%s"
 					}
 				}
+
+				resource "stackit_mongodbflex_user" "user" {
+					project_id = stackit_mongodbflex_instance.instance.project_id
+					instance_id = stackit_mongodbflex_instance.instance.instance_id
+					username = "%s"
+					roles = ["%s"]
+					database = "%s"
+				}
 				`,
 		testutil.MongoDBFlexProviderConfig(),
 		instanceResource["project_id"],
@@ -69,6 +85,9 @@ func configResources(version string) string {
 		instanceResource["storage_size"],
 		version,
 		instanceResource["options_type"],
+		userResource["username"],
+		userResource["role"],
+		userResource["database"],
 	)
 }
 
@@ -96,6 +115,20 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.size", instanceResource["storage_size"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.type", instanceResource["options_type"]),
+
+					// User
+					resource.TestCheckResourceAttrPair(
+						"stackit_mongodbflex_user.user", "project_id",
+						"stackit_mongodbflex_instance.instance", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_mongodbflex_user.user", "instance_id",
+						"stackit_mongodbflex_instance.instance", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_mongodbflex_user.user", "user_id"),
+					resource.TestCheckResourceAttrSet("stackit_mongodbflex_user.user", "password"),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_user.user", "username", userResource["username"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_user.user", "database", userResource["database"]),
 				),
 			},
 			// data source
@@ -106,6 +139,12 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					data "stackit_mongodbflex_instance" "instance" {
 						project_id     = stackit_mongodbflex_instance.instance.project_id
 						instance_id    = stackit_mongodbflex_instance.instance.instance_id
+					}
+
+					data "stackit_mongodbflex_user" "user" {
+						project_id     = stackit_mongodbflex_instance.instance.project_id
+						instance_id    = stackit_mongodbflex_instance.instance.instance_id
+						user_id        = stackit_mongodbflex_user.user.user_id
 					}
 					`,
 					configResources(instanceResource["version"]),
@@ -122,6 +161,10 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 						"data.stackit_mongodbflex_instance.instance", "instance_id",
 						"stackit_mongodbflex_instance.instance", "instance_id",
 					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_mongodbflex_user.user", "instance_id",
+						"stackit_mongodbflex_user.user", "instance_id",
+					),
 
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "acl.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "acl.0", instanceResource["acl"]),
@@ -131,6 +174,16 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.ram", instanceResource["flavor_ram"]),
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "replicas", instanceResource["replicas"]),
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "options.type", instanceResource["options_type"]),
+
+					// User data
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "project_id", userResource["project_id"]),
+					resource.TestCheckResourceAttrSet("data.stackit_mongodbflex_user.user", "user_id"),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "username", userResource["username"]),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "database", userResource["database"]),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "roles.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "roles.0", userResource["role"]),
+					resource.TestCheckResourceAttrSet("data.stackit_mongodbflex_user.user", "host"),
+					resource.TestCheckResourceAttrSet("data.stackit_mongodbflex_user.user", "port"),
 				),
 			},
 			// Import
@@ -150,6 +203,28 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+			{
+				ResourceName: "stackit_mongodbflex_user.user",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_mongodbflex_user.user"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_mongodbflex_user.user")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					userId, ok := r.Primary.Attributes["user_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute user_id")
+					}
+
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, userId), nil
+				},
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"password"},
 			},
 			// Update
 			{
