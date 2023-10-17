@@ -145,6 +145,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"acls": schema.SetAttribute{
 				Description: descriptions["acls"],
+				ElementType: types.StringType,
 				Optional:    true,
 				Validators: []validator.Set{
 					setvalidator.ValueStringsAre(
