@@ -66,7 +66,7 @@ func TestAccSecretsManager(t *testing.T) {
 			// Creation
 			{
 				Config: resourceConfig(utils.Ptr(fmt.Sprintf(
-					`["%s", "%s"]`,
+					"[%q, %q]",
 					instanceResource["acl-1"],
 					instanceResource["acl-2"],
 				))),
@@ -89,7 +89,7 @@ func TestAccSecretsManager(t *testing.T) {
 						instance_id = stackit_secretsmanager_instance.instance.instance_id
 					}`,
 					resourceConfig(utils.Ptr(fmt.Sprintf(
-						`["%s", "%s"]`,
+						"[%q, %q]",
 						instanceResource["acl-1"],
 						instanceResource["acl-2"],
 					))),
@@ -126,7 +126,7 @@ func TestAccSecretsManager(t *testing.T) {
 			// Update
 			{
 				Config: resourceConfig(utils.Ptr(fmt.Sprintf(
-					`["%s", "%s"]`,
+					"[%q, %q]",
 					instanceResource["acl-1"],
 					instanceResource["acl-2-updated"],
 				))),
