@@ -193,7 +193,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Create ACLs
-	err = updateACLs(ctx, &model, r.client)
+	err = updateACLs(ctx, projectId, instanceId, acls, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACLs: %v", err))
 		return
@@ -273,8 +273,17 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
+	var acls []string
+	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
+		diags = model.ACLs.ElementsAs(ctx, &acls, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	// Update ACLs
-	err := updateACLs(ctx, &model, r.client)
+	err := updateACLs(ctx, projectId, instanceId, acls, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACLs: %v", err))
 		return
@@ -413,18 +422,8 @@ func toCreatePayload(model *Model) (*secretsmanager.CreateInstancePayload, error
 }
 
 // updateACLs creates and deletes ACLs so that the instance's ACLs are the ones in the model
-func updateACLs(ctx context.Context, model *Model, client *secretsmanager.APIClient) error {
-	projectId := model.ProjectId.ValueString()
-	instanceId := model.InstanceId.ValueString()
-
+func updateACLs(ctx context.Context, projectId, instanceId string, acls []string, client *secretsmanager.APIClient) error {
 	// Get ACLs current state
-	var modelACLs []string
-	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
-		diags := model.ACLs.ElementsAs(ctx, &modelACLs, false)
-		if diags.HasError() {
-			return fmt.Errorf("reading ACLs from model: %w", core.DiagsToError(diags))
-		}
-	}
 	currentACLsResp, err := client.GetAcls(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		return fmt.Errorf("fetching current ACLs: %w", err)
@@ -436,7 +435,7 @@ func updateACLs(ctx context.Context, model *Model, client *secretsmanager.APICli
 		id        string
 	}
 	aclsState := make(map[string]*aclState)
-	for _, cidr := range modelACLs {
+	for _, cidr := range acls {
 		aclsState[cidr] = &aclState{
 			isInModel: true,
 		}

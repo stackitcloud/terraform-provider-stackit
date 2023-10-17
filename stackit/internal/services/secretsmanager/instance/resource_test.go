@@ -453,16 +453,7 @@ func TestUpdateACLs(t *testing.T) {
 			}
 
 			// Run test
-			var acls []attr.Value
-			for _, acl := range tt.acls {
-				acls = append(acls, types.StringValue(acl))
-			}
-			model := &Model{
-				ProjectId:  types.StringValue("pid"),
-				InstanceId: types.StringValue("iid"),
-				ACLs:       types.SetValueMust(types.StringType, acls),
-			}
-			err = updateACLs(context.Background(), model, client)
+			err = updateACLs(context.Background(), "pid", "iid", tt.acls, client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
