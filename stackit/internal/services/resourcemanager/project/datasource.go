@@ -74,7 +74,6 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 		apiClient, err = resourcemanager.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithServiceAccountEmail(providerData.ServiceAccountEmail),
-			config.WithRegion(providerData.Region),
 		)
 	}
 	if err != nil {
@@ -89,7 +88,7 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 // Schema defines the schema for the data source.
 func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                "Resource Manager project data source schema. Must have a `region` specified in the provider configuration.",
+		"main":                "Resource Manager project data source schema.",
 		"id":                  "Terraform's internal data source. ID. It is structured as \"`container_id`\".",
 		"container_id":        "Project container ID.",
 		"parent_container_id": "Parent container ID",
