@@ -144,7 +144,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 }
 
-func TestSyncACLs(t *testing.T) {
+func TestUpdateACLs(t *testing.T) {
 	// This is the response used when getting all ACLs currently, across all tests
 	getAllACLsResp := secretsmanager.AclList{
 		Acls: &[]secretsmanager.Acl{
@@ -429,7 +429,7 @@ func TestSyncACLs(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ACLs:       types.SetValueMust(types.StringType, acls),
 			}
-			err = syncACLs(context.Background(), model, client)
+			err = updateACLs(context.Background(), model, client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

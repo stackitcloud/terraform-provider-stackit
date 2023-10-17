@@ -198,7 +198,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Create ACLs
-	err = syncACLs(ctx, &model, r.client)
+	err = updateACLs(ctx, &model, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACLs: %v", err))
 		return
@@ -334,8 +334,8 @@ func toCreatePayload(model *Model) (*secretsmanager.CreateInstancePayload, error
 	}, nil
 }
 
-// syncACLs creates and deletes ACLs so that the instance's ACLs are the ones in the model
-func syncACLs(ctx context.Context, model *Model, client *secretsmanager.APIClient) error {
+// updateACLs creates and deletes ACLs so that the instance's ACLs are the ones in the model
+func updateACLs(ctx context.Context, model *Model, client *secretsmanager.APIClient) error {
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 
