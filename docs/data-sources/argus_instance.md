@@ -3,12 +3,12 @@
 page_title: "stackit_argus_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  
+  Argus instance data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_argus_instance (Data Source)
 
-
+Argus instance data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

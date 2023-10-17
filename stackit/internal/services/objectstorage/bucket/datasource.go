@@ -63,7 +63,7 @@ func (r *bucketDataSource) Configure(ctx context.Context, req datasource.Configu
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the data source configuration", err))
 		return
 	}
 
@@ -74,7 +74,7 @@ func (r *bucketDataSource) Configure(ctx context.Context, req datasource.Configu
 // Schema defines the schema for the data source.
 func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                     "ObjectStorage bucket data source schema.",
+		"main":                     "ObjectStorage bucket data source schema. Must have a `region` specified in the provider configuration.",
 		"id":                       "Terraform's internal data source identifier. It is structured as \"`project_id`,`name`\".",
 		"name":                     "The bucket name. It must be DNS conform.",
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",

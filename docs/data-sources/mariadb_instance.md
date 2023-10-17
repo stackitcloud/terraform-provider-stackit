@@ -3,12 +3,12 @@
 page_title: "stackit_mariadb_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  MariaDB instance data source schema.
+  MariaDB instance data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_mariadb_instance (Data Source)
 
-MariaDB instance data source schema.
+MariaDB instance data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

@@ -114,7 +114,7 @@ func (r *scrapeConfigResource) Configure(ctx context.Context, req resource.Confi
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 	r.client = apiClient
@@ -124,6 +124,7 @@ func (r *scrapeConfigResource) Configure(ctx context.Context, req resource.Confi
 // Schema defines the schema for the resource.
 func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Argus scrape config resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`name`\".",

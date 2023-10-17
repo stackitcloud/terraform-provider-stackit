@@ -3,12 +3,12 @@
 page_title: "stackit_mongodbflex_user Resource - stackit"
 subcategory: ""
 description: |-
-  MongoDB Flex user resource schema.
+  MongoDB Flex user resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_mongodbflex_user (Resource)
 
-MongoDB Flex user resource schema.
+MongoDB Flex user resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

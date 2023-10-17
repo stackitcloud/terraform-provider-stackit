@@ -3,12 +3,12 @@
 page_title: "stackit_mongodbflex_instance Resource - stackit"
 subcategory: ""
 description: |-
-  MongoDB Flex instance resource schema.
+  MongoDB Flex instance resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_mongodbflex_instance (Resource)
 
-MongoDB Flex instance resource schema.
+MongoDB Flex instance resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

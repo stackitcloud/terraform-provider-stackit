@@ -61,7 +61,7 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the data source configuration", err))
 		return
 	}
 
@@ -72,7 +72,7 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 // Schema defines the schema for the datasource.
 func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                 "ObjectStorage credential data source schema.",
+		"main":                 "ObjectStorage credential data source schema. Must have a `region` specified in the provider configuration.",
 		"id":                   "Terraform's internal resource identifier. It is structured as \"`project_id`,`credentials_group_id`,`credential_id`\".",
 		"credential_id":        "The credential ID.",
 		"credentials_group_id": "The credential group ID.",

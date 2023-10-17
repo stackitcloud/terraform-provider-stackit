@@ -3,12 +3,12 @@
 page_title: "stackit_redis_credential Data Source - stackit"
 subcategory: ""
 description: |-
-  Redis credential data source schema.
+  Redis credential data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_redis_credential (Data Source)
 
-Redis credential data source schema.
+Redis credential data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

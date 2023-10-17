@@ -87,7 +87,7 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 
@@ -98,7 +98,7 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 // Schema defines the schema for the resource.
 func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "MongoDB Flex user resource schema.",
+		"main":        "MongoDB Flex user resource schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the MongoDB Flex instance.",

@@ -3,12 +3,12 @@
 page_title: "stackit_argus_instance Resource - stackit"
 subcategory: ""
 description: |-
-  
+  Argus instance resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_argus_instance (Resource)
 
-
+Argus instance resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

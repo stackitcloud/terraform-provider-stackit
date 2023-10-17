@@ -3,12 +3,12 @@
 page_title: "stackit_logme_instance Resource - stackit"
 subcategory: ""
 description: |-
-  LogMe instance resource schema.
+  LogMe instance resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_logme_instance (Resource)
 
-LogMe instance resource schema.
+LogMe instance resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

@@ -3,12 +3,12 @@
 page_title: "stackit_postgresql_instance Resource - stackit"
 subcategory: ""
 description: |-
-  PostgreSQL instance resource schema.
+  PostgreSQL instance resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_postgresql_instance (Resource)
 
-PostgreSQL instance resource schema.
+PostgreSQL instance resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

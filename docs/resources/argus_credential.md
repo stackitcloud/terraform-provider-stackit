@@ -3,12 +3,12 @@
 page_title: "stackit_argus_credential Resource - stackit"
 subcategory: ""
 description: |-
-  
+  Argus credential resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_argus_credential (Resource)
 
-
+Argus credential resource schema. Must have a `region` specified in the provider configuration.
 
 
 

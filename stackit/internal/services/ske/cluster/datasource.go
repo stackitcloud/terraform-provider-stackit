@@ -64,7 +64,7 @@ func (r *clusterDataSource) Configure(ctx context.Context, req datasource.Config
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the data source configuration", err))
 		return
 	}
 
@@ -73,7 +73,7 @@ func (r *clusterDataSource) Configure(ctx context.Context, req datasource.Config
 }
 func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "SKE Cluster data source schema.",
+		Description: "SKE Cluster data source schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`name`\".",

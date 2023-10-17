@@ -3,12 +3,12 @@
 page_title: "stackit_mongodbflex_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  MongoDB Flex instance data source schema.
+  MongoDB Flex instance data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_mongodbflex_instance (Data Source)
 
-MongoDB Flex instance data source schema.
+MongoDB Flex instance data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

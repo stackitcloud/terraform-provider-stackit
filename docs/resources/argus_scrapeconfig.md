@@ -3,12 +3,12 @@
 page_title: "stackit_argus_scrapeconfig Resource - stackit"
 subcategory: ""
 description: |-
-  
+  Argus scrape config resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_argus_scrapeconfig (Resource)
 
-
+Argus scrape config resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

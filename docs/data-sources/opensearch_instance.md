@@ -3,12 +3,12 @@
 page_title: "stackit_opensearch_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  OpenSearch instance data source schema.
+  OpenSearch instance data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_opensearch_instance (Data Source)
 
-OpenSearch instance data source schema.
+OpenSearch instance data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

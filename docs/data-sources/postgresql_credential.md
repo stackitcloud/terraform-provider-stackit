@@ -3,12 +3,12 @@
 page_title: "stackit_postgresql_credential Data Source - stackit"
 subcategory: ""
 description: |-
-  PostgreSQL credential data source schema.
+  PostgreSQL credential data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_postgresql_credential (Data Source)
 
-PostgreSQL credential data source schema.
+PostgreSQL credential data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

@@ -3,12 +3,12 @@
 page_title: "stackit_redis_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  Redis instance data source schema.
+  Redis instance data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_redis_instance (Data Source)
 
-Redis instance data source schema.
+Redis instance data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

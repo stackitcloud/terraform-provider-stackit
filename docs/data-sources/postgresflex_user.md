@@ -3,12 +3,12 @@
 page_title: "stackit_postgresflex_user Data Source - stackit"
 subcategory: ""
 description: |-
-  PostgresFlex user data source schema.
+  PostgresFlex user data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_postgresflex_user (Data Source)
 
-PostgresFlex user data source schema.
+PostgresFlex user data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

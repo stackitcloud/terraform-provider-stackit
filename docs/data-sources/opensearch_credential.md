@@ -3,12 +3,12 @@
 page_title: "stackit_opensearch_credential Data Source - stackit"
 subcategory: ""
 description: |-
-  OpenSearch credential data source schema.
+  OpenSearch credential data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_opensearch_credential (Data Source)
 
-OpenSearch credential data source schema.
+OpenSearch credential data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
