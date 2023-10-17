@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -190,17 +191,22 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	instanceId := *createResp.Id
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	// Map response body to schema
-	err = mapFields(createResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
-		return
-	}
-
 	// Create ACLs
 	err = updateACLs(ctx, &model, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACLs: %v", err))
+		return
+	}
+	aclList, err := r.client.GetAcls(ctx, projectId, instanceId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapFields(createResp, aclList, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -231,9 +237,14 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	aclList, err := r.client.GetAcls(ctx, projectId, instanceId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		return
+	}
 
 	// Map response body to schema
-	err = mapFields(instanceResp, &model)
+	err = mapFields(instanceResp, aclList, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -295,7 +306,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Secrets Manager instance state imported")
 }
 
-func mapFields(instance *secretsmanager.Instance, model *Model) error {
+func mapFields(instance *secretsmanager.Instance, aclList *secretsmanager.AclList, model *Model) error {
 	if instance == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -322,6 +333,32 @@ func mapFields(instance *secretsmanager.Instance, model *Model) error {
 	model.InstanceId = types.StringValue(instanceId)
 	model.Name = types.StringPointerValue(instance.Name)
 
+	err := mapACLs(aclList, model)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func mapACLs(aclList *secretsmanager.AclList, model *Model) error {
+	if aclList == nil {
+		return fmt.Errorf("nil ACL list")
+	}
+	if aclList.Acls == nil {
+		model.ACLs = types.SetNull(types.StringType)
+		return nil
+	}
+
+	acls := []attr.Value{}
+	for _, acl := range *aclList.Acls {
+		acls = append(acls, types.StringValue(*acl.Cidr))
+	}
+	aclsSet, diags := types.SetValue(types.StringType, acls)
+	if diags.HasError() {
+		return fmt.Errorf("mapping ACLs: %w", core.DiagsToError(diags))
+	}
+	model.ACLs = aclsSet
 	return nil
 }
 

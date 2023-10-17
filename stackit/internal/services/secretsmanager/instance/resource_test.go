@@ -22,17 +22,20 @@ func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *secretsmanager.Instance
+		aclList     *secretsmanager.AclList
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_values",
 			&secretsmanager.Instance{},
+			&secretsmanager.AclList{},
 			Model{
 				Id:         types.StringValue("pid,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringNull(),
+				ACLs:       types.SetNull(types.StringType),
 			},
 			true,
 		},
@@ -41,16 +44,45 @@ func TestMapFields(t *testing.T) {
 			&secretsmanager.Instance{
 				Name: utils.Ptr("name"),
 			},
+			&secretsmanager.AclList{
+				Acls: &[]secretsmanager.Acl{
+					{
+						Cidr: utils.Ptr("cidr-1"),
+						Id:   utils.Ptr("id-cidr-1"),
+					},
+					{
+						Cidr: utils.Ptr("cidr-2"),
+						Id:   utils.Ptr("id-cidr-2"),
+					},
+					{
+						Cidr: utils.Ptr("cidr-3"),
+						Id:   utils.Ptr("id-cidr-3"),
+					},
+				},
+			},
 			Model{
 				Id:         types.StringValue("pid,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("name"),
+				ACLs: types.SetValueMust(types.StringType, []attr.Value{
+					types.StringValue("cidr-1"),
+					types.StringValue("cidr-2"),
+					types.StringValue("cidr-3"),
+				}),
 			},
 			true,
 		},
 		{
 			"nil_response",
+			nil,
+			&secretsmanager.AclList{},
+			Model{},
+			false,
+		},
+		{
+			"nil_acli_list",
+			&secretsmanager.Instance{},
 			nil,
 			Model{},
 			false,
@@ -58,6 +90,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_resource_id",
 			&secretsmanager.Instance{},
+			&secretsmanager.AclList{},
 			Model{},
 			false,
 		},
@@ -68,7 +101,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapFields(tt.input, state)
+			err := mapFields(tt.input, tt.aclList, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
