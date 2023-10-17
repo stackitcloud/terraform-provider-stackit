@@ -66,10 +66,10 @@ func (r *userDataSource) Configure(ctx context.Context, req datasource.Configure
 
 	var apiClient *mongodbflex.APIClient
 	var err error
-	if providerData.PostgresFlexCustomEndpoint != "" {
+	if providerData.MongoDBFlexCustomEndpoint != "" {
 		apiClient, err = mongodbflex.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.PostgresFlexCustomEndpoint),
+			config.WithEndpoint(providerData.MongoDBFlexCustomEndpoint),
 		)
 	} else {
 		apiClient, err = mongodbflex.NewAPIClient(
@@ -84,16 +84,16 @@ func (r *userDataSource) Configure(ctx context.Context, req datasource.Configure
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "PostgresFlex user client configured")
+	tflog.Info(ctx, "MongoDB Flex user client configured")
 }
 
 // Schema defines the schema for the data source.
 func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "PostgresFlex user data source schema. Must have a `region` specified in the provider configuration.",
+		"main":        "MongoDB Flex user data source schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
-		"instance_id": "ID of the PostgresFlex instance.",
+		"instance_id": "ID of the MongoDB Flex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
 	}
 
@@ -181,7 +181,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "PostgresFlex user read")
+	tflog.Info(ctx, "MongoDB Flex user read")
 }
 
 func mapDataSourceFields(userResp *mongodbflex.GetUserResponse, model *DataSourceModel) error {

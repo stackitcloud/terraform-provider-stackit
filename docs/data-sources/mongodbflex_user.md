@@ -3,12 +3,12 @@
 page_title: "stackit_mongodbflex_user Data Source - stackit"
 subcategory: ""
 description: |-
-  PostgresFlex user data source schema. Must have a region specified in the provider configuration.
+  MongoDB Flex user data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_mongodbflex_user (Data Source)
 
-PostgresFlex user data source schema. Must have a `region` specified in the provider configuration.
+MongoDB Flex user data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
@@ -24,7 +24,7 @@ data "stackit_mongodbflex_instance" "example" {
 
 ### Required
 
-- `instance_id` (String) ID of the PostgresFlex instance.
+- `instance_id` (String) ID of the MongoDB Flex instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 - `user_id` (String) User ID.
 
