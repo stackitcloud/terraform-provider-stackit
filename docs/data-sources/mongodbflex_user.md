@@ -32,7 +32,7 @@ data "stackit_mongodbflex_instance" "example" {
 
 - `database` (String)
 - `host` (String)
-- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`instance_id`,`user_id`".
+- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`instance_id`,`user_id`". Must have a `region` specified in the provider configuration.
 - `port` (Number)
 - `roles` (Set of String)
 - `username` (String)

@@ -3,12 +3,12 @@
 page_title: "stackit_resourcemanager_project Data Source - stackit"
 subcategory: ""
 description: |-
-  Resource Manager project data source schema. Must have a region specified in the provider configuration.
+  Resource Manager project data source schema.
 ---
 
 # stackit_resourcemanager_project (Data Source)
 
-Resource Manager project data source schema. Must have a `region` specified in the provider configuration.
+Resource Manager project data source schema.
 
 ## Example Usage
 
