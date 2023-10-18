@@ -229,8 +229,8 @@ func TestUpdateACLs(t *testing.T) {
 				Id:   utils.Ptr("id-acl-3"),
 			},
 			{
-				Cidr: utils.Ptr("acl-3"),
-				Id:   utils.Ptr("id-acl-3-repeated"),
+				Cidr: utils.Ptr("acl-2"),
+				Id:   utils.Ptr("id-acl-2-repeated"),
 			},
 		},
 	}
@@ -274,7 +274,7 @@ func TestUpdateACLs(t *testing.T) {
 		},
 		{
 			description: "delete_acl",
-			acls:        []string{"acl-1", "acl-3"},
+			acls:        []string{"acl-3", "acl-1"},
 			expectedACLsStates: map[string]bool{
 				"acl-1": true,
 				"acl-2": false,
