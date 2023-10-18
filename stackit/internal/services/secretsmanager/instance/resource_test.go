@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -35,7 +36,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringNull(),
-				ACLs:       types.SetNull(types.StringType),
+				ACLs:       types.ListNull(types.StringType),
 			},
 			true,
 		},
@@ -65,7 +66,41 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("name"),
-				ACLs: types.SetValueMust(types.StringType, []attr.Value{
+				ACLs: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("cidr-1"),
+					types.StringValue("cidr-2"),
+					types.StringValue("cidr-3"),
+				}),
+			},
+			true,
+		},
+		{
+			"acls_repeated",
+			&secretsmanager.Instance{
+				Name: utils.Ptr("name"),
+			},
+			&secretsmanager.AclList{
+				Acls: &[]secretsmanager.Acl{
+					{
+						Cidr: utils.Ptr("cidr-1"),
+						Id:   utils.Ptr("id-cidr-1"),
+					},
+					{
+						Cidr: utils.Ptr("cidr-2"),
+						Id:   utils.Ptr("id-cidr-2"),
+					},
+					{
+						Cidr: utils.Ptr("cidr-3"),
+						Id:   utils.Ptr("id-cidr-3"),
+					},
+				},
+			},
+			Model{
+				Id:         types.StringValue("pid,iid"),
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+				Name:       types.StringValue("name"),
+				ACLs: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("cidr-1"),
 					types.StringValue("cidr-2"),
 					types.StringValue("cidr-3"),
@@ -109,6 +144,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
+				fmt.Println(state.ACLs.Elements())
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
@@ -193,6 +229,10 @@ func TestUpdateACLs(t *testing.T) {
 				Cidr: utils.Ptr("acl-3"),
 				Id:   utils.Ptr("id-acl-3"),
 			},
+			{
+				Cidr: utils.Ptr("acl-3"),
+				Id:   utils.Ptr("id-acl-3-repeated"),
+			},
 		},
 	}
 	getAllACLsRespBytes, err := json.Marshal(getAllACLsResp)
@@ -246,6 +286,18 @@ func TestUpdateACLs(t *testing.T) {
 		{
 			description: "multiple_changes",
 			acls:        []string{"acl-4", "acl-3", "acl-1", "acl-5"},
+			expectedACLsStates: map[string]bool{
+				"acl-1": true,
+				"acl-2": false,
+				"acl-3": true,
+				"acl-4": true,
+				"acl-5": true,
+			},
+			isValid: true,
+		},
+		{
+			description: "multiple_changes_repetition",
+			acls:        []string{"acl-4", "acl-3", "acl-1", "acl-5", "acl-5"},
 			expectedACLsStates: map[string]bool{
 				"acl-1": true,
 				"acl-2": false,
@@ -399,11 +451,12 @@ func TestUpdateACLs(t *testing.T) {
 					t.Errorf("Delete ACL handler: no ACL ID")
 					return
 				}
-				if aclId[:3] != "id-" {
+				cidr, ok := strings.CutPrefix(aclId, "id-")
+				if !ok {
 					t.Errorf("Delete ACL handler: got unexpected ACL ID '%v'", aclId)
 					return
 				}
-				cidr := aclId[3:]
+				cidr, _ = strings.CutSuffix(cidr, "-repeated")
 				cidrExists, cidrWasCreated := aclsStates[cidr]
 				if !cidrWasCreated {
 					t.Errorf("Delete ACL handler: attempted to delete CIDR '%v' that wasn't created", cidr)
