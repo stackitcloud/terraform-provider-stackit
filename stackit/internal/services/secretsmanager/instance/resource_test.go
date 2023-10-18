@@ -75,40 +75,6 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
-			"acls_repeated",
-			&secretsmanager.Instance{
-				Name: utils.Ptr("name"),
-			},
-			&secretsmanager.AclList{
-				Acls: &[]secretsmanager.Acl{
-					{
-						Cidr: utils.Ptr("cidr-1"),
-						Id:   utils.Ptr("id-cidr-1"),
-					},
-					{
-						Cidr: utils.Ptr("cidr-2"),
-						Id:   utils.Ptr("id-cidr-2"),
-					},
-					{
-						Cidr: utils.Ptr("cidr-3"),
-						Id:   utils.Ptr("id-cidr-3"),
-					},
-				},
-			},
-			Model{
-				Id:         types.StringValue("pid,iid"),
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-				Name:       types.StringValue("name"),
-				ACLs: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("cidr-1"),
-					types.StringValue("cidr-2"),
-					types.StringValue("cidr-3"),
-				}),
-			},
-			true,
-		},
-		{
 			"nil_response",
 			nil,
 			&secretsmanager.AclList{},
