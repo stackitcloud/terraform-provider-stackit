@@ -22,6 +22,6 @@ Secrets Manager instance data source schema. Must have a `region` specified in t
 
 ### Read-Only
 
-- `acls` (Set of String) The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation
+- `acls` (List of String) The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
 - `name` (String) Instance name.
