@@ -20,9 +20,9 @@ import (
 var instanceResource = map[string]string{
 	"project_id":    testutil.ProjectId,
 	"name":          fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
-	"acl-1":         "1.2.3.4/5",
-	"acl-2":         "111.222.111.222/11",
-	"acl-2-updated": "111.222.111.222/22",
+	"acl-0":         "1.2.3.4/5",
+	"acl-1":         "111.222.111.222/11",
+	"acl-1-updated": "111.222.111.222/22",
 }
 
 func resourceConfig(acls *string) string {
@@ -67,8 +67,8 @@ func TestAccSecretsManager(t *testing.T) {
 			{
 				Config: resourceConfig(utils.Ptr(fmt.Sprintf(
 					"[%q, %q]",
+					instanceResource["acl-0"],
 					instanceResource["acl-1"],
-					instanceResource["acl-2"],
 				))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -76,8 +76,8 @@ func TestAccSecretsManager(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.#", "2"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.0", instanceResource["acl-1"]),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", instanceResource["acl-2"]),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.0", instanceResource["acl-0"]),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", instanceResource["acl-1"]),
 				),
 			},
 			{ // Data source
@@ -90,8 +90,8 @@ func TestAccSecretsManager(t *testing.T) {
 					}`,
 					resourceConfig(utils.Ptr(fmt.Sprintf(
 						"[%q, %q]",
+						instanceResource["acl-0"],
 						instanceResource["acl-1"],
-						instanceResource["acl-2"],
 					))),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -102,8 +102,8 @@ func TestAccSecretsManager(t *testing.T) {
 						"data.stackit_secretsmanager_instance.instance", "instance_id",
 					),
 					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "name", instanceResource["name"]),
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "acls.0", instanceResource["acl-1"]),
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "acls.1", instanceResource["acl-2"]),
+					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "acls.0", instanceResource["acl-0"]),
+					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "acls.1", instanceResource["acl-1"]),
 				),
 			},
 			// Import
@@ -127,8 +127,8 @@ func TestAccSecretsManager(t *testing.T) {
 			{
 				Config: resourceConfig(utils.Ptr(fmt.Sprintf(
 					"[%q, %q]",
-					instanceResource["acl-1"],
-					instanceResource["acl-2-updated"],
+					instanceResource["acl-0"],
+					instanceResource["acl-1-updated"],
 				))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -136,8 +136,8 @@ func TestAccSecretsManager(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.#", "2"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.0", instanceResource["acl-1"]),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", instanceResource["acl-2-updated"]),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.0", instanceResource["acl-0"]),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", instanceResource["acl-1-updated"]),
 				),
 			},
 			// Update, no ACLs
