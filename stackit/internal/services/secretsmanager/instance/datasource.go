@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -79,6 +80,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"instance_id": "ID of the Secrets Manager instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
 		"name":        "Instance name.",
+		"acls":        "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation",
 	}
 
 	resp.Schema = schema.Schema{
@@ -108,6 +110,11 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: descriptions["name"],
 				Computed:    true,
 			},
+			"acls": schema.ListAttribute{
+				Description: descriptions["acls"],
+				ElementType: types.StringType,
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -130,8 +137,13 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	aclList, err := r.client.GetAcls(ctx, projectId, instanceId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		return
+	}
 
-	err = mapFields(instanceResp, &model)
+	err = mapFields(instanceResp, aclList, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return

@@ -18,24 +18,45 @@ import (
 
 // Instance resource data
 var instanceResource = map[string]string{
-	"project_id": testutil.ProjectId,
-	"name":       fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
+	"project_id":    testutil.ProjectId,
+	"name":          fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
+	"acl-0":         "1.2.3.4/5",
+	"acl-1":         "111.222.111.222/11",
+	"acl-1-updated": "111.222.111.222/22",
 }
 
-func resourceConfig() string {
+func resourceConfig(acls *string) string {
+	if acls == nil {
+		return fmt.Sprintf(`
+					%s
+	
+					resource "stackit_secretsmanager_instance" "instance" {
+						project_id = "%s"
+						name       = "%s"
+					}
+					`,
+			testutil.SecretsManagerProviderConfig(),
+			instanceResource["project_id"],
+			instanceResource["name"],
+		)
+	}
+
 	return fmt.Sprintf(`
 				%s
 
 				resource "stackit_secretsmanager_instance" "instance" {
 					project_id = "%s"
 					name       = "%s"
+					acls = %s
 				}
 				`,
 		testutil.SecretsManagerProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
+		*acls,
 	)
 }
+
 func TestAccSecretsManager(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -44,12 +65,19 @@ func TestAccSecretsManager(t *testing.T) {
 
 			// Creation
 			{
-				Config: resourceConfig(),
+				Config: resourceConfig(utils.Ptr(fmt.Sprintf(
+					"[%q, %q]",
+					instanceResource["acl-0"],
+					instanceResource["acl-1"],
+				))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.#", "2"),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.0", instanceResource["acl-0"]),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", instanceResource["acl-1"]),
 				),
 			},
 			{ // Data source
@@ -60,7 +88,11 @@ func TestAccSecretsManager(t *testing.T) {
 						project_id  = stackit_secretsmanager_instance.instance.project_id
 						instance_id = stackit_secretsmanager_instance.instance.instance_id
 					}`,
-					resourceConfig(),
+					resourceConfig(utils.Ptr(fmt.Sprintf(
+						"[%q, %q]",
+						instanceResource["acl-0"],
+						instanceResource["acl-1"],
+					))),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -70,6 +102,8 @@ func TestAccSecretsManager(t *testing.T) {
 						"data.stackit_secretsmanager_instance.instance", "instance_id",
 					),
 					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "acls.0", instanceResource["acl-0"]),
+					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "acls.1", instanceResource["acl-1"]),
 				),
 			},
 			// Import
@@ -88,6 +122,34 @@ func TestAccSecretsManager(t *testing.T) {
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+			// Update
+			{
+				Config: resourceConfig(utils.Ptr(fmt.Sprintf(
+					"[%q, %q]",
+					instanceResource["acl-0"],
+					instanceResource["acl-1-updated"],
+				))),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance data
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_secretsmanager_instance.instance", "instance_id"),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.#", "2"),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.0", instanceResource["acl-0"]),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", instanceResource["acl-1-updated"]),
+				),
+			},
+			// Update, no ACLs
+			{
+				Config: resourceConfig(nil),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance data
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_secretsmanager_instance.instance", "instance_id"),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.#", "0"),
+				),
 			},
 			// Deletion is done by the framework implicitly
 		},

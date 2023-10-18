@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -18,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
 )
 
@@ -33,6 +36,7 @@ type Model struct {
 	InstanceId types.String `tfsdk:"instance_id"`
 	ProjectId  types.String `tfsdk:"project_id"`
 	Name       types.String `tfsdk:"name"`
+	ACLs       types.List   `tfsdk:"acls"`
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -94,6 +98,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"instance_id": "ID of the Secrets Manager instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
 		"name":        "Instance name.",
+		"acls":        "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation",
 	}
 
 	resp.Schema = schema.Schema{
@@ -138,6 +143,17 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
+			"acls": schema.ListAttribute{
+				Description: descriptions["acls"],
+				ElementType: types.StringType,
+				Optional:    true,
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+					listvalidator.ValueStringsAre(
+						validate.CIDR(),
+					),
+				},
+			},
 		},
 	}
 }
@@ -152,6 +168,15 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+
+	var acls []string
+	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
+		diags = model.ACLs.ElementsAs(ctx, &acls, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
@@ -168,8 +193,20 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	instanceId := *createResp.Id
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
+	// Create ACLs
+	err = updateACLs(ctx, projectId, instanceId, acls, r.client)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACLs: %v", err))
+		return
+	}
+	aclList, err := r.client.GetAcls(ctx, projectId, instanceId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		return
+	}
+
 	// Map response body to schema
-	err = mapFields(createResp, &model)
+	err = mapFields(createResp, aclList, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -202,9 +239,14 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	aclList, err := r.client.GetAcls(ctx, projectId, instanceId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		return
+	}
 
 	// Map response body to schema
-	err = mapFields(instanceResp, &model)
+	err = mapFields(instanceResp, aclList, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -220,9 +262,58 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *instanceResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Update shouldn't be called
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", "Instance can't be updated")
+func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+
+	var acls []string
+	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
+		diags = model.ACLs.ElementsAs(ctx, &acls, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	// Update ACLs
+	err := updateACLs(ctx, projectId, instanceId, acls, r.client)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACLs: %v", err))
+		return
+	}
+
+	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+	aclList, err := r.client.GetAcls(ctx, projectId, instanceId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapFields(instanceResp, aclList, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Secrets Manager instance updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -266,7 +357,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Secrets Manager instance state imported")
 }
 
-func mapFields(instance *secretsmanager.Instance, model *Model) error {
+func mapFields(instance *secretsmanager.Instance, aclList *secretsmanager.AclList, model *Model) error {
 	if instance == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -293,6 +384,32 @@ func mapFields(instance *secretsmanager.Instance, model *Model) error {
 	model.InstanceId = types.StringValue(instanceId)
 	model.Name = types.StringPointerValue(instance.Name)
 
+	err := mapACLs(aclList, model)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func mapACLs(aclList *secretsmanager.AclList, model *Model) error {
+	if aclList == nil {
+		return fmt.Errorf("nil ACL list")
+	}
+	if aclList.Acls == nil || len(*aclList.Acls) == 0 {
+		model.ACLs = types.ListNull(types.StringType)
+		return nil
+	}
+
+	acls := []attr.Value{}
+	for _, acl := range *aclList.Acls {
+		acls = append(acls, types.StringValue(*acl.Cidr))
+	}
+	aclsList, diags := types.ListValue(types.StringType, acls)
+	if diags.HasError() {
+		return fmt.Errorf("mapping ACLs: %w", core.DiagsToError(diags))
+	}
+	model.ACLs = aclsList
 	return nil
 }
 
@@ -303,4 +420,55 @@ func toCreatePayload(model *Model) (*secretsmanager.CreateInstancePayload, error
 	return &secretsmanager.CreateInstancePayload{
 		Name: model.Name.ValueStringPointer(),
 	}, nil
+}
+
+// updateACLs creates and deletes ACLs so that the instance's ACLs are the ones in the model
+func updateACLs(ctx context.Context, projectId, instanceId string, acls []string, client *secretsmanager.APIClient) error {
+	// Get ACLs current state
+	currentACLsResp, err := client.GetAcls(ctx, projectId, instanceId).Execute()
+	if err != nil {
+		return fmt.Errorf("fetching current ACLs: %w", err)
+	}
+
+	type aclState struct {
+		isInModel bool
+		isCreated bool
+		id        string
+	}
+	aclsState := make(map[string]*aclState)
+	for _, cidr := range acls {
+		aclsState[cidr] = &aclState{
+			isInModel: true,
+		}
+	}
+	for _, acl := range *currentACLsResp.Acls {
+		cidr := *acl.Cidr
+		if _, ok := aclsState[cidr]; !ok {
+			aclsState[cidr] = &aclState{}
+		}
+		aclsState[cidr].isCreated = true
+		aclsState[cidr].id = *acl.Id
+	}
+
+	// Create/delete ACLs
+	for cidr, state := range aclsState {
+		if state.isInModel && !state.isCreated {
+			payload := secretsmanager.CreateAclPayload{
+				Cidr: utils.Ptr(cidr),
+			}
+			_, err := client.CreateAcl(ctx, projectId, instanceId).CreateAclPayload(payload).Execute()
+			if err != nil {
+				return fmt.Errorf("creating ACL '%v': %w", cidr, err)
+			}
+		}
+
+		if !state.isInModel && state.isCreated {
+			err := client.DeleteAcl(ctx, projectId, instanceId, state.id).Execute()
+			if err != nil {
+				return fmt.Errorf("deleting ACL '%v': %w", cidr, err)
+			}
+		}
+	}
+
+	return nil
 }
