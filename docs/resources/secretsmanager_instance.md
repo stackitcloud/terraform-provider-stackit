@@ -3,12 +3,12 @@
 page_title: "stackit_secretsmanager_instance Resource - stackit"
 subcategory: ""
 description: |-
-  Secrets Manager instance resource schema.
+  Secrets Manager instance resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_secretsmanager_instance (Resource)
 
-Secrets Manager instance resource schema.
+Secrets Manager instance resource schema. Must have a `region` specified in the provider configuration.
 
 
 
@@ -22,7 +22,7 @@ Secrets Manager instance resource schema.
 
 ### Optional
 
-- `acls` (Set of String) The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation
+- `acls` (List of String) The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation
 
 ### Read-Only
 

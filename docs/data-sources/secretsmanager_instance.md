@@ -3,12 +3,12 @@
 page_title: "stackit_secretsmanager_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  Secrets Manager instance data source schema.
+  Secrets Manager instance data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_secretsmanager_instance (Data Source)
 
-Secrets Manager instance data source schema.
+Secrets Manager instance data source schema. Must have a `region` specified in the provider configuration.
 
 
 
@@ -22,6 +22,6 @@ Secrets Manager instance data source schema.
 
 ### Read-Only
 
-- `acls` (Set of String)
+- `acls` (Set of String) The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
 - `name` (String) Instance name.
