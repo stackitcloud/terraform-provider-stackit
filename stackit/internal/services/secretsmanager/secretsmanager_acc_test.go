@@ -27,9 +27,9 @@ var instanceResource = map[string]string{
 
 // User resource data
 var userResource = map[string]string{
-	"description":          testutil.ResourceNameWithDateTime("secretsmanager"),
-	"write_enabled":        "false",
-	"write_enable_updated": "true",
+	"description":           testutil.ResourceNameWithDateTime("secretsmanager"),
+	"write_enabled":         "false",
+	"write_enabled_updated": "true",
 }
 
 func resourceConfig(acls *string, writeEnabled string) string {
