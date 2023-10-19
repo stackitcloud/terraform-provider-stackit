@@ -43,8 +43,8 @@ func resourceConfig(acls *string, writeEnabled string) string {
 					}
 
 					resource "stackit_secretsmanager_user" "user" {
-						project_id = stackit_postgresflex_instance.instance.project_id
-						instance_id = stackit_postgresflex_instance.instance.instance_id
+						project_id = stackit_secretsmanager_instance.instance.project_id
+						instance_id = stackit_secretsmanager_instance.instance.instance_id
 						description = "%s"
 						write_enabled = %s
 					}
@@ -67,8 +67,8 @@ func resourceConfig(acls *string, writeEnabled string) string {
 				}
 
 				resource "stackit_secretsmanager_user" "user" {
-					project_id = stackit_postgresflex_instance.instance.project_id
-					instance_id = stackit_postgresflex_instance.instance.instance_id
+					project_id = stackit_secretsmanager_instance.instance.project_id
+					instance_id = stackit_secretsmanager_instance.instance.instance_id
 					description = "%s"
 					write_enabled = %s
 				}
