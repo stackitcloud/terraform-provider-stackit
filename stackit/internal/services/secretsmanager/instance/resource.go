@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -36,7 +36,7 @@ type Model struct {
 	InstanceId types.String `tfsdk:"instance_id"`
 	ProjectId  types.String `tfsdk:"project_id"`
 	Name       types.String `tfsdk:"name"`
-	ACLs       types.List   `tfsdk:"acls"`
+	ACLs       types.Set    `tfsdk:"acls"`
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -143,13 +143,12 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
-			"acls": schema.ListAttribute{
+			"acls": schema.SetAttribute{
 				Description: descriptions["acls"],
 				ElementType: types.StringType,
 				Optional:    true,
-				Validators: []validator.List{
-					listvalidator.UniqueValues(),
-					listvalidator.ValueStringsAre(
+				Validators: []validator.Set{
+					setvalidator.ValueStringsAre(
 						validate.CIDR(),
 					),
 				},
@@ -397,7 +396,7 @@ func mapACLs(aclList *secretsmanager.AclList, model *Model) error {
 		return fmt.Errorf("nil ACL list")
 	}
 	if aclList.Acls == nil || len(*aclList.Acls) == 0 {
-		model.ACLs = types.ListNull(types.StringType)
+		model.ACLs = types.SetNull(types.StringType)
 		return nil
 	}
 
@@ -405,7 +404,7 @@ func mapACLs(aclList *secretsmanager.AclList, model *Model) error {
 	for _, acl := range *aclList.Acls {
 		acls = append(acls, types.StringValue(*acl.Cidr))
 	}
-	aclsList, diags := types.ListValue(types.StringType, acls)
+	aclsList, diags := types.SetValue(types.StringType, acls)
 	if diags.HasError() {
 		return fmt.Errorf("mapping ACLs: %w", core.DiagsToError(diags))
 	}

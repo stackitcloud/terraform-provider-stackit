@@ -35,6 +35,7 @@ import (
 	redisInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/instance"
 	resourceManagerProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/project"
 	secretsManagerInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/instance"
+	secretsManagerUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/user"
 	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
 	skeProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/project"
 
@@ -327,10 +328,10 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 // DataSources defines the data sources implemented in the provider.
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		argusInstance.NewInstanceDataSource,
+		argusScrapeConfig.NewScrapeConfigDataSource,
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
-		postgresInstance.NewInstanceDataSource,
-		postgresCredential.NewCredentialDataSource,
 		logMeInstance.NewInstanceDataSource,
 		logMeCredential.NewCredentialDataSource,
 		mariaDBInstance.NewInstanceDataSource,
@@ -342,28 +343,30 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		objecStorageCredential.NewCredentialDataSource,
 		openSearchInstance.NewInstanceDataSource,
 		openSearchCredential.NewCredentialDataSource,
+		postgresFlexInstance.NewInstanceDataSource,
+		postgresFlexUser.NewUserDataSource,
+		postgresInstance.NewInstanceDataSource,
+		postgresCredential.NewCredentialDataSource,
 		rabbitMQInstance.NewInstanceDataSource,
 		rabbitMQCredential.NewCredentialDataSource,
 		redisInstance.NewInstanceDataSource,
 		redisCredential.NewCredentialDataSource,
-		argusInstance.NewInstanceDataSource,
-		argusScrapeConfig.NewScrapeConfigDataSource,
 		resourceManagerProject.NewProjectDataSource,
 		secretsManagerInstance.NewInstanceDataSource,
+		secretsManagerUser.NewUserDataSource,
 		skeProject.NewProjectDataSource,
 		skeCluster.NewClusterDataSource,
-		postgresFlexInstance.NewInstanceDataSource,
-		postgresFlexUser.NewUserDataSource,
 	}
 }
 
 // Resources defines the resources implemented in the provider.
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		argusCredential.NewCredentialResource,
+		argusInstance.NewInstanceResource,
+		argusScrapeConfig.NewScrapeConfigResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
-		postgresInstance.NewInstanceResource,
-		postgresCredential.NewCredentialResource,
 		logMeInstance.NewInstanceResource,
 		logMeCredential.NewCredentialResource,
 		mariaDBInstance.NewInstanceResource,
@@ -375,18 +378,18 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		objecStorageCredential.NewCredentialResource,
 		openSearchInstance.NewInstanceResource,
 		openSearchCredential.NewCredentialResource,
+		postgresFlexInstance.NewInstanceResource,
+		postgresFlexUser.NewUserResource,
+		postgresInstance.NewInstanceResource,
+		postgresCredential.NewCredentialResource,
 		rabbitMQInstance.NewInstanceResource,
 		rabbitMQCredential.NewCredentialResource,
 		redisInstance.NewInstanceResource,
 		redisCredential.NewCredentialResource,
-		argusInstance.NewInstanceResource,
-		argusScrapeConfig.NewScrapeConfigResource,
 		resourceManagerProject.NewProjectResource,
-		argusCredential.NewCredentialResource,
 		secretsManagerInstance.NewInstanceResource,
+		secretsManagerUser.NewUserResource,
 		skeProject.NewProjectResource,
 		skeCluster.NewClusterResource,
-		postgresFlexInstance.NewInstanceResource,
-		postgresFlexUser.NewUserResource,
 	}
 }
