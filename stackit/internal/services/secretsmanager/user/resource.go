@@ -287,6 +287,12 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
+	// Get existing state
+	diags = req.State.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	// Map response body to schema
 	err = mapFields(user, &model)
 	if err != nil {
