@@ -92,8 +92,9 @@ func TestAccSecretsManager(t *testing.T) {
 			{
 				Config: resourceConfig(
 					utils.Ptr(fmt.Sprintf(
-						"[%q, %q]",
+						"[%q, %q, %q]",
 						instanceResource["acl-0"],
+						instanceResource["acl-1"],
 						instanceResource["acl-1"],
 					)),
 					userResource["write_enabled"],
