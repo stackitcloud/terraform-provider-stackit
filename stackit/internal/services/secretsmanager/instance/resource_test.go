@@ -36,7 +36,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringNull(),
-				ACLs:       types.ListNull(types.StringType),
+				ACLs:       types.SetNull(types.StringType),
 			},
 			true,
 		},
@@ -66,7 +66,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("name"),
-				ACLs: types.ListValueMust(types.StringType, []attr.Value{
+				ACLs: types.SetValueMust(types.StringType, []attr.Value{
 					types.StringValue("cidr-1"),
 					types.StringValue("cidr-2"),
 					types.StringValue("cidr-3"),
