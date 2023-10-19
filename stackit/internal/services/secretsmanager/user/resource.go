@@ -34,7 +34,7 @@ type Model struct {
 	ProjectId    types.String `tfsdk:"project_id"`
 	Description  types.String `tfsdk:"description"`
 	WriteEnabled types.Bool   `tfsdk:"write_enabled"`
-	Username     types.String `tfsdk:"name"`
+	Username     types.String `tfsdk:"username"`
 	Password     types.String `tfsdk:"password"`
 }
 

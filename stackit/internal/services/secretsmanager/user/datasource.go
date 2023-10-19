@@ -30,7 +30,7 @@ type DataSourceModel struct {
 	ProjectId    types.String `tfsdk:"project_id"`
 	Description  types.String `tfsdk:"description"`
 	WriteEnabled types.Bool   `tfsdk:"write_enabled"`
-	Username     types.String `tfsdk:"name"`
+	Username     types.String `tfsdk:"username"`
 }
 
 // NewUserDataSource is a helper function to simplify the provider implementation.
