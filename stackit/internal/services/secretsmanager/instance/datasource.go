@@ -110,7 +110,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: descriptions["name"],
 				Computed:    true,
 			},
-			"acls": schema.ListAttribute{
+			"acls": schema.SetAttribute{
 				Description: descriptions["acls"],
 				ElementType: types.StringType,
 				Computed:    true,
