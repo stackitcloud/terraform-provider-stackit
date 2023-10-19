@@ -108,7 +108,8 @@ func TestAccSecretsManager(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", instanceResource["acl-1"]),
 				),
 			},
-			{ // Data source
+			// Data source
+			{
 				Config: fmt.Sprintf(`
 					%s
 
