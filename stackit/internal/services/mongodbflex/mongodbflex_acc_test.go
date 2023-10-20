@@ -35,6 +35,7 @@ var instanceResource = map[string]string{
 	"flavor_id":               "2.4",
 	"backup_schedule":         "00 6 * * *",
 	"backup_schedule_updated": "00 12 * * *",
+	"backup_schedule_read":    "0 6 * * *",
 }
 
 // User resource data
@@ -179,7 +180,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.ram", instanceResource["flavor_ram"]),
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "replicas", instanceResource["replicas"]),
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "options.type", instanceResource["options_type"]),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "backup_schedule", instanceResource["backup_schedule_read"]),
 
 					// User data
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "project_id", userResource["project_id"]),
@@ -207,8 +208,18 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"backup_schedule"},
+				ImportStateCheck: func(s []*terraform.InstanceState) error {
+					if len(s) != 1 {
+						return fmt.Errorf("expected 1 state, got %d", len(s))
+					}
+					if s[0].Attributes["backup_schedule"] != instanceResource["backup_schedule_read"] {
+						return fmt.Errorf("expected backup_schedule %s, got %s", instanceResource["backup_schedule_read"], s[0].Attributes["backup_schedule"])
+					}
+					return nil
+				},
 			},
 			{
 				ResourceName: "stackit_mongodbflex_user.user",
