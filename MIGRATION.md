@@ -128,36 +128,36 @@ resource "stackit_logme_credential" "example-credential" {
 
 ## Available resources
 
-| Community provider | Official provider | Import available? | `id` format | |
+| Community provider | Official provider | Import available? | `id` format | Notes|
 |-|-|-|-|-|
-| stackit_argus_credential | stackit_argus_credential | :red_circle: |  |  |
-| stackit_argus_instance | stackit_argus_instance | :green_circle: | [project_id],[instance_id] |  |
-| stackit_argus_job | stackit_argus_scrapeconfig | :green_circle: | [project_id],[instance_id],[name] |  |
-| stackit_elasticsearch_credential | :red_circle: | :red_circle: |  | Service deprecated |
-| stackit_elasticsearch_instance | :red_circle: | :red_circle: |  | Service deprecated |
-| stackit_kubernetes_cluster | stackit_ske_cluster | :green_circle: | [project_id],[name] |  |
-| stackit_kubernetes_project | stackit_ske_project | :green_circle: | [project_id] |  |
-| stackit_load_balancer | :red_circle: | :red_circle: |  | Coming soon |
-| stackit_logme_credential | stackit_logme_credential | :green_circle: | [project_id],[instance_id],[credential_id] |  |
-| stackit_logme_instance | stackit_logme_instance | :green_circle: | [project_id],[instance_id] |  |
-| stackit_mariadb_credential | stackit_mariadb_credential | :green_circle: | [project_id],[instance_id],[credential_id] |  |
-| stackit_mariadb_instance | stackit_mariadb_instance | :green_circle: | [project_id],[instance_id] |  |
-| stackit_mongodb_flex_instance | stackit_mongodbflex_instance | :green_circle: | [project_id],[instance_id] |  |
-| stackit_mongodb_flex_user | stackit_mongodbflex_user | :yellow_circle: | [project_id],[instance_id],[user_id] | `password` field will be empty |
-| stackit_object_storage_bucket | stackit_objectstorage_bucket | :green_circle: | [project_id],[name] |  |
-| stackit_object_storage_credential | stackit_objectstorage_credential | :green_circle: | [project_id],[credentials_group_id],[credential_id] |  |
-| stackit_object_storage_credentials_group | stackit_objectstorage_credentials_group | :green_circle: | [project_id],[credentials_group_id] |  |
-| stackit_object_storage_project | :red_circle: | :red_circle: |  | Resource deprecated |
-| stackit_opensearch_credential | stackit_opensearch_credential | :green_circle: | [project_id],[credentials_group_id],[credential_id] |  |
-| stackit_opensearch_instance | stackit_opensearch_instance | :green_circle: | [project_id],[instance_id] |  |
-| stackit_postgres_credential | stackit_postgresql_credential | :green_circle: | [project_id],[credentials_group_id],[credential_id] |  |
-| stackit_postgres_flex_instance | stackit_postgresflex_instance | :green_circle: | [project_id],[instance_id] |  |
-| stackit_postgres_flex_user | stackit_postgresflex_user | :yellow_circle: | [project_id],[instance_id],[user_id] | `password` field will be empty |
-| stackit_postgres_instance | stackit_postgresql_instance | :green_circle: | [project_id],[instance_id] |  |
-| stackit_project | stackit_resourcemanager_project | :green_circle: | [container_id] |  |
-| stackit_rabbitmq_credential | stackit_rabbitmq_credential | :green_circle: | [project_id],[credentials_group_id],[credential_id] |  |
-| stackit_rabbitmq_instance | stackit_rabbitmq_instance | :green_circle: | [project_id],[instance_id] |  |
-| stackit_redis_credential | stackit_redis_credential | :green_circle: | [project_id],[credentials_group_id],[credential_id] |  |
-| stackit_redis_instance | stackit_redis_instance | :green_circle: | [project_id],[instance_id] |  |
-| stackit_secrets_manager_instance | stackit_secretsmanager_instance | :green_circle: | [project_id],[instance_id] |  |
-| stackit_secrets_manager_user | stackit_secretsmanager_user | :yellow_circle: | [project_id],[instance_id],[user_id] | `password` field will be empty |
+| stackit_argus_credential | stackit_argus_credential | :x: |  |  |
+| stackit_argus_instance | stackit_argus_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_argus_job | stackit_argus_scrapeconfig | :white_check_mark: | [project_id],[instance_id],[name] |  |
+| stackit_elasticsearch_credential | | |  | Service deprecated |
+| stackit_elasticsearch_instance | | |  | Service deprecated |
+| stackit_kubernetes_cluster | stackit_ske_cluster | :white_check_mark: | [project_id],[name] |  |
+| stackit_kubernetes_project | stackit_ske_project | :white_check_mark: | [project_id] |  |
+| stackit_load_balancer | | |  | Coming soon |
+| stackit_logme_credential | stackit_logme_credential | :white_check_mark: | [project_id],[instance_id],[credential_id] |  |
+| stackit_logme_instance | stackit_logme_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_mariadb_credential | stackit_mariadb_credential | :white_check_mark: | [project_id],[instance_id],[credential_id] |  |
+| stackit_mariadb_instance | stackit_mariadb_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_mongodb_flex_instance | stackit_mongodbflex_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_mongodb_flex_user | stackit_mongodbflex_user | :warning: | [project_id],[instance_id],[user_id] | `password` field will be empty |
+| stackit_object_storage_bucket | stackit_objectstorage_bucket | :white_check_mark: | [project_id],[name] |  |
+| stackit_object_storage_credential | stackit_objectstorage_credential | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_object_storage_credentials_group | stackit_objectstorage_credentials_group | :white_check_mark: | [project_id],[credentials_group_id] |  |
+| stackit_object_storage_project |  | |  | Resource deprecated |
+| stackit_opensearch_credential | stackit_opensearch_credential | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_opensearch_instance | stackit_opensearch_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_postgres_credential | stackit_postgresql_credential | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_postgres_flex_instance | stackit_postgresflex_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_postgres_flex_user | stackit_postgresflex_user | :warning: | [project_id],[instance_id],[user_id] | `password` field will be empty |
+| stackit_postgres_instance | stackit_postgresql_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_project | stackit_resourcemanager_project | :white_check_mark: | [container_id] |  |
+| stackit_rabbitmq_credential | stackit_rabbitmq_credential | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_rabbitmq_instance | stackit_rabbitmq_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_redis_credential | stackit_redis_credential | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_redis_instance | stackit_redis_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_secrets_manager_instance | stackit_secretsmanager_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_secrets_manager_user | stackit_secretsmanager_user | :warning: | [project_id],[instance_id],[user_id] | `password` field will be empty |
