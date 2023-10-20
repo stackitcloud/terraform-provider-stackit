@@ -786,7 +786,7 @@ func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, f
 // Remove leading 0s from backup schedule numbers (e.g. "00 00 * * *" becomes "0 0 * * *")
 // Needed as the API does it internally and would otherwise cause inconsistent result in Terraform
 func simplifyBackupSchedule(schedule string) string {
-	regex := regexp.MustCompile(`0+\d+`)
+	regex := regexp.MustCompile(`0+\d+`) // Matches series of one or more zeros followed by a series of one or more digits
 	simplifiedSchedule := regex.ReplaceAllStringFunc(schedule, func(match string) string {
 		simplified := strings.TrimLeft(match, "0")
 		if simplified == "" {
