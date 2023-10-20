@@ -635,7 +635,7 @@ func mapFields(resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flav
 	simplifiedModelBackupSchedule := simplifyBackupSchedule(model.BackupSchedule.ValueString())
 	// If the value returned by the API is different from the one in the model after simplification,
 	// we update the model so that it causes an error in Terraform
-	if simplifiedModelBackupSchedule != *instance.BackupSchedule {
+	if simplifiedModelBackupSchedule != types.StringPointerValue(instance.BackupSchedule).ValueString() {
 		model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
 	}
 
