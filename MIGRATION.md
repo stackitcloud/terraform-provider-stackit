@@ -126,11 +126,38 @@ resource "stackit_logme_credential" "example-credential" {
 }
 ```
 
-## Notes
+## Available resources
 
-### Import credentials
-
-There are some resources which provide fields **only** upon creation, such as users or credentials, which cannot be imported. Here is the list of the resources for which that happens:
-
-- Argus credentials: `import` is not available
-- PostgresFlex user: `import` is available but the `password` field will be empty
+| Community provider | Official provider | Import available? | `id` format | |
+|-|-|-|-|-|
+| stackit_argus_credential | stackit_argus_credential | :red_circle: |  |  |
+| stackit_argus_instance | stackit_argus_instance | :green_circle: | [project_id],[instance_id] |  |
+| stackit_argus_job | stackit_argus_scrapeconfig | :green_circle: | [project_id],[instance_id],[name] |  |
+| stackit_elasticsearch_credential | :red_circle: | :red_circle: |  | Service deprecated |
+| stackit_elasticsearch_instance | :red_circle: | :red_circle: |  | Service deprecated |
+| stackit_kubernetes_cluster | stackit_ske_cluster | :green_circle: | [project_id],[name] |  |
+| stackit_kubernetes_project | stackit_ske_project | :green_circle: | [project_id] |  |
+| stackit_load_balancer | :red_circle: | :red_circle: |  | Coming soon |
+| stackit_logme_credential | stackit_logme_credential | :green_circle: | [project_id],[instance_id],[credential_id] |  |
+| stackit_logme_instance | stackit_logme_instance | :green_circle: | [project_id],[instance_id] |  |
+| stackit_mariadb_credential | stackit_mariadb_credential | :green_circle: | [project_id],[instance_id],[credential_id] |  |
+| stackit_mariadb_instance | stackit_mariadb_instance | :green_circle: | [project_id],[instance_id] |  |
+| stackit_mongodb_flex_instance | stackit_mongodbflex_instance | :green_circle: | [project_id],[instance_id] |  |
+| stackit_mongodb_flex_user | stackit_mongodbflex_user | :yellow_circle: | [project_id],[instance_id],[user_id] | `password` field will be empty |
+| stackit_object_storage_bucket | stackit_objectstorage_bucket | :green_circle: | [project_id],[name] |  |
+| stackit_object_storage_credential | stackit_objectstorage_credential | :green_circle: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_object_storage_credentials_group | stackit_objectstorage_credentials_group | :green_circle: | [project_id],[credentials_group_id] |  |
+| stackit_object_storage_project | :red_circle: | :red_circle: |  | Deprecated |
+| stackit_opensearch_credential | stackit_opensearch_credential | :green_circle: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_opensearch_instance | stackit_opensearch_instance | :green_circle: | [project_id],[instance_id] |  |
+| stackit_postgres_credential | stackit_postgresql_credential | :green_circle: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_postgres_flex_instance | stackit_postgresflex_instance | :green_circle: | [project_id],[instance_id] |  |
+| stackit_postgres_flex_user | stackit_postgresflex_user | :yellow_circle: | [project_id],[instance_id],[user_id] | `password` field will be empty |
+| stackit_postgres_instance | stackit_postgresql_instance | :green_circle: | [project_id],[instance_id] |  |
+| stackit_project | stackit_resourcemanager_project | :green_circle: | [container_id] |  |
+| stackit_rabbitmq_credential | stackit_rabbitmq_credential | :green_circle: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_rabbitmq_instance | stackit_rabbitmq_instance | :green_circle: | [project_id],[instance_id] |  |
+| stackit_redis_credential | stackit_redis_credential | :green_circle: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_redis_instance | stackit_redis_instance | :green_circle: | [project_id],[instance_id] |  |
+| stackit_secrets_manager_instance | stackit_secretsmanager_instance | :green_circle: | [project_id],[instance_id] |  |
+| stackit_secrets_manager_user | stackit_secretsmanager_user | :yellow_circle: | [project_id],[instance_id],[user_id] | `password` field will be empty |
