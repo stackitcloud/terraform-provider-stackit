@@ -15,4 +15,5 @@ resource "stackit_mongodbflex_instance" "example" {
   options = {
     type = "Single"
   }
+  backup_schedule = "0 0 * * *"
 }

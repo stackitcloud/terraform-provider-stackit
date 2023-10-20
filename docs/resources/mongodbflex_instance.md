@@ -30,6 +30,7 @@ resource "stackit_mongodbflex_instance" "example" {
   options = {
     type = "Single"
   }
+  backup_schedule = "0 0 * * *"
 }
 ```
 
@@ -39,6 +40,7 @@ resource "stackit_mongodbflex_instance" "example" {
 ### Required
 
 - `acl` (List of String) The Access Control List (ACL) for the MongoDB Flex instance.
+- `backup_schedule` (String)
 - `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
 - `name` (String) Instance name.
 - `options` (Attributes) (see [below for nested schema](#nestedatt--options))
@@ -49,7 +51,6 @@ resource "stackit_mongodbflex_instance" "example" {
 
 ### Read-Only
 
-- `backup_schedule` (String)
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
 - `instance_id` (String) ID of the MongoDB Flex instance.
 
