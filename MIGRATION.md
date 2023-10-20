@@ -147,7 +147,7 @@ resource "stackit_logme_credential" "example-credential" {
 | stackit_object_storage_bucket | stackit_objectstorage_bucket | :green_circle: | [project_id],[name] |  |
 | stackit_object_storage_credential | stackit_objectstorage_credential | :green_circle: | [project_id],[credentials_group_id],[credential_id] |  |
 | stackit_object_storage_credentials_group | stackit_objectstorage_credentials_group | :green_circle: | [project_id],[credentials_group_id] |  |
-| stackit_object_storage_project | :red_circle: | :red_circle: |  | Deprecated |
+| stackit_object_storage_project | :red_circle: | :red_circle: |  | Resource deprecated |
 | stackit_opensearch_credential | stackit_opensearch_credential | :green_circle: | [project_id],[credentials_group_id],[credential_id] |  |
 | stackit_opensearch_instance | stackit_opensearch_instance | :green_circle: | [project_id],[instance_id] |  |
 | stackit_postgres_credential | stackit_postgresql_credential | :green_circle: | [project_id],[credentials_group_id],[credential_id] |  |
