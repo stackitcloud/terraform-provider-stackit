@@ -20,19 +20,22 @@ import (
 
 // Instance resource data
 var instanceResource = map[string]string{
-	"project_id":         testutil.ProjectId,
-	"name":               fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
-	"acl":                "192.168.0.0/16",
-	"flavor_cpu":         "2",
-	"flavor_ram":         "4",
-	"flavor_description": "Small, Compute optimized",
-	"replicas":           "1",
-	"storage_class":      "premium-perf2-mongodb",
-	"storage_size":       "10",
-	"version":            "5.0",
-	"version_updated":    "6.0",
-	"options_type":       "Single",
-	"flavor_id":          "2.4",
+	"project_id":              testutil.ProjectId,
+	"name":                    fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
+	"acl":                     "192.168.0.0/16",
+	"flavor_cpu":              "2",
+	"flavor_ram":              "4",
+	"flavor_description":      "Small, Compute optimized",
+	"replicas":                "1",
+	"storage_class":           "premium-perf2-mongodb",
+	"storage_size":            "10",
+	"version":                 "5.0",
+	"version_updated":         "6.0",
+	"options_type":            "Single",
+	"flavor_id":               "2.4",
+	"backup_schedule":         "00 6 * * *",
+	"backup_schedule_updated": "00 12 * * *",
+	"backup_schedule_read":    "0 6 * * *",
 }
 
 // User resource data
@@ -43,7 +46,7 @@ var userResource = map[string]string{
 	"project_id": instanceResource["project_id"],
 }
 
-func configResources(version string) string {
+func configResources(version, backupSchedule string) string {
 	return fmt.Sprintf(`
 				%s
 
@@ -64,6 +67,7 @@ func configResources(version string) string {
 					options = {
 						type = "%s"
 					}
+					backup_schedule = "%s"
 				}
 
 				resource "stackit_mongodbflex_user" "user" {
@@ -85,6 +89,7 @@ func configResources(version string) string {
 		instanceResource["storage_size"],
 		version,
 		instanceResource["options_type"],
+		backupSchedule,
 		userResource["username"],
 		userResource["role"],
 		userResource["database"],
@@ -98,7 +103,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: configResources(instanceResource["version"]),
+				Config: configResources(instanceResource["version"], instanceResource["backup_schedule"]),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "project_id", instanceResource["project_id"]),
@@ -115,6 +120,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.size", instanceResource["storage_size"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.type", instanceResource["options_type"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
 
 					// User
 					resource.TestCheckResourceAttrPair(
@@ -147,7 +153,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 						user_id        = stackit_mongodbflex_user.user.user_id
 					}
 					`,
-					configResources(instanceResource["version"]),
+					configResources(instanceResource["version"], instanceResource["backup_schedule"]),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -174,6 +180,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.ram", instanceResource["flavor_ram"]),
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "replicas", instanceResource["replicas"]),
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "options.type", instanceResource["options_type"]),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "backup_schedule", instanceResource["backup_schedule_read"]),
 
 					// User data
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "project_id", userResource["project_id"]),
@@ -201,8 +208,18 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"backup_schedule"},
+				ImportStateCheck: func(s []*terraform.InstanceState) error {
+					if len(s) != 1 {
+						return fmt.Errorf("expected 1 state, got %d", len(s))
+					}
+					if s[0].Attributes["backup_schedule"] != instanceResource["backup_schedule_read"] {
+						return fmt.Errorf("expected backup_schedule %s, got %s", instanceResource["backup_schedule_read"], s[0].Attributes["backup_schedule"])
+					}
+					return nil
+				},
 			},
 			{
 				ResourceName: "stackit_mongodbflex_user.user",
@@ -228,7 +245,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: configResources(instanceResource["version_updated"]),
+				Config: configResources(instanceResource["version_updated"], instanceResource["backup_schedule_updated"]),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "project_id", instanceResource["project_id"]),
@@ -245,6 +262,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.size", instanceResource["storage_size"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "version", instanceResource["version_updated"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.type", instanceResource["options_type"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "backup_schedule", instanceResource["backup_schedule_updated"]),
 				),
 			},
 			// Deletion is done by the framework implicitly

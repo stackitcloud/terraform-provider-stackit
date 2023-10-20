@@ -21,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
@@ -206,11 +205,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Required:    true,
 			},
 			"backup_schedule": schema.StringAttribute{
-				Computed: true, // Update functionality for this field is currently not working properly on the API side
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-				Default: stringdefault.StaticString(DefaultBackupSchedule), // Using the same default value as the Portal, as the field is required
+				Required: true,
 			},
 			"flavor": schema.SingleNestedAttribute{
 				Required: true,
@@ -637,6 +632,13 @@ func mapFields(resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flav
 		return fmt.Errorf("creating options: %w", core.DiagsToError(diags))
 	}
 
+	simplifiedModelBackupSchedule := simplifyBackupSchedule(model.BackupSchedule.ValueString())
+	// If the value returned by the API is different from the one in the model after simplification,
+	// we update the model so that it causes an error in Terraform
+	if simplifiedModelBackupSchedule != types.StringPointerValue(instance.BackupSchedule).ValueString() {
+		model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
+	}
+
 	idParts := []string{
 		model.ProjectId.ValueString(),
 		instanceId,
@@ -647,7 +649,6 @@ func mapFields(resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flav
 	model.InstanceId = types.StringValue(instanceId)
 	model.Name = types.StringPointerValue(instance.Name)
 	model.ACL = aclList
-	model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
 	model.Flavor = flavorObject
 	model.Replicas = conversion.ToTypeInt64(instance.Replicas)
 	model.Storage = storageObject
@@ -780,4 +781,18 @@ func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, f
 	}
 
 	return nil
+}
+
+// Remove leading 0s from backup schedule numbers (e.g. "00 00 * * *" becomes "0 0 * * *")
+// Needed as the API does it internally and would otherwise cause inconsistent result in Terraform
+func simplifyBackupSchedule(schedule string) string {
+	regex := regexp.MustCompile(`0+\d+`) // Matches series of one or more zeros followed by a series of one or more digits
+	simplifiedSchedule := regex.ReplaceAllStringFunc(schedule, func(match string) string {
+		simplified := strings.TrimLeft(match, "0")
+		if simplified == "" {
+			simplified = "0"
+		}
+		return simplified
+	})
+	return simplifiedSchedule
 }
