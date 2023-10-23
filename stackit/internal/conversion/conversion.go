@@ -9,15 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
-func ToPtrInt32(source types.Int64) *int32 {
-	if source.IsNull() || source.IsUnknown() {
-		return nil
-	}
-	ttlInt64 := source.ValueInt64()
-	ttlInt32 := int32(ttlInt64)
-	return &ttlInt32
-}
-
 func ToString(ctx context.Context, v attr.Value) (string, error) {
 	if t := v.Type(ctx); t != types.StringType {
 		return "", fmt.Errorf("type mismatch. expected 'types.StringType' but got '%s'", t.String())
