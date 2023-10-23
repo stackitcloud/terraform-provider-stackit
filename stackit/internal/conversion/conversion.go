@@ -18,13 +18,6 @@ func ToPtrInt32(source types.Int64) *int32 {
 	return &ttlInt32
 }
 
-func ToTypeInt64(i *int32) types.Int64 {
-	if i == nil {
-		return types.Int64PointerValue(nil)
-	}
-	return types.Int64Value(int64(*i))
-}
-
 func ToString(ctx context.Context, v attr.Value) (string, error) {
 	if t := v.Type(ctx); t != types.StringType {
 		return "", fmt.Errorf("type mismatch. expected 'types.StringType' but got '%s'", t.String())
