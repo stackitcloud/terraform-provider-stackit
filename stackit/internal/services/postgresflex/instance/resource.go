@@ -542,8 +542,8 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 		flavorValues = map[string]attr.Value{
 			"id":          types.StringValue(*instance.Flavor.Id),
 			"description": types.StringValue(*instance.Flavor.Description),
-			"cpu":         conversion.ToTypeInt64(instance.Flavor.Cpu),
-			"ram":         conversion.ToTypeInt64(instance.Flavor.Memory),
+			"cpu":         types.Int64PointerValue(instance.Flavor.Cpu),
+			"ram":         types.Int64PointerValue(instance.Flavor.Memory),
 		}
 	}
 	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
@@ -560,7 +560,7 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 	} else {
 		storageValues = map[string]attr.Value{
 			"class": types.StringValue(*instance.Storage.Class),
-			"size":  conversion.ToTypeInt64(instance.Storage.Size),
+			"size":  types.Int64PointerValue(instance.Storage.Size),
 		}
 	}
 	storageObject, diags := types.ObjectValue(storageTypes, storageValues)
@@ -580,7 +580,7 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 	model.ACL = aclList
 	model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
 	model.Flavor = flavorObject
-	model.Replicas = conversion.ToTypeInt64(instance.Replicas)
+	model.Replicas = types.Int64PointerValue(instance.Replicas)
 	model.Storage = storageObject
 	model.Version = types.StringPointerValue(instance.Version)
 	return nil

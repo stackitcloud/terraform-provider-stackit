@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -222,6 +221,6 @@ func mapDataSourceFields(userResp *postgresflex.UserResponse, model *DataSourceM
 		model.Roles = rolesSet
 	}
 	model.Host = types.StringPointerValue(user.Host)
-	model.Port = conversion.ToTypeInt64(user.Port)
+	model.Port = types.Int64PointerValue(user.Port)
 	return nil
 }
