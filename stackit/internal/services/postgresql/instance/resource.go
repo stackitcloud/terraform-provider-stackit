@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -345,7 +344,7 @@ func toCreatePayload(model *Model, parameters *parametersModel, parametersPlugin
 		InstanceName: model.Name.ValueStringPointer(),
 		Parameters: &postgresql.InstanceParameters{
 			EnableMonitoring:     parameters.EnableMonitoring.ValueBoolPointer(),
-			MetricsFrequency:     conversion.ToPtrInt32(parameters.MetricsFrequency),
+			MetricsFrequency:     parameters.MetricsFrequency.ValueInt64Pointer(),
 			MetricsPrefix:        parameters.MetricsPrefix.ValueStringPointer(),
 			MonitoringInstanceId: parameters.MonitoringInstanceId.ValueStringPointer(),
 			Plugins:              parametersPlugins,
@@ -487,7 +486,7 @@ func toUpdatePayload(model *Model, parameters *parametersModel, parametersPlugin
 	return &postgresql.UpdateInstancePayload{
 		Parameters: &postgresql.InstanceParameters{
 			EnableMonitoring:     parameters.EnableMonitoring.ValueBoolPointer(),
-			MetricsFrequency:     conversion.ToPtrInt32(parameters.MetricsFrequency),
+			MetricsFrequency:     parameters.MetricsFrequency.ValueInt64Pointer(),
 			MetricsPrefix:        parameters.MetricsPrefix.ValueStringPointer(),
 			MonitoringInstanceId: parameters.MonitoringInstanceId.ValueStringPointer(),
 			Plugins:              parametersPlugins,

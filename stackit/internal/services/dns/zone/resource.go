@@ -25,7 +25,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -580,11 +579,11 @@ func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
 		Description:   model.Description.ValueStringPointer(),
 		Acl:           model.Acl.ValueStringPointer(),
 		Type:          model.Type.ValueStringPointer(),
-		DefaultTTL:    conversion.ToPtrInt32(model.DefaultTTL),
-		ExpireTime:    conversion.ToPtrInt32(model.ExpireTime),
-		RefreshTime:   conversion.ToPtrInt32(model.RefreshTime),
-		RetryTime:     conversion.ToPtrInt32(model.RetryTime),
-		NegativeCache: conversion.ToPtrInt32(model.NegativeCache),
+		DefaultTTL:    model.DefaultTTL.ValueInt64Pointer(),
+		ExpireTime:    model.ExpireTime.ValueInt64Pointer(),
+		RefreshTime:   model.RefreshTime.ValueInt64Pointer(),
+		RetryTime:     model.RetryTime.ValueInt64Pointer(),
+		NegativeCache: model.NegativeCache.ValueInt64Pointer(),
 		IsReverseZone: model.IsReverseZone.ValueBoolPointer(),
 		Primaries:     &modelPrimaries,
 	}, nil
@@ -600,11 +599,11 @@ func toUpdatePayload(model *Model) (*dns.UpdateZonePayload, error) {
 		ContactEmail:  model.ContactEmail.ValueStringPointer(),
 		Description:   model.Description.ValueStringPointer(),
 		Acl:           model.Acl.ValueStringPointer(),
-		DefaultTTL:    conversion.ToPtrInt32(model.DefaultTTL),
-		ExpireTime:    conversion.ToPtrInt32(model.ExpireTime),
-		RefreshTime:   conversion.ToPtrInt32(model.RefreshTime),
-		RetryTime:     conversion.ToPtrInt32(model.RetryTime),
-		NegativeCache: conversion.ToPtrInt32(model.NegativeCache),
+		DefaultTTL:    model.DefaultTTL.ValueInt64Pointer(),
+		ExpireTime:    model.ExpireTime.ValueInt64Pointer(),
+		RefreshTime:   model.RefreshTime.ValueInt64Pointer(),
+		RetryTime:     model.RetryTime.ValueInt64Pointer(),
+		NegativeCache: model.NegativeCache.ValueInt64Pointer(),
 		Primaries:     nil, // API returns error if this field is set, even if nothing changes
 	}, nil
 }
