@@ -224,7 +224,7 @@ func TestToCreatePayload(t *testing.T) {
 				InstanceName: utils.Ptr("name"),
 				Parameters: &postgresql.InstanceParameters{
 					EnableMonitoring:     utils.Ptr(true),
-					MetricsFrequency:     utils.Ptr(int32(123)),
+					MetricsFrequency:     utils.Ptr(int64(123)),
 					MetricsPrefix:        utils.Ptr("prefix"),
 					MonitoringInstanceId: utils.Ptr("monitoring"),
 					Plugins: &[]string{
@@ -257,7 +257,7 @@ func TestToCreatePayload(t *testing.T) {
 				InstanceName: utils.Ptr(""),
 				Parameters: &postgresql.InstanceParameters{
 					EnableMonitoring:     nil,
-					MetricsFrequency:     utils.Ptr(int32(2123456789)),
+					MetricsFrequency:     utils.Ptr(int64(2123456789)),
 					MetricsPrefix:        nil,
 					MonitoringInstanceId: nil,
 					Plugins: &[]string{
@@ -351,7 +351,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&postgresql.UpdateInstancePayload{
 				Parameters: &postgresql.InstanceParameters{
 					EnableMonitoring:     utils.Ptr(true),
-					MetricsFrequency:     utils.Ptr(int32(123)),
+					MetricsFrequency:     utils.Ptr(int64(123)),
 					MetricsPrefix:        utils.Ptr("prefix"),
 					MonitoringInstanceId: utils.Ptr("monitoring"),
 					Plugins: &[]string{
@@ -382,7 +382,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&postgresql.UpdateInstancePayload{
 				Parameters: &postgresql.InstanceParameters{
 					EnableMonitoring:     nil,
-					MetricsFrequency:     utils.Ptr(int32(2123456789)),
+					MetricsFrequency:     utils.Ptr(int64(2123456789)),
 					MetricsPrefix:        nil,
 					MonitoringInstanceId: nil,
 					Plugins: &[]string{

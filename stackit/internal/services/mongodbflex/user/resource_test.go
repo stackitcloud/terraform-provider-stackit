@@ -53,7 +53,7 @@ func TestMapFieldsCreate(t *testing.T) {
 					Database: utils.Ptr("database"),
 					Password: utils.Ptr("password"),
 					Host:     utils.Ptr("host"),
-					Port:     utils.Ptr(int32(1234)),
+					Port:     utils.Ptr(int64(1234)),
 				},
 			},
 			Model{
@@ -84,7 +84,7 @@ func TestMapFieldsCreate(t *testing.T) {
 					Database: nil,
 					Password: utils.Ptr(""),
 					Host:     nil,
-					Port:     utils.Ptr(int32(2123456789)),
+					Port:     utils.Ptr(int64(2123456789)),
 				},
 			},
 			Model{
@@ -192,7 +192,7 @@ func TestMapFields(t *testing.T) {
 					Username: utils.Ptr("username"),
 					Database: utils.Ptr("database"),
 					Host:     utils.Ptr("host"),
-					Port:     utils.Ptr(int32(1234)),
+					Port:     utils.Ptr(int64(1234)),
 				},
 			},
 			Model{
@@ -221,7 +221,7 @@ func TestMapFields(t *testing.T) {
 					Username: nil,
 					Database: nil,
 					Host:     nil,
-					Port:     utils.Ptr(int32(2123456789)),
+					Port:     utils.Ptr(int64(2123456789)),
 				},
 			},
 			Model{

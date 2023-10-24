@@ -45,7 +45,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					},
 					Username: utils.Ptr("username"),
 					Host:     utils.Ptr("host"),
-					Port:     utils.Ptr(int32(1234)),
+					Port:     utils.Ptr(int64(1234)),
 				},
 			},
 			DataSourceModel{
@@ -72,7 +72,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					Roles:    &[]string{},
 					Username: nil,
 					Host:     nil,
-					Port:     utils.Ptr(int32(2123456789)),
+					Port:     utils.Ptr(int64(2123456789)),
 				},
 			},
 			DataSourceModel{

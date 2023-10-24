@@ -81,18 +81,18 @@ func TestMapFields(t *testing.T) {
 					},
 					BackupSchedule: utils.Ptr("schedule"),
 					Flavor: &mongodbflex.InstanceFlavor{
-						Cpu:         utils.Ptr(int32(12)),
+						Cpu:         utils.Ptr(int64(12)),
 						Description: utils.Ptr("description"),
 						Id:          utils.Ptr("flavor_id"),
-						Memory:      utils.Ptr(int32(34)),
+						Memory:      utils.Ptr(int64(34)),
 					},
 					Id:       utils.Ptr("iid"),
 					Name:     utils.Ptr("name"),
-					Replicas: utils.Ptr(int32(56)),
+					Replicas: utils.Ptr(int64(56)),
 					Status:   utils.Ptr("status"),
 					Storage: &mongodbflex.InstanceStorage{
 						Class: utils.Ptr("class"),
-						Size:  utils.Ptr(int32(78)),
+						Size:  utils.Ptr(int64(78)),
 					},
 					Options: &map[string]string{
 						"type": "type",
@@ -147,7 +147,7 @@ func TestMapFields(t *testing.T) {
 					Flavor:         nil,
 					Id:             utils.Ptr("iid"),
 					Name:           utils.Ptr("name"),
-					Replicas:       utils.Ptr(int32(56)),
+					Replicas:       utils.Ptr(int64(56)),
 					Status:         utils.Ptr("status"),
 					Storage:        nil,
 					Options: &map[string]string{
@@ -297,10 +297,10 @@ func TestToCreatePayload(t *testing.T) {
 				BackupSchedule: utils.Ptr("schedule"),
 				FlavorId:       utils.Ptr("flavor_id"),
 				Name:           utils.Ptr("name"),
-				Replicas:       utils.Ptr(int32(12)),
+				Replicas:       utils.Ptr(int64(12)),
 				Storage: &mongodbflex.InstanceStorage{
 					Class: utils.Ptr("class"),
-					Size:  utils.Ptr(int32(34)),
+					Size:  utils.Ptr(int64(34)),
 				},
 				Options: &map[string]string{"type": "type"},
 				Version: utils.Ptr("version"),
@@ -337,7 +337,7 @@ func TestToCreatePayload(t *testing.T) {
 				BackupSchedule: nil,
 				FlavorId:       nil,
 				Name:           nil,
-				Replicas:       utils.Ptr(int32(2123456789)),
+				Replicas:       utils.Ptr(int64(2123456789)),
 				Storage: &mongodbflex.InstanceStorage{
 					Class: nil,
 					Size:  nil,
@@ -476,10 +476,10 @@ func TestToUpdatePayload(t *testing.T) {
 				BackupSchedule: utils.Ptr("schedule"),
 				FlavorId:       utils.Ptr("flavor_id"),
 				Name:           utils.Ptr("name"),
-				Replicas:       utils.Ptr(int32(12)),
+				Replicas:       utils.Ptr(int64(12)),
 				Storage: &mongodbflex.InstanceStorage{
 					Class: utils.Ptr("class"),
-					Size:  utils.Ptr(int32(34)),
+					Size:  utils.Ptr(int64(34)),
 				},
 				Options: &map[string]string{"type": "type"},
 				Version: utils.Ptr("version"),
@@ -516,7 +516,7 @@ func TestToUpdatePayload(t *testing.T) {
 				BackupSchedule: nil,
 				FlavorId:       nil,
 				Name:           nil,
-				Replicas:       utils.Ptr(int32(2123456789)),
+				Replicas:       utils.Ptr(int64(2123456789)),
 				Storage: &mongodbflex.InstanceStorage{
 					Class: nil,
 					Size:  nil,
@@ -615,9 +615,9 @@ func TestLoadFlavorId(t *testing.T) {
 				Flavors: &[]mongodbflex.HandlersInfraFlavor{
 					{
 						Id:          utils.Ptr("fid-1"),
-						Cpu:         utils.Ptr(int32(2)),
+						Cpu:         utils.Ptr(int64(2)),
 						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int32(8)),
+						Memory:      utils.Ptr(int64(8)),
 					},
 				},
 			},
@@ -640,15 +640,15 @@ func TestLoadFlavorId(t *testing.T) {
 				Flavors: &[]mongodbflex.HandlersInfraFlavor{
 					{
 						Id:          utils.Ptr("fid-1"),
-						Cpu:         utils.Ptr(int32(2)),
+						Cpu:         utils.Ptr(int64(2)),
 						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int32(8)),
+						Memory:      utils.Ptr(int64(8)),
 					},
 					{
 						Id:          utils.Ptr("fid-2"),
-						Cpu:         utils.Ptr(int32(1)),
+						Cpu:         utils.Ptr(int64(1)),
 						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int32(4)),
+						Memory:      utils.Ptr(int64(4)),
 					},
 				},
 			},
@@ -671,15 +671,15 @@ func TestLoadFlavorId(t *testing.T) {
 				Flavors: &[]mongodbflex.HandlersInfraFlavor{
 					{
 						Id:          utils.Ptr("fid-1"),
-						Cpu:         utils.Ptr(int32(1)),
+						Cpu:         utils.Ptr(int64(1)),
 						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int32(8)),
+						Memory:      utils.Ptr(int64(8)),
 					},
 					{
 						Id:          utils.Ptr("fid-2"),
-						Cpu:         utils.Ptr(int32(1)),
+						Cpu:         utils.Ptr(int64(1)),
 						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int32(4)),
+						Memory:      utils.Ptr(int64(4)),
 					},
 				},
 			},
