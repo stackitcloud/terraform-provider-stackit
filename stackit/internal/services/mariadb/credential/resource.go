@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -370,7 +369,7 @@ func mapFields(credentialsResp *mariadb.CredentialsResponse, model *Model) error
 		model.HttpAPIURI = types.StringPointerValue(credentials.HttpApiUri)
 		model.Name = types.StringPointerValue(credentials.Name)
 		model.Password = types.StringPointerValue(credentials.Password)
-		model.Port = conversion.ToTypeInt64(credentials.Port)
+		model.Port = types.Int64PointerValue(credentials.Port)
 		model.Uri = types.StringPointerValue(credentials.Uri)
 		model.Username = types.StringPointerValue(credentials.Username)
 	}

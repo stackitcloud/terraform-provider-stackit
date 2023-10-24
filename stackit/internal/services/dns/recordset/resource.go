@@ -452,7 +452,7 @@ func mapFields(recordSetResp *dns.RecordSetResponse, model *Model) error {
 	model.Error = types.StringPointerValue(recordSet.Error)
 	model.Name = types.StringPointerValue(recordSet.Name)
 	model.State = types.StringPointerValue(recordSet.State)
-	model.TTL = conversion.ToTypeInt64(recordSet.Ttl)
+	model.TTL = types.Int64PointerValue(recordSet.Ttl)
 	model.Type = types.StringPointerValue(recordSet.Type)
 	return nil
 }
