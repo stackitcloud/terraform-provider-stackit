@@ -575,7 +575,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		return
 	}
 
-	wr, err := wait.CreateOrUpdateClusterWaitHandler(ctx, r.client, projectId, name).SetTimeout(30 * time.Minute).WaitWithContext(ctx)
+	wr, err := wait.CreateOrUpdateClusterWaitHandler(ctx, r.client, projectId, name).SetTimeout(45 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Cluster creation waiting: %v", err))
 		return
