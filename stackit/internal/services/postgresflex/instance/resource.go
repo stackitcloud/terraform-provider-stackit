@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -607,10 +606,10 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
 		FlavorId:       flavor.Id.ValueStringPointer(),
 		Name:           model.Name.ValueStringPointer(),
-		Replicas:       conversion.ToPtrInt32(model.Replicas),
+		Replicas:       model.Replicas.ValueInt64Pointer(),
 		Storage: &postgresflex.InstanceStorage{
 			Class: storage.Class.ValueStringPointer(),
-			Size:  conversion.ToPtrInt32(storage.Size),
+			Size:  storage.Size.ValueInt64Pointer(),
 		},
 		Version: model.Version.ValueStringPointer(),
 	}, nil
@@ -637,10 +636,10 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
 		FlavorId:       flavor.Id.ValueStringPointer(),
 		Name:           model.Name.ValueStringPointer(),
-		Replicas:       conversion.ToPtrInt32(model.Replicas),
+		Replicas:       model.Replicas.ValueInt64Pointer(),
 		Storage: &postgresflex.InstanceStorage{
 			Class: storage.Class.ValueStringPointer(),
-			Size:  conversion.ToPtrInt32(storage.Size),
+			Size:  storage.Size.ValueInt64Pointer(),
 		},
 		Version: model.Version.ValueStringPointer(),
 	}, nil
@@ -657,11 +656,11 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 	if flavor == nil {
 		return fmt.Errorf("nil flavor")
 	}
-	cpu := conversion.ToPtrInt32(flavor.CPU)
+	cpu := flavor.CPU.ValueInt64Pointer()
 	if cpu == nil {
 		return fmt.Errorf("nil CPU")
 	}
-	ram := conversion.ToPtrInt32(flavor.RAM)
+	ram := flavor.RAM.ValueInt64Pointer()
 	if ram == nil {
 		return fmt.Errorf("nil RAM")
 	}
