@@ -90,10 +90,10 @@ func TestMapFields(t *testing.T) {
 							},
 							Type: utils.Ptr("B"),
 						},
-						MaxSurge:       utils.Ptr(int32(3)),
+						MaxSurge:       utils.Ptr(int64(3)),
 						MaxUnavailable: nil,
-						Maximum:        utils.Ptr(int32(5)),
-						Minimum:        utils.Ptr(int32(1)),
+						Maximum:        utils.Ptr(int64(5)),
+						Minimum:        utils.Ptr(int64(1)),
 						Name:           utils.Ptr("node"),
 						Taints: &[]ske.Taint{
 							{
@@ -103,7 +103,7 @@ func TestMapFields(t *testing.T) {
 							},
 						},
 						Volume: &ske.Volume{
-							Size: utils.Ptr(int32(3)),
+							Size: utils.Ptr(int64(3)),
 							Type: utils.Ptr("type"),
 						},
 					},

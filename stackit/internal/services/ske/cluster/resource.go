@@ -663,10 +663,10 @@ func toNodepoolsPayload(ctx context.Context, m *Cluster) []ske.Nodepool {
 		}
 		cnp := ske.Nodepool{
 			Name:           nodePool.Name.ValueStringPointer(),
-			Minimum:        conversion.ToPtrInt32(nodePool.Minimum),
-			Maximum:        conversion.ToPtrInt32(nodePool.Maximum),
-			MaxSurge:       conversion.ToPtrInt32(nodePool.MaxSurge),
-			MaxUnavailable: conversion.ToPtrInt32(nodePool.MaxUnavailable),
+			Minimum:        nodePool.Minimum.ValueInt64Pointer(),
+			Maximum:        nodePool.Maximum.ValueInt64Pointer(),
+			MaxSurge:       nodePool.MaxSurge.ValueInt64Pointer(),
+			MaxUnavailable: nodePool.MaxUnavailable.ValueInt64Pointer(),
 			Machine: &ske.Machine{
 				Type: nodePool.MachineType.ValueStringPointer(),
 				Image: &ske.Image{
@@ -676,7 +676,7 @@ func toNodepoolsPayload(ctx context.Context, m *Cluster) []ske.Nodepool {
 			},
 			Volume: &ske.Volume{
 				Type: nodePool.VolumeType.ValueStringPointer(),
-				Size: conversion.ToPtrInt32(nodePool.VolumeSize),
+				Size: nodePool.VolumeSize.ValueInt64Pointer(),
 			},
 			Taints:            &ts,
 			Cri:               &cn,
@@ -837,12 +837,12 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 				MachineType:       types.StringPointerValue(np.Machine.Type),
 				OSName:            maimna,
 				OSVersion:         maimver,
-				Minimum:           conversion.ToTypeInt64(np.Minimum),
-				Maximum:           conversion.ToTypeInt64(np.Maximum),
-				MaxSurge:          conversion.ToTypeInt64(np.MaxSurge),
-				MaxUnavailable:    conversion.ToTypeInt64(np.MaxUnavailable),
+				Minimum:           types.Int64PointerValue(np.Minimum),
+				Maximum:           types.Int64PointerValue(np.Maximum),
+				MaxSurge:          types.Int64PointerValue(np.MaxSurge),
+				MaxUnavailable:    types.Int64PointerValue(np.MaxUnavailable),
 				VolumeType:        vt,
-				VolumeSize:        conversion.ToTypeInt64(np.Volume.Size),
+				VolumeSize:        types.Int64PointerValue(np.Volume.Size),
 				Labels:            types.MapNull(types.StringType),
 				Taints:            nil,
 				CRI:               crin,

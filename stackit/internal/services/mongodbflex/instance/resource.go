@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -591,8 +590,8 @@ func mapFields(resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flav
 		flavorValues = map[string]attr.Value{
 			"id":          types.StringValue(*instance.Flavor.Id),
 			"description": types.StringValue(*instance.Flavor.Description),
-			"cpu":         conversion.ToTypeInt64(instance.Flavor.Cpu),
-			"ram":         conversion.ToTypeInt64(instance.Flavor.Memory),
+			"cpu":         types.Int64PointerValue(instance.Flavor.Cpu),
+			"ram":         types.Int64PointerValue(instance.Flavor.Memory),
 		}
 	}
 	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
@@ -609,7 +608,7 @@ func mapFields(resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flav
 	} else {
 		storageValues = map[string]attr.Value{
 			"class": types.StringValue(*instance.Storage.Class),
-			"size":  conversion.ToTypeInt64(instance.Storage.Size),
+			"size":  types.Int64PointerValue(instance.Storage.Size),
 		}
 	}
 	storageObject, diags := types.ObjectValue(storageTypes, storageValues)
@@ -650,7 +649,7 @@ func mapFields(resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flav
 	model.Name = types.StringPointerValue(instance.Name)
 	model.ACL = aclList
 	model.Flavor = flavorObject
-	model.Replicas = conversion.ToTypeInt64(instance.Replicas)
+	model.Replicas = types.Int64PointerValue(instance.Replicas)
 	model.Storage = storageObject
 	model.Version = types.StringPointerValue(instance.Version)
 	model.Options = optionsObject
@@ -686,10 +685,10 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
 		FlavorId:       flavor.Id.ValueStringPointer(),
 		Name:           model.Name.ValueStringPointer(),
-		Replicas:       conversion.ToPtrInt32(model.Replicas),
+		Replicas:       model.Replicas.ValueInt64Pointer(),
 		Storage: &mongodbflex.InstanceStorage{
 			Class: storage.Class.ValueStringPointer(),
-			Size:  conversion.ToPtrInt32(storage.Size),
+			Size:  storage.Size.ValueInt64Pointer(),
 		},
 		Version: model.Version.ValueStringPointer(),
 		Options: &payloadOptions,
@@ -725,10 +724,10 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
 		FlavorId:       flavor.Id.ValueStringPointer(),
 		Name:           model.Name.ValueStringPointer(),
-		Replicas:       conversion.ToPtrInt32(model.Replicas),
+		Replicas:       model.Replicas.ValueInt64Pointer(),
 		Storage: &mongodbflex.InstanceStorage{
 			Class: storage.Class.ValueStringPointer(),
-			Size:  conversion.ToPtrInt32(storage.Size),
+			Size:  storage.Size.ValueInt64Pointer(),
 		},
 		Version: model.Version.ValueStringPointer(),
 		Options: &payloadOptions,
@@ -746,11 +745,11 @@ func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, f
 	if flavor == nil {
 		return fmt.Errorf("nil flavor")
 	}
-	cpu := conversion.ToPtrInt32(flavor.CPU)
+	cpu := flavor.CPU.ValueInt64Pointer()
 	if cpu == nil {
 		return fmt.Errorf("nil CPU")
 	}
-	ram := conversion.ToPtrInt32(flavor.RAM)
+	ram := flavor.RAM.ValueInt64Pointer()
 	if ram == nil {
 		return fmt.Errorf("nil RAM")
 	}

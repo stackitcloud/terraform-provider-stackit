@@ -22,7 +22,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -452,7 +451,7 @@ func mapFields(recordSetResp *dns.RecordSetResponse, model *Model) error {
 	model.Error = types.StringPointerValue(recordSet.Error)
 	model.Name = types.StringPointerValue(recordSet.Name)
 	model.State = types.StringPointerValue(recordSet.State)
-	model.TTL = conversion.ToTypeInt64(recordSet.Ttl)
+	model.TTL = types.Int64PointerValue(recordSet.Ttl)
 	model.Type = types.StringPointerValue(recordSet.Type)
 	return nil
 }
@@ -477,7 +476,7 @@ func toCreatePayload(model *Model) (*dns.CreateRecordSetPayload, error) {
 		Comment: model.Comment.ValueStringPointer(),
 		Name:    model.Name.ValueStringPointer(),
 		Records: &records,
-		Ttl:     conversion.ToPtrInt32(model.TTL),
+		Ttl:     model.TTL.ValueInt64Pointer(),
 		Type:    model.Type.ValueStringPointer(),
 	}, nil
 }
@@ -502,6 +501,6 @@ func toUpdatePayload(model *Model) (*dns.UpdateRecordSetPayload, error) {
 		Comment: model.Comment.ValueStringPointer(),
 		Name:    model.Name.ValueStringPointer(),
 		Records: &records,
-		Ttl:     conversion.ToPtrInt32(model.TTL),
+		Ttl:     model.TTL.ValueInt64Pointer(),
 	}, nil
 }
