@@ -14,6 +14,7 @@ import (
 	argusScrapeConfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/scrapeconfig"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
+	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
 	logMeInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/instance"
 	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
@@ -82,6 +83,7 @@ type providerModel struct {
 	PostgreSQLCustomEndpoint      types.String `tfsdk:"postgresql_custom_endpoint"`
 	PostgresFlexCustomEndpoint    types.String `tfsdk:"postgresflex_custom_endpoint"`
 	MongoDBFlexCustomEndpoint     types.String `tfsdk:"mongodbflex_custom_endpoint"`
+	LoadBalancerCustomEndpoint    types.String `tfsdk:"loadbalancer_custom_endpoint"`
 	LogMeCustomEndpoint           types.String `tfsdk:"logme_custom_endpoint"`
 	RabbitMQCustomEndpoint        types.String `tfsdk:"rabbitmq_custom_endpoint"`
 	MariaDBCustomEndpoint         types.String `tfsdk:"mariadb_custom_endpoint"`
@@ -276,6 +278,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.MongoDBFlexCustomEndpoint.IsUnknown() || providerConfig.MongoDBFlexCustomEndpoint.IsNull()) {
 		providerData.MongoDBFlexCustomEndpoint = providerConfig.MongoDBFlexCustomEndpoint.ValueString()
 	}
+	if !(providerConfig.LoadBalancerCustomEndpoint.IsUnknown() || providerConfig.LoadBalancerCustomEndpoint.IsNull()) {
+		providerData.LoadBalancerCustomEndpoint = providerConfig.LoadBalancerCustomEndpoint.ValueString()
+	}
 	if !(providerConfig.LogMeCustomEndpoint.IsUnknown() || providerConfig.LogMeCustomEndpoint.IsNull()) {
 		providerData.LogMeCustomEndpoint = providerConfig.LogMeCustomEndpoint.ValueString()
 	}
@@ -367,6 +372,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		argusScrapeConfig.NewScrapeConfigResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
+		loadBalancer.NewProjectResource,
 		logMeInstance.NewInstanceResource,
 		logMeCredential.NewCredentialResource,
 		mariaDBInstance.NewInstanceResource,

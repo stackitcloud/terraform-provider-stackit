@@ -2,6 +2,7 @@ package loadbalancer
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -13,7 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -137,18 +141,50 @@ type projectResource struct {
 
 // Metadata returns the resource type name.
 func (r *projectResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_loadbalancer_project"
+	resp.TypeName = req.ProviderTypeName + "_loadbalancer"
 }
 
 // Configure adds the provider configured client to the resource.
 func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
 
+	providerData, ok := req.ProviderData.(core.ProviderData)
+	if !ok {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
+		return
+	}
+
+	var apiClient *loadbalancer.APIClient
+	var err error
+	if providerData.LoadBalancerCustomEndpoint != "" {
+		ctx = tflog.SetField(ctx, "loadbalancer_custom_endpoint", providerData.LoadBalancerCustomEndpoint)
+		apiClient, err = loadbalancer.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithEndpoint(providerData.LoadBalancerCustomEndpoint),
+		)
+	} else {
+		apiClient, err = loadbalancer.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithServiceAccountEmail(providerData.ServiceAccountEmail),
+		)
+	}
+
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+		return
+	}
+
+	r.client = apiClient
+	tflog.Info(ctx, "Load Balancer client configured")
 }
 
 // Schema defines the schema for the resource.
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":       "Resource Manager project resource schema.",
+		"main":       "Load Balancer project resource schema.",
 		"id":         "Terraform's internal resource ID. It is structured as \"`container_id`\".",
 		"project_id": "STACKIT project ID to which the Load Balancer is associated.",
 		// TODO: Add descriptions according to API docs
