@@ -3,6 +3,7 @@ package loadbalancer
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
+	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -154,7 +156,7 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 // Schema defines the schema for the resource.
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                 "Load Balancer project resource schema.",
+		"main":                 "Load Balancer resource schema.",
 		"id":                   "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`name`\".",
 		"project_id":           "STACKIT project ID to which the Load Balancer is associated.",
 		"external_address":     "External Load Balancer IP address where this Load Balancer is exposed.",
@@ -202,7 +204,6 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 				Validators: []validator.String{
 					validate.UUID(),
-					validate.NoSeparator(),
 				},
 			},
 			"external_address": schema.StringAttribute{
@@ -250,6 +251,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 					stringvalidator.LengthAtMost(63),
+					validate.NoSeparator(),
 				},
 			},
 			"networks": schema.ListNestedAttribute{
@@ -391,8 +393,33 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
+	// Get status of load balancer functionality
+	statusResp, err := r.client.GetStatus(ctx, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error getting status of load balancer functionality", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+	if *statusResp.Status != wait.FunctionalityStatusReady {
+		_, err = r.client.EnableLoadBalancing(ctx, projectId).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling load balancer functionality", fmt.Sprintf("Calling API: %v", err))
+			return
+		}
+
+		wr, err := wait.EnableLoadBalancingWaitHandler(ctx, r.client, projectId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling load balancer functionality", fmt.Sprintf("Waiting for enablement: %v", err))
+			return
+		}
+		_, ok := wr.(*loadbalancer.StatusResponse)
+		if !ok {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Wait result conversion, got %+v", wr))
+			return
+		}
+	}
+
 	// Generate API request body from model
-	_, err := toCreatePayload(ctx, &model)
+	_, err = toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -400,23 +427,23 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *projectResource) Read(_ context.Context, _ resource.ReadRequest, _ *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *projectResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *projectResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 
 }
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: container_id
-func (r *projectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *projectResource) ImportState(_ context.Context, _ resource.ImportStateRequest, _ *resource.ImportStateResponse) {
 
 }
 
@@ -429,11 +456,11 @@ func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoa
 	networks := toNetworksPayload(model)
 	options, err := toOptionsPayload(ctx, model)
 	if err != nil {
-		return nil, fmt.Errorf("converting options: %v", err)
+		return nil, fmt.Errorf("converting options: %w", err)
 	}
 	targetPools, err := toTargetPoolsPayload(ctx, model)
 	if err != nil {
-		return nil, fmt.Errorf("converting target pools: %v", err)
+		return nil, fmt.Errorf("converting target pools: %w", err)
 	}
 
 	return &loadbalancer.CreateLoadBalancerPayload{
@@ -485,7 +512,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags := model.Options.As(ctx, optionsModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return nil, fmt.Errorf("%v", diags.Errors())
+			return nil, fmt.Errorf("%v", core.DiagsToError(diags))
 		}
 	}
 
@@ -494,7 +521,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 		var acl []string
 		diags := optionsModel.ACL.ElementsAs(ctx, &acl, false)
 		if diags.HasError() {
-			return nil, fmt.Errorf("converting acl: %v", diags.Errors())
+			return nil, fmt.Errorf("converting acl: %v", core.DiagsToError(diags))
 		}
 		accessControl.AllowedSourceRanges = &acl
 	}
@@ -519,7 +546,7 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.Ta
 			var activeHealthCheckModel ActiveHealthCheck
 			diags := targetPool.ActiveHealthCheck.As(ctx, &activeHealthCheckModel, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
-				return nil, fmt.Errorf("converting active health check: %v", diags.Errors())
+				return nil, fmt.Errorf("converting active health check: %v", core.DiagsToError(diags))
 			}
 
 			activeHealthCheck = &loadbalancer.ActiveHealthCheck{
