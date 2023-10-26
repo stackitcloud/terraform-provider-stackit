@@ -43,6 +43,7 @@ type Model struct {
 // Struct corresponding to each Model.Listener
 type Listener struct {
 	DisplayName types.String `tfsdk:"display_name"`
+	Name        types.String `tfsdk:"name"`
 	Port        types.Int64  `tfsdk:"port"`
 	Protocol    types.String `tfsdk:"protocol"`
 	TargetPool  types.String `tfsdk:"target_pool"`
@@ -153,36 +154,34 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 // Schema defines the schema for the resource.
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":       "Load Balancer project resource schema.",
-		"id":         "Terraform's internal resource ID. It is structured as \"`container_id`\".",
-		"project_id": "STACKIT project ID to which the Load Balancer is associated.",
-		// TODO: Add descriptions according to API docs
-		"external_address":       "",
-		"listeners":              "",
-		"listeners.display_name": "",
-		"port":                   "",
-		"protocol":               "",
-		"target_pool":            "",
-		"name":                   "",
-		"networks":               "",
-		"network_id":             "",
-		"role":                   "",
-		"options":                "",
-		"acl":                    "",
-		"private_network_only":   "",
-		"private_address":        "",
-		"target_pools":           "",
-		"active_health_check":    "",
-		"healthy_threshold":      "",
-		"interval":               "",
-		"interval_jitter":        "",
-		"timeout":                "",
-		"unhealthy_threshold":    "",
-		"target_pools.name":      "",
-		"target_port":            "",
-		"targets":                "",
-		"targets.display_name":   "",
-		"ip":                     "",
+		"main":                 "Load Balancer project resource schema.",
+		"id":                   "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`name`\".",
+		"project_id":           "STACKIT project ID to which the Load Balancer is associated.",
+		"external_address":     "External Load Balancer IP address where this Load Balancer is exposed.",
+		"listeners":            "List of all listeners which will accept traffic. Limited to 20.",
+		"listeners.name":       "Will be used to reference a listener and will replace display name in the future.",
+		"port":                 "Port number where we listen for traffic.",
+		"protocol":             "Protocol is the highest network protocol we understand to load balance.",
+		"target_pool":          "Reference target pool by target pool name.",
+		"name":                 "Load balancer name.",
+		"networks":             "List of networks that listeners and targets reside in.",
+		"network_id":           "Openstack network ID.",
+		"role":                 "The role defines how the load balancer is using the network.",
+		"options":              "Defines any optional functionality you want to have enabled on your load balancer.",
+		"acl":                  "Load Balancer is accessible only from an IP address in this range.",
+		"private_network_only": "If true, Load Balancer is accessible only via a private network IP address.",
+		"private_address":      "Transient private Load Balancer IP address. It can change any time.",
+		"target_pools":         "List of all target pools which will be used in the Load Balancer. Limited to 20.",
+		"healthy_threshold":    "Healthy threshold of the health checking.",
+		"interval":             "Interval duration of health checking in seconds.",
+		"interval_jitter":      "Interval duration threshold of the health checking in seconds.",
+		"timeout":              "Active health checking timeout duration in seconds.",
+		"unhealthy_threshold":  "Unhealthy threshold of the health checking.",
+		"target_pools.name":    "Target pool name.",
+		"target_port":          "Identical port number where each target listens for traffic.",
+		"targets":              "List of all targets which will be used in the pool. Limited to 250.",
+		"targets.display_name": "Target display name",
+		"ip":                   "Target IP",
 	}
 
 	resp.Schema = schema.Schema{
@@ -220,6 +219,10 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						"display_name": schema.StringAttribute{
 							Description: descriptions["listeners.display_name"],
 							Optional:    true,
+							Computed:    true,
+						},
+						"name": schema.StringAttribute{
+							Description: descriptions["listeners.display_name"],
 							Computed:    true,
 						},
 						"port": schema.Int64Attribute{
@@ -417,10 +420,6 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 
 }
 
-func mapFields(ctx context.Context, lbResp *loadbalancer.LoadBalancer, model *Model) (err error) {
-	return nil
-}
-
 func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoadBalancerPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
@@ -549,8 +548,4 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.Ta
 	}
 
 	return &targetPools, nil
-}
-
-func toUpdatePayload(model *Model) (*loadbalancer.UpdateTargetPoolPayload, error) {
-	return nil, nil
 }
