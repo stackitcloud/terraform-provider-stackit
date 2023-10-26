@@ -34,7 +34,6 @@ When setting up authentication, the provider will always try to use the key flow
 ## Key flow
 
 To use the key flow, you need to have a service account key and an RSA key-pair.
-
 To configure it, follow this steps:
 
     The following instructions assume that you have created a service account and assigned it the necessary permissions, e.g. project.owner.
@@ -42,8 +41,6 @@ To configure it, follow this steps:
 1.  In the Portal, go to the `Service Accounts` tab, choose a `Service Account` and go to `Service Account Keys` to create a key.
 
 - You can create your own RSA key-pair or have the Portal generate one for you.
-
-  **Disclaimer:** as of now, creation of a service account key in the Portal is only available in DEV and QA environments. You can use this flow in these environments by setting the fields `token_custom_endpoint` and `jwks_custom_endpoint` to the corresponding endpoints in the provider block.
 
 2.  Save the content of the service account key and the corresponding private key by copying them or saving them in a file.
 
