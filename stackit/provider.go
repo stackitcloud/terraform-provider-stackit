@@ -14,7 +14,6 @@ import (
 	argusScrapeConfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/scrapeconfig"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
-	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
 	logMeInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/instance"
 	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
@@ -372,7 +371,6 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		argusScrapeConfig.NewScrapeConfigResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
-		loadBalancer.NewProjectResource,
 		logMeInstance.NewInstanceResource,
 		logMeCredential.NewCredentialResource,
 		mariaDBInstance.NewInstanceResource,
