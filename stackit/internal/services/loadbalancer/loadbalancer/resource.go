@@ -30,9 +30,9 @@ var (
 
 type Model struct {
 	Id              types.String `tfsdk:"id"` // needed by TF
-	Project         types.String `tfsdk:"project_id"`
+	ProjectId       types.String `tfsdk:"project_id"`
 	ExternalAddress types.String `tfsdk:"external_address"`
-	Listeners       []Listener   `tfsdk:"listeneres"`
+	Listeners       []Listener   `tfsdk:"listeners"`
 	Name            types.String `tfsdk:"name"`
 	Networks        []Network    `tfsdk:"networks"`
 	Options         types.Object `tfsdk:"options"`
@@ -43,19 +43,9 @@ type Model struct {
 // Struct corresponding to each Model.Listener
 type Listener struct {
 	DisplayName types.String `tfsdk:"display_name"`
-	Name        types.String `tfsdk:"name"`
 	Port        types.Int64  `tfsdk:"port"`
 	Protocol    types.String `tfsdk:"protocol"`
 	TargetPool  types.String `tfsdk:"target_pool"`
-}
-
-// Types corresponding to Listener
-var listenerTypes = map[string]attr.Type{
-	"display_name": basetypes.StringType{},
-	"name":         basetypes.StringType{},
-	"port":         basetypes.Int64Type{},
-	"protocol":     basetypes.StringType{},
-	"target_pool":  basetypes.StringType{},
 }
 
 // Struct corresponding to each Model.Network
@@ -64,22 +54,16 @@ type Network struct {
 	Role      types.String `tfsdk:"role"`
 }
 
-// Types corresponding to Network
-var networkTypes = map[string]attr.Type{
-	"network_id": basetypes.StringType{},
-	"role":       basetypes.StringType{},
-}
-
 // Struct corresponding to Model.Options
 type Options struct {
-	Acls types.Set    `tfsdk:"acls"`
-	Role types.String `tfsdk:"role"`
+	ACL                types.List `tfsdk:"acl"`
+	PrivateNetworkOnly types.Bool `tfsdk:"private_network_only"`
 }
 
 // Types corresponding to Options
 var optionsTypes = map[string]attr.Type{
-	"acls": basetypes.SetType{},
-	"role": basetypes.StringType{},
+	"acl":                  basetypes.ListType{ElemType: basetypes.StringType{}},
+	"private_network_only": basetypes.BoolType{},
 }
 
 // Struct corresponding to each Model.TargetPool
@@ -87,46 +71,31 @@ type TargetPool struct {
 	ActiveHealthCheck types.Object `tfsdk:"active_health_check"`
 	Name              types.String `tfsdk:"name"`
 	TargetPort        types.Int64  `tfsdk:"target_port"`
-	Targets           types.Object `tfsdk:"protocol"`
-}
-
-// Types corresponding to Listener
-var targetPoolTypes = map[string]attr.Type{
-	"display_name": basetypes.StringType{},
-	"name":         basetypes.StringType{},
-	"port":         basetypes.Int64Type{},
-	"protocol":     basetypes.StringType{},
-	"target_pool":  basetypes.StringType{},
+	Targets           []Target     `tfsdk:"targets"`
 }
 
 // Struct corresponding to each Model.TargetPool.ActiveHealthCheck
 type ActiveHealthCheck struct {
-	HealthyThreshold   types.String `tfsdk:"healthy_threshold"`
+	HealthyThreshold   types.Int64  `tfsdk:"healthy_threshold"`
 	Interval           types.String `tfsdk:"interval"`
 	IntervalJitter     types.String `tfsdk:"interval_jitter"`
 	Timeout            types.String `tfsdk:"timeout"`
-	UnhealthyThreshold types.String `tfsdk:"unhealthy_threshold"`
+	UnhealthyThreshold types.Int64  `tfsdk:"unhealthy_threshold"`
 }
 
 // Types corresponding to ActiveHealthCheck
 var activeHealthCheckTypes = map[string]attr.Type{
-	"healthy_threshold":   basetypes.StringType{},
+	"healthy_threshold":   basetypes.Int64Type{},
 	"interval":            basetypes.StringType{},
 	"interval_jitter":     basetypes.StringType{},
 	"timeout":             basetypes.StringType{},
-	"unhealthy_threshold": basetypes.StringType{},
+	"unhealthy_threshold": basetypes.Int64Type{},
 }
 
 // Struct corresponding to each Model.TargetPool.Targets
 type Target struct {
 	DisplayName types.String `tfsdk:"display_name"`
 	Ip          types.String `tfsdk:"ip"`
-}
-
-// Types corresponding to Target
-var targetTypes = map[string]attr.Type{
-	"display_name": basetypes.StringType{},
-	"ip":           basetypes.StringType{},
 }
 
 // NewProjectResource is a helper function to simplify the provider implementation.
@@ -191,7 +160,6 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		"external_address":       "",
 		"listeners":              "",
 		"listeners.display_name": "",
-		"listeners.name":         "",
 		"port":                   "",
 		"protocol":               "",
 		"target_pool":            "",
@@ -200,7 +168,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		"network_id":             "",
 		"role":                   "",
 		"options":                "",
-		"acls":                   "",
+		"acl":                    "",
 		"private_network_only":   "",
 		"private_address":        "",
 		"target_pools":           "",
@@ -251,11 +219,6 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					Attributes: map[string]schema.Attribute{
 						"display_name": schema.StringAttribute{
 							Description: descriptions["listeners.display_name"],
-							Optional:    true,
-							Computed:    true,
-						},
-						"name": schema.StringAttribute{
-							Description: descriptions["listeners.name"],
 							Optional:    true,
 							Computed:    true,
 						},
@@ -314,8 +277,8 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:    true,
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
-					"acls": schema.SetAttribute{
-						Description: descriptions["acls"],
+					"acl": schema.SetAttribute{
+						Description: descriptions["acl"],
 						ElementType: types.StringType,
 						Optional:    true,
 						Computed:    true,
@@ -350,7 +313,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Optional:    true,
 							Computed:    true,
 							Attributes: map[string]schema.Attribute{
-								"healthy_threshold": schema.StringAttribute{
+								"healthy_threshold": schema.Int64Attribute{
 									Description: descriptions["healthy_threshold"],
 									Optional:    true,
 									Computed:    true,
@@ -370,7 +333,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 									Optional:    true,
 									Computed:    true,
 								},
-								"unhealthy_threshold": schema.StringAttribute{
+								"unhealthy_threshold": schema.Int64Attribute{
 									Description: descriptions["unhealthy_threshold"],
 									Optional:    true,
 									Computed:    true,
@@ -415,7 +378,22 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+	// Retrieve values from plan
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	projectId := model.ProjectId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
 
+	// Generate API request body from model
+	_, err := toCreatePayload(ctx, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
+		return
+	}
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -443,8 +421,134 @@ func mapFields(ctx context.Context, lbResp *loadbalancer.LoadBalancer, model *Mo
 	return nil
 }
 
-func toCreatePayload(model *Model, serviceAccountEmail string) (*loadbalancer.CreateLoadBalancerPayload, error) {
-	return nil, nil
+func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoadBalancerPayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
+
+	listeners := toListenersPayload(model)
+	networks := toNetworksPayload(model)
+	options, err := toOptionsPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("converting options: %v", err)
+	}
+	targetPools, err := toTargetPoolsPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("converting target pools: %v", err)
+	}
+
+	return &loadbalancer.CreateLoadBalancerPayload{
+		ExternalAddress: model.ExternalAddress.ValueStringPointer(),
+		Listeners:       listeners,
+		Name:            model.Name.ValueStringPointer(),
+		Networks:        networks,
+		Options:         options,
+		TargetPools:     targetPools,
+	}, nil
+}
+
+func toListenersPayload(model *Model) *[]loadbalancer.Listener {
+	if model.Listeners == nil {
+		return nil
+	}
+
+	listeners := []loadbalancer.Listener{}
+	for _, listener := range model.Listeners {
+		listeners = append(listeners, loadbalancer.Listener{
+			DisplayName: listener.DisplayName.ValueStringPointer(),
+			Port:        listener.Port.ValueInt64Pointer(),
+			Protocol:    listener.Protocol.ValueStringPointer(),
+			TargetPool:  listener.TargetPool.ValueStringPointer(),
+		})
+	}
+
+	return &listeners
+}
+
+func toNetworksPayload(model *Model) *[]loadbalancer.Network {
+	if model.Networks == nil {
+		return nil
+	}
+
+	networks := []loadbalancer.Network{}
+	for _, network := range model.Networks {
+		networks = append(networks, loadbalancer.Network{
+			NetworkId: network.NetworkId.ValueStringPointer(),
+			Role:      network.Role.ValueStringPointer(),
+		})
+	}
+
+	return &networks
+}
+
+func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBalancerOptions, error) {
+	var optionsModel = &Options{}
+	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
+		diags := model.Options.As(ctx, optionsModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("%v", diags.Errors())
+		}
+	}
+
+	accessControl := &loadbalancer.LoadbalancerOptionAccessControl{}
+	if !(optionsModel.ACL.IsNull() || optionsModel.ACL.IsUnknown()) {
+		var acl []string
+		diags := optionsModel.ACL.ElementsAs(ctx, &acl, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting acl: %v", diags.Errors())
+		}
+		accessControl.AllowedSourceRanges = &acl
+	}
+
+	options := &loadbalancer.LoadBalancerOptions{
+		AccessControl:      accessControl,
+		PrivateNetworkOnly: optionsModel.PrivateNetworkOnly.ValueBoolPointer(),
+	}
+
+	return options, nil
+}
+
+func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.TargetPool, error) {
+	if model.TargetPools == nil {
+		return nil, nil
+	}
+
+	var targetPools []loadbalancer.TargetPool
+	for _, targetPool := range model.TargetPools {
+		var activeHealthCheck *loadbalancer.ActiveHealthCheck
+		if !(targetPool.ActiveHealthCheck.IsNull() || targetPool.ActiveHealthCheck.IsUnknown()) {
+			var activeHealthCheckModel ActiveHealthCheck
+			diags := targetPool.ActiveHealthCheck.As(ctx, &activeHealthCheckModel, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return nil, fmt.Errorf("converting active health check: %v", diags.Errors())
+			}
+
+			activeHealthCheck = &loadbalancer.ActiveHealthCheck{
+				HealthyThreshold:   activeHealthCheckModel.HealthyThreshold.ValueInt64Pointer(),
+				Interval:           activeHealthCheckModel.Interval.ValueStringPointer(),
+				IntervalJitter:     activeHealthCheckModel.IntervalJitter.ValueStringPointer(),
+				Timeout:            activeHealthCheckModel.Timeout.ValueStringPointer(),
+				UnhealthyThreshold: activeHealthCheckModel.UnhealthyThreshold.ValueInt64Pointer(),
+			}
+		}
+
+		var targets []loadbalancer.Target
+		for _, target := range targetPool.Targets {
+			targets = append(targets, loadbalancer.Target{
+				DisplayName: target.DisplayName.ValueStringPointer(),
+				Ip:          target.Ip.ValueStringPointer(),
+			})
+		}
+
+		targetPools = append(targetPools, loadbalancer.TargetPool{
+			ActiveHealthCheck: activeHealthCheck,
+			Name:              targetPool.Name.ValueStringPointer(),
+			TargetPort:        targetPool.TargetPort.ValueInt64Pointer(),
+			Targets:           &targets,
+		})
+	}
+
+	return &targetPools, nil
 }
 
 func toUpdatePayload(model *Model) (*loadbalancer.UpdateTargetPoolPayload, error) {
