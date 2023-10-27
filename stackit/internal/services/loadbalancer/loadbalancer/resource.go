@@ -425,6 +425,17 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	wr, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, *got.Name).SetTimeout(45 * time.Minute).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Load balancer creation waiting: %v", err))
+		return
+	}
+	_, ok := wr.(*loadbalancer.LoadBalancer)
+	if !ok {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Wait result conversion, got %+v", wr))
+		return
+	}
+
 	// Map response body to schema
 	err = mapFields(ctx, got, &model)
 	if err != nil {
