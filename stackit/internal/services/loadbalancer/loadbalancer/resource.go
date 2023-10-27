@@ -481,6 +481,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoa
 	return &loadbalancer.CreateLoadBalancerPayload{
 		ExternalAddress: model.ExternalAddress.ValueStringPointer(),
 		Listeners:       listeners,
+		Name:            model.Name.ValueStringPointer(),
 		Networks:        networks,
 		Options:         options,
 		TargetPools:     targetPools,
