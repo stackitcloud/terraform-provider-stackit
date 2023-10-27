@@ -205,19 +205,14 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// If the request has not been processed yet and the containerId doesnt exist,
 	// the waiter will fail with authentication error, so wait some time before checking the creation
-	wr, err := wait.CreateProjectWaitHandler(ctx, r.client, respContainerId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateProjectWaitHandler(ctx, r.client, respContainerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*resourcemanager.ProjectResponseWithParents)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
 	// Map response body to schema
-	err = mapFields(ctx, got, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Processing API payload: %v", err))
 		return

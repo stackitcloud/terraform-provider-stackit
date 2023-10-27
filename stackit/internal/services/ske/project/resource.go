@@ -125,16 +125,12 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	model.Id = types.StringValue(projectId)
-	wr, err := wait.CreateProjectWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
+	_, err = wait.CreateProjectWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Project creation waiting: %v", err))
 		return
 	}
-	_, ok := wr.(*ske.ProjectResponse)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
+
 	diags := resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
