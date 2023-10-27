@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -27,9 +28,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &projectResource{}
-	_ resource.ResourceWithConfigure   = &projectResource{}
-	_ resource.ResourceWithImportState = &projectResource{}
+	_ resource.Resource                = &loadBalancerResource{}
+	_ resource.ResourceWithConfigure   = &loadBalancerResource{}
+	_ resource.ResourceWithImportState = &loadBalancerResource{}
 )
 
 type Model struct {
@@ -102,23 +103,23 @@ type Target struct {
 	Ip          types.String `tfsdk:"ip"`
 }
 
-// NewProjectResource is a helper function to simplify the provider implementation.
-func NewProjectResource() resource.Resource {
-	return &projectResource{}
+// NewLoadBalancerResource is a helper function to simplify the provider implementation.
+func NewLoadBalancerResource() resource.Resource {
+	return &loadBalancerResource{}
 }
 
-// projectResource is the resource implementation.
-type projectResource struct {
+// loadBalancerResource is the resource implementation.
+type loadBalancerResource struct {
 	client *loadbalancer.APIClient
 }
 
 // Metadata returns the resource type name.
-func (r *projectResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *loadBalancerResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_loadbalancer"
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *loadBalancerResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -155,7 +156,7 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 }
 
 // Schema defines the schema for the resource.
-func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                 "Load Balancer resource schema.",
 		"id":                   "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`name`\".",
@@ -378,7 +379,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -449,7 +450,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -484,7 +485,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -538,14 +539,50 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *projectResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *loadBalancerResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.State.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	projectId := model.ProjectId.ValueString()
+	name := model.Name.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "name", name)
 
+	// Delete load balancer
+	_, err := r.client.DeleteLoadBalancer(ctx, projectId, name).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting load balancer", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	_, err = wait.DeleteLoadBalancerWaitHandler(ctx, r.client, projectId, name).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting load balancer", fmt.Sprintf("Load balancer deleting waiting: %v", err))
+		return
+	}
+
+	tflog.Info(ctx, "Load balancer deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: container_id
-func (r *projectResource) ImportState(_ context.Context, _ resource.ImportStateRequest, _ *resource.ImportStateResponse) {
+// The expected format of the resource import identifier is: project_id,name
+func (r *loadBalancerResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	idParts := strings.Split(req.ID, core.Separator)
 
+	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing load balancer",
+			fmt.Sprintf("Expected import identifier with format: [project_id],[name]  Got: %q", req.ID),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[1])...)
+	tflog.Info(ctx, "Load balancer state imported")
 }
 
 func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoadBalancerPayload, error) {
