@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -442,13 +443,92 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *projectResource) Read(_ context.Context, _ resource.ReadRequest, _ *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.State.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	projectId := model.ProjectId.ValueString()
+	name := model.Name.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "name", name)
 
+	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, name).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", err.Error())
+		return
+	}
+
+	// Map response body to schema
+	err = mapFields(ctx, lbResp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	// Set refreshed state
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Load balancer read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *projectResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	// Retrieve values from plan
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	projectId := model.ProjectId.ValueString()
+	name := model.Name.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "name", name)
 
+	for _, targetPool := range model.TargetPools {
+		// Generate API request body from model
+		payload, err := toTargetPoolUpdatePayload(ctx, utils.Ptr(targetPool))
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Creating API payload: %v", err))
+			return
+		}
+
+		// Update target pool
+		_, err = r.client.UpdateTargetPool(ctx, projectId, name, targetPool.Name.ValueString()).UpdateTargetPoolPayload(*payload).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API: %v", err))
+			return
+		}
+	}
+
+	// Get updated load balancer
+	got, err := r.client.GetLoadBalancer(ctx, projectId, name).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapFields(ctx, got, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	// Set state to fully populated data
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tflog.Info(ctx, "Load balancer updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -556,40 +636,81 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.Ta
 
 	var targetPools []loadbalancer.TargetPool
 	for _, targetPool := range model.TargetPools {
-		var activeHealthCheck *loadbalancer.ActiveHealthCheck
-		if !(targetPool.ActiveHealthCheck.IsNull() || targetPool.ActiveHealthCheck.IsUnknown()) {
-			var activeHealthCheckModel ActiveHealthCheck
-			diags := targetPool.ActiveHealthCheck.As(ctx, &activeHealthCheckModel, basetypes.ObjectAsOptions{})
-			if diags.HasError() {
-				return nil, fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
-			}
-
-			activeHealthCheck = &loadbalancer.ActiveHealthCheck{
-				HealthyThreshold:   activeHealthCheckModel.HealthyThreshold.ValueInt64Pointer(),
-				Interval:           activeHealthCheckModel.Interval.ValueStringPointer(),
-				IntervalJitter:     activeHealthCheckModel.IntervalJitter.ValueStringPointer(),
-				Timeout:            activeHealthCheckModel.Timeout.ValueStringPointer(),
-				UnhealthyThreshold: activeHealthCheckModel.UnhealthyThreshold.ValueInt64Pointer(),
-			}
+		activeHealthCheck, err := toActiveHealthCheckPayload(ctx, utils.Ptr(targetPool))
+		if err != nil {
+			return nil, fmt.Errorf("converting target pool: %w", err)
 		}
 
-		var targets []loadbalancer.Target
-		for _, target := range targetPool.Targets {
-			targets = append(targets, loadbalancer.Target{
-				DisplayName: target.DisplayName.ValueStringPointer(),
-				Ip:          target.Ip.ValueStringPointer(),
-			})
+		targets := toTargetsPayload(utils.Ptr(targetPool))
+		if err != nil {
+			return nil, fmt.Errorf("converting target pool: %w", err)
 		}
 
 		targetPools = append(targetPools, loadbalancer.TargetPool{
 			ActiveHealthCheck: activeHealthCheck,
 			Name:              targetPool.Name.ValueStringPointer(),
 			TargetPort:        targetPool.TargetPort.ValueInt64Pointer(),
-			Targets:           &targets,
+			Targets:           targets,
 		})
 	}
 
 	return &targetPools, nil
+}
+
+func toTargetPoolUpdatePayload(ctx context.Context, targetPool *TargetPool) (*loadbalancer.UpdateTargetPoolPayload, error) {
+	if targetPool == nil {
+		return nil, fmt.Errorf("nil target pool")
+	}
+
+	activeHealthCheck, err := toActiveHealthCheckPayload(ctx, targetPool)
+	if err != nil {
+		return nil, fmt.Errorf("converting target pool: %w", err)
+	}
+
+	targets := toTargetsPayload(targetPool)
+
+	return &loadbalancer.UpdateTargetPoolPayload{
+		ActiveHealthCheck: activeHealthCheck,
+		Name:              targetPool.Name.ValueStringPointer(),
+		TargetPort:        targetPool.TargetPort.ValueInt64Pointer(),
+		Targets:           targets,
+	}, nil
+}
+
+func toActiveHealthCheckPayload(ctx context.Context, targetPool *TargetPool) (*loadbalancer.ActiveHealthCheck, error) {
+	if targetPool.ActiveHealthCheck.IsNull() {
+		return nil, nil
+	}
+
+	var activeHealthCheckModel ActiveHealthCheck
+	diags := targetPool.ActiveHealthCheck.As(ctx, &activeHealthCheckModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
+	}
+
+	return &loadbalancer.ActiveHealthCheck{
+		HealthyThreshold:   activeHealthCheckModel.HealthyThreshold.ValueInt64Pointer(),
+		Interval:           activeHealthCheckModel.Interval.ValueStringPointer(),
+		IntervalJitter:     activeHealthCheckModel.IntervalJitter.ValueStringPointer(),
+		Timeout:            activeHealthCheckModel.Timeout.ValueStringPointer(),
+		UnhealthyThreshold: activeHealthCheckModel.UnhealthyThreshold.ValueInt64Pointer(),
+	}, nil
+}
+
+func toTargetsPayload(targetPool *TargetPool) *[]loadbalancer.Target {
+	if targetPool.Targets == nil {
+		return nil
+	}
+
+	var targets []loadbalancer.Target
+	for _, target := range targetPool.Targets {
+		targets = append(targets, loadbalancer.Target{
+			DisplayName: target.DisplayName.ValueStringPointer(),
+			Ip:          target.Ip.ValueStringPointer(),
+		})
+	}
+
+	return &targets
 }
 
 func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) error {

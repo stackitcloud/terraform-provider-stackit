@@ -166,6 +166,86 @@ func TestToCreatePayload(t *testing.T) {
 	}
 }
 
+func TestToTargetPoolUpdatePayload(t *testing.T) {
+	tests := []struct {
+		description string
+		input       *TargetPool
+		expected    *loadbalancer.UpdateTargetPoolPayload
+		isValid     bool
+	}{
+		{
+			"default_values_ok",
+			&TargetPool{},
+			&loadbalancer.UpdateTargetPoolPayload{},
+			true,
+		},
+		{
+			"simple_values_ok",
+			&TargetPool{
+				ActiveHealthCheck: types.ObjectValueMust(
+					activeHealthCheckTypes,
+					map[string]attr.Value{
+						"healthy_threshold":   types.Int64Value(1),
+						"interval":            types.StringValue("2s"),
+						"interval_jitter":     types.StringValue("3s"),
+						"timeout":             types.StringValue("4s"),
+						"unhealthy_threshold": types.Int64Value(5),
+					},
+				),
+				Name:       types.StringValue("name"),
+				TargetPort: types.Int64Value(80),
+				Targets: []Target{
+					{
+						DisplayName: types.StringValue("display_name"),
+						Ip:          types.StringValue("ip"),
+					},
+				},
+			},
+			&loadbalancer.UpdateTargetPoolPayload{
+				ActiveHealthCheck: utils.Ptr(loadbalancer.ActiveHealthCheck{
+					HealthyThreshold:   utils.Ptr(int64(1)),
+					Interval:           utils.Ptr("2s"),
+					IntervalJitter:     utils.Ptr("3s"),
+					Timeout:            utils.Ptr("4s"),
+					UnhealthyThreshold: utils.Ptr(int64(5)),
+				}),
+				Name:       utils.Ptr("name"),
+				TargetPort: utils.Ptr(int64(80)),
+				Targets: utils.Ptr([]loadbalancer.Target{
+					{
+						DisplayName: utils.Ptr("display_name"),
+						Ip:          utils.Ptr("ip"),
+					},
+				}),
+			},
+			true,
+		},
+		{
+			"nil_target_pool",
+			nil,
+			nil,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output, err := toTargetPoolUpdatePayload(context.Background(), tt.input)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(output, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
