@@ -625,7 +625,7 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) err
 	if err != nil {
 		return fmt.Errorf("mapping options: %w", err)
 	}
-	err = mapTargetPools(ctx, lb, m)
+	err = mapTargetPools(lb, m)
 	if err != nil {
 		return fmt.Errorf("mapping target pools: %w", err)
 	}
@@ -699,7 +699,7 @@ func mapOptions(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) er
 	return nil
 }
 
-func mapTargetPools(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) error {
+func mapTargetPools(lb *loadbalancer.LoadBalancer, m *Model) error {
 	if lb.TargetPools == nil {
 		return nil
 	}
