@@ -3,10 +3,12 @@ package loadbalancer
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -44,7 +46,6 @@ type Model struct {
 // Struct corresponding to each Model.Listener
 type Listener struct {
 	DisplayName types.String `tfsdk:"display_name"`
-	Name        types.String `tfsdk:"name"`
 	Port        types.Int64  `tfsdk:"port"`
 	Protocol    types.String `tfsdk:"protocol"`
 	TargetPool  types.String `tfsdk:"target_pool"`
@@ -160,7 +161,6 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		"project_id":           "STACKIT project ID to which the Load Balancer is associated.",
 		"external_address":     "External Load Balancer IP address where this Load Balancer is exposed.",
 		"listeners":            "List of all listeners which will accept traffic. Limited to 20.",
-		"listeners.name":       "Will be used to reference a listener and will replace display name in the future.",
 		"port":                 "Port number where we listen for traffic.",
 		"protocol":             "Protocol is the highest network protocol we understand to load balance.",
 		"target_pool":          "Reference target pool by target pool name.",
@@ -219,10 +219,6 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						"display_name": schema.StringAttribute{
 							Description: descriptions["listeners.display_name"],
 							Optional:    true,
-							Computed:    true,
-						},
-						"name": schema.StringAttribute{
-							Description: descriptions["listeners.display_name"],
 							Computed:    true,
 						},
 						"port": schema.Int64Attribute{
@@ -460,7 +456,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoa
 	return &loadbalancer.CreateLoadBalancerPayload{
 		ExternalAddress: model.ExternalAddress.ValueStringPointer(),
 		Listeners:       listeners,
-		Name:            model.Name.ValueStringPointer(),
 		Networks:        networks,
 		Options:         options,
 		TargetPools:     targetPools,
@@ -569,4 +564,157 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.Ta
 	}
 
 	return &targetPools, nil
+}
+
+func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) error {
+	if lb == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if m == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	var name string
+	if m.Name.ValueString() != "" {
+		name = m.Name.ValueString()
+	} else if lb.Name != nil {
+		name = *lb.Name
+	} else {
+		return fmt.Errorf("name not present")
+	}
+	m.Name = types.StringValue(name)
+	idParts := []string{
+		m.ProjectId.ValueString(),
+		name,
+	}
+	m.Id = types.StringValue(
+		strings.Join(idParts, core.Separator),
+	)
+
+	m.ExternalAddress = types.StringPointerValue(lb.ExternalAddress)
+	m.PrivateAddress = types.StringPointerValue(lb.PrivateAddress)
+
+	mapListeners(lb, m)
+	mapNetworks(lb, m)
+	err := mapOptions(ctx, lb, m)
+	if err != nil {
+		return fmt.Errorf("mapping options: %w", err)
+	}
+	err = mapTargetPools(ctx, lb, m)
+	if err != nil {
+		return fmt.Errorf("mapping target pools: %w", err)
+	}
+
+	return nil
+}
+
+func mapListeners(lb *loadbalancer.LoadBalancer, m *Model) {
+	if lb.Listeners == nil {
+		return
+	}
+
+	var listeners []Listener
+	for _, listener := range *lb.Listeners {
+		listeners = append(listeners, Listener{
+			DisplayName: types.StringPointerValue(listener.DisplayName),
+			Port:        types.Int64PointerValue(listener.Port),
+			Protocol:    types.StringPointerValue(listener.Protocol),
+			TargetPool:  types.StringPointerValue(listener.TargetPool),
+		})
+	}
+	m.Listeners = listeners
+}
+
+func mapNetworks(lb *loadbalancer.LoadBalancer, m *Model) {
+	if lb.Networks == nil {
+		return
+	}
+
+	var networks []Network
+	for _, network := range *lb.Networks {
+		networks = append(networks, Network{
+			NetworkId: types.StringPointerValue(network.NetworkId),
+			Role:      types.StringPointerValue(network.Role),
+		})
+	}
+	m.Networks = networks
+}
+
+func mapOptions(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) error {
+	if lb.Options == nil {
+		return nil
+	}
+
+	var diags diag.Diagnostics
+	acl := types.ListNull(types.StringType)
+	if lb.Options.AccessControl != nil && lb.Options.AccessControl.AllowedSourceRanges != nil {
+		acl, diags = types.ListValueFrom(ctx, types.StringType, *lb.Options.AccessControl.AllowedSourceRanges)
+		if diags != nil {
+			return fmt.Errorf("converting acl: %w", core.DiagsToError(diags))
+		}
+	}
+	privateNetworkOnly := types.BoolNull()
+	if lb.Options.PrivateNetworkOnly != nil {
+		privateNetworkOnly = types.BoolValue(*lb.Options.PrivateNetworkOnly)
+	}
+	if acl.IsNull() && privateNetworkOnly.IsNull() {
+		return nil
+	}
+
+	optionsValues := map[string]attr.Value{
+		"acl":                  acl,
+		"private_network_only": privateNetworkOnly,
+	}
+	options, diags := types.ObjectValue(optionsTypes, optionsValues)
+	if diags != nil {
+		return fmt.Errorf("converting options: %w", core.DiagsToError(diags))
+	}
+	m.Options = options
+
+	return nil
+}
+
+func mapTargetPools(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) error {
+	if lb.TargetPools == nil {
+		return nil
+	}
+
+	var diags diag.Diagnostics
+	var targetPools []TargetPool
+	for _, targetPool := range *lb.TargetPools {
+		var activeHealthCheck basetypes.ObjectValue
+		if targetPool.ActiveHealthCheck != nil {
+			activeHealthCheckValues := map[string]attr.Value{
+				"healthy_threshold":   types.Int64Value(*targetPool.ActiveHealthCheck.HealthyThreshold),
+				"interval":            types.StringValue(*targetPool.ActiveHealthCheck.Interval),
+				"interval_jitter":     types.StringValue(*targetPool.ActiveHealthCheck.IntervalJitter),
+				"timeout":             types.StringValue(*targetPool.ActiveHealthCheck.Timeout),
+				"unhealthy_threshold": types.Int64Value(*targetPool.ActiveHealthCheck.UnhealthyThreshold),
+			}
+			activeHealthCheck, diags = types.ObjectValue(activeHealthCheckTypes, activeHealthCheckValues)
+			if diags != nil {
+				return fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
+			}
+		}
+
+		var targets []Target
+		if targetPool.Targets != nil {
+			for _, target := range *targetPool.Targets {
+				targets = append(targets, Target{
+					DisplayName: types.StringPointerValue(target.DisplayName),
+					Ip:          types.StringPointerValue(target.Ip),
+				})
+			}
+		}
+
+		targetPools = append(targetPools, TargetPool{
+			ActiveHealthCheck: activeHealthCheck,
+			Name:              types.StringPointerValue(targetPool.Name),
+			TargetPort:        types.Int64Value(*targetPool.TargetPort),
+			Targets:           targets,
+		})
+	}
+	m.TargetPools = targetPools
+
+	return nil
 }
