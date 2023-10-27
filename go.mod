@@ -14,6 +14,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/core v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/argus v0.5.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.4.0
+	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.5.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.5.0
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.5.0
