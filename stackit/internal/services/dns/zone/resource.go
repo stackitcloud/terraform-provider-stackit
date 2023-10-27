@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -321,7 +320,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	zoneId := *createResp.Zone.Id
 
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
-	wr, err := wait.CreateZoneWaitHandler(ctx, r.client, projectId, zoneId).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
+	wr, err := wait.CreateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Zone creation waiting: %v", err))
 		return
@@ -407,7 +406,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	wr, err := wait.UpdateZoneWaitHandler(ctx, r.client, projectId, zoneId).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
+	wr, err := wait.UpdateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Zone update waiting: %v", err))
 		return
@@ -458,7 +457,7 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = wait.DeleteZoneWaitHandler(ctx, r.client, projectId, zoneId).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Zone deletion waiting: %v", err))
 		return

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -169,7 +168,7 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	wr, err := wait.CreateBucketWaitHandler(ctx, r.client, projectId, bucketName).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
+	wr, err := wait.CreateBucketWaitHandler(ctx, r.client, projectId, bucketName).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Bucket creation waiting: %v", err))
 		return
@@ -253,7 +252,7 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", fmt.Sprintf("Calling API: %v", err))
 	}
-	_, err = wait.DeleteBucketWaitHandler(ctx, r.client, projectId, bucketName).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteBucketWaitHandler(ctx, r.client, projectId, bucketName).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", fmt.Sprintf("Bucket deletion waiting: %v", err))
 		return
