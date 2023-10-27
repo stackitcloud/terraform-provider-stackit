@@ -430,7 +430,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Load balancer creation waiting: %v", err))
 		return
 	}
-	_, ok := wr.(*loadbalancer.LoadBalancer)
+	got, ok := wr.(*loadbalancer.LoadBalancer)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Wait result conversion, got %+v", wr))
 		return
