@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -206,7 +205,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// If the request has not been processed yet and the containerId doesnt exist,
 	// the waiter will fail with authentication error, so wait some time before checking the creation
-	wr, err := wait.CreateProjectWaitHandler(ctx, r.client, respContainerId).SetSleepBeforeWait(1 * time.Minute).WaitWithContext(ctx)
+	wr, err := wait.CreateProjectWaitHandler(ctx, r.client, respContainerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
