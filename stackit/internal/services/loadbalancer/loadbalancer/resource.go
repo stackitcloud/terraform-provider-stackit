@@ -512,7 +512,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags := model.Options.As(ctx, optionsModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return nil, fmt.Errorf("%v", core.DiagsToError(diags))
+			return nil, fmt.Errorf("%w", core.DiagsToError(diags))
 		}
 	}
 
@@ -521,7 +521,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 		var acl []string
 		diags := optionsModel.ACL.ElementsAs(ctx, &acl, false)
 		if diags.HasError() {
-			return nil, fmt.Errorf("converting acl: %v", core.DiagsToError(diags))
+			return nil, fmt.Errorf("converting acl: %w", core.DiagsToError(diags))
 		}
 		accessControl.AllowedSourceRanges = &acl
 	}
@@ -546,7 +546,7 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.Ta
 			var activeHealthCheckModel ActiveHealthCheck
 			diags := targetPool.ActiveHealthCheck.As(ctx, &activeHealthCheckModel, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
-				return nil, fmt.Errorf("converting active health check: %v", core.DiagsToError(diags))
+				return nil, fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
 			}
 
 			activeHealthCheck = &loadbalancer.ActiveHealthCheck{
