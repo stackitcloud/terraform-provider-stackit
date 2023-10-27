@@ -575,21 +575,16 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		return
 	}
 
-	wr, err := wait.CreateOrUpdateClusterWaitHandler(ctx, r.client, projectId, name).SetTimeout(45 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateOrUpdateClusterWaitHandler(ctx, r.client, projectId, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Cluster creation waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*ske.ClusterResponse)
-	if !ok {
-		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
-	if got.Status.Error != nil && got.Status.Error.Message != nil && *got.Status.Error.Code == wait.InvalidArgusInstanceErrorCode {
-		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid argus instance id, the cluster is usable but metrics won't be forwarded: %s", *got.Status.Error.Message))
+	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == wait.InvalidArgusInstanceErrorCode {
+		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid argus instance id, the cluster is usable but metrics won't be forwarded: %s", *waitResp.Status.Error.Message))
 	}
 
-	err = mapFields(ctx, got, model)
+	err = mapFields(ctx, waitResp, model)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -1149,7 +1144,7 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = wait.DeleteClusterWaitHandler(ctx, r.client, projectId, name).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteClusterWaitHandler(ctx, r.client, projectId, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Cluster deletion waiting: %v", err))
 		return

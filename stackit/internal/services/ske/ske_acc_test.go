@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -534,7 +533,7 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 		if err != nil {
 			return fmt.Errorf("destroying project %s during CheckDestroy: %w", projectId, err)
 		}
-		_, err = wait.DeleteProjectWaitHandler(ctx, client, projectId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
+		_, err = wait.DeleteProjectWaitHandler(ctx, client, projectId).WaitWithContext(ctx)
 		if err != nil {
 			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", projectId, err)
 		}

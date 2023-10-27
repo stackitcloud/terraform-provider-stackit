@@ -11,21 +11,21 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.19.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.5.1
-	github.com/stackitcloud/stackit-sdk-go/core v0.3.0
-	github.com/stackitcloud/stackit-sdk-go/services/argus v0.5.0
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.4.0
-	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.4.0
-	github.com/stackitcloud/stackit-sdk-go/services/logme v0.5.0
-	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.5.0
-	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.5.0
-	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.5.0
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.4.0
-	github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.5.0
-	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.5.0
-	github.com/stackitcloud/stackit-sdk-go/services/redis v0.5.0
-	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.4.0
+	github.com/stackitcloud/stackit-sdk-go/core v0.4.0
+	github.com/stackitcloud/stackit-sdk-go/services/argus v0.6.0
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.5.0
+	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.5.0
+	github.com/stackitcloud/stackit-sdk-go/services/logme v0.6.0
+	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.6.0
+	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.6.0
+	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.6.0
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.5.0
+	github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.6.0
+	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.6.0
+	github.com/stackitcloud/stackit-sdk-go/services/redis v0.6.0
+	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.5.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.3.0
-	github.com/stackitcloud/stackit-sdk-go/services/ske v0.4.0
+	github.com/stackitcloud/stackit-sdk-go/services/ske v0.5.0
 	golang.org/x/mod v0.13.0
 )
 
@@ -36,7 +36,7 @@ require (
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/fatih/color v1.15.0 // indirect
-	github.com/go-logr/logr v1.2.4 // indirect
+	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.0.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
@@ -66,10 +66,10 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/oklog/run v1.1.0 // indirect
-	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.5.0
+	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.6.0
 	github.com/stretchr/testify v1.8.3 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	github.com/vmihailenco/msgpack/v5 v5.4.0 // indirect
+	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/zclconf/go-cty v1.14.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
