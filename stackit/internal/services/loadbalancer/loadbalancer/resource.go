@@ -419,25 +419,20 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Create a new load balancer
-	got, err := r.client.CreateLoadBalancer(ctx, projectId).CreateLoadBalancerPayload(*payload).Execute()
+	createResp, err := r.client.CreateLoadBalancer(ctx, projectId).CreateLoadBalancerPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	wr, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, *got.Name).SetTimeout(45 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateLoadBalancerWaitHandler(ctx, r.client, projectId, *createResp.Name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Load balancer creation waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*loadbalancer.LoadBalancer)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
 	// Map response body to schema
-	err = mapFields(ctx, got, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -519,14 +514,14 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	// Get updated load balancer
-	got, err := r.client.GetLoadBalancer(ctx, projectId, name).Execute()
+	getResp, err := r.client.GetLoadBalancer(ctx, projectId, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, got, &model)
+	err = mapFields(ctx, getResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
