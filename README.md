@@ -71,7 +71,7 @@ The expected format of the service account key is a **json** with the following 
 }
 ```
 
-3. Configure the service account key and private key for authentication in the SDK:
+3. Configure the service account key and private key for authentication in the SDK by following one of the alternatives below:
    - setting the fiels in the provider block: `service_account_key` or `service_account_key_path`, `private_key` or `private_key_path`
    - setting environment variables: `STACKIT_SERVICE_ACCOUNT_KEY_PATH` and `STACKIT_PRIVATE_KEY_PATH`
    - setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH` and `STACKIT_PRIVATE_KEY_PATH` in the credentials file (see above)
