@@ -272,8 +272,7 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 			},
 			"name": schema.StringAttribute{
 				Description: descriptions["name"],
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -518,7 +517,7 @@ func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 
 	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, name).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 

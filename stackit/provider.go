@@ -342,6 +342,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		argusScrapeConfig.NewScrapeConfigDataSource,
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
+		loadbalancer.NewLoadBalancerDataSource,
 		logMeInstance.NewInstanceDataSource,
 		logMeCredential.NewCredentialDataSource,
 		mariaDBInstance.NewInstanceDataSource,
