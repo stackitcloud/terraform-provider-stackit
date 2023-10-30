@@ -216,7 +216,6 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 			"external_address": schema.StringAttribute{
 				Description: descriptions["external_address"],
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
