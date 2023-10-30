@@ -113,6 +113,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"postgresql_custom_endpoint":      "Custom endpoint for the PostgreSQL service",
 		"postgresflex_custom_endpoint":    "Custom endpoint for the PostgresFlex service",
 		"mongodbflex_custom_endpoint":     "Custom endpoint for the MongoDB Flex service",
+		"loadbalancer_custom_endpoint":    "Custom endpoint for the Load Balancer service",
 		"logme_custom_endpoint":           "Custom endpoint for the LogMe service",
 		"rabbitmq_custom_endpoint":        "Custom endpoint for the RabbitMQ service",
 		"mariadb_custom_endpoint":         "Custom endpoint for the MariaDB service",
@@ -175,6 +176,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"mongodbflex_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["mongodbflex_custom_endpoint"],
+			},
+			"loadbalancer_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["loadbalancer_custom_endpoint"],
 			},
 			"logme_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
