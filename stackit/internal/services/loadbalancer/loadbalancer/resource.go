@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -12,7 +13,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -61,13 +67,13 @@ type Network struct {
 
 // Struct corresponding to Model.Options
 type Options struct {
-	ACL                types.List `tfsdk:"acl"`
+	ACL                types.Set  `tfsdk:"acl"`
 	PrivateNetworkOnly types.Bool `tfsdk:"private_network_only"`
 }
 
 // Types corresponding to Options
 var optionsTypes = map[string]attr.Type{
-	"acl":                  basetypes.ListType{ElemType: basetypes.StringType{}},
+	"acl":                  basetypes.SetType{ElemType: basetypes.StringType{}},
 	"private_network_only": basetypes.BoolType{},
 }
 
@@ -142,7 +148,7 @@ func (r *loadBalancerResource) Configure(ctx context.Context, req resource.Confi
 	} else {
 		apiClient, err = loadbalancer.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithServiceAccountEmail(providerData.ServiceAccountEmail),
+			config.WithRegion(providerData.Region),
 		)
 	}
 
@@ -198,7 +204,7 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Description: "STACKIT project ID to which the dns record set is associated.",
+				Description: descriptions["project_id"],
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -211,32 +217,55 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 				Description: descriptions["external_address"],
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"listeners": schema.ListNestedAttribute{
 				Description: descriptions["listeners"],
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.List{
+					listvalidator.SizeBetween(1, 20),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"display_name": schema.StringAttribute{
 							Description: descriptions["listeners.display_name"],
 							Optional:    true,
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
 						},
 						"port": schema.Int64Attribute{
 							Description: descriptions["port"],
 							Optional:    true,
 							Computed:    true,
+							PlanModifiers: []planmodifier.Int64{
+								int64planmodifier.RequiresReplace(),
+							},
 						},
 						"protocol": schema.StringAttribute{
 							Description: descriptions["protocol"],
 							Optional:    true,
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
+							Validators: []validator.String{
+								stringvalidator.OneOf("PROTOCOL_UNSPECIFIED", "PROTOCOL_TCP", "PROTOCOL_UDP", "PROTOCOL_TCP_PROXY"),
+							},
 						},
 						"target_pool": schema.StringAttribute{
 							Description: descriptions["target_pool"],
 							Optional:    true,
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
 						},
 					},
 				},
@@ -245,6 +274,9 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 				Description: descriptions["name"],
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 					stringvalidator.LengthAtMost(63),
@@ -253,14 +285,21 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 			},
 			"networks": schema.ListNestedAttribute{
 				Description: descriptions["networks"],
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.List{
+					listvalidator.SizeBetween(1, 1),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"network_id": schema.StringAttribute{
 							Description: descriptions["network_id"],
-							Optional:    true,
-							Computed:    true,
+							Required:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
 							Validators: []validator.String{
 								validate.UUID(),
 								validate.NoSeparator(),
@@ -270,6 +309,12 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 							Description: descriptions["role"],
 							Optional:    true,
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
+							Validators: []validator.String{
+								stringvalidator.OneOf("ROLE_UNSPECIFIED", "ROLE_LISTENERS_AND_TARGETS", "ROLE_LISTENERS", "ROLE_TARGETS"),
+							},
 						},
 					},
 				},
@@ -278,12 +323,18 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 				Description: descriptions["options"],
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"acl": schema.SetAttribute{
 						Description: descriptions["acl"],
 						ElementType: types.StringType,
 						Optional:    true,
 						Computed:    true,
+						PlanModifiers: []planmodifier.Set{
+							setplanmodifier.RequiresReplace(),
+						},
 						Validators: []validator.Set{
 							setvalidator.ValueStringsAre(
 								validate.CIDR(),
@@ -294,6 +345,9 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 						Description: descriptions["private_network_only"],
 						Optional:    true,
 						Computed:    true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.RequiresReplace(),
+						},
 					},
 				},
 			},
@@ -306,8 +360,10 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 			},
 			"target_pools": schema.ListNestedAttribute{
 				Description: descriptions["target_pools"],
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
+				Validators: []validator.List{
+					listvalidator.SizeBetween(1, 20),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"active_health_check": schema.SingleNestedAttribute{
@@ -344,29 +400,27 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 						},
 						"name": schema.StringAttribute{
 							Description: descriptions["target_pools.name"],
-							Optional:    true,
-							Computed:    true,
+							Required:    true,
 						},
-						"target_port": schema.StringAttribute{
+						"target_port": schema.Int64Attribute{
 							Description: descriptions["target_port"],
-							Optional:    true,
-							Computed:    true,
+							Required:    true,
 						},
 						"targets": schema.ListNestedAttribute{
 							Description: descriptions["targets"],
-							Optional:    true,
-							Computed:    true,
+							Required:    true,
+							Validators: []validator.List{
+								listvalidator.SizeBetween(1, 250),
+							},
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"display_name": schema.StringAttribute{
 										Description: descriptions["targets.display_name"],
-										Optional:    true,
-										Computed:    true,
+										Required:    true,
 									},
 									"ip": schema.StringAttribute{
 										Description: descriptions["ip"],
-										Optional:    true,
-										Computed:    true,
+										Required:    true,
 									},
 								},
 							},
@@ -399,7 +453,7 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 
 	// If load balancer functionality is not enabled, enable it
 	if *statusResp.Status != wait.FunctionalityStatusReady {
-		_, err = r.client.EnableLoadBalancing(ctx, projectId).Execute()
+		_, err = r.client.EnableLoadBalancing(ctx, projectId).XRequestID("").Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling load balancer functionality", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -420,7 +474,7 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Create a new load balancer
-	createResp, err := r.client.CreateLoadBalancer(ctx, projectId).CreateLoadBalancerPayload(*payload).Execute()
+	createResp, err := r.client.CreateLoadBalancer(ctx, projectId).CreateLoadBalancerPayload(*payload).XRequestID("").Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -721,7 +775,7 @@ func toTargetPoolUpdatePayload(ctx context.Context, targetPool *TargetPool) (*lo
 }
 
 func toActiveHealthCheckPayload(ctx context.Context, targetPool *TargetPool) (*loadbalancer.ActiveHealthCheck, error) {
-	if targetPool.ActiveHealthCheck.IsNull() {
+	if targetPool.ActiveHealthCheck.IsNull() || targetPool.ActiveHealthCheck.IsUnknown() {
 		return nil, nil
 	}
 
@@ -836,9 +890,9 @@ func mapOptions(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) er
 	}
 
 	var diags diag.Diagnostics
-	acl := types.ListNull(types.StringType)
+	acl := types.SetNull(types.StringType)
 	if lb.Options.AccessControl != nil && lb.Options.AccessControl.AllowedSourceRanges != nil {
-		acl, diags = types.ListValueFrom(ctx, types.StringType, *lb.Options.AccessControl.AllowedSourceRanges)
+		acl, diags = types.SetValueFrom(ctx, types.StringType, *lb.Options.AccessControl.AllowedSourceRanges)
 		if diags != nil {
 			return fmt.Errorf("converting acl: %w", core.DiagsToError(diags))
 		}

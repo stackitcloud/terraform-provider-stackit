@@ -62,7 +62,7 @@ func TestToCreatePayload(t *testing.T) {
 				Options: types.ObjectValueMust(
 					optionsTypes,
 					map[string]attr.Value{
-						"acl": types.ListValueMust(
+						"acl": types.SetValueMust(
 							types.StringType,
 							[]attr.Value{types.StringValue("cidr")}),
 						"private_network_only": types.BoolValue(true),
@@ -351,9 +351,8 @@ func TestMapFields(t *testing.T) {
 				Options: types.ObjectValueMust(
 					optionsTypes,
 					map[string]attr.Value{
-						"acl": types.ListValueMust(
+						"acl": types.SetValueMust(
 							types.StringType,
-
 							[]attr.Value{types.StringValue("cidr")}),
 						"private_network_only": types.BoolValue(true),
 					},
