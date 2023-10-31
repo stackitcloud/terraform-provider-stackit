@@ -54,20 +54,21 @@ var (
 )
 
 type Cluster struct {
-	Id                        types.String  `tfsdk:"id"` // needed by TF
-	ProjectId                 types.String  `tfsdk:"project_id"`
-	Name                      types.String  `tfsdk:"name"`
-	KubernetesVersion         types.String  `tfsdk:"kubernetes_version"`
-	KubernetesVersionUsed     types.String  `tfsdk:"kubernetes_version_used"`
-	AllowPrivilegedContainers types.Bool    `tfsdk:"allow_privileged_containers"`
-	NodePools                 []NodePool    `tfsdk:"node_pools"`
-	Maintenance               types.Object  `tfsdk:"maintenance"`
-	Hibernations              []Hibernation `tfsdk:"hibernations"`
-	Extensions                *Extensions   `tfsdk:"extensions"`
-	KubeConfig                types.String  `tfsdk:"kube_config"`
+	Id                        types.String `tfsdk:"id"` // needed by TF
+	ProjectId                 types.String `tfsdk:"project_id"`
+	Name                      types.String `tfsdk:"name"`
+	KubernetesVersion         types.String `tfsdk:"kubernetes_version"`
+	KubernetesVersionUsed     types.String `tfsdk:"kubernetes_version_used"`
+	AllowPrivilegedContainers types.Bool   `tfsdk:"allow_privileged_containers"`
+	NodePools                 types.List   `tfsdk:"node_pools"`
+	Maintenance               types.Object `tfsdk:"maintenance"`
+	Hibernations              types.List   `tfsdk:"hibernations"`
+	Extensions                *Extensions  `tfsdk:"extensions"`
+	KubeConfig                types.String `tfsdk:"kube_config"`
 }
 
-type NodePool struct {
+// Struct corresponding to Cluster.NodePools[i]
+type nodePool struct {
 	Name              types.String `tfsdk:"name"`
 	MachineType       types.String `tfsdk:"machine_type"`
 	OSName            types.String `tfsdk:"os_name"`
@@ -79,17 +80,44 @@ type NodePool struct {
 	VolumeType        types.String `tfsdk:"volume_type"`
 	VolumeSize        types.Int64  `tfsdk:"volume_size"`
 	Labels            types.Map    `tfsdk:"labels"`
-	Taints            []Taint      `tfsdk:"taints"`
+	Taints            types.List   `tfsdk:"taints"`
 	CRI               types.String `tfsdk:"cri"`
 	AvailabilityZones types.List   `tfsdk:"availability_zones"`
 }
 
-type Taint struct {
+// Types corresponding to odePool
+var nodePoolTypes = map[string]attr.Type{
+	"name":               basetypes.StringType{},
+	"machine_type":       basetypes.StringType{},
+	"os_name":            basetypes.StringType{},
+	"os_version":         basetypes.StringType{},
+	"minimum":            basetypes.Int64Type{},
+	"maximum":            basetypes.Int64Type{},
+	"max_surge":          basetypes.Int64Type{},
+	"max_unavailable":    basetypes.Int64Type{},
+	"volume_type":        basetypes.StringType{},
+	"volume_size":        basetypes.Int64Type{},
+	"labels":             basetypes.MapType{ElemType: types.StringType},
+	"taints":             basetypes.ListType{ElemType: types.ObjectType{AttrTypes: taintTypes}},
+	"cri":                basetypes.StringType{},
+	"availability_zones": basetypes.ListType{ElemType: types.StringType},
+}
+
+// Struct corresponding to nodePool.Taints[i]
+type taint struct {
 	Effect types.String `tfsdk:"effect"`
 	Key    types.String `tfsdk:"key"`
 	Value  types.String `tfsdk:"value"`
 }
 
+// Types corresponding to taint
+var taintTypes = map[string]attr.Type{
+	"effect": basetypes.StringType{},
+	"key":    basetypes.StringType{},
+	"value":  basetypes.StringType{},
+}
+
+// Struct corresponding to Cluster.Maintenance
 type Maintenance struct {
 	EnableKubernetesVersionUpdates   types.Bool   `tfsdk:"enable_kubernetes_version_updates"`
 	EnableMachineImageVersionUpdates types.Bool   `tfsdk:"enable_machine_image_version_updates"`
@@ -97,6 +125,7 @@ type Maintenance struct {
 	End                              types.String `tfsdk:"end"`
 }
 
+// Types corresponding to Maintenance
 var maintenanceTypes = map[string]attr.Type{
 	"enable_kubernetes_version_updates":    basetypes.BoolType{},
 	"enable_machine_image_version_updates": basetypes.BoolType{},
@@ -104,10 +133,18 @@ var maintenanceTypes = map[string]attr.Type{
 	"end":                                  basetypes.StringType{},
 }
 
-type Hibernation struct {
+// Struct corresponding to Cluster.Hibernations[i]
+type hibernation struct {
 	Start    types.String `tfsdk:"start"`
 	End      types.String `tfsdk:"end"`
 	Timezone types.String `tfsdk:"timezone"`
+}
+
+// Types corresponding to hibernation
+var hibernationTypes = map[string]attr.Type{
+	"start":    basetypes.StringType{},
+	"end":      basetypes.StringType{},
+	"timezone": basetypes.StringType{},
 }
 
 type Extensions struct {
@@ -549,13 +586,21 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	if hasDeprecatedVersion {
 		diags.AddWarning("Deprecated Kubernetes version", fmt.Sprintf("Version %s of Kubernetes is deprecated, please update it", *kubernetes.Version))
 	}
-	nodePools := toNodepoolsPayload(ctx, model)
+	nodePools, err := toNodepoolsPayload(ctx, model)
+	if err != nil {
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating node pools API payload: %v", err))
+		return
+	}
 	maintenance, err := toMaintenancePayload(ctx, model)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating maintenance API payload: %v", err))
 		return
 	}
-	hibernations := toHibernationsPayload(model)
+	hibernations, err := toHibernationsPayload(ctx, model)
+	if err != nil {
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating hibernations API payload: %v", err))
+		return
+	}
 	extensions, err := toExtensionsPayload(ctx, model)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating extension API payload: %v", err))
@@ -608,13 +653,24 @@ func (r *clusterResource) getCredential(ctx context.Context, model *Cluster) err
 	return nil
 }
 
-func toNodepoolsPayload(ctx context.Context, m *Cluster) []ske.Nodepool {
+func toNodepoolsPayload(ctx context.Context, m *Cluster) ([]ske.Nodepool, error) {
+	nodePools := []nodePool{}
+	diags := m.NodePools.ElementsAs(ctx, &nodePools, false)
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
 	cnps := []ske.Nodepool{}
-	for i := range m.NodePools {
+	for _, nodePool := range nodePools {
 		// taints
+		taintsModel := []taint{}
+		diags := nodePool.Taints.ElementsAs(ctx, &taintsModel, false)
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
 		ts := []ske.Taint{}
-		nodePool := m.NodePools[i]
-		for _, v := range nodePool.Taints {
+		for _, v := range taintsModel {
 			t := ske.Taint{
 				Effect: v.Effect.ValueStringPointer(),
 				Key:    v.Key.ValueStringPointer(),
@@ -680,12 +736,22 @@ func toNodepoolsPayload(ctx context.Context, m *Cluster) []ske.Nodepool {
 		}
 		cnps = append(cnps, cnp)
 	}
-	return cnps
+	return cnps, nil
 }
 
-func toHibernationsPayload(m *Cluster) *ske.Hibernation {
+func toHibernationsPayload(ctx context.Context, m *Cluster) (*ske.Hibernation, error) {
+	hibernation := []hibernation{}
+	diags := m.Hibernations.ElementsAs(ctx, &hibernation, false)
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
+	if len(hibernation) == 0 {
+		return nil, nil
+	}
+
 	scs := []ske.HibernationSchedule{}
-	for _, h := range m.Hibernations {
+	for _, h := range hibernation {
 		sc := ske.HibernationSchedule{
 			Start: h.Start.ValueStringPointer(),
 			End:   h.End.ValueStringPointer(),
@@ -697,13 +763,9 @@ func toHibernationsPayload(m *Cluster) *ske.Hibernation {
 		scs = append(scs, sc)
 	}
 
-	if len(scs) == 0 {
-		return nil
-	}
-
 	return &ske.Hibernation{
 		Schedules: &scs,
-	}
+	}, nil
 }
 
 func toExtensionsPayload(ctx context.Context, m *Cluster) (*ske.Extension, error) {
@@ -805,104 +867,164 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 		m.KubernetesVersionUsed = types.StringPointerValue(cl.Kubernetes.Version)
 		m.AllowPrivilegedContainers = types.BoolPointerValue(cl.Kubernetes.AllowPrivilegedContainers)
 	}
-	if cl.Nodepools == nil {
-		m.NodePools = []NodePool{}
-	} else {
-		nodepools := *cl.Nodepools
-		m.NodePools = []NodePool{}
-		for i := range nodepools {
-			np := nodepools[i]
 
-			maimna := types.StringNull()
-			maimver := types.StringNull()
-			if np.Machine != nil && np.Machine.Image != nil {
-				maimna = types.StringPointerValue(np.Machine.Image.Name)
-				maimver = types.StringPointerValue(np.Machine.Image.Version)
-			}
-			vt := types.StringNull()
-			if np.Volume != nil {
-				vt = types.StringPointerValue(np.Volume.Type)
-			}
-			crin := types.StringNull()
-			if np.Cri != nil {
-				crin = types.StringPointerValue(np.Cri.Name)
-			}
-			n := NodePool{
-				Name:              types.StringPointerValue(np.Name),
-				MachineType:       types.StringPointerValue(np.Machine.Type),
-				OSName:            maimna,
-				OSVersion:         maimver,
-				Minimum:           types.Int64PointerValue(np.Minimum),
-				Maximum:           types.Int64PointerValue(np.Maximum),
-				MaxSurge:          types.Int64PointerValue(np.MaxSurge),
-				MaxUnavailable:    types.Int64PointerValue(np.MaxUnavailable),
-				VolumeType:        vt,
-				VolumeSize:        types.Int64PointerValue(np.Volume.Size),
-				Labels:            types.MapNull(types.StringType),
-				Taints:            nil,
-				CRI:               crin,
-				AvailabilityZones: types.ListNull(types.StringType),
-			}
-			if np.Labels != nil {
-				elems := map[string]attr.Value{}
-				for k, v := range *np.Labels {
-					elems[k] = types.StringValue(v)
-				}
-				n.Labels = types.MapValueMust(types.StringType, elems)
-			}
-			if np.Taints != nil {
-				for _, v := range *np.Taints {
-					if n.Taints == nil {
-						n.Taints = []Taint{}
-					}
-					n.Taints = append(n.Taints, Taint{
-						Effect: types.StringPointerValue(v.Effect),
-						Key:    types.StringPointerValue(v.Key),
-						Value:  types.StringPointerValue(v.Value),
-					})
-				}
-			}
-			if np.AvailabilityZones == nil {
-				n.AvailabilityZones = types.ListNull(types.StringType)
-			} else {
-				elems := []attr.Value{}
-				for _, v := range *np.AvailabilityZones {
-					elems = append(elems, types.StringValue(v))
-				}
-				n.AvailabilityZones = types.ListValueMust(types.StringType, elems)
-			}
-			m.NodePools = append(m.NodePools, n)
-		}
+	err := mapNodePools(ctx, cl, m)
+	if err != nil {
+		return fmt.Errorf("mapping node_pools: %w", err)
 	}
 
-	err := mapMaintenance(ctx, cl, m)
+	err = mapMaintenance(ctx, cl, m)
 	if err != nil {
-		return err
+		return fmt.Errorf("mapping maintenance: %w", err)
 	}
 	mapHibernations(cl, m)
 	mapExtensions(cl, m)
 	return nil
 }
 
-func mapHibernations(cl *ske.ClusterResponse, m *Cluster) {
-	if cl.Hibernation == nil || cl.Hibernation.Schedules == nil {
-		return
+func mapNodePools(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
+	if cl.Nodepools == nil {
+		m.NodePools = types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes})
+		return nil
 	}
 
-	m.Hibernations = []Hibernation{}
-	for _, h := range *cl.Hibernation.Schedules {
-		m.Hibernations = append(m.Hibernations, Hibernation{
-			Start:    types.StringPointerValue(h.Start),
-			End:      types.StringPointerValue(h.End),
-			Timezone: types.StringPointerValue(h.Timezone),
-		})
+	nodePools := []attr.Value{}
+	for i, nodePoolResp := range *cl.Nodepools {
+		nodePool := map[string]attr.Value{
+			"name":               types.StringPointerValue(nodePoolResp.Name),
+			"machine_type":       types.StringPointerValue(nodePoolResp.Machine.Type),
+			"os_name":            types.StringNull(),
+			"os_version":         types.StringNull(),
+			"minimum":            types.Int64PointerValue(nodePoolResp.Minimum),
+			"maximum":            types.Int64PointerValue(nodePoolResp.Maximum),
+			"max_surge":          types.Int64PointerValue(nodePoolResp.MaxSurge),
+			"max_unavailable":    types.Int64PointerValue(nodePoolResp.MaxUnavailable),
+			"volume_type":        types.StringNull(),
+			"volume_size":        types.Int64PointerValue(nodePoolResp.Volume.Size),
+			"labels":             types.MapNull(types.StringType),
+			"cri":                types.StringNull(),
+			"availability_zones": types.ListNull(types.StringType),
+		}
+
+		if nodePoolResp.Machine != nil && nodePoolResp.Machine.Image != nil {
+			nodePool["os_name"] = types.StringPointerValue(nodePoolResp.Machine.Image.Name)
+			nodePool["os_version"] = types.StringPointerValue(nodePoolResp.Machine.Image.Version)
+		}
+
+		if nodePoolResp.Volume != nil {
+			nodePool["volume_type"] = types.StringPointerValue(nodePoolResp.Volume.Type)
+		}
+
+		if nodePoolResp.Cri != nil {
+			nodePool["cri"] = types.StringPointerValue(nodePoolResp.Cri.Name)
+		}
+
+		err := mapTaints(ctx, nodePoolResp.Taints, nodePool)
+		if err != nil {
+			return fmt.Errorf("mapping index %d, field taints: %w", i, err)
+		}
+
+		if nodePoolResp.Labels != nil {
+			elems := map[string]attr.Value{}
+			for k, v := range *nodePoolResp.Labels {
+				elems[k] = types.StringValue(v)
+			}
+			elemsTF, diags := types.MapValue(types.StringType, elems)
+			if diags.HasError() {
+				return fmt.Errorf("mapping index %d, field labels: %w", i, core.DiagsToError(diags))
+			}
+			nodePool["labels"] = elemsTF
+		}
+
+		if nodePoolResp.AvailabilityZones != nil {
+			elems := []attr.Value{}
+			for _, v := range *nodePoolResp.AvailabilityZones {
+				elems = append(elems, types.StringValue(v))
+			}
+			elemsTF, diags := types.ListValue(types.StringType, elems)
+			if diags.HasError() {
+				return fmt.Errorf("mapping index %d, field availability_zones: %w", i, core.DiagsToError(diags))
+			}
+			nodePool["availability_zones"] = elemsTF
+		}
+
+		nodePoolTF, diags := basetypes.NewObjectValue(nodePoolTypes, nodePool)
+		if diags.HasError() {
+			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
+		}
+		nodePools = append(nodePools, nodePoolTF)
 	}
+	nodePoolsTF, diags := basetypes.NewListValue(types.ObjectType{AttrTypes: nodePoolTypes}, nodePools)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+	m.NodePools = nodePoolsTF
+	return nil
+}
+
+func mapTaints(ctx context.Context, t *[]ske.Taint, nodePool map[string]attr.Value) error {
+	if t == nil {
+		nodePool["taints"] = types.ListNull(types.ObjectType{AttrTypes: taintTypes})
+		return nil
+	}
+
+	taints := []attr.Value{}
+
+	for i, taintResp := range *t {
+		taint := map[string]attr.Value{
+			"effect": types.StringPointerValue(taintResp.Effect),
+			"key":    types.StringPointerValue(taintResp.Key),
+			"value":  types.StringPointerValue(taintResp.Value),
+		}
+		taintTF, diags := basetypes.NewObjectValue(taintTypes, taint)
+		if diags.HasError() {
+			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
+		}
+		taints = append(taints, taintTF)
+	}
+
+	taintsTF, diags := basetypes.NewListValue(types.ObjectType{AttrTypes: taintTypes}, taints)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	nodePool["taints"] = taintsTF
+	return nil
+}
+
+func mapHibernations(cl *ske.ClusterResponse, m *Cluster) error {
+	if cl.Hibernation == nil || cl.Hibernation.Schedules == nil {
+		m.Hibernations = basetypes.NewListNull(basetypes.ObjectType{AttrTypes: hibernationTypes})
+		return nil
+	}
+
+	hibernations := []attr.Value{}
+	for i, hibernationResp := range *cl.Hibernation.Schedules {
+		hibernation := map[string]attr.Value{
+			"start":    types.StringPointerValue(hibernationResp.Start),
+			"end":      types.StringPointerValue(hibernationResp.End),
+			"timezone": types.StringPointerValue(hibernationResp.Timezone),
+		}
+		hibernationTF, diags := basetypes.NewObjectValue(hibernationTypes, hibernation)
+		if diags.HasError() {
+			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
+		}
+		hibernations = append(hibernations, hibernationTF)
+	}
+
+	hibernationsTF, diags := basetypes.NewListValue(types.ObjectType{AttrTypes: hibernationTypes}, hibernations)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	m.Hibernations = hibernationsTF
+	return nil
 }
 
 func mapMaintenance(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	// Aligned with SKE team that a flattened data structure is fine, because not extensions are planned.
 	if cl.Maintenance == nil {
-		m.Maintenance = types.ObjectNull(map[string]attr.Type{})
+		m.Maintenance = types.ObjectNull(maintenanceTypes)
 		return nil
 	}
 	ekvu := types.BoolNull()
