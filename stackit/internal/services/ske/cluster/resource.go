@@ -968,7 +968,7 @@ func mapNodePools(cl *ske.ClusterResponse, m *Cluster) error {
 }
 
 func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value) error {
-	if t == nil {
+	if t == nil || len(*t) == 0 {
 		nodePool["taints"] = types.ListNull(types.ObjectType{AttrTypes: taintTypes})
 		return nil
 	}
