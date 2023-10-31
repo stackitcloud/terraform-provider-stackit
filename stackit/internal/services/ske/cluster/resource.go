@@ -661,7 +661,9 @@ func toNodepoolsPayload(ctx context.Context, m *Cluster) ([]ske.Nodepool, error)
 	}
 
 	cnps := []ske.Nodepool{}
-	for _, nodePool := range nodePools {
+	for i := range nodePools {
+		nodePool := nodePools[i]
+
 		// taints
 		taintsModel := []taint{}
 		diags := nodePool.Taints.ElementsAs(ctx, &taintsModel, false)
@@ -868,7 +870,7 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 		m.AllowPrivilegedContainers = types.BoolPointerValue(cl.Kubernetes.AllowPrivilegedContainers)
 	}
 
-	err := mapNodePools(ctx, cl, m)
+	err := mapNodePools(cl, m)
 	if err != nil {
 		return fmt.Errorf("mapping node_pools: %w", err)
 	}
@@ -877,12 +879,15 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	if err != nil {
 		return fmt.Errorf("mapping maintenance: %w", err)
 	}
-	mapHibernations(cl, m)
+	err = mapHibernations(cl, m)
+	if err != nil {
+		return fmt.Errorf("mapping hibernations: %w", err)
+	}
 	mapExtensions(cl, m)
 	return nil
 }
 
-func mapNodePools(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
+func mapNodePools(cl *ske.ClusterResponse, m *Cluster) error {
 	if cl.Nodepools == nil {
 		m.NodePools = types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes})
 		return nil
@@ -919,7 +924,7 @@ func mapNodePools(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) erro
 			nodePool["cri"] = types.StringPointerValue(nodePoolResp.Cri.Name)
 		}
 
-		err := mapTaints(ctx, nodePoolResp.Taints, nodePool)
+		err := mapTaints(nodePoolResp.Taints, nodePool)
 		if err != nil {
 			return fmt.Errorf("mapping index %d, field taints: %w", i, err)
 		}
@@ -962,7 +967,7 @@ func mapNodePools(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) erro
 	return nil
 }
 
-func mapTaints(ctx context.Context, t *[]ske.Taint, nodePool map[string]attr.Value) error {
+func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value) error {
 	if t == nil {
 		nodePool["taints"] = types.ListNull(types.ObjectType{AttrTypes: taintTypes})
 		return nil
