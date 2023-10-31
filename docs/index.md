@@ -116,6 +116,7 @@ Using this flow is less secure since the token is long-lived. You can provide th
 - `credentials_path` (String) Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.
 - `dns_custom_endpoint` (String) Custom endpoint for the DNS service
 - `jwks_custom_endpoint` (String) Custom endpoint for the jwks API, which is used to get the json web key sets (jwks) to validate tokens when using the key flow
+- `loadbalancer_custom_endpoint` (String) Custom endpoint for the Load Balancer service
 - `logme_custom_endpoint` (String) Custom endpoint for the LogMe service
 - `mariadb_custom_endpoint` (String) Custom endpoint for the MariaDB service
 - `mongodbflex_custom_endpoint` (String) Custom endpoint for the MongoDB Flex service
