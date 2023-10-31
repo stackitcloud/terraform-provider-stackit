@@ -144,9 +144,6 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						"protocol": schema.StringAttribute{
 							Description: descriptions["protocol"],
 							Computed:    true,
-							Validators: []validator.String{
-								stringvalidator.OneOf("PROTOCOL_UNSPECIFIED", "PROTOCOL_TCP", "PROTOCOL_UDP", "PROTOCOL_TCP_PROXY"),
-							},
 						},
 						"target_pool": schema.StringAttribute{
 							Description: descriptions["target_pool"],
@@ -183,9 +180,6 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						"role": schema.StringAttribute{
 							Description: descriptions["role"],
 							Computed:    true,
-							Validators: []validator.String{
-								stringvalidator.OneOf("ROLE_UNSPECIFIED", "ROLE_LISTENERS_AND_TARGETS", "ROLE_LISTENERS", "ROLE_TARGETS"),
-							},
 						},
 					},
 				},
