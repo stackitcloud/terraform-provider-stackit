@@ -50,6 +50,13 @@ var (
 	ResourceManagerCustomEndpoint = os.Getenv("TF_ACC_RESOURCEMANAGER_CUSTOM_ENDPOINT")
 	SecretsManagerCustomEndpoint  = os.Getenv("TF_ACC_SECRETSMANAGER_CUSTOM_ENDPOINT")
 	SKECustomEndpoint             = os.Getenv("TF_ACC_SKE_CUSTOM_ENDPOINT")
+
+	// OpenStack user domain name
+	OSUserDomainName = os.Getenv("TF_ACC_OS_USER_DOMAIN_NAME")
+	// OpenStack user name
+	OSUserName = os.Getenv("TF_ACC_OS_USER_NAME")
+	// OpenStack password
+	OSPassword = os.Getenv("TF_ACC_OS_PASSWORD")
 )
 
 // Provider config helper functions
