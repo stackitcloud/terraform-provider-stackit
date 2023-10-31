@@ -194,7 +194,8 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 	}
 
 	resp.Schema = schema.Schema{
-		Description: descriptions["main"],
+		Description:         descriptions["main"],
+		MarkdownDescription: "",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
