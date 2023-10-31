@@ -5,13 +5,20 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -27,9 +34,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &projectResource{}
-	_ resource.ResourceWithConfigure   = &projectResource{}
-	_ resource.ResourceWithImportState = &projectResource{}
+	_ resource.Resource                = &loadBalancerResource{}
+	_ resource.ResourceWithConfigure   = &loadBalancerResource{}
+	_ resource.ResourceWithImportState = &loadBalancerResource{}
 )
 
 type Model struct {
@@ -60,13 +67,13 @@ type Network struct {
 
 // Struct corresponding to Model.Options
 type Options struct {
-	ACL                types.List `tfsdk:"acl"`
+	ACL                types.Set  `tfsdk:"acl"`
 	PrivateNetworkOnly types.Bool `tfsdk:"private_network_only"`
 }
 
 // Types corresponding to Options
 var optionsTypes = map[string]attr.Type{
-	"acl":                  basetypes.ListType{ElemType: basetypes.StringType{}},
+	"acl":                  basetypes.SetType{ElemType: basetypes.StringType{}},
 	"private_network_only": basetypes.BoolType{},
 }
 
@@ -102,23 +109,23 @@ type Target struct {
 	Ip          types.String `tfsdk:"ip"`
 }
 
-// NewProjectResource is a helper function to simplify the provider implementation.
-func NewProjectResource() resource.Resource {
-	return &projectResource{}
+// NewLoadBalancerResource is a helper function to simplify the provider implementation.
+func NewLoadBalancerResource() resource.Resource {
+	return &loadBalancerResource{}
 }
 
-// projectResource is the resource implementation.
-type projectResource struct {
+// loadBalancerResource is the resource implementation.
+type loadBalancerResource struct {
 	client *loadbalancer.APIClient
 }
 
 // Metadata returns the resource type name.
-func (r *projectResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *loadBalancerResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_loadbalancer"
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *loadBalancerResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -141,7 +148,7 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 	} else {
 		apiClient, err = loadbalancer.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithServiceAccountEmail(providerData.ServiceAccountEmail),
+			config.WithRegion(providerData.Region),
 		)
 	}
 
@@ -155,7 +162,7 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 }
 
 // Schema defines the schema for the resource.
-func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                 "Load Balancer resource schema.",
 		"id":                   "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`name`\".",
@@ -197,7 +204,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Description: "STACKIT project ID to which the dns record set is associated.",
+				Description: descriptions["project_id"],
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -209,41 +216,65 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"external_address": schema.StringAttribute{
 				Description: descriptions["external_address"],
 				Optional:    true,
-				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"listeners": schema.ListNestedAttribute{
 				Description: descriptions["listeners"],
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.List{
+					listvalidator.SizeBetween(1, 20),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"display_name": schema.StringAttribute{
 							Description: descriptions["listeners.display_name"],
 							Optional:    true,
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
 						},
 						"port": schema.Int64Attribute{
 							Description: descriptions["port"],
 							Optional:    true,
 							Computed:    true,
+							PlanModifiers: []planmodifier.Int64{
+								int64planmodifier.RequiresReplace(),
+							},
 						},
 						"protocol": schema.StringAttribute{
 							Description: descriptions["protocol"],
 							Optional:    true,
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
+							Validators: []validator.String{
+								stringvalidator.OneOf("PROTOCOL_UNSPECIFIED", "PROTOCOL_TCP", "PROTOCOL_UDP", "PROTOCOL_TCP_PROXY"),
+							},
 						},
 						"target_pool": schema.StringAttribute{
 							Description: descriptions["target_pool"],
 							Optional:    true,
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
 						},
 					},
 				},
 			},
 			"name": schema.StringAttribute{
 				Description: descriptions["name"],
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 					stringvalidator.LengthAtMost(63),
@@ -252,14 +283,21 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"networks": schema.ListNestedAttribute{
 				Description: descriptions["networks"],
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.List{
+					listvalidator.SizeBetween(1, 1),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"network_id": schema.StringAttribute{
 							Description: descriptions["network_id"],
-							Optional:    true,
-							Computed:    true,
+							Required:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
 							Validators: []validator.String{
 								validate.UUID(),
 								validate.NoSeparator(),
@@ -269,6 +307,12 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Description: descriptions["role"],
 							Optional:    true,
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
+							Validators: []validator.String{
+								stringvalidator.OneOf("ROLE_UNSPECIFIED", "ROLE_LISTENERS_AND_TARGETS", "ROLE_LISTENERS", "ROLE_TARGETS"),
+							},
 						},
 					},
 				},
@@ -277,12 +321,18 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: descriptions["options"],
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"acl": schema.SetAttribute{
 						Description: descriptions["acl"],
 						ElementType: types.StringType,
 						Optional:    true,
 						Computed:    true,
+						PlanModifiers: []planmodifier.Set{
+							setplanmodifier.RequiresReplace(),
+						},
 						Validators: []validator.Set{
 							setvalidator.ValueStringsAre(
 								validate.CIDR(),
@@ -293,6 +343,9 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						Description: descriptions["private_network_only"],
 						Optional:    true,
 						Computed:    true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.RequiresReplace(),
+						},
 					},
 				},
 			},
@@ -305,8 +358,10 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"target_pools": schema.ListNestedAttribute{
 				Description: descriptions["target_pools"],
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
+				Validators: []validator.List{
+					listvalidator.SizeBetween(1, 20),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"active_health_check": schema.SingleNestedAttribute{
@@ -343,29 +398,27 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						},
 						"name": schema.StringAttribute{
 							Description: descriptions["target_pools.name"],
-							Optional:    true,
-							Computed:    true,
+							Required:    true,
 						},
-						"target_port": schema.StringAttribute{
+						"target_port": schema.Int64Attribute{
 							Description: descriptions["target_port"],
-							Optional:    true,
-							Computed:    true,
+							Required:    true,
 						},
 						"targets": schema.ListNestedAttribute{
 							Description: descriptions["targets"],
-							Optional:    true,
-							Computed:    true,
+							Required:    true,
+							Validators: []validator.List{
+								listvalidator.SizeBetween(1, 250),
+							},
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"display_name": schema.StringAttribute{
 										Description: descriptions["targets.display_name"],
-										Optional:    true,
-										Computed:    true,
+										Required:    true,
 									},
 									"ip": schema.StringAttribute{
 										Description: descriptions["ip"],
-										Optional:    true,
-										Computed:    true,
+										Required:    true,
 									},
 								},
 							},
@@ -378,7 +431,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -398,7 +451,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// If load balancer functionality is not enabled, enable it
 	if *statusResp.Status != wait.FunctionalityStatusReady {
-		_, err = r.client.EnableLoadBalancing(ctx, projectId).Execute()
+		_, err = r.client.EnableLoadBalancing(ctx, projectId).XRequestID("").Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling load balancer functionality", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -419,7 +472,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Create a new load balancer
-	createResp, err := r.client.CreateLoadBalancer(ctx, projectId).CreateLoadBalancerPayload(*payload).Execute()
+	createResp, err := r.client.CreateLoadBalancer(ctx, projectId).CreateLoadBalancerPayload(*payload).XRequestID("").Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -449,7 +502,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -463,7 +516,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, name).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
@@ -484,7 +537,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -538,14 +591,50 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *projectResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *loadBalancerResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.State.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	projectId := model.ProjectId.ValueString()
+	name := model.Name.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "name", name)
 
+	// Delete load balancer
+	_, err := r.client.DeleteLoadBalancer(ctx, projectId, name).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting load balancer", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	_, err = wait.DeleteLoadBalancerWaitHandler(ctx, r.client, projectId, name).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting load balancer", fmt.Sprintf("Load balancer deleting waiting: %v", err))
+		return
+	}
+
+	tflog.Info(ctx, "Load balancer deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: container_id
-func (r *projectResource) ImportState(_ context.Context, _ resource.ImportStateRequest, _ *resource.ImportStateResponse) {
+// The expected format of the resource import identifier is: project_id,name
+func (r *loadBalancerResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	idParts := strings.Split(req.ID, core.Separator)
 
+	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing load balancer",
+			fmt.Sprintf("Expected import identifier with format: [project_id],[name]  Got: %q", req.ID),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[1])...)
+	tflog.Info(ctx, "Load balancer state imported")
 }
 
 func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoadBalancerPayload, error) {
@@ -684,7 +773,7 @@ func toTargetPoolUpdatePayload(ctx context.Context, targetPool *TargetPool) (*lo
 }
 
 func toActiveHealthCheckPayload(ctx context.Context, targetPool *TargetPool) (*loadbalancer.ActiveHealthCheck, error) {
-	if targetPool.ActiveHealthCheck.IsNull() {
+	if targetPool.ActiveHealthCheck.IsNull() || targetPool.ActiveHealthCheck.IsUnknown() {
 		return nil, nil
 	}
 
@@ -799,9 +888,9 @@ func mapOptions(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) er
 	}
 
 	var diags diag.Diagnostics
-	acl := types.ListNull(types.StringType)
+	acl := types.SetNull(types.StringType)
 	if lb.Options.AccessControl != nil && lb.Options.AccessControl.AllowedSourceRanges != nil {
-		acl, diags = types.ListValueFrom(ctx, types.StringType, *lb.Options.AccessControl.AllowedSourceRanges)
+		acl, diags = types.SetValueFrom(ctx, types.StringType, *lb.Options.AccessControl.AllowedSourceRanges)
 		if diags != nil {
 			return fmt.Errorf("converting acl: %w", core.DiagsToError(diags))
 		}
