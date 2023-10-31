@@ -28,7 +28,7 @@ var clusterResource = map[string]string{
 	"kubernetes_version":                               "1.24",
 	"kubernetes_version_used":                          "1.24.17",
 	"kubernetes_version_new":                           "1.25",
-	"kubernetes_version_used_new":                      "1.25.14",
+	"kubernetes_version_used_new":                      "1.25.15",
 	"allowPrivilegedContainers":                        "true",
 	"nodepool_name":                                    "np-acc-test",
 	"nodepool_name_min":                                "np-acc-min-test",
@@ -142,6 +142,7 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 				os_version = "%s"
 				minimum = "%s"
 				maximum = "%s"
+				max_surge = "%s"
 				availability_zones = ["%s"]
 			}]
 		}
@@ -188,6 +189,7 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 		clusterResource["nodepool_os_version_min"],
 		clusterResource["nodepool_minimum"],
 		clusterResource["nodepool_maximum"],
+		clusterResource["nodepool_max_surge"],
 		clusterResource["nodepool_zone"],
 	)
 }

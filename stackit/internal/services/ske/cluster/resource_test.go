@@ -31,9 +31,9 @@ func TestMapFields(t *testing.T) {
 				Name:                      types.StringValue("name"),
 				KubernetesVersion:         types.StringNull(),
 				AllowPrivilegedContainers: types.BoolNull(),
-				NodePools:                 []NodePool{},
-				Maintenance:               types.ObjectNull(map[string]attr.Type{}),
-				Hibernations:              nil,
+				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:               types.ObjectNull(maintenanceTypes),
+				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
 				Extensions:                nil,
 				KubeConfig:                types.StringNull(),
 			},
@@ -122,43 +122,72 @@ func TestMapFields(t *testing.T) {
 				KubernetesVersionUsed:     types.StringValue("1.2.3"),
 				AllowPrivilegedContainers: types.BoolValue(true),
 
-				NodePools: []NodePool{
-					{
-						Name:           types.StringValue("node"),
-						MachineType:    types.StringValue("B"),
-						OSName:         types.StringValue("os"),
-						OSVersion:      types.StringValue("os-ver"),
-						Minimum:        types.Int64Value(1),
-						Maximum:        types.Int64Value(5),
-						MaxSurge:       types.Int64Value(3),
-						MaxUnavailable: types.Int64Null(),
-						VolumeType:     types.StringValue("type"),
-						VolumeSize:     types.Int64Value(3),
-						Labels:         types.MapValueMust(types.StringType, map[string]attr.Value{"k": types.StringValue("v")}),
-						Taints: []Taint{
-							{
-								Effect: types.StringValue("effect"),
-								Key:    types.StringValue("key"),
-								Value:  types.StringValue("value"),
+				NodePools: types.ListValueMust(
+					types.ObjectType{AttrTypes: nodePoolTypes},
+					[]attr.Value{
+						types.ObjectValueMust(
+							nodePoolTypes,
+							map[string]attr.Value{
+								"name":            types.StringValue("node"),
+								"machine_type":    types.StringValue("B"),
+								"os_name":         types.StringValue("os"),
+								"os_version":      types.StringValue("os-ver"),
+								"minimum":         types.Int64Value(1),
+								"maximum":         types.Int64Value(5),
+								"max_surge":       types.Int64Value(3),
+								"max_unavailable": types.Int64Null(),
+								"volume_type":     types.StringValue("type"),
+								"volume_size":     types.Int64Value(3),
+								"labels": types.MapValueMust(
+									types.StringType,
+									map[string]attr.Value{
+										"k": types.StringValue("v"),
+									},
+								),
+								"taints": types.ListValueMust(
+									types.ObjectType{AttrTypes: taintTypes},
+									[]attr.Value{
+										types.ObjectValueMust(
+											taintTypes,
+											map[string]attr.Value{
+												"effect": types.StringValue("effect"),
+												"key":    types.StringValue("key"),
+												"value":  types.StringValue("value"),
+											},
+										),
+									},
+								),
+								"cri": types.StringValue("cri"),
+								"availability_zones": types.ListValueMust(
+									types.StringType,
+									[]attr.Value{
+										types.StringValue("z1"),
+										types.StringValue("z2"),
+									},
+								),
 							},
-						},
-						CRI:               types.StringValue("cri"),
-						AvailabilityZones: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("z1"), types.StringValue("z2")}),
+						),
 					},
-				},
+				),
 				Maintenance: types.ObjectValueMust(maintenanceTypes, map[string]attr.Value{
 					"enable_kubernetes_version_updates":    types.BoolValue(true),
 					"enable_machine_image_version_updates": types.BoolValue(true),
 					"start":                                types.StringValue("03:04:05+06:00"),
 					"end":                                  types.StringValue("13:14:15Z"),
 				}),
-				Hibernations: []Hibernation{
-					{
-						Start:    types.StringValue("1"),
-						End:      types.StringValue("2"),
-						Timezone: types.StringValue("CET"),
+				Hibernations: types.ListValueMust(
+					types.ObjectType{AttrTypes: hibernationTypes},
+					[]attr.Value{
+						types.ObjectValueMust(
+							hibernationTypes,
+							map[string]attr.Value{
+								"start":    types.StringValue("1"),
+								"end":      types.StringValue("2"),
+								"timezone": types.StringValue("CET"),
+							},
+						),
 					},
-				},
+				),
 				Extensions: &Extensions{
 					Argus: &ArgusExtension{
 						Enabled:         types.BoolValue(true),
