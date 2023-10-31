@@ -82,9 +82,9 @@ func configResources(targetPort string) string {
 			}
 		`,
 		supportingInfraResources(loadBalancerResource["name"], OpenStack{
-			userDomainName: "portal_mvp",
-			userName:       "portal-uat-os-C8JmXNRG",
-			password:       "4xaJygKynMTXRhpdbKm7",
+			userDomainName: testutil.OSUserDomainName,
+			userName:       testutil.OSUserName,
+			password:       testutil.OSPassword,
 		}),
 		testutil.LoadBalancerProviderConfig(),
 		loadBalancerResource["project_id"],

@@ -201,7 +201,7 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 ### Configuring an OpenStack provider` + "\n" + `
 
 To automate the creation of load balancers, OpenStack can be used to setup the supporting infrastructure.
-To set up the OpenStack provider, you can create a token through the STACKIT Portal, in the your project's Infrastructure API page.
+To set up the OpenStack provider, you can create a token through the STACKIT Portal, in your project's Infrastructure API page.
 There, the OpenStack user domain name, username, and password are generated and can be obtained. The provider can then be configured as follows:` + "\n" +
 
 			"```terraform" + `
