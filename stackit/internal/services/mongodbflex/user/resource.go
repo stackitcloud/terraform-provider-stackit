@@ -438,7 +438,7 @@ func toCreatePayload(model *Model, roles []string) (*mongodbflex.CreateUserPaylo
 
 	return &mongodbflex.CreateUserPayload{
 		Roles:    &roles,
-		Username: model.Username.ValueStringPointer(),
-		Database: model.Database.ValueStringPointer(),
+		Username: core.StringValueToPointer(model.Username),
+		Database: core.StringValueToPointer(model.Database),
 	}, nil
 }

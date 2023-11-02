@@ -674,9 +674,9 @@ func toNodepoolsPayload(ctx context.Context, m *Cluster) ([]ske.Nodepool, error)
 		ts := []ske.Taint{}
 		for _, v := range taintsModel {
 			t := ske.Taint{
-				Effect: v.Effect.ValueStringPointer(),
-				Key:    v.Key.ValueStringPointer(),
-				Value:  v.Value.ValueStringPointer(),
+				Effect: core.StringValueToPointer(v.Effect),
+				Key:    core.StringValueToPointer(v.Key),
+				Value:  core.StringValueToPointer(v.Value),
 			}
 			ts = append(ts, t)
 		}
@@ -712,24 +712,24 @@ func toNodepoolsPayload(ctx context.Context, m *Cluster) ([]ske.Nodepool, error)
 		}
 
 		cn := ske.CRI{
-			Name: nodePool.CRI.ValueStringPointer(),
+			Name: core.StringValueToPointer(nodePool.CRI),
 		}
 		cnp := ske.Nodepool{
-			Name:           nodePool.Name.ValueStringPointer(),
-			Minimum:        nodePool.Minimum.ValueInt64Pointer(),
-			Maximum:        nodePool.Maximum.ValueInt64Pointer(),
-			MaxSurge:       nodePool.MaxSurge.ValueInt64Pointer(),
-			MaxUnavailable: nodePool.MaxUnavailable.ValueInt64Pointer(),
+			Name:           core.StringValueToPointer(nodePool.Name),
+			Minimum:        core.Int64ValueToPointer(nodePool.Minimum),
+			Maximum:        core.Int64ValueToPointer(nodePool.Maximum),
+			MaxSurge:       core.Int64ValueToPointer(nodePool.MaxSurge),
+			MaxUnavailable: core.Int64ValueToPointer(nodePool.MaxUnavailable),
 			Machine: &ske.Machine{
-				Type: nodePool.MachineType.ValueStringPointer(),
+				Type: core.StringValueToPointer(nodePool.MachineType),
 				Image: &ske.Image{
-					Name:    nodePool.OSName.ValueStringPointer(),
-					Version: nodePool.OSVersion.ValueStringPointer(),
+					Name:    core.StringValueToPointer(nodePool.OSName),
+					Version: core.StringValueToPointer(nodePool.OSVersion),
 				},
 			},
 			Volume: &ske.Volume{
-				Type: nodePool.VolumeType.ValueStringPointer(),
-				Size: nodePool.VolumeSize.ValueInt64Pointer(),
+				Type: core.StringValueToPointer(nodePool.VolumeType),
+				Size: core.Int64ValueToPointer(nodePool.VolumeSize),
 			},
 			Taints:            &ts,
 			Cri:               &cn,
@@ -755,8 +755,8 @@ func toHibernationsPayload(ctx context.Context, m *Cluster) (*ske.Hibernation, e
 	scs := []ske.HibernationSchedule{}
 	for _, h := range hibernation {
 		sc := ske.HibernationSchedule{
-			Start: h.Start.ValueStringPointer(),
-			End:   h.End.ValueStringPointer(),
+			Start: core.StringValueToPointer(h.Start),
+			End:   core.StringValueToPointer(h.End),
 		}
 		if !h.Timezone.IsNull() && !h.Timezone.IsUnknown() {
 			tz := h.Timezone.ValueString()
@@ -777,8 +777,8 @@ func toExtensionsPayload(ctx context.Context, m *Cluster) (*ske.Extension, error
 	ex := &ske.Extension{}
 	if m.Extensions.Argus != nil {
 		ex.Argus = &ske.Argus{
-			Enabled:         m.Extensions.Argus.Enabled.ValueBoolPointer(),
-			ArgusInstanceId: m.Extensions.Argus.ArgusInstanceId.ValueStringPointer(),
+			Enabled:         core.BoolValueToPointer(m.Extensions.Argus.Enabled),
+			ArgusInstanceId: core.StringValueToPointer(m.Extensions.Argus.ArgusInstanceId),
 		}
 	}
 	if m.Extensions.ACL != nil {
@@ -788,7 +788,7 @@ func toExtensionsPayload(ctx context.Context, m *Cluster) (*ske.Extension, error
 			return nil, fmt.Errorf("error in extension object converion %v", diags.Errors())
 		}
 		ex.Acl = &ske.ACL{
-			Enabled:      m.Extensions.ACL.Enabled.ValueBoolPointer(),
+			Enabled:      core.BoolValueToPointer(m.Extensions.ACL.Enabled),
 			AllowedCidrs: &cidrs,
 		}
 	}
@@ -824,8 +824,8 @@ func toMaintenancePayload(ctx context.Context, m *Cluster) (*ske.Maintenance, er
 
 	return &ske.Maintenance{
 		AutoUpdate: &ske.MaintenanceAutoUpdate{
-			KubernetesVersion:   maintenance.EnableKubernetesVersionUpdates.ValueBoolPointer(),
-			MachineImageVersion: maintenance.EnableMachineImageVersionUpdates.ValueBoolPointer(),
+			KubernetesVersion:   core.BoolValueToPointer(maintenance.EnableKubernetesVersionUpdates),
+			MachineImageVersion: core.BoolValueToPointer(maintenance.EnableMachineImageVersionUpdates),
 		},
 		TimeWindow: &ske.TimeWindow{
 			Start: timeWindowStart,
@@ -874,7 +874,6 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	if err != nil {
 		return fmt.Errorf("mapping node_pools: %w", err)
 	}
-
 	err = mapMaintenance(ctx, cl, m)
 	if err != nil {
 		return fmt.Errorf("mapping maintenance: %w", err)
@@ -1136,14 +1135,14 @@ func mapExtensions(cl *ske.ClusterResponse, m *Cluster) {
 }
 
 func toKubernetesPayload(m *Cluster, availableVersions []ske.KubernetesVersion) (kubernetesPayload *ske.Kubernetes, hasDeprecatedVersion bool, err error) {
-	versionUsed, hasDeprecatedVersion, err := latestMatchingVersion(availableVersions, m.KubernetesVersion.ValueStringPointer())
+	versionUsed, hasDeprecatedVersion, err := latestMatchingVersion(availableVersions, core.StringValueToPointer(m.KubernetesVersion))
 	if err != nil {
 		return nil, false, fmt.Errorf("getting latest matching kubernetes version: %w", err)
 	}
 
 	k := &ske.Kubernetes{
 		Version:                   versionUsed,
-		AllowPrivilegedContainers: m.AllowPrivilegedContainers.ValueBoolPointer(),
+		AllowPrivilegedContainers: core.BoolValueToPointer(m.AllowPrivilegedContainers),
 	}
 	return k, hasDeprecatedVersion, nil
 }

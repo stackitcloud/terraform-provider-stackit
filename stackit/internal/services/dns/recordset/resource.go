@@ -451,16 +451,16 @@ func toCreatePayload(model *Model) (*dns.CreateRecordSetPayload, error) {
 			return nil, fmt.Errorf("expected record at index %d to be of type %T, got %T", i, types.String{}, record)
 		}
 		records = append(records, dns.RecordPayload{
-			Content: recordString.ValueStringPointer(),
+			Content: core.StringValueToPointer(recordString),
 		})
 	}
 
 	return &dns.CreateRecordSetPayload{
-		Comment: model.Comment.ValueStringPointer(),
-		Name:    model.Name.ValueStringPointer(),
+		Comment: core.StringValueToPointer(model.Comment),
+		Name:    core.StringValueToPointer(model.Name),
 		Records: &records,
-		Ttl:     model.TTL.ValueInt64Pointer(),
-		Type:    model.Type.ValueStringPointer(),
+		Ttl:     core.Int64ValueToPointer(model.TTL),
+		Type:    core.StringValueToPointer(model.Type),
 	}, nil
 }
 
@@ -476,14 +476,14 @@ func toUpdatePayload(model *Model) (*dns.UpdateRecordSetPayload, error) {
 			return nil, fmt.Errorf("expected record at index %d to be of type %T, got %T", i, types.String{}, record)
 		}
 		records = append(records, dns.RecordPayload{
-			Content: recordString.ValueStringPointer(),
+			Content: core.StringValueToPointer(recordString),
 		})
 	}
 
 	return &dns.UpdateRecordSetPayload{
-		Comment: model.Comment.ValueStringPointer(),
-		Name:    model.Name.ValueStringPointer(),
+		Comment: core.StringValueToPointer(model.Comment),
+		Name:    core.StringValueToPointer(model.Name),
 		Records: &records,
-		Ttl:     model.TTL.ValueInt64Pointer(),
+		Ttl:     core.Int64ValueToPointer(model.TTL),
 	}, nil
 }

@@ -578,18 +578,18 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*rabbitmq.Creat
 	}
 	if parameters == nil {
 		return &rabbitmq.CreateInstancePayload{
-			InstanceName: model.Name.ValueStringPointer(),
-			PlanId:       model.PlanId.ValueStringPointer(),
+			InstanceName: core.StringValueToPointer(model.Name),
+			PlanId:       core.StringValueToPointer(model.PlanId),
 		}, nil
 	}
 	payloadParams := &rabbitmq.InstanceParameters{}
 	if parameters.SgwAcl.ValueString() != "" {
-		payloadParams.SgwAcl = parameters.SgwAcl.ValueStringPointer()
+		payloadParams.SgwAcl = core.StringValueToPointer(parameters.SgwAcl)
 	}
 	return &rabbitmq.CreateInstancePayload{
-		InstanceName: model.Name.ValueStringPointer(),
+		InstanceName: core.StringValueToPointer(model.Name),
 		Parameters:   payloadParams,
-		PlanId:       model.PlanId.ValueStringPointer(),
+		PlanId:       core.StringValueToPointer(model.PlanId),
 	}, nil
 }
 
@@ -600,14 +600,14 @@ func toUpdatePayload(model *Model, parameters *parametersModel) (*rabbitmq.Updat
 
 	if parameters == nil {
 		return &rabbitmq.UpdateInstancePayload{
-			PlanId: model.PlanId.ValueStringPointer(),
+			PlanId: core.StringValueToPointer(model.PlanId),
 		}, nil
 	}
 	return &rabbitmq.UpdateInstancePayload{
 		Parameters: &rabbitmq.InstanceParameters{
-			SgwAcl: parameters.SgwAcl.ValueStringPointer(),
+			SgwAcl: core.StringValueToPointer(parameters.SgwAcl),
 		},
-		PlanId: model.PlanId.ValueStringPointer(),
+		PlanId: core.StringValueToPointer(model.PlanId),
 	}, nil
 }
 

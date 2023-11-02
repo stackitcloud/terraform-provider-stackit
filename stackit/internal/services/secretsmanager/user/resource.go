@@ -359,8 +359,8 @@ func toCreatePayload(model *Model) (*secretsmanager.CreateUserPayload, error) {
 		return nil, fmt.Errorf("nil model")
 	}
 	return &secretsmanager.CreateUserPayload{
-		Description: model.Description.ValueStringPointer(),
-		Write:       model.WriteEnabled.ValueBoolPointer(),
+		Description: core.StringValueToPointer(model.Description),
+		Write:       core.BoolValueToPointer(model.WriteEnabled),
 	}, nil
 }
 
@@ -369,7 +369,7 @@ func toUpdatePayload(model *Model) (*secretsmanager.UpdateUserPayload, error) {
 		return nil, fmt.Errorf("nil model")
 	}
 	return &secretsmanager.UpdateUserPayload{
-		Write: model.WriteEnabled.ValueBoolPointer(),
+		Write: core.BoolValueToPointer(model.WriteEnabled),
 	}, nil
 }
 

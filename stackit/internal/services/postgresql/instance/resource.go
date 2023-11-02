@@ -330,21 +330,21 @@ func toCreatePayload(model *Model, parameters *parametersModel, parametersPlugin
 
 	if parameters == nil {
 		return &postgresql.CreateInstancePayload{
-			InstanceName: model.Name.ValueStringPointer(),
-			PlanId:       model.PlanId.ValueStringPointer(),
+			InstanceName: core.StringValueToPointer(model.Name),
+			PlanId:       core.StringValueToPointer(model.PlanId),
 		}, nil
 	}
 	return &postgresql.CreateInstancePayload{
-		InstanceName: model.Name.ValueStringPointer(),
+		InstanceName: core.StringValueToPointer(model.Name),
 		Parameters: &postgresql.InstanceParameters{
-			EnableMonitoring:     parameters.EnableMonitoring.ValueBoolPointer(),
-			MetricsFrequency:     parameters.MetricsFrequency.ValueInt64Pointer(),
-			MetricsPrefix:        parameters.MetricsPrefix.ValueStringPointer(),
-			MonitoringInstanceId: parameters.MonitoringInstanceId.ValueStringPointer(),
+			EnableMonitoring:     core.BoolValueToPointer(parameters.EnableMonitoring),
+			MetricsFrequency:     core.Int64ValueToPointer(parameters.MetricsFrequency),
+			MetricsPrefix:        core.StringValueToPointer(parameters.MetricsPrefix),
+			MonitoringInstanceId: core.StringValueToPointer(parameters.MonitoringInstanceId),
 			Plugins:              parametersPlugins,
-			SgwAcl:               parameters.SgwAcl.ValueStringPointer(),
+			SgwAcl:               core.StringValueToPointer(parameters.SgwAcl),
 		},
-		PlanId: model.PlanId.ValueStringPointer(),
+		PlanId: core.StringValueToPointer(model.PlanId),
 	}, nil
 }
 
@@ -469,19 +469,19 @@ func toUpdatePayload(model *Model, parameters *parametersModel, parametersPlugin
 
 	if parameters == nil {
 		return &postgresql.UpdateInstancePayload{
-			PlanId: model.PlanId.ValueStringPointer(),
+			PlanId: core.StringValueToPointer(model.PlanId),
 		}, nil
 	}
 	return &postgresql.UpdateInstancePayload{
 		Parameters: &postgresql.InstanceParameters{
-			EnableMonitoring:     parameters.EnableMonitoring.ValueBoolPointer(),
-			MetricsFrequency:     parameters.MetricsFrequency.ValueInt64Pointer(),
-			MetricsPrefix:        parameters.MetricsPrefix.ValueStringPointer(),
-			MonitoringInstanceId: parameters.MonitoringInstanceId.ValueStringPointer(),
+			EnableMonitoring:     core.BoolValueToPointer(parameters.EnableMonitoring),
+			MetricsFrequency:     core.Int64ValueToPointer(parameters.MetricsFrequency),
+			MetricsPrefix:        core.StringValueToPointer(parameters.MetricsPrefix),
+			MonitoringInstanceId: core.StringValueToPointer(parameters.MonitoringInstanceId),
 			Plugins:              parametersPlugins,
-			SgwAcl:               parameters.SgwAcl.ValueStringPointer(),
+			SgwAcl:               core.StringValueToPointer(parameters.SgwAcl),
 		},
-		PlanId: model.PlanId.ValueStringPointer(),
+		PlanId: core.StringValueToPointer(model.PlanId),
 	}, nil
 }
 

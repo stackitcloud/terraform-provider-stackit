@@ -328,7 +328,7 @@ func toCreatePayload(model *Model) (*objectstorage.CreateAccessKeyPayload, error
 		return &objectstorage.CreateAccessKeyPayload{}, nil
 	}
 
-	expirationTimestampValue := model.ExpirationTimestamp.ValueStringPointer()
+	expirationTimestampValue := core.StringValueToPointer(model.ExpirationTimestamp)
 	if expirationTimestampValue == nil {
 		return &objectstorage.CreateAccessKeyPayload{}, nil
 	}

@@ -417,7 +417,7 @@ func toCreatePayload(model *Model) (*secretsmanager.CreateInstancePayload, error
 		return nil, fmt.Errorf("nil model")
 	}
 	return &secretsmanager.CreateInstancePayload{
-		Name: model.Name.ValueStringPointer(),
+		Name: core.StringValueToPointer(model.Name),
 	}, nil
 }
 
