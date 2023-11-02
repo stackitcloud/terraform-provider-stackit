@@ -33,8 +33,8 @@ var clusterResource = map[string]string{
 	"nodepool_name":                                    "np-acc-test",
 	"nodepool_name_min":                                "np-acc-min-test",
 	"nodepool_machine_type":                            "b1.2",
-	"nodepool_os_version":                              "3510.2.5",
-	"nodepool_os_version_min":                          "3510.2.5",
+	"nodepool_os_version":                              "3602.2.1",
+	"nodepool_os_version_min":                          "3602.2.1",
 	"nodepool_os_name":                                 "flatcar",
 	"nodepool_minimum":                                 "2",
 	"nodepool_maximum":                                 "3",
@@ -60,6 +60,7 @@ var clusterResource = map[string]string{
 	"maintenance_enable_machine_image_version_updates": "true",
 	"maintenance_start":                                "01:23:45Z",
 	"maintenance_end":                                  "05:00:00+02:00",
+	"maintenance_end_new":                              "03:03:03+00:00",
 }
 
 func getConfig(version string, apc *bool, maintenanceEnd *string) string {
@@ -145,6 +146,12 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 				max_surge = "%s"
 				availability_zones = ["%s"]
 			}]
+			maintenance = {
+				enable_kubernetes_version_updates = %s
+				enable_machine_image_version_updates = %s
+				start = "%s"
+				end = "%s"
+			}
 		}
 		`,
 		testutil.SKEProviderConfig(),
@@ -191,6 +198,10 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 		clusterResource["nodepool_maximum"],
 		clusterResource["nodepool_max_surge"],
 		clusterResource["nodepool_zone"],
+		clusterResource["maintenance_enable_kubernetes_version_updates"],
+		clusterResource["maintenance_enable_machine_image_version_updates"],
+		clusterResource["maintenance_start"],
+		maintenanceEndTF,
 	)
 }
 
@@ -448,13 +459,13 @@ func TestAccSKE(t *testing.T) {
 			},
 			// 6) Update kubernetes version and maximum
 			{
-				Config: getConfig("1.25.12", nil, utils.Ptr("03:03:03+00:00")),
+				Config: getConfig(clusterResource["kubernetes_version_new"], nil, utils.Ptr(clusterResource["maintenance_end_new"])),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", clusterResource["name"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version", "1.25"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_used", "1.25.12"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version", clusterResource["kubernetes_version_new"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_used", clusterResource["kubernetes_version_used_new"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.name", clusterResource["nodepool_name"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.0", clusterResource["nodepool_zone"]),
@@ -485,7 +496,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_kubernetes_version_updates", clusterResource["maintenance_enable_kubernetes_version_updates"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", clusterResource["maintenance_enable_machine_image_version_updates"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", "03:03:03+00:00"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end_new"]),
 
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kube_config"),
 				),

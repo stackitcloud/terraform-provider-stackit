@@ -86,7 +86,7 @@ func DnsProviderConfig() string {
 }
 
 func LoadBalancerProviderConfig() string {
-	if LogMeCustomEndpoint == "" {
+	if LoadBalancerCustomEndpoint == "" {
 		return `
 		provider "stackit" {
 			region = "eu01"
