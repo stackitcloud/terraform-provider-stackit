@@ -19,6 +19,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/argus"
 	"github.com/stackitcloud/stackit-sdk-go/services/argus/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -515,8 +516,8 @@ func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {
 		pa[k] = elements[k].String()
 	}
 	return &argus.CreateInstancePayload{
-		Name:      core.StringValueToPointer(model.Name),
-		PlanId:    core.StringValueToPointer(model.PlanId),
+		Name:      conversion.StringValueToPointer(model.Name),
+		PlanId:    conversion.StringValueToPointer(model.PlanId),
 		Parameter: &pa,
 	}, nil
 }
@@ -531,8 +532,8 @@ func toUpdatePayload(model *Model) (*argus.UpdateInstancePayload, error) {
 		pa[k] = v.String()
 	}
 	return &argus.UpdateInstancePayload{
-		Name:      core.StringValueToPointer(model.Name),
-		PlanId:    core.StringValueToPointer(model.PlanId),
+		Name:      conversion.StringValueToPointer(model.Name),
+		PlanId:    conversion.StringValueToPointer(model.PlanId),
 		Parameter: &pa,
 	}, nil
 }

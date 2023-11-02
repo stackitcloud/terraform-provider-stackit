@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -578,18 +579,18 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*logme.CreateIn
 	}
 	if parameters == nil {
 		return &logme.CreateInstancePayload{
-			InstanceName: core.StringValueToPointer(model.Name),
-			PlanId:       core.StringValueToPointer(model.PlanId),
+			InstanceName: conversion.StringValueToPointer(model.Name),
+			PlanId:       conversion.StringValueToPointer(model.PlanId),
 		}, nil
 	}
 	payloadParams := &logme.InstanceParameters{}
 	if parameters.SgwAcl.ValueString() != "" {
-		payloadParams.SgwAcl = core.StringValueToPointer(parameters.SgwAcl)
+		payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
 	}
 	return &logme.CreateInstancePayload{
-		InstanceName: core.StringValueToPointer(model.Name),
+		InstanceName: conversion.StringValueToPointer(model.Name),
 		Parameters:   payloadParams,
-		PlanId:       core.StringValueToPointer(model.PlanId),
+		PlanId:       conversion.StringValueToPointer(model.PlanId),
 	}, nil
 }
 
@@ -600,14 +601,14 @@ func toUpdatePayload(model *Model, parameters *parametersModel) (*logme.UpdateIn
 
 	if parameters == nil {
 		return &logme.UpdateInstancePayload{
-			PlanId: core.StringValueToPointer(model.PlanId),
+			PlanId: conversion.StringValueToPointer(model.PlanId),
 		}, nil
 	}
 	return &logme.UpdateInstancePayload{
 		Parameters: &logme.InstanceParameters{
-			SgwAcl: core.StringValueToPointer(parameters.SgwAcl),
+			SgwAcl: conversion.StringValueToPointer(parameters.SgwAcl),
 		},
-		PlanId: core.StringValueToPointer(model.PlanId),
+		PlanId: conversion.StringValueToPointer(model.PlanId),
 	}, nil
 }
 

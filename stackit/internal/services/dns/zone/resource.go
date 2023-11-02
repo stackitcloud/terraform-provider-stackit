@@ -24,6 +24,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -556,18 +557,18 @@ func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
 		modelPrimaries = append(modelPrimaries, primaryString.ValueString())
 	}
 	return &dns.CreateZonePayload{
-		Name:          core.StringValueToPointer(model.Name),
-		DnsName:       core.StringValueToPointer(model.DnsName),
-		ContactEmail:  core.StringValueToPointer(model.ContactEmail),
-		Description:   core.StringValueToPointer(model.Description),
-		Acl:           core.StringValueToPointer(model.Acl),
-		Type:          core.StringValueToPointer(model.Type),
-		DefaultTTL:    core.Int64ValueToPointer(model.DefaultTTL),
-		ExpireTime:    core.Int64ValueToPointer(model.ExpireTime),
-		RefreshTime:   core.Int64ValueToPointer(model.RefreshTime),
-		RetryTime:     core.Int64ValueToPointer(model.RetryTime),
-		NegativeCache: core.Int64ValueToPointer(model.NegativeCache),
-		IsReverseZone: core.BoolValueToPointer(model.IsReverseZone),
+		Name:          conversion.StringValueToPointer(model.Name),
+		DnsName:       conversion.StringValueToPointer(model.DnsName),
+		ContactEmail:  conversion.StringValueToPointer(model.ContactEmail),
+		Description:   conversion.StringValueToPointer(model.Description),
+		Acl:           conversion.StringValueToPointer(model.Acl),
+		Type:          conversion.StringValueToPointer(model.Type),
+		DefaultTTL:    conversion.Int64ValueToPointer(model.DefaultTTL),
+		ExpireTime:    conversion.Int64ValueToPointer(model.ExpireTime),
+		RefreshTime:   conversion.Int64ValueToPointer(model.RefreshTime),
+		RetryTime:     conversion.Int64ValueToPointer(model.RetryTime),
+		NegativeCache: conversion.Int64ValueToPointer(model.NegativeCache),
+		IsReverseZone: conversion.BoolValueToPointer(model.IsReverseZone),
 		Primaries:     &modelPrimaries,
 	}, nil
 }
@@ -578,15 +579,15 @@ func toUpdatePayload(model *Model) (*dns.UpdateZonePayload, error) {
 	}
 
 	return &dns.UpdateZonePayload{
-		Name:          core.StringValueToPointer(model.Name),
-		ContactEmail:  core.StringValueToPointer(model.ContactEmail),
-		Description:   core.StringValueToPointer(model.Description),
-		Acl:           core.StringValueToPointer(model.Acl),
-		DefaultTTL:    core.Int64ValueToPointer(model.DefaultTTL),
-		ExpireTime:    core.Int64ValueToPointer(model.ExpireTime),
-		RefreshTime:   core.Int64ValueToPointer(model.RefreshTime),
-		RetryTime:     core.Int64ValueToPointer(model.RetryTime),
-		NegativeCache: core.Int64ValueToPointer(model.NegativeCache),
+		Name:          conversion.StringValueToPointer(model.Name),
+		ContactEmail:  conversion.StringValueToPointer(model.ContactEmail),
+		Description:   conversion.StringValueToPointer(model.Description),
+		Acl:           conversion.StringValueToPointer(model.Acl),
+		DefaultTTL:    conversion.Int64ValueToPointer(model.DefaultTTL),
+		ExpireTime:    conversion.Int64ValueToPointer(model.ExpireTime),
+		RefreshTime:   conversion.Int64ValueToPointer(model.RefreshTime),
+		RetryTime:     conversion.Int64ValueToPointer(model.RetryTime),
+		NegativeCache: conversion.Int64ValueToPointer(model.NegativeCache),
 		Primaries:     nil, // API returns error if this field is set, even if nothing changes
 	}, nil
 }

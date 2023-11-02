@@ -29,6 +29,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -687,9 +688,9 @@ func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoa
 	}
 
 	return &loadbalancer.CreateLoadBalancerPayload{
-		ExternalAddress: core.StringValueToPointer(model.ExternalAddress),
+		ExternalAddress: conversion.StringValueToPointer(model.ExternalAddress),
 		Listeners:       listeners,
-		Name:            core.StringValueToPointer(model.Name),
+		Name:            conversion.StringValueToPointer(model.Name),
 		Networks:        networks,
 		Options:         options,
 		TargetPools:     targetPools,
@@ -704,10 +705,10 @@ func toListenersPayload(model *Model) *[]loadbalancer.Listener {
 	listeners := []loadbalancer.Listener{}
 	for _, listener := range model.Listeners {
 		listeners = append(listeners, loadbalancer.Listener{
-			DisplayName: core.StringValueToPointer(listener.DisplayName),
-			Port:        core.Int64ValueToPointer(listener.Port),
-			Protocol:    core.StringValueToPointer(listener.Protocol),
-			TargetPool:  core.StringValueToPointer(listener.TargetPool),
+			DisplayName: conversion.StringValueToPointer(listener.DisplayName),
+			Port:        conversion.Int64ValueToPointer(listener.Port),
+			Protocol:    conversion.StringValueToPointer(listener.Protocol),
+			TargetPool:  conversion.StringValueToPointer(listener.TargetPool),
 		})
 	}
 
@@ -722,8 +723,8 @@ func toNetworksPayload(model *Model) *[]loadbalancer.Network {
 	networks := []loadbalancer.Network{}
 	for _, network := range model.Networks {
 		networks = append(networks, loadbalancer.Network{
-			NetworkId: core.StringValueToPointer(network.NetworkId),
-			Role:      core.StringValueToPointer(network.Role),
+			NetworkId: conversion.StringValueToPointer(network.NetworkId),
+			Role:      conversion.StringValueToPointer(network.Role),
 		})
 	}
 
@@ -751,7 +752,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 
 	options := &loadbalancer.LoadBalancerOptions{
 		AccessControl:      accessControl,
-		PrivateNetworkOnly: core.BoolValueToPointer(optionsModel.PrivateNetworkOnly),
+		PrivateNetworkOnly: conversion.BoolValueToPointer(optionsModel.PrivateNetworkOnly),
 	}
 
 	return options, nil
@@ -776,8 +777,8 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.Ta
 
 		targetPools = append(targetPools, loadbalancer.TargetPool{
 			ActiveHealthCheck: activeHealthCheck,
-			Name:              core.StringValueToPointer(targetPool.Name),
-			TargetPort:        core.Int64ValueToPointer(targetPool.TargetPort),
+			Name:              conversion.StringValueToPointer(targetPool.Name),
+			TargetPort:        conversion.Int64ValueToPointer(targetPool.TargetPort),
 			Targets:           targets,
 		})
 	}
@@ -799,8 +800,8 @@ func toTargetPoolUpdatePayload(ctx context.Context, targetPool *TargetPool) (*lo
 
 	return &loadbalancer.UpdateTargetPoolPayload{
 		ActiveHealthCheck: activeHealthCheck,
-		Name:              core.StringValueToPointer(targetPool.Name),
-		TargetPort:        core.Int64ValueToPointer(targetPool.TargetPort),
+		Name:              conversion.StringValueToPointer(targetPool.Name),
+		TargetPort:        conversion.Int64ValueToPointer(targetPool.TargetPort),
 		Targets:           targets,
 	}, nil
 }
@@ -817,11 +818,11 @@ func toActiveHealthCheckPayload(ctx context.Context, targetPool *TargetPool) (*l
 	}
 
 	return &loadbalancer.ActiveHealthCheck{
-		HealthyThreshold:   core.Int64ValueToPointer(activeHealthCheckModel.HealthyThreshold),
-		Interval:           core.StringValueToPointer(activeHealthCheckModel.Interval),
-		IntervalJitter:     core.StringValueToPointer(activeHealthCheckModel.IntervalJitter),
-		Timeout:            core.StringValueToPointer(activeHealthCheckModel.Timeout),
-		UnhealthyThreshold: core.Int64ValueToPointer(activeHealthCheckModel.UnhealthyThreshold),
+		HealthyThreshold:   conversion.Int64ValueToPointer(activeHealthCheckModel.HealthyThreshold),
+		Interval:           conversion.StringValueToPointer(activeHealthCheckModel.Interval),
+		IntervalJitter:     conversion.StringValueToPointer(activeHealthCheckModel.IntervalJitter),
+		Timeout:            conversion.StringValueToPointer(activeHealthCheckModel.Timeout),
+		UnhealthyThreshold: conversion.Int64ValueToPointer(activeHealthCheckModel.UnhealthyThreshold),
 	}, nil
 }
 
@@ -833,8 +834,8 @@ func toTargetsPayload(targetPool *TargetPool) *[]loadbalancer.Target {
 	var targets []loadbalancer.Target
 	for _, target := range targetPool.Targets {
 		targets = append(targets, loadbalancer.Target{
-			DisplayName: core.StringValueToPointer(target.DisplayName),
-			Ip:          core.StringValueToPointer(target.Ip),
+			DisplayName: conversion.StringValueToPointer(target.DisplayName),
+			Ip:          conversion.StringValueToPointer(target.Ip),
 		})
 	}
 

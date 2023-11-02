@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -330,21 +331,21 @@ func toCreatePayload(model *Model, parameters *parametersModel, parametersPlugin
 
 	if parameters == nil {
 		return &postgresql.CreateInstancePayload{
-			InstanceName: core.StringValueToPointer(model.Name),
-			PlanId:       core.StringValueToPointer(model.PlanId),
+			InstanceName: conversion.StringValueToPointer(model.Name),
+			PlanId:       conversion.StringValueToPointer(model.PlanId),
 		}, nil
 	}
 	return &postgresql.CreateInstancePayload{
-		InstanceName: core.StringValueToPointer(model.Name),
+		InstanceName: conversion.StringValueToPointer(model.Name),
 		Parameters: &postgresql.InstanceParameters{
-			EnableMonitoring:     core.BoolValueToPointer(parameters.EnableMonitoring),
-			MetricsFrequency:     core.Int64ValueToPointer(parameters.MetricsFrequency),
-			MetricsPrefix:        core.StringValueToPointer(parameters.MetricsPrefix),
-			MonitoringInstanceId: core.StringValueToPointer(parameters.MonitoringInstanceId),
+			EnableMonitoring:     conversion.BoolValueToPointer(parameters.EnableMonitoring),
+			MetricsFrequency:     conversion.Int64ValueToPointer(parameters.MetricsFrequency),
+			MetricsPrefix:        conversion.StringValueToPointer(parameters.MetricsPrefix),
+			MonitoringInstanceId: conversion.StringValueToPointer(parameters.MonitoringInstanceId),
 			Plugins:              parametersPlugins,
-			SgwAcl:               core.StringValueToPointer(parameters.SgwAcl),
+			SgwAcl:               conversion.StringValueToPointer(parameters.SgwAcl),
 		},
-		PlanId: core.StringValueToPointer(model.PlanId),
+		PlanId: conversion.StringValueToPointer(model.PlanId),
 	}, nil
 }
 
@@ -469,19 +470,19 @@ func toUpdatePayload(model *Model, parameters *parametersModel, parametersPlugin
 
 	if parameters == nil {
 		return &postgresql.UpdateInstancePayload{
-			PlanId: core.StringValueToPointer(model.PlanId),
+			PlanId: conversion.StringValueToPointer(model.PlanId),
 		}, nil
 	}
 	return &postgresql.UpdateInstancePayload{
 		Parameters: &postgresql.InstanceParameters{
-			EnableMonitoring:     core.BoolValueToPointer(parameters.EnableMonitoring),
-			MetricsFrequency:     core.Int64ValueToPointer(parameters.MetricsFrequency),
-			MetricsPrefix:        core.StringValueToPointer(parameters.MetricsPrefix),
-			MonitoringInstanceId: core.StringValueToPointer(parameters.MonitoringInstanceId),
+			EnableMonitoring:     conversion.BoolValueToPointer(parameters.EnableMonitoring),
+			MetricsFrequency:     conversion.Int64ValueToPointer(parameters.MetricsFrequency),
+			MetricsPrefix:        conversion.StringValueToPointer(parameters.MetricsPrefix),
+			MonitoringInstanceId: conversion.StringValueToPointer(parameters.MonitoringInstanceId),
 			Plugins:              parametersPlugins,
-			SgwAcl:               core.StringValueToPointer(parameters.SgwAcl),
+			SgwAcl:               conversion.StringValueToPointer(parameters.SgwAcl),
 		},
-		PlanId: core.StringValueToPointer(model.PlanId),
+		PlanId: conversion.StringValueToPointer(model.PlanId),
 	}, nil
 }
 

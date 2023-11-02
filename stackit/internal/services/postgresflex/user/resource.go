@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -435,6 +436,6 @@ func toCreatePayload(model *Model, roles []string) (*postgresflex.CreateUserPayl
 
 	return &postgresflex.CreateUserPayload{
 		Roles:    &roles,
-		Username: core.StringValueToPointer(model.Username),
+		Username: conversion.StringValueToPointer(model.Username),
 	}, nil
 }

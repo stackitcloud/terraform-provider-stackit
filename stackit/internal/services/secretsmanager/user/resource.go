@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -359,8 +360,8 @@ func toCreatePayload(model *Model) (*secretsmanager.CreateUserPayload, error) {
 		return nil, fmt.Errorf("nil model")
 	}
 	return &secretsmanager.CreateUserPayload{
-		Description: core.StringValueToPointer(model.Description),
-		Write:       core.BoolValueToPointer(model.WriteEnabled),
+		Description: conversion.StringValueToPointer(model.Description),
+		Write:       conversion.BoolValueToPointer(model.WriteEnabled),
 	}, nil
 }
 
@@ -369,7 +370,7 @@ func toUpdatePayload(model *Model) (*secretsmanager.UpdateUserPayload, error) {
 		return nil, fmt.Errorf("nil model")
 	}
 	return &secretsmanager.UpdateUserPayload{
-		Write: core.BoolValueToPointer(model.WriteEnabled),
+		Write: conversion.BoolValueToPointer(model.WriteEnabled),
 	}, nil
 }
 
