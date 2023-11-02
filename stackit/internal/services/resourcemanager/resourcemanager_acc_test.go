@@ -156,15 +156,20 @@ func testAccCheckResourceManagerDestroy(s *terraform.State) error {
 
 	items := *projectsResp.Items
 	for i := range items {
-		if utils.Contains(projectsToDestroy, *items[i].ContainerId) {
-			err := client.DeleteProjectExecute(ctx, *items[i].ContainerId)
-			if err != nil {
-				return fmt.Errorf("destroying project %s during CheckDestroy: %w", *items[i].ContainerId, err)
-			}
-			_, err = wait.DeleteProjectWaitHandler(ctx, client, *items[i].ContainerId).WaitWithContext(ctx)
-			if err != nil {
-				return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", *items[i].ContainerId, err)
-			}
+		if *items[i].LifecycleState == resourcemanager.LIFECYCLESTATE_DELETING {
+			continue
+		}
+		if !utils.Contains(projectsToDestroy, *items[i].ContainerId) {
+			continue
+		}
+
+		err := client.DeleteProjectExecute(ctx, *items[i].ContainerId)
+		if err != nil {
+			return fmt.Errorf("destroying project %s during CheckDestroy: %w", *items[i].ContainerId, err)
+		}
+		_, err = wait.DeleteProjectWaitHandler(ctx, client, *items[i].ContainerId).WaitWithContext(ctx)
+		if err != nil {
+			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", *items[i].ContainerId, err)
 		}
 	}
 	return nil
