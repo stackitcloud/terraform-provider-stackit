@@ -458,13 +458,13 @@ func TestAccSKE(t *testing.T) {
 			},
 			// 6) Update kubernetes version and maximum
 			{
-				Config: getConfig("1.25.12", nil, utils.Ptr("03:03:03+00:00")),
+				Config: getConfig(clusterResource["kubernetes_version_new"], nil, utils.Ptr("03:03:03+00:00")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", clusterResource["name"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version", "1.25"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_used", "1.25.12"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version", clusterResource["kubernetes_version_new"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_used", clusterResource["kubernetes_version_used_new"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.name", clusterResource["nodepool_name"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.0", clusterResource["nodepool_zone"]),
