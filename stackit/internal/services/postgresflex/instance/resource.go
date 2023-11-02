@@ -592,15 +592,15 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		Acl: &postgresflex.InstanceAcl{
 			Items: &acl,
 		},
-		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
-		FlavorId:       flavor.Id.ValueStringPointer(),
-		Name:           model.Name.ValueStringPointer(),
-		Replicas:       model.Replicas.ValueInt64Pointer(),
+		BackupSchedule: core.StringValueToPointer(model.BackupSchedule),
+		FlavorId:       core.StringValueToPointer(flavor.Id),
+		Name:           core.StringValueToPointer(model.Name),
+		Replicas:       core.Int64ValueToPointer(model.Replicas),
 		Storage: &postgresflex.InstanceStorage{
-			Class: storage.Class.ValueStringPointer(),
-			Size:  storage.Size.ValueInt64Pointer(),
+			Class: core.StringValueToPointer(storage.Class),
+			Size:  core.Int64ValueToPointer(storage.Size),
 		},
-		Version: model.Version.ValueStringPointer(),
+		Version: core.StringValueToPointer(model.Version),
 	}, nil
 }
 
@@ -622,15 +622,15 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		Acl: &postgresflex.InstanceAcl{
 			Items: &acl,
 		},
-		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
-		FlavorId:       flavor.Id.ValueStringPointer(),
-		Name:           model.Name.ValueStringPointer(),
-		Replicas:       model.Replicas.ValueInt64Pointer(),
+		BackupSchedule: core.StringValueToPointer(model.BackupSchedule),
+		FlavorId:       core.StringValueToPointer(flavor.Id),
+		Name:           core.StringValueToPointer(model.Name),
+		Replicas:       core.Int64ValueToPointer(model.Replicas),
 		Storage: &postgresflex.InstanceStorage{
-			Class: storage.Class.ValueStringPointer(),
-			Size:  storage.Size.ValueInt64Pointer(),
+			Class: core.StringValueToPointer(storage.Class),
+			Size:  core.Int64ValueToPointer(storage.Size),
 		},
-		Version: model.Version.ValueStringPointer(),
+		Version: core.StringValueToPointer(model.Version),
 	}, nil
 }
 
@@ -645,11 +645,11 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 	if flavor == nil {
 		return fmt.Errorf("nil flavor")
 	}
-	cpu := flavor.CPU.ValueInt64Pointer()
+	cpu := core.Int64ValueToPointer(flavor.CPU)
 	if cpu == nil {
 		return fmt.Errorf("nil CPU")
 	}
-	ram := flavor.RAM.ValueInt64Pointer()
+	ram := core.Int64ValueToPointer(flavor.RAM)
 	if ram == nil {
 		return fmt.Errorf("nil RAM")
 	}

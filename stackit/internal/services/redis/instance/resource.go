@@ -578,18 +578,18 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*redis.CreateIn
 	}
 	if parameters == nil {
 		return &redis.CreateInstancePayload{
-			InstanceName: model.Name.ValueStringPointer(),
-			PlanId:       model.PlanId.ValueStringPointer(),
+			InstanceName: core.StringValueToPointer(model.Name),
+			PlanId:       core.StringValueToPointer(model.PlanId),
 		}, nil
 	}
 	payloadParams := &redis.InstanceParameters{}
 	if parameters.SgwAcl.ValueString() != "" {
-		payloadParams.SgwAcl = parameters.SgwAcl.ValueStringPointer()
+		payloadParams.SgwAcl = core.StringValueToPointer(parameters.SgwAcl)
 	}
 	return &redis.CreateInstancePayload{
-		InstanceName: model.Name.ValueStringPointer(),
+		InstanceName: core.StringValueToPointer(model.Name),
 		Parameters:   payloadParams,
-		PlanId:       model.PlanId.ValueStringPointer(),
+		PlanId:       core.StringValueToPointer(model.PlanId),
 	}, nil
 }
 
@@ -600,14 +600,14 @@ func toUpdatePayload(model *Model, parameters *parametersModel) (*redis.UpdateIn
 
 	if parameters == nil {
 		return &redis.UpdateInstancePayload{
-			PlanId: model.PlanId.ValueStringPointer(),
+			PlanId: core.StringValueToPointer(model.PlanId),
 		}, nil
 	}
 	return &redis.UpdateInstancePayload{
 		Parameters: &redis.InstanceParameters{
-			SgwAcl: parameters.SgwAcl.ValueStringPointer(),
+			SgwAcl: core.StringValueToPointer(parameters.SgwAcl),
 		},
-		PlanId: model.PlanId.ValueStringPointer(),
+		PlanId: core.StringValueToPointer(model.PlanId),
 	}, nil
 }
 

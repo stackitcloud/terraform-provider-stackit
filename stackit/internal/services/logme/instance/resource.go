@@ -578,18 +578,18 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*logme.CreateIn
 	}
 	if parameters == nil {
 		return &logme.CreateInstancePayload{
-			InstanceName: model.Name.ValueStringPointer(),
-			PlanId:       model.PlanId.ValueStringPointer(),
+			InstanceName: core.StringValueToPointer(model.Name),
+			PlanId:       core.StringValueToPointer(model.PlanId),
 		}, nil
 	}
 	payloadParams := &logme.InstanceParameters{}
 	if parameters.SgwAcl.ValueString() != "" {
-		payloadParams.SgwAcl = parameters.SgwAcl.ValueStringPointer()
+		payloadParams.SgwAcl = core.StringValueToPointer(parameters.SgwAcl)
 	}
 	return &logme.CreateInstancePayload{
-		InstanceName: model.Name.ValueStringPointer(),
+		InstanceName: core.StringValueToPointer(model.Name),
 		Parameters:   payloadParams,
-		PlanId:       model.PlanId.ValueStringPointer(),
+		PlanId:       core.StringValueToPointer(model.PlanId),
 	}, nil
 }
 
@@ -600,14 +600,14 @@ func toUpdatePayload(model *Model, parameters *parametersModel) (*logme.UpdateIn
 
 	if parameters == nil {
 		return &logme.UpdateInstancePayload{
-			PlanId: model.PlanId.ValueStringPointer(),
+			PlanId: core.StringValueToPointer(model.PlanId),
 		}, nil
 	}
 	return &logme.UpdateInstancePayload{
 		Parameters: &logme.InstanceParameters{
-			SgwAcl: parameters.SgwAcl.ValueStringPointer(),
+			SgwAcl: core.StringValueToPointer(parameters.SgwAcl),
 		},
-		PlanId: model.PlanId.ValueStringPointer(),
+		PlanId: core.StringValueToPointer(model.PlanId),
 	}, nil
 }
 

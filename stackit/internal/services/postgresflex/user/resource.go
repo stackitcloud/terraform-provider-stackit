@@ -435,6 +435,6 @@ func toCreatePayload(model *Model, roles []string) (*postgresflex.CreateUserPayl
 
 	return &postgresflex.CreateUserPayload{
 		Roles:    &roles,
-		Username: model.Username.ValueStringPointer(),
+		Username: core.StringValueToPointer(model.Username),
 	}, nil
 }

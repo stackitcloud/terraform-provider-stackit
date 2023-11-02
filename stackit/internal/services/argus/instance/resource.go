@@ -515,8 +515,8 @@ func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {
 		pa[k] = elements[k].String()
 	}
 	return &argus.CreateInstancePayload{
-		Name:      model.Name.ValueStringPointer(),
-		PlanId:    model.PlanId.ValueStringPointer(),
+		Name:      core.StringValueToPointer(model.Name),
+		PlanId:    core.StringValueToPointer(model.PlanId),
 		Parameter: &pa,
 	}, nil
 }
@@ -531,8 +531,8 @@ func toUpdatePayload(model *Model) (*argus.UpdateInstancePayload, error) {
 		pa[k] = v.String()
 	}
 	return &argus.UpdateInstancePayload{
-		Name:      model.Name.ValueStringPointer(),
-		PlanId:    model.PlanId.ValueStringPointer(),
+		Name:      core.StringValueToPointer(model.Name),
+		PlanId:    core.StringValueToPointer(model.PlanId),
 		Parameter: &pa,
 	}, nil
 }

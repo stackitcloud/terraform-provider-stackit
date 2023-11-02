@@ -556,18 +556,18 @@ func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
 		modelPrimaries = append(modelPrimaries, primaryString.ValueString())
 	}
 	return &dns.CreateZonePayload{
-		Name:          model.Name.ValueStringPointer(),
-		DnsName:       model.DnsName.ValueStringPointer(),
-		ContactEmail:  model.ContactEmail.ValueStringPointer(),
-		Description:   model.Description.ValueStringPointer(),
-		Acl:           model.Acl.ValueStringPointer(),
-		Type:          model.Type.ValueStringPointer(),
-		DefaultTTL:    model.DefaultTTL.ValueInt64Pointer(),
-		ExpireTime:    model.ExpireTime.ValueInt64Pointer(),
-		RefreshTime:   model.RefreshTime.ValueInt64Pointer(),
-		RetryTime:     model.RetryTime.ValueInt64Pointer(),
-		NegativeCache: model.NegativeCache.ValueInt64Pointer(),
-		IsReverseZone: model.IsReverseZone.ValueBoolPointer(),
+		Name:          core.StringValueToPointer(model.Name),
+		DnsName:       core.StringValueToPointer(model.DnsName),
+		ContactEmail:  core.StringValueToPointer(model.ContactEmail),
+		Description:   core.StringValueToPointer(model.Description),
+		Acl:           core.StringValueToPointer(model.Acl),
+		Type:          core.StringValueToPointer(model.Type),
+		DefaultTTL:    core.Int64ValueToPointer(model.DefaultTTL),
+		ExpireTime:    core.Int64ValueToPointer(model.ExpireTime),
+		RefreshTime:   core.Int64ValueToPointer(model.RefreshTime),
+		RetryTime:     core.Int64ValueToPointer(model.RetryTime),
+		NegativeCache: core.Int64ValueToPointer(model.NegativeCache),
+		IsReverseZone: core.BoolValueToPointer(model.IsReverseZone),
 		Primaries:     &modelPrimaries,
 	}, nil
 }
@@ -578,15 +578,15 @@ func toUpdatePayload(model *Model) (*dns.UpdateZonePayload, error) {
 	}
 
 	return &dns.UpdateZonePayload{
-		Name:          model.Name.ValueStringPointer(),
-		ContactEmail:  model.ContactEmail.ValueStringPointer(),
-		Description:   model.Description.ValueStringPointer(),
-		Acl:           model.Acl.ValueStringPointer(),
-		DefaultTTL:    model.DefaultTTL.ValueInt64Pointer(),
-		ExpireTime:    model.ExpireTime.ValueInt64Pointer(),
-		RefreshTime:   model.RefreshTime.ValueInt64Pointer(),
-		RetryTime:     model.RetryTime.ValueInt64Pointer(),
-		NegativeCache: model.NegativeCache.ValueInt64Pointer(),
+		Name:          core.StringValueToPointer(model.Name),
+		ContactEmail:  core.StringValueToPointer(model.ContactEmail),
+		Description:   core.StringValueToPointer(model.Description),
+		Acl:           core.StringValueToPointer(model.Acl),
+		DefaultTTL:    core.Int64ValueToPointer(model.DefaultTTL),
+		ExpireTime:    core.Int64ValueToPointer(model.ExpireTime),
+		RefreshTime:   core.Int64ValueToPointer(model.RefreshTime),
+		RetryTime:     core.Int64ValueToPointer(model.RetryTime),
+		NegativeCache: core.Int64ValueToPointer(model.NegativeCache),
 		Primaries:     nil, // API returns error if this field is set, even if nothing changes
 	}, nil
 }
