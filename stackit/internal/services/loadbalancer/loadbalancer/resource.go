@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -483,7 +484,7 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 
 	// If load balancer functionality is not enabled, enable it
 	if *statusResp.Status != wait.FunctionalityStatusReady {
-		_, err = r.client.EnableLoadBalancing(ctx, projectId).XRequestID("").Execute()
+		_, err = r.client.EnableLoadBalancing(ctx, projectId).XRequestID(uuid.NewString()).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling load balancer functionality", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -504,7 +505,7 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Create a new load balancer
-	createResp, err := r.client.CreateLoadBalancer(ctx, projectId).CreateLoadBalancerPayload(*payload).XRequestID("").Execute()
+	createResp, err := r.client.CreateLoadBalancer(ctx, projectId).CreateLoadBalancerPayload(*payload).XRequestID(uuid.NewString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Calling API: %v", err))
 		return
