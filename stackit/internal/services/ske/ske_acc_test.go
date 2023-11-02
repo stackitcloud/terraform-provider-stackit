@@ -60,6 +60,7 @@ var clusterResource = map[string]string{
 	"maintenance_enable_machine_image_version_updates": "true",
 	"maintenance_start":                                "01:23:45Z",
 	"maintenance_end":                                  "05:00:00+02:00",
+	"maintenance_end_new":                              "03:03:03+00:00",
 }
 
 func getConfig(version string, apc *bool, maintenanceEnd *string) string {
@@ -458,7 +459,7 @@ func TestAccSKE(t *testing.T) {
 			},
 			// 6) Update kubernetes version and maximum
 			{
-				Config: getConfig(clusterResource["kubernetes_version_new"], nil, utils.Ptr("03:03:03+00:00")),
+				Config: getConfig(clusterResource["kubernetes_version_new"], nil, utils.Ptr(clusterResource["maintenance_end_new"])),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
@@ -495,7 +496,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_kubernetes_version_updates", clusterResource["maintenance_enable_kubernetes_version_updates"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", clusterResource["maintenance_enable_machine_image_version_updates"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", "03:03:03+00:00"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end_new"]),
 
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kube_config"),
 				),
