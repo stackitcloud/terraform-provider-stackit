@@ -23,7 +23,11 @@ var projectResource = map[string]string{
 	"new_label":           "a-label",
 }
 
-func resourceConfig(name, label string) string {
+func resourceConfig(name string, label *string) string {
+	labelConfig := ""
+	if label != nil {
+		labelConfig = fmt.Sprintf("new_label = \"%s\"", *label)
+	}
 	return fmt.Sprintf(`
 				%s
 
@@ -41,7 +45,7 @@ func resourceConfig(name, label string) string {
 		projectResource["parent_container_id"],
 		name,
 		projectResource["billing_reference"],
-		label,
+		labelConfig,
 		testutil.TestProjectServiceAccountEmail,
 	)
 }
@@ -53,7 +57,7 @@ func TestAccResourceManagerResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: resourceConfig(projectResource["name"], ""),
+				Config: resourceConfig(projectResource["name"], nil),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Project data
 					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.project", "container_id"),
@@ -71,7 +75,7 @@ func TestAccResourceManagerResource(t *testing.T) {
 					data "stackit_resourcemanager_project" "project" {
 						container_id = stackit_resourcemanager_project.project.container_id
 					}`,
-					resourceConfig(projectResource["name"], ""),
+					resourceConfig(projectResource["name"], nil),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Project data
@@ -108,7 +112,7 @@ func TestAccResourceManagerResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfig(fmt.Sprintf("%s-new", projectResource["name"]), "new_label='a-label'"),
+				Config: resourceConfig(fmt.Sprintf("%s-new", projectResource["name"]), utils.Ptr("a-label")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Project data
 					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.project", "container_id"),
