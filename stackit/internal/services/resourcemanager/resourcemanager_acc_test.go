@@ -26,7 +26,7 @@ var projectResource = map[string]string{
 func resourceConfig(name string, label *string) string {
 	labelConfig := ""
 	if label != nil {
-		labelConfig = fmt.Sprintf("new_label = \"%s\"", *label)
+		labelConfig = fmt.Sprintf("new_label = %q", *label)
 	}
 	return fmt.Sprintf(`
 				%s
