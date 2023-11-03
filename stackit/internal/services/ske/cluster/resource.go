@@ -154,8 +154,8 @@ type extensions struct {
 
 // Types corresponding to extensions
 var extensionsTypes = map[string]attr.Type{
-	"argus": basetypes.ObjectType{},
-	"acl":   basetypes.ObjectType{},
+	"argus": basetypes.ObjectType{AttrTypes: argusExtensionTypes},
+	"acl":   basetypes.ObjectType{AttrTypes: aclTypes},
 }
 
 type acl struct {
@@ -166,7 +166,7 @@ type acl struct {
 // Types corresponding to acl
 var aclTypes = map[string]attr.Type{
 	"enabled":       basetypes.BoolType{},
-	"allowed_cidrs": basetypes.ListType{},
+	"allowed_cidrs": basetypes.ListType{ElemType: types.StringType},
 }
 
 type argusExtension struct {
@@ -1206,8 +1206,8 @@ func mapExtensions(cl *ske.ClusterResponse, m *Cluster) error {
 	}
 
 	extensionsValues := map[string]attr.Value{
-		"acl":             acl,
-		"argus_extension": argusExtension,
+		"acl":   acl,
+		"argus": argusExtension,
 	}
 
 	extensions, diags := types.ObjectValue(extensionsTypes, extensionsValues)
