@@ -548,11 +548,11 @@ func toCreatePayload(ctx context.Context, model *Model) (*argus.CreateScrapeConf
 	}
 
 	sc := argus.CreateScrapeConfigPayload{
-		JobName:        core.StringValueToPointer(model.Name),
-		MetricsPath:    core.StringValueToPointer(model.MetricsPath),
-		ScrapeInterval: core.StringValueToPointer(model.ScrapeInterval),
-		ScrapeTimeout:  core.StringValueToPointer(model.ScrapeTimeout),
-		Scheme:         core.StringValueToPointer(model.Scheme),
+		JobName:        conversion.StringValueToPointer(model.Name),
+		MetricsPath:    conversion.StringValueToPointer(model.MetricsPath),
+		ScrapeInterval: conversion.StringValueToPointer(model.ScrapeInterval),
+		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
+		Scheme:         conversion.StringValueToPointer(model.Scheme),
 	}
 	setDefaultsCreateScrapeConfig(&sc, model)
 
@@ -568,8 +568,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*argus.CreateScrapeConf
 	if model.BasicAuth != nil {
 		if sc.BasicAuth == nil {
 			sc.BasicAuth = &argus.CreateScrapeConfigPayloadBasicAuth{
-				Username: core.StringValueToPointer(model.BasicAuth.Username),
-				Password: core.StringValueToPointer(model.BasicAuth.Password),
+				Username: conversion.StringValueToPointer(model.BasicAuth.Username),
+				Password: conversion.StringValueToPointer(model.BasicAuth.Password),
 			}
 		}
 	}
@@ -628,10 +628,10 @@ func toUpdatePayload(ctx context.Context, model *Model) (*argus.UpdateScrapeConf
 	}
 
 	sc := argus.UpdateScrapeConfigPayload{
-		MetricsPath:    core.StringValueToPointer(model.MetricsPath),
-		ScrapeInterval: core.StringValueToPointer(model.ScrapeInterval),
-		ScrapeTimeout:  core.StringValueToPointer(model.ScrapeTimeout),
-		Scheme:         core.StringValueToPointer(model.Scheme),
+		MetricsPath:    conversion.StringValueToPointer(model.MetricsPath),
+		ScrapeInterval: conversion.StringValueToPointer(model.ScrapeInterval),
+		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
+		Scheme:         conversion.StringValueToPointer(model.Scheme),
 	}
 	setDefaultsUpdateScrapeConfig(&sc, model)
 
@@ -647,8 +647,8 @@ func toUpdatePayload(ctx context.Context, model *Model) (*argus.UpdateScrapeConf
 	if model.BasicAuth != nil {
 		if sc.BasicAuth == nil {
 			sc.BasicAuth = &argus.CreateScrapeConfigPayloadBasicAuth{
-				Username: core.StringValueToPointer(model.BasicAuth.Username),
-				Password: core.StringValueToPointer(model.BasicAuth.Password),
+				Username: conversion.StringValueToPointer(model.BasicAuth.Username),
+				Password: conversion.StringValueToPointer(model.BasicAuth.Password),
 			}
 		}
 	}

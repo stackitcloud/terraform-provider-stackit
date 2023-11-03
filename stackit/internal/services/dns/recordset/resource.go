@@ -21,6 +21,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -451,16 +452,16 @@ func toCreatePayload(model *Model) (*dns.CreateRecordSetPayload, error) {
 			return nil, fmt.Errorf("expected record at index %d to be of type %T, got %T", i, types.String{}, record)
 		}
 		records = append(records, dns.RecordPayload{
-			Content: core.StringValueToPointer(recordString),
+			Content: conversion.StringValueToPointer(recordString),
 		})
 	}
 
 	return &dns.CreateRecordSetPayload{
-		Comment: core.StringValueToPointer(model.Comment),
-		Name:    core.StringValueToPointer(model.Name),
+		Comment: conversion.StringValueToPointer(model.Comment),
+		Name:    conversion.StringValueToPointer(model.Name),
 		Records: &records,
-		Ttl:     core.Int64ValueToPointer(model.TTL),
-		Type:    core.StringValueToPointer(model.Type),
+		Ttl:     conversion.Int64ValueToPointer(model.TTL),
+		Type:    conversion.StringValueToPointer(model.Type),
 	}, nil
 }
 
@@ -476,14 +477,14 @@ func toUpdatePayload(model *Model) (*dns.UpdateRecordSetPayload, error) {
 			return nil, fmt.Errorf("expected record at index %d to be of type %T, got %T", i, types.String{}, record)
 		}
 		records = append(records, dns.RecordPayload{
-			Content: core.StringValueToPointer(recordString),
+			Content: conversion.StringValueToPointer(recordString),
 		})
 	}
 
 	return &dns.UpdateRecordSetPayload{
-		Comment: core.StringValueToPointer(model.Comment),
-		Name:    core.StringValueToPointer(model.Name),
+		Comment: conversion.StringValueToPointer(model.Comment),
+		Name:    conversion.StringValueToPointer(model.Name),
 		Records: &records,
-		Ttl:     core.Int64ValueToPointer(model.TTL),
+		Ttl:     conversion.Int64ValueToPointer(model.TTL),
 	}, nil
 }

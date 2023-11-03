@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -417,7 +418,7 @@ func toCreatePayload(model *Model) (*secretsmanager.CreateInstancePayload, error
 		return nil, fmt.Errorf("nil model")
 	}
 	return &secretsmanager.CreateInstancePayload{
-		Name: core.StringValueToPointer(model.Name),
+		Name: conversion.StringValueToPointer(model.Name),
 	}, nil
 }
 

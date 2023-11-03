@@ -418,10 +418,10 @@ func toCreatePayload(model *Model, serviceAccountEmail string) (*resourcemanager
 	}
 
 	return &resourcemanager.CreateProjectPayload{
-		ContainerParentId: core.StringValueToPointer(model.ContainerParentId),
+		ContainerParentId: conversion.StringValueToPointer(model.ContainerParentId),
 		Labels:            labels,
 		Members:           &members,
-		Name:              core.StringValueToPointer(model.Name),
+		Name:              conversion.StringValueToPointer(model.Name),
 	}, nil
 }
 
@@ -437,8 +437,8 @@ func toUpdatePayload(model *Model) (*resourcemanager.UpdateProjectPayload, error
 	}
 
 	return &resourcemanager.UpdateProjectPayload{
-		ContainerParentId: core.StringValueToPointer(model.ContainerParentId),
-		Name:              core.StringValueToPointer(model.Name),
+		ContainerParentId: conversion.StringValueToPointer(model.ContainerParentId),
+		Name:              conversion.StringValueToPointer(model.Name),
 		Labels:            labels,
 	}, nil
 }

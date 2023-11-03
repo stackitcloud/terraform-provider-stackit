@@ -57,3 +57,33 @@ func ToTerraformStringMap(ctx context.Context, m map[string]string) (basetypes.M
 
 	return res, nil
 }
+
+// StringValueToPointer converts basetypes.StringValue to a pointer to string.
+// It returns nil if the value is null or unknown.
+func StringValueToPointer(s basetypes.StringValue) *string {
+	if s.IsNull() || s.IsUnknown() {
+		return nil
+	}
+	value := s.ValueString()
+	return &value
+}
+
+// Int64ValueToPointer converts basetypes.Int64Value to a pointer to int64.
+// It returns nil if the value is null or unknown.
+func Int64ValueToPointer(s basetypes.Int64Value) *int64 {
+	if s.IsNull() || s.IsUnknown() {
+		return nil
+	}
+	value := s.ValueInt64()
+	return &value
+}
+
+// BoolValueToPointer converts basetypes.BoolValue to a pointer to bool.
+// It returns nil if the value is null or unknown.
+func BoolValueToPointer(s basetypes.BoolValue) *bool {
+	if s.IsNull() || s.IsUnknown() {
+		return nil
+	}
+	value := s.ValueBool()
+	return &value
+}

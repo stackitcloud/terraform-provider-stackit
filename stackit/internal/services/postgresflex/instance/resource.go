@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -592,15 +593,15 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		Acl: &postgresflex.InstanceAcl{
 			Items: &acl,
 		},
-		BackupSchedule: core.StringValueToPointer(model.BackupSchedule),
-		FlavorId:       core.StringValueToPointer(flavor.Id),
-		Name:           core.StringValueToPointer(model.Name),
-		Replicas:       core.Int64ValueToPointer(model.Replicas),
+		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
+		FlavorId:       conversion.StringValueToPointer(flavor.Id),
+		Name:           conversion.StringValueToPointer(model.Name),
+		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
 		Storage: &postgresflex.InstanceStorage{
-			Class: core.StringValueToPointer(storage.Class),
-			Size:  core.Int64ValueToPointer(storage.Size),
+			Class: conversion.StringValueToPointer(storage.Class),
+			Size:  conversion.Int64ValueToPointer(storage.Size),
 		},
-		Version: core.StringValueToPointer(model.Version),
+		Version: conversion.StringValueToPointer(model.Version),
 	}, nil
 }
 
@@ -622,15 +623,15 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		Acl: &postgresflex.InstanceAcl{
 			Items: &acl,
 		},
-		BackupSchedule: core.StringValueToPointer(model.BackupSchedule),
-		FlavorId:       core.StringValueToPointer(flavor.Id),
-		Name:           core.StringValueToPointer(model.Name),
-		Replicas:       core.Int64ValueToPointer(model.Replicas),
+		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
+		FlavorId:       conversion.StringValueToPointer(flavor.Id),
+		Name:           conversion.StringValueToPointer(model.Name),
+		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
 		Storage: &postgresflex.InstanceStorage{
-			Class: core.StringValueToPointer(storage.Class),
-			Size:  core.Int64ValueToPointer(storage.Size),
+			Class: conversion.StringValueToPointer(storage.Class),
+			Size:  conversion.Int64ValueToPointer(storage.Size),
 		},
-		Version: core.StringValueToPointer(model.Version),
+		Version: conversion.StringValueToPointer(model.Version),
 	}, nil
 }
 
@@ -645,11 +646,11 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 	if flavor == nil {
 		return fmt.Errorf("nil flavor")
 	}
-	cpu := core.Int64ValueToPointer(flavor.CPU)
+	cpu := conversion.Int64ValueToPointer(flavor.CPU)
 	if cpu == nil {
 		return fmt.Errorf("nil CPU")
 	}
-	ram := core.Int64ValueToPointer(flavor.RAM)
+	ram := conversion.Int64ValueToPointer(flavor.RAM)
 	if ram == nil {
 		return fmt.Errorf("nil RAM")
 	}

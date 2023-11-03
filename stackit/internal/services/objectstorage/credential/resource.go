@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -328,7 +329,7 @@ func toCreatePayload(model *Model) (*objectstorage.CreateAccessKeyPayload, error
 		return &objectstorage.CreateAccessKeyPayload{}, nil
 	}
 
-	expirationTimestampValue := core.StringValueToPointer(model.ExpirationTimestamp)
+	expirationTimestampValue := conversion.StringValueToPointer(model.ExpirationTimestamp)
 	if expirationTimestampValue == nil {
 		return &objectstorage.CreateAccessKeyPayload{}, nil
 	}
