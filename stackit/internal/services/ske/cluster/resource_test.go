@@ -20,25 +20,25 @@ func TestMapFields(t *testing.T) {
 		expected    Cluster
 		isValid     bool
 	}{
-		// {
-		// 	"default_values",
-		// 	&ske.ClusterResponse{
-		// 		Name: utils.Ptr("name"),
-		// 	},
-		// 	Cluster{
-		// 		Id:                        types.StringValue("pid,name"),
-		// 		ProjectId:                 types.StringValue("pid"),
-		// 		Name:                      types.StringValue("name"),
-		// 		KubernetesVersion:         types.StringNull(),
-		// 		AllowPrivilegedContainers: types.BoolNull(),
-		// 		NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
-		// 		Maintenance:               types.ObjectNull(maintenanceTypes),
-		// 		Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
-		// 		Extensions:                types.ObjectNull(extensionsTypes),
-		// 		KubeConfig:                types.StringNull(),
-		// 	},
-		// 	true,
-		// },
+		{
+			"default_values",
+			&ske.ClusterResponse{
+				Name: utils.Ptr("name"),
+			},
+			Cluster{
+				Id:                        types.StringValue("pid,name"),
+				ProjectId:                 types.StringValue("pid"),
+				Name:                      types.StringValue("name"),
+				KubernetesVersion:         types.StringNull(),
+				AllowPrivilegedContainers: types.BoolNull(),
+				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:               types.ObjectNull(maintenanceTypes),
+				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions:                types.ObjectNull(extensionsTypes),
+				KubeConfig:                types.StringNull(),
+			},
+			true,
+		},
 		{
 			"simple_values",
 			&ske.ClusterResponse{

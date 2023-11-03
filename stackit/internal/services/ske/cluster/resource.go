@@ -926,7 +926,10 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	if err != nil {
 		return fmt.Errorf("mapping hibernations: %w", err)
 	}
-	mapExtensions(cl, m)
+	err = mapExtensions(cl, m)
+	if err != nil {
+		return fmt.Errorf("mapping extensions: %w", err)
+	}
 	return nil
 }
 
