@@ -803,14 +803,14 @@ func toExtensionsPayload(ctx context.Context, m *Cluster) (*ske.Extension, error
 		acl := acl{}
 		diags = ex.ACL.As(ctx, &acl, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return nil, fmt.Errorf("converting extensions.acl object %v", diags.Errors())
+			return nil, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
 		}
 		aclEnabled := conversion.BoolValueToPointer(acl.Enabled)
 
 		cidrs := []string{}
 		diags = acl.AllowedCIDRs.ElementsAs(ctx, &cidrs, true)
 		if diags.HasError() {
-			return nil, fmt.Errorf("converting extensions.acl.cidrs object %v", diags.Errors())
+			return nil, fmt.Errorf("converting extensions.acl.cidrs object: %v", diags.Errors())
 		}
 		skeAcl = &ske.ACL{
 			Enabled:      aclEnabled,
@@ -823,7 +823,7 @@ func toExtensionsPayload(ctx context.Context, m *Cluster) (*ske.Extension, error
 		argus := argusExtension{}
 		diags = ex.ACL.As(ctx, &argus, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return nil, fmt.Errorf("converting extensions.acl object %v", diags.Errors())
+			return nil, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
 		}
 		argusEnabled := conversion.BoolValueToPointer(argus.Enabled)
 		argusInstanceId := conversion.StringValueToPointer(argus.ArgusInstanceId)
@@ -847,7 +847,7 @@ func toMaintenancePayload(ctx context.Context, m *Cluster) (*ske.Maintenance, er
 	maintenance := Maintenance{}
 	diags := m.Maintenance.As(ctx, &maintenance, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		return nil, fmt.Errorf("converting maintenance object %v", diags.Errors())
+		return nil, fmt.Errorf("converting maintenance object: %v", diags.Errors())
 	}
 
 	var timeWindowStart *string
