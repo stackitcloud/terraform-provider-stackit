@@ -821,9 +821,9 @@ func toExtensionsPayload(ctx context.Context, m *Cluster) (*ske.Extension, error
 	var skeArgusExtension *ske.Argus
 	if !(ex.Argus.IsNull() || ex.Argus.IsUnknown()) {
 		argus := argusExtension{}
-		diags = ex.ACL.As(ctx, &argus, basetypes.ObjectAsOptions{})
+		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return nil, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
+			return nil, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
 		}
 		argusEnabled := conversion.BoolValueToPointer(argus.Enabled)
 		argusInstanceId := conversion.StringValueToPointer(argus.ArgusInstanceId)
