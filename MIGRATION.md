@@ -137,7 +137,7 @@ resource "stackit_logme_credential" "example-credential" {
 | stackit_elasticsearch_instance | | |  | Service deprecated |
 | stackit_kubernetes_cluster | stackit_ske_cluster | :white_check_mark: | [project_id],[name] |  |
 | stackit_kubernetes_project | stackit_ske_project | :white_check_mark: | [project_id] |  |
-| stackit_load_balancer | | |  | Coming soon |
+| stackit_load_balancer | stackit_loadbalancer | :white_check_mark: | [project_id],[name] | |
 | stackit_logme_credential | stackit_logme_credential | :white_check_mark: | [project_id],[instance_id],[credential_id] |  |
 | stackit_logme_instance | stackit_logme_instance | :white_check_mark: | [project_id],[instance_id] |  |
 | stackit_mariadb_credential | stackit_mariadb_credential | :white_check_mark: | [project_id],[instance_id],[credential_id] |  |
