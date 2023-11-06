@@ -933,7 +933,7 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	return nil
 }
 
-func mapNodePools(cl *ske.ClusterResponse, m *Cluster) error {
+func mapNodePools(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	if cl.Nodepools == nil {
 		m.NodePools = types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes})
 		return nil
@@ -988,11 +988,7 @@ func mapNodePools(cl *ske.ClusterResponse, m *Cluster) error {
 		}
 
 		if nodePoolResp.AvailabilityZones != nil {
-			elems := []attr.Value{}
-			for _, v := range *nodePoolResp.AvailabilityZones {
-				elems = append(elems, types.StringValue(v))
-			}
-			elemsTF, diags := types.ListValue(types.StringType, elems)
+			elemsTF, diags := types.ListValueFrom(ctx, types.StringType, *nodePoolResp.AvailabilityZones)
 			if diags.HasError() {
 				return fmt.Errorf("mapping index %d, field availability_zones: %w", i, core.DiagsToError(diags))
 			}
@@ -1153,7 +1149,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluste
 	return startTime, endTime, nil
 }
 
-func mapExtensions(cl *ske.ClusterResponse, m *Cluster) error {
+func mapExtensions(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	if cl.Extensions == nil || (cl.Extensions.Argus == nil && cl.Extensions.Acl == nil) {
 		m.Extensions = types.ObjectNull(extensionsTypes)
 		return nil
@@ -1167,14 +1163,7 @@ func mapExtensions(cl *ske.ClusterResponse, m *Cluster) error {
 			enabled = types.BoolValue(*cl.Extensions.Acl.Enabled)
 		}
 
-		cidrs := []attr.Value{}
-		if cl.Extensions.Acl.AllowedCidrs != nil {
-			for _, v := range *cl.Extensions.Acl.AllowedCidrs {
-				cidrs = append(cidrs, types.StringValue(v))
-			}
-		}
-
-		cidrsList, diags := types.ListValue(types.StringType, cidrs)
+		cidrsList, diags := types.ListValueFrom(ctx, types.StringType, cl.Extensions.Acl.AllowedCidrs)
 		if diags.HasError() {
 			return fmt.Errorf("creating allowed_cidrs list: %w", core.DiagsToError(diags))
 		}
