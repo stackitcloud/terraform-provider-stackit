@@ -1174,9 +1174,14 @@ func mapExtensions(cl *ske.ClusterResponse, m *Cluster) error {
 			}
 		}
 
+		cidrsList, diags := types.ListValue(types.StringType, cidrs)
+		if diags.HasError() {
+			return fmt.Errorf("creating allowed_cidrs list: %w", core.DiagsToError(diags))
+		}
+
 		aclValues := map[string]attr.Value{
 			"enabled":       enabled,
-			"allowed_cidrs": types.ListValueMust(types.StringType, cidrs),
+			"allowed_cidrs": cidrsList,
 		}
 
 		acl, diags = types.ObjectValue(aclTypes, aclValues)
