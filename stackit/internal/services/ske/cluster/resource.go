@@ -795,7 +795,7 @@ func toExtensionsPayload(ctx context.Context, m *Cluster) (*ske.Extension, error
 	ex := extensions{}
 	diags := m.Extensions.As(ctx, &ex, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		return nil, fmt.Errorf("error in extensions object conversion %v", diags.Errors())
+		return nil, fmt.Errorf("converting extensions object: %v", diags.Errors())
 	}
 
 	var skeAcl *ske.ACL
