@@ -914,7 +914,7 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 		m.AllowPrivilegedContainers = types.BoolPointerValue(cl.Kubernetes.AllowPrivilegedContainers)
 	}
 
-	err := mapNodePools(cl, m)
+	err := mapNodePools(ctx, cl, m)
 	if err != nil {
 		return fmt.Errorf("mapping node_pools: %w", err)
 	}
@@ -926,7 +926,7 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	if err != nil {
 		return fmt.Errorf("mapping hibernations: %w", err)
 	}
-	err = mapExtensions(cl, m)
+	err = mapExtensions(ctx, cl, m)
 	if err != nil {
 		return fmt.Errorf("mapping extensions: %w", err)
 	}
