@@ -143,7 +143,6 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 				os_version = "%s"
 				minimum = "%s"
 				maximum = "%s"
-				max_surge = "%s"
 				availability_zones = ["%s"]
 			}]
 			maintenance = {
@@ -196,7 +195,6 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 		clusterResource["nodepool_os_version_min"],
 		clusterResource["nodepool_minimum"],
 		clusterResource["nodepool_maximum"],
-		clusterResource["nodepool_max_surge"],
 		clusterResource["nodepool_zone"],
 		clusterResource["maintenance_enable_kubernetes_version_updates"],
 		clusterResource["maintenance_enable_machine_image_version_updates"],
