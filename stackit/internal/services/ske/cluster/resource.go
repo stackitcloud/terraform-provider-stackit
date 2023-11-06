@@ -803,14 +803,14 @@ func toExtensionsPayload(ctx context.Context, m *Cluster) (*ske.Extension, error
 		acl := acl{}
 		diags = ex.ACL.As(ctx, &acl, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return nil, fmt.Errorf("error in extensions.acl object conversion %v", diags.Errors())
+			return nil, fmt.Errorf("converting extensions.acl object %v", diags.Errors())
 		}
 		aclEnabled := conversion.BoolValueToPointer(acl.Enabled)
 
 		cidrs := []string{}
 		diags = acl.AllowedCIDRs.ElementsAs(ctx, &cidrs, true)
 		if diags.HasError() {
-			return nil, fmt.Errorf("error in extensions.acl.cidrs object conversion %v", diags.Errors())
+			return nil, fmt.Errorf("converting extensions.acl.cidrs object %v", diags.Errors())
 		}
 		skeAcl = &ske.ACL{
 			Enabled:      aclEnabled,
@@ -823,7 +823,7 @@ func toExtensionsPayload(ctx context.Context, m *Cluster) (*ske.Extension, error
 		argus := argusExtension{}
 		diags = ex.ACL.As(ctx, &argus, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return nil, fmt.Errorf("error in extensions.acl object conversion %v", diags.Errors())
+			return nil, fmt.Errorf("converting extensions.acl object %v", diags.Errors())
 		}
 		argusEnabled := conversion.BoolValueToPointer(argus.Enabled)
 		argusInstanceId := conversion.StringValueToPointer(argus.ArgusInstanceId)
@@ -847,7 +847,7 @@ func toMaintenancePayload(ctx context.Context, m *Cluster) (*ske.Maintenance, er
 	maintenance := Maintenance{}
 	diags := m.Maintenance.As(ctx, &maintenance, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		return nil, fmt.Errorf("error in maintenance object conversion %v", diags.Errors())
+		return nil, fmt.Errorf("converting maintenance object %v", diags.Errors())
 	}
 
 	var timeWindowStart *string
@@ -1088,7 +1088,7 @@ func mapMaintenance(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) er
 	}
 	startTime, endTime, err := getMaintenanceTimes(ctx, cl, m)
 	if err != nil {
-		return fmt.Errorf("failed to get maintenance times: %w", err)
+		return fmt.Errorf("getting maintenance times: %w", err)
 	}
 	maintenanceValues := map[string]attr.Value{
 		"enable_kubernetes_version_updates":    ekvu,
@@ -1098,7 +1098,7 @@ func mapMaintenance(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) er
 	}
 	maintenanceObject, diags := types.ObjectValue(maintenanceTypes, maintenanceValues)
 	if diags.HasError() {
-		return fmt.Errorf("failed to create flavor: %w", core.DiagsToError(diags))
+		return fmt.Errorf("creating flavor: %w", core.DiagsToError(diags))
 	}
 	m.Maintenance = maintenanceObject
 	return nil
@@ -1107,11 +1107,11 @@ func mapMaintenance(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) er
 func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) (startTime, endTime string, err error) {
 	startTimeAPI, err := time.Parse(time.RFC3339, *cl.Maintenance.TimeWindow.Start)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to parse start time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.Start, err)
+		return "", "", fmt.Errorf("parsing start time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.Start, err)
 	}
 	endTimeAPI, err := time.Parse(time.RFC3339, *cl.Maintenance.TimeWindow.End)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to parse end time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.End, err)
+		return "", "", fmt.Errorf("parsing end time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.End, err)
 	}
 
 	if m.Maintenance.IsNull() || m.Maintenance.IsUnknown() {
@@ -1121,7 +1121,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluste
 	maintenance := &Maintenance{}
 	diags := m.Maintenance.As(ctx, maintenance, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		return "", "", fmt.Errorf("error in maintenance object conversion %w", core.DiagsToError(diags.Errors()))
+		return "", "", fmt.Errorf("converting maintenance object %w", core.DiagsToError(diags.Errors()))
 	}
 
 	if maintenance.Start.IsNull() || maintenance.Start.IsUnknown() {
@@ -1129,7 +1129,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluste
 	} else {
 		startTimeTF, err := time.Parse("15:04:05Z07:00", maintenance.Start.ValueString())
 		if err != nil {
-			return "", "", fmt.Errorf("failed to parse start time '%s' from TF config as RFC time: %w", maintenance.Start.ValueString(), err)
+			return "", "", fmt.Errorf("parsing start time '%s' from TF config as RFC time: %w", maintenance.Start.ValueString(), err)
 		}
 		if startTimeAPI.Format("15:04:05Z07:00") != startTimeTF.Format("15:04:05Z07:00") {
 			return "", "", fmt.Errorf("start time '%v' from API response doesn't match start time '%v' from TF config", *cl.Maintenance.TimeWindow.Start, maintenance.Start.ValueString())
@@ -1142,7 +1142,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluste
 	} else {
 		endTimeTF, err := time.Parse("15:04:05Z07:00", maintenance.End.ValueString())
 		if err != nil {
-			return "", "", fmt.Errorf("failed to parse end time '%s' from TF config as RFC time: %w", maintenance.End.ValueString(), err)
+			return "", "", fmt.Errorf("parsing end time '%s' from TF config as RFC time: %w", maintenance.End.ValueString(), err)
 		}
 		if endTimeAPI.Format("15:04:05Z07:00") != endTimeTF.Format("15:04:05Z07:00") {
 			return "", "", fmt.Errorf("end time '%v' from API response doesn't match end time '%v' from TF config", *cl.Maintenance.TimeWindow.End, maintenance.End.ValueString())
@@ -1181,7 +1181,7 @@ func mapExtensions(cl *ske.ClusterResponse, m *Cluster) error {
 
 		acl, diags = types.ObjectValue(aclTypes, aclValues)
 		if diags.HasError() {
-			return fmt.Errorf("failed to create acl: %w", core.DiagsToError(diags))
+			return fmt.Errorf("creating acl: %w", core.DiagsToError(diags))
 		}
 	}
 
@@ -1204,7 +1204,7 @@ func mapExtensions(cl *ske.ClusterResponse, m *Cluster) error {
 
 		argusExtension, diags = types.ObjectValue(argusExtensionTypes, argusExtensionValues)
 		if diags.HasError() {
-			return fmt.Errorf("failed to create argus extension: %w", core.DiagsToError(diags))
+			return fmt.Errorf("creating argus extension: %w", core.DiagsToError(diags))
 		}
 	}
 
@@ -1215,7 +1215,7 @@ func mapExtensions(cl *ske.ClusterResponse, m *Cluster) error {
 
 	extensions, diags := types.ObjectValue(extensionsTypes, extensionsValues)
 	if diags.HasError() {
-		return fmt.Errorf("failed to create extensions: %w", core.DiagsToError(diags))
+		return fmt.Errorf("creating extensions: %w", core.DiagsToError(diags))
 	}
 	m.Extensions = extensions
 	return nil
