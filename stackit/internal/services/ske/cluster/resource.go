@@ -63,7 +63,7 @@ type Cluster struct {
 	NodePools                 types.List   `tfsdk:"node_pools"`
 	Maintenance               types.Object `tfsdk:"maintenance"`
 	Hibernations              types.List   `tfsdk:"hibernations"`
-	Extensions                *Extensions  `tfsdk:"extensions"`
+	Extensions                types.Object `tfsdk:"extensions"`
 	KubeConfig                types.String `tfsdk:"kube_config"`
 }
 
@@ -147,19 +147,37 @@ var hibernationTypes = map[string]attr.Type{
 	"timezone": basetypes.StringType{},
 }
 
-type Extensions struct {
-	Argus *ArgusExtension `tfsdk:"argus"`
-	ACL   *ACL            `tfsdk:"acl"`
+type extensions struct {
+	Argus types.Object `tfsdk:"argus"`
+	ACL   types.Object `tfsdk:"acl"`
 }
 
-type ACL struct {
+// Types corresponding to extensions
+var extensionsTypes = map[string]attr.Type{
+	"argus": basetypes.ObjectType{AttrTypes: argusExtensionTypes},
+	"acl":   basetypes.ObjectType{AttrTypes: aclTypes},
+}
+
+type acl struct {
 	Enabled      types.Bool `tfsdk:"enabled"`
 	AllowedCIDRs types.List `tfsdk:"allowed_cidrs"`
 }
 
-type ArgusExtension struct {
+// Types corresponding to acl
+var aclTypes = map[string]attr.Type{
+	"enabled":       basetypes.BoolType{},
+	"allowed_cidrs": basetypes.ListType{ElemType: types.StringType},
+}
+
+type argusExtension struct {
 	Enabled         types.Bool   `tfsdk:"enabled"`
 	ArgusInstanceId types.String `tfsdk:"argus_instance_id"`
+}
+
+// Types corresponding to argusExtension
+var argusExtensionTypes = map[string]attr.Type{
+	"enabled":           basetypes.BoolType{},
+	"argus_instance_id": basetypes.StringType{},
 }
 
 // NewClusterResource is a helper function to simplify the provider implementation.
@@ -771,28 +789,54 @@ func toHibernationsPayload(ctx context.Context, m *Cluster) (*ske.Hibernation, e
 }
 
 func toExtensionsPayload(ctx context.Context, m *Cluster) (*ske.Extension, error) {
-	if m.Extensions == nil {
+	if m.Extensions.IsNull() || m.Extensions.IsUnknown() {
 		return nil, nil
 	}
-	ex := &ske.Extension{}
-	if m.Extensions.Argus != nil {
-		ex.Argus = &ske.Argus{
-			Enabled:         conversion.BoolValueToPointer(m.Extensions.Argus.Enabled),
-			ArgusInstanceId: conversion.StringValueToPointer(m.Extensions.Argus.ArgusInstanceId),
-		}
+	ex := extensions{}
+	diags := m.Extensions.As(ctx, &ex, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting extensions object: %v", diags.Errors())
 	}
-	if m.Extensions.ACL != nil {
-		cidrs := []string{}
-		diags := m.Extensions.ACL.AllowedCIDRs.ElementsAs(ctx, &cidrs, true)
+
+	var skeAcl *ske.ACL
+	if !(ex.ACL.IsNull() || ex.ACL.IsUnknown()) {
+		acl := acl{}
+		diags = ex.ACL.As(ctx, &acl, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return nil, fmt.Errorf("error in extension object converion %v", diags.Errors())
+			return nil, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
 		}
-		ex.Acl = &ske.ACL{
-			Enabled:      conversion.BoolValueToPointer(m.Extensions.ACL.Enabled),
+		aclEnabled := conversion.BoolValueToPointer(acl.Enabled)
+
+		cidrs := []string{}
+		diags = acl.AllowedCIDRs.ElementsAs(ctx, &cidrs, true)
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting extensions.acl.cidrs object: %v", diags.Errors())
+		}
+		skeAcl = &ske.ACL{
+			Enabled:      aclEnabled,
 			AllowedCidrs: &cidrs,
 		}
 	}
-	return ex, nil
+
+	var skeArgusExtension *ske.Argus
+	if !(ex.Argus.IsNull() || ex.Argus.IsUnknown()) {
+		argus := argusExtension{}
+		diags = ex.ACL.As(ctx, &argus, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
+		}
+		argusEnabled := conversion.BoolValueToPointer(argus.Enabled)
+		argusInstanceId := conversion.StringValueToPointer(argus.ArgusInstanceId)
+		skeArgusExtension = &ske.Argus{
+			Enabled:         argusEnabled,
+			ArgusInstanceId: argusInstanceId,
+		}
+	}
+
+	return &ske.Extension{
+		Acl:   skeAcl,
+		Argus: skeArgusExtension,
+	}, nil
 }
 
 func toMaintenancePayload(ctx context.Context, m *Cluster) (*ske.Maintenance, error) {
@@ -803,7 +847,7 @@ func toMaintenancePayload(ctx context.Context, m *Cluster) (*ske.Maintenance, er
 	maintenance := Maintenance{}
 	diags := m.Maintenance.As(ctx, &maintenance, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		return nil, fmt.Errorf("error in maintenance object conversion %v", diags.Errors())
+		return nil, fmt.Errorf("converting maintenance object: %v", diags.Errors())
 	}
 
 	var timeWindowStart *string
@@ -870,7 +914,7 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 		m.AllowPrivilegedContainers = types.BoolPointerValue(cl.Kubernetes.AllowPrivilegedContainers)
 	}
 
-	err := mapNodePools(cl, m)
+	err := mapNodePools(ctx, cl, m)
 	if err != nil {
 		return fmt.Errorf("mapping node_pools: %w", err)
 	}
@@ -882,11 +926,14 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	if err != nil {
 		return fmt.Errorf("mapping hibernations: %w", err)
 	}
-	mapExtensions(cl, m)
+	err = mapExtensions(ctx, cl, m)
+	if err != nil {
+		return fmt.Errorf("mapping extensions: %w", err)
+	}
 	return nil
 }
 
-func mapNodePools(cl *ske.ClusterResponse, m *Cluster) error {
+func mapNodePools(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	if cl.Nodepools == nil {
 		m.NodePools = types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes})
 		return nil
@@ -941,11 +988,7 @@ func mapNodePools(cl *ske.ClusterResponse, m *Cluster) error {
 		}
 
 		if nodePoolResp.AvailabilityZones != nil {
-			elems := []attr.Value{}
-			for _, v := range *nodePoolResp.AvailabilityZones {
-				elems = append(elems, types.StringValue(v))
-			}
-			elemsTF, diags := types.ListValue(types.StringType, elems)
+			elemsTF, diags := types.ListValueFrom(ctx, types.StringType, *nodePoolResp.AvailabilityZones)
 			if diags.HasError() {
 				return fmt.Errorf("mapping index %d, field availability_zones: %w", i, core.DiagsToError(diags))
 			}
@@ -1026,7 +1069,7 @@ func mapHibernations(cl *ske.ClusterResponse, m *Cluster) error {
 }
 
 func mapMaintenance(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
-	// Aligned with SKE team that a flattened data structure is fine, because not extensions are planned.
+	// Aligned with SKE team that a flattened data structure is fine, because no extensions are planned.
 	if cl.Maintenance == nil {
 		m.Maintenance = types.ObjectNull(maintenanceTypes)
 		return nil
@@ -1041,7 +1084,7 @@ func mapMaintenance(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) er
 	}
 	startTime, endTime, err := getMaintenanceTimes(ctx, cl, m)
 	if err != nil {
-		return fmt.Errorf("failed to get maintenance times: %w", err)
+		return fmt.Errorf("getting maintenance times: %w", err)
 	}
 	maintenanceValues := map[string]attr.Value{
 		"enable_kubernetes_version_updates":    ekvu,
@@ -1051,7 +1094,7 @@ func mapMaintenance(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) er
 	}
 	maintenanceObject, diags := types.ObjectValue(maintenanceTypes, maintenanceValues)
 	if diags.HasError() {
-		return fmt.Errorf("failed to create flavor: %w", core.DiagsToError(diags))
+		return fmt.Errorf("creating flavor: %w", core.DiagsToError(diags))
 	}
 	m.Maintenance = maintenanceObject
 	return nil
@@ -1060,11 +1103,11 @@ func mapMaintenance(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) er
 func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) (startTime, endTime string, err error) {
 	startTimeAPI, err := time.Parse(time.RFC3339, *cl.Maintenance.TimeWindow.Start)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to parse start time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.Start, err)
+		return "", "", fmt.Errorf("parsing start time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.Start, err)
 	}
 	endTimeAPI, err := time.Parse(time.RFC3339, *cl.Maintenance.TimeWindow.End)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to parse end time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.End, err)
+		return "", "", fmt.Errorf("parsing end time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.End, err)
 	}
 
 	if m.Maintenance.IsNull() || m.Maintenance.IsUnknown() {
@@ -1074,7 +1117,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluste
 	maintenance := &Maintenance{}
 	diags := m.Maintenance.As(ctx, maintenance, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		return "", "", fmt.Errorf("error in maintenance object conversion %w", core.DiagsToError(diags.Errors()))
+		return "", "", fmt.Errorf("converting maintenance object %w", core.DiagsToError(diags.Errors()))
 	}
 
 	if maintenance.Start.IsNull() || maintenance.Start.IsUnknown() {
@@ -1082,7 +1125,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluste
 	} else {
 		startTimeTF, err := time.Parse("15:04:05Z07:00", maintenance.Start.ValueString())
 		if err != nil {
-			return "", "", fmt.Errorf("failed to parse start time '%s' from TF config as RFC time: %w", maintenance.Start.ValueString(), err)
+			return "", "", fmt.Errorf("parsing start time '%s' from TF config as RFC time: %w", maintenance.Start.ValueString(), err)
 		}
 		if startTimeAPI.Format("15:04:05Z07:00") != startTimeTF.Format("15:04:05Z07:00") {
 			return "", "", fmt.Errorf("start time '%v' from API response doesn't match start time '%v' from TF config", *cl.Maintenance.TimeWindow.Start, maintenance.Start.ValueString())
@@ -1095,7 +1138,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluste
 	} else {
 		endTimeTF, err := time.Parse("15:04:05Z07:00", maintenance.End.ValueString())
 		if err != nil {
-			return "", "", fmt.Errorf("failed to parse end time '%s' from TF config as RFC time: %w", maintenance.End.ValueString(), err)
+			return "", "", fmt.Errorf("parsing end time '%s' from TF config as RFC time: %w", maintenance.End.ValueString(), err)
 		}
 		if endTimeAPI.Format("15:04:05Z07:00") != endTimeTF.Format("15:04:05Z07:00") {
 			return "", "", fmt.Errorf("end time '%v' from API response doesn't match end time '%v' from TF config", *cl.Maintenance.TimeWindow.End, maintenance.End.ValueString())
@@ -1106,32 +1149,70 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluste
 	return startTime, endTime, nil
 }
 
-func mapExtensions(cl *ske.ClusterResponse, m *Cluster) {
+func mapExtensions(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	if cl.Extensions == nil || (cl.Extensions.Argus == nil && cl.Extensions.Acl == nil) {
-		return
+		m.Extensions = types.ObjectNull(extensionsTypes)
+		return nil
 	}
-	if m.Extensions == nil {
-		m.Extensions = &Extensions{}
-	}
-	if cl.Extensions.Argus != nil {
-		m.Extensions.Argus = &ArgusExtension{
-			Enabled:         types.BoolPointerValue(cl.Extensions.Argus.Enabled),
-			ArgusInstanceId: types.StringPointerValue(cl.Extensions.Argus.ArgusInstanceId),
+
+	var diags diag.Diagnostics
+	acl := types.ObjectNull(aclTypes)
+	if cl.Extensions.Acl != nil {
+		enabled := types.BoolNull()
+		if cl.Extensions.Acl.Enabled != nil {
+			enabled = types.BoolValue(*cl.Extensions.Acl.Enabled)
+		}
+
+		cidrsList, diags := types.ListValueFrom(ctx, types.StringType, cl.Extensions.Acl.AllowedCidrs)
+		if diags.HasError() {
+			return fmt.Errorf("creating allowed_cidrs list: %w", core.DiagsToError(diags))
+		}
+
+		aclValues := map[string]attr.Value{
+			"enabled":       enabled,
+			"allowed_cidrs": cidrsList,
+		}
+
+		acl, diags = types.ObjectValue(aclTypes, aclValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating acl: %w", core.DiagsToError(diags))
 		}
 	}
 
-	if cl.Extensions.Acl != nil {
-		cidr := []attr.Value{}
-		if cl.Extensions.Acl.AllowedCidrs != nil {
-			for _, v := range *cl.Extensions.Acl.AllowedCidrs {
-				cidr = append(cidr, types.StringValue(v))
-			}
+	argusExtension := types.ObjectNull(argusExtensionTypes)
+	if cl.Extensions.Argus != nil {
+		enabled := types.BoolNull()
+		if cl.Extensions.Argus.Enabled != nil {
+			enabled = types.BoolValue(*cl.Extensions.Argus.Enabled)
 		}
-		m.Extensions.ACL = &ACL{
-			Enabled:      types.BoolPointerValue(cl.Extensions.Acl.Enabled),
-			AllowedCIDRs: types.ListValueMust(types.StringType, cidr),
+
+		argusInstanceId := types.StringNull()
+		if cl.Extensions.Argus.ArgusInstanceId != nil {
+			argusInstanceId = types.StringValue(*cl.Extensions.Argus.ArgusInstanceId)
+		}
+
+		argusExtensionValues := map[string]attr.Value{
+			"enabled":           enabled,
+			"argus_instance_id": argusInstanceId,
+		}
+
+		argusExtension, diags = types.ObjectValue(argusExtensionTypes, argusExtensionValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating argus extension: %w", core.DiagsToError(diags))
 		}
 	}
+
+	extensionsValues := map[string]attr.Value{
+		"acl":   acl,
+		"argus": argusExtension,
+	}
+
+	extensions, diags := types.ObjectValue(extensionsTypes, extensionsValues)
+	if diags.HasError() {
+		return fmt.Errorf("creating extensions: %w", core.DiagsToError(diags))
+	}
+	m.Extensions = extensions
+	return nil
 }
 
 func toKubernetesPayload(m *Cluster, availableVersions []ske.KubernetesVersion) (kubernetesPayload *ske.Kubernetes, hasDeprecatedVersion bool, err error) {

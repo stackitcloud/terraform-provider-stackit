@@ -34,7 +34,7 @@ func TestMapFields(t *testing.T) {
 				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 				Maintenance:               types.ObjectNull(maintenanceTypes),
 				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
-				Extensions:                nil,
+				Extensions:                types.ObjectNull(extensionsTypes),
 				KubeConfig:                types.StringNull(),
 			},
 			true,
@@ -188,18 +188,18 @@ func TestMapFields(t *testing.T) {
 						),
 					},
 				),
-				Extensions: &Extensions{
-					Argus: &ArgusExtension{
-						Enabled:         types.BoolValue(true),
-						ArgusInstanceId: types.StringValue("aid"),
-					},
-					ACL: &ACL{
-						Enabled: types.BoolValue(true),
-						AllowedCIDRs: types.ListValueMust(types.StringType, []attr.Value{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
+						"allowed_cidrs": types.ListValueMust(types.StringType, []attr.Value{
 							types.StringValue("cidr1"),
 						}),
-					},
-				},
+					}),
+					"argus": types.ObjectValueMust(argusExtensionTypes, map[string]attr.Value{
+						"enabled":           types.BoolValue(true),
+						"argus_instance_id": types.StringValue("aid"),
+					}),
+				}),
 				KubeConfig: types.StringNull(),
 			},
 			true,
