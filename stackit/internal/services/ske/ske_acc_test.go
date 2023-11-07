@@ -146,7 +146,12 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 				max_surge = "%s"
 				availability_zones = ["%s"]
 			}]
-			extensions = {}
+			maintenance = {
+				enable_kubernetes_version_updates = %s
+				enable_machine_image_version_updates = %s
+				start = "%s"
+				end = "%s"
+			}
 		}
 		`,
 		testutil.SKEProviderConfig(),
@@ -193,6 +198,10 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 		clusterResource["nodepool_maximum"],
 		clusterResource["nodepool_max_surge"],
 		clusterResource["nodepool_zone"],
+		clusterResource["maintenance_enable_kubernetes_version_updates"],
+		clusterResource["maintenance_enable_machine_image_version_updates"],
+		clusterResource["maintenance_start"],
+		maintenanceEndTF,
 	)
 }
 

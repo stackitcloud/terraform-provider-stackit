@@ -1158,24 +1158,15 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluste
 	return startTime, endTime, nil
 }
 
-func checkDisabledExtensions(ctx context.Context, m *Cluster) (bool, error) {
-	if m.Extensions.IsNull() {
-		return true, nil
-	}
-
-	ex := extensions{}
-	diags := m.Extensions.As(ctx, &ex, basetypes.ObjectAsOptions{})
-	if diags.HasError() {
-		return false, fmt.Errorf("converting extensions object: %v", diags.Errors())
-	}
-
+func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, argusDisabled bool, err error) {
+	var diags diag.Diagnostics
 	acl := acl{}
 	if ex.ACL.IsNull() {
 		acl.Enabled = types.BoolValue(false)
 	} else {
 		diags = ex.ACL.As(ctx, &acl, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return false, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
+			return false, false, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
 		}
 	}
 
@@ -1185,21 +1176,26 @@ func checkDisabledExtensions(ctx context.Context, m *Cluster) (bool, error) {
 	} else {
 		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return false, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
+			return false, false, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
 		}
 	}
 
-	if acl.Enabled == types.BoolValue(false) && argus.Enabled == types.BoolValue(false) {
-		return true, nil
-	}
-
-	return false, nil
+	return !acl.Enabled.ValueBool(), !argus.Enabled.ValueBool(), nil
 }
 
 func mapExtensions(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	if cl.Extensions == nil {
 		m.Extensions = types.ObjectNull(extensionsTypes)
 		return nil
+	}
+
+	var diags diag.Diagnostics
+	ex := extensions{}
+	if !m.Extensions.IsNull() {
+		diags := m.Extensions.As(ctx, &ex, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return fmt.Errorf("converting extensions object: %v", diags.Errors())
+		}
 	}
 
 	// If the user provides the extensions block with the enabled flags as false
@@ -1211,9 +1207,13 @@ func mapExtensions(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) err
 	// If we parse that object into the terraform model, it will produce an inconsistent result after apply
 	// error
 
-	disabledExtensions, err := checkDisabledExtensions(ctx, m)
+	aclDisabled, argusDisabled, err := checkDisabledExtensions(ctx, ex)
 	if err != nil {
 		return fmt.Errorf("checking if extensions are disabled: %w", err)
+	}
+	disabledExtensions := false
+	if aclDisabled && argusDisabled {
+		disabledExtensions = true
 	}
 
 	emptyExtensions := &ske.Extension{}
@@ -1221,7 +1221,6 @@ func mapExtensions(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) err
 		return nil
 	}
 
-	var diags diag.Diagnostics
 	acl := types.ObjectNull(aclTypes)
 	if cl.Extensions.Acl != nil {
 		enabled := types.BoolNull()
@@ -1243,6 +1242,8 @@ func mapExtensions(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) err
 		if diags.HasError() {
 			return fmt.Errorf("creating acl: %w", core.DiagsToError(diags))
 		}
+	} else if aclDisabled {
+		acl = ex.ACL
 	}
 
 	argusExtension := types.ObjectNull(argusExtensionTypes)
@@ -1266,6 +1267,8 @@ func mapExtensions(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) err
 		if diags.HasError() {
 			return fmt.Errorf("creating argus extension: %w", core.DiagsToError(diags))
 		}
+	} else if argusDisabled {
+		argusExtension = ex.Argus
 	}
 
 	extensionsValues := map[string]attr.Value{

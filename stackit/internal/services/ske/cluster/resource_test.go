@@ -286,6 +286,58 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
+			"extensions_only_argus_disabled",
+			types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+				"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
+					"enabled": types.BoolValue(true),
+					"allowed_cidrs": types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("cidr1"),
+					}),
+				}),
+				"argus": types.ObjectValueMust(argusExtensionTypes, map[string]attr.Value{
+					"enabled":           types.BoolValue(false),
+					"argus_instance_id": types.StringNull(),
+				}),
+			}),
+			&ske.ClusterResponse{
+				Extensions: &ske.Extension{
+					Acl: &ske.ACL{
+						AllowedCidrs: &[]string{"cidr1"},
+						Enabled:      utils.Ptr(true),
+					},
+					Argus: &ske.Argus{
+						ArgusInstanceId: nil,
+						Enabled:         utils.Ptr(false),
+					},
+				},
+				Name: utils.Ptr("name"),
+			},
+			Cluster{
+				Id:                        types.StringValue("pid,name"),
+				ProjectId:                 types.StringValue("pid"),
+				Name:                      types.StringValue("name"),
+				KubernetesVersion:         types.StringNull(),
+				AllowPrivilegedContainers: types.BoolNull(),
+				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:               types.ObjectNull(maintenanceTypes),
+				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
+						"allowed_cidrs": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("cidr1"),
+						}),
+					}),
+					"argus": types.ObjectValueMust(argusExtensionTypes, map[string]attr.Value{
+						"enabled":           types.BoolValue(false),
+						"argus_instance_id": types.StringNull(),
+					}),
+				}),
+				KubeConfig: types.StringNull(),
+			},
+			true,
+		},
+		{
 			"extensions_not_set",
 			types.ObjectNull(extensionsTypes),
 			&ske.ClusterResponse{
