@@ -490,7 +490,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							},
 							"allowed_cidrs": schema.ListAttribute{
 								Description: "Specify a list of CIDRs to whitelist.",
-								Required:    true,
+								Optional:    true,
 								ElementType: types.StringType,
 							},
 						},
@@ -922,7 +922,7 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	if err != nil {
 		return fmt.Errorf("mapping maintenance: %w", err)
 	}
-	err = mapHibernations(cl, m)
+	err = mapHibernations(ctx, cl, m)
 	if err != nil {
 		return fmt.Errorf("mapping hibernations: %w", err)
 	}
@@ -1039,9 +1039,18 @@ func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value) error {
 	return nil
 }
 
-func mapHibernations(cl *ske.ClusterResponse, m *Cluster) error {
-	if cl.Hibernation == nil || cl.Hibernation.Schedules == nil {
+func mapHibernations(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
+	if cl.Hibernation == nil {
 		m.Hibernations = basetypes.NewListNull(basetypes.ObjectType{AttrTypes: hibernationTypes})
+		return nil
+	}
+
+	if cl.Hibernation.Schedules == nil {
+		emptyHibernations, diags := basetypes.NewListValueFrom(ctx, basetypes.ObjectType{AttrTypes: hibernationTypes}, []attr.Value{})
+		if diags.HasError() {
+			return fmt.Errorf("hibernations is an empty list, converting to terraform empty list: %w", core.DiagsToError(diags))
+		}
+		m.Hibernations = emptyHibernations
 		return nil
 	}
 
@@ -1149,9 +1158,66 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluste
 	return startTime, endTime, nil
 }
 
+func checkDisabledExtensions(ctx context.Context, m *Cluster) (bool, error) {
+	if m.Extensions.IsNull() {
+		return true, nil
+	}
+
+	ex := extensions{}
+	diags := m.Extensions.As(ctx, &ex, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return false, fmt.Errorf("converting extensions object: %v", diags.Errors())
+	}
+
+	acl := acl{}
+	if ex.ACL.IsNull() {
+		acl.Enabled = types.BoolValue(false)
+	} else {
+		diags = ex.ACL.As(ctx, &acl, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return false, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
+		}
+	}
+
+	argus := argusExtension{}
+	if ex.Argus.IsNull() {
+		argus.Enabled = types.BoolValue(false)
+	} else {
+		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return false, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
+		}
+	}
+
+	if acl.Enabled == types.BoolValue(false) && argus.Enabled == types.BoolValue(false) {
+		return true, nil
+	}
+
+	return false, nil
+}
+
 func mapExtensions(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
-	if cl.Extensions == nil || (cl.Extensions.Argus == nil && cl.Extensions.Acl == nil) {
+	if cl.Extensions == nil {
 		m.Extensions = types.ObjectNull(extensionsTypes)
+		return nil
+	}
+
+	// If the user provides the extensions block with the enabled flags as false
+	// the SKE API will return an empty extensions block, which throws an inconsistent
+	// result after apply error. To prevent this error, if both flags are false,
+	// we set the fields provided by the user in the terraform model
+
+	// If the extensions field is not provided, the SKE API returns an empty object.
+	// If we parse that object into the terraform model, it will produce an inconsistent result after apply
+	// error
+
+	disabledExtensions, err := checkDisabledExtensions(ctx, m)
+	if err != nil {
+		return fmt.Errorf("checking if extensions are disabled: %w", err)
+	}
+
+	emptyExtensions := &ske.Extension{}
+	if *cl.Extensions == *emptyExtensions && (disabledExtensions || m.Extensions.IsNull()) {
 		return nil
 	}
 
