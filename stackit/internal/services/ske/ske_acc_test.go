@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	oapiError "github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
@@ -143,7 +143,6 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 				os_version = "%s"
 				minimum = "%s"
 				maximum = "%s"
-				max_surge = "%s"
 				availability_zones = ["%s"]
 			}]
 			maintenance = {
@@ -196,7 +195,6 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 		clusterResource["nodepool_os_version_min"],
 		clusterResource["nodepool_minimum"],
 		clusterResource["nodepool_maximum"],
-		clusterResource["nodepool_max_surge"],
 		clusterResource["nodepool_zone"],
 		clusterResource["maintenance_enable_kubernetes_version_updates"],
 		clusterResource["maintenance_enable_machine_image_version_updates"],
@@ -531,7 +529,7 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 	for _, projectId := range projectsToDestroy {
 		_, err := client.GetProject(ctx, projectId).Execute()
 		if err != nil {
-			oapiErr, ok := err.(*oapiError.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+			oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 			if !ok {
 				return fmt.Errorf("could not convert error to GenericOpenApiError in acc test destruction, %w", err)
 			}
