@@ -1243,6 +1243,10 @@ func mapExtensions(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) err
 			return fmt.Errorf("creating acl: %w", core.DiagsToError(diags))
 		}
 	} else if aclDisabled {
+		diags = ex.ACL.As(ctx, &acl, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
+		}
 		acl = ex.ACL
 	}
 
@@ -1268,6 +1272,10 @@ func mapExtensions(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) err
 			return fmt.Errorf("creating argus extension: %w", core.DiagsToError(diags))
 		}
 	} else if argusDisabled {
+		diags = ex.Argus.As(ctx, &argusExtension, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
+		}
 		argusExtension = ex.Argus
 	}
 
