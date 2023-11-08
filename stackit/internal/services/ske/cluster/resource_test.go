@@ -15,13 +15,15 @@ import (
 func TestMapFields(t *testing.T) {
 	cs := ske.ClusterStatusState("OK")
 	tests := []struct {
-		description string
-		input       *ske.ClusterResponse
-		expected    Cluster
-		isValid     bool
+		description     string
+		stateExtensions types.Object
+		input           *ske.ClusterResponse
+		expected        Cluster
+		isValid         bool
 	}{
 		{
 			"default_values",
+			types.ObjectNull(extensionsTypes),
 			&ske.ClusterResponse{
 				Name: utils.Ptr("name"),
 			},
@@ -41,6 +43,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"simple_values",
+			types.ObjectNull(extensionsTypes),
 			&ske.ClusterResponse{
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
@@ -195,7 +198,7 @@ func TestMapFields(t *testing.T) {
 							types.StringValue("cidr1"),
 						}),
 					}),
-					"argus": types.ObjectValueMust(argusExtensionTypes, map[string]attr.Value{
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
 						"enabled":           types.BoolValue(true),
 						"argus_instance_id": types.StringValue("aid"),
 					}),
@@ -205,13 +208,162 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
+			"extensions_mixed_values",
+			types.ObjectNull(extensionsTypes),
+			&ske.ClusterResponse{
+				Extensions: &ske.Extension{
+					Acl: &ske.ACL{
+						AllowedCidrs: nil,
+						Enabled:      utils.Ptr(true),
+					},
+					Argus: &ske.Argus{
+						ArgusInstanceId: nil,
+						Enabled:         utils.Ptr(true),
+					},
+				},
+				Name: utils.Ptr("name"),
+			},
+			Cluster{
+				Id:                        types.StringValue("pid,name"),
+				ProjectId:                 types.StringValue("pid"),
+				Name:                      types.StringValue("name"),
+				KubernetesVersion:         types.StringNull(),
+				AllowPrivilegedContainers: types.BoolNull(),
+				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:               types.ObjectNull(maintenanceTypes),
+				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
+						"enabled":       types.BoolValue(true),
+						"allowed_cidrs": types.ListNull(types.StringType),
+					}),
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+						"enabled":           types.BoolValue(true),
+						"argus_instance_id": types.StringNull(),
+					}),
+				}),
+				KubeConfig: types.StringNull(),
+			},
+			true,
+		},
+		{
+			"extensions_disabled",
+			types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+				"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
+					"enabled":       types.BoolValue(false),
+					"allowed_cidrs": types.ListNull(types.StringType),
+				}),
+				"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+					"enabled":           types.BoolValue(false),
+					"argus_instance_id": types.StringNull(),
+				}),
+			}),
+			&ske.ClusterResponse{
+				Extensions: &ske.Extension{},
+				Name:       utils.Ptr("name"),
+			},
+			Cluster{
+				Id:                        types.StringValue("pid,name"),
+				ProjectId:                 types.StringValue("pid"),
+				Name:                      types.StringValue("name"),
+				KubernetesVersion:         types.StringNull(),
+				AllowPrivilegedContainers: types.BoolNull(),
+				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:               types.ObjectNull(maintenanceTypes),
+				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
+						"enabled":       types.BoolValue(false),
+						"allowed_cidrs": types.ListNull(types.StringType),
+					}),
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+						"enabled":           types.BoolValue(false),
+						"argus_instance_id": types.StringNull(),
+					}),
+				}),
+				KubeConfig: types.StringNull(),
+			},
+			true,
+		},
+		{
+			"extensions_only_argus_disabled",
+			types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+				"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
+					"enabled": types.BoolValue(true),
+					"allowed_cidrs": types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("cidr1"),
+					}),
+				}),
+				"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+					"enabled":           types.BoolValue(false),
+					"argus_instance_id": types.StringValue("id"),
+				}),
+			}),
+			&ske.ClusterResponse{
+				Extensions: &ske.Extension{
+					Acl: &ske.ACL{
+						AllowedCidrs: &[]string{"cidr1"},
+						Enabled:      utils.Ptr(true),
+					},
+				},
+				Name: utils.Ptr("name"),
+			},
+			Cluster{
+				Id:                        types.StringValue("pid,name"),
+				ProjectId:                 types.StringValue("pid"),
+				Name:                      types.StringValue("name"),
+				KubernetesVersion:         types.StringNull(),
+				AllowPrivilegedContainers: types.BoolNull(),
+				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:               types.ObjectNull(maintenanceTypes),
+				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
+						"allowed_cidrs": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("cidr1"),
+						}),
+					}),
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+						"enabled":           types.BoolValue(false),
+						"argus_instance_id": types.StringValue("id"),
+					}),
+				}),
+				KubeConfig: types.StringNull(),
+			},
+			true,
+		},
+		{
+			"extensions_not_set",
+			types.ObjectNull(extensionsTypes),
+			&ske.ClusterResponse{
+				Extensions: &ske.Extension{},
+				Name:       utils.Ptr("name"),
+			},
+			Cluster{
+				Id:                        types.StringValue("pid,name"),
+				ProjectId:                 types.StringValue("pid"),
+				Name:                      types.StringValue("name"),
+				KubernetesVersion:         types.StringNull(),
+				AllowPrivilegedContainers: types.BoolNull(),
+				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:               types.ObjectNull(maintenanceTypes),
+				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions:                types.ObjectNull(extensionsTypes),
+				KubeConfig:                types.StringNull(),
+			},
+			true,
+		},
+		{
 			"nil_response",
+			types.ObjectNull(extensionsTypes),
 			nil,
 			Cluster{},
 			false,
 		},
 		{
 			"no_resource_id",
+			types.ObjectNull(extensionsTypes),
 			&ske.ClusterResponse{},
 			Cluster{},
 			false,
@@ -220,7 +372,8 @@ func TestMapFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &Cluster{
-				ProjectId: tt.expected.ProjectId,
+				ProjectId:  tt.expected.ProjectId,
+				Extensions: tt.stateExtensions,
 			}
 			err := mapFields(context.Background(), tt.input, state)
 			if !tt.isValid && err == nil {
