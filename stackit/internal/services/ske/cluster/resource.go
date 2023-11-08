@@ -154,7 +154,7 @@ type extensions struct {
 
 // Types corresponding to extensions
 var extensionsTypes = map[string]attr.Type{
-	"argus": basetypes.ObjectType{AttrTypes: argusExtensionTypes},
+	"argus": basetypes.ObjectType{AttrTypes: argusTypes},
 	"acl":   basetypes.ObjectType{AttrTypes: aclTypes},
 }
 
@@ -169,13 +169,13 @@ var aclTypes = map[string]attr.Type{
 	"allowed_cidrs": basetypes.ListType{ElemType: types.StringType},
 }
 
-type argusExtension struct {
+type argus struct {
 	Enabled         types.Bool   `tfsdk:"enabled"`
 	ArgusInstanceId types.String `tfsdk:"argus_instance_id"`
 }
 
 // Types corresponding to argusExtension
-var argusExtensionTypes = map[string]attr.Type{
+var argusTypes = map[string]attr.Type{
 	"enabled":           basetypes.BoolType{},
 	"argus_instance_id": basetypes.StringType{},
 }
@@ -818,16 +818,16 @@ func toExtensionsPayload(ctx context.Context, m *Cluster) (*ske.Extension, error
 		}
 	}
 
-	var skeArgusExtension *ske.Argus
+	var skeArgus *ske.Argus
 	if !(ex.Argus.IsNull() || ex.Argus.IsUnknown()) {
-		argus := argusExtension{}
+		argus := argus{}
 		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
 		}
 		argusEnabled := conversion.BoolValueToPointer(argus.Enabled)
 		argusInstanceId := conversion.StringValueToPointer(argus.ArgusInstanceId)
-		skeArgusExtension = &ske.Argus{
+		skeArgus = &ske.Argus{
 			Enabled:         argusEnabled,
 			ArgusInstanceId: argusInstanceId,
 		}
@@ -835,7 +835,7 @@ func toExtensionsPayload(ctx context.Context, m *Cluster) (*ske.Extension, error
 
 	return &ske.Extension{
 		Acl:   skeAcl,
-		Argus: skeArgusExtension,
+		Argus: skeArgus,
 	}, nil
 }
 
@@ -1041,6 +1041,14 @@ func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value) error {
 
 func mapHibernations(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	if cl.Hibernation == nil {
+		if !m.Hibernations.IsNull() {
+			emptyHibernations, diags := basetypes.NewListValueFrom(ctx, basetypes.ObjectType{AttrTypes: hibernationTypes}, []attr.Value{})
+			if diags.HasError() {
+				return fmt.Errorf("hibernations is an empty list, converting to terraform empty list: %w", core.DiagsToError(diags))
+			}
+			m.Hibernations = emptyHibernations
+			return nil
+		}
 		m.Hibernations = basetypes.NewListNull(basetypes.ObjectType{AttrTypes: hibernationTypes})
 		return nil
 	}
@@ -1170,7 +1178,7 @@ func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, a
 		}
 	}
 
-	argus := argusExtension{}
+	argus := argus{}
 	if ex.Argus.IsNull() {
 		argus.Enabled = types.BoolValue(false)
 	} else {
@@ -1218,10 +1226,13 @@ func mapExtensions(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) err
 
 	emptyExtensions := &ske.Extension{}
 	if *cl.Extensions == *emptyExtensions && (disabledExtensions || m.Extensions.IsNull()) {
+		if m.Extensions.Attributes() == nil {
+			m.Extensions = types.ObjectNull(extensionsTypes)
+		}
 		return nil
 	}
 
-	acl := types.ObjectNull(aclTypes)
+	aclExtension := types.ObjectNull(aclTypes)
 	if cl.Extensions.Acl != nil {
 		enabled := types.BoolNull()
 		if cl.Extensions.Acl.Enabled != nil {
@@ -1238,19 +1249,15 @@ func mapExtensions(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) err
 			"allowed_cidrs": cidrsList,
 		}
 
-		acl, diags = types.ObjectValue(aclTypes, aclValues)
+		aclExtension, diags = types.ObjectValue(aclTypes, aclValues)
 		if diags.HasError() {
 			return fmt.Errorf("creating acl: %w", core.DiagsToError(diags))
 		}
-	} else if aclDisabled {
-		diags = ex.ACL.As(ctx, &acl, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
-		}
-		acl = ex.ACL
+	} else if aclDisabled && !ex.ACL.IsNull() {
+		aclExtension = ex.ACL
 	}
 
-	argusExtension := types.ObjectNull(argusExtensionTypes)
+	argusExtension := types.ObjectNull(argusTypes)
 	if cl.Extensions.Argus != nil {
 		enabled := types.BoolNull()
 		if cl.Extensions.Argus.Enabled != nil {
@@ -1267,20 +1274,16 @@ func mapExtensions(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) err
 			"argus_instance_id": argusInstanceId,
 		}
 
-		argusExtension, diags = types.ObjectValue(argusExtensionTypes, argusExtensionValues)
+		argusExtension, diags = types.ObjectValue(argusTypes, argusExtensionValues)
 		if diags.HasError() {
 			return fmt.Errorf("creating argus extension: %w", core.DiagsToError(diags))
 		}
-	} else if argusDisabled {
-		diags = ex.Argus.As(ctx, &argusExtension, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
-		}
+	} else if argusDisabled && !ex.Argus.IsNull() {
 		argusExtension = ex.Argus
 	}
 
 	extensionsValues := map[string]attr.Value{
-		"acl":   acl,
+		"acl":   aclExtension,
 		"argus": argusExtension,
 	}
 

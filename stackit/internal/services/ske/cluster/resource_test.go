@@ -198,7 +198,7 @@ func TestMapFields(t *testing.T) {
 							types.StringValue("cidr1"),
 						}),
 					}),
-					"argus": types.ObjectValueMust(argusExtensionTypes, map[string]attr.Value{
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
 						"enabled":           types.BoolValue(true),
 						"argus_instance_id": types.StringValue("aid"),
 					}),
@@ -237,7 +237,7 @@ func TestMapFields(t *testing.T) {
 						"enabled":       types.BoolValue(true),
 						"allowed_cidrs": types.ListNull(types.StringType),
 					}),
-					"argus": types.ObjectValueMust(argusExtensionTypes, map[string]attr.Value{
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
 						"enabled":           types.BoolValue(true),
 						"argus_instance_id": types.StringNull(),
 					}),
@@ -253,7 +253,7 @@ func TestMapFields(t *testing.T) {
 					"enabled":       types.BoolValue(false),
 					"allowed_cidrs": types.ListNull(types.StringType),
 				}),
-				"argus": types.ObjectValueMust(argusExtensionTypes, map[string]attr.Value{
+				"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
 					"enabled":           types.BoolValue(false),
 					"argus_instance_id": types.StringNull(),
 				}),
@@ -276,7 +276,7 @@ func TestMapFields(t *testing.T) {
 						"enabled":       types.BoolValue(false),
 						"allowed_cidrs": types.ListNull(types.StringType),
 					}),
-					"argus": types.ObjectValueMust(argusExtensionTypes, map[string]attr.Value{
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
 						"enabled":           types.BoolValue(false),
 						"argus_instance_id": types.StringNull(),
 					}),
@@ -294,9 +294,9 @@ func TestMapFields(t *testing.T) {
 						types.StringValue("cidr1"),
 					}),
 				}),
-				"argus": types.ObjectValueMust(argusExtensionTypes, map[string]attr.Value{
+				"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
 					"enabled":           types.BoolValue(false),
-					"argus_instance_id": types.StringNull(),
+					"argus_instance_id": types.StringValue("id"),
 				}),
 			}),
 			&ske.ClusterResponse{
@@ -304,10 +304,6 @@ func TestMapFields(t *testing.T) {
 					Acl: &ske.ACL{
 						AllowedCidrs: &[]string{"cidr1"},
 						Enabled:      utils.Ptr(true),
-					},
-					Argus: &ske.Argus{
-						ArgusInstanceId: nil,
-						Enabled:         utils.Ptr(false),
 					},
 				},
 				Name: utils.Ptr("name"),
@@ -328,9 +324,9 @@ func TestMapFields(t *testing.T) {
 							types.StringValue("cidr1"),
 						}),
 					}),
-					"argus": types.ObjectValueMust(argusExtensionTypes, map[string]attr.Value{
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
 						"enabled":           types.BoolValue(false),
-						"argus_instance_id": types.StringNull(),
+						"argus_instance_id": types.StringValue("id"),
 					}),
 				}),
 				KubeConfig: types.StringNull(),
