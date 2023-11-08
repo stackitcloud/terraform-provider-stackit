@@ -1042,7 +1042,7 @@ func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value) error {
 func mapHibernations(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	if cl.Hibernation == nil {
 		if !m.Hibernations.IsNull() {
-			emptyHibernations, diags := basetypes.NewListValueFrom(ctx, basetypes.ObjectType{AttrTypes: hibernationTypes}, []attr.Value{})
+			emptyHibernations, diags := basetypes.NewListValue(basetypes.ObjectType{AttrTypes: hibernationTypes}, []attr.Value{})
 			if diags.HasError() {
 				return fmt.Errorf("hibernations is an empty list, converting to terraform empty list: %w", core.DiagsToError(diags))
 			}
@@ -1054,7 +1054,7 @@ func mapHibernations(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) e
 	}
 
 	if cl.Hibernation.Schedules == nil {
-		emptyHibernations, diags := basetypes.NewListValueFrom(ctx, basetypes.ObjectType{AttrTypes: hibernationTypes}, []attr.Value{})
+		emptyHibernations, diags := basetypes.NewListValue(basetypes.ObjectType{AttrTypes: hibernationTypes}, []attr.Value{})
 		if diags.HasError() {
 			return fmt.Errorf("hibernations is an empty list, converting to terraform empty list: %w", core.DiagsToError(diags))
 		}
