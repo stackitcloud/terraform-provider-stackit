@@ -922,7 +922,7 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	if err != nil {
 		return fmt.Errorf("mapping maintenance: %w", err)
 	}
-	err = mapHibernations(ctx, cl, m)
+	err = mapHibernations(cl, m)
 	if err != nil {
 		return fmt.Errorf("mapping hibernations: %w", err)
 	}
@@ -1039,7 +1039,7 @@ func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value) error {
 	return nil
 }
 
-func mapHibernations(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
+func mapHibernations(cl *ske.ClusterResponse, m *Cluster) error {
 	if cl.Hibernation == nil {
 		if !m.Hibernations.IsNull() {
 			emptyHibernations, diags := basetypes.NewListValue(basetypes.ObjectType{AttrTypes: hibernationTypes}, []attr.Value{})
