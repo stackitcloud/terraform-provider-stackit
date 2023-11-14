@@ -155,6 +155,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Computed: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"roles": schema.SetAttribute{

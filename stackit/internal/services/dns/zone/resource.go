@@ -231,6 +231,7 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				ElementType: types.StringType,
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.RequiresReplace(),
+					listplanmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.List{
 					listvalidator.SizeAtMost(10),
