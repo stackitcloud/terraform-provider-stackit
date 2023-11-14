@@ -271,6 +271,7 @@ The example below uses OpenStack to create the network, router, a public IP addr
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
 								stringplanmodifier.RequiresReplace(),
+								stringplanmodifier.UseStateForUnknown(),
 							},
 						},
 						"port": schema.Int64Attribute{
@@ -279,6 +280,7 @@ The example below uses OpenStack to create the network, router, a public IP addr
 							Computed:    true,
 							PlanModifiers: []planmodifier.Int64{
 								int64planmodifier.RequiresReplace(),
+								int64planmodifier.UseStateForUnknown(),
 							},
 						},
 						"protocol": schema.StringAttribute{
@@ -287,6 +289,7 @@ The example below uses OpenStack to create the network, router, a public IP addr
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
 								stringplanmodifier.RequiresReplace(),
+								stringplanmodifier.UseStateForUnknown(),
 							},
 							Validators: []validator.String{
 								stringvalidator.OneOf("PROTOCOL_UNSPECIFIED", "PROTOCOL_TCP", "PROTOCOL_UDP", "PROTOCOL_TCP_PROXY"),
@@ -298,6 +301,7 @@ The example below uses OpenStack to create the network, router, a public IP addr
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
 								stringplanmodifier.RequiresReplace(),
+								stringplanmodifier.UseStateForUnknown(),
 							},
 						},
 					},
@@ -343,6 +347,7 @@ The example below uses OpenStack to create the network, router, a public IP addr
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
 								stringplanmodifier.RequiresReplace(),
+								stringplanmodifier.UseStateForUnknown(),
 							},
 							Validators: []validator.String{
 								stringvalidator.OneOf("ROLE_UNSPECIFIED", "ROLE_LISTENERS_AND_TARGETS", "ROLE_LISTENERS", "ROLE_TARGETS"),
@@ -357,6 +362,7 @@ The example below uses OpenStack to create the network, router, a public IP addr
 				Computed:    true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.RequiresReplace(),
+					objectplanmodifier.UseStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"acl": schema.SetAttribute{
@@ -366,6 +372,7 @@ The example below uses OpenStack to create the network, router, a public IP addr
 						Computed:    true,
 						PlanModifiers: []planmodifier.Set{
 							setplanmodifier.RequiresReplace(),
+							setplanmodifier.UseStateForUnknown(),
 						},
 						Validators: []validator.Set{
 							setvalidator.ValueStringsAre(
@@ -379,6 +386,7 @@ The example below uses OpenStack to create the network, router, a public IP addr
 						Computed:    true,
 						PlanModifiers: []planmodifier.Bool{
 							boolplanmodifier.RequiresReplace(),
+							boolplanmodifier.UseStateForUnknown(),
 						},
 					},
 				},
