@@ -24,6 +24,9 @@ generate-docs:
 	@echo "Generating documentation with tfplugindocs"
 	@$(SCRIPTS_BASE)/tfplugindocs.sh
 
+build:
+	@go build -o bin/terraform-provider-stackit
+
 # TEST
 test:
 	@echo "Running tests for the terraform provider"

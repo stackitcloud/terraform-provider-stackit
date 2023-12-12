@@ -106,9 +106,9 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 	descriptions := map[string]string{
 		"main":                "Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.",
 		"id":                  "Terraform's internal resource ID. It is structured as \"`container_id`\".",
-		"project_id":          "Project ID. It is an UUID.",
+		"project_id":          "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
 		"container_id":        "Project container ID. Globally unique, user-friendly identifier.",
-		"parent_container_id": "Parent resource container ID. Both container ID (user-friendly) and UUID are supported",
+		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
 		"name":                "Project name.",
 		"labels":              "Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}",
 		"owner_email":         "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
@@ -402,7 +402,7 @@ func mapFields(ctx context.Context, projectResp *resourcemanager.ProjectResponse
 	model.ProjectId = types.StringValue(projectId)
 	model.ContainerId = types.StringValue(containerId)
 	if projectResp.Parent != nil {
-		if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err != nil {
+		if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
 			// the provided containerParentId is the UUID identifier
 			model.ContainerParentId = types.StringPointerValue(projectResp.Parent.Id)
 		} else {

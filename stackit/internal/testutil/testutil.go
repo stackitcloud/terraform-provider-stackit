@@ -30,8 +30,10 @@ var (
 
 	// ProjectId is the id of project used for tests
 	ProjectId = os.Getenv("TF_ACC_PROJECT_ID")
-	// TestProjectParentContainerID is the container id of the organization under which projects are created as part of the resource-manager acceptance tests
+	// TestProjectParentContainerID is the container id of the parent resource under which projects are created as part of the resource-manager acceptance tests
 	TestProjectParentContainerID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID")
+	// TestProjectParentContainerID is the uuid of the parent resource under which projects are created as part of the resource-manager acceptance tests
+	TestProjectParentUUID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_UUID")
 	// TestProjectServiceAccountEmail is the e-mail of a service account with admin permissions on the organization under which projects are created as part of the resource-manager acceptance tests
 	TestProjectServiceAccountEmail = os.Getenv("TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL")
 

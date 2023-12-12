@@ -19,6 +19,7 @@ import (
 var projectResource = map[string]string{
 	"name":                fmt.Sprintf("acc-pj-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 	"parent_container_id": testutil.TestProjectParentContainerID,
+	"parent_uuid":         testutil.TestProjectParentUUID,
 	"billing_reference":   "TEST-REF",
 	"new_label":           "a-label",
 }
@@ -29,16 +30,22 @@ func resourceConfig(name string, label *string) string {
 		labelConfig = fmt.Sprintf("new_label = %q", *label)
 	}
 	return fmt.Sprintf(`
-				%s
+				%[1]s
 
-				resource "stackit_resourcemanager_project" "project" {
-					parent_container_id = "%s"
-					name = "%s"
+				resource "stackit_resourcemanager_project" "project_container_id" {
+					parent_container_id = "%[2]s"
+					name = "%[3]s"
 					labels = {
-						"billing_reference" = "%s"
-						%s
+						"billing_reference" = "%[4]s"
+						%[5]s
 					}
-					owner_email = "%s"
+					owner_email = "%[6]s"
+				}
+
+				resource "stackit_resourcemanager_project" "project_uuid" {
+					parent_container_id = "%[7]s"
+					name = "%[3]s-uuid"
+					owner_email = "%[6]s"
 				}
 				`,
 		testutil.ResourceManagerProviderConfig(),
@@ -47,6 +54,7 @@ func resourceConfig(name string, label *string) string {
 		projectResource["billing_reference"],
 		labelConfig,
 		testutil.TestProjectServiceAccountEmail,
+		projectResource["parent_uuid"],
 	)
 }
 
@@ -59,13 +67,19 @@ func TestAccResourceManagerResource(t *testing.T) {
 			{
 				Config: resourceConfig(projectResource["name"], nil),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Project data
-					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.project", "container_id"),
-					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.project", "project_id"),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "name", projectResource["name"]),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "parent_container_id", projectResource["parent_container_id"]),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "labels.%", "1"),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "labels.billing_reference", projectResource["billing_reference"]),
+					// Parent container id project data
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.project_container_id", "container_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.project_container_id", "project_id"),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project_container_id", "name", projectResource["name"]),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project_container_id", "parent_container_id", projectResource["parent_container_id"]),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project_container_id", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project_container_id", "labels.billing_reference", projectResource["billing_reference"]),
+
+					// Parent UUID project data
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.project_uuid", "container_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.project_uuid", "project_id"),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project_uuid", "name", fmt.Sprintf("%s-uuid", projectResource["name"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project_uuid", "parent_container_id", projectResource["parent_uuid"]),
 				),
 			},
 			// Data source
@@ -73,21 +87,48 @@ func TestAccResourceManagerResource(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 
-					data "stackit_resourcemanager_project" "project" {
-						container_id = stackit_resourcemanager_project.project.container_id
-					}`,
+					data "stackit_resourcemanager_project" "project_container" {
+						container_id = stackit_resourcemanager_project.project_container_id.container_id
+					}
+					
+					data "stackit_resourcemanager_project" "project_uuid" {
+						project_id = stackit_resourcemanager_project.project_container_id.project_id
+					}
+
+					data "stackit_resourcemanager_project" "project_both" {
+						container_id = stackit_resourcemanager_project.project_container_id.container_id
+						project_id = stackit_resourcemanager_project.project_container_id.project_id
+					}
+					`,
 					resourceConfig(projectResource["name"], nil),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Project data
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project", "id"),
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project", "container_id"),
-					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project", "name", projectResource["name"]),
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project", "parent_container_id"),
-					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project", "labels.%", "1"),
-					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project", "labels.billing_reference", projectResource["billing_reference"]),
-					resource.TestCheckResourceAttrPair("data.stackit_resourcemanager_project.project", "project_id",
-						"stackit_resourcemanager_project.project", "project_id"),
+					// Container project data
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_container", "id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_container", "container_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_container", "project_id"),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_container", "name", projectResource["name"]),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_container", "parent_container_id"),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_container", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_container", "labels.billing_reference", projectResource["billing_reference"]),
+
+					// UUID project data
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_uuid", "id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_uuid", "container_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_uuid", "project_id"),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_uuid", "name", projectResource["name"]),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_uuid", "parent_container_id"),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_uuid", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_uuid", "labels.billing_reference", projectResource["billing_reference"]),
+
+					// Both project data
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_both", "id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_both", "container_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_both", "project_id"),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_both", "name", projectResource["name"]),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_both", "parent_container_id"),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_both", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_both", "labels.billing_reference", projectResource["billing_reference"]),
 				),
 			},
 			// Import
@@ -117,7 +158,6 @@ func TestAccResourceManagerResource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Project data
 					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.project", "container_id"),
-					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.project", "project_id"),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "name", fmt.Sprintf("%s-new", projectResource["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "parent_container_id", projectResource["parent_container_id"]),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "labels.%", "2"),
