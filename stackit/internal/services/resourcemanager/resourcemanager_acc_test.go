@@ -61,6 +61,7 @@ func TestAccResourceManagerResource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Project data
 					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.project", "container_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.project", "project_id"),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "name", projectResource["name"]),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "parent_container_id", projectResource["parent_container_id"]),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "labels.%", "1"),
@@ -116,6 +117,7 @@ func TestAccResourceManagerResource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Project data
 					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.project", "container_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.project", "project_id"),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "name", fmt.Sprintf("%s-new", projectResource["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "parent_container_id", projectResource["parent_container_id"]),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "labels.%", "2"),

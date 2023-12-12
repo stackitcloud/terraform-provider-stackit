@@ -28,6 +28,7 @@ var (
 
 type ModelData struct {
 	Id                types.String `tfsdk:"id"` // needed by TF
+	ProjectId         types.String `tfsdk:"project_id"`
 	ContainerId       types.String `tfsdk:"container_id"`
 	ContainerParentId types.String `tfsdk:"parent_container_id"`
 	Name              types.String `tfsdk:"name"`
@@ -90,8 +91,9 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 	descriptions := map[string]string{
 		"main":                "Resource Manager project data source schema.",
 		"id":                  "Terraform's internal data source. ID. It is structured as \"`container_id`\".",
+		"project_id":          "Project ID. It is an UUID.",
 		"container_id":        "Project container ID.",
-		"parent_container_id": "Parent container ID",
+		"parent_container_id": "Parent resource container ID. Both container ID (user-friendly) and UUID are supported",
 		"name":                "Project name.",
 		"labels":              `Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`,
 	}
@@ -102,6 +104,14 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
 				Computed:    true,
+			},
+			"project_id": schema.StringAttribute{
+				Description: descriptions["project_id"],
+				Optional:    true,
+				Computed:    true,
+				Validators: []validator.String{
+					validate.UUID(),
+				},
 			},
 			"container_id": schema.StringAttribute{
 				Description: descriptions["container_id"],
@@ -184,6 +194,15 @@ func mapDataFields(ctx context.Context, projectResp *resourcemanager.ProjectResp
 		return fmt.Errorf("model input is nil")
 	}
 
+	var projectId string
+	if model.ProjectId.ValueString() != "" {
+		projectId = model.ProjectId.ValueString()
+	} else if projectResp.ProjectId != nil {
+		projectId = *projectResp.ProjectId
+	} else {
+		return fmt.Errorf("project id not present")
+	}
+
 	var containerId string
 	if model.ContainerId.ValueString() != "" {
 		containerId = model.ContainerId.ValueString()
@@ -204,6 +223,7 @@ func mapDataFields(ctx context.Context, projectResp *resourcemanager.ProjectResp
 	}
 
 	model.Id = types.StringValue(containerId)
+	model.ProjectId = types.StringValue(projectId)
 	model.ContainerId = types.StringValue(containerId)
 	model.ContainerParentId = types.StringPointerValue(projectResp.Parent.ContainerId)
 	model.Name = types.StringPointerValue(projectResp.Name)
