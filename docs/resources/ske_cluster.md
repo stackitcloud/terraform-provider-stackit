@@ -111,8 +111,11 @@ Optional:
 
 Required:
 
-- `allowed_cidrs` (List of String) Specify a list of CIDRs to whitelist.
 - `enabled` (Boolean) Is ACL enabled?
+
+Optional:
+
+- `allowed_cidrs` (List of String) Specify a list of CIDRs to whitelist.
 
 
 <a id="nestedatt--extensions--argus"></a>

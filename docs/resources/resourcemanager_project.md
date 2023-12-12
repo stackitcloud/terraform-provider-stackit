@@ -3,12 +3,12 @@
 page_title: "stackit_resourcemanager_project Resource - stackit"
 subcategory: ""
 description: |-
-  Resource Manager project resource schema.
+  Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.
 ---
 
 # stackit_resourcemanager_project (Resource)
 
-Resource Manager project resource schema.
+Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.
 
 ## Example Usage
 
@@ -31,7 +31,7 @@ resource "stackit_resourcemanager_project" "example" {
 
 - `name` (String) Project name.
 - `owner_email` (String) Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.
-- `parent_container_id` (String) Parent container ID
+- `parent_container_id` (String) Parent resource identifier. Both container ID (user-friendly) and UUID are supported
 
 ### Optional
 
@@ -41,3 +41,4 @@ resource "stackit_resourcemanager_project" "example" {
 
 - `container_id` (String) Project container ID. Globally unique, user-friendly identifier.
 - `id` (String) Terraform's internal resource ID. It is structured as "`container_id`".
+- `project_id` (String) Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.
