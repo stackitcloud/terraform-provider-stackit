@@ -107,7 +107,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"service_account_key":             "Service account key used for authentication. If set alongside private key, the key flow will be used to authenticate all operations.",
 		"private_key_path":                "Path for the private RSA key used for authentication. If set alongside the service account key, the key flow will be used to authenticate all operations.",
 		"private_key":                     "Private RSA key used for authentication. If set alongside the service account key, the key flow will be used to authenticate all operations.",
-		"service_account_email":           "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL",
+		"service_account_email":           "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.",
 		"region":                          "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"dns_custom_endpoint":             "Custom endpoint for the DNS service",
 		"postgresql_custom_endpoint":      "Custom endpoint for the PostgreSQL service",

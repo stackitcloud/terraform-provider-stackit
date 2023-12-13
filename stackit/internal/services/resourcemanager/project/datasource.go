@@ -28,6 +28,7 @@ var (
 
 type ModelData struct {
 	Id                types.String `tfsdk:"id"` // needed by TF
+	ProjectId         types.String `tfsdk:"project_id"`
 	ContainerId       types.String `tfsdk:"container_id"`
 	ContainerParentId types.String `tfsdk:"parent_container_id"`
 	Name              types.String `tfsdk:"name"`
@@ -88,10 +89,11 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 // Schema defines the schema for the data source.
 func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                "Resource Manager project data source schema.",
+		"main":                "Resource Manager project data source schema. To identify the project, you need to provider either project_id or container_id. If you provide both, project_id will be used.",
 		"id":                  "Terraform's internal data source. ID. It is structured as \"`container_id`\".",
-		"container_id":        "Project container ID.",
-		"parent_container_id": "Parent container ID",
+		"project_id":          "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
+		"container_id":        "Project container ID. Globally unique, user-friendly identifier.",
+		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
 		"name":                "Project name.",
 		"labels":              `Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`,
 	}
@@ -103,9 +105,16 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Description: descriptions["id"],
 				Computed:    true,
 			},
+			"project_id": schema.StringAttribute{
+				Description: descriptions["project_id"],
+				Optional:    true,
+				Validators: []validator.String{
+					validate.UUID(),
+				},
+			},
 			"container_id": schema.StringAttribute{
 				Description: descriptions["container_id"],
-				Required:    true,
+				Optional:    true,
 				Validators: []validator.String{
 					validate.NoSeparator(),
 				},
@@ -154,10 +163,25 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	containerId := state.ContainerId.ValueString()
-	ctx = tflog.SetField(ctx, "project_id", containerId)
 
-	projectResp, err := d.client.GetProject(ctx, containerId).Execute()
+	projectId := state.ProjectId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+
+	containerId := state.ContainerId.ValueString()
+	ctx = tflog.SetField(ctx, "container_id", containerId)
+
+	if containerId == "" && projectId == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", "Either container_id or project_id must be set")
+		return
+	}
+
+	// set project identifier. If projectId is provided, it takes precedence over containerId
+	var identifier = containerId
+	if projectId != "" {
+		identifier = projectId
+	}
+
+	projectResp, err := d.client.GetProject(ctx, identifier).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -184,6 +208,15 @@ func mapDataFields(ctx context.Context, projectResp *resourcemanager.ProjectResp
 		return fmt.Errorf("model input is nil")
 	}
 
+	var projectId string
+	if model.ProjectId.ValueString() != "" {
+		projectId = model.ProjectId.ValueString()
+	} else if projectResp.ProjectId != nil {
+		projectId = *projectResp.ProjectId
+	} else {
+		return fmt.Errorf("project id not present")
+	}
+
 	var containerId string
 	if model.ContainerId.ValueString() != "" {
 		containerId = model.ContainerId.ValueString()
@@ -204,6 +237,7 @@ func mapDataFields(ctx context.Context, projectResp *resourcemanager.ProjectResp
 	}
 
 	model.Id = types.StringValue(containerId)
+	model.ProjectId = types.StringValue(projectId)
 	model.ContainerId = types.StringValue(containerId)
 	model.ContainerParentId = types.StringPointerValue(projectResp.Parent.ContainerId)
 	model.Name = types.StringPointerValue(projectResp.Name)

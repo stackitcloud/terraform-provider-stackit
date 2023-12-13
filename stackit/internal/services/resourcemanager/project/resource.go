@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -39,6 +40,7 @@ const (
 
 type Model struct {
 	Id                types.String `tfsdk:"id"` // needed by TF
+	ProjectId         types.String `tfsdk:"project_id"`
 	ContainerId       types.String `tfsdk:"container_id"`
 	ContainerParentId types.String `tfsdk:"parent_container_id"`
 	Name              types.String `tfsdk:"name"`
@@ -102,10 +104,11 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 // Schema defines the schema for the resource.
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                "Resource Manager project resource schema.",
+		"main":                "Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.",
 		"id":                  "Terraform's internal resource ID. It is structured as \"`container_id`\".",
+		"project_id":          "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
 		"container_id":        "Project container ID. Globally unique, user-friendly identifier.",
-		"parent_container_id": "Parent container ID",
+		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
 		"name":                "Project name.",
 		"labels":              "Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}",
 		"owner_email":         "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
@@ -119,6 +122,16 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Description: descriptions["project_id"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
 				},
 			},
 			"container_id": schema.StringAttribute{
@@ -357,6 +370,15 @@ func mapFields(ctx context.Context, projectResp *resourcemanager.ProjectResponse
 		return fmt.Errorf("model input is nil")
 	}
 
+	var projectId string
+	if model.ProjectId.ValueString() != "" {
+		projectId = model.ProjectId.ValueString()
+	} else if projectResp.ProjectId != nil {
+		projectId = *projectResp.ProjectId
+	} else {
+		return fmt.Errorf("project id not present")
+	}
+
 	var containerId string
 	if model.ContainerId.ValueString() != "" {
 		containerId = model.ContainerId.ValueString()
@@ -377,9 +399,16 @@ func mapFields(ctx context.Context, projectResp *resourcemanager.ProjectResponse
 	}
 
 	model.Id = types.StringValue(containerId)
+	model.ProjectId = types.StringValue(projectId)
 	model.ContainerId = types.StringValue(containerId)
 	if projectResp.Parent != nil {
-		model.ContainerParentId = types.StringPointerValue(projectResp.Parent.ContainerId)
+		if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
+			// the provided containerParentId is the UUID identifier
+			model.ContainerParentId = types.StringPointerValue(projectResp.Parent.Id)
+		} else {
+			// the provided containerParentId is the user-friendly container id
+			model.ContainerParentId = types.StringPointerValue(projectResp.Parent.ContainerId)
+		}
 	} else {
 		model.ContainerParentId = types.StringNull()
 	}
