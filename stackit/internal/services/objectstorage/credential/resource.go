@@ -186,7 +186,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	// Handle project init
 	err := enableProject(ctx, &model, r.client)
-	if resp.Diagnostics.HasError() {
+	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
 	}

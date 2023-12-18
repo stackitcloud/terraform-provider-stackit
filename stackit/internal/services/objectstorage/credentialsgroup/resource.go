@@ -90,7 +90,7 @@ func (r *credentialsGroupResource) Configure(ctx context.Context, req resource.C
 // Schema defines the schema for the resource.
 func (r *credentialsGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                 "ObjectStorage credentials group resource schema. Must have a `region` specified in the provider configuration.",
+		"main":                 "ObjectStorage credentials group resource schema. Must have a `region` specified in the provider configuration. If you are creating `credentialsgroup` and `bucket` resources simultaneously, please include the `depends_on` field so that they are created sequentially. This prevents errors from concurrent calls to the service enablement that is done in the background.",
 		"id":                   "Terraform's internal data source identifier. It is structured as \"`project_id`,`credentials_group_id`\".",
 		"credentials_group_id": "The credentials group ID",
 		"name":                 "The credentials group's display name.",
@@ -159,7 +159,7 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 
 	// Handle project init
 	err := enableProject(ctx, &model, r.client)
-	if resp.Diagnostics.HasError() {
+	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
 	}
