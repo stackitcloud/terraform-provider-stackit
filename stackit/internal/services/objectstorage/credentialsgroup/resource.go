@@ -159,7 +159,7 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 
 	// Handle project init
 	err := enableProject(ctx, &model, r.client)
-	if resp.Diagnostics.HasError() {
+	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
 	}

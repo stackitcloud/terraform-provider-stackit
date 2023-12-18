@@ -156,7 +156,7 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	// Handle project init
 	err := enableProject(ctx, &model, r.client)
-	if resp.Diagnostics.HasError() {
+	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
 	}
