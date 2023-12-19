@@ -301,8 +301,8 @@ func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model 
 }
 
 type objectStorageClient interface {
-	CreateProjectExecute(ctx context.Context, projectId string) (*objectstorage.GetProjectResponse, error)
-	GetCredentialsGroupsExecute(ctx context.Context, projectId string) (*objectstorage.GetCredentialsGroupsResponse, error)
+	EnableServiceExecute(ctx context.Context, projectId string) (*objectstorage.ProjectStatus, error)
+	ListCredentialsGroupsExecute(ctx context.Context, projectId string) (*objectstorage.ListCredentialsGroupsResponse, error)
 }
 
 // enableProject enables object storage for the specified project. If the project is already enabled, nothing happens
@@ -310,7 +310,7 @@ func enableProject(ctx context.Context, model *Model, client objectStorageClient
 	projectId := model.ProjectId.ValueString()
 
 	// From the object storage OAS: Creation will also be successful if the project is already enabled, but will not create a duplicate
-	_, err := client.CreateProjectExecute(ctx, projectId)
+	_, err := client.EnableServiceExecute(ctx, projectId)
 	if err != nil {
 		return fmt.Errorf("failed to create object storage project: %w", err)
 	}
@@ -326,7 +326,7 @@ func readCredentialsGroups(ctx context.Context, model *Model, client objectStora
 		return fmt.Errorf("missing configuration: either name or credentials group id must be provided")
 	}
 
-	credentialsGroupsResp, err := client.GetCredentialsGroupsExecute(ctx, model.ProjectId.ValueString())
+	credentialsGroupsResp, err := client.ListCredentialsGroupsExecute(ctx, model.ProjectId.ValueString())
 	if err != nil {
 		return fmt.Errorf("getting credentials groups: %w", err)
 	}

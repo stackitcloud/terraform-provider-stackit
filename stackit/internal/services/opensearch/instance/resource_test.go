@@ -221,14 +221,14 @@ func TestToUpdatePayload(t *testing.T) {
 		description     string
 		input           *Model
 		inputParameters *parametersModel
-		expected        *opensearch.UpdateInstancePayload
+		expected        *opensearch.PartialUpdateInstancePayload
 		isValid         bool
 	}{
 		{
 			"default_values",
 			&Model{},
 			&parametersModel{},
-			&opensearch.UpdateInstancePayload{
+			&opensearch.PartialUpdateInstancePayload{
 				Parameters: &opensearch.InstanceParameters{},
 			},
 			true,
@@ -241,7 +241,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&parametersModel{
 				SgwAcl: types.StringValue("sgw"),
 			},
-			&opensearch.UpdateInstancePayload{
+			&opensearch.PartialUpdateInstancePayload{
 				Parameters: &opensearch.InstanceParameters{
 					SgwAcl: utils.Ptr("sgw"),
 				},
@@ -257,7 +257,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&parametersModel{
 				SgwAcl: types.StringNull(),
 			},
-			&opensearch.UpdateInstancePayload{
+			&opensearch.PartialUpdateInstancePayload{
 				Parameters: &opensearch.InstanceParameters{
 					SgwAcl: nil,
 				},
@@ -278,7 +278,7 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			nil,
-			&opensearch.UpdateInstancePayload{
+			&opensearch.PartialUpdateInstancePayload{
 				PlanId: utils.Ptr("plan"),
 			},
 			true,

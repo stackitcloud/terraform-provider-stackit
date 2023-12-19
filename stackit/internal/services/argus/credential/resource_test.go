@@ -12,13 +12,13 @@ import (
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *argus.Credential
+		input       *argus.Credentials
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"ok",
-			&argus.Credential{
+			&argus.Credentials{
 				Username: utils.Ptr("username"),
 				Password: utils.Ptr("password"),
 			},
@@ -39,7 +39,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"response_fields_nil_fail",
-			&argus.Credential{
+			&argus.Credentials{
 				Password: nil,
 				Username: nil,
 			},
@@ -48,7 +48,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"no_resource_id",
-			&argus.Credential{},
+			&argus.Credentials{},
 			Model{},
 			false,
 		},

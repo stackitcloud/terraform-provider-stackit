@@ -12,20 +12,20 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/core v0.7.3
-	github.com/stackitcloud/stackit-sdk-go/services/argus v0.7.0
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.6.0
-	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.7.0
-	github.com/stackitcloud/stackit-sdk-go/services/logme v0.7.0
-	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.7.0
-	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.7.0
-	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.7.0
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.7.0
-	github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.8.0
-	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.7.0
-	github.com/stackitcloud/stackit-sdk-go/services/redis v0.7.0
-	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.6.0
-	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.4.0
-	github.com/stackitcloud/stackit-sdk-go/services/ske v0.7.0
+	github.com/stackitcloud/stackit-sdk-go/services/argus v0.0.0-release.2023.12.20.5
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.0.0-release.2023.12.20.5
+	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.0.0-release.2023.12.20.5
+	github.com/stackitcloud/stackit-sdk-go/services/logme v0.0.0-release.2023.12.20.5
+	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.0.0-release.2023.12.20.5
+	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.0.0-release.2023.12.20.5
+	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.0.0-release.2023.12.20.5
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.0.0-release.2023.12.20.5
+	github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.0.0-release.2023.12.20.5
+	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.0.0-release.2023.12.20.5
+	github.com/stackitcloud/stackit-sdk-go/services/redis v0.0.0-release.2023.12.20.5
+	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.0.0-release.2023.12.20.5
+	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.0.0-release.2023.12.20.5
+	github.com/stackitcloud/stackit-sdk-go/services/ske v0.0.0-release.2023.12.20.5
 	golang.org/x/mod v0.14.0
 )
 

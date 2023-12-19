@@ -317,7 +317,7 @@ func TestToUpdatePayload(t *testing.T) {
 		input                  *Model
 		inputParameters        *parametersModel
 		inputParametersPlugins *[]string
-		expected               *postgresql.UpdateInstancePayload
+		expected               *postgresql.PartialUpdateInstancePayload
 		isValid                bool
 	}{
 		{
@@ -325,7 +325,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{},
 			&parametersModel{},
 			&[]string{},
-			&postgresql.UpdateInstancePayload{
+			&postgresql.PartialUpdateInstancePayload{
 				Parameters: &postgresql.InstanceParameters{
 					Plugins: &[]string{},
 				},
@@ -348,7 +348,7 @@ func TestToUpdatePayload(t *testing.T) {
 				"plugin_1",
 				"plugin_2",
 			},
-			&postgresql.UpdateInstancePayload{
+			&postgresql.PartialUpdateInstancePayload{
 				Parameters: &postgresql.InstanceParameters{
 					EnableMonitoring:     utils.Ptr(true),
 					MetricsFrequency:     utils.Ptr(int64(123)),
@@ -379,7 +379,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&[]string{
 				"",
 			},
-			&postgresql.UpdateInstancePayload{
+			&postgresql.PartialUpdateInstancePayload{
 				Parameters: &postgresql.InstanceParameters{
 					EnableMonitoring:     nil,
 					MetricsFrequency:     utils.Ptr(int64(2123456789)),
@@ -409,7 +409,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			nil,
 			nil,
-			&postgresql.UpdateInstancePayload{
+			&postgresql.PartialUpdateInstancePayload{
 				PlanId: utils.Ptr("plan"),
 			},
 			true,

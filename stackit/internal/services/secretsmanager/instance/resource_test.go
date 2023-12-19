@@ -366,7 +366,7 @@ func TestUpdateACLs(t *testing.T) {
 			// Handler for creating ACL
 			createACLHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				decoder := json.NewDecoder(r.Body)
-				var payload secretsmanager.CreateAclPayload
+				var payload secretsmanager.CreateACLPayload
 				err := decoder.Decode(&payload)
 				if err != nil {
 					t.Errorf("Create ACL handler: failed to parse payload")

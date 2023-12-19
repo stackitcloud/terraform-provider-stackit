@@ -20,12 +20,12 @@ type objectStorageClientMocked struct {
 	returnError bool
 }
 
-func (c *objectStorageClientMocked) CreateProjectExecute(_ context.Context, projectId string) (*objectstorage.GetProjectResponse, error) {
+func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId string) (*objectstorage.ProjectStatus, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("create project failed")
 	}
 
-	return &objectstorage.GetProjectResponse{
+	return &objectstorage.ProjectStatus{
 		Project: utils.Ptr(projectId),
 	}, nil
 }
@@ -212,14 +212,14 @@ func TestReadCredentials(t *testing.T) {
 
 	tests := []struct {
 		description         string
-		mockedResp          *objectstorage.GetAccessKeysResponse
+		mockedResp          *objectstorage.ListAccessKeysResponse
 		expected            Model
 		getCredentialsFails bool
 		isValid             bool
 	}{
 		{
 			"default_values",
-			&objectstorage.GetAccessKeysResponse{
+			&objectstorage.ListAccessKeysResponse{
 				AccessKeys: &[]objectstorage.AccessKey{
 					{
 						KeyId: utils.Ptr("foo-cid"),
@@ -247,7 +247,7 @@ func TestReadCredentials(t *testing.T) {
 		},
 		{
 			"simple_values",
-			&objectstorage.GetAccessKeysResponse{
+			&objectstorage.ListAccessKeysResponse{
 				AccessKeys: &[]objectstorage.AccessKey{
 					{
 						KeyId:       utils.Ptr("foo-cid"),
@@ -281,7 +281,7 @@ func TestReadCredentials(t *testing.T) {
 		},
 		{
 			"expiration_timestamp_with_fractional_seconds",
-			&objectstorage.GetAccessKeysResponse{
+			&objectstorage.ListAccessKeysResponse{
 				AccessKeys: &[]objectstorage.AccessKey{
 					{
 						KeyId:       utils.Ptr("foo-cid"),
@@ -315,7 +315,7 @@ func TestReadCredentials(t *testing.T) {
 		},
 		{
 			"empty_credentials",
-			&objectstorage.GetAccessKeysResponse{
+			&objectstorage.ListAccessKeysResponse{
 				AccessKeys: &[]objectstorage.AccessKey{},
 			},
 			Model{},
@@ -331,7 +331,7 @@ func TestReadCredentials(t *testing.T) {
 		},
 		{
 			"non_matching_credential",
-			&objectstorage.GetAccessKeysResponse{
+			&objectstorage.ListAccessKeysResponse{
 				AccessKeys: &[]objectstorage.AccessKey{
 					{
 						KeyId:       utils.Ptr("foo-cid"),
@@ -351,7 +351,7 @@ func TestReadCredentials(t *testing.T) {
 		},
 		{
 			"error_response",
-			&objectstorage.GetAccessKeysResponse{
+			&objectstorage.ListAccessKeysResponse{
 				AccessKeys: &[]objectstorage.AccessKey{
 					{
 						KeyId:       utils.Ptr("cid"),

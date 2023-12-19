@@ -361,12 +361,12 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	err = r.client.UpdateInstance(ctx, projectId, instanceId).UpdateInstancePayload(*payload).Execute()
+	err = r.client.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
@@ -594,17 +594,17 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*redis.CreateIn
 	}, nil
 }
 
-func toUpdatePayload(model *Model, parameters *parametersModel) (*redis.UpdateInstancePayload, error) {
+func toUpdatePayload(model *Model, parameters *parametersModel) (*redis.PartialUpdateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
 	if parameters == nil {
-		return &redis.UpdateInstancePayload{
+		return &redis.PartialUpdateInstancePayload{
 			PlanId: conversion.StringValueToPointer(model.PlanId),
 		}, nil
 	}
-	return &redis.UpdateInstancePayload{
+	return &redis.PartialUpdateInstancePayload{
 		Parameters: &redis.InstanceParameters{
 			SgwAcl: conversion.StringValueToPointer(parameters.SgwAcl),
 		},
@@ -614,7 +614,7 @@ func toUpdatePayload(model *Model, parameters *parametersModel) (*redis.UpdateIn
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
-	res, err := r.client.GetOfferings(ctx, projectId).Execute()
+	res, err := r.client.ListOfferings(ctx, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting Redis offerings: %w", err)
 	}
@@ -652,7 +652,7 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 func loadPlanNameAndVersion(ctx context.Context, client *redis.APIClient, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	planId := model.PlanId.ValueString()
-	res, err := client.GetOfferings(ctx, projectId).Execute()
+	res, err := client.ListOfferings(ctx, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting Redis offerings: %w", err)
 	}

@@ -199,7 +199,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACLs: %v", err))
 		return
 	}
-	aclList, err := r.client.GetAcls(ctx, projectId, instanceId).Execute()
+	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
 		return
@@ -239,7 +239,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	aclList, err := r.client.GetAcls(ctx, projectId, instanceId).Execute()
+	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
 		return
@@ -295,7 +295,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	aclList, err := r.client.GetAcls(ctx, projectId, instanceId).Execute()
+	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
 		return
@@ -425,7 +425,7 @@ func toCreatePayload(model *Model) (*secretsmanager.CreateInstancePayload, error
 // updateACLs creates and deletes ACLs so that the instance's ACLs are the ones in the model
 func updateACLs(ctx context.Context, projectId, instanceId string, acls []string, client *secretsmanager.APIClient) error {
 	// Get ACLs current state
-	currentACLsResp, err := client.GetAcls(ctx, projectId, instanceId).Execute()
+	currentACLsResp, err := client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		return fmt.Errorf("fetching current ACLs: %w", err)
 	}
@@ -453,17 +453,17 @@ func updateACLs(ctx context.Context, projectId, instanceId string, acls []string
 	// Create/delete ACLs
 	for cidr, state := range aclsState {
 		if state.isInModel && !state.isCreated {
-			payload := secretsmanager.CreateAclPayload{
+			payload := secretsmanager.CreateACLPayload{
 				Cidr: utils.Ptr(cidr),
 			}
-			_, err := client.CreateAcl(ctx, projectId, instanceId).CreateAclPayload(payload).Execute()
+			_, err := client.CreateACL(ctx, projectId, instanceId).CreateACLPayload(payload).Execute()
 			if err != nil {
 				return fmt.Errorf("creating ACL '%v': %w", cidr, err)
 			}
 		}
 
 		if !state.isInModel && state.isCreated {
-			err := client.DeleteAcl(ctx, projectId, instanceId, state.id).Execute()
+			err := client.DeleteACL(ctx, projectId, instanceId, state.id).Execute()
 			if err != nil {
 				return fmt.Errorf("deleting ACL '%v': %w", cidr, err)
 			}

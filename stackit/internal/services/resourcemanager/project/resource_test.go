@@ -250,14 +250,14 @@ func TestToUpdatePayload(t *testing.T) {
 		description string
 		input       *Model
 		inputLabels *map[string]string
-		expected    *resourcemanager.UpdateProjectPayload
+		expected    *resourcemanager.PartialUpdateProjectPayload
 		isValid     bool
 	}{
 		{
 			"default_ok",
 			&Model{},
 			nil,
-			&resourcemanager.UpdateProjectPayload{
+			&resourcemanager.PartialUpdateProjectPayload{
 				ContainerParentId: nil,
 				Labels:            nil,
 				Name:              nil,
@@ -275,7 +275,7 @@ func TestToUpdatePayload(t *testing.T) {
 				"label1": "1",
 				"label2": "2",
 			},
-			&resourcemanager.UpdateProjectPayload{
+			&resourcemanager.PartialUpdateProjectPayload{
 				ContainerParentId: utils.Ptr("pid"),
 				Labels: &map[string]string{
 					"label1": "1",

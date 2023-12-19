@@ -15,12 +15,12 @@ type objectStorageClientMocked struct {
 	returnError bool
 }
 
-func (c *objectStorageClientMocked) CreateProjectExecute(_ context.Context, projectId string) (*objectstorage.GetProjectResponse, error) {
+func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId string) (*objectstorage.ProjectStatus, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("create project failed")
 	}
 
-	return &objectstorage.GetProjectResponse{
+	return &objectstorage.ProjectStatus{
 		Project: utils.Ptr(projectId),
 	}, nil
 }

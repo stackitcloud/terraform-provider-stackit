@@ -103,7 +103,7 @@ func (r *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	_, err := r.client.GetProject(ctx, projectId).Execute()
+	_, err := r.client.GetServiceStatus(ctx, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Calling API: %v", err))
 		return

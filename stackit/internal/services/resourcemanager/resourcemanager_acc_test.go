@@ -195,7 +195,7 @@ func testAccCheckResourceManagerDestroy(s *terraform.State) error {
 		projectsToDestroy = append(projectsToDestroy, containerId)
 	}
 
-	projectsResp, err := client.GetProjects(ctx).ContainerParentId(projectResource["parent_container_id"]).Execute()
+	projectsResp, err := client.ListProjects(ctx).ContainerParentId(projectResource["parent_container_id"]).Execute()
 	if err != nil {
 		return fmt.Errorf("getting projectsResp: %w", err)
 	}

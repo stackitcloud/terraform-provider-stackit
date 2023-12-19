@@ -231,13 +231,13 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *dns.UpdateRecordSetPayload
+		expected    *dns.PartialUpdateRecordSetPayload
 		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
-			&dns.UpdateRecordSetPayload{
+			&dns.PartialUpdateRecordSetPayload{
 				Records: &[]dns.RecordPayload{},
 			},
 			true,
@@ -253,7 +253,7 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				TTL: types.Int64Value(1),
 			},
-			&dns.UpdateRecordSetPayload{
+			&dns.PartialUpdateRecordSetPayload{
 				Comment: utils.Ptr("comment"),
 				Name:    utils.Ptr("name"),
 				Records: &[]dns.RecordPayload{
@@ -272,7 +272,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Records: types.ListValueMust(types.StringType, nil),
 				TTL:     types.Int64Value(2123456789),
 			},
-			&dns.UpdateRecordSetPayload{
+			&dns.PartialUpdateRecordSetPayload{
 				Comment: nil,
 				Name:    utils.Ptr(""),
 				Records: &[]dns.RecordPayload{},

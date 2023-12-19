@@ -412,12 +412,12 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	_, err = r.client.UpdateInstance(ctx, projectId, instanceId).UpdateInstancePayload(*payload).Execute()
+	_, err = r.client.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
 	}
-	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
@@ -590,14 +590,14 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}
 
 	return &postgresflex.CreateInstancePayload{
-		Acl: &postgresflex.InstanceAcl{
+		Acl: &postgresflex.ACL{
 			Items: &acl,
 		},
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
 		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
-		Storage: &postgresflex.InstanceStorage{
+		Storage: &postgresflex.Storage{
 			Class: conversion.StringValueToPointer(storage.Class),
 			Size:  conversion.Int64ValueToPointer(storage.Size),
 		},
@@ -605,7 +605,7 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}, nil
 }
 
-func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel) (*postgresflex.UpdateInstancePayload, error) {
+func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel) (*postgresflex.PartialUpdateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -619,15 +619,15 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		return nil, fmt.Errorf("nil storage")
 	}
 
-	return &postgresflex.UpdateInstancePayload{
-		Acl: &postgresflex.InstanceAcl{
+	return &postgresflex.PartialUpdateInstancePayload{
+		Acl: &postgresflex.ACL{
 			Items: &acl,
 		},
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
 		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
-		Storage: &postgresflex.InstanceStorage{
+		Storage: &postgresflex.Storage{
 			Class: conversion.StringValueToPointer(storage.Class),
 			Size:  conversion.Int64ValueToPointer(storage.Size),
 		},
@@ -636,7 +636,7 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 }
 
 type postgresFlexClient interface {
-	GetFlavorsExecute(ctx context.Context, projectId string) (*postgresflex.FlavorsResponse, error)
+	ListFlavorsExecute(ctx context.Context, projectId string) (*postgresflex.ListFlavorsResponse, error)
 }
 
 func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, flavor *flavorModel) error {
@@ -656,7 +656,7 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 	}
 
 	projectId := model.ProjectId.ValueString()
-	res, err := client.GetFlavorsExecute(ctx, projectId)
+	res, err := client.ListFlavorsExecute(ctx, projectId)
 	if err != nil {
 		return fmt.Errorf("listing postgresflex flavors: %w", err)
 	}

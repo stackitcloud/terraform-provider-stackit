@@ -297,7 +297,7 @@ func mapFields(bucketResp *objectstorage.GetBucketResponse, model *Model) error 
 }
 
 type objectStorageClient interface {
-	CreateProjectExecute(ctx context.Context, projectId string) (*objectstorage.GetProjectResponse, error)
+	EnableServiceExecute(ctx context.Context, projectId string) (*objectstorage.ProjectStatus, error)
 }
 
 // enableProject enables object storage for the specified project. If the project is already enabled, nothing happens
@@ -305,7 +305,7 @@ func enableProject(ctx context.Context, model *Model, client objectStorageClient
 	projectId := model.ProjectId.ValueString()
 
 	// From the object storage OAS: Creation will also be successful if the project is already enabled, but will not create a duplicate
-	_, err := client.CreateProjectExecute(ctx, projectId)
+	_, err := client.EnableServiceExecute(ctx, projectId)
 	if err != nil {
 		return fmt.Errorf("failed to create object storage project: %w", err)
 	}

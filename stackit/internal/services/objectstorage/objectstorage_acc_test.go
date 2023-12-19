@@ -248,7 +248,7 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		bucketsToDestroy = append(bucketsToDestroy, bucketName)
 	}
 
-	bucketsResp, err := client.GetBuckets(ctx, testutil.ProjectId).Execute()
+	bucketsResp, err := client.ListBuckets(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting bucketsResp: %w", err)
 	}
@@ -281,7 +281,7 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		credentialsGroupsToDestroy = append(credentialsGroupsToDestroy, credentialsGroupId)
 	}
 
-	credentialsGroupsResp, err := client.GetCredentialsGroups(ctx, testutil.ProjectId).Execute()
+	credentialsGroupsResp, err := client.ListCredentialsGroups(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting bucketsResp: %w", err)
 	}

@@ -398,12 +398,12 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 	// Update existing zone
-	_, err = r.client.UpdateZone(ctx, projectId, zoneId).UpdateZonePayload(*payload).Execute()
+	_, err = r.client.PartialUpdateZone(ctx, projectId, zoneId).PartialUpdateZonePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	waitResp, err := wait.UpdateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Zone update waiting: %v", err))
 		return
@@ -574,12 +574,12 @@ func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
 	}, nil
 }
 
-func toUpdatePayload(model *Model) (*dns.UpdateZonePayload, error) {
+func toUpdatePayload(model *Model) (*dns.PartialUpdateZonePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	return &dns.UpdateZonePayload{
+	return &dns.PartialUpdateZonePayload{
 		Name:          conversion.StringValueToPointer(model.Name),
 		ContactEmail:  conversion.StringValueToPointer(model.ContactEmail),
 		Description:   conversion.StringValueToPointer(model.Description),
