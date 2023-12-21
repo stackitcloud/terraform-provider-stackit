@@ -669,14 +669,14 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}
 
 	return &mongodbflex.CreateInstancePayload{
-		Acl: &mongodbflex.InstanceAcl{
+		Acl: &mongodbflex.ACL{
 			Items: &acl,
 		},
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
 		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
-		Storage: &mongodbflex.InstanceStorage{
+		Storage: &mongodbflex.Storage{
 			Class: conversion.StringValueToPointer(storage.Class),
 			Size:  conversion.Int64ValueToPointer(storage.Size),
 		},
@@ -708,14 +708,14 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}
 
 	return &mongodbflex.PartialUpdateInstancePayload{
-		Acl: &mongodbflex.InstanceAcl{
+		Acl: &mongodbflex.ACL{
 			Items: &acl,
 		},
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
 		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
-		Storage: &mongodbflex.InstanceStorage{
+		Storage: &mongodbflex.Storage{
 			Class: conversion.StringValueToPointer(storage.Class),
 			Size:  conversion.Int64ValueToPointer(storage.Size),
 		},
@@ -725,7 +725,7 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 }
 
 type mongoDBFlexClient interface {
-	GetFlavorsExecute(ctx context.Context, projectId string) (*mongodbflex.GetFlavorsResponse, error)
+	ListFlavorsExecute(ctx context.Context, projectId string) (*mongodbflex.ListFlavorsResponse, error)
 }
 
 func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, flavor *flavorModel) error {
@@ -745,7 +745,7 @@ func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, f
 	}
 
 	projectId := model.ProjectId.ValueString()
-	res, err := client.GetFlavorsExecute(ctx, projectId)
+	res, err := client.ListFlavorsExecute(ctx, projectId)
 	if err != nil {
 		return fmt.Errorf("listing mongodbflex flavors: %w", err)
 	}
