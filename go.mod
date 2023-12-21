@@ -13,7 +13,7 @@ require (
 	github.com/hashicorp/terraform-plugin-testing v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/core v0.7.3
 	github.com/stackitcloud/stackit-sdk-go/services/argus v0.7.0
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.6.0
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.7.0

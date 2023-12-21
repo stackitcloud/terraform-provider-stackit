@@ -155,8 +155,8 @@ github.com/stackitcloud/stackit-sdk-go/core v0.7.3 h1:oxLY44Vuyn7+lcKBZDFGbc2YSj
 github.com/stackitcloud/stackit-sdk-go/core v0.7.3/go.mod h1:5hA/nSktcp/BiFaRyMIV6E/1d/i7cieLNE5XzWPrICo=
 github.com/stackitcloud/stackit-sdk-go/services/argus v0.7.0 h1:6q5vqrc1Rov0l64eWjK0rC6pvMIuJd6RotPPc1ZQYGo=
 github.com/stackitcloud/stackit-sdk-go/services/argus v0.7.0/go.mod h1:IPMHLk1W1+u2wnqllvJnOmcP10auT+572iglpiQo3H8=
-github.com/stackitcloud/stackit-sdk-go/services/dns v0.6.0 h1:n7ONZlfyWk/D10mWMT/j25kuV6ARgyFd3vIZB3kgrIo=
-github.com/stackitcloud/stackit-sdk-go/services/dns v0.6.0/go.mod h1:1hRYJV33kFW/WaJuiFZWP7Z5FHhf6TnVc1equhFhMnA=
+github.com/stackitcloud/stackit-sdk-go/services/dns v0.7.0 h1:vwuQfDuX83IeLnNPA+j09On4sITvdcXK3pogkANrBzA=
+github.com/stackitcloud/stackit-sdk-go/services/dns v0.7.0/go.mod h1:IRNGsJZhuf0s+9Ta4wIhDt3t8mOwKcZ2YeHC0CChigQ=
 github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.7.0 h1:atkoIAIk3ciXRfhppRW6idhvyXBaGHcOYw9koWkfrFU=
 github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.7.0/go.mod h1:Lvtm8yykjbBaa3JPpy5cTDgJ7oZ26PVROxNSwfwa87w=
 github.com/stackitcloud/stackit-sdk-go/services/logme v0.7.0 h1:adCOJQTd2do0W5AjU0thALEvid0KMJw52ZsSwj2k4FM=
