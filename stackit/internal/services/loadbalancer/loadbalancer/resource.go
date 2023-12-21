@@ -485,7 +485,7 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	// Get status of load balancer functionality
-	statusResp, err := r.client.GetStatus(ctx, projectId).Execute()
+	statusResp, err := r.client.GetServiceStatus(ctx, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error getting status of load balancer functionality", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -493,13 +493,13 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 
 	// If load balancer functionality is not enabled, enable it
 	if *statusResp.Status != wait.FunctionalityStatusReady {
-		_, err = r.client.EnableLoadBalancing(ctx, projectId).XRequestID(uuid.NewString()).Execute()
+		_, err = r.client.EnableService(ctx, projectId).XRequestID(uuid.NewString()).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling load balancer functionality", fmt.Sprintf("Calling API: %v", err))
 			return
 		}
 
-		_, err := wait.EnableLoadBalancingWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
+		_, err := wait.EnableServiceWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling load balancer functionality", fmt.Sprintf("Waiting for enablement: %v", err))
 			return

@@ -305,7 +305,7 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 }
 
 type objectStorageClient interface {
-	CreateProjectExecute(ctx context.Context, projectId string) (*objectstorage.GetProjectResponse, error)
+	EnableServiceExecute(ctx context.Context, projectId string) (*objectstorage.ProjectStatus, error)
 }
 
 // enableProject enables object storage for the specified project. If the project is already enabled, nothing happens
@@ -313,7 +313,7 @@ func enableProject(ctx context.Context, model *Model, client objectStorageClient
 	projectId := model.ProjectId.ValueString()
 
 	// From the object storage OAS: Creation will also be successful if the project is already enabled, but will not create a duplicate
-	_, err := client.CreateProjectExecute(ctx, projectId)
+	_, err := client.EnableServiceExecute(ctx, projectId)
 	if err != nil {
 		return fmt.Errorf("failed to create object storage project: %w", err)
 	}
@@ -394,7 +394,7 @@ func readCredentials(ctx context.Context, model *Model, client *objectstorage.AP
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	credentialId := model.CredentialId.ValueString()
 
-	credentialsGroupResp, err := client.GetAccessKeys(ctx, projectId).CredentialsGroup(credentialsGroupId).Execute()
+	credentialsGroupResp, err := client.ListAccessKeys(ctx, projectId).CredentialsGroup(credentialsGroupId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting credentials groups: %w", err)
 	}

@@ -380,7 +380,7 @@ func mapFieldsCreate(userResp *postgresflex.CreateUserResponse, model *Model) er
 	return nil
 }
 
-func mapFields(userResp *postgresflex.UserResponse, model *Model) error {
+func mapFields(userResp *postgresflex.GetUserResponse, model *Model) error {
 	if userResp == nil || userResp.Item == nil {
 		return fmt.Errorf("response is nil")
 	}

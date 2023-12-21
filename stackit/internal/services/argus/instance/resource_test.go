@@ -15,13 +15,13 @@ import (
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *argus.InstanceResponse
+		input       *argus.GetInstanceResponse
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_ok",
-			&argus.InstanceResponse{
+			&argus.GetInstanceResponse{
 				Id: utils.Ptr("iid"),
 			},
 			Model{
@@ -37,7 +37,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"values_ok",
-			&argus.InstanceResponse{
+			&argus.GetInstanceResponse{
 				Id:         utils.Ptr("iid"),
 				Name:       utils.Ptr("name"),
 				PlanName:   utils.Ptr("plan1"),
@@ -57,7 +57,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"nullable_fields_ok",
-			&argus.InstanceResponse{
+			&argus.GetInstanceResponse{
 				Id:   utils.Ptr("iid"),
 				Name: nil,
 			},
@@ -80,7 +80,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"no_resource_id",
-			&argus.InstanceResponse{},
+			&argus.GetInstanceResponse{},
 			Model{},
 			false,
 		},

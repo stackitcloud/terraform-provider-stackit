@@ -20,7 +20,7 @@ func TestMapFieldsCreate(t *testing.T) {
 		{
 			"default_values",
 			&mongodbflex.CreateUserResponse{
-				Item: &mongodbflex.InstanceUser{
+				Item: &mongodbflex.User{
 					Id:       utils.Ptr("uid"),
 					Password: utils.Ptr(""),
 				},
@@ -42,7 +42,7 @@ func TestMapFieldsCreate(t *testing.T) {
 		{
 			"simple_values",
 			&mongodbflex.CreateUserResponse{
-				Item: &mongodbflex.InstanceUser{
+				Item: &mongodbflex.User{
 					Id: utils.Ptr("uid"),
 					Roles: &[]string{
 						"role_1",
@@ -77,7 +77,7 @@ func TestMapFieldsCreate(t *testing.T) {
 		{
 			"null_fields_and_int_conversions",
 			&mongodbflex.CreateUserResponse{
-				Item: &mongodbflex.InstanceUser{
+				Item: &mongodbflex.User{
 					Id:       utils.Ptr("uid"),
 					Roles:    &[]string{},
 					Username: nil,
@@ -116,7 +116,7 @@ func TestMapFieldsCreate(t *testing.T) {
 		{
 			"no_resource_id",
 			&mongodbflex.CreateUserResponse{
-				Item: &mongodbflex.InstanceUser{},
+				Item: &mongodbflex.User{},
 			},
 			Model{},
 			false,
@@ -124,7 +124,7 @@ func TestMapFieldsCreate(t *testing.T) {
 		{
 			"no_password",
 			&mongodbflex.CreateUserResponse{
-				Item: &mongodbflex.InstanceUser{
+				Item: &mongodbflex.User{
 					Id: utils.Ptr("uid"),
 				},
 			},

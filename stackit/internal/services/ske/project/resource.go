@@ -118,14 +118,14 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	_, err := r.client.CreateProject(ctx, projectId).Execute()
+	_, err := r.client.EnableService(ctx, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	model.Id = types.StringValue(projectId)
-	_, err = wait.CreateProjectWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
+	_, err = wait.EnableServiceWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Project creation waiting: %v", err))
 		return
@@ -148,7 +148,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	_, err := r.client.GetProject(ctx, projectId).Execute()
+	_, err := r.client.GetServiceStatus(ctx, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -180,12 +180,12 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	c := r.client
-	_, err := c.DeleteProject(ctx, projectId).Execute()
+	_, err := c.DisableService(ctx, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = wait.DeleteProjectWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
+	_, err = wait.DisableServiceWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Project deletion waiting: %v", err))
 		return

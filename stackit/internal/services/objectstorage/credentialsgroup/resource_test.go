@@ -12,26 +12,26 @@ import (
 )
 
 type objectStorageClientMocked struct {
-	returnError              bool
-	getCredentialsGroupsResp *objectstorage.GetCredentialsGroupsResponse
+	returnError               bool
+	listCredentialsGroupsResp *objectstorage.ListCredentialsGroupsResponse
 }
 
-func (c *objectStorageClientMocked) CreateProjectExecute(_ context.Context, projectId string) (*objectstorage.GetProjectResponse, error) {
+func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId string) (*objectstorage.ProjectStatus, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("create project failed")
 	}
 
-	return &objectstorage.GetProjectResponse{
+	return &objectstorage.ProjectStatus{
 		Project: utils.Ptr(projectId),
 	}, nil
 }
 
-func (c *objectStorageClientMocked) GetCredentialsGroupsExecute(_ context.Context, _ string) (*objectstorage.GetCredentialsGroupsResponse, error) {
+func (c *objectStorageClientMocked) ListCredentialsGroupsExecute(_ context.Context, _ string) (*objectstorage.ListCredentialsGroupsResponse, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("get credentials groups failed")
 	}
 
-	return c.getCredentialsGroupsResp, nil
+	return c.listCredentialsGroupsResp, nil
 }
 
 func TestMapFields(t *testing.T) {
@@ -161,14 +161,14 @@ func TestEnableProject(t *testing.T) {
 func TestReadCredentialsGroups(t *testing.T) {
 	tests := []struct {
 		description               string
-		mockedResp                *objectstorage.GetCredentialsGroupsResponse
+		mockedResp                *objectstorage.ListCredentialsGroupsResponse
 		expected                  Model
 		getCredentialsGroupsFails bool
 		isValid                   bool
 	}{
 		{
 			"default_values",
-			&objectstorage.GetCredentialsGroupsResponse{
+			&objectstorage.ListCredentialsGroupsResponse{
 				CredentialsGroups: &[]objectstorage.CredentialsGroup{
 					{
 						CredentialsGroupId: utils.Ptr("cid"),
@@ -190,7 +190,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 		},
 		{
 			"simple_values",
-			&objectstorage.GetCredentialsGroupsResponse{
+			&objectstorage.ListCredentialsGroupsResponse{
 				CredentialsGroups: &[]objectstorage.CredentialsGroup{
 					{
 						CredentialsGroupId: utils.Ptr("cid"),
@@ -216,7 +216,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 		},
 		{
 			"empty_credentials_groups",
-			&objectstorage.GetCredentialsGroupsResponse{
+			&objectstorage.ListCredentialsGroupsResponse{
 				CredentialsGroups: &[]objectstorage.CredentialsGroup{},
 			},
 			Model{},
@@ -225,7 +225,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 		},
 		{
 			"nil_credentials_groups",
-			&objectstorage.GetCredentialsGroupsResponse{
+			&objectstorage.ListCredentialsGroupsResponse{
 				CredentialsGroups: nil,
 			},
 			Model{},
@@ -241,7 +241,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 		},
 		{
 			"non_matching_credentials_group",
-			&objectstorage.GetCredentialsGroupsResponse{
+			&objectstorage.ListCredentialsGroupsResponse{
 				CredentialsGroups: &[]objectstorage.CredentialsGroup{
 					{
 						CredentialsGroupId: utils.Ptr("foo-other"),
@@ -256,7 +256,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 		},
 		{
 			"error_response",
-			&objectstorage.GetCredentialsGroupsResponse{
+			&objectstorage.ListCredentialsGroupsResponse{
 				CredentialsGroups: &[]objectstorage.CredentialsGroup{
 					{
 						CredentialsGroupId: utils.Ptr("other_id"),
@@ -273,8 +273,8 @@ func TestReadCredentialsGroups(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			client := &objectStorageClientMocked{
-				returnError:              tt.getCredentialsGroupsFails,
-				getCredentialsGroupsResp: tt.mockedResp,
+				returnError:               tt.getCredentialsGroupsFails,
+				listCredentialsGroupsResp: tt.mockedResp,
 			}
 			model := &Model{
 				ProjectId:          tt.expected.ProjectId,

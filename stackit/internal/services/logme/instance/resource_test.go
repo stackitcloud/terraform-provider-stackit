@@ -221,14 +221,14 @@ func TestToUpdatePayload(t *testing.T) {
 		description     string
 		input           *Model
 		inputParameters *parametersModel
-		expected        *logme.UpdateInstancePayload
+		expected        *logme.PartialUpdateInstancePayload
 		isValid         bool
 	}{
 		{
 			"default_values",
 			&Model{},
 			&parametersModel{},
-			&logme.UpdateInstancePayload{
+			&logme.PartialUpdateInstancePayload{
 				Parameters: &logme.InstanceParameters{},
 			},
 			true,
@@ -241,7 +241,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&parametersModel{
 				SgwAcl: types.StringValue("sgw"),
 			},
-			&logme.UpdateInstancePayload{
+			&logme.PartialUpdateInstancePayload{
 				Parameters: &logme.InstanceParameters{
 					SgwAcl: utils.Ptr("sgw"),
 				},
@@ -257,7 +257,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&parametersModel{
 				SgwAcl: types.StringNull(),
 			},
-			&logme.UpdateInstancePayload{
+			&logme.PartialUpdateInstancePayload{
 				Parameters: &logme.InstanceParameters{
 					SgwAcl: nil,
 				},
@@ -278,7 +278,7 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			nil,
-			&logme.UpdateInstancePayload{
+			&logme.PartialUpdateInstancePayload{
 				PlanId: utils.Ptr("plan"),
 			},
 			true,

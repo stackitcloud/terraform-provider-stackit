@@ -13,16 +13,16 @@ import (
 )
 
 type mongoDBFlexClientMocked struct {
-	returnError    bool
-	getFlavorsResp *mongodbflex.GetFlavorsResponse
+	returnError     bool
+	listFlavorsResp *mongodbflex.ListFlavorsResponse
 }
 
-func (c *mongoDBFlexClientMocked) GetFlavorsExecute(_ context.Context, _ string) (*mongodbflex.GetFlavorsResponse, error) {
+func (c *mongoDBFlexClientMocked) ListFlavorsExecute(_ context.Context, _ string) (*mongodbflex.ListFlavorsResponse, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("get flavors failed")
 	}
 
-	return c.getFlavorsResp, nil
+	return c.listFlavorsResp, nil
 }
 
 func TestMapFields(t *testing.T) {
@@ -38,7 +38,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values",
 			&mongodbflex.GetInstanceResponse{
-				Item: &mongodbflex.InstanceSingleInstance{},
+				Item: &mongodbflex.Instance{},
 			},
 			&flavorModel{},
 			&storageModel{},
@@ -71,8 +71,8 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&mongodbflex.GetInstanceResponse{
-				Item: &mongodbflex.InstanceSingleInstance{
-					Acl: &mongodbflex.InstanceAcl{
+				Item: &mongodbflex.Instance{
+					Acl: &mongodbflex.ACL{
 						Items: &[]string{
 							"ip1",
 							"ip2",
@@ -80,7 +80,7 @@ func TestMapFields(t *testing.T) {
 						},
 					},
 					BackupSchedule: utils.Ptr("schedule"),
-					Flavor: &mongodbflex.InstanceFlavor{
+					Flavor: &mongodbflex.Flavor{
 						Cpu:         utils.Ptr(int64(12)),
 						Description: utils.Ptr("description"),
 						Id:          utils.Ptr("flavor_id"),
@@ -90,7 +90,7 @@ func TestMapFields(t *testing.T) {
 					Name:     utils.Ptr("name"),
 					Replicas: utils.Ptr(int64(56)),
 					Status:   utils.Ptr("status"),
-					Storage: &mongodbflex.InstanceStorage{
+					Storage: &mongodbflex.Storage{
 						Class: utils.Ptr("class"),
 						Size:  utils.Ptr(int64(78)),
 					},
@@ -135,8 +135,8 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values_no_flavor_and_storage",
 			&mongodbflex.GetInstanceResponse{
-				Item: &mongodbflex.InstanceSingleInstance{
-					Acl: &mongodbflex.InstanceAcl{
+				Item: &mongodbflex.Instance{
+					Acl: &mongodbflex.ACL{
 						Items: &[]string{
 							"ip1",
 							"ip2",
@@ -257,10 +257,10 @@ func TestToCreatePayload(t *testing.T) {
 			&storageModel{},
 			&optionsModel{},
 			&mongodbflex.CreateInstancePayload{
-				Acl: &mongodbflex.InstanceAcl{
+				Acl: &mongodbflex.ACL{
 					Items: &[]string{},
 				},
-				Storage: &mongodbflex.InstanceStorage{},
+				Storage: &mongodbflex.Storage{},
 				Options: &map[string]string{},
 			},
 			true,
@@ -288,7 +288,7 @@ func TestToCreatePayload(t *testing.T) {
 				Type: types.StringValue("type"),
 			},
 			&mongodbflex.CreateInstancePayload{
-				Acl: &mongodbflex.InstanceAcl{
+				Acl: &mongodbflex.ACL{
 					Items: &[]string{
 						"ip_1",
 						"ip_2",
@@ -298,7 +298,7 @@ func TestToCreatePayload(t *testing.T) {
 				FlavorId:       utils.Ptr("flavor_id"),
 				Name:           utils.Ptr("name"),
 				Replicas:       utils.Ptr(int64(12)),
-				Storage: &mongodbflex.InstanceStorage{
+				Storage: &mongodbflex.Storage{
 					Class: utils.Ptr("class"),
 					Size:  utils.Ptr(int64(34)),
 				},
@@ -329,7 +329,7 @@ func TestToCreatePayload(t *testing.T) {
 				Type: types.StringNull(),
 			},
 			&mongodbflex.CreateInstancePayload{
-				Acl: &mongodbflex.InstanceAcl{
+				Acl: &mongodbflex.ACL{
 					Items: &[]string{
 						"",
 					},
@@ -338,7 +338,7 @@ func TestToCreatePayload(t *testing.T) {
 				FlavorId:       nil,
 				Name:           nil,
 				Replicas:       utils.Ptr(int64(2123456789)),
-				Storage: &mongodbflex.InstanceStorage{
+				Storage: &mongodbflex.Storage{
 					Class: nil,
 					Size:  nil,
 				},
@@ -436,10 +436,10 @@ func TestToUpdatePayload(t *testing.T) {
 			&storageModel{},
 			&optionsModel{},
 			&mongodbflex.PartialUpdateInstancePayload{
-				Acl: &mongodbflex.InstanceAcl{
+				Acl: &mongodbflex.ACL{
 					Items: &[]string{},
 				},
-				Storage: &mongodbflex.InstanceStorage{},
+				Storage: &mongodbflex.Storage{},
 				Options: &map[string]string{},
 			},
 			true,
@@ -467,7 +467,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Type: types.StringValue("type"),
 			},
 			&mongodbflex.PartialUpdateInstancePayload{
-				Acl: &mongodbflex.InstanceAcl{
+				Acl: &mongodbflex.ACL{
 					Items: &[]string{
 						"ip_1",
 						"ip_2",
@@ -477,7 +477,7 @@ func TestToUpdatePayload(t *testing.T) {
 				FlavorId:       utils.Ptr("flavor_id"),
 				Name:           utils.Ptr("name"),
 				Replicas:       utils.Ptr(int64(12)),
-				Storage: &mongodbflex.InstanceStorage{
+				Storage: &mongodbflex.Storage{
 					Class: utils.Ptr("class"),
 					Size:  utils.Ptr(int64(34)),
 				},
@@ -508,7 +508,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Type: types.StringNull(),
 			},
 			&mongodbflex.PartialUpdateInstancePayload{
-				Acl: &mongodbflex.InstanceAcl{
+				Acl: &mongodbflex.ACL{
 					Items: &[]string{
 						"",
 					},
@@ -517,7 +517,7 @@ func TestToUpdatePayload(t *testing.T) {
 				FlavorId:       nil,
 				Name:           nil,
 				Replicas:       utils.Ptr(int64(2123456789)),
-				Storage: &mongodbflex.InstanceStorage{
+				Storage: &mongodbflex.Storage{
 					Class: nil,
 					Size:  nil,
 				},
@@ -600,7 +600,7 @@ func TestLoadFlavorId(t *testing.T) {
 	tests := []struct {
 		description     string
 		inputFlavor     *flavorModel
-		mockedResp      *mongodbflex.GetFlavorsResponse
+		mockedResp      *mongodbflex.ListFlavorsResponse
 		expected        *flavorModel
 		getFlavorsFails bool
 		isValid         bool
@@ -611,7 +611,7 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&mongodbflex.GetFlavorsResponse{
+			&mongodbflex.ListFlavorsResponse{
 				Flavors: &[]mongodbflex.HandlersInfraFlavor{
 					{
 						Id:          utils.Ptr("fid-1"),
@@ -636,7 +636,7 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&mongodbflex.GetFlavorsResponse{
+			&mongodbflex.ListFlavorsResponse{
 				Flavors: &[]mongodbflex.HandlersInfraFlavor{
 					{
 						Id:          utils.Ptr("fid-1"),
@@ -667,7 +667,7 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&mongodbflex.GetFlavorsResponse{
+			&mongodbflex.ListFlavorsResponse{
 				Flavors: &[]mongodbflex.HandlersInfraFlavor{
 					{
 						Id:          utils.Ptr("fid-1"),
@@ -696,7 +696,7 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&mongodbflex.GetFlavorsResponse{},
+			&mongodbflex.ListFlavorsResponse{},
 			&flavorModel{
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
@@ -710,7 +710,7 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&mongodbflex.GetFlavorsResponse{},
+			&mongodbflex.ListFlavorsResponse{},
 			&flavorModel{
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
@@ -722,8 +722,8 @@ func TestLoadFlavorId(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			client := &mongoDBFlexClientMocked{
-				returnError:    tt.getFlavorsFails,
-				getFlavorsResp: tt.mockedResp,
+				returnError:     tt.getFlavorsFails,
+				listFlavorsResp: tt.mockedResp,
 			}
 			model := &Model{
 				ProjectId: types.StringValue("pid"),

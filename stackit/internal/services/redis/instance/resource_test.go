@@ -221,14 +221,14 @@ func TestToUpdatePayload(t *testing.T) {
 		description     string
 		input           *Model
 		inputParameters *parametersModel
-		expected        *redis.UpdateInstancePayload
+		expected        *redis.PartialUpdateInstancePayload
 		isValid         bool
 	}{
 		{
 			"default_values",
 			&Model{},
 			&parametersModel{},
-			&redis.UpdateInstancePayload{
+			&redis.PartialUpdateInstancePayload{
 				Parameters: &redis.InstanceParameters{},
 			},
 			true,
@@ -241,7 +241,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&parametersModel{
 				SgwAcl: types.StringValue("sgw"),
 			},
-			&redis.UpdateInstancePayload{
+			&redis.PartialUpdateInstancePayload{
 				Parameters: &redis.InstanceParameters{
 					SgwAcl: utils.Ptr("sgw"),
 				},
@@ -257,7 +257,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&parametersModel{
 				SgwAcl: types.StringNull(),
 			},
-			&redis.UpdateInstancePayload{
+			&redis.PartialUpdateInstancePayload{
 				Parameters: &redis.InstanceParameters{
 					SgwAcl: nil,
 				},
@@ -278,7 +278,7 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			nil,
-			&redis.UpdateInstancePayload{
+			&redis.PartialUpdateInstancePayload{
 				PlanId: utils.Ptr("plan"),
 			},
 			true,

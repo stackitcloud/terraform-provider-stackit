@@ -14,10 +14,10 @@ import (
 
 type postgresFlexClientMocked struct {
 	returnError    bool
-	getFlavorsResp *postgresflex.FlavorsResponse
+	getFlavorsResp *postgresflex.ListFlavorsResponse
 }
 
-func (c *postgresFlexClientMocked) GetFlavorsExecute(_ context.Context, _ string) (*postgresflex.FlavorsResponse, error) {
+func (c *postgresFlexClientMocked) ListFlavorsExecute(_ context.Context, _ string) (*postgresflex.ListFlavorsResponse, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("get flavors failed")
 	}
@@ -37,7 +37,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values",
 			&postgresflex.InstanceResponse{
-				Item: &postgresflex.InstanceSingleInstance{},
+				Item: &postgresflex.Instance{},
 			},
 			&flavorModel{},
 			&storageModel{},
@@ -66,8 +66,8 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&postgresflex.InstanceResponse{
-				Item: &postgresflex.InstanceSingleInstance{
-					Acl: &postgresflex.InstanceAcl{
+				Item: &postgresflex.Instance{
+					Acl: &postgresflex.ACL{
 						Items: &[]string{
 							"ip1",
 							"ip2",
@@ -75,7 +75,7 @@ func TestMapFields(t *testing.T) {
 						},
 					},
 					BackupSchedule: utils.Ptr("schedule"),
-					Flavor: &postgresflex.InstanceFlavor{
+					Flavor: &postgresflex.Flavor{
 						Cpu:         utils.Ptr(int64(12)),
 						Description: utils.Ptr("description"),
 						Id:          utils.Ptr("flavor_id"),
@@ -85,7 +85,7 @@ func TestMapFields(t *testing.T) {
 					Name:     utils.Ptr("name"),
 					Replicas: utils.Ptr(int64(56)),
 					Status:   utils.Ptr("status"),
-					Storage: &postgresflex.InstanceStorage{
+					Storage: &postgresflex.Storage{
 						Class: utils.Ptr("class"),
 						Size:  utils.Ptr(int64(78)),
 					},
@@ -123,8 +123,8 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values_no_flavor_and_storage",
 			&postgresflex.InstanceResponse{
-				Item: &postgresflex.InstanceSingleInstance{
-					Acl: &postgresflex.InstanceAcl{
+				Item: &postgresflex.Instance{
+					Acl: &postgresflex.ACL{
 						Items: &[]string{
 							"ip1",
 							"ip2",
@@ -232,10 +232,10 @@ func TestToCreatePayload(t *testing.T) {
 			&flavorModel{},
 			&storageModel{},
 			&postgresflex.CreateInstancePayload{
-				Acl: &postgresflex.InstanceAcl{
+				Acl: &postgresflex.ACL{
 					Items: &[]string{},
 				},
-				Storage: &postgresflex.InstanceStorage{},
+				Storage: &postgresflex.Storage{},
 			},
 			true,
 		},
@@ -259,7 +259,7 @@ func TestToCreatePayload(t *testing.T) {
 				Size:  types.Int64Value(34),
 			},
 			&postgresflex.CreateInstancePayload{
-				Acl: &postgresflex.InstanceAcl{
+				Acl: &postgresflex.ACL{
 					Items: &[]string{
 						"ip_1",
 						"ip_2",
@@ -269,7 +269,7 @@ func TestToCreatePayload(t *testing.T) {
 				FlavorId:       utils.Ptr("flavor_id"),
 				Name:           utils.Ptr("name"),
 				Replicas:       utils.Ptr(int64(12)),
-				Storage: &postgresflex.InstanceStorage{
+				Storage: &postgresflex.Storage{
 					Class: utils.Ptr("class"),
 					Size:  utils.Ptr(int64(34)),
 				},
@@ -296,7 +296,7 @@ func TestToCreatePayload(t *testing.T) {
 				Size:  types.Int64Null(),
 			},
 			&postgresflex.CreateInstancePayload{
-				Acl: &postgresflex.InstanceAcl{
+				Acl: &postgresflex.ACL{
 					Items: &[]string{
 						"",
 					},
@@ -305,7 +305,7 @@ func TestToCreatePayload(t *testing.T) {
 				FlavorId:       nil,
 				Name:           nil,
 				Replicas:       utils.Ptr(int64(2123456789)),
-				Storage: &postgresflex.InstanceStorage{
+				Storage: &postgresflex.Storage{
 					Class: nil,
 					Size:  nil,
 				},
@@ -376,7 +376,7 @@ func TestToUpdatePayload(t *testing.T) {
 		inputAcl     []string
 		inputFlavor  *flavorModel
 		inputStorage *storageModel
-		expected     *postgresflex.UpdateInstancePayload
+		expected     *postgresflex.PartialUpdateInstancePayload
 		isValid      bool
 	}{
 		{
@@ -385,11 +385,11 @@ func TestToUpdatePayload(t *testing.T) {
 			[]string{},
 			&flavorModel{},
 			&storageModel{},
-			&postgresflex.UpdateInstancePayload{
-				Acl: &postgresflex.InstanceAcl{
+			&postgresflex.PartialUpdateInstancePayload{
+				Acl: &postgresflex.ACL{
 					Items: &[]string{},
 				},
-				Storage: &postgresflex.InstanceStorage{},
+				Storage: &postgresflex.Storage{},
 			},
 			true,
 		},
@@ -412,8 +412,8 @@ func TestToUpdatePayload(t *testing.T) {
 				Class: types.StringValue("class"),
 				Size:  types.Int64Value(34),
 			},
-			&postgresflex.UpdateInstancePayload{
-				Acl: &postgresflex.InstanceAcl{
+			&postgresflex.PartialUpdateInstancePayload{
+				Acl: &postgresflex.ACL{
 					Items: &[]string{
 						"ip_1",
 						"ip_2",
@@ -423,7 +423,7 @@ func TestToUpdatePayload(t *testing.T) {
 				FlavorId:       utils.Ptr("flavor_id"),
 				Name:           utils.Ptr("name"),
 				Replicas:       utils.Ptr(int64(12)),
-				Storage: &postgresflex.InstanceStorage{
+				Storage: &postgresflex.Storage{
 					Class: utils.Ptr("class"),
 					Size:  utils.Ptr(int64(34)),
 				},
@@ -449,8 +449,8 @@ func TestToUpdatePayload(t *testing.T) {
 				Class: types.StringNull(),
 				Size:  types.Int64Null(),
 			},
-			&postgresflex.UpdateInstancePayload{
-				Acl: &postgresflex.InstanceAcl{
+			&postgresflex.PartialUpdateInstancePayload{
+				Acl: &postgresflex.ACL{
 					Items: &[]string{
 						"",
 					},
@@ -459,7 +459,7 @@ func TestToUpdatePayload(t *testing.T) {
 				FlavorId:       nil,
 				Name:           nil,
 				Replicas:       utils.Ptr(int64(2123456789)),
-				Storage: &postgresflex.InstanceStorage{
+				Storage: &postgresflex.Storage{
 					Class: nil,
 					Size:  nil,
 				},
@@ -527,7 +527,7 @@ func TestLoadFlavorId(t *testing.T) {
 	tests := []struct {
 		description     string
 		inputFlavor     *flavorModel
-		mockedResp      *postgresflex.FlavorsResponse
+		mockedResp      *postgresflex.ListFlavorsResponse
 		expected        *flavorModel
 		getFlavorsFails bool
 		isValid         bool
@@ -538,8 +538,8 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&postgresflex.FlavorsResponse{
-				Flavors: &[]postgresflex.InstanceFlavor{
+			&postgresflex.ListFlavorsResponse{
+				Flavors: &[]postgresflex.Flavor{
 					{
 						Id:          utils.Ptr("fid-1"),
 						Cpu:         utils.Ptr(int64(2)),
@@ -563,8 +563,8 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&postgresflex.FlavorsResponse{
-				Flavors: &[]postgresflex.InstanceFlavor{
+			&postgresflex.ListFlavorsResponse{
+				Flavors: &[]postgresflex.Flavor{
 					{
 						Id:          utils.Ptr("fid-1"),
 						Cpu:         utils.Ptr(int64(2)),
@@ -594,8 +594,8 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&postgresflex.FlavorsResponse{
-				Flavors: &[]postgresflex.InstanceFlavor{
+			&postgresflex.ListFlavorsResponse{
+				Flavors: &[]postgresflex.Flavor{
 					{
 						Id:          utils.Ptr("fid-1"),
 						Cpu:         utils.Ptr(int64(1)),
@@ -623,7 +623,7 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&postgresflex.FlavorsResponse{},
+			&postgresflex.ListFlavorsResponse{},
 			&flavorModel{
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
@@ -637,7 +637,7 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&postgresflex.FlavorsResponse{},
+			&postgresflex.ListFlavorsResponse{},
 			&flavorModel{
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),

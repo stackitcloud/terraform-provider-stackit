@@ -580,7 +580,7 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 
 func (r *clusterResource) loadAvaiableVersions(ctx context.Context) ([]ske.KubernetesVersion, error) {
 	c := r.client
-	res, err := c.GetOptions(ctx).Execute()
+	res, err := c.ListProviderOptions(ctx).Execute()
 	if err != nil {
 		return nil, fmt.Errorf("calling API: %w", err)
 	}
@@ -878,7 +878,7 @@ func toMaintenancePayload(ctx context.Context, m *Cluster) (*ske.Maintenance, er
 	}, nil
 }
 
-func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
+func mapFields(ctx context.Context, cl *ske.Cluster, m *Cluster) error {
 	if cl == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -933,7 +933,7 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 	return nil
 }
 
-func mapNodePools(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
+func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Cluster) error {
 	if cl.Nodepools == nil {
 		m.NodePools = types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes})
 		return nil
@@ -1039,7 +1039,7 @@ func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value) error {
 	return nil
 }
 
-func mapHibernations(cl *ske.ClusterResponse, m *Cluster) error {
+func mapHibernations(cl *ske.Cluster, m *Cluster) error {
 	if cl.Hibernation == nil {
 		if !m.Hibernations.IsNull() {
 			emptyHibernations, diags := basetypes.NewListValue(basetypes.ObjectType{AttrTypes: hibernationTypes}, []attr.Value{})
@@ -1085,7 +1085,7 @@ func mapHibernations(cl *ske.ClusterResponse, m *Cluster) error {
 	return nil
 }
 
-func mapMaintenance(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
+func mapMaintenance(ctx context.Context, cl *ske.Cluster, m *Cluster) error {
 	// Aligned with SKE team that a flattened data structure is fine, because no extensions are planned.
 	if cl.Maintenance == nil {
 		m.Maintenance = types.ObjectNull(maintenanceTypes)
@@ -1117,7 +1117,7 @@ func mapMaintenance(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) er
 	return nil
 }
 
-func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) (startTime, endTime string, err error) {
+func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Cluster) (startTime, endTime string, err error) {
 	startTimeAPI, err := time.Parse(time.RFC3339, *cl.Maintenance.TimeWindow.Start)
 	if err != nil {
 		return "", "", fmt.Errorf("parsing start time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.Start, err)
@@ -1191,7 +1191,7 @@ func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, a
 	return !acl.Enabled.ValueBool(), !argus.Enabled.ValueBool(), nil
 }
 
-func mapExtensions(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
+func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Cluster) error {
 	if cl.Extensions == nil {
 		m.Extensions = types.ObjectNull(extensionsTypes)
 		return nil

@@ -281,7 +281,7 @@ func TestToPayloadUpdate(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *dns.UpdateZonePayload
+		expected    *dns.PartialUpdateZonePayload
 		isValid     bool
 	}{
 		{
@@ -289,7 +289,7 @@ func TestToPayloadUpdate(t *testing.T) {
 			&Model{
 				Name: types.StringValue("Name"),
 			},
-			&dns.UpdateZonePayload{
+			&dns.PartialUpdateZonePayload{
 				Name: utils.Ptr("Name"),
 			},
 			true,
@@ -315,7 +315,7 @@ func TestToPayloadUpdate(t *testing.T) {
 				NegativeCache: types.Int64Value(-4534534),
 				IsReverseZone: types.BoolValue(true),
 			},
-			&dns.UpdateZonePayload{
+			&dns.PartialUpdateZonePayload{
 				Name:          utils.Ptr("Name"),
 				Acl:           utils.Ptr("Acl"),
 				Description:   utils.Ptr("Description"),

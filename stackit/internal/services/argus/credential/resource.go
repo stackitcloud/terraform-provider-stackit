@@ -149,7 +149,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 
-	got, err := r.client.CreateCredential(ctx, instanceId, projectId).Execute()
+	got, err := r.client.CreateCredentials(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -167,7 +167,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	tflog.Info(ctx, "Argus credential created")
 }
 
-func mapFields(r *argus.Credential, model *Model) error {
+func mapFields(r *argus.Credentials, model *Model) error {
 	if r == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -206,7 +206,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userName := model.Username.ValueString()
-	_, err := r.client.GetCredential(ctx, instanceId, projectId, userName).Execute()
+	_, err := r.client.GetCredentials(ctx, instanceId, projectId, userName).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -236,7 +236,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userName := model.Username.ValueString()
-	_, err := r.client.DeleteCredential(ctx, instanceId, projectId, userName).Execute()
+	_, err := r.client.DeleteCredentials(ctx, instanceId, projectId, userName).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
 		return

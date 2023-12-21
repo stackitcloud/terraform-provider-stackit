@@ -264,7 +264,7 @@ func testAccCheckRedisDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.GetInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}

@@ -137,7 +137,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	aclList, err := r.client.GetAcls(ctx, projectId, instanceId).Execute()
+	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
 		return

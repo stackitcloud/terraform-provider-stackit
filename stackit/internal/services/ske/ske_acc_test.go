@@ -527,7 +527,7 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 		projectsToDestroy = append(projectsToDestroy, rs.Primary.ID)
 	}
 	for _, projectId := range projectsToDestroy {
-		_, err := client.GetProject(ctx, projectId).Execute()
+		_, err := client.GetServiceStatus(ctx, projectId).Execute()
 		if err != nil {
 			oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 			if !ok {
@@ -540,11 +540,11 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 			return fmt.Errorf("getting project: %w", err)
 		}
 
-		_, err = client.DeleteProjectExecute(ctx, projectId)
+		_, err = client.DisableServiceExecute(ctx, projectId)
 		if err != nil {
 			return fmt.Errorf("destroying project %s during CheckDestroy: %w", projectId, err)
 		}
-		_, err = wait.DeleteProjectWaitHandler(ctx, client, projectId).WaitWithContext(ctx)
+		_, err = wait.DisableServiceWaitHandler(ctx, client, projectId).WaitWithContext(ctx)
 		if err != nil {
 			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", projectId, err)
 		}

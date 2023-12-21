@@ -536,7 +536,7 @@ func testAccCheckDnsDestroy(s *terraform.State) error {
 		zonesToDestroy = append(zonesToDestroy, zoneId)
 	}
 
-	zonesResp, err := client.GetZones(ctx, testutil.ProjectId).ActiveEq(true).Execute()
+	zonesResp, err := client.ListZones(ctx, testutil.ProjectId).ActiveEq(true).Execute()
 	if err != nil {
 		return fmt.Errorf("getting zonesResp: %w", err)
 	}

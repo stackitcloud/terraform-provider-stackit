@@ -179,7 +179,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	tflog.Info(ctx, "PostgresFlex user read")
 }
 
-func mapDataSourceFields(userResp *postgresflex.UserResponse, model *DataSourceModel) error {
+func mapDataSourceFields(userResp *postgresflex.GetUserResponse, model *DataSourceModel) error {
 	if userResp == nil || userResp.Item == nil {
 		return fmt.Errorf("response is nil")
 	}

@@ -318,12 +318,12 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 	// Update recordset
-	_, err = r.client.UpdateRecordSet(ctx, projectId, zoneId, recordSetId).UpdateRecordSetPayload(*payload).Execute()
+	_, err = r.client.PartialUpdateRecordSet(ctx, projectId, zoneId, recordSetId).PartialUpdateRecordSetPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", err.Error())
 		return
 	}
-	waitResp, err := wait.UpdateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Instance update waiting: %v", err))
 		return
@@ -465,7 +465,7 @@ func toCreatePayload(model *Model) (*dns.CreateRecordSetPayload, error) {
 	}, nil
 }
 
-func toUpdatePayload(model *Model) (*dns.UpdateRecordSetPayload, error) {
+func toUpdatePayload(model *Model) (*dns.PartialUpdateRecordSetPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -481,7 +481,7 @@ func toUpdatePayload(model *Model) (*dns.UpdateRecordSetPayload, error) {
 		})
 	}
 
-	return &dns.UpdateRecordSetPayload{
+	return &dns.PartialUpdateRecordSetPayload{
 		Comment: conversion.StringValueToPointer(model.Comment),
 		Name:    conversion.StringValueToPointer(model.Name),
 		Records: &records,

@@ -13,14 +13,14 @@ import (
 func TestMapDataSourceFields(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *postgresflex.UserResponse
+		input       *postgresflex.GetUserResponse
 		expected    DataSourceModel
 		isValid     bool
 	}{
 		{
 			"default_values",
-			&postgresflex.UserResponse{
-				Item: &postgresflex.UserResponseUser{},
+			&postgresflex.GetUserResponse{
+				Item: &postgresflex.UserResponse{},
 			},
 			DataSourceModel{
 				Id:         types.StringValue("pid,iid,uid"),
@@ -36,8 +36,8 @@ func TestMapDataSourceFields(t *testing.T) {
 		},
 		{
 			"simple_values",
-			&postgresflex.UserResponse{
-				Item: &postgresflex.UserResponseUser{
+			&postgresflex.GetUserResponse{
+				Item: &postgresflex.UserResponse{
 					Roles: &[]string{
 						"role_1",
 						"role_2",
@@ -66,8 +66,8 @@ func TestMapDataSourceFields(t *testing.T) {
 		},
 		{
 			"null_fields_and_int_conversions",
-			&postgresflex.UserResponse{
-				Item: &postgresflex.UserResponseUser{
+			&postgresflex.GetUserResponse{
+				Item: &postgresflex.UserResponse{
 					Id:       utils.Ptr("uid"),
 					Roles:    &[]string{},
 					Username: nil,
@@ -95,14 +95,14 @@ func TestMapDataSourceFields(t *testing.T) {
 		},
 		{
 			"nil_response_2",
-			&postgresflex.UserResponse{},
+			&postgresflex.GetUserResponse{},
 			DataSourceModel{},
 			false,
 		},
 		{
 			"no_resource_id",
-			&postgresflex.UserResponse{
-				Item: &postgresflex.UserResponseUser{},
+			&postgresflex.GetUserResponse{
+				Item: &postgresflex.UserResponse{},
 			},
 			DataSourceModel{},
 			false,

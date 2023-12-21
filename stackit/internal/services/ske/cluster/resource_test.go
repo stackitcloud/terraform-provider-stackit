@@ -17,14 +17,14 @@ func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description     string
 		stateExtensions types.Object
-		input           *ske.ClusterResponse
+		input           *ske.Cluster
 		expected        Cluster
 		isValid         bool
 	}{
 		{
 			"default_values",
 			types.ObjectNull(extensionsTypes),
-			&ske.ClusterResponse{
+			&ske.Cluster{
 				Name: utils.Ptr("name"),
 			},
 			Cluster{
@@ -44,7 +44,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			types.ObjectNull(extensionsTypes),
-			&ske.ClusterResponse{
+			&ske.Cluster{
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
 						AllowedCidrs: &[]string{"cidr1"},
@@ -210,7 +210,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"extensions_mixed_values",
 			types.ObjectNull(extensionsTypes),
-			&ske.ClusterResponse{
+			&ske.Cluster{
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
 						AllowedCidrs: nil,
@@ -258,7 +258,7 @@ func TestMapFields(t *testing.T) {
 					"argus_instance_id": types.StringNull(),
 				}),
 			}),
-			&ske.ClusterResponse{
+			&ske.Cluster{
 				Extensions: &ske.Extension{},
 				Name:       utils.Ptr("name"),
 			},
@@ -299,7 +299,7 @@ func TestMapFields(t *testing.T) {
 					"argus_instance_id": types.StringValue("id"),
 				}),
 			}),
-			&ske.ClusterResponse{
+			&ske.Cluster{
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
 						AllowedCidrs: &[]string{"cidr1"},
@@ -336,7 +336,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"extensions_not_set",
 			types.ObjectNull(extensionsTypes),
-			&ske.ClusterResponse{
+			&ske.Cluster{
 				Extensions: &ske.Extension{},
 				Name:       utils.Ptr("name"),
 			},
@@ -364,7 +364,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_resource_id",
 			types.ObjectNull(extensionsTypes),
-			&ske.ClusterResponse{},
+			&ske.Cluster{},
 			Cluster{},
 			false,
 		},
@@ -686,7 +686,7 @@ func TestGetMaintenanceTimes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			apiResponse := &ske.ClusterResponse{
+			apiResponse := &ske.Cluster{
 				Maintenance: &ske.Maintenance{
 					TimeWindow: &ske.TimeWindow{
 						Start: utils.Ptr(tt.startAPI),

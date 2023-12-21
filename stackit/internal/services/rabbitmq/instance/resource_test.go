@@ -221,14 +221,14 @@ func TestToUpdatePayload(t *testing.T) {
 		description     string
 		input           *Model
 		inputParameters *parametersModel
-		expected        *rabbitmq.UpdateInstancePayload
+		expected        *rabbitmq.PartialUpdateInstancePayload
 		isValid         bool
 	}{
 		{
 			"default_values",
 			&Model{},
 			&parametersModel{},
-			&rabbitmq.UpdateInstancePayload{
+			&rabbitmq.PartialUpdateInstancePayload{
 				Parameters: &rabbitmq.InstanceParameters{},
 			},
 			true,
@@ -241,7 +241,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&parametersModel{
 				SgwAcl: types.StringValue("sgw"),
 			},
-			&rabbitmq.UpdateInstancePayload{
+			&rabbitmq.PartialUpdateInstancePayload{
 				Parameters: &rabbitmq.InstanceParameters{
 					SgwAcl: utils.Ptr("sgw"),
 				},
@@ -257,7 +257,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&parametersModel{
 				SgwAcl: types.StringNull(),
 			},
-			&rabbitmq.UpdateInstancePayload{
+			&rabbitmq.PartialUpdateInstancePayload{
 				Parameters: &rabbitmq.InstanceParameters{
 					SgwAcl: nil,
 				},
@@ -278,7 +278,7 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			nil,
-			&rabbitmq.UpdateInstancePayload{
+			&rabbitmq.PartialUpdateInstancePayload{
 				PlanId: utils.Ptr("plan"),
 			},
 			true,

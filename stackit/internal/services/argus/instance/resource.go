@@ -438,7 +438,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Argus instance state imported")
 }
 
-func mapFields(ctx context.Context, r *argus.InstanceResponse, model *Model) error {
+func mapFields(ctx context.Context, r *argus.GetInstanceResponse, model *Model) error {
 	if r == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -540,7 +540,7 @@ func toUpdatePayload(model *Model) (*argus.UpdateInstancePayload, error) {
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
-	res, err := r.client.GetPlans(ctx, projectId).Execute()
+	res, err := r.client.ListPlans(ctx, projectId).Execute()
 	if err != nil {
 		return err
 	}

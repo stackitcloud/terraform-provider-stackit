@@ -290,7 +290,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 	// Update existing project
-	_, err = r.client.UpdateProject(ctx, containerId).UpdateProjectPayload(*payload).Execute()
+	_, err = r.client.PartialUpdateProject(ctx, containerId).PartialUpdateProjectPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -454,7 +454,7 @@ func toCreatePayload(model *Model, serviceAccountEmail string) (*resourcemanager
 	}, nil
 }
 
-func toUpdatePayload(model *Model) (*resourcemanager.UpdateProjectPayload, error) {
+func toUpdatePayload(model *Model) (*resourcemanager.PartialUpdateProjectPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -465,7 +465,7 @@ func toUpdatePayload(model *Model) (*resourcemanager.UpdateProjectPayload, error
 		return nil, fmt.Errorf("converting to GO map: %w", err)
 	}
 
-	return &resourcemanager.UpdateProjectPayload{
+	return &resourcemanager.PartialUpdateProjectPayload{
 		ContainerParentId: conversion.StringValueToPointer(model.ContainerParentId),
 		Name:              conversion.StringValueToPointer(model.Name),
 		Labels:            labels,

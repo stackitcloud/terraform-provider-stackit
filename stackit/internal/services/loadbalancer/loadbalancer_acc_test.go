@@ -313,7 +313,7 @@ func testAccCheckLoadBalancerDestroy(_ *terraform.State) error {
 	}
 
 	// Disabling loadbalancer functionality will delete all load balancers
-	_, err = client.DisableLoadBalancingExecute(ctx, testutil.ProjectId)
+	_, err = client.DisableServiceExecute(ctx, testutil.ProjectId)
 	if err != nil {
 		return fmt.Errorf("disabling loadbalancer functionality: %w", err)
 	}
