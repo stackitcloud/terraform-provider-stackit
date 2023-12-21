@@ -17,7 +17,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.7.0
-	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.7.0
+	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.8.0
