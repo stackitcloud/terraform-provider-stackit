@@ -70,10 +70,10 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 
 	var apiClient *objectstorage.APIClient
 	var err error
-	if providerData.PostgreSQLCustomEndpoint != "" {
+	if providerData.ObjectStorageCustomEndpoint != "" {
 		apiClient, err = objectstorage.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.PostgreSQLCustomEndpoint),
+			config.WithEndpoint(providerData.ObjectStorageCustomEndpoint),
 		)
 	} else {
 		apiClient, err = objectstorage.NewAPIClient(
