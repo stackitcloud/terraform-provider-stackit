@@ -171,7 +171,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					),
 					mapvalidator.ValueStringsAre(
 						stringvalidator.RegexMatches(
-							regexp.MustCompile(`[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`),
+							regexp.MustCompile(`^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`),
 							"must match expression"),
 					),
 				},
