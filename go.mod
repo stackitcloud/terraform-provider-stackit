@@ -19,7 +19,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.8.0
-	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.8.0
+	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.8.1
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.8.0
