@@ -143,8 +143,8 @@ github.com/skeema/knownhosts v1.2.0 h1:h9r9cf0+u7wSE+M183ZtMGgOJKiL96brpaz5ekfJC
 github.com/skeema/knownhosts v1.2.0/go.mod h1:g4fPeYpque7P0xefxtGzV81ihjC8sX2IqpAoNkjxbMo=
 github.com/stackitcloud/stackit-sdk-go/core v0.7.4 h1:5+oySPzNvLEuza++ttbMNH+wtPt8cupalJ/BlYqtF0w=
 github.com/stackitcloud/stackit-sdk-go/core v0.7.4/go.mod h1:EEOA1cjndB+kcjBn6irvpscvox+3ckVdieLA4W502C8=
-github.com/stackitcloud/stackit-sdk-go/services/argus v0.8.0 h1:wB/3AHZu3u8hY+DN7sA+zm/zB5UK7T3Cdzu6c3IMa2E=
-github.com/stackitcloud/stackit-sdk-go/services/argus v0.8.0/go.mod h1:nYxNcZuHaXzZXNES9lriPtt6su+N599yYG96palrxVo=
+github.com/stackitcloud/stackit-sdk-go/services/argus v0.8.1 h1:7Js87bIX9oe/KLrtnh2fR7eJ8cCKf+P0qjG/kL3q87g=
+github.com/stackitcloud/stackit-sdk-go/services/argus v0.8.1/go.mod h1:Ir/0ILytrfb4DzMn4c4kUchobCOVYiK7g5sZ6EcRmGk=
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.7.0 h1:vwuQfDuX83IeLnNPA+j09On4sITvdcXK3pogkANrBzA=
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.7.0/go.mod h1:IRNGsJZhuf0s+9Ta4wIhDt3t8mOwKcZ2YeHC0CChigQ=
 github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.8.0 h1:Ax309bGX7WyQIfEij70wFpWq+3BVZQjg3wmE2rZBCmE=
