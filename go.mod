@@ -21,10 +21,10 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.8.1
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.8.1
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.8.1
-  github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.9.1
+	github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.9.1
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.8.1
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.8.1
-	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.7.0
+	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.7.2
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.5.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v0.8.0
 	golang.org/x/mod v0.14.0
@@ -38,7 +38,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/golang-jwt/jwt/v5 v5.1.0 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0 // indirect
@@ -72,8 +72,8 @@ require (
 	github.com/zclconf/go-cty v1.14.1 // indirect
 	golang.org/x/crypto v0.16.0 // indirect
 	golang.org/x/exp v0.0.0-20230809150735-7b3493d9a819 // indirect
-	golang.org/x/net v0.18.0 // indirect
-	golang.org/x/oauth2 v0.14.0 // indirect
+	golang.org/x/net v0.19.0 // indirect
+	golang.org/x/oauth2 v0.15.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
