@@ -279,7 +279,7 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 
 // Read refreshes the Terraform state with the latest data.
 func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var state Cluster
+	var state Model
 	diags := req.Config.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -311,7 +311,7 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	tflog.Info(ctx, "SKE cluster read")
 }
 
-func (r *clusterDataSource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Cluster) {
+func (r *clusterDataSource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Model) {
 	c := r.client
 	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute()
 	if err != nil {

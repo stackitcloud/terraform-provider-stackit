@@ -18,7 +18,7 @@ func TestMapFields(t *testing.T) {
 		description     string
 		stateExtensions types.Object
 		input           *ske.Cluster
-		expected        Cluster
+		expected        Model
 		isValid         bool
 	}{
 		{
@@ -27,7 +27,7 @@ func TestMapFields(t *testing.T) {
 			&ske.Cluster{
 				Name: utils.Ptr("name"),
 			},
-			Cluster{
+			Model{
 				Id:                        types.StringValue("pid,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
@@ -117,7 +117,7 @@ func TestMapFields(t *testing.T) {
 					Hibernated: nil,
 				},
 			},
-			Cluster{
+			Model{
 				Id:                        types.StringValue("pid,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
@@ -223,7 +223,7 @@ func TestMapFields(t *testing.T) {
 				},
 				Name: utils.Ptr("name"),
 			},
-			Cluster{
+			Model{
 				Id:                        types.StringValue("pid,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
@@ -262,7 +262,7 @@ func TestMapFields(t *testing.T) {
 				Extensions: &ske.Extension{},
 				Name:       utils.Ptr("name"),
 			},
-			Cluster{
+			Model{
 				Id:                        types.StringValue("pid,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
@@ -308,7 +308,7 @@ func TestMapFields(t *testing.T) {
 				},
 				Name: utils.Ptr("name"),
 			},
-			Cluster{
+			Model{
 				Id:                        types.StringValue("pid,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
@@ -340,7 +340,7 @@ func TestMapFields(t *testing.T) {
 				Extensions: &ske.Extension{},
 				Name:       utils.Ptr("name"),
 			},
-			Cluster{
+			Model{
 				Id:                        types.StringValue("pid,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
@@ -358,20 +358,20 @@ func TestMapFields(t *testing.T) {
 			"nil_response",
 			types.ObjectNull(extensionsTypes),
 			nil,
-			Cluster{},
+			Model{},
 			false,
 		},
 		{
 			"no_resource_id",
 			types.ObjectNull(extensionsTypes),
 			&ske.Cluster{},
-			Cluster{},
+			Model{},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			state := &Cluster{
+			state := &Model{
 				ProjectId:  tt.expected.ProjectId,
 				Extensions: tt.stateExtensions,
 			}
@@ -705,7 +705,7 @@ func TestGetMaintenanceTimes(t *testing.T) {
 			if diags.HasError() {
 				t.Fatalf("failed to create flavor: %v", core.DiagsToError(diags))
 			}
-			tfState := &Cluster{
+			tfState := &Model{
 				Maintenance: maintenanceObject,
 			}
 
