@@ -71,11 +71,12 @@ To configure it, follow this steps:
    - setting the environment variable: `STACKIT_SERVICE_ACCOUNT_KEY_PATH`
    - setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH` in the credentials file (see above)
 
-> **If you have provided your own RSA key-pair when creating the service account key**, you also need to configure it (takes precedence over the private key included in the service account key, if present):
+> **If you have provided your own RSA key-pair when creating the service account key**, you also need to configure your private key (takes precedence over the private key included in the service account key, if present):
 >
-> - setting the fiels in the provider block: `private_key` or `private_key_path`
+> - setting the field in the provider block: `private_key` or `private_key_path`
 > - setting the environment variable: `STACKIT_PRIVATE_KEY_PATH`
 > - setting `STACKIT_PRIVATE_KEY_PATH` in the credentials file (see above)
+
 
 ## Token flow
 
