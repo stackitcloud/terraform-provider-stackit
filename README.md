@@ -26,8 +26,7 @@ When setting up authentication, the provider will always try to use the key flow
    ```json
    {
      "STACKIT_SERVICE_ACCOUNT_TOKEN": "foo_token",
-     "STACKIT_SERVICE_ACCOUNT_KEY_PATH": "path/to/sa_key.json",
-     "STACKIT_PRIVATE_KEY_PATH": "path/to/private_key.pem"
+     "STACKIT_SERVICE_ACCOUNT_KEY_PATH": "path/to/sa_key.json"
    }
    ```
 
@@ -42,11 +41,9 @@ To configure it, follow this steps:
 
 - You can create your own RSA key-pair or have the Portal generate one for you.
 
-2.  Save the content of the service account key and the corresponding private key by copying them or saving them in a file.
+2.  Save the content of the service account key by copying it and saving it in a JSON file.
 
-    **Hint:** If you have generated the RSA key-pair using the Portal, you can save the private key in a PEM encoded file by downloading the service account key as a PEM file and using `openssl storeutl -keys <path/to/sa_key_pem_file> > private.key` to extract the private key from the service account key.
-
-The expected format of the service account key is a **json** with the following structure:
+    The expected format of the service account key is a **json** with the following structure:
 
 ```json
 {
@@ -68,10 +65,17 @@ The expected format of the service account key is a **json** with the following 
 }
 ```
 
-3. Configure the service account key and private key for authentication in the SDK by following one of the alternatives below:
-   - setting the fiels in the provider block: `service_account_key` or `service_account_key_path`, `private_key` or `private_key_path`
-   - setting environment variables: `STACKIT_SERVICE_ACCOUNT_KEY_PATH` and `STACKIT_PRIVATE_KEY_PATH`
-   - setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH` and `STACKIT_PRIVATE_KEY_PATH` in the credentials file (see above)
+3. Configure the service account key for authentication in the SDK by following one of the alternatives below:
+
+   - setting the fiels in the provider block: `service_account_key` or `service_account_key_path`
+   - setting the environment variable: `STACKIT_SERVICE_ACCOUNT_KEY_PATH`
+   - setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH` in the credentials file (see above)
+
+4. **If you have provided your own RSA key-pair**, you can set it the same way (it will take precedence over the private key included in the service account key, if present):
+
+   - setting the fiels in the provider block: `private_key` or `private_key_path`
+   - setting the environment variable: `STACKIT_PRIVATE_KEY_PATH`
+   - setting `STACKIT_PRIVATE_KEY_PATH` in the credentials file (see above)
 
 ## Token flow
 
