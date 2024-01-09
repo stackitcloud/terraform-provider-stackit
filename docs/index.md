@@ -124,16 +124,16 @@ Using this flow is less secure since the token is long-lived. You can provide th
 - `opensearch_custom_endpoint` (String) Custom endpoint for the OpenSearch service
 - `postgresflex_custom_endpoint` (String) Custom endpoint for the PostgresFlex service
 - `postgresql_custom_endpoint` (String) Custom endpoint for the PostgreSQL service
-- `private_key` (String) Private RSA key used for authentication. If set alongside the service account key, the key flow will be used to authenticate all operations.
-- `private_key_path` (String) Path for the private RSA key used for authentication. If set alongside the service account key, the key flow will be used to authenticate all operations.
+- `private_key` (String) Private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.
+- `private_key_path` (String) Path for the private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.
 - `rabbitmq_custom_endpoint` (String) Custom endpoint for the RabbitMQ service
 - `redis_custom_endpoint` (String)
 - `region` (String) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `resourcemanager_custom_endpoint` (String) Custom endpoint for the Resource Manager service
 - `secretsmanager_custom_endpoint` (String) Custom endpoint for the Secrets Manager service
 - `service_account_email` (String) Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.
-- `service_account_key` (String) Service account key used for authentication. If set alongside private key, the key flow will be used to authenticate all operations.
-- `service_account_key_path` (String) Path for the service account key used for authentication. If set alongside the private key, the key flow will be used to authenticate all operations.
+- `service_account_key` (String) Service account key used for authentication. If set, the key flow will be used to authenticate all operations.
+- `service_account_key_path` (String) Path for the service account key used for authentication. If set, the key flow will be used to authenticate all operations.
 - `service_account_token` (String) Token used for authentication. If set, the token flow will be used to authenticate all operations.
 - `ske_custom_endpoint` (String) Custom endpoint for the Kubernetes Engine (SKE) service
 - `token_custom_endpoint` (String) Custom endpoint for the token API, which is used to request access tokens when using the key flow
