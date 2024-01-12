@@ -1,12 +1,12 @@
 resource "stackit_ske_cluster" "example" {
   project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name               = "example-name"
+  name               = "example"
   kubernetes_version = "1.25"
   node_pools = [
     {
       name               = "np-example"
-      machine_type       = "b1.2"
-      os_version         = "3510.2.5"
+      machine_type       = "x.x"
+      os_version         = "x.x.x"
       minimum            = "2"
       maximum            = "3"
       availability_zones = ["eu01-3"]

@@ -261,10 +261,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "The cluster name.",
 				Required:    true,
 				Validators: []validator.String{
-					stringvalidator.RegexMatches(
-						regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,10}$`),
-						"must start with a letter, must have lower case letters, numbers or hyphens, no hyphen at the end and less than 11 characters.",
-					),
 					validate.NoSeparator(),
 				},
 			},
