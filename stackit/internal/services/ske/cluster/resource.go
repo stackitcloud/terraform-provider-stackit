@@ -512,6 +512,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 	}
 }
 
+// needs to be executed inside the Create and Update methods
+// since ValidateConfig runs before variables are rendered to their value,
+// which causes errors like this: https://github.com/stackitcloud/terraform-provider-stackit/issues/201
 func checkAllowPrivilegedContainers(allowPrivilegeContainers types.Bool, kubernetesVersion types.String) diag.Diagnostics {
 	var diags diag.Diagnostics
 
