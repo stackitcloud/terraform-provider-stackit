@@ -512,21 +512,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 	}
 }
 
-func (r *clusterResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var model Model
-	diags := req.Config.Get(ctx, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	diags = checkAllowPrivilegedContainers(model.AllowPrivilegedContainers, model.KubernetesVersion)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-}
-
+// needs to be executed inside the Create and Update methods
+// since ValidateConfig runs before variables are rendered to their value,
+// which causes errors like this: https://github.com/stackitcloud/terraform-provider-stackit/issues/201
 func checkAllowPrivilegedContainers(allowPrivilegeContainers types.Bool, kubernetesVersion types.String) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -556,6 +544,13 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	diags = checkAllowPrivilegedContainers(model.AllowPrivilegedContainers, model.KubernetesVersion)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	projectId := model.ProjectId.ValueString()
 	clusterName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -1393,6 +1388,13 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	diags = checkAllowPrivilegedContainers(model.AllowPrivilegedContainers, model.KubernetesVersion)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	projectId := model.ProjectId.ValueString()
 	clName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
