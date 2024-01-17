@@ -207,7 +207,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.Int64{
-					int64validator.Between(1, 99999999),
+					int64validator.Between(1, 3000000),
 				},
 				Default: int64default.StaticInt64(DefaultSampleLimit),
 			},
@@ -566,7 +566,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*argus.CreateScrapeConf
 		MetricsPath:    conversion.StringValueToPointer(model.MetricsPath),
 		ScrapeInterval: conversion.StringValueToPointer(model.ScrapeInterval),
 		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
-		// potentially lossy conversion depending on the allowed range for sample_limit
+		// potentially lossy conversion, depending on the allowed range for sample_limit
 		SampleLimit: utils.Ptr(float64(model.SampleLimit.ValueInt64())),
 		Scheme:      conversion.StringValueToPointer(model.Scheme),
 	}
@@ -650,7 +650,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*argus.UpdateScrapeConf
 		MetricsPath:    conversion.StringValueToPointer(model.MetricsPath),
 		ScrapeInterval: conversion.StringValueToPointer(model.ScrapeInterval),
 		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
-		// potentially lossy conversion depending on the allowed range for sample_limit
+		// potentially lossy conversion, depending on the allowed range for sample_limit
 		SampleLimit: utils.Ptr(float64(model.SampleLimit.ValueInt64())),
 		Scheme:      conversion.StringValueToPointer(model.Scheme),
 	}
