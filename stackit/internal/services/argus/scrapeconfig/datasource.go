@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -120,6 +121,14 @@ func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 					stringvalidator.LengthBetween(2, 8),
 				},
 				Computed: true,
+			},
+
+			"sample_limit": schema.Int64Attribute{
+				Description: "Specifies the scrape sample limit.",
+				Computed:    true,
+				Validators: []validator.Int64{
+					int64validator.Between(1, 3000000),
+				},
 			},
 
 			"scrape_timeout": schema.StringAttribute{
