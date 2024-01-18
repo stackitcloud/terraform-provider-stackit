@@ -275,6 +275,7 @@ func TestAccResource(t *testing.T) {
 				    name = "%s"
 				    targets = [%s]
 					scrape_interval = "%s"
+					sample_limit = %s
 					metrics_path = "%s"
 				}
 				`,
@@ -285,6 +286,7 @@ func TestAccResource(t *testing.T) {
 					scrapeConfigResource["name"],
 					scrapeConfigResource["urls"],
 					scrapeConfigResource["scrape_interval"],
+					scrapeConfigResource["sample_limit"],
 					scrapeConfigResource["metrics_path"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
