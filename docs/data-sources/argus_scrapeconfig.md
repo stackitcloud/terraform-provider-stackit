@@ -35,6 +35,7 @@ data "stackit_argus_scrapeconfig" "example" {
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`instance_id`,`name`".
 - `metrics_path` (String) Specifies the job scraping url path.
 - `saml2` (Attributes) A SAML2 configuration block (see [below for nested schema](#nestedatt--saml2))
+- `sample_limit` (Number) Specifies the scrape sample limit.
 - `scheme` (String) Specifies the http scheme.
 - `scrape_interval` (String) Specifies the scrape interval as duration string.
 - `scrape_timeout` (String) Specifies the scrape timeout as duration string.
