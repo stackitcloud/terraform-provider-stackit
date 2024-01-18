@@ -51,6 +51,7 @@ func TestMapFields(t *testing.T) {
 				Scheme:         utils.Ptr("scheme"),
 				ScrapeInterval: utils.Ptr("1"),
 				ScrapeTimeout:  utils.Ptr("2"),
+				SampleLimit:    utils.Ptr(int64(17)),
 				StaticConfigs: &[]argus.StaticConfigs{
 					{
 						Labels:  &map[string]string{"k1": "v1"},
@@ -75,6 +76,7 @@ func TestMapFields(t *testing.T) {
 				Scheme:         types.StringValue("scheme"),
 				ScrapeInterval: types.StringValue("1"),
 				ScrapeTimeout:  types.StringValue("2"),
+				SampleLimit:    types.Int64Value(17),
 				SAML2: &SAML2{
 					EnableURLParameters: types.BoolValue(false),
 				},
@@ -158,6 +160,7 @@ func TestToCreatePayload(t *testing.T) {
 				Scheme:         utils.Ptr("https"),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
 				StaticConfigs:  &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
 				Params:         &map[string]any{"saml2": []string{"enabled"}},
 			},
@@ -176,6 +179,7 @@ func TestToCreatePayload(t *testing.T) {
 				Scheme:         utils.Ptr("https"),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
 				StaticConfigs:  &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
 				Params:         &map[string]any{"saml2": []string{"enabled"}},
 			},
@@ -225,6 +229,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Scheme:         utils.Ptr("https"),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
 				StaticConfigs:  &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
 			},
 			true,
@@ -241,6 +246,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Scheme:         utils.Ptr("http"),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
 				StaticConfigs:  &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
 			},
 			true,
