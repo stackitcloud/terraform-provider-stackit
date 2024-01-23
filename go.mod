@@ -16,7 +16,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.8.2
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.9.1
-	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.9.0
+	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.9.1
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.10.2
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.8.2
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.9.1
