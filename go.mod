@@ -24,7 +24,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.10.1
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.9.0
-	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.7.3
+	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.7.4
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.5.2
 	github.com/stackitcloud/stackit-sdk-go/services/ske v0.9.1
 	golang.org/x/mod v0.14.0
