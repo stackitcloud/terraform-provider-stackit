@@ -14,6 +14,14 @@
         "gomod",
         "github-actions"
     ],
+    "packageRules": [
+        {
+            "matchSourceUrls": [
+                "https://github.com/stackitcloud/stackit-sdk-go"
+            ],
+            "groupName": "SDK"
+        }
+    ],
     "postUpdateOptions": [
         "gomodTidy",
         "gomodUpdateImportPaths"
