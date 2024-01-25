@@ -8,7 +8,7 @@
   "packageRules": [
     {
       "matchSourceUrls": ["https://github.com/stackitcloud/stackit-sdk-go"],
-      "groupName": "SDK"
+      "groupName": "STACKIT SDK modules"
     }
   ],
   "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths"]
