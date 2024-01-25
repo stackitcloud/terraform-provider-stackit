@@ -164,9 +164,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"plan_id": schema.StringAttribute{
 				Description: "The Argus plan ID.",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 				Validators: []validator.String{
 					validate.UUID(),
 				},
