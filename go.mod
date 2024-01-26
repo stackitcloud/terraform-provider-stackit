@@ -12,7 +12,7 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/core v0.7.6
-	github.com/stackitcloud/stackit-sdk-go/services/argus v0.9.2
+	github.com/stackitcloud/stackit-sdk-go/services/argus v0.9.3
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.8.2
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.9.2
@@ -81,8 +81,8 @@ require (
 	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240108191215-35c7eff3a6b1 // indirect
-	google.golang.org/grpc v1.60.1 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240125205218-1f4bbc51befe // indirect
+	google.golang.org/grpc v1.61.0 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
