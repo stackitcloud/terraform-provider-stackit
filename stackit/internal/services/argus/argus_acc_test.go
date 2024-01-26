@@ -18,9 +18,10 @@ import (
 )
 
 var instanceResource = map[string]string{
-	"project_id": testutil.ProjectId,
-	"name":       testutil.ResourceNameWithDateTime("argus"),
-	"plan_name":  "Monitoring-Medium-EU01",
+	"project_id":    testutil.ProjectId,
+	"name":          testutil.ResourceNameWithDateTime("argus"),
+	"plan_name":     "Monitoring-Basic-EU01",
+	"new_plan_name": "Monitoring-Medium-EU01",
 }
 
 var scrapeConfigResource = map[string]string{
@@ -38,7 +39,7 @@ var credentialResource = map[string]string{
 	"project_id": testutil.ProjectId,
 }
 
-func resourceConfig(instanceName, target, saml2EnableUrlParameters string) string {
+func resourceConfig(instanceName, planName, target, saml2EnableUrlParameters string) string {
 	return fmt.Sprintf(`
 				%s
 
@@ -70,7 +71,7 @@ func resourceConfig(instanceName, target, saml2EnableUrlParameters string) strin
 		testutil.ArgusProviderConfig(),
 		instanceResource["project_id"],
 		instanceName,
-		instanceResource["plan_name"],
+		planName,
 		scrapeConfigResource["name"],
 		scrapeConfigResource["metrics_path"],
 		target,
@@ -87,7 +88,7 @@ func TestAccResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: resourceConfig(instanceResource["name"], scrapeConfigResource["urls"], scrapeConfigResource["saml2_enable_url_parameters"]),
+				Config: resourceConfig(instanceResource["name"], instanceResource["plan_name"], scrapeConfigResource["urls"], scrapeConfigResource["saml2_enable_url_parameters"]),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "project_id", instanceResource["project_id"]),
@@ -156,7 +157,7 @@ func TestAccResource(t *testing.T) {
 					  	name        = stackit_argus_scrapeconfig.scrapeconfig.name
 					}
 					`,
-					resourceConfig(instanceResource["name"], scrapeConfigResource["urls"], scrapeConfigResource["saml2_enable_url_parameters"]),
+					resourceConfig(instanceResource["name"], instanceResource["plan_name"], scrapeConfigResource["urls"], scrapeConfigResource["saml2_enable_url_parameters"]),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -235,13 +236,13 @@ func TestAccResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfig(fmt.Sprintf("%s-new", instanceResource["name"]), "", "true"),
+				Config: resourceConfig(fmt.Sprintf("%s-new", instanceResource["name"]), instanceResource["new_plan_name"], "", "true"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "name", instanceResource["name"]+"-new"),
-					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "plan_name", instanceResource["plan_name"]),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "plan_name", instanceResource["new_plan_name"]),
 
 					// Scrape Config
 					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "name", scrapeConfigResource["name"]),
@@ -282,7 +283,7 @@ func TestAccResource(t *testing.T) {
 					testutil.ArgusProviderConfig(),
 					instanceResource["project_id"],
 					instanceResource["name"],
-					instanceResource["plan_name"],
+					instanceResource["new_plan_name"],
 					scrapeConfigResource["name"],
 					scrapeConfigResource["urls"],
 					scrapeConfigResource["scrape_interval"],
@@ -294,7 +295,7 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "name", instanceResource["name"]),
-					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "plan_name", instanceResource["plan_name"]),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "plan_name", instanceResource["new_plan_name"]),
 
 					// Scrape Config
 					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "name", scrapeConfigResource["name"]),
