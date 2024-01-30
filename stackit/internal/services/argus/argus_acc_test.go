@@ -278,6 +278,9 @@ func TestAccResource(t *testing.T) {
 					scrape_interval = "%s"
 					sample_limit = %s
 					metrics_path = "%s"
+					saml2 = {
+						enable_url_parameters = false
+					}
 				}
 				`,
 					testutil.ArgusProviderConfig(),
