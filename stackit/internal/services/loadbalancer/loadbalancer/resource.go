@@ -81,10 +81,16 @@ var optionsTypes = map[string]attr.Type{
 
 // Struct corresponding to each Model.TargetPool
 type TargetPool struct {
-	ActiveHealthCheck types.Object `tfsdk:"active_health_check"`
-	Name              types.String `tfsdk:"name"`
-	TargetPort        types.Int64  `tfsdk:"target_port"`
-	Targets           []Target     `tfsdk:"targets"`
+	ActiveHealthCheck  types.Object `tfsdk:"active_health_check"`
+	Name               types.String `tfsdk:"name"`
+	TargetPort         types.Int64  `tfsdk:"target_port"`
+	Targets            []Target     `tfsdk:"targets"`
+	SessionPersistence types.Object `tfsdk:"session_persistence"`
+}
+
+// Struct corresponding to each Model.TargetPool.SessionPersistence
+type SessionPersistence struct {
+	UseSourceIPAddress types.Bool `tfsdk:"use_source_ip_address"`
 }
 
 // Struct corresponding to each Model.TargetPool.ActiveHealthCheck
@@ -224,7 +230,7 @@ provider "openstack" {
 	auth_url         = "https://keystone.api.iaas.eu01.stackit.cloud/v3"
 }
 ` + "\n```" + `
-		
+
 ### Configuring the supporting infrastructure
 
 The example below uses OpenStack to create the network, router, a public IP address and a compute instance.
@@ -445,6 +451,18 @@ The example below uses OpenStack to create the network, router, a public IP addr
 						"target_port": schema.Int64Attribute{
 							Description: descriptions["target_port"],
 							Required:    true,
+						},
+						"session_persistence": schema.SingleNestedAttribute{
+							Description: descriptions["session_persistence"],
+							Optional:    true,
+							Computed:    false,
+							Attributes: map[string]schema.Attribute{
+								"use_source_ip_address": schema.BoolAttribute{
+									Description: descriptions["use_source_ip_address"],
+									Optional:    false,
+									Computed:    false,
+								},
+							},
 						},
 						"targets": schema.ListNestedAttribute{
 							Description: descriptions["targets"],
@@ -783,11 +801,16 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.Ta
 			return nil, fmt.Errorf("converting target pool: %w", err)
 		}
 
+		session_persistence, err := toSessionPersistencePayload(ctx, utils.Ptr(targetPool))
+		if err != nil {
+			return nil, fmt.Errorf("converting target pool: %w", err)
+		}
 		targetPools = append(targetPools, loadbalancer.TargetPool{
-			ActiveHealthCheck: activeHealthCheck,
-			Name:              conversion.StringValueToPointer(targetPool.Name),
-			TargetPort:        conversion.Int64ValueToPointer(targetPool.TargetPort),
-			Targets:           targets,
+			ActiveHealthCheck:  activeHealthCheck,
+			Name:               conversion.StringValueToPointer(targetPool.Name),
+			TargetPort:         conversion.Int64ValueToPointer(targetPool.TargetPort),
+			Targets:            targets,
+			SessionPersistence: session_persistence,
 		})
 	}
 
@@ -806,11 +829,33 @@ func toTargetPoolUpdatePayload(ctx context.Context, targetPool *TargetPool) (*lo
 
 	targets := toTargetsPayload(targetPool)
 
+	session_persistence, err := toSessionPersistencePayload(ctx, targetPool)
+	if err != nil {
+		return nil, fmt.Errorf("converting target pool: %w", err)
+	}
+
 	return &loadbalancer.UpdateTargetPoolPayload{
-		ActiveHealthCheck: activeHealthCheck,
-		Name:              conversion.StringValueToPointer(targetPool.Name),
-		TargetPort:        conversion.Int64ValueToPointer(targetPool.TargetPort),
-		Targets:           targets,
+		ActiveHealthCheck:  activeHealthCheck,
+		Name:               conversion.StringValueToPointer(targetPool.Name),
+		TargetPort:         conversion.Int64ValueToPointer(targetPool.TargetPort),
+		Targets:            targets,
+		SessionPersistence: session_persistence,
+	}, nil
+}
+
+func toSessionPersistencePayload(ctx context.Context, targetPool *TargetPool) (*loadbalancer.SessionPersistence, error) {
+	if targetPool.SessionPersistence.IsNull() || targetPool.ActiveHealthCheck.IsUnknown() {
+		return nil, nil
+	}
+
+	var session_persistence SessionPersistence
+	diags := targetPool.SessionPersistence.As(ctx, &session_persistence, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting session persistence: %w", core.DiagsToError(diags))
+	}
+
+	return &loadbalancer.SessionPersistence{
+		UseSourceIpAddress: conversion.BoolValueToPointer(session_persistence.UseSourceIPAddress),
 	}, nil
 }
 
