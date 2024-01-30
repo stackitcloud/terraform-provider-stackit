@@ -459,7 +459,7 @@ The example below uses OpenStack to create the network, router, a public IP addr
 							Attributes: map[string]schema.Attribute{
 								"use_source_ip_address": schema.BoolAttribute{
 									Description: descriptions["use_source_ip_address"],
-									Optional:    false,
+									Optional:    true,
 									Computed:    false,
 								},
 							},
