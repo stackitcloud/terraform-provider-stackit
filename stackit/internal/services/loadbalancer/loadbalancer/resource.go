@@ -111,6 +111,11 @@ var activeHealthCheckTypes = map[string]attr.Type{
 	"unhealthy_threshold": basetypes.Int64Type{},
 }
 
+// Types corresponding to SessionPersistence
+var sessionPersistenceTypes = map[string]attr.Type{
+	"use_source_ip_address": basetypes.BoolType{},
+}
+
 // Struct corresponding to each Model.TargetPool.Targets
 type Target struct {
 	DisplayName types.String `tfsdk:"display_name"`
@@ -1012,6 +1017,7 @@ func mapTargetPools(lb *loadbalancer.LoadBalancer, m *Model) error {
 	var targetPools []TargetPool
 	for _, targetPool := range *lb.TargetPools {
 		var activeHealthCheck basetypes.ObjectValue
+		var sessionPersistence basetypes.ObjectValue
 		if targetPool.ActiveHealthCheck != nil {
 			activeHealthCheckValues := map[string]attr.Value{
 				"healthy_threshold":   types.Int64Value(*targetPool.ActiveHealthCheck.HealthyThreshold),
@@ -1023,6 +1029,15 @@ func mapTargetPools(lb *loadbalancer.LoadBalancer, m *Model) error {
 			activeHealthCheck, diags = types.ObjectValue(activeHealthCheckTypes, activeHealthCheckValues)
 			if diags != nil {
 				return fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
+			}
+		}
+		if targetPool.SessionPersistence != nil {
+			sessionPersistenceValues := map[string]attr.Value{
+				"use_source_ip_address": types.BoolValue(*targetPool.SessionPersistence.UseSourceIpAddress),
+			}
+			sessionPersistence, diags = types.ObjectValue(sessionPersistenceTypes, sessionPersistenceValues)
+			if diags != nil {
+				return fmt.Errorf("converting session persistence: %w", core.DiagsToError(diags))
 			}
 		}
 
@@ -1037,10 +1052,11 @@ func mapTargetPools(lb *loadbalancer.LoadBalancer, m *Model) error {
 		}
 
 		targetPools = append(targetPools, TargetPool{
-			ActiveHealthCheck: activeHealthCheck,
-			Name:              types.StringPointerValue(targetPool.Name),
-			TargetPort:        types.Int64Value(*targetPool.TargetPort),
-			Targets:           targets,
+			ActiveHealthCheck:  activeHealthCheck,
+			Name:               types.StringPointerValue(targetPool.Name),
+			TargetPort:         types.Int64Value(*targetPool.TargetPort),
+			Targets:            targets,
+			SessionPersistence: sessionPersistence,
 		})
 	}
 	m.TargetPools = targetPools
