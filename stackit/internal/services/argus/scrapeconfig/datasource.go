@@ -136,11 +136,11 @@ func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed:    true,
 			},
 			"saml2": schema.SingleNestedAttribute{
-				Description: "A SAML2 configuration block",
+				Description: "A SAML2 configuration block.",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"enable_url_parameters": schema.BoolAttribute{
-						Description: "Are URL parameters be enabled?",
+						Description: "Specifies if URL parameters are enabled",
 						Computed:    true,
 					},
 				},

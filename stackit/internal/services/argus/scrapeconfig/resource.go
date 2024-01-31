@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -214,9 +215,20 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 			"saml2": schema.SingleNestedAttribute{
 				Description: "A SAML2 configuration block.",
 				Optional:    true,
+				Computed:    true,
+				Default: objectdefault.StaticValue(
+					types.ObjectValueMust(
+						map[string]attr.Type{
+							"enable_url_parameters": types.BoolType,
+						},
+						map[string]attr.Value{
+							"enable_url_parameters": types.BoolValue(DefaultSAML2EnableURLParameters),
+						},
+					),
+				),
 				Attributes: map[string]schema.Attribute{
 					"enable_url_parameters": schema.BoolAttribute{
-						Description: "Are URL parameters be enabled?",
+						Description: "Specifies if URL parameters are enabled.",
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(DefaultSAML2EnableURLParameters),
