@@ -94,16 +94,14 @@ Using this flow is less secure since the token is long-lived. You can provide th
 
 To keep track of your terraform state, you can configure an [S3 backend](https://developer.hashicorp.com/terraform/language/settings/backends/s3) using [STACKIT Object Storage](https://docs.stackit.cloud/stackit/en/object-storage-s3-compatible-71009778.html).
 
-
 To do so, you need an Object Storage [S3 bucket](https://docs.stackit.cloud/stackit/en/basic-concept-objectstorage-71009785.html#BasicConceptObjectStorage-Buckets) and [credentials](https://docs.stackit.cloud/stackit/en/basic-concept-objectstorage-71009785.html#BasicConceptObjectStorage-Credentials) to access it. If you need to create them, check [Getting Started - Object Storage](https://docs.stackit.cloud/stackit/en/getting-started-objectstorage-71009792.html).
-
 
 Once you have everything setup, you can configure the backend by adding the following block to your terraform configuration:
 
 ```
 terraform {
   backend "s3" {
-    bucket = "bucket_name"
+    bucket = "BUCKET_NAME"
     key    = "path/to/key"
     endpoints = {
       s3 = "https://object.storage.eu01.onstackit.cloud"
@@ -113,8 +111,8 @@ terraform {
     skip_region_validation      = true
     skip_s3_checksum            = true
     skip_requesting_account_id  = true
-    secret_key                  = "secret_key"
-    access_key                  = "access_key"
+    secret_key                  = "SECRET_KEY"
+    access_key                  = "ACCESS_KEY"
   }
 }
 ```
