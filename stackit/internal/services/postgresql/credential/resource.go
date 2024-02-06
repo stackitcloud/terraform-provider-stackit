@@ -107,6 +107,15 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
+		DeprecationMessage: strings.Join(
+			[]string{
+				"The STACKIT PostgreSQL service will reach its end of support on June 30th.",
+				"Data sources of this type will stop work after that.",
+				"Use stackit_postgresqlflex_user instead.",
+				"For more details, check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html",
+			},
+			" ",
+		),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
