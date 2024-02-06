@@ -154,6 +154,8 @@ github.com/skeema/knownhosts v1.2.1 h1:SHWdIUa82uGZz+F+47k8SY4QhhI291cXCpopT1lK2
 github.com/skeema/knownhosts v1.2.1/go.mod h1:xYbVRSPxqBZFrdmDyMmsOs+uX1UZC3nTN3ThzgDxUwo=
 github.com/stackitcloud/stackit-sdk-go/core v0.7.6 h1:AhbhfshlDJq0wuJRlw+TbwiX0slyA72Aei544g5CnHM=
 github.com/stackitcloud/stackit-sdk-go/core v0.7.6/go.mod h1:ePb/1v9P1++W/92rN9mdToUkaMiK7lz4SVFY2KtSrB4=
+github.com/stackitcloud/stackit-sdk-go/core v0.7.7 h1:w1T8I2ERT5xPHXS+UV9maSseK8tyUJQjzS21hhRSWjU=
+github.com/stackitcloud/stackit-sdk-go/core v0.7.7/go.mod h1:nfC2Tbjd73Ivn8wEp3lvG/dmiXHgl6QX+HY2Ih3aGgw=
 github.com/stackitcloud/stackit-sdk-go/services/argus v0.9.1 h1:hOlia7L71vvEwVr/DaXn9XK4v1QygF0QBKSCz/uGJqI=
 github.com/stackitcloud/stackit-sdk-go/services/argus v0.9.1/go.mod h1:AscK7xOrJqvimsicdIRcAroDL8XT1t/nKHbkhdjoxfI=
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.8.1 h1:Md3cESelxU23S5RasabMLSpiDh9trBd+/ncw82NWmIY=
@@ -174,6 +176,8 @@ github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.8.3 h1:zyTmg+Rlg
 github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.8.3/go.mod h1:BNV6OmtKOLHIb7pAOJxHPWhcxCiBuPgumYM/+5pPs2o=
 github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.10.1 h1:oOZPQBEDrBNV41u4K17cjOcEZEgb+bwzT1+ifRdhGCw=
 github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.10.1/go.mod h1:pB3XUNyNUvUmwtbdXUPF2EYK0nmyw4GBRVC71byG+0M=
+github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.12.0 h1:Ud9IT71e8oJcs7hSiJF2k8wysz3+zzTyYQJwMuM8J6Q=
+github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.12.0/go.mod h1:8tWbOEdgd8GanzMj3Z/cdMW6uhvNrBEJ8ZLtRYNsY4Y=
 github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.9.1 h1:wQuDhEl5kThEO1kKCI1HLCPBpRVMaYS2hubI6p3m2Pw=
 github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.9.1/go.mod h1:ynWKUEoq4keShHmy7Zd3MWXeWqYOHTXqcR+utNQfegg=
 github.com/stackitcloud/stackit-sdk-go/services/redis v0.9.1 h1:pSzjCpdje9PH5TnZkrmiE8hWUYf0G6ithcXDuP6A5uM=
