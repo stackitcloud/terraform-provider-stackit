@@ -93,7 +93,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		"options":               "Defines any optional functionality you want to have enabled on your load balancer.",
 		"acl":                   "Load Balancer is accessible only from an IP address in this range.",
 		"private_network_only":  "If true, Load Balancer is accessible only via a private network IP address.",
-		"session_persistence":   "Here you can setup various session persistence options, so far only use_source_ip_address is supported.",
+		"session_persistence":   "Here you can setup various session persistence options, so far only \"`use_source_ip_address`\" is supported.",
 		"use_source_ip_address": "If true then all connections from one source IP address are redirected to the same target. This setting changes the load balancing algorithm to Maglev.",
 		"private_address":       "Transient private Load Balancer IP address. It can change any time.",
 		"target_pools":          "List of all target pools which will be used in the Load Balancer. Limited to 20.",
