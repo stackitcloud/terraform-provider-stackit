@@ -8,25 +8,25 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/terraform-plugin-framework v1.5.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.12.0
-	github.com/hashicorp/terraform-plugin-go v0.20.0
+	github.com/hashicorp/terraform-plugin-go v0.21.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/core v0.7.7
-	github.com/stackitcloud/stackit-sdk-go/services/argus v0.9.1
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.8.1
-	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.8.3
-	github.com/stackitcloud/stackit-sdk-go/services/logme v0.9.1
-	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.9.1
-	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.10.2
-	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.8.3
-	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.9.1
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.8.3
+	github.com/stackitcloud/stackit-sdk-go/services/argus v0.9.4
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.8.3
+	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.9.1
+	github.com/stackitcloud/stackit-sdk-go/services/logme v0.10.0
+	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.10.0
+	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.11.0
+	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.8.5
+	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.10.0
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.12.0
-	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.9.1
-	github.com/stackitcloud/stackit-sdk-go/services/redis v0.9.1
-	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.7.4
-	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.5.3
-	github.com/stackitcloud/stackit-sdk-go/services/ske v0.9.1
+	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.10.0
+	github.com/stackitcloud/stackit-sdk-go/services/redis v0.10.0
+	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.7.6
+	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.5.5
+	github.com/stackitcloud/stackit-sdk-go/services/ske v0.9.3
 	golang.org/x/mod v0.14.0
 )
 
@@ -81,8 +81,8 @@ require (
 	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240108191215-35c7eff3a6b1 // indirect
-	google.golang.org/grpc v1.60.1 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240125205218-1f4bbc51befe // indirect
+	google.golang.org/grpc v1.61.0 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )

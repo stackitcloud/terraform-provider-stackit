@@ -81,10 +81,16 @@ var optionsTypes = map[string]attr.Type{
 
 // Struct corresponding to each Model.TargetPool
 type TargetPool struct {
-	ActiveHealthCheck types.Object `tfsdk:"active_health_check"`
-	Name              types.String `tfsdk:"name"`
-	TargetPort        types.Int64  `tfsdk:"target_port"`
-	Targets           []Target     `tfsdk:"targets"`
+	ActiveHealthCheck  types.Object `tfsdk:"active_health_check"`
+	Name               types.String `tfsdk:"name"`
+	TargetPort         types.Int64  `tfsdk:"target_port"`
+	Targets            []Target     `tfsdk:"targets"`
+	SessionPersistence types.Object `tfsdk:"session_persistence"`
+}
+
+// Struct corresponding to each Model.TargetPool.SessionPersistence
+type SessionPersistence struct {
+	UseSourceIPAddress types.Bool `tfsdk:"use_source_ip_address"`
 }
 
 // Struct corresponding to each Model.TargetPool.ActiveHealthCheck
@@ -103,6 +109,11 @@ var activeHealthCheckTypes = map[string]attr.Type{
 	"interval_jitter":     basetypes.StringType{},
 	"timeout":             basetypes.StringType{},
 	"unhealthy_threshold": basetypes.Int64Type{},
+}
+
+// Types corresponding to SessionPersistence
+var sessionPersistenceTypes = map[string]attr.Type{
+	"use_source_ip_address": basetypes.BoolType{},
 }
 
 // Struct corresponding to each Model.TargetPool.Targets
@@ -166,33 +177,35 @@ func (r *loadBalancerResource) Configure(ctx context.Context, req resource.Confi
 // Schema defines the schema for the resource.
 func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                 "Load Balancer resource schema.",
-		"id":                   "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`name`\".",
-		"project_id":           "STACKIT project ID to which the Load Balancer is associated.",
-		"external_address":     "External Load Balancer IP address where this Load Balancer is exposed.",
-		"listeners":            "List of all listeners which will accept traffic. Limited to 20.",
-		"port":                 "Port number where we listen for traffic.",
-		"protocol":             "Protocol is the highest network protocol we understand to load balance.",
-		"target_pool":          "Reference target pool by target pool name.",
-		"name":                 "Load balancer name.",
-		"networks":             "List of networks that listeners and targets reside in.",
-		"network_id":           "Openstack network ID.",
-		"role":                 "The role defines how the load balancer is using the network.",
-		"options":              "Defines any optional functionality you want to have enabled on your load balancer.",
-		"acl":                  "Load Balancer is accessible only from an IP address in this range.",
-		"private_network_only": "If true, Load Balancer is accessible only via a private network IP address.",
-		"private_address":      "Transient private Load Balancer IP address. It can change any time.",
-		"target_pools":         "List of all target pools which will be used in the Load Balancer. Limited to 20.",
-		"healthy_threshold":    "Healthy threshold of the health checking.",
-		"interval":             "Interval duration of health checking in seconds.",
-		"interval_jitter":      "Interval duration threshold of the health checking in seconds.",
-		"timeout":              "Active health checking timeout duration in seconds.",
-		"unhealthy_threshold":  "Unhealthy threshold of the health checking.",
-		"target_pools.name":    "Target pool name.",
-		"target_port":          "Identical port number where each target listens for traffic.",
-		"targets":              "List of all targets which will be used in the pool. Limited to 250.",
-		"targets.display_name": "Target display name",
-		"ip":                   "Target IP",
+		"main":                  "Load Balancer resource schema.",
+		"id":                    "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`name`\".",
+		"project_id":            "STACKIT project ID to which the Load Balancer is associated.",
+		"external_address":      "External Load Balancer IP address where this Load Balancer is exposed.",
+		"listeners":             "List of all listeners which will accept traffic. Limited to 20.",
+		"port":                  "Port number where we listen for traffic.",
+		"protocol":              "Protocol is the highest network protocol we understand to load balance.",
+		"target_pool":           "Reference target pool by target pool name.",
+		"name":                  "Load balancer name.",
+		"networks":              "List of networks that listeners and targets reside in.",
+		"network_id":            "Openstack network ID.",
+		"role":                  "The role defines how the load balancer is using the network.",
+		"options":               "Defines any optional functionality you want to have enabled on your load balancer.",
+		"acl":                   "Load Balancer is accessible only from an IP address in this range.",
+		"private_network_only":  "If true, Load Balancer is accessible only via a private network IP address.",
+		"session_persistence":   "Here you can setup various session persistence options, so far only \"`use_source_ip_address`\" is supported.",
+		"use_source_ip_address": "If true then all connections from one source IP address are redirected to the same target. This setting changes the load balancing algorithm to Maglev.",
+		"private_address":       "Transient private Load Balancer IP address. It can change any time.",
+		"target_pools":          "List of all target pools which will be used in the Load Balancer. Limited to 20.",
+		"healthy_threshold":     "Healthy threshold of the health checking.",
+		"interval":              "Interval duration of health checking in seconds.",
+		"interval_jitter":       "Interval duration threshold of the health checking in seconds.",
+		"timeout":               "Active health checking timeout duration in seconds.",
+		"unhealthy_threshold":   "Unhealthy threshold of the health checking.",
+		"target_pools.name":     "Target pool name.",
+		"target_port":           "Identical port number where each target listens for traffic.",
+		"targets":               "List of all targets which will be used in the pool. Limited to 250.",
+		"targets.display_name":  "Target display name",
+		"ip":                    "Target IP",
 	}
 
 	resp.Schema = schema.Schema{
@@ -224,7 +237,7 @@ provider "openstack" {
 	auth_url         = "https://keystone.api.iaas.eu01.stackit.cloud/v3"
 }
 ` + "\n```" + `
-		
+
 ### Configuring the supporting infrastructure
 
 The example below uses OpenStack to create the network, router, a public IP address and a compute instance.
@@ -445,6 +458,18 @@ The example below uses OpenStack to create the network, router, a public IP addr
 						"target_port": schema.Int64Attribute{
 							Description: descriptions["target_port"],
 							Required:    true,
+						},
+						"session_persistence": schema.SingleNestedAttribute{
+							Description: descriptions["session_persistence"],
+							Optional:    true,
+							Computed:    false,
+							Attributes: map[string]schema.Attribute{
+								"use_source_ip_address": schema.BoolAttribute{
+									Description: descriptions["use_source_ip_address"],
+									Optional:    true,
+									Computed:    false,
+								},
+							},
 						},
 						"targets": schema.ListNestedAttribute{
 							Description: descriptions["targets"],
@@ -783,11 +808,16 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.Ta
 			return nil, fmt.Errorf("converting target pool: %w", err)
 		}
 
+		session_persistence, err := toSessionPersistencePayload(ctx, utils.Ptr(targetPool))
+		if err != nil {
+			return nil, fmt.Errorf("converting target pool: %w", err)
+		}
 		targetPools = append(targetPools, loadbalancer.TargetPool{
-			ActiveHealthCheck: activeHealthCheck,
-			Name:              conversion.StringValueToPointer(targetPool.Name),
-			TargetPort:        conversion.Int64ValueToPointer(targetPool.TargetPort),
-			Targets:           targets,
+			ActiveHealthCheck:  activeHealthCheck,
+			Name:               conversion.StringValueToPointer(targetPool.Name),
+			TargetPort:         conversion.Int64ValueToPointer(targetPool.TargetPort),
+			Targets:            targets,
+			SessionPersistence: session_persistence,
 		})
 	}
 
@@ -806,11 +836,33 @@ func toTargetPoolUpdatePayload(ctx context.Context, targetPool *TargetPool) (*lo
 
 	targets := toTargetsPayload(targetPool)
 
+	session_persistence, err := toSessionPersistencePayload(ctx, targetPool)
+	if err != nil {
+		return nil, fmt.Errorf("converting target pool: %w", err)
+	}
+
 	return &loadbalancer.UpdateTargetPoolPayload{
-		ActiveHealthCheck: activeHealthCheck,
-		Name:              conversion.StringValueToPointer(targetPool.Name),
-		TargetPort:        conversion.Int64ValueToPointer(targetPool.TargetPort),
-		Targets:           targets,
+		ActiveHealthCheck:  activeHealthCheck,
+		Name:               conversion.StringValueToPointer(targetPool.Name),
+		TargetPort:         conversion.Int64ValueToPointer(targetPool.TargetPort),
+		Targets:            targets,
+		SessionPersistence: session_persistence,
+	}, nil
+}
+
+func toSessionPersistencePayload(ctx context.Context, targetPool *TargetPool) (*loadbalancer.SessionPersistence, error) {
+	if targetPool.SessionPersistence.IsNull() || targetPool.ActiveHealthCheck.IsUnknown() {
+		return nil, nil
+	}
+
+	var session_persistence SessionPersistence
+	diags := targetPool.SessionPersistence.As(ctx, &session_persistence, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting session persistence: %w", core.DiagsToError(diags))
+	}
+
+	return &loadbalancer.SessionPersistence{
+		UseSourceIpAddress: conversion.BoolValueToPointer(session_persistence.UseSourceIPAddress),
 	}, nil
 }
 
@@ -967,6 +1019,7 @@ func mapTargetPools(lb *loadbalancer.LoadBalancer, m *Model) error {
 	var targetPools []TargetPool
 	for _, targetPool := range *lb.TargetPools {
 		var activeHealthCheck basetypes.ObjectValue
+		var sessionPersistence basetypes.ObjectValue
 		if targetPool.ActiveHealthCheck != nil {
 			activeHealthCheckValues := map[string]attr.Value{
 				"healthy_threshold":   types.Int64Value(*targetPool.ActiveHealthCheck.HealthyThreshold),
@@ -978,6 +1031,15 @@ func mapTargetPools(lb *loadbalancer.LoadBalancer, m *Model) error {
 			activeHealthCheck, diags = types.ObjectValue(activeHealthCheckTypes, activeHealthCheckValues)
 			if diags != nil {
 				return fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
+			}
+		}
+		if targetPool.SessionPersistence != nil {
+			sessionPersistenceValues := map[string]attr.Value{
+				"use_source_ip_address": types.BoolValue(*targetPool.SessionPersistence.UseSourceIpAddress),
+			}
+			sessionPersistence, diags = types.ObjectValue(sessionPersistenceTypes, sessionPersistenceValues)
+			if diags != nil {
+				return fmt.Errorf("converting session persistence: %w", core.DiagsToError(diags))
 			}
 		}
 
@@ -992,10 +1054,11 @@ func mapTargetPools(lb *loadbalancer.LoadBalancer, m *Model) error {
 		}
 
 		targetPools = append(targetPools, TargetPool{
-			ActiveHealthCheck: activeHealthCheck,
-			Name:              types.StringPointerValue(targetPool.Name),
-			TargetPort:        types.Int64Value(*targetPool.TargetPort),
-			Targets:           targets,
+			ActiveHealthCheck:  activeHealthCheck,
+			Name:               types.StringPointerValue(targetPool.Name),
+			TargetPort:         types.Int64Value(*targetPool.TargetPort),
+			Targets:            targets,
+			SessionPersistence: sessionPersistence,
 		})
 	}
 	m.TargetPools = targetPools
