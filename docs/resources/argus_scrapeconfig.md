@@ -82,4 +82,4 @@ Required:
 
 Optional:
 
-- `enable_url_parameters` (Boolean) Are URL parameters be enabled?
+- `enable_url_parameters` (Boolean) Specifies if URL parameters are enabled.
