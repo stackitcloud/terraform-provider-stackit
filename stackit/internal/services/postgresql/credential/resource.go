@@ -102,7 +102,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		"deprecation_message": strings.Join(
 			[]string{
 				"The STACKIT PostgreSQL service will reach its end of support on June 30th 2024.",
-				"Resources of this type will stop work after that.",
+				"Resources of this type will stop working after that.",
 				"Use stackit_postgresqlflex_user instead.",
 				"For more details, check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html",
 			},

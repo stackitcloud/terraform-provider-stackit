@@ -126,7 +126,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"deprecation_message": strings.Join(
 			[]string{
 				"The STACKIT PostgreSQL service will reach its end of support on June 30th 2024.",
-				"Resources of this type will stop work after that.",
+				"Resources of this type will stop working after that.",
 				"Use stackit_postgresqlflex_instance instead.",
 				"Check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html on how to backup and restore an instance from PostgreSQL to PostgreSQL Flex, then import the resource to Terraform using an \"import\" block (https://developer.hashicorp.com/terraform/language/import)",
 			},

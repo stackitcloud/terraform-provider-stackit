@@ -4,14 +4,14 @@ page_title: "stackit_postgresql_instance Data Source - stackit"
 subcategory: ""
 description: |-
   PostgreSQL instance data source schema. Must have a region specified in the provider configuration.
-  !> The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Data sources of this type will stop work after that. Use stackitpostgresqlflexinstance instead. For more details, check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html
+  !> The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Data sources of this type will stop working after that. Use stackitpostgresqlflexinstance instead. For more details, check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html
 ---
 
 # stackit_postgresql_instance (Data Source)
 
 PostgreSQL instance data source schema. Must have a `region` specified in the provider configuration.
 
-!> The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Data sources of this type will stop work after that. Use stackit_postgresqlflex_instance instead. For more details, check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html
+!> The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Data sources of this type will stop working after that. Use stackit_postgresqlflex_instance instead. For more details, check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html
 
 ## Example Usage
 
