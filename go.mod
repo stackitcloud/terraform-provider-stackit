@@ -26,7 +26,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.7.6
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.5.5
-	github.com/stackitcloud/stackit-sdk-go/services/ske v0.9.3
+	github.com/stackitcloud/stackit-sdk-go/services/ske v0.10.0
 	golang.org/x/mod v0.14.0
 )
 

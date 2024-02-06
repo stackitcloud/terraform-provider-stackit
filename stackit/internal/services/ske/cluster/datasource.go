@@ -6,11 +6,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -269,7 +269,7 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				},
 			},
 			"kube_config": schema.StringAttribute{
-				Description: "Kube config file used for connecting to the cluster",
+				Description: "Kube config file used for connecting to the cluster. Warning: the kubeconfig is generated for each run of `terraform apply` and is short-lived (1h). It should only be used for other terraform operations and not to be stored externally (e.g. in a Secrets Manager instance) for later use.",
 				Sensitive:   true,
 				Computed:    true,
 			},
@@ -301,7 +301,12 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-	r.getCredential(ctx, &diags, &state)
+	// Handle kubeconfig
+	err = r.createKubeConfig(ctx, &state)
+	if err != nil {
+		core.LogAndAddError(ctx, &diags, "Error reading cluster", fmt.Sprintf("Creating kubeconfig: %v", err))
+		return
+	}
 	// Set refreshed state
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
@@ -311,12 +316,15 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	tflog.Info(ctx, "SKE cluster read")
 }
 
-func (r *clusterDataSource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Model) {
+func (r *clusterDataSource) createKubeConfig(ctx context.Context, model *Model) error {
 	c := r.client
-	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute()
+	payload := ske.CreateKubeconfigPayload{
+		ExpirationSeconds: utils.Ptr("3600"),
+	}
+	res, err := c.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).CreateKubeconfigPayload(payload).Execute()
 	if err != nil {
-		diags.AddError("failed fetching cluster credentials for data source", err.Error())
-		return
+		return fmt.Errorf("calling API: %w", err)
 	}
 	model.KubeConfig = types.StringPointerValue(res.Kubeconfig)
+	return nil
 }

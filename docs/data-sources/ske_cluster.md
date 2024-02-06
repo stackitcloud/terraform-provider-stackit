@@ -35,7 +35,7 @@ This should be used with care since it also disables a couple of other features 
 - `extensions` (Attributes) A single extensions block as defined below (see [below for nested schema](#nestedatt--extensions))
 - `hibernations` (Attributes List) One or more hibernation block as defined below. (see [below for nested schema](#nestedatt--hibernations))
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`name`".
-- `kube_config` (String, Sensitive) Kube config file used for connecting to the cluster
+- `kube_config` (String, Sensitive) Kube config file used for connecting to the cluster. Warning: the kubeconfig is generated for each run of `terraform apply` and is short-lived (1h). It should only be used for other terraform operations and not to be stored externally (e.g. in a Secrets Manager instance) for later use.
 - `kubernetes_version` (String) Kubernetes version.
 - `kubernetes_version_used` (String) Full Kubernetes version used. For example, if `1.22` was selected, this value may result to `1.22.15`
 - `maintenance` (Attributes) A single maintenance block as defined below (see [below for nested schema](#nestedatt--maintenance))

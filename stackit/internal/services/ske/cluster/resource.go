@@ -497,12 +497,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"kube_config": schema.StringAttribute{
-				Description: "Kube config file used for connecting to the cluster",
+				Description: "Kube config file used for connecting to the cluster. Warning: the kubeconfig is generated for each run of `terraform apply` and is short-lived (1h). It should only be used for other terraform operations and not to be stored externally (e.g. in a Secrets Manager instance) for later use.",
 				Sensitive:   true,
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 	}
@@ -647,19 +644,22 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		return
 	}
 
-	// Handle credential
-	err = r.getCredential(ctx, model)
+	// Handle kubeconfig
+	err = r.createKubeConfig(ctx, model)
 	if err != nil {
-		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Getting credential: %v", err))
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating kubeconfig: %v", err))
 		return
 	}
 }
 
-func (r *clusterResource) getCredential(ctx context.Context, model *Model) error {
+func (r *clusterResource) createKubeConfig(ctx context.Context, model *Model) error {
 	c := r.client
-	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute()
+	payload := ske.CreateKubeconfigPayload{
+		ExpirationSeconds: utils.Ptr("3600"),
+	}
+	res, err := c.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).CreateKubeconfigPayload(payload).Execute()
 	if err != nil {
-		return fmt.Errorf("fetching cluster credentials: %w", err)
+		return fmt.Errorf("calling API: %w", err)
 	}
 	model.KubeConfig = types.StringPointerValue(res.Kubeconfig)
 	return nil
