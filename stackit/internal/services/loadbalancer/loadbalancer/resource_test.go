@@ -88,6 +88,12 @@ func TestToCreatePayload(t *testing.T) {
 								Ip:          types.StringValue("ip"),
 							},
 						},
+						SessionPersistence: types.ObjectValueMust(
+							sessionPersistenceTypes,
+							map[string]attr.Value{
+								"use_source_ip_address": types.BoolValue(true),
+							},
+						),
 					},
 				},
 			},
@@ -134,6 +140,9 @@ func TestToCreatePayload(t *testing.T) {
 								DisplayName: utils.Ptr("display_name"),
 								Ip:          utils.Ptr("ip"),
 							},
+						}),
+						SessionPersistence: utils.Ptr(loadbalancer.SessionPersistence{
+							UseSourceIpAddress: utils.Ptr(true),
 						}),
 					},
 				}),
@@ -200,6 +209,12 @@ func TestToTargetPoolUpdatePayload(t *testing.T) {
 						Ip:          types.StringValue("ip"),
 					},
 				},
+				SessionPersistence: types.ObjectValueMust(
+					sessionPersistenceTypes,
+					map[string]attr.Value{
+						"use_source_ip_address": types.BoolValue(false),
+					},
+				),
 			},
 			&loadbalancer.UpdateTargetPoolPayload{
 				ActiveHealthCheck: utils.Ptr(loadbalancer.ActiveHealthCheck{
@@ -216,6 +231,9 @@ func TestToTargetPoolUpdatePayload(t *testing.T) {
 						DisplayName: utils.Ptr("display_name"),
 						Ip:          utils.Ptr("ip"),
 					},
+				}),
+				SessionPersistence: utils.Ptr(loadbalancer.SessionPersistence{
+					UseSourceIpAddress: utils.Ptr(false),
 				}),
 			},
 			true,
@@ -322,6 +340,9 @@ func TestMapFields(t *testing.T) {
 								Ip:          utils.Ptr("ip"),
 							},
 						}),
+						SessionPersistence: utils.Ptr(loadbalancer.SessionPersistence{
+							UseSourceIpAddress: utils.Ptr(true),
+						}),
 					},
 				}),
 			},
@@ -378,6 +399,12 @@ func TestMapFields(t *testing.T) {
 								Ip:          types.StringValue("ip"),
 							},
 						},
+						SessionPersistence: types.ObjectValueMust(
+							sessionPersistenceTypes,
+							map[string]attr.Value{
+								"use_source_ip_address": types.BoolValue(true),
+							},
+						),
 					},
 				},
 			},

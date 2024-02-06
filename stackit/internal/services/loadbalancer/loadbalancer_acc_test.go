@@ -27,6 +27,7 @@ var loadBalancerResource = map[string]string{
 	"interval_jitter":       "5s",
 	"timeout":               "10s",
 	"unhealthy_threshold":   "3",
+	"use_source_ip_address": "true",
 	"listener_display_name": "example-listener",
 	"listener_port":         "5432",
 	"listener_protocol":     "PROTOCOL_TCP",
@@ -53,6 +54,9 @@ func configResources(targetPort string) string {
 					ip           = openstack_compute_instance_v2.example.network.0.fixed_ip_v4
 					}
 				]
+				session_persistence = {
+					use_source_ip_address = %s
+				}
 				active_health_check = {
 					healthy_threshold   = %s
 					interval            = "%s"
@@ -92,6 +96,7 @@ func configResources(targetPort string) string {
 		loadBalancerResource["target_pool_name"],
 		targetPort,
 		loadBalancerResource["target_display_name"],
+		loadBalancerResource["use_source_ip_address"],
 		loadBalancerResource["healthy_threshold"],
 		loadBalancerResource["interval"],
 		loadBalancerResource["interval_jitter"],
@@ -206,6 +211,7 @@ func TestAccLoadBalancerResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval_jitter", loadBalancerResource["interval_jitter"]),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.timeout", loadBalancerResource["timeout"]),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.unhealthy_threshold", loadBalancerResource["unhealthy_threshold"]),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.session_persistence.use_source_ip_address", loadBalancerResource["use_source_ip_address"]),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "listeners.0.display_name", loadBalancerResource["listener_display_name"]),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "listeners.0.port", loadBalancerResource["listener_port"]),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "listeners.0.protocol", loadBalancerResource["listener_protocol"]),
@@ -248,6 +254,7 @@ func TestAccLoadBalancerResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval_jitter", loadBalancerResource["interval_jitter"]),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.timeout", loadBalancerResource["timeout"]),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.unhealthy_threshold", loadBalancerResource["unhealthy_threshold"]),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.session_persistence.use_source_ip_address", loadBalancerResource["use_source_ip_address"]),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "listeners.0.display_name", loadBalancerResource["listener_display_name"]),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "listeners.0.port", loadBalancerResource["listener_port"]),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "listeners.0.protocol", loadBalancerResource["listener_protocol"]),
