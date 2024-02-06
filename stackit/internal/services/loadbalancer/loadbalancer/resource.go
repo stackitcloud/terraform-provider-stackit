@@ -55,10 +55,16 @@ type Model struct {
 
 // Struct corresponding to each Model.Listener
 type Listener struct {
-	DisplayName types.String `tfsdk:"display_name"`
-	Port        types.Int64  `tfsdk:"port"`
-	Protocol    types.String `tfsdk:"protocol"`
-	TargetPool  types.String `tfsdk:"target_pool"`
+	DisplayName          types.String          `tfsdk:"display_name"`
+	Port                 types.Int64           `tfsdk:"port"`
+	Protocol             types.String          `tfsdk:"protocol"`
+	ServerNameIndicators []ServerNameIndicator `tfsdk:"serverNameIndicators"`
+	TargetPool           types.String          `tfsdk:"target_pool"`
+}
+
+// Struct corresponding to a single Server Name Indicator
+type ServerNameIndicator struct {
+	Name string `tfsdk:"name"`
 }
 
 // Struct corresponding to each Model.Network
@@ -177,35 +183,37 @@ func (r *loadBalancerResource) Configure(ctx context.Context, req resource.Confi
 // Schema defines the schema for the resource.
 func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                  "Load Balancer resource schema. Must have a `region` specified in the provider configuration.",
-		"id":                    "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`name`\".",
-		"project_id":            "STACKIT project ID to which the Load Balancer is associated.",
-		"external_address":      "External Load Balancer IP address where this Load Balancer is exposed.",
-		"listeners":             "List of all listeners which will accept traffic. Limited to 20.",
-		"port":                  "Port number where we listen for traffic.",
-		"protocol":              "Protocol is the highest network protocol we understand to load balance.",
-		"target_pool":           "Reference target pool by target pool name.",
-		"name":                  "Load balancer name.",
-		"networks":              "List of networks that listeners and targets reside in.",
-		"network_id":            "Openstack network ID.",
-		"role":                  "The role defines how the load balancer is using the network.",
-		"options":               "Defines any optional functionality you want to have enabled on your load balancer.",
-		"acl":                   "Load Balancer is accessible only from an IP address in this range.",
-		"private_network_only":  "If true, Load Balancer is accessible only via a private network IP address.",
-		"session_persistence":   "Here you can setup various session persistence options, so far only \"`use_source_ip_address`\" is supported.",
-		"use_source_ip_address": "If true then all connections from one source IP address are redirected to the same target. This setting changes the load balancing algorithm to Maglev.",
-		"private_address":       "Transient private Load Balancer IP address. It can change any time.",
-		"target_pools":          "List of all target pools which will be used in the Load Balancer. Limited to 20.",
-		"healthy_threshold":     "Healthy threshold of the health checking.",
-		"interval":              "Interval duration of health checking in seconds.",
-		"interval_jitter":       "Interval duration threshold of the health checking in seconds.",
-		"timeout":               "Active health checking timeout duration in seconds.",
-		"unhealthy_threshold":   "Unhealthy threshold of the health checking.",
-		"target_pools.name":     "Target pool name.",
-		"target_port":           "Identical port number where each target listens for traffic.",
-		"targets":               "List of all targets which will be used in the pool. Limited to 250.",
-		"targets.display_name":  "Target display name",
-		"ip":                    "Target IP",
+		"main":                      "Load Balancer resource schema.",
+		"id":                        "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`name`\".",
+		"project_id":                "STACKIT project ID to which the Load Balancer is associated.",
+		"external_address":          "External Load Balancer IP address where this Load Balancer is exposed.",
+		"listeners":                 "List of all listeners which will accept traffic. Limited to 20.",
+		"port":                      "Port number where we listen for traffic.",
+		"protocol":                  "Protocol is the highest network protocol we understand to load balance.",
+		"target_pool":               "Reference target pool by target pool name.",
+		"name":                      "Load balancer name.",
+		"networks":                  "List of networks that listeners and targets reside in.",
+		"network_id":                "Openstack network ID.",
+		"role":                      "The role defines how the load balancer is using the network.",
+		"options":                   "Defines any optional functionality you want to have enabled on your load balancer.",
+		"acl":                       "Load Balancer is accessible only from an IP address in this range.",
+		"private_network_only":      "If true, Load Balancer is accessible only via a private network IP address.",
+		"session_persistence":       "Here you can setup various session persistence options, so far only \"`use_source_ip_address`\" is supported.",
+		"use_source_ip_address":     "If true then all connections from one source IP address are redirected to the same target. This setting changes the load balancing algorithm to Maglev.",
+		"serverNameIndicators":      "A list of domain names to match in order to pass TLS traffic to the target pool in the current listener",
+		"serverNameIndicators.name": "A domain name to match in order to pass TLS traffic to the target pool in the current listener",
+		"private_address":           "Transient private Load Balancer IP address. It can change any time.",
+		"target_pools":              "List of all target pools which will be used in the Load Balancer. Limited to 20.",
+		"healthy_threshold":         "Healthy threshold of the health checking.",
+		"interval":                  "Interval duration of health checking in seconds.",
+		"interval_jitter":           "Interval duration threshold of the health checking in seconds.",
+		"timeout":                   "Active health checking timeout duration in seconds.",
+		"unhealthy_threshold":       "Unhealthy threshold of the health checking.",
+		"target_pools.name":         "Target pool name.",
+		"target_port":               "Identical port number where each target listens for traffic.",
+		"targets":                   "List of all targets which will be used in the pool. Limited to 250.",
+		"targets.display_name":      "Target display name",
+		"ip":                        "Target IP",
 	}
 
 	resp.Schema = schema.Schema{
@@ -305,7 +313,19 @@ The example below uses OpenStack to create the network, router, a public IP addr
 								stringplanmodifier.UseStateForUnknown(),
 							},
 							Validators: []validator.String{
-								stringvalidator.OneOf("PROTOCOL_UNSPECIFIED", "PROTOCOL_TCP", "PROTOCOL_UDP", "PROTOCOL_TCP_PROXY"),
+								stringvalidator.OneOf("PROTOCOL_UNSPECIFIED", "PROTOCOL_TCP", "PROTOCOL_UDP", "PROTOCOL_TCP_PROXY", "PROTOCOL_TLS_PASSTHROUGH"),
+							},
+						},
+						"serverNameIndicators": schema.ListNestedAttribute{
+							Description: descriptions["serverNameIndicators"],
+							Required:    false,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"name": schema.StringAttribute{
+										Description: descriptions["serverNameIndicators.name"],
+										Required:    false,
+									},
+								},
 							},
 						},
 						"target_pool": schema.StringAttribute{
@@ -737,15 +757,30 @@ func toListenersPayload(model *Model) *[]loadbalancer.Listener {
 
 	listeners := []loadbalancer.Listener{}
 	for _, listener := range model.Listeners {
+		serverNameIndicators := toServerNameIndicatorsPayload(listener)
 		listeners = append(listeners, loadbalancer.Listener{
-			DisplayName: conversion.StringValueToPointer(listener.DisplayName),
-			Port:        conversion.Int64ValueToPointer(listener.Port),
-			Protocol:    conversion.StringValueToPointer(listener.Protocol),
-			TargetPool:  conversion.StringValueToPointer(listener.TargetPool),
+			DisplayName:          conversion.StringValueToPointer(listener.DisplayName),
+			Port:                 conversion.Int64ValueToPointer(listener.Port),
+			Protocol:             conversion.StringValueToPointer(listener.Protocol),
+			ServerNameIndicators: serverNameIndicators,
+			TargetPool:           conversion.StringValueToPointer(listener.TargetPool),
 		})
 	}
 
 	return &listeners
+}
+
+func toServerNameIndicatorsPayload(listener Listener) *[]loadbalancer.ServerNameIndicator {
+	if listener.ServerNameIndicators == nil {
+		return nil
+	}
+	serverNameIndicators := []loadbalancer.ServerNameIndicator{}
+	for _, serverNameIndicator := range listener.ServerNameIndicators {
+		serverNameIndicators = append(serverNameIndicators, loadbalancer.ServerNameIndicator{
+			Name: &serverNameIndicator.Name,
+		})
+	}
+	return &serverNameIndicators
 }
 
 func toNetworksPayload(model *Model) *[]loadbalancer.Network {
@@ -944,6 +979,19 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) err
 	return nil
 }
 
+func mapServerNameIndicatorsPayload(listener loadbalancer.Listener) []ServerNameIndicator {
+	if listener.ServerNameIndicators == nil {
+		return nil
+	}
+	serverNameIndicators := []ServerNameIndicator{}
+	for _, serverNameIndicator := range *listener.ServerNameIndicators {
+		serverNameIndicators = append(serverNameIndicators, ServerNameIndicator{
+			Name: *serverNameIndicator.Name,
+		})
+	}
+	return serverNameIndicators
+}
+
 func mapListeners(lb *loadbalancer.LoadBalancer, m *Model) {
 	if lb.Listeners == nil {
 		return
@@ -951,11 +999,13 @@ func mapListeners(lb *loadbalancer.LoadBalancer, m *Model) {
 
 	var listeners []Listener
 	for _, listener := range *lb.Listeners {
+		serverNameIndicators := mapServerNameIndicatorsPayload(listener)
 		listeners = append(listeners, Listener{
-			DisplayName: types.StringPointerValue(listener.DisplayName),
-			Port:        types.Int64PointerValue(listener.Port),
-			Protocol:    types.StringPointerValue(listener.Protocol),
-			TargetPool:  types.StringPointerValue(listener.TargetPool),
+			DisplayName:          types.StringPointerValue(listener.DisplayName),
+			Port:                 types.Int64PointerValue(listener.Port),
+			Protocol:             types.StringPointerValue(listener.Protocol),
+			ServerNameIndicators: serverNameIndicators,
+			TargetPool:           types.StringPointerValue(listener.TargetPool),
 		})
 	}
 	m.Listeners = listeners

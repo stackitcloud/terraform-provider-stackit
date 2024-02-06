@@ -45,7 +45,12 @@ func TestToCreatePayload(t *testing.T) {
 						DisplayName: types.StringValue("display_name"),
 						Port:        types.Int64Value(80),
 						Protocol:    types.StringValue("protocol"),
-						TargetPool:  types.StringValue("target_pool"),
+						ServerNameIndicators: []ServerNameIndicator{
+							{
+								Name: "domain.com",
+							},
+						},
+						TargetPool: types.StringValue("target_pool"),
 					},
 				},
 				Name: types.StringValue("name"),
@@ -104,7 +109,12 @@ func TestToCreatePayload(t *testing.T) {
 						DisplayName: utils.Ptr("display_name"),
 						Port:        utils.Ptr(int64(80)),
 						Protocol:    utils.Ptr("protocol"),
-						TargetPool:  utils.Ptr("target_pool"),
+						ServerNameIndicators: &[]loadbalancer.ServerNameIndicator{
+							{
+								Name: utils.Ptr("domain.com"),
+							},
+						},
+						TargetPool: utils.Ptr("target_pool"),
 					},
 				}),
 				Name: utils.Ptr("name"),
@@ -303,7 +313,12 @@ func TestMapFields(t *testing.T) {
 						DisplayName: utils.Ptr("display_name"),
 						Port:        utils.Ptr(int64(80)),
 						Protocol:    utils.Ptr("protocol"),
-						TargetPool:  utils.Ptr("target_pool"),
+						ServerNameIndicators: &[]loadbalancer.ServerNameIndicator{
+							{
+								Name: utils.Ptr("domain.com"),
+							},
+						},
+						TargetPool: utils.Ptr("target_pool"),
 					},
 				}),
 				Name: utils.Ptr("name"),
@@ -356,7 +371,12 @@ func TestMapFields(t *testing.T) {
 						DisplayName: types.StringValue("display_name"),
 						Port:        types.Int64Value(80),
 						Protocol:    types.StringValue("protocol"),
-						TargetPool:  types.StringValue("target_pool"),
+						ServerNameIndicators: []ServerNameIndicator{
+							{
+								Name: "domain.com",
+							},
+						},
+						TargetPool: types.StringValue("target_pool"),
 					},
 				},
 				Networks: []Network{
