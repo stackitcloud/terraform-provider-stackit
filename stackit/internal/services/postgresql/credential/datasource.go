@@ -76,16 +76,8 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 // Schema defines the schema for the data source.
 func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":          "PostgreSQL credential data source schema. Must have a `region` specified in the provider configuration.",
-		"id":            "Terraform's internal data source. identifier. It is structured as \"`project_id`,`instance_id`,`credential_id`\".",
-		"credential_id": "The credential's ID.",
-		"instance_id":   "ID of the PostgreSQL instance.",
-		"project_id":    "STACKIT project ID to which the instance is associated.",
-	}
-
-	resp.Schema = schema.Schema{
-		Description: descriptions["main"],
-		DeprecationMessage: strings.Join(
+		"main": "PostgreSQL credential data source schema. Must have a `region` specified in the provider configuration.",
+		"deprecation_message": strings.Join(
 			[]string{
 				"The STACKIT PostgreSQL service will reach its end of support on June 30th.",
 				"Data sources of this type will stop work after that.",
@@ -94,6 +86,17 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			},
 			" ",
 		),
+		"id":            "Terraform's internal data source. identifier. It is structured as \"`project_id`,`instance_id`,`credential_id`\".",
+		"credential_id": "The credential's ID.",
+		"instance_id":   "ID of the PostgreSQL instance.",
+		"project_id":    "STACKIT project ID to which the instance is associated.",
+	}
+
+	resp.Schema = schema.Schema{
+		Description: descriptions["main"],
+		// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
+		DeprecationMessage:  descriptions["deprecation_message"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
