@@ -37,13 +37,14 @@ import (
 )
 
 const (
-	DefaultOSName                = "flatcar"
-	DefaultCRI                   = "containerd"
-	DefaultVolumeType            = "storage_premium_perf1"
-	DefaultVolumeSizeGB    int64 = 20
-	VersionStateSupported        = "supported"
-	VersionStatePreview          = "preview"
-	VersionStateDeprecated       = "deprecated"
+	DefaultOSName                     = "flatcar"
+	DefaultCRI                        = "containerd"
+	DefaultVolumeType                 = "storage_premium_perf1"
+	DefaultVolumeSizeGB         int64 = 20
+	DefaultKubeconfigExpiration       = "3600"
+	VersionStateSupported             = "supported"
+	VersionStatePreview               = "preview"
+	VersionStateDeprecated            = "deprecated"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -655,7 +656,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 func (r *clusterResource) createKubeConfig(ctx context.Context, model *Model) error {
 	c := r.client
 	payload := ske.CreateKubeconfigPayload{
-		ExpirationSeconds: utils.Ptr("3600"),
+		ExpirationSeconds: utils.Ptr(DefaultKubeconfigExpiration),
 	}
 	res, err := c.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).CreateKubeconfigPayload(payload).Execute()
 	if err != nil {
