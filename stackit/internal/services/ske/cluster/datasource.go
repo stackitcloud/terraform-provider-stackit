@@ -9,11 +9,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -315,11 +314,10 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 func (r *clusterDataSource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Model) {
 	c := r.client
-	res, err := c.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).
-		CreateKubeconfigPayload(ske.CreateKubeconfigPayload{
-			ExpirationSeconds: conversion.StringValueToPointer(basetypes.NewStringValue(DefaultKubeconfigExpiration)),
-		}).
-		Execute()
+	payload := ske.CreateKubeconfigPayload{
+		ExpirationSeconds: utils.Ptr(DefaultKubeconfigExpiration),
+	}
+	res, err := c.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).CreateKubeconfigPayload(payload).Execute()
 	if err != nil {
 		diags.AddError("failed fetching cluster credentials for data source", err.Error())
 		return

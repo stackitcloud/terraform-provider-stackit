@@ -658,11 +658,10 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 
 func (r *clusterResource) getCredential(ctx context.Context, model *Model) error {
 	c := r.client
-	res, err := c.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).
-		CreateKubeconfigPayload(ske.CreateKubeconfigPayload{
-			ExpirationSeconds: conversion.StringValueToPointer(basetypes.NewStringValue(DefaultKubeconfigExpiration)),
-		}).
-		Execute()
+	payload := ske.CreateKubeconfigPayload{
+		ExpirationSeconds: utils.Ptr(DefaultKubeconfigExpiration),
+	}
+	res, err := c.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).CreateKubeconfigPayload(payload).Execute()
 	if err != nil {
 		return fmt.Errorf("fetching cluster credentials: %w", err)
 	}
