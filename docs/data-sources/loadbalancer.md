@@ -69,12 +69,24 @@ Read-Only:
 <a id="nestedatt--target_pools"></a>
 ### Nested Schema for `target_pools`
 
+Optional:
+
+- `session_persistence` (Attributes) Here you can setup various session persistence options, so far only "`use_source_ip_address`" is supported. (see [below for nested schema](#nestedatt--target_pools--session_persistence))
+
 Read-Only:
 
 - `active_health_check` (Attributes) (see [below for nested schema](#nestedatt--target_pools--active_health_check))
 - `name` (String) Target pool name.
 - `target_port` (Number) Identical port number where each target listens for traffic.
 - `targets` (Attributes List) List of all targets which will be used in the pool. Limited to 250. (see [below for nested schema](#nestedatt--target_pools--targets))
+
+<a id="nestedatt--target_pools--session_persistence"></a>
+### Nested Schema for `target_pools.session_persistence`
+
+Optional:
+
+- `use_source_ip_address` (Boolean) If true then all connections from one source IP address are redirected to the same target. This setting changes the load balancing algorithm to Maglev.
+
 
 <a id="nestedatt--target_pools--active_health_check"></a>
 ### Nested Schema for `target_pools.active_health_check`

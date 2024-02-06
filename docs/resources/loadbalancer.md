@@ -59,7 +59,7 @@ provider "openstack" {
 }
 
 ```
-		
+
 ### Configuring the supporting infrastructure
 
 The example below uses OpenStack to create the network, router, a public IP address and a compute instance.
@@ -229,6 +229,7 @@ Required:
 Optional:
 
 - `active_health_check` (Attributes) (see [below for nested schema](#nestedatt--target_pools--active_health_check))
+- `session_persistence` (Attributes) Here you can setup various session persistence options, so far only "`use_source_ip_address`" is supported. (see [below for nested schema](#nestedatt--target_pools--session_persistence))
 
 <a id="nestedatt--target_pools--targets"></a>
 ### Nested Schema for `target_pools.targets`
@@ -249,6 +250,14 @@ Optional:
 - `interval_jitter` (String) Interval duration threshold of the health checking in seconds.
 - `timeout` (String) Active health checking timeout duration in seconds.
 - `unhealthy_threshold` (Number) Unhealthy threshold of the health checking.
+
+
+<a id="nestedatt--target_pools--session_persistence"></a>
+### Nested Schema for `target_pools.session_persistence`
+
+Optional:
+
+- `use_source_ip_address` (Boolean) If true then all connections from one source IP address are redirected to the same target. This setting changes the load balancing algorithm to Maglev.
 
 
 

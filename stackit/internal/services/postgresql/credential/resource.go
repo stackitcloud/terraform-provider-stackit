@@ -98,7 +98,16 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 // Schema defines the schema for the resource.
 func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":          "PostgreSQL credential resource schema. Must have a `region` specified in the provider configuration.",
+		"main": "PostgreSQL credential resource schema. Must have a `region` specified in the provider configuration.",
+		"deprecation_message": strings.Join(
+			[]string{
+				"The STACKIT PostgreSQL service will reach its end of support on June 30th 2024.",
+				"Resources of this type will stop working after that.",
+				"Use stackit_postgresflex_user instead.",
+				"For more details, check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html",
+			},
+			" ",
+		),
 		"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credential_id`\".",
 		"credential_id": "The credential's ID.",
 		"instance_id":   "ID of the PostgreSQL instance.",
@@ -107,6 +116,9 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
+		// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
+		DeprecationMessage:  descriptions["deprecation_message"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],

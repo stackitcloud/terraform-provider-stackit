@@ -34,7 +34,7 @@ data "stackit_argus_scrapeconfig" "example" {
 - `basic_auth` (Attributes) A basic authentication block. (see [below for nested schema](#nestedatt--basic_auth))
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`instance_id`,`name`".
 - `metrics_path` (String) Specifies the job scraping url path.
-- `saml2` (Attributes) A SAML2 configuration block (see [below for nested schema](#nestedatt--saml2))
+- `saml2` (Attributes) A SAML2 configuration block. (see [below for nested schema](#nestedatt--saml2))
 - `sample_limit` (Number) Specifies the scrape sample limit.
 - `scheme` (String) Specifies the http scheme.
 - `scrape_interval` (String) Specifies the scrape interval as duration string.
@@ -55,7 +55,7 @@ Read-Only:
 
 Read-Only:
 
-- `enable_url_parameters` (Boolean) Are URL parameters be enabled?
+- `enable_url_parameters` (Boolean) Specifies if URL parameters are enabled
 
 
 <a id="nestedatt--targets"></a>

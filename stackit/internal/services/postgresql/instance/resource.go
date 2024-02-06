@@ -122,7 +122,16 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "PostgreSQL instance resource schema. Must have a `region` specified in the provider configuration.",
+		"main": "PostgreSQL instance resource schema. Must have a `region` specified in the provider configuration.",
+		"deprecation_message": strings.Join(
+			[]string{
+				"The STACKIT PostgreSQL service will reach its end of support on June 30th 2024.",
+				"Resources of this type will stop working after that.",
+				"Use stackit_postgresflex_instance instead.",
+				"Check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html on how to backup and restore an instance from PostgreSQL to PostgreSQL Flex, then import the resource to Terraform using an \"import\" block (https://developer.hashicorp.com/terraform/language/import)",
+			},
+			" ",
+		),
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
 		"instance_id": "ID of the PostgreSQL instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
@@ -134,6 +143,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
+		// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
+		DeprecationMessage:  descriptions["deprecation_message"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
