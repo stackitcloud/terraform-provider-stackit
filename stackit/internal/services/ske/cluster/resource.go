@@ -37,13 +37,14 @@ import (
 )
 
 const (
-	DefaultOSName                = "flatcar"
-	DefaultCRI                   = "containerd"
-	DefaultVolumeType            = "storage_premium_perf1"
-	DefaultVolumeSizeGB    int64 = 20
-	VersionStateSupported        = "supported"
-	VersionStatePreview          = "preview"
-	VersionStateDeprecated       = "deprecated"
+	DefaultOSName                     = "flatcar"
+	DefaultCRI                        = "containerd"
+	DefaultKubeconfigExpiration       = "3600"
+	DefaultVolumeType                 = "storage_premium_perf1"
+	DefaultVolumeSizeGB         int64 = 20
+	VersionStateSupported             = "supported"
+	VersionStatePreview               = "preview"
+	VersionStateDeprecated            = "deprecated"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -657,7 +658,11 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 
 func (r *clusterResource) getCredential(ctx context.Context, model *Model) error {
 	c := r.client
-	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute()
+	res, err := c.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).
+		CreateKubeconfigPayload(ske.CreateKubeconfigPayload{
+			ExpirationSeconds: conversion.StringValueToPointer(basetypes.NewStringValue(DefaultKubeconfigExpiration)),
+		}).
+		Execute()
 	if err != nil {
 		return fmt.Errorf("fetching cluster credentials: %w", err)
 	}
