@@ -255,11 +255,6 @@ func TestAccLoadBalancerResource(t *testing.T) {
 						project_id     = stackit_loadbalancer.loadbalancer.project_id
 						name    = stackit_loadbalancer.loadbalancer.name
 					}
-
-					data "stackit_loadbalancer_credential" "credential" {
-						project_id   = stackit_loadbalancer_credential.credential.project_id
-						credentials_ref = stackit_loadbalancer_credential.credential.credentials_ref
-					}
 					`,
 					configResources(loadBalancerResource["target_port"]),
 				),
@@ -293,15 +288,6 @@ func TestAccLoadBalancerResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "networks.0.network_id"),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "networks.0.role", loadBalancerResource["network_role"]),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.private_network_only", loadBalancerResource["private_network_only"]),
-
-					// Credential
-					resource.TestCheckResourceAttrPair(
-						"data.stackit_loadbalancer_credential.credential", "project_id",
-						"stackit_loadbalancer.loadbalancer", "project_id",
-					),
-					resource.TestCheckResourceAttrSet("stackit_loadbalancer_credential.credential", "credentials_ref"),
-					resource.TestCheckResourceAttr("stackit_loadbalancer_credential.credential", "display_name", loadBalancerResource["credential_display_name"]),
-					resource.TestCheckResourceAttr("stackit_loadbalancer_credential.credential", "username", loadBalancerResource["credential_username"]),
 				),
 			},
 			// Import

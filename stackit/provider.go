@@ -344,7 +344,6 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
 		loadBalancer.NewLoadBalancerDataSource,
-		loadBalancerCredential.NewCredentialDataSource,
 		logMeInstance.NewInstanceDataSource,
 		logMeCredential.NewCredentialDataSource,
 		mariaDBInstance.NewInstanceDataSource,
