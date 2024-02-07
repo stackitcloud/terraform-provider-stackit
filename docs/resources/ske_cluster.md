@@ -58,7 +58,7 @@ Deprecated as of Kubernetes 1.25 and later
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`name`".
-- `kube_config` (String, Sensitive) Kube config file used for connecting to the cluster
+- `kube_config` (String, Sensitive, Deprecated) Kube config file used for connecting to the cluster
 - `kubernetes_version_used` (String) Full Kubernetes version used. For example, if 1.22 was selected, this value may result to 1.22.15
 
 <a id="nestedatt--node_pools"></a>

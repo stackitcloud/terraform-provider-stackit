@@ -61,6 +61,7 @@ var clusterResource = map[string]string{
 	"maintenance_start":                                "01:23:45Z",
 	"maintenance_end":                                  "05:00:00+02:00",
 	"maintenance_end_new":                              "03:03:03+00:00",
+	"kubeconfig_expiration":                            "3600",
 }
 
 func getConfig(version string, apc *bool, maintenanceEnd *string) string {
@@ -133,6 +134,12 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 			}
 		}
 
+		resource "stackit_ske_kubeconfig" "kubeconfig" {
+			project_id = stackit_ske_project.project.project_id
+			cluster_name = stackit_ske_cluster.cluster.name
+			expiration = "%s"
+		}
+
 		resource "stackit_ske_cluster" "cluster_min" {
 			project_id = stackit_ske_project.project.project_id
 			name = "%s"
@@ -186,6 +193,9 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 		clusterResource["maintenance_enable_machine_image_version_updates"],
 		clusterResource["maintenance_start"],
 		maintenanceEndTF,
+
+		// Kubeconfig
+		clusterResource["kubeconfig_expiration"],
 
 		// Minimal
 		clusterResource["name_min"],
@@ -257,6 +267,20 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end"]),
 
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kube_config"),
+
+					// Kubeconfig
+
+					resource.TestCheckResourceAttrPair(
+						"stackit_ske_kubeconfig.kubeconfig", "project_id",
+						"stackit_ske_cluster.cluster", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_ske_kubeconfig.kubeconfig", "cluster_name",
+						"stackit_ske_cluster.cluster", "name",
+					),
+					resource.TestCheckResourceAttr("stackit_ske_kubeconfig.kubeconfig", "expiration", clusterResource["kubeconfig_expiration"]),
+					resource.TestCheckResourceAttrSet("stackit_ske_kubeconfig.kubeconfig", "kubeconfig"),
+					resource.TestCheckResourceAttrSet("stackit_ske_kubeconfig.kubeconfig", "expires_at"),
 
 					// Minimal cluster
 					resource.TestCheckResourceAttrPair(
