@@ -1,7 +1,6 @@
 package loadbalancer
 
 import (
-	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -50,7 +49,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(context.Background(), tt.input)
+			output, err := toCreatePayload(tt.input)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -135,7 +134,7 @@ func TestMapFields(t *testing.T) {
 			model := &Model{
 				ProjectId: tt.expected.ProjectId,
 			}
-			err := mapFields(context.Background(), tt.input, model)
+			err := mapFields(tt.input, model)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

@@ -189,7 +189,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	// Generate API request body from model
-	payload, err := toCreatePayload(ctx, &model)
+	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -203,7 +203,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, createResp.Credential, &model)
+	err = mapFields(createResp.Credential, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -240,7 +240,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, credResp.Credential, &model)
+	err = mapFields(credResp.Credential, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -255,7 +255,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	tflog.Info(ctx, "Load balancer credential read")
 }
 
-func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credential", "Credential can't be updated")
 }
@@ -301,7 +301,7 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 	tflog.Info(ctx, "Load balancer credential state imported")
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateCredentialsPayload, error) {
+func toCreatePayload(model *Model) (*loadbalancer.CreateCredentialsPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -313,7 +313,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateCre
 	}, nil
 }
 
-func mapFields(ctx context.Context, cred *loadbalancer.CredentialsResponse, m *Model) error {
+func mapFields(cred *loadbalancer.CredentialsResponse, m *Model) error {
 	if cred == nil {
 		return fmt.Errorf("response input is nil")
 	}

@@ -1,7 +1,6 @@
 package loadbalancer
 
 import (
-	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -78,7 +77,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			model := &DataSourceModel{
 				ProjectId: tt.expected.ProjectId,
 			}
-			err := mapDataSourceFields(context.Background(), tt.input, model)
+			err := mapDataSourceFields(tt.input, model)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

@@ -143,7 +143,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	}
 
 	// Map response body to schema
-	err = mapDataSourceFields(ctx, credResp.Credential, &model)
+	err = mapDataSourceFields(credResp.Credential, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -160,7 +160,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	tflog.Info(ctx, "Load balancer credential read")
 }
 
-func mapDataSourceFields(ctx context.Context, cred *loadbalancer.CredentialsResponse, m *DataSourceModel) error {
+func mapDataSourceFields(cred *loadbalancer.CredentialsResponse, m *DataSourceModel) error {
 	if cred == nil {
 		return fmt.Errorf("response input is nil")
 	}
