@@ -3,12 +3,12 @@
 page_title: "stackit_loadbalancer Data Source - stackit"
 subcategory: ""
 description: |-
-  Load Balancer resource schema.
+  Load Balancer data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_loadbalancer (Data Source)
 
-Load Balancer resource schema.
+Load Balancer data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
