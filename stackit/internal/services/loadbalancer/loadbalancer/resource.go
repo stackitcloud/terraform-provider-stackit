@@ -757,7 +757,7 @@ func toListenersPayload(model *Model) *[]loadbalancer.Listener {
 
 	listeners := []loadbalancer.Listener{}
 	for _, listener := range model.Listeners {
-		serverNameIndicators := toServerNameIndicatorsPayload(listener)
+		serverNameIndicators := toServerNameIndicatorsPayload(&listener)
 		listeners = append(listeners, loadbalancer.Listener{
 			DisplayName:          conversion.StringValueToPointer(listener.DisplayName),
 			Port:                 conversion.Int64ValueToPointer(listener.Port),
@@ -770,7 +770,7 @@ func toListenersPayload(model *Model) *[]loadbalancer.Listener {
 	return &listeners
 }
 
-func toServerNameIndicatorsPayload(listener Listener) *[]loadbalancer.ServerNameIndicator {
+func toServerNameIndicatorsPayload(listener *Listener) *[]loadbalancer.ServerNameIndicator {
 	if listener.ServerNameIndicators == nil {
 		return nil
 	}
