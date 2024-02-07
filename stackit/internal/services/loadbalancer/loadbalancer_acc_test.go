@@ -16,23 +16,26 @@ import (
 
 // Instance resource data
 var loadBalancerResource = map[string]string{
-	"project_id":            testutil.ProjectId,
-	"name":                  fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
-	"target_pool_name":      "example-target-pool",
-	"target_port":           "5432",
-	"target_port_updated":   "5431",
-	"target_display_name":   "example-target",
-	"healthy_threshold":     "3",
-	"interval":              "10s",
-	"interval_jitter":       "5s",
-	"timeout":               "10s",
-	"unhealthy_threshold":   "3",
-	"use_source_ip_address": "true",
-	"listener_display_name": "example-listener",
-	"listener_port":         "5432",
-	"listener_protocol":     "PROTOCOL_TCP",
-	"network_role":          "ROLE_LISTENERS_AND_TARGETS",
-	"private_network_only":  "true",
+	"project_id":              testutil.ProjectId,
+	"name":                    fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
+	"target_pool_name":        "example-target-pool",
+	"target_port":             "5432",
+	"target_port_updated":     "5431",
+	"target_display_name":     "example-target",
+	"healthy_threshold":       "3",
+	"interval":                "10s",
+	"interval_jitter":         "5s",
+	"timeout":                 "10s",
+	"unhealthy_threshold":     "3",
+	"use_source_ip_address":   "true",
+	"listener_display_name":   "example-listener",
+	"listener_port":           "5432",
+	"listener_protocol":       "PROTOCOL_TCP",
+	"network_role":            "ROLE_LISTENERS_AND_TARGETS",
+	"private_network_only":    "true",
+	"credential_display_name": fmt.Sprintf("tf-acc-cred%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
+	"credential_username":     "username",
+	"credential_password":     "password",
 }
 
 func configResources(targetPort string) string {
@@ -83,7 +86,14 @@ func configResources(targetPort string) string {
 			options = {
 				private_network_only = %s
 			}
-			}
+		}
+
+		resource "stackit_loadbalancer_credential" "credential" {
+			project_id   = "%[3]s"
+			display_name = "%[20]s"
+			username     = "%[21]s"
+			password     = "%[22]s"
+		}
 		`,
 		supportingInfraResources(loadBalancerResource["name"], OpenStack{
 			userDomainName: testutil.OSUserDomainName,
@@ -108,6 +118,9 @@ func configResources(targetPort string) string {
 		loadBalancerResource["target_pool_name"],
 		loadBalancerResource["network_role"],
 		loadBalancerResource["private_network_only"],
+		loadBalancerResource["credential_display_name"],
+		loadBalancerResource["credential_username"],
+		loadBalancerResource["credential_password"],
 	)
 }
 
@@ -200,6 +213,7 @@ func TestAccLoadBalancerResource(t *testing.T) {
 			{
 				Config: configResources(loadBalancerResource["target_port"]),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					// Load balancer instance
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "project_id", loadBalancerResource["project_id"]),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "name", loadBalancerResource["name"]),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.name", loadBalancerResource["target_pool_name"]),
@@ -219,6 +233,16 @@ func TestAccLoadBalancerResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "networks.0.network_id"),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "networks.0.role", loadBalancerResource["network_role"]),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "options.private_network_only", loadBalancerResource["private_network_only"]),
+
+					// Credential
+					resource.TestCheckResourceAttrPair(
+						"stackit_loadbalancer_credential.credential", "project_id",
+						"stackit_loadbalancer.loadbalancer", "project_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer_credential.credential", "credentials_ref"),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_credential.credential", "display_name", loadBalancerResource["credential_display_name"]),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_credential.credential", "username", loadBalancerResource["credential_username"]),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_credential.credential", "password", loadBalancerResource["credential_password"]),
 				),
 			},
 			// Data source
@@ -230,10 +254,16 @@ func TestAccLoadBalancerResource(t *testing.T) {
 						project_id     = stackit_loadbalancer.loadbalancer.project_id
 						name    = stackit_loadbalancer.loadbalancer.name
 					}
+
+					data "stackit_loadbalancer_credential" "credential" {
+						project_id   = stackit_loadbalancer_credential.credential.project_id
+						credentials_ref = stackit_loadbalancer_credential.credential.credentials_ref
+					}
 					`,
 					configResources(loadBalancerResource["target_port"]),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					// Load balancer instance
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "project_id", loadBalancerResource["project_id"]),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "name", loadBalancerResource["name"]),
 					resource.TestCheckResourceAttrPair(
@@ -262,6 +292,15 @@ func TestAccLoadBalancerResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "networks.0.network_id"),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "networks.0.role", loadBalancerResource["network_role"]),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.private_network_only", loadBalancerResource["private_network_only"]),
+
+					// Credential
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_loadbalancer_credential.credential", "project_id",
+						"stackit_loadbalancer.loadbalancer", "project_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer_credential.credential", "credentials_ref"),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_credential.credential", "display_name", loadBalancerResource["credential_display_name"]),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_credential.credential", "username", loadBalancerResource["credential_username"]),
 				),
 			},
 			// Import
@@ -281,6 +320,23 @@ func TestAccLoadBalancerResource(t *testing.T) {
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+			{
+				ResourceName: "stackit_loadbalancer_credential.credential",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_loadbalancer_credential.credential"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_loadbalancer_credential.credential")
+					}
+					credentialsRef, ok := r.Primary.Attributes["credentials_ref"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute credentials_ref")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, credentialsRef), nil
+				},
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"password"},
 			},
 			// Update
 			{
