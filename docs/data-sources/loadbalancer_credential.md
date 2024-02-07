@@ -13,7 +13,7 @@ Load balancer credential data source schema. Must have a `region` specified in t
 ## Example Usage
 
 ```terraform
-data "stackit_loadbalancer" "example" {
+data "stackit_loadbalancer_credential" "example" {
   project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   credentials_ref = "yyyyyyyyyyy-yyyyy"
 }
