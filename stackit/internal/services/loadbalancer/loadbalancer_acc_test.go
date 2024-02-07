@@ -72,7 +72,7 @@ func configResources(targetPort string) string {
 				display_name = "%s"
 				port         = %s
 				protocol     = "%s"
-				serverNameIndictors = [
+				server_name_indictors = [
 					{
 						"name": "%s"
 					}
