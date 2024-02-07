@@ -89,10 +89,10 @@ func configResources(targetPort string) string {
 		}
 
 		resource "stackit_loadbalancer_credential" "credential" {
-			project_id   = "%[3]s"
-			display_name = "%[20]s"
-			username     = "%[21]s"
-			password     = "%[22]s"
+			project_id   = "%s"
+			display_name = "%s"
+			username     = "%s"
+			password     = "%s"
 		}
 		`,
 		supportingInfraResources(loadBalancerResource["name"], OpenStack{
@@ -118,6 +118,7 @@ func configResources(targetPort string) string {
 		loadBalancerResource["target_pool_name"],
 		loadBalancerResource["network_role"],
 		loadBalancerResource["private_network_only"],
+		loadBalancerResource["project_id"],
 		loadBalancerResource["credential_display_name"],
 		loadBalancerResource["credential_username"],
 		loadBalancerResource["credential_password"],

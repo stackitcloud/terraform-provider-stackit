@@ -95,11 +95,11 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 	descriptions := map[string]string{
 		"main":            "Load balancer credential resource schema. Must have a `region` specified in the provider configuration.",
 		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`credentials_ref`\".",
+		"credentials_ref": "The credentials reference can be used for observability of the Load Balancer.",
 		"project_id":      "STACKIT project ID to which the load balancer credential is associated.",
 		"display_name":    "Credential name.",
 		"username":        "The username used for the ARGUS instance.",
 		"password":        "The password used for the ARGUS instance.",
-		"credentials_ref": "The credentials reference can be used for observability of the Load Balancer.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -107,6 +107,13 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"credentials_ref": schema.StringAttribute{
+				Description: descriptions["credentials_ref"],
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -141,13 +148,6 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"credentials_ref": schema.StringAttribute{
-				Description: descriptions["credentials_ref"],
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},
@@ -201,6 +201,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = tflog.SetField(ctx, "credentials_ref", createResp.Credential.CredentialsRef)
 
 	// Map response body to schema
 	err = mapFields(createResp.Credential, &model)
