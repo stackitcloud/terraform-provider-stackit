@@ -25,16 +25,15 @@ var clusterResource = map[string]string{
 	"project_id":                                       testutil.ProjectId,
 	"name":                                             fmt.Sprintf("cl-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 	"name_min":                                         fmt.Sprintf("cl-min-%s", acctest.RandStringFromCharSet(3, acctest.CharSetAlphaNum)),
-	"kubernetes_version":                               "1.24",
-	"kubernetes_version_used":                          "1.24.17",
-	"kubernetes_version_new":                           "1.25",
-	"kubernetes_version_used_new":                      "1.25.15",
-	"allowPrivilegedContainers":                        "true",
+	"kubernetes_version":                               "1.25",
+	"kubernetes_version_used":                          "1.25.16",
+	"kubernetes_version_new":                           "1.26",
+	"kubernetes_version_used_new":                      "1.26.11",
 	"nodepool_name":                                    "np-acc-test",
 	"nodepool_name_min":                                "np-acc-min-test",
 	"nodepool_machine_type":                            "b1.2",
-	"nodepool_os_version":                              "3602.2.1",
-	"nodepool_os_version_min":                          "3602.2.1",
+	"nodepool_os_version":                              "3602.2.2",
+	"nodepool_os_version_min":                          "3602.2.2",
 	"nodepool_os_name":                                 "flatcar",
 	"nodepool_minimum":                                 "2",
 	"nodepool_maximum":                                 "3",
@@ -64,15 +63,7 @@ var clusterResource = map[string]string{
 	"kubeconfig_expiration":                            "3600",
 }
 
-func getConfig(version string, apc *bool, maintenanceEnd *string) string {
-	apcConfig := ""
-	if apc != nil {
-		if *apc {
-			apcConfig = "allow_privileged_containers = true"
-		} else {
-			apcConfig = "allow_privileged_containers = false"
-		}
-	}
+func getConfig(version string, maintenanceEnd *string) string {
 	maintenanceEndTF := clusterResource["maintenance_end"]
 	if maintenanceEnd != nil {
 		maintenanceEndTF = *maintenanceEnd
@@ -88,7 +79,6 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 			project_id = stackit_ske_project.project.project_id
 			name = "%s"
 			kubernetes_version = "%s"
-			%s
 			node_pools = [{
 				name = "%s"
 				machine_type = "%s"
@@ -164,7 +154,6 @@ func getConfig(version string, apc *bool, maintenanceEnd *string) string {
 		projectResource["project_id"],
 		clusterResource["name"],
 		version,
-		apcConfig,
 		clusterResource["nodepool_name"],
 		clusterResource["nodepool_machine_type"],
 		clusterResource["nodepool_minimum"],
@@ -221,7 +210,7 @@ func TestAccSKE(t *testing.T) {
 
 			// 1) Creation
 			{
-				Config: getConfig(clusterResource["kubernetes_version"], utils.Ptr(true), nil),
+				Config: getConfig(clusterResource["kubernetes_version"], nil),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// project data
 					resource.TestCheckResourceAttr("stackit_ske_project.project", "project_id", projectResource["project_id"]),
@@ -233,7 +222,6 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", clusterResource["name"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version", clusterResource["kubernetes_version"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_used", clusterResource["kubernetes_version_used"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "allow_privileged_containers", clusterResource["allowPrivilegedContainers"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.name", clusterResource["nodepool_name"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.0", clusterResource["nodepool_zone"]),
@@ -338,7 +326,7 @@ func TestAccSKE(t *testing.T) {
 					}
 
 						`,
-					getConfig(clusterResource["kubernetes_version"], utils.Ptr(true), nil),
+					getConfig(clusterResource["kubernetes_version"], nil),
 					projectResource["project_id"],
 					clusterResource["project_id"],
 					clusterResource["name"],
@@ -358,7 +346,6 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "name", clusterResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "kubernetes_version", clusterResource["kubernetes_version"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "kubernetes_version_used", clusterResource["kubernetes_version_used"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "allow_privileged_containers", clusterResource["allowPrivilegedContainers"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.name", clusterResource["nodepool_name"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.availability_zones.0", clusterResource["nodepool_zone"]),
@@ -481,7 +468,7 @@ func TestAccSKE(t *testing.T) {
 			},
 			// 6) Update kubernetes version and maximum
 			{
-				Config: getConfig(clusterResource["kubernetes_version_new"], nil, utils.Ptr(clusterResource["maintenance_end_new"])),
+				Config: getConfig(clusterResource["kubernetes_version_new"], utils.Ptr(clusterResource["maintenance_end_new"])),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),

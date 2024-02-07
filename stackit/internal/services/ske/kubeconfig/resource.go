@@ -137,6 +137,7 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			"kube_config": schema.StringAttribute{
 				Description: descriptions["kube_config"],
 				Computed:    true,
+				Sensitive:   true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},

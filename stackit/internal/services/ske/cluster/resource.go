@@ -3,6 +3,7 @@ package ske
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -27,6 +28,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
@@ -649,17 +651,34 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	}
 
 	// Handle credential
-	err = r.getCredential(ctx, model)
+	err = r.getCredential(ctx, diags, model)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Getting credential: %v", err))
 		return
 	}
 }
 
-func (r *clusterResource) getCredential(ctx context.Context, model *Model) error {
+func (r *clusterResource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Model) error {
 	c := r.client
+	// for kubernetes with version >= 1.27, the deprecated endpoint will not work, so we set kubeconfig to nil
+	if semver.Compare(fmt.Sprintf("v%s", model.KubernetesVersion.ValueString()), "v1.27") >= 0 {
+		core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "Kubernetes version is 1.27 or higher, you must use the stackit_ske_kubeconfig resource instead.")
+		model.KubeConfig = types.StringPointerValue(nil)
+		return nil
+	}
 	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute()
 	if err != nil {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if !ok {
+			return fmt.Errorf("fetching cluster credentials: could not convert error to oapierror.GenericOpenAPIError")
+		}
+		if oapiErr.StatusCode == http.StatusBadRequest {
+			// deprecated endpoint will return 400 if the new endpoints have been used
+			// if that's the case, we set the field to null
+			core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "The call to GetCredentials failed, which means the new credentials rotation flow might already been triggered for this cluster. If you are already using the stackit_ske_kubeconfig resource you can ignore this warning. If not, you must start using it.")
+			model.KubeConfig = types.StringPointerValue(nil)
+			return nil
+		}
 		return fmt.Errorf("fetching cluster credentials: %w", err)
 	}
 	model.KubeConfig = types.StringPointerValue(res.Kubeconfig)
