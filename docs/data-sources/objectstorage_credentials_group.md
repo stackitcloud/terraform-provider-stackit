@@ -28,7 +28,7 @@ data "stackit_objectstorage_credentials_group" "example" {
 
 ### Optional
 
-- `credentials_group_id` (String) Terraform's internal data source identifier. It is structured as "`project_id`,`credentials_group_id`".
+- `credentials_group_id` (String) The credentials group ID.
 - `name` (String) The credentials group's display name.
 
 ### Read-Only
