@@ -20,13 +20,13 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.8.5
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.10.0
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.9.0
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.9.1
 	github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.7.6
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.5.5
-	github.com/stackitcloud/stackit-sdk-go/services/ske v0.9.3
+	github.com/stackitcloud/stackit-sdk-go/services/ske v0.10.0
 	golang.org/x/mod v0.14.0
 )
 
