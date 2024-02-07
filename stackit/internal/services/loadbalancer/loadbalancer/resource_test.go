@@ -45,11 +45,17 @@ func TestToCreatePayload(t *testing.T) {
 						DisplayName: types.StringValue("display_name"),
 						Port:        types.Int64Value(80),
 						Protocol:    types.StringValue("protocol"),
-						ServerNameIndicators: []ServerNameIndicator{
-							{
-								Name: "domain.com",
+						ServerNameIndicators: types.ListValueMust(
+							types.ObjectType{AttrTypes: serverNameIndicatorTypes},
+							[]attr.Value{
+								types.ObjectValueMust(
+									serverNameIndicatorTypes,
+									map[string]attr.Value{
+										"name": types.StringValue("domain.com"),
+									},
+								),
 							},
-						},
+						),
 						TargetPool: types.StringValue("target_pool"),
 					},
 				},
@@ -371,11 +377,17 @@ func TestMapFields(t *testing.T) {
 						DisplayName: types.StringValue("display_name"),
 						Port:        types.Int64Value(80),
 						Protocol:    types.StringValue("protocol"),
-						ServerNameIndicators: []ServerNameIndicator{
-							{
-								Name: "domain.com",
+						ServerNameIndicators: types.ListValueMust(
+							types.ObjectType{AttrTypes: serverNameIndicatorTypes},
+							[]attr.Value{
+								types.ObjectValueMust(
+									serverNameIndicatorTypes,
+									map[string]attr.Value{
+										"name": types.StringValue("domain.com"),
+									},
+								),
 							},
-						},
+						),
 						TargetPool: types.StringValue("target_pool"),
 					},
 				},

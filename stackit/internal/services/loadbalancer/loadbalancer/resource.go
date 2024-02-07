@@ -55,16 +55,21 @@ type Model struct {
 
 // Struct corresponding to each Model.Listener
 type Listener struct {
-	DisplayName          types.String          `tfsdk:"display_name"`
-	Port                 types.Int64           `tfsdk:"port"`
-	Protocol             types.String          `tfsdk:"protocol"`
-	ServerNameIndicators []ServerNameIndicator `tfsdk:"serverNameIndicators"`
-	TargetPool           types.String          `tfsdk:"target_pool"`
+	DisplayName          types.String `tfsdk:"display_name"`
+	Port                 types.Int64  `tfsdk:"port"`
+	Protocol             types.String `tfsdk:"protocol"`
+	ServerNameIndicators types.List   `tfsdk:"serverNameIndicators"`
+	TargetPool           types.String `tfsdk:"target_pool"`
 }
 
-// Struct corresponding to a single Server Name Indicator
+// Struct corresponding to Listener.ServerNameIndicators[i]
 type ServerNameIndicator struct {
-	Name string `tfsdk:"name"`
+	Name types.String `tfsdk:"name"`
+}
+
+// Types corresponding to ServerNameIndicator
+var serverNameIndicatorTypes = map[string]attr.Type{
+	"name": basetypes.StringType{},
 }
 
 // Struct corresponding to each Model.Network
@@ -729,7 +734,10 @@ func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoa
 		return nil, fmt.Errorf("nil model")
 	}
 
-	listeners := toListenersPayload(model)
+	listeners, err := toListenersPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("converting listeners: %w", err)
+	}
 	networks := toNetworksPayload(model)
 	options, err := toOptionsPayload(ctx, model)
 	if err != nil {
@@ -750,14 +758,18 @@ func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoa
 	}, nil
 }
 
-func toListenersPayload(model *Model) *[]loadbalancer.Listener {
+func toListenersPayload(ctx context.Context, model *Model) (*[]loadbalancer.Listener, error) {
 	if model.Listeners == nil {
-		return nil
+		return nil, nil
 	}
 
 	listeners := []loadbalancer.Listener{}
-	for _, listener := range model.Listeners {
-		serverNameIndicators := toServerNameIndicatorsPayload(&listener)
+	for i := range model.Listeners {
+		listener := model.Listeners[i]
+		serverNameIndicators, err := toServerNameIndicatorsPayload(ctx, &listener)
+		if err != nil {
+			return nil, fmt.Errorf("converting index %d: converting ServerNameIndicator: %w", i, err)
+		}
 		listeners = append(listeners, loadbalancer.Listener{
 			DisplayName:          conversion.StringValueToPointer(listener.DisplayName),
 			Port:                 conversion.Int64ValueToPointer(listener.Port),
@@ -767,20 +779,25 @@ func toListenersPayload(model *Model) *[]loadbalancer.Listener {
 		})
 	}
 
-	return &listeners
+	return &listeners, nil
 }
 
-func toServerNameIndicatorsPayload(listener *Listener) *[]loadbalancer.ServerNameIndicator {
-	if listener.ServerNameIndicators == nil {
-		return nil
+func toServerNameIndicatorsPayload(ctx context.Context, listener *Listener) (*[]loadbalancer.ServerNameIndicator, error) {
+	serverNameIndicators := []ServerNameIndicator{}
+	diags := listener.ServerNameIndicators.ElementsAs(ctx, &serverNameIndicators, false)
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
 	}
-	serverNameIndicators := []loadbalancer.ServerNameIndicator{}
-	for _, serverNameIndicator := range listener.ServerNameIndicators {
-		serverNameIndicators = append(serverNameIndicators, loadbalancer.ServerNameIndicator{
-			Name: &serverNameIndicator.Name,
+
+	payload := []loadbalancer.ServerNameIndicator{}
+	for i := range serverNameIndicators {
+		indicator := serverNameIndicators[i]
+		payload = append(payload, loadbalancer.ServerNameIndicator{
+			Name: conversion.StringValueToPointer(indicator.Name),
 		})
 	}
-	return &serverNameIndicators
+
+	return &payload, nil
 }
 
 func toNetworksPayload(model *Model) *[]loadbalancer.Network {
@@ -965,9 +982,12 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) err
 	m.ExternalAddress = types.StringPointerValue(lb.ExternalAddress)
 	m.PrivateAddress = types.StringPointerValue(lb.PrivateAddress)
 
-	mapListeners(lb, m)
+	err := mapListeners(lb, m)
+	if err != nil {
+		return fmt.Errorf("mapping listeners: %w", err)
+	}
 	mapNetworks(lb, m)
-	err := mapOptions(ctx, lb, m)
+	err = mapOptions(ctx, lb, m)
 	if err != nil {
 		return fmt.Errorf("mapping options: %w", err)
 	}
@@ -979,36 +999,57 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) err
 	return nil
 }
 
-func mapServerNameIndicatorsPayload(listener loadbalancer.Listener) []ServerNameIndicator {
-	if listener.ServerNameIndicators == nil {
+func mapServerNameIndicators(serverNameIndicatorsResp *[]loadbalancer.ServerNameIndicator, l *Listener) error {
+	if serverNameIndicatorsResp == nil || *serverNameIndicatorsResp == nil {
+		l.ServerNameIndicators = types.ListNull(types.ObjectType{AttrTypes: serverNameIndicatorTypes})
 		return nil
 	}
-	serverNameIndicators := []ServerNameIndicator{}
-	for _, serverNameIndicator := range *listener.ServerNameIndicators {
-		serverNameIndicators = append(serverNameIndicators, ServerNameIndicator{
-			Name: *serverNameIndicator.Name,
-		})
+
+	serverNameIndicators := []attr.Value{}
+	for i, serverNameIndicatorResp := range *serverNameIndicatorsResp {
+		serverNameIndicator := map[string]attr.Value{
+			"name": types.StringPointerValue(serverNameIndicatorResp.Name),
+		}
+		serverNameIndicatorTF, diags := basetypes.NewObjectValue(serverNameIndicatorTypes, serverNameIndicator)
+		if diags.HasError() {
+			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
+		}
+		serverNameIndicators = append(serverNameIndicators, serverNameIndicatorTF)
 	}
-	return serverNameIndicators
+
+	serverNameIndicatorsTF, diags := basetypes.NewListValue(
+		types.ObjectType{AttrTypes: serverNameIndicatorTypes},
+		serverNameIndicators,
+	)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	l.ServerNameIndicators = serverNameIndicatorsTF
+	return nil
 }
 
-func mapListeners(lb *loadbalancer.LoadBalancer, m *Model) {
+func mapListeners(lb *loadbalancer.LoadBalancer, m *Model) error {
 	if lb.Listeners == nil {
-		return
+		return nil
 	}
 
 	var listeners []Listener
-	for _, listener := range *lb.Listeners {
-		serverNameIndicators := mapServerNameIndicatorsPayload(listener)
-		listeners = append(listeners, Listener{
-			DisplayName:          types.StringPointerValue(listener.DisplayName),
-			Port:                 types.Int64PointerValue(listener.Port),
-			Protocol:             types.StringPointerValue(listener.Protocol),
-			ServerNameIndicators: serverNameIndicators,
-			TargetPool:           types.StringPointerValue(listener.TargetPool),
-		})
+	for i, listener := range *lb.Listeners {
+		listenerTF := Listener{
+			DisplayName: types.StringPointerValue(listener.DisplayName),
+			Port:        types.Int64PointerValue(listener.Port),
+			Protocol:    types.StringPointerValue(listener.Protocol),
+			TargetPool:  types.StringPointerValue(listener.TargetPool),
+		}
+		err := mapServerNameIndicators(listener.ServerNameIndicators, &listenerTF)
+		if err != nil {
+			return fmt.Errorf("mapping index %d, field serverNameIndicators: %w", i, err)
+		}
+		listeners = append(listeners, listenerTF)
 	}
 	m.Listeners = listeners
+	return nil
 }
 
 func mapNetworks(lb *loadbalancer.LoadBalancer, m *Model) {
