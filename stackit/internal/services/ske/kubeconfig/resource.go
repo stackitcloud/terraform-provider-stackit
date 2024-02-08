@@ -174,6 +174,8 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 	}
 }
 
+// ModifyPlan will be called in the Plan phase and will check if the plan is a creation of the resource
+// If so, show warning related to deprecated credentials endpoints
 func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	if req.State.Raw.IsNull() {
 		// Planned to create a kubeconfig
