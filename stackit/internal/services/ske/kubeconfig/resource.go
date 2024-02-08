@@ -119,7 +119,7 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"kubeconfig_uuid": schema.StringAttribute{
+			"kube_config_uuid": schema.StringAttribute{
 				Description: descriptions["kube_config_uuid"],
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
