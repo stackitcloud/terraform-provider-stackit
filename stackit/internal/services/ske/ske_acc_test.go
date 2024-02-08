@@ -28,7 +28,7 @@ var clusterResource = map[string]string{
 	"kubernetes_version":                               "1.25",
 	"kubernetes_version_used":                          "1.25.16",
 	"kubernetes_version_new":                           "1.26",
-	"kubernetes_version_used_new":                      "1.26.11",
+	"kubernetes_version_used_new":                      "1.26.13",
 	"nodepool_name":                                    "np-acc-test",
 	"nodepool_name_min":                                "np-acc-min-test",
 	"nodepool_machine_type":                            "b1.2",
@@ -254,7 +254,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end"]),
 
-					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kube_config"),
+					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster", "kube_config"), // when using the kubeconfig resource, the kubeconfig field becomes null
 
 					// Kubeconfig
 
