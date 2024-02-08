@@ -26,8 +26,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource              = &kubeconfigResource{}
-	_ resource.ResourceWithConfigure = &kubeconfigResource{}
+	_ resource.Resource               = &kubeconfigResource{}
+	_ resource.ResourceWithConfigure  = &kubeconfigResource{}
+	_ resource.ResourceWithModifyPlan = &kubeconfigResource{}
 )
 
 type Model struct {
@@ -159,6 +160,13 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				},
 			},
 		},
+	}
+}
+
+func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.State.Raw.IsNull() {
+		// Planned to create a kubeconfig
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Planned to create kubeconfig", "Once this resource is created, you will no longer be able to use the deprecated credentials endpoints and the kube_config field on the cluster resource will be empty for this cluster. For more info check How to Rotate SKE Credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html)")
 	}
 }
 
