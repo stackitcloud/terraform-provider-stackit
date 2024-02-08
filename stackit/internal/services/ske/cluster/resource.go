@@ -670,7 +670,7 @@ func (r *clusterResource) getCredential(ctx context.Context, diags *diag.Diagnos
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if !ok {
-			return fmt.Errorf("fetching cluster credentials: could not convert error to oapierror.GenericOpenAPIError")
+			return fmt.Errorf("fetch cluster credentials: could not convert error to oapierror.GenericOpenAPIError")
 		}
 		if oapiErr.StatusCode == http.StatusBadRequest {
 			// deprecated endpoint will return 400 if the new endpoints have been used
