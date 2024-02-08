@@ -273,7 +273,6 @@ func (r *kubeconfigResource) createKubeconfig(ctx context.Context, model *Model)
 	return nil
 }
 
-// Update updates the resource and sets the updated Terraform state on success.
 func (r *kubeconfigResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating kubeconfig", "Kubeconfig can't be updated")
