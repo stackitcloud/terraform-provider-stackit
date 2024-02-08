@@ -253,8 +253,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", clusterResource["maintenance_enable_machine_image_version_updates"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end"]),
-
-					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster", "kube_config"), // when using the kubeconfig resource, the kubeconfig field becomes null
+					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kube_config"),
 
 					// Kubeconfig
 
@@ -267,7 +266,7 @@ func TestAccSKE(t *testing.T) {
 						"stackit_ske_cluster.cluster", "name",
 					),
 					resource.TestCheckResourceAttr("stackit_ske_kubeconfig.kubeconfig", "expiration", clusterResource["kubeconfig_expiration"]),
-					resource.TestCheckResourceAttrSet("stackit_ske_kubeconfig.kubeconfig", "kubeconfig"),
+					resource.TestCheckResourceAttrSet("stackit_ske_kubeconfig.kubeconfig", "kube_config"),
 					resource.TestCheckResourceAttrSet("stackit_ske_kubeconfig.kubeconfig", "expires_at"),
 
 					// Minimal cluster
@@ -377,7 +376,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end"]),
 
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kube_config"),
+					resource.TestCheckNoResourceAttr("data.stackit_ske_cluster.cluster", "kube_config"), // when using the kubeconfig resource, the kubeconfig field becomes null
 
 					// Minimal cluster
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "name", clusterResource["name_min"]),

@@ -3,6 +3,7 @@ package ske
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -11,9 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
+	"golang.org/x/mod/semver"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -269,10 +272,10 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				},
 			},
 			"kube_config": schema.StringAttribute{
-				Description:        "Kube config file used for connecting to the cluster",
-				DeprecationMessage: "This field will not work for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see How to rotate SKE credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).",
+				Description:        "Kube config file used for connecting to the cluster. This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see How to rotate SKE credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).",
 				Sensitive:          true,
 				Computed:           true,
+				DeprecationMessage: "This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see How to rotate SKE credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).",
 			},
 		},
 	}
@@ -312,12 +315,29 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	tflog.Info(ctx, "SKE cluster read")
 }
 
-func (r *clusterDataSource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Model) {
+func (r *clusterDataSource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Model) error {
 	c := r.client
+	// for kubernetes with version >= 1.27, the deprecated endpoint will not work, so we set kubeconfig to nil
+	if semver.Compare(fmt.Sprintf("v%s", model.KubernetesVersion.ValueString()), "v1.27") >= 0 {
+		core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "Kubernetes version is 1.27 or higher, you must use the stackit_ske_kubeconfig resource instead.")
+		model.KubeConfig = types.StringPointerValue(nil)
+		return nil
+	}
 	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute()
 	if err != nil {
-		diags.AddError("failed fetching cluster credentials for data source", err.Error())
-		return
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if !ok {
+			return fmt.Errorf("fetch cluster credentials: could not convert error to oapierror.GenericOpenAPIError")
+		}
+		if oapiErr.StatusCode == http.StatusBadRequest {
+			// deprecated endpoint will return 400 if the new endpoints have been used
+			// if that's the case, we set the field to null
+			core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "The call to GetCredentials failed, which means the new credentials rotation flow might already been triggered for this cluster. If you are already using the stackit_ske_kubeconfig resource you can ignore this warning. If not, you must start using it.")
+			model.KubeConfig = types.StringPointerValue(nil)
+			return nil
+		}
+		return fmt.Errorf("fetching cluster credentials: %w", err)
 	}
 	model.KubeConfig = types.StringPointerValue(res.Kubeconfig)
+	return nil
 }
