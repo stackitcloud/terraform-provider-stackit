@@ -323,12 +323,12 @@ The example below uses OpenStack to create the network, router, a public IP addr
 						},
 						"server_name_indicators": schema.ListNestedAttribute{
 							Description: descriptions["server_name_indicators"],
-							Required:    false,
+							Optional:    true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"name": schema.StringAttribute{
 										Description: descriptions["server_name_indicators.name"],
-										Required:    false,
+										Optional:    true,
 									},
 								},
 							},

@@ -151,12 +151,12 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						},
 						"server_name_indicators": schema.ListNestedAttribute{
 							Description: descriptions["server_name_indicators"],
-							Required:    false,
+							Optional:    true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"name": schema.StringAttribute{
 										Description: descriptions["server_name_indicators.name"],
-										Required:    false,
+										Optional:    true,
 									},
 								},
 							},
