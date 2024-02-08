@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -15,6 +17,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -37,6 +40,7 @@ type Model struct {
 	ProjectId   types.String `tfsdk:"project_id"`
 	Kubeconfig  types.String `tfsdk:"kube_config"`
 	Expiration  types.Int64  `tfsdk:"expiration"`
+	Refresh     types.Bool   `tfsdk:"refresh"`
 	ExpiresAt   types.String `tfsdk:"expires_at"`
 }
 
@@ -100,6 +104,7 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		"project_id":   "STACKIT project ID to which the cluster is associated.",
 		"kube_config":  "Raw kube config.",
 		"expiration":   "Expiration time of the kubeconfig, in seconds. The default is 3600s (1h).",
+		"refresh":      "If set to true, the provider will check if the kubeconfig has expired and will generated a new valid one in-place",
 	}
 
 	resp.Schema = schema.Schema{
@@ -135,14 +140,6 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					validate.NoSeparator(),
 				},
 			},
-			"kube_config": schema.StringAttribute{
-				Description: descriptions["kube_config"],
-				Computed:    true,
-				Sensitive:   true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
 			"expiration": schema.Int64Attribute{
 				Description: descriptions["expiration"],
 				Optional:    true,
@@ -150,6 +147,21 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
 					int64planmodifier.UseStateForUnknown(),
+				},
+			},
+			"refresh": schema.BoolAttribute{
+				Description: descriptions["refresh"],
+				Optional:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+				},
+			},
+			"kube_config": schema.StringAttribute{
+				Description: descriptions["kube_config"],
+				Computed:    true,
+				Sensitive:   true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"expires_at": schema.StringAttribute{
@@ -183,23 +195,9 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
 
-	// Generate API request body from model
-	payload, err := toCreatePayload(&model)
+	err := r.createKubeconfig(ctx, &resp.Diagnostics, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Creating API payload: %v", err))
-		return
-	}
-	// Create new kubeconfig
-	kubeconfigResp, err := r.client.CreateKubeconfig(ctx, projectId, clusterName).CreateKubeconfigPayload(*payload).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Calling API: %v", err))
-		return
-	}
-
-	// Map response body to schema
-	err = mapFields(kubeconfigResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Creating kubeconfig: %v", err))
 		return
 	}
 	// Set state to fully populated data
@@ -212,7 +210,8 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 }
 
 // Read refreshes the Terraform state with the latest data.
-// There is no GET kubeconfig endpoint, so for this resource Read doesn't perform any operation
+// There is no GET kubeconfig endpoint.
+// If the refresh field is set, Read will check the expiration date and will get a new valid kubeconfig if it has expired
 func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
@@ -227,7 +226,51 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
 
+	if model.Refresh.ValueBool() && !model.ExpiresAt.IsNull() {
+		expiresAt, err := time.Parse("2006-01-02T15:04:05Z07:00", model.ExpiresAt.ValueString())
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("Converting expiresAt field to timestamp: %v", err))
+			return
+		}
+		currentTime := time.Now()
+		if expiresAt.Before(currentTime) {
+
+			err := r.createKubeconfig(ctx, &resp.Diagnostics, &model)
+			if err != nil {
+				core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("The existing kubeconfig is expired and the refresh field is enabled, creating a new one: %v", err))
+				return
+			}
+
+			// Set state to fully populated data
+			diags = resp.State.Set(ctx, model)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		}
+	}
+
 	tflog.Info(ctx, "SKE kubeconfig read")
+}
+
+func (r *kubeconfigResource) createKubeconfig(ctx context.Context, diags *diag.Diagnostics, model *Model) error {
+	// Generate API request body from model
+	payload, err := toCreatePayload(model)
+	if err != nil {
+		return fmt.Errorf("creating API payload: %w", err)
+	}
+	// Create new kubeconfig
+	kubeconfigResp, err := r.client.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.ClusterName.ValueString()).CreateKubeconfigPayload(*payload).Execute()
+	if err != nil {
+		return fmt.Errorf("calling API: %w", err)
+	}
+
+	// Map response body to schema
+	err = mapFields(kubeconfigResp, model)
+	if err != nil {
+		return fmt.Errorf("processing API payload: %w", err)
+	}
+	return nil
 }
 
 // Update updates the resource and sets the updated Terraform state on success.

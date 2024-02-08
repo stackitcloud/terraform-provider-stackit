@@ -28,6 +28,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:   types.StringValue("pid"),
 				Kubeconfig:  types.StringValue("kubeconfig"),
 				Expiration:  types.Int64Null(),
+				Refresh:     types.BoolNull(),
 				ExpiresAt:   types.StringValue("2024-02-07T16:42:12Z"),
 			},
 			true,
