@@ -34,14 +34,14 @@ var (
 )
 
 type Model struct {
-	Id             types.String `tfsdk:"id"` // needed by TF
-	ClusterName    types.String `tfsdk:"cluster_name"`
-	ProjectId      types.String `tfsdk:"project_id"`
-	KubeconfigUUID types.String `tfsdk:"kube_config_uuid"` // uuid generated internally because kubeconfig has no identifier
-	Kubeconfig     types.String `tfsdk:"kube_config"`
-	Expiration     types.Int64  `tfsdk:"expiration"`
-	Refresh        types.Bool   `tfsdk:"refresh"`
-	ExpiresAt      types.String `tfsdk:"expires_at"`
+	Id           types.String `tfsdk:"id"` // needed by TF
+	ClusterName  types.String `tfsdk:"cluster_name"`
+	ProjectId    types.String `tfsdk:"project_id"`
+	KubeconfigId types.String `tfsdk:"kube_config_id"` // uuid generated internally because kubeconfig has no identifier
+	Kubeconfig   types.String `tfsdk:"kube_config"`
+	Expiration   types.Int64  `tfsdk:"expiration"`
+	Refresh      types.Bool   `tfsdk:"refresh"`
+	ExpiresAt    types.String `tfsdk:"expires_at"`
 }
 
 // NewKubeconfigResource is a helper function to simplify the provider implementation.
@@ -98,15 +98,15 @@ func (r *kubeconfigResource) Configure(ctx context.Context, req resource.Configu
 // Schema defines the schema for the resource.
 func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":             "SKE kubeconfig resource schema. Must have a `region` specified in the provider configuration.",
-		"id":               "Terraform's internal resource ID. It is structured as \"`project_id`,`cluster_name`,`kube_config_uuid`\".",
-		"kube_config_uuid": "Internally generated UUID to identify a kubeconfig resource in Terraform, since the SKE API doesnt return a kubeconfig identifier",
-		"cluster_name":     "Name of the SKE cluster.",
-		"project_id":       "STACKIT project ID to which the cluster is associated.",
-		"kube_config":      "Raw kubeconfig.",
-		"expiration":       "Expiration time of the kubeconfig, in seconds.",
-		"expires_at":       "Timestamp when the kubeconfig expires",
-		"refresh":          "If set to true, the provider will check if the kubeconfig has expired and will generated a new valid one in-place",
+		"main":           "SKE kubeconfig resource schema. Must have a `region` specified in the provider configuration.",
+		"id":             "Terraform's internal resource ID. It is structured as \"`project_id`,`cluster_name`,`kube_config_id`\".",
+		"kube_config_id": "Internally generated UUID to identify a kubeconfig resource in Terraform, since the SKE API doesnt return a kubeconfig identifier",
+		"cluster_name":   "Name of the SKE cluster.",
+		"project_id":     "STACKIT project ID to which the cluster is associated.",
+		"kube_config":    "Raw kubeconfig.",
+		"expiration":     "Expiration time of the kubeconfig, in seconds.",
+		"expires_at":     "Timestamp when the kubeconfig expires",
+		"refresh":        "If set to true, the provider will check if the kubeconfig has expired and will generated a new valid one in-place",
 	}
 
 	resp.Schema = schema.Schema{
@@ -119,8 +119,8 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"kube_config_uuid": schema.StringAttribute{
-				Description: descriptions["kube_config_uuid"],
+			"kube_config_id": schema.StringAttribute{
+				Description: descriptions["kube_config_id"],
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -205,11 +205,11 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	clusterName := model.ClusterName.ValueString()
 	kubeconfigUUID := uuid.New().String()
 
-	model.KubeconfigUUID = types.StringValue(kubeconfigUUID)
+	model.KubeconfigId = types.StringValue(kubeconfigUUID)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
-	ctx = tflog.SetField(ctx, "kube_config_uuid", kubeconfigUUID)
+	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
 
 	err := r.createKubeconfig(ctx, &model)
 	if err != nil {
@@ -239,10 +239,10 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	projectId := model.ProjectId.ValueString()
 	clusterName := model.ClusterName.ValueString()
-	kubeconfigUUID := model.KubeconfigUUID.ValueString()
+	kubeconfigUUID := model.KubeconfigId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
-	ctx = tflog.SetField(ctx, "kube_config_uuid", kubeconfigUUID)
+	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
 
 	if model.Refresh.ValueBool() && !model.ExpiresAt.IsNull() {
 		expiresAt, err := time.Parse("2006-01-02T15:04:05Z07:00", model.ExpiresAt.ValueString())
@@ -309,10 +309,10 @@ func (r *kubeconfigResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	projectId := model.ProjectId.ValueString()
 	clusterName := model.ClusterName.ValueString()
-	kubeconfigUUID := model.KubeconfigUUID.ValueString()
+	kubeconfigUUID := model.KubeconfigId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
-	ctx = tflog.SetField(ctx, "kube_config_uuid", kubeconfigUUID)
+	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
 
 	// kubeconfig is deleted automatically from the state
 	tflog.Info(ctx, "SKE kubeconfig deleted")
@@ -329,7 +329,7 @@ func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model) error {
 	idParts := []string{
 		model.ProjectId.ValueString(),
 		model.ClusterName.ValueString(),
-		model.KubeconfigUUID.ValueString(),
+		model.KubeconfigId.ValueString(),
 	}
 	model.Id = types.StringValue(
 		strings.Join(idParts, core.Separator),
