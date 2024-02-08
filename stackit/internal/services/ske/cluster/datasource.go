@@ -305,7 +305,12 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-	r.getCredential(ctx, &diags, &state)
+	// Handle credential
+	err = r.getCredential(ctx, &resp.Diagnostics, &state)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Getting credential: %v", err))
+		return
+	}
 	// Set refreshed state
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
