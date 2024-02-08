@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -175,7 +174,7 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 	}
 }
 
-func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	if req.State.Raw.IsNull() {
 		// Planned to create a kubeconfig
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Planned to create kubeconfig", "Once this resource is created, you will no longer be able to use the deprecated credentials endpoints and the kube_config field on the cluster resource will be empty for this cluster. For more info check How to Rotate SKE Credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html)")
@@ -195,7 +194,7 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
 
-	err := r.createKubeconfig(ctx, &resp.Diagnostics, &model)
+	err := r.createKubeconfig(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Creating kubeconfig: %v", err))
 		return
@@ -234,8 +233,7 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 		}
 		currentTime := time.Now()
 		if expiresAt.Before(currentTime) {
-
-			err := r.createKubeconfig(ctx, &resp.Diagnostics, &model)
+			err := r.createKubeconfig(ctx, &model)
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("The existing kubeconfig is expired and the refresh field is enabled, creating a new one: %v", err))
 				return
@@ -253,7 +251,7 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	tflog.Info(ctx, "SKE kubeconfig read")
 }
 
-func (r *kubeconfigResource) createKubeconfig(ctx context.Context, diags *diag.Diagnostics, model *Model) error {
+func (r *kubeconfigResource) createKubeconfig(ctx context.Context, model *Model) error {
 	// Generate API request body from model
 	payload, err := toCreatePayload(model)
 	if err != nil {
