@@ -177,7 +177,7 @@ func (r *loadBalancerResource) Configure(ctx context.Context, req resource.Confi
 // Schema defines the schema for the resource.
 func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                  "Load Balancer resource schema.",
+		"main":                  "Load Balancer resource schema. Must have a `region` specified in the provider configuration.",
 		"id":                    "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`name`\".",
 		"project_id":            "STACKIT project ID to which the Load Balancer is associated.",
 		"external_address":      "External Load Balancer IP address where this Load Balancer is exposed.",
