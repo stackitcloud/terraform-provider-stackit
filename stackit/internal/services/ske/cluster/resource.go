@@ -672,7 +672,7 @@ func (r *clusterResource) getCredential(ctx context.Context, diags *diag.Diagnos
 		if oapiErr.StatusCode == http.StatusBadRequest {
 			// deprecated endpoint will return 400 if the new endpoints have been used
 			// if that's the case, we set the field to null
-			core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "The call to GetCredentials failed, which means the new credentials rotation flow might already been triggered for this cluster. If you are already using the stackit_ske_kubeconfig resource you can ignore this warning. If not, you must start using it.")
+			core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "Failed to get static token kubeconfig, which means the new credentials rotation flow might already been triggered for this cluster. If you are already using the stackit_ske_kubeconfig resource you can ignore this warning. If not, you must use it to access this cluster's short-lived admin kubeconfig.")
 			model.KubeConfig = types.StringPointerValue(nil)
 			return nil
 		}
@@ -1386,6 +1386,14 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
+	// Handle credential
+	err = r.getCredential(ctx, &resp.Diagnostics, &state)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Getting credential: %v", err))
+		return
+	}
+
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
