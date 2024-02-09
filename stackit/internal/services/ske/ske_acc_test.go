@@ -506,7 +506,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end_new"]),
 
-					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kube_config"),
+					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster", "kube_config"), // when using the kubeconfig resource, the kubeconfig field becomes null
 				),
 			},
 			// Deletion is done by the framework implicitly
