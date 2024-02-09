@@ -39,6 +39,7 @@ import (
 	secretsManagerInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/instance"
 	secretsManagerUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/user"
 	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
+	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
 	skeProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/project"
 
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
@@ -405,5 +406,6 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		secretsManagerUser.NewUserResource,
 		skeProject.NewProjectResource,
 		skeCluster.NewClusterResource,
+		skeKubeconfig.NewKubeconfigResource,
 	}
 }
