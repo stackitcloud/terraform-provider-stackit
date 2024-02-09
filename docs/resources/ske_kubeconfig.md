@@ -29,5 +29,5 @@ SKE kubeconfig resource schema. Must have a `region` specified in the provider c
 
 - `expires_at` (String) Timestamp when the kubeconfig expires
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`cluster_name`,`kube_config_id`".
-- `kube_config` (String, Sensitive) Raw kubeconfig.
+- `kube_config` (String, Sensitive) Raw short-lived admin kubeconfig.
 - `kube_config_id` (String) Internally generated UUID to identify a kubeconfig resource in Terraform, since the SKE API doesnt return a kubeconfig identifier
