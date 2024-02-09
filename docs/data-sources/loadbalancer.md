@@ -8,7 +8,7 @@ description: |-
 
 # stackit_loadbalancer (Data Source)
 
-Load Balancer data source schema. Must have a region specified in the provider configuration.
+Load Balancer data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
