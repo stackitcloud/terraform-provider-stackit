@@ -45,16 +45,16 @@ type Model struct {
 	Id              types.String `tfsdk:"id"` // needed by TF
 	ProjectId       types.String `tfsdk:"project_id"`
 	ExternalAddress types.String `tfsdk:"external_address"`
-	Listeners       []Listener   `tfsdk:"listeners"`
+	Listeners       []listener   `tfsdk:"listeners"`
 	Name            types.String `tfsdk:"name"`
-	Networks        []Network    `tfsdk:"networks"`
+	Networks        []network    `tfsdk:"networks"`
 	Options         types.Object `tfsdk:"options"`
 	PrivateAddress  types.String `tfsdk:"private_address"`
-	TargetPools     []TargetPool `tfsdk:"target_pools"`
+	TargetPools     []targetPool `tfsdk:"target_pools"`
 }
 
 // Struct corresponding to each Model.Listener
-type Listener struct {
+type listener struct {
 	DisplayName          types.String `tfsdk:"display_name"`
 	Port                 types.Int64  `tfsdk:"port"`
 	Protocol             types.String `tfsdk:"protocol"`
@@ -63,7 +63,7 @@ type Listener struct {
 }
 
 // Struct corresponding to Listener.ServerNameIndicators[i]
-type ServerNameIndicator struct {
+type serverNameIndicator struct {
 	Name types.String `tfsdk:"name"`
 }
 
@@ -73,13 +73,13 @@ var serverNameIndicatorTypes = map[string]attr.Type{
 }
 
 // Struct corresponding to each Model.Network
-type Network struct {
+type network struct {
 	NetworkId types.String `tfsdk:"network_id"`
 	Role      types.String `tfsdk:"role"`
 }
 
 // Struct corresponding to Model.Options
-type Options struct {
+type options struct {
 	ACL                types.Set  `tfsdk:"acl"`
 	PrivateNetworkOnly types.Bool `tfsdk:"private_network_only"`
 }
@@ -91,21 +91,21 @@ var optionsTypes = map[string]attr.Type{
 }
 
 // Struct corresponding to each Model.TargetPool
-type TargetPool struct {
+type targetPool struct {
 	ActiveHealthCheck  types.Object `tfsdk:"active_health_check"`
 	Name               types.String `tfsdk:"name"`
 	TargetPort         types.Int64  `tfsdk:"target_port"`
-	Targets            []Target     `tfsdk:"targets"`
+	Targets            []target     `tfsdk:"targets"`
 	SessionPersistence types.Object `tfsdk:"session_persistence"`
 }
 
 // Struct corresponding to each Model.TargetPool.SessionPersistence
-type SessionPersistence struct {
+type sessionPersistence struct {
 	UseSourceIPAddress types.Bool `tfsdk:"use_source_ip_address"`
 }
 
 // Struct corresponding to each Model.TargetPool.ActiveHealthCheck
-type ActiveHealthCheck struct {
+type activeHealthCheck struct {
 	HealthyThreshold   types.Int64  `tfsdk:"healthy_threshold"`
 	Interval           types.String `tfsdk:"interval"`
 	IntervalJitter     types.String `tfsdk:"interval_jitter"`
@@ -128,7 +128,7 @@ var sessionPersistenceTypes = map[string]attr.Type{
 }
 
 // Struct corresponding to each Model.TargetPool.Targets
-type Target struct {
+type target struct {
 	DisplayName types.String `tfsdk:"display_name"`
 	Ip          types.String `tfsdk:"ip"`
 }
@@ -782,9 +782,9 @@ func toListenersPayload(ctx context.Context, model *Model) (*[]loadbalancer.List
 	return &listeners, nil
 }
 
-func toServerNameIndicatorsPayload(ctx context.Context, listener *Listener) (*[]loadbalancer.ServerNameIndicator, error) {
-	serverNameIndicators := []ServerNameIndicator{}
-	diags := listener.ServerNameIndicators.ElementsAs(ctx, &serverNameIndicators, false)
+func toServerNameIndicatorsPayload(ctx context.Context, l *listener) (*[]loadbalancer.ServerNameIndicator, error) {
+	serverNameIndicators := []serverNameIndicator{}
+	diags := l.ServerNameIndicators.ElementsAs(ctx, &serverNameIndicators, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
@@ -817,7 +817,7 @@ func toNetworksPayload(model *Model) *[]loadbalancer.Network {
 }
 
 func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBalancerOptions, error) {
-	var optionsModel = &Options{}
+	var optionsModel = &options{}
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags := model.Options.As(ctx, optionsModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -876,39 +876,39 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.Ta
 	return &targetPools, nil
 }
 
-func toTargetPoolUpdatePayload(ctx context.Context, targetPool *TargetPool) (*loadbalancer.UpdateTargetPoolPayload, error) {
-	if targetPool == nil {
+func toTargetPoolUpdatePayload(ctx context.Context, tp *targetPool) (*loadbalancer.UpdateTargetPoolPayload, error) {
+	if tp == nil {
 		return nil, fmt.Errorf("nil target pool")
 	}
 
-	activeHealthCheck, err := toActiveHealthCheckPayload(ctx, targetPool)
+	activeHealthCheck, err := toActiveHealthCheckPayload(ctx, tp)
 	if err != nil {
 		return nil, fmt.Errorf("converting target pool: %w", err)
 	}
 
-	targets := toTargetsPayload(targetPool)
+	targets := toTargetsPayload(tp)
 
-	session_persistence, err := toSessionPersistencePayload(ctx, targetPool)
+	session_persistence, err := toSessionPersistencePayload(ctx, tp)
 	if err != nil {
 		return nil, fmt.Errorf("converting target pool: %w", err)
 	}
 
 	return &loadbalancer.UpdateTargetPoolPayload{
 		ActiveHealthCheck:  activeHealthCheck,
-		Name:               conversion.StringValueToPointer(targetPool.Name),
-		TargetPort:         conversion.Int64ValueToPointer(targetPool.TargetPort),
+		Name:               conversion.StringValueToPointer(tp.Name),
+		TargetPort:         conversion.Int64ValueToPointer(tp.TargetPort),
 		Targets:            targets,
 		SessionPersistence: session_persistence,
 	}, nil
 }
 
-func toSessionPersistencePayload(ctx context.Context, targetPool *TargetPool) (*loadbalancer.SessionPersistence, error) {
-	if targetPool.SessionPersistence.IsNull() || targetPool.ActiveHealthCheck.IsUnknown() {
+func toSessionPersistencePayload(ctx context.Context, tp *targetPool) (*loadbalancer.SessionPersistence, error) {
+	if tp.SessionPersistence.IsNull() || tp.ActiveHealthCheck.IsUnknown() {
 		return nil, nil
 	}
 
-	var session_persistence SessionPersistence
-	diags := targetPool.SessionPersistence.As(ctx, &session_persistence, basetypes.ObjectAsOptions{})
+	var session_persistence sessionPersistence
+	diags := tp.SessionPersistence.As(ctx, &session_persistence, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting session persistence: %w", core.DiagsToError(diags))
 	}
@@ -918,13 +918,13 @@ func toSessionPersistencePayload(ctx context.Context, targetPool *TargetPool) (*
 	}, nil
 }
 
-func toActiveHealthCheckPayload(ctx context.Context, targetPool *TargetPool) (*loadbalancer.ActiveHealthCheck, error) {
-	if targetPool.ActiveHealthCheck.IsNull() || targetPool.ActiveHealthCheck.IsUnknown() {
+func toActiveHealthCheckPayload(ctx context.Context, tp *targetPool) (*loadbalancer.ActiveHealthCheck, error) {
+	if tp.ActiveHealthCheck.IsNull() || tp.ActiveHealthCheck.IsUnknown() {
 		return nil, nil
 	}
 
-	var activeHealthCheckModel ActiveHealthCheck
-	diags := targetPool.ActiveHealthCheck.As(ctx, &activeHealthCheckModel, basetypes.ObjectAsOptions{})
+	var activeHealthCheckModel activeHealthCheck
+	diags := tp.ActiveHealthCheck.As(ctx, &activeHealthCheckModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
 	}
@@ -938,13 +938,13 @@ func toActiveHealthCheckPayload(ctx context.Context, targetPool *TargetPool) (*l
 	}, nil
 }
 
-func toTargetsPayload(targetPool *TargetPool) *[]loadbalancer.Target {
-	if targetPool.Targets == nil {
+func toTargetsPayload(tp *targetPool) *[]loadbalancer.Target {
+	if tp.Targets == nil {
 		return nil
 	}
 
 	var targets []loadbalancer.Target
-	for _, target := range targetPool.Targets {
+	for _, target := range tp.Targets {
 		targets = append(targets, loadbalancer.Target{
 			DisplayName: conversion.StringValueToPointer(target.DisplayName),
 			Ip:          conversion.StringValueToPointer(target.Ip),
@@ -999,7 +999,7 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) err
 	return nil
 }
 
-func mapServerNameIndicators(serverNameIndicatorsResp *[]loadbalancer.ServerNameIndicator, l *Listener) error {
+func mapServerNameIndicators(serverNameIndicatorsResp *[]loadbalancer.ServerNameIndicator, l *listener) error {
 	if serverNameIndicatorsResp == nil || *serverNameIndicatorsResp == nil {
 		l.ServerNameIndicators = types.ListNull(types.ObjectType{AttrTypes: serverNameIndicatorTypes})
 		return nil
@@ -1034,15 +1034,15 @@ func mapListeners(lb *loadbalancer.LoadBalancer, m *Model) error {
 		return nil
 	}
 
-	var listeners []Listener
-	for i, listener := range *lb.Listeners {
-		listenerTF := Listener{
-			DisplayName: types.StringPointerValue(listener.DisplayName),
-			Port:        types.Int64PointerValue(listener.Port),
-			Protocol:    types.StringPointerValue(listener.Protocol),
-			TargetPool:  types.StringPointerValue(listener.TargetPool),
+	var listeners []listener
+	for i, l := range *lb.Listeners {
+		listenerTF := listener{
+			DisplayName: types.StringPointerValue(l.DisplayName),
+			Port:        types.Int64PointerValue(l.Port),
+			Protocol:    types.StringPointerValue(l.Protocol),
+			TargetPool:  types.StringPointerValue(l.TargetPool),
 		}
-		err := mapServerNameIndicators(listener.ServerNameIndicators, &listenerTF)
+		err := mapServerNameIndicators(l.ServerNameIndicators, &listenerTF)
 		if err != nil {
 			return fmt.Errorf("mapping index %d, field serverNameIndicators: %w", i, err)
 		}
@@ -1057,11 +1057,11 @@ func mapNetworks(lb *loadbalancer.LoadBalancer, m *Model) {
 		return
 	}
 
-	var networks []Network
-	for _, network := range *lb.Networks {
-		networks = append(networks, Network{
-			NetworkId: types.StringPointerValue(network.NetworkId),
-			Role:      types.StringPointerValue(network.Role),
+	var networks []network
+	for _, n := range *lb.Networks {
+		networks = append(networks, network{
+			NetworkId: types.StringPointerValue(n.NetworkId),
+			Role:      types.StringPointerValue(n.Role),
 		})
 	}
 	m.Networks = networks
@@ -1107,26 +1107,26 @@ func mapTargetPools(lb *loadbalancer.LoadBalancer, m *Model) error {
 	}
 
 	var diags diag.Diagnostics
-	var targetPools []TargetPool
-	for _, targetPool := range *lb.TargetPools {
+	var targetPools []targetPool
+	for _, tp := range *lb.TargetPools {
 		var activeHealthCheck basetypes.ObjectValue
 		var sessionPersistence basetypes.ObjectValue
-		if targetPool.ActiveHealthCheck != nil {
+		if tp.ActiveHealthCheck != nil {
 			activeHealthCheckValues := map[string]attr.Value{
-				"healthy_threshold":   types.Int64Value(*targetPool.ActiveHealthCheck.HealthyThreshold),
-				"interval":            types.StringValue(*targetPool.ActiveHealthCheck.Interval),
-				"interval_jitter":     types.StringValue(*targetPool.ActiveHealthCheck.IntervalJitter),
-				"timeout":             types.StringValue(*targetPool.ActiveHealthCheck.Timeout),
-				"unhealthy_threshold": types.Int64Value(*targetPool.ActiveHealthCheck.UnhealthyThreshold),
+				"healthy_threshold":   types.Int64Value(*tp.ActiveHealthCheck.HealthyThreshold),
+				"interval":            types.StringValue(*tp.ActiveHealthCheck.Interval),
+				"interval_jitter":     types.StringValue(*tp.ActiveHealthCheck.IntervalJitter),
+				"timeout":             types.StringValue(*tp.ActiveHealthCheck.Timeout),
+				"unhealthy_threshold": types.Int64Value(*tp.ActiveHealthCheck.UnhealthyThreshold),
 			}
 			activeHealthCheck, diags = types.ObjectValue(activeHealthCheckTypes, activeHealthCheckValues)
 			if diags != nil {
 				return fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
 			}
 		}
-		if targetPool.SessionPersistence != nil {
+		if tp.SessionPersistence != nil {
 			sessionPersistenceValues := map[string]attr.Value{
-				"use_source_ip_address": types.BoolValue(*targetPool.SessionPersistence.UseSourceIpAddress),
+				"use_source_ip_address": types.BoolValue(*tp.SessionPersistence.UseSourceIpAddress),
 			}
 			sessionPersistence, diags = types.ObjectValue(sessionPersistenceTypes, sessionPersistenceValues)
 			if diags != nil {
@@ -1134,20 +1134,20 @@ func mapTargetPools(lb *loadbalancer.LoadBalancer, m *Model) error {
 			}
 		}
 
-		var targets []Target
-		if targetPool.Targets != nil {
-			for _, target := range *targetPool.Targets {
-				targets = append(targets, Target{
-					DisplayName: types.StringPointerValue(target.DisplayName),
-					Ip:          types.StringPointerValue(target.Ip),
+		var targets []target
+		if tp.Targets != nil {
+			for _, t := range *tp.Targets {
+				targets = append(targets, target{
+					DisplayName: types.StringPointerValue(t.DisplayName),
+					Ip:          types.StringPointerValue(t.Ip),
 				})
 			}
 		}
 
-		targetPools = append(targetPools, TargetPool{
+		targetPools = append(targetPools, targetPool{
 			ActiveHealthCheck:  activeHealthCheck,
-			Name:               types.StringPointerValue(targetPool.Name),
-			TargetPort:         types.Int64Value(*targetPool.TargetPort),
+			Name:               types.StringPointerValue(tp.Name),
+			TargetPort:         types.Int64Value(*tp.TargetPort),
 			Targets:            targets,
 			SessionPersistence: sessionPersistence,
 		})

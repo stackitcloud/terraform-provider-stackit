@@ -40,7 +40,7 @@ func TestToCreatePayload(t *testing.T) {
 			"simple_values_ok",
 			&Model{
 				ExternalAddress: types.StringValue("external_address"),
-				Listeners: []Listener{
+				Listeners: []listener{
 					{
 						DisplayName: types.StringValue("display_name"),
 						Port:        types.Int64Value(80),
@@ -60,7 +60,7 @@ func TestToCreatePayload(t *testing.T) {
 					},
 				},
 				Name: types.StringValue("name"),
-				Networks: []Network{
+				Networks: []network{
 					{
 						NetworkId: types.StringValue("network_id"),
 						Role:      types.StringValue("role"),
@@ -79,7 +79,7 @@ func TestToCreatePayload(t *testing.T) {
 						"private_network_only": types.BoolValue(true),
 					},
 				),
-				TargetPools: []TargetPool{
+				TargetPools: []targetPool{
 					{
 						ActiveHealthCheck: types.ObjectValueMust(
 							activeHealthCheckTypes,
@@ -93,7 +93,7 @@ func TestToCreatePayload(t *testing.T) {
 						),
 						Name:       types.StringValue("name"),
 						TargetPort: types.Int64Value(80),
-						Targets: []Target{
+						Targets: []target{
 							{
 								DisplayName: types.StringValue("display_name"),
 								Ip:          types.StringValue("ip"),
@@ -194,19 +194,19 @@ func TestToCreatePayload(t *testing.T) {
 func TestToTargetPoolUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *TargetPool
+		input       *targetPool
 		expected    *loadbalancer.UpdateTargetPoolPayload
 		isValid     bool
 	}{
 		{
 			"default_values_ok",
-			&TargetPool{},
+			&targetPool{},
 			&loadbalancer.UpdateTargetPoolPayload{},
 			true,
 		},
 		{
 			"simple_values_ok",
-			&TargetPool{
+			&targetPool{
 				ActiveHealthCheck: types.ObjectValueMust(
 					activeHealthCheckTypes,
 					map[string]attr.Value{
@@ -219,7 +219,7 @@ func TestToTargetPoolUpdatePayload(t *testing.T) {
 				),
 				Name:       types.StringValue("name"),
 				TargetPort: types.Int64Value(80),
-				Targets: []Target{
+				Targets: []target{
 					{
 						DisplayName: types.StringValue("display_name"),
 						Ip:          types.StringValue("ip"),
@@ -372,7 +372,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:       types.StringValue("pid"),
 				Name:            types.StringValue("name"),
 				ExternalAddress: types.StringValue("external_address"),
-				Listeners: []Listener{
+				Listeners: []listener{
 					{
 						DisplayName: types.StringValue("display_name"),
 						Port:        types.Int64Value(80),
@@ -391,7 +391,7 @@ func TestMapFields(t *testing.T) {
 						TargetPool: types.StringValue("target_pool"),
 					},
 				},
-				Networks: []Network{
+				Networks: []network{
 					{
 						NetworkId: types.StringValue("network_id"),
 						Role:      types.StringValue("role"),
@@ -410,7 +410,7 @@ func TestMapFields(t *testing.T) {
 						"private_network_only": types.BoolValue(true),
 					},
 				),
-				TargetPools: []TargetPool{
+				TargetPools: []targetPool{
 					{
 						ActiveHealthCheck: types.ObjectValueMust(
 							activeHealthCheckTypes,
@@ -425,7 +425,7 @@ func TestMapFields(t *testing.T) {
 						),
 						Name:       types.StringValue("name"),
 						TargetPort: types.Int64Value(80),
-						Targets: []Target{
+						Targets: []target{
 							{
 								DisplayName: types.StringValue("display_name"),
 								Ip:          types.StringValue("ip"),
