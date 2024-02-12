@@ -45,15 +45,15 @@ type Model struct {
 	Id              types.String `tfsdk:"id"` // needed by TF
 	ProjectId       types.String `tfsdk:"project_id"`
 	ExternalAddress types.String `tfsdk:"external_address"`
-	Listeners       []listener   `tfsdk:"listeners"`
+	Listeners       types.List   `tfsdk:"listeners"`
 	Name            types.String `tfsdk:"name"`
-	Networks        []network    `tfsdk:"networks"`
+	Networks        types.List   `tfsdk:"networks"`
 	Options         types.Object `tfsdk:"options"`
 	PrivateAddress  types.String `tfsdk:"private_address"`
-	TargetPools     []targetPool `tfsdk:"target_pools"`
+	TargetPools     types.List   `tfsdk:"target_pools"`
 }
 
-// Struct corresponding to each Model.Listener
+// Struct corresponding to Model.Listeners[i]
 type listener struct {
 	DisplayName          types.String `tfsdk:"display_name"`
 	Port                 types.Int64  `tfsdk:"port"`
@@ -62,20 +62,35 @@ type listener struct {
 	TargetPool           types.String `tfsdk:"target_pool"`
 }
 
-// Struct corresponding to Listener.ServerNameIndicators[i]
+// Types corresponding to listener
+var listenerTypes = map[string]attr.Type{
+	"display_name":           basetypes.StringType{},
+	"port":                   basetypes.Int64Type{},
+	"protocol":               basetypes.StringType{},
+	"server_name_indicators": basetypes.ListType{ElemType: types.ObjectType{AttrTypes: serverNameIndicatorTypes}},
+	"target_pool":            basetypes.StringType{},
+}
+
+// Struct corresponding to listener.ServerNameIndicators[i]
 type serverNameIndicator struct {
 	Name types.String `tfsdk:"name"`
 }
 
-// Types corresponding to ServerNameIndicator
+// Types corresponding to serverNameIndicator
 var serverNameIndicatorTypes = map[string]attr.Type{
 	"name": basetypes.StringType{},
 }
 
-// Struct corresponding to each Model.Network
+// Struct corresponding to Model.Networks[i]
 type network struct {
 	NetworkId types.String `tfsdk:"network_id"`
 	Role      types.String `tfsdk:"role"`
+}
+
+// Types corresponding to network
+var networkTypes = map[string]attr.Type{
+	"network_id": basetypes.StringType{},
+	"role":       basetypes.StringType{},
 }
 
 // Struct corresponding to Model.Options
@@ -84,27 +99,31 @@ type options struct {
 	PrivateNetworkOnly types.Bool `tfsdk:"private_network_only"`
 }
 
-// Types corresponding to Options
+// Types corresponding to options
 var optionsTypes = map[string]attr.Type{
 	"acl":                  basetypes.SetType{ElemType: basetypes.StringType{}},
 	"private_network_only": basetypes.BoolType{},
 }
 
-// Struct corresponding to each Model.TargetPool
+// Struct corresponding to Model.TargetPools[i]
 type targetPool struct {
 	ActiveHealthCheck  types.Object `tfsdk:"active_health_check"`
 	Name               types.String `tfsdk:"name"`
 	TargetPort         types.Int64  `tfsdk:"target_port"`
-	Targets            []target     `tfsdk:"targets"`
+	Targets            types.List   `tfsdk:"targets"`
 	SessionPersistence types.Object `tfsdk:"session_persistence"`
 }
 
-// Struct corresponding to each Model.TargetPool.SessionPersistence
-type sessionPersistence struct {
-	UseSourceIPAddress types.Bool `tfsdk:"use_source_ip_address"`
+// Types corresponding to targetPool
+var targetPoolTypes = map[string]attr.Type{
+	"active_health_check": basetypes.ObjectType{AttrTypes: activeHealthCheckTypes},
+	"name":                basetypes.StringType{},
+	"target_pool":         basetypes.StringType{},
+	"targets":             basetypes.ListType{ElemType: basetypes.ObjectType{AttrTypes: targetTypes}},
+	"session_persistence": basetypes.ObjectType{AttrTypes: sessionPersistenceTypes},
 }
 
-// Struct corresponding to each Model.TargetPool.ActiveHealthCheck
+// Struct corresponding to targetPool.ActiveHealthCheck
 type activeHealthCheck struct {
 	HealthyThreshold   types.Int64  `tfsdk:"healthy_threshold"`
 	Interval           types.String `tfsdk:"interval"`
@@ -113,7 +132,7 @@ type activeHealthCheck struct {
 	UnhealthyThreshold types.Int64  `tfsdk:"unhealthy_threshold"`
 }
 
-// Types corresponding to ActiveHealthCheck
+// Types corresponding to activeHealthCheck
 var activeHealthCheckTypes = map[string]attr.Type{
 	"healthy_threshold":   basetypes.Int64Type{},
 	"interval":            basetypes.StringType{},
@@ -122,15 +141,26 @@ var activeHealthCheckTypes = map[string]attr.Type{
 	"unhealthy_threshold": basetypes.Int64Type{},
 }
 
-// Types corresponding to SessionPersistence
-var sessionPersistenceTypes = map[string]attr.Type{
-	"use_source_ip_address": basetypes.BoolType{},
-}
-
-// Struct corresponding to each Model.TargetPool.Targets
+// Struct corresponding to targetPool.Targets[i]
 type target struct {
 	DisplayName types.String `tfsdk:"display_name"`
 	Ip          types.String `tfsdk:"ip"`
+}
+
+// Types corresponding to target
+var targetTypes = map[string]attr.Type{
+	"display_name": basetypes.StringType{},
+	"ip":           basetypes.StringType{},
+}
+
+// Struct corresponding to targetPool.SessionPersistence
+type sessionPersistence struct {
+	UseSourceIPAddress types.Bool `tfsdk:"use_source_ip_address"`
+}
+
+// Types corresponding to SessionPersistence
+var sessionPersistenceTypes = map[string]attr.Type{
+	"use_source_ip_address": basetypes.BoolType{},
 }
 
 // NewLoadBalancerResource is a helper function to simplify the provider implementation.
