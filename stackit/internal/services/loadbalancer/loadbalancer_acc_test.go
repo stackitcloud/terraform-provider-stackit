@@ -16,24 +16,27 @@ import (
 
 // Instance resource data
 var loadBalancerResource = map[string]string{
-	"project_id":            testutil.ProjectId,
-	"name":                  fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
-	"target_pool_name":      "example-target-pool",
-	"target_port":           "5432",
-	"target_port_updated":   "5431",
-	"target_display_name":   "example-target",
-	"healthy_threshold":     "3",
-	"interval":              "10s",
-	"interval_jitter":       "5s",
-	"timeout":               "10s",
-	"unhealthy_threshold":   "3",
-	"use_source_ip_address": "true",
-	"listener_display_name": "example-listener",
-	"listener_port":         "5432",
-	"listener_protocol":     "PROTOCOL_TLS_PASSTHROUGH",
-	"serverNameIndicator":   "domain.com",
-	"network_role":          "ROLE_LISTENERS_AND_TARGETS",
-	"private_network_only":  "true",
+	"project_id":              testutil.ProjectId,
+	"name":                    fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
+	"target_pool_name":        "example-target-pool",
+	"target_port":             "5432",
+	"target_port_updated":     "5431",
+	"target_display_name":     "example-target",
+	"healthy_threshold":       "3",
+	"interval":                "10s",
+	"interval_jitter":         "5s",
+	"timeout":                 "10s",
+	"unhealthy_threshold":     "3",
+	"use_source_ip_address":   "true",
+	"listener_display_name":   "example-listener",
+	"listener_port":           "5432",
+	"listener_protocol":       "PROTOCOL_TLS_PASSTHROUGH",
+	"serverNameIndicator":     "domain.com",
+	"network_role":            "ROLE_LISTENERS_AND_TARGETS",
+	"private_network_only":    "true",
+	"credential_display_name": fmt.Sprintf("tf-acc-cred%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
+	"credential_username":     "username",
+	"credential_password":     "password",
 }
 
 func configResources(targetPort string) string {
@@ -72,9 +75,9 @@ func configResources(targetPort string) string {
 				display_name = "%s"
 				port         = %s
 				protocol     = "%s"
-				server_name_indictors = [
+				server_name_indicators = [
 					{
-						"name": "%s"
+						name = "%s"
 					}
 				]
 				target_pool  = "%s"
@@ -234,7 +237,7 @@ func TestAccLoadBalancerResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "listeners.0.display_name", loadBalancerResource["listener_display_name"]),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "listeners.0.port", loadBalancerResource["listener_port"]),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "listeners.0.protocol", loadBalancerResource["listener_protocol"]),
-					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "listeners.0.serverNameIndicators.0.name", loadBalancerResource["serverNameIndicator"]),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "listeners.0.server_name_indicators.0.name", loadBalancerResource["serverNameIndicator"]),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "listeners.0.target_pool", loadBalancerResource["target_pool_name"]),
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "networks.0.network_id"),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "networks.0.role", loadBalancerResource["network_role"]),
@@ -289,7 +292,7 @@ func TestAccLoadBalancerResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "listeners.0.display_name", loadBalancerResource["listener_display_name"]),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "listeners.0.port", loadBalancerResource["listener_port"]),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "listeners.0.protocol", loadBalancerResource["listener_protocol"]),
-					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "listeners.0.serverNameIndicators.0.name", loadBalancerResource["serverNameIndicator"]),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "listeners.0.server_name_indicators.0.name", loadBalancerResource["serverNameIndicator"]),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "listeners.0.target_pool", loadBalancerResource["target_pool_name"]),
 					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "networks.0.network_id"),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "networks.0.role", loadBalancerResource["network_role"]),
