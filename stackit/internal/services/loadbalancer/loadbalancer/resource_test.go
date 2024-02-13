@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
@@ -290,13 +289,18 @@ func TestMapFields(t *testing.T) {
 				TargetPools: nil,
 			},
 			&Model{
-				Id:        types.StringValue("pid,name"),
-				ProjectId: types.StringValue("pid"),
-				Name:      types.StringValue("name"),
+				Id:              types.StringValue("pid,name"),
+				ProjectId:       types.StringValue("pid"),
+				ExternalAddress: types.StringNull(),
+				Listeners:       types.ListNull(types.ObjectType{AttrTypes: listenerTypes}),
+				Name:            types.StringValue("name"),
+				Networks:        types.ListNull(types.ObjectType{AttrTypes: networkTypes}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
 					"acl":                  types.SetNull(types.StringType),
 					"private_network_only": types.BoolNull(),
 				}),
+				PrivateAddress: types.StringNull(),
+				TargetPools:    types.ListNull(types.ObjectType{AttrTypes: targetPoolTypes}),
 			},
 			true,
 		},
@@ -450,7 +454,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(model, tt.expected, cmpopts.IgnoreTypes(types.ListNull(types.StringType)))
+				diff := cmp.Diff(model, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

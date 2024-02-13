@@ -1109,7 +1109,7 @@ func mapListeners(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 			"display_name": types.StringPointerValue(listenerResp.DisplayName),
 			"port":         types.Int64PointerValue(listenerResp.Port),
 			"protocol":     types.StringPointerValue(listenerResp.Protocol),
-			"target_pool":  types.StringPointerValue(listenerResp.Protocol),
+			"target_pool":  types.StringPointerValue(listenerResp.TargetPool),
 		}
 
 		err := mapServerNameIndicators(listenerResp.ServerNameIndicators, listenerMap)
