@@ -40,24 +40,12 @@ data "stackit_loadbalancer" "example" {
 <a id="nestedatt--listeners"></a>
 ### Nested Schema for `listeners`
 
-Optional:
-
-- `server_name_indicators` (Attributes List) A list of domain names to match in order to pass TLS traffic to the target pool in the current listener (see [below for nested schema](#nestedatt--listeners--server_name_indicators))
-
 Read-Only:
 
 - `display_name` (String)
 - `port` (Number) Port number where we listen for traffic.
 - `protocol` (String) Protocol is the highest network protocol we understand to load balance.
 - `target_pool` (String) Reference target pool by target pool name.
-
-<a id="nestedatt--listeners--server_name_indicators"></a>
-### Nested Schema for `listeners.server_name_indicators`
-
-Optional:
-
-- `name` (String) A domain name to match in order to pass TLS traffic to the target pool in the current listener
-
 
 
 <a id="nestedatt--networks"></a>
