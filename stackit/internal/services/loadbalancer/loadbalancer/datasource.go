@@ -324,7 +324,7 @@ func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, lbResp, &model)
+	err = mapFields(lbResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
