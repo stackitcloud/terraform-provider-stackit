@@ -678,12 +678,12 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 	for i := range targetPools {
-		targetPool := targetPools[i]
-		targetPoolName := targetPool.Name.ValueString()
+		targetPoolModel := targetPools[i]
+		targetPoolName := targetPoolModel.Name.ValueString()
 		ctx = tflog.SetField(ctx, "target_pool_name", targetPoolName)
 
 		// Generate API request body from model
-		payload, err := toTargetPoolUpdatePayload(ctx, utils.Ptr(targetPool))
+		payload, err := toTargetPoolUpdatePayload(ctx, utils.Ptr(targetPoolModel))
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Creating API payload for target pool: %v", err))
 			return
