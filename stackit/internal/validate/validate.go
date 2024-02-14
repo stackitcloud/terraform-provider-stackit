@@ -115,7 +115,6 @@ func RecordSet() *Validator {
 					req.ConfigValue.ValueString(),
 				))
 			}
-
 		},
 	}
 }
