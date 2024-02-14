@@ -4,8 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
 func TestUUID(t *testing.T) {
@@ -89,6 +92,157 @@ func TestIP(t *testing.T) {
 			r := validator.StringResponse{}
 			IP().ValidateString(context.Background(), validator.StringRequest{
 				ConfigValue: types.StringValue(tt.input),
+			}, &r)
+
+			if !tt.isValid && !r.Diagnostics.HasError() {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && r.Diagnostics.HasError() {
+				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
+			}
+		})
+	}
+}
+
+func TestRecordSet(t *testing.T) {
+	tests := []struct {
+		description string
+		record      string
+		recordType  string
+		isValid     bool
+	}{
+		{
+			"A record ok IP4",
+			"111.222.111.222",
+			"A",
+			true,
+		},
+		{
+			"A record fail IP6",
+			"2001:0db8:85a3:08d3::0370:7344",
+			"A",
+			false,
+		},
+		{
+			"A record too short",
+			"0.1.2",
+			"A",
+			false,
+		},
+		{
+			"A record Empty",
+			"",
+			"A",
+			false,
+		},
+		{
+			"A record Not an IP",
+			"for-sure-not-an-IP",
+			"A",
+			false,
+		},
+		{
+			"AAAA record fail IP4",
+			"111.222.111.222",
+			"AAAA",
+			false,
+		},
+		{
+			"AAAA record ok IP6",
+			"2001:0db8:85a3:08d3::0370:7344",
+			"AAAA",
+			true,
+		},
+		{
+			"AAAA record too short",
+			"0.1.2",
+			"AAAA",
+			false,
+		},
+		{
+			"AAAA record Empty",
+			"",
+			"AAAA",
+			false,
+		},
+		{
+			"AAAA record Not an IP",
+			"for-sure-not-an-IP",
+			"AAAA",
+			false,
+		},
+		{
+			"CNAME record",
+			"some-record",
+			"CNAME",
+			true,
+		},
+		{
+			"NS record",
+			"some-record",
+			"NS",
+			true,
+		},
+		{
+			"MX record",
+			"some-record",
+			"MX",
+			true,
+		},
+		{
+			"TXT record",
+			"some-record",
+			"TXT",
+			true,
+		},
+		{
+			"ALIAS record",
+			"some-record",
+			"ALIAS",
+			true,
+		},
+		{
+			"DNAME record",
+			"some-record",
+			"DNAME",
+			true,
+		},
+		{
+			"CAA record",
+			"some-record",
+			"CAA",
+			true,
+		},
+		{
+			"random record",
+			"some-record",
+			"random",
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			r := validator.StringResponse{}
+			scheme := tftypes.Object{
+				AttributeTypes: map[string]tftypes.Type{
+					"type": tftypes.String,
+				},
+			}
+			value := map[string]tftypes.Value{
+				"type": tftypes.NewValue(tftypes.String, tt.recordType),
+			}
+			record := tftypes.NewValue(scheme, value)
+
+			RecordSet().ValidateString(context.Background(), validator.StringRequest{
+				Config: tfsdk.Config{
+					Schema: schema.Schema{
+						Attributes: map[string]schema.Attribute{
+							"type": schema.StringAttribute{},
+						},
+					},
+					Raw: record,
+				},
+				ConfigValue: types.StringValue(tt.record),
 			}, &r)
 
 			if !tt.isValid && !r.Diagnostics.HasError() {

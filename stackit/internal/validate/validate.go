@@ -10,7 +10,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
@@ -69,6 +71,51 @@ func IP() *Validator {
 					req.ConfigValue.ValueString(),
 				))
 			}
+		},
+	}
+}
+
+func RecordSet() *Validator {
+	const typePath = "type"
+	return &Validator{
+		description: "value must be a valid record set",
+		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			recordType := basetypes.StringValue{}
+			req.Config.GetAttribute(ctx, path.Root(typePath), &recordType)
+			switch recordType.ValueString() {
+			case "A":
+				ip := net.ParseIP(req.ConfigValue.ValueString())
+				if ip == nil || ip.To4() == nil {
+					resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+						req.Path,
+						"value must be an IPv4 address",
+						req.ConfigValue.ValueString(),
+					))
+				}
+			case "AAAA":
+				ip := net.ParseIP(req.ConfigValue.ValueString())
+				if ip == nil || ip.To4() != nil || ip.To16() == nil {
+					resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+						req.Path,
+						"value must be an IPv6 address",
+						req.ConfigValue.ValueString(),
+					))
+				}
+			case "CNAME":
+			case "NS":
+			case "MX":
+			case "TXT":
+			case "ALIAS":
+			case "DNAME":
+			case "CAA":
+			default:
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					"invalid record type",
+					req.ConfigValue.ValueString(),
+				))
+			}
+
 		},
 	}
 }
