@@ -671,14 +671,14 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	targetPools := []targetPool{}
-	diags = model.TargetPools.ElementsAs(ctx, &targetPools, false)
+	targetPoolsModel := []targetPool{}
+	diags = model.TargetPools.ElementsAs(ctx, &targetPoolsModel, false)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	for i := range targetPools {
-		targetPoolModel := targetPools[i]
+	for i := range targetPoolsModel {
+		targetPoolModel := targetPoolsModel[i]
 		targetPoolName := targetPoolModel.Name.ValueString()
 		ctx = tflog.SetField(ctx, "target_pool_name", targetPoolName)
 
