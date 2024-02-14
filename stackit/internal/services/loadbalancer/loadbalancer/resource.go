@@ -862,19 +862,19 @@ func toNetworksPayload(ctx context.Context, model *Model) (*[]loadbalancer.Netwo
 		return nil, nil
 	}
 
-	networks := []network{}
-	diags := model.Networks.ElementsAs(ctx, &networks, false)
+	networksModel := []network{}
+	diags := model.Networks.ElementsAs(ctx, &networksModel, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
 
-	if len(networks) == 0 {
+	if len(networksModel) == 0 {
 		return nil, nil
 	}
 
 	payload := []loadbalancer.Network{}
-	for i := range networks {
-		networkModel := networks[i]
+	for i := range networksModel {
+		networkModel := networksModel[i]
 		payload = append(payload, loadbalancer.Network{
 			NetworkId: conversion.StringValueToPointer(networkModel.NetworkId),
 			Role:      conversion.StringValueToPointer(networkModel.Role),
@@ -897,18 +897,18 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 		return nil, core.DiagsToError(diags)
 	}
 
-	accessControl := &loadbalancer.LoadbalancerOptionAccessControl{}
+	accessControlPayload := &loadbalancer.LoadbalancerOptionAccessControl{}
 	if !(optionsModel.ACL.IsNull() || optionsModel.ACL.IsUnknown()) {
 		var aclModel []string
 		diags := optionsModel.ACL.ElementsAs(ctx, &aclModel, false)
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting acl: %w", core.DiagsToError(diags))
 		}
-		accessControl.AllowedSourceRanges = &aclModel
+		accessControlPayload.AllowedSourceRanges = &aclModel
 	}
 
 	payload := loadbalancer.LoadBalancerOptions{
-		AccessControl:      accessControl,
+		AccessControl:      accessControlPayload,
 		PrivateNetworkOnly: conversion.BoolValueToPointer(optionsModel.PrivateNetworkOnly),
 	}
 
