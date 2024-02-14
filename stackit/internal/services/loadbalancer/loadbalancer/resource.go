@@ -679,7 +679,7 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 	for i := range targetPools {
 		targetPool := targetPools[i]
-		targetPoolName := model.Name.ValueString()
+		targetPoolName := targetPool.Name.ValueString()
 		ctx = tflog.SetField(ctx, "target_pool_name", targetPoolName)
 
 		// Generate API request body from model
