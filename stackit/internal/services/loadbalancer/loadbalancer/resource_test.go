@@ -40,36 +40,34 @@ func TestToCreatePayload(t *testing.T) {
 			"simple_values_ok",
 			&Model{
 				ExternalAddress: types.StringValue("external_address"),
-				Listeners: []Listener{
-					{
-						DisplayName: types.StringValue("display_name"),
-						Port:        types.Int64Value(80),
-						Protocol:    types.StringValue("protocol"),
-						ServerNameIndicators: types.ListValueMust(
-							types.ObjectType{AttrTypes: serverNameIndicatorTypes},
-							[]attr.Value{
-								types.ObjectValueMust(
-									serverNameIndicatorTypes,
-									map[string]attr.Value{
-										"name": types.StringValue("domain.com"),
-									},
-								),
-							},
+				Listeners: types.ListValueMust(types.ObjectType{AttrTypes: listenerTypes}, []attr.Value{
+					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
+						"display_name": types.StringValue("display_name"),
+						"port":         types.Int64Value(80),
+						"protocol":     types.StringValue("protocol"),
+						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
+							types.ObjectValueMust(
+								serverNameIndicatorTypes,
+								map[string]attr.Value{
+									"name": types.StringValue("domain.com"),
+								},
+							),
+						},
 						),
-						TargetPool: types.StringValue("target_pool"),
-					},
-				},
+						"target_pool": types.StringValue("target_pool"),
+					}),
+				}),
 				Name: types.StringValue("name"),
-				Networks: []Network{
-					{
-						NetworkId: types.StringValue("network_id"),
-						Role:      types.StringValue("role"),
-					},
-					{
-						NetworkId: types.StringValue("network_id_2"),
-						Role:      types.StringValue("role_2"),
-					},
-				},
+				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
+					types.ObjectValueMust(networkTypes, map[string]attr.Value{
+						"network_id": types.StringValue("network_id"),
+						"role":       types.StringValue("role"),
+					}),
+					types.ObjectValueMust(networkTypes, map[string]attr.Value{
+						"network_id": types.StringValue("network_id_2"),
+						"role":       types.StringValue("role_2"),
+					}),
+				}),
 				Options: types.ObjectValueMust(
 					optionsTypes,
 					map[string]attr.Value{
@@ -79,38 +77,32 @@ func TestToCreatePayload(t *testing.T) {
 						"private_network_only": types.BoolValue(true),
 					},
 				),
-				TargetPools: []TargetPool{
-					{
-						ActiveHealthCheck: types.ObjectValueMust(
-							activeHealthCheckTypes,
-							map[string]attr.Value{
-								"healthy_threshold":   types.Int64Value(1),
-								"interval":            types.StringValue("2s"),
-								"interval_jitter":     types.StringValue("3s"),
-								"timeout":             types.StringValue("4s"),
-								"unhealthy_threshold": types.Int64Value(5),
-							},
-						),
-						Name:       types.StringValue("name"),
-						TargetPort: types.Int64Value(80),
-						Targets: []Target{
-							{
-								DisplayName: types.StringValue("display_name"),
-								Ip:          types.StringValue("ip"),
-							},
-						},
-						SessionPersistence: types.ObjectValueMust(
-							sessionPersistenceTypes,
-							map[string]attr.Value{
-								"use_source_ip_address": types.BoolValue(true),
-							},
-						),
-					},
-				},
+				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
+					types.ObjectValueMust(targetPoolTypes, map[string]attr.Value{
+						"active_health_check": types.ObjectValueMust(activeHealthCheckTypes, map[string]attr.Value{
+							"healthy_threshold":   types.Int64Value(1),
+							"interval":            types.StringValue("2s"),
+							"interval_jitter":     types.StringValue("3s"),
+							"timeout":             types.StringValue("4s"),
+							"unhealthy_threshold": types.Int64Value(5),
+						}),
+						"name":        types.StringValue("name"),
+						"target_port": types.Int64Value(80),
+						"targets": types.ListValueMust(types.ObjectType{AttrTypes: targetTypes}, []attr.Value{
+							types.ObjectValueMust(targetTypes, map[string]attr.Value{
+								"display_name": types.StringValue("display_name"),
+								"ip":           types.StringValue("ip"),
+							}),
+						}),
+						"session_persistence": types.ObjectValueMust(sessionPersistenceTypes, map[string]attr.Value{
+							"use_source_ip_address": types.BoolValue(true),
+						}),
+					}),
+				}),
 			},
 			&loadbalancer.CreateLoadBalancerPayload{
 				ExternalAddress: utils.Ptr("external_address"),
-				Listeners: utils.Ptr([]loadbalancer.Listener{
+				Listeners: &[]loadbalancer.Listener{
 					{
 						DisplayName: utils.Ptr("display_name"),
 						Port:        utils.Ptr(int64(80)),
@@ -122,9 +114,9 @@ func TestToCreatePayload(t *testing.T) {
 						},
 						TargetPool: utils.Ptr("target_pool"),
 					},
-				}),
+				},
 				Name: utils.Ptr("name"),
-				Networks: utils.Ptr([]loadbalancer.Network{
+				Networks: &[]loadbalancer.Network{
 					{
 						NetworkId: utils.Ptr("network_id"),
 						Role:      utils.Ptr("role"),
@@ -133,35 +125,35 @@ func TestToCreatePayload(t *testing.T) {
 						NetworkId: utils.Ptr("network_id_2"),
 						Role:      utils.Ptr("role_2"),
 					},
-				}),
-				Options: utils.Ptr(loadbalancer.LoadBalancerOptions{
+				},
+				Options: &loadbalancer.LoadBalancerOptions{
 					AccessControl: &loadbalancer.LoadbalancerOptionAccessControl{
-						AllowedSourceRanges: utils.Ptr([]string{"cidr"}),
+						AllowedSourceRanges: &[]string{"cidr"},
 					},
 					PrivateNetworkOnly: utils.Ptr(true),
-				}),
-				TargetPools: utils.Ptr([]loadbalancer.TargetPool{
+				},
+				TargetPools: &[]loadbalancer.TargetPool{
 					{
-						ActiveHealthCheck: utils.Ptr(loadbalancer.ActiveHealthCheck{
+						ActiveHealthCheck: &loadbalancer.ActiveHealthCheck{
 							HealthyThreshold:   utils.Ptr(int64(1)),
 							Interval:           utils.Ptr("2s"),
 							IntervalJitter:     utils.Ptr("3s"),
 							Timeout:            utils.Ptr("4s"),
 							UnhealthyThreshold: utils.Ptr(int64(5)),
-						}),
+						},
 						Name:       utils.Ptr("name"),
 						TargetPort: utils.Ptr(int64(80)),
-						Targets: utils.Ptr([]loadbalancer.Target{
+						Targets: &[]loadbalancer.Target{
 							{
 								DisplayName: utils.Ptr("display_name"),
 								Ip:          utils.Ptr("ip"),
 							},
-						}),
-						SessionPersistence: utils.Ptr(loadbalancer.SessionPersistence{
+						},
+						SessionPersistence: &loadbalancer.SessionPersistence{
 							UseSourceIpAddress: utils.Ptr(true),
-						}),
+						},
 					},
-				}),
+				},
 			},
 			true,
 		},
@@ -194,63 +186,57 @@ func TestToCreatePayload(t *testing.T) {
 func TestToTargetPoolUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *TargetPool
+		input       *targetPool
 		expected    *loadbalancer.UpdateTargetPoolPayload
 		isValid     bool
 	}{
 		{
 			"default_values_ok",
-			&TargetPool{},
+			&targetPool{},
 			&loadbalancer.UpdateTargetPoolPayload{},
 			true,
 		},
 		{
 			"simple_values_ok",
-			&TargetPool{
-				ActiveHealthCheck: types.ObjectValueMust(
-					activeHealthCheckTypes,
-					map[string]attr.Value{
-						"healthy_threshold":   types.Int64Value(1),
-						"interval":            types.StringValue("2s"),
-						"interval_jitter":     types.StringValue("3s"),
-						"timeout":             types.StringValue("4s"),
-						"unhealthy_threshold": types.Int64Value(5),
-					},
-				),
+			&targetPool{
+				ActiveHealthCheck: types.ObjectValueMust(activeHealthCheckTypes, map[string]attr.Value{
+					"healthy_threshold":   types.Int64Value(1),
+					"interval":            types.StringValue("2s"),
+					"interval_jitter":     types.StringValue("3s"),
+					"timeout":             types.StringValue("4s"),
+					"unhealthy_threshold": types.Int64Value(5),
+				}),
 				Name:       types.StringValue("name"),
 				TargetPort: types.Int64Value(80),
-				Targets: []Target{
-					{
-						DisplayName: types.StringValue("display_name"),
-						Ip:          types.StringValue("ip"),
-					},
-				},
-				SessionPersistence: types.ObjectValueMust(
-					sessionPersistenceTypes,
-					map[string]attr.Value{
-						"use_source_ip_address": types.BoolValue(false),
-					},
-				),
+				Targets: types.ListValueMust(types.ObjectType{AttrTypes: targetTypes}, []attr.Value{
+					types.ObjectValueMust(targetTypes, map[string]attr.Value{
+						"display_name": types.StringValue("display_name"),
+						"ip":           types.StringValue("ip"),
+					}),
+				}),
+				SessionPersistence: types.ObjectValueMust(sessionPersistenceTypes, map[string]attr.Value{
+					"use_source_ip_address": types.BoolValue(false),
+				}),
 			},
 			&loadbalancer.UpdateTargetPoolPayload{
-				ActiveHealthCheck: utils.Ptr(loadbalancer.ActiveHealthCheck{
+				ActiveHealthCheck: &loadbalancer.ActiveHealthCheck{
 					HealthyThreshold:   utils.Ptr(int64(1)),
 					Interval:           utils.Ptr("2s"),
 					IntervalJitter:     utils.Ptr("3s"),
 					Timeout:            utils.Ptr("4s"),
 					UnhealthyThreshold: utils.Ptr(int64(5)),
-				}),
+				},
 				Name:       utils.Ptr("name"),
 				TargetPort: utils.Ptr(int64(80)),
-				Targets: utils.Ptr([]loadbalancer.Target{
+				Targets: &[]loadbalancer.Target{
 					{
 						DisplayName: utils.Ptr("display_name"),
 						Ip:          utils.Ptr("ip"),
 					},
-				}),
-				SessionPersistence: utils.Ptr(loadbalancer.SessionPersistence{
+				},
+				SessionPersistence: &loadbalancer.SessionPersistence{
 					UseSourceIpAddress: utils.Ptr(false),
-				}),
+				},
 			},
 			true,
 		},
@@ -303,9 +289,18 @@ func TestMapFields(t *testing.T) {
 				TargetPools: nil,
 			},
 			&Model{
-				Id:        types.StringValue("pid,name"),
-				ProjectId: types.StringValue("pid"),
-				Name:      types.StringValue("name"),
+				Id:              types.StringValue("pid,name"),
+				ProjectId:       types.StringValue("pid"),
+				ExternalAddress: types.StringNull(),
+				Listeners:       types.ListNull(types.ObjectType{AttrTypes: listenerTypes}),
+				Name:            types.StringValue("name"),
+				Networks:        types.ListNull(types.ObjectType{AttrTypes: networkTypes}),
+				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+					"acl":                  types.SetNull(types.StringType),
+					"private_network_only": types.BoolNull(),
+				}),
+				PrivateAddress: types.StringNull(),
+				TargetPools:    types.ListNull(types.ObjectType{AttrTypes: targetPoolTypes}),
 			},
 			true,
 		},
@@ -370,37 +365,35 @@ func TestMapFields(t *testing.T) {
 			&Model{
 				Id:              types.StringValue("pid,name"),
 				ProjectId:       types.StringValue("pid"),
-				Name:            types.StringValue("name"),
 				ExternalAddress: types.StringValue("external_address"),
-				Listeners: []Listener{
-					{
-						DisplayName: types.StringValue("display_name"),
-						Port:        types.Int64Value(80),
-						Protocol:    types.StringValue("protocol"),
-						ServerNameIndicators: types.ListValueMust(
-							types.ObjectType{AttrTypes: serverNameIndicatorTypes},
-							[]attr.Value{
-								types.ObjectValueMust(
-									serverNameIndicatorTypes,
-									map[string]attr.Value{
-										"name": types.StringValue("domain.com"),
-									},
-								),
-							},
+				Listeners: types.ListValueMust(types.ObjectType{AttrTypes: listenerTypes}, []attr.Value{
+					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
+						"display_name": types.StringValue("display_name"),
+						"port":         types.Int64Value(80),
+						"protocol":     types.StringValue("protocol"),
+						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
+							types.ObjectValueMust(
+								serverNameIndicatorTypes,
+								map[string]attr.Value{
+									"name": types.StringValue("domain.com"),
+								},
+							),
+						},
 						),
-						TargetPool: types.StringValue("target_pool"),
-					},
-				},
-				Networks: []Network{
-					{
-						NetworkId: types.StringValue("network_id"),
-						Role:      types.StringValue("role"),
-					},
-					{
-						NetworkId: types.StringValue("network_id_2"),
-						Role:      types.StringValue("role_2"),
-					},
-				},
+						"target_pool": types.StringValue("target_pool"),
+					}),
+				}),
+				Name: types.StringValue("name"),
+				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
+					types.ObjectValueMust(networkTypes, map[string]attr.Value{
+						"network_id": types.StringValue("network_id"),
+						"role":       types.StringValue("role"),
+					}),
+					types.ObjectValueMust(networkTypes, map[string]attr.Value{
+						"network_id": types.StringValue("network_id_2"),
+						"role":       types.StringValue("role_2"),
+					}),
+				}),
 				Options: types.ObjectValueMust(
 					optionsTypes,
 					map[string]attr.Value{
@@ -410,35 +403,28 @@ func TestMapFields(t *testing.T) {
 						"private_network_only": types.BoolValue(true),
 					},
 				),
-				TargetPools: []TargetPool{
-					{
-						ActiveHealthCheck: types.ObjectValueMust(
-							activeHealthCheckTypes,
-							map[string]attr.Value{
-								"healthy_threshold": types.Int64Value(1),
-								"interval":          types.StringValue("2s"),
-								"interval_jitter":   types.StringValue("3s"),
-								"timeout":           types.StringValue("4s"),
-
-								"unhealthy_threshold": types.Int64Value(5),
-							},
-						),
-						Name:       types.StringValue("name"),
-						TargetPort: types.Int64Value(80),
-						Targets: []Target{
-							{
-								DisplayName: types.StringValue("display_name"),
-								Ip:          types.StringValue("ip"),
-							},
-						},
-						SessionPersistence: types.ObjectValueMust(
-							sessionPersistenceTypes,
-							map[string]attr.Value{
-								"use_source_ip_address": types.BoolValue(true),
-							},
-						),
-					},
-				},
+				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
+					types.ObjectValueMust(targetPoolTypes, map[string]attr.Value{
+						"active_health_check": types.ObjectValueMust(activeHealthCheckTypes, map[string]attr.Value{
+							"healthy_threshold":   types.Int64Value(1),
+							"interval":            types.StringValue("2s"),
+							"interval_jitter":     types.StringValue("3s"),
+							"timeout":             types.StringValue("4s"),
+							"unhealthy_threshold": types.Int64Value(5),
+						}),
+						"name":        types.StringValue("name"),
+						"target_port": types.Int64Value(80),
+						"targets": types.ListValueMust(types.ObjectType{AttrTypes: targetTypes}, []attr.Value{
+							types.ObjectValueMust(targetTypes, map[string]attr.Value{
+								"display_name": types.StringValue("display_name"),
+								"ip":           types.StringValue("ip"),
+							}),
+						}),
+						"session_persistence": types.ObjectValueMust(sessionPersistenceTypes, map[string]attr.Value{
+							"use_source_ip_address": types.BoolValue(true),
+						}),
+					}),
+				}),
 			},
 			true,
 		},
@@ -460,7 +446,7 @@ func TestMapFields(t *testing.T) {
 			model := &Model{
 				ProjectId: tt.expected.ProjectId,
 			}
-			err := mapFields(context.Background(), tt.input, model)
+			err := mapFields(tt.input, model)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

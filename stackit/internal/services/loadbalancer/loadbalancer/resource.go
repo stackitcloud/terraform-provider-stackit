@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -45,16 +44,16 @@ type Model struct {
 	Id              types.String `tfsdk:"id"` // needed by TF
 	ProjectId       types.String `tfsdk:"project_id"`
 	ExternalAddress types.String `tfsdk:"external_address"`
-	Listeners       []Listener   `tfsdk:"listeners"`
+	Listeners       types.List   `tfsdk:"listeners"`
 	Name            types.String `tfsdk:"name"`
-	Networks        []Network    `tfsdk:"networks"`
+	Networks        types.List   `tfsdk:"networks"`
 	Options         types.Object `tfsdk:"options"`
 	PrivateAddress  types.String `tfsdk:"private_address"`
-	TargetPools     []TargetPool `tfsdk:"target_pools"`
+	TargetPools     types.List   `tfsdk:"target_pools"`
 }
 
-// Struct corresponding to each Model.Listener
-type Listener struct {
+// Struct corresponding to Model.Listeners[i]
+type listener struct {
 	DisplayName          types.String `tfsdk:"display_name"`
 	Port                 types.Int64  `tfsdk:"port"`
 	Protocol             types.String `tfsdk:"protocol"`
@@ -62,50 +61,69 @@ type Listener struct {
 	TargetPool           types.String `tfsdk:"target_pool"`
 }
 
-// Struct corresponding to Listener.ServerNameIndicators[i]
-type ServerNameIndicator struct {
+// Types corresponding to listener
+var listenerTypes = map[string]attr.Type{
+	"display_name":           types.StringType,
+	"port":                   types.Int64Type,
+	"protocol":               types.StringType,
+	"server_name_indicators": types.ListType{ElemType: types.ObjectType{AttrTypes: serverNameIndicatorTypes}},
+	"target_pool":            types.StringType,
+}
+
+// Struct corresponding to listener.ServerNameIndicators[i]
+type serverNameIndicator struct {
 	Name types.String `tfsdk:"name"`
 }
 
-// Types corresponding to ServerNameIndicator
+// Types corresponding to serverNameIndicator
 var serverNameIndicatorTypes = map[string]attr.Type{
-	"name": basetypes.StringType{},
+	"name": types.StringType,
 }
 
-// Struct corresponding to each Model.Network
-type Network struct {
+// Struct corresponding to Model.Networks[i]
+type network struct {
 	NetworkId types.String `tfsdk:"network_id"`
 	Role      types.String `tfsdk:"role"`
 }
 
+// Types corresponding to network
+var networkTypes = map[string]attr.Type{
+	"network_id": types.StringType,
+	"role":       types.StringType,
+}
+
 // Struct corresponding to Model.Options
-type Options struct {
+type options struct {
 	ACL                types.Set  `tfsdk:"acl"`
 	PrivateNetworkOnly types.Bool `tfsdk:"private_network_only"`
 }
 
-// Types corresponding to Options
+// Types corresponding to options
 var optionsTypes = map[string]attr.Type{
-	"acl":                  basetypes.SetType{ElemType: basetypes.StringType{}},
-	"private_network_only": basetypes.BoolType{},
+	"acl":                  types.SetType{ElemType: types.StringType},
+	"private_network_only": types.BoolType,
 }
 
-// Struct corresponding to each Model.TargetPool
-type TargetPool struct {
+// Struct corresponding to Model.TargetPools[i]
+type targetPool struct {
 	ActiveHealthCheck  types.Object `tfsdk:"active_health_check"`
 	Name               types.String `tfsdk:"name"`
 	TargetPort         types.Int64  `tfsdk:"target_port"`
-	Targets            []Target     `tfsdk:"targets"`
+	Targets            types.List   `tfsdk:"targets"`
 	SessionPersistence types.Object `tfsdk:"session_persistence"`
 }
 
-// Struct corresponding to each Model.TargetPool.SessionPersistence
-type SessionPersistence struct {
-	UseSourceIPAddress types.Bool `tfsdk:"use_source_ip_address"`
+// Types corresponding to targetPool
+var targetPoolTypes = map[string]attr.Type{
+	"active_health_check": types.ObjectType{AttrTypes: activeHealthCheckTypes},
+	"name":                types.StringType,
+	"target_port":         types.Int64Type,
+	"targets":             types.ListType{ElemType: types.ObjectType{AttrTypes: targetTypes}},
+	"session_persistence": types.ObjectType{AttrTypes: sessionPersistenceTypes},
 }
 
-// Struct corresponding to each Model.TargetPool.ActiveHealthCheck
-type ActiveHealthCheck struct {
+// Struct corresponding to targetPool.ActiveHealthCheck
+type activeHealthCheck struct {
 	HealthyThreshold   types.Int64  `tfsdk:"healthy_threshold"`
 	Interval           types.String `tfsdk:"interval"`
 	IntervalJitter     types.String `tfsdk:"interval_jitter"`
@@ -113,24 +131,35 @@ type ActiveHealthCheck struct {
 	UnhealthyThreshold types.Int64  `tfsdk:"unhealthy_threshold"`
 }
 
-// Types corresponding to ActiveHealthCheck
+// Types corresponding to activeHealthCheck
 var activeHealthCheckTypes = map[string]attr.Type{
-	"healthy_threshold":   basetypes.Int64Type{},
-	"interval":            basetypes.StringType{},
-	"interval_jitter":     basetypes.StringType{},
-	"timeout":             basetypes.StringType{},
-	"unhealthy_threshold": basetypes.Int64Type{},
+	"healthy_threshold":   types.Int64Type,
+	"interval":            types.StringType,
+	"interval_jitter":     types.StringType,
+	"timeout":             types.StringType,
+	"unhealthy_threshold": types.Int64Type,
+}
+
+// Struct corresponding to targetPool.Targets[i]
+type target struct {
+	DisplayName types.String `tfsdk:"display_name"`
+	Ip          types.String `tfsdk:"ip"`
+}
+
+// Types corresponding to target
+var targetTypes = map[string]attr.Type{
+	"display_name": types.StringType,
+	"ip":           types.StringType,
+}
+
+// Struct corresponding to targetPool.SessionPersistence
+type sessionPersistence struct {
+	UseSourceIPAddress types.Bool `tfsdk:"use_source_ip_address"`
 }
 
 // Types corresponding to SessionPersistence
 var sessionPersistenceTypes = map[string]attr.Type{
-	"use_source_ip_address": basetypes.BoolType{},
-}
-
-// Struct corresponding to each Model.TargetPool.Targets
-type Target struct {
-	DisplayName types.String `tfsdk:"display_name"`
-	Ip          types.String `tfsdk:"ip"`
+	"use_source_ip_address": types.BoolType,
 }
 
 // NewLoadBalancerResource is a helper function to simplify the provider implementation.
@@ -577,7 +606,7 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model)
+	err = mapFields(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -613,7 +642,7 @@ func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, lbResp, &model)
+	err = mapFields(lbResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -642,31 +671,42 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	for _, targetPool := range model.TargetPools {
+	targetPoolsModel := []targetPool{}
+	diags = model.TargetPools.ElementsAs(ctx, &targetPoolsModel, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	for i := range targetPoolsModel {
+		targetPoolModel := targetPoolsModel[i]
+		targetPoolName := targetPoolModel.Name.ValueString()
+		ctx = tflog.SetField(ctx, "target_pool_name", targetPoolName)
+
 		// Generate API request body from model
-		payload, err := toTargetPoolUpdatePayload(ctx, utils.Ptr(targetPool))
+		payload, err := toTargetPoolUpdatePayload(ctx, utils.Ptr(targetPoolModel))
 		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Creating API payload: %v", err))
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Creating API payload for target pool: %v", err))
 			return
 		}
 
 		// Update target pool
-		_, err = r.client.UpdateTargetPool(ctx, projectId, name, targetPool.Name.ValueString()).UpdateTargetPoolPayload(*payload).Execute()
+		_, err = r.client.UpdateTargetPool(ctx, projectId, name, targetPoolName).UpdateTargetPoolPayload(*payload).Execute()
 		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API: %v", err))
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API for target pool: %v", err))
 			return
 		}
 	}
+	ctx = tflog.SetField(ctx, "target_pool_name", nil)
 
 	// Get updated load balancer
 	getResp, err := r.client.GetLoadBalancer(ctx, projectId, name).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API after update: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, getResp, &model)
+	err = mapFields(getResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -734,197 +774,241 @@ func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoa
 		return nil, fmt.Errorf("nil model")
 	}
 
-	listeners, err := toListenersPayload(ctx, model)
+	listenersPayload, err := toListenersPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("converting listeners: %w", err)
 	}
-	networks := toNetworksPayload(model)
-	options, err := toOptionsPayload(ctx, model)
+	networksPayload, err := toNetworksPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("converting networks: %w", err)
+	}
+	optionsPayload, err := toOptionsPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("converting options: %w", err)
 	}
-	targetPools, err := toTargetPoolsPayload(ctx, model)
+	targetPoolsPayload, err := toTargetPoolsPayload(ctx, model)
 	if err != nil {
-		return nil, fmt.Errorf("converting target pools: %w", err)
+		return nil, fmt.Errorf("converting target_pools: %w", err)
 	}
 
 	return &loadbalancer.CreateLoadBalancerPayload{
 		ExternalAddress: conversion.StringValueToPointer(model.ExternalAddress),
-		Listeners:       listeners,
+		Listeners:       listenersPayload,
 		Name:            conversion.StringValueToPointer(model.Name),
-		Networks:        networks,
-		Options:         options,
-		TargetPools:     targetPools,
+		Networks:        networksPayload,
+		Options:         optionsPayload,
+		TargetPools:     targetPoolsPayload,
 	}, nil
 }
 
 func toListenersPayload(ctx context.Context, model *Model) (*[]loadbalancer.Listener, error) {
-	if model.Listeners == nil {
+	if model.Listeners.IsNull() || model.Listeners.IsUnknown() {
 		return nil, nil
 	}
 
-	listeners := []loadbalancer.Listener{}
-	for i := range model.Listeners {
-		listener := model.Listeners[i]
-		serverNameIndicators, err := toServerNameIndicatorsPayload(ctx, &listener)
-		if err != nil {
-			return nil, fmt.Errorf("converting index %d: converting ServerNameIndicator: %w", i, err)
-		}
-		listeners = append(listeners, loadbalancer.Listener{
-			DisplayName:          conversion.StringValueToPointer(listener.DisplayName),
-			Port:                 conversion.Int64ValueToPointer(listener.Port),
-			Protocol:             conversion.StringValueToPointer(listener.Protocol),
-			ServerNameIndicators: serverNameIndicators,
-			TargetPool:           conversion.StringValueToPointer(listener.TargetPool),
-		})
-	}
-
-	return &listeners, nil
-}
-
-func toServerNameIndicatorsPayload(ctx context.Context, listener *Listener) (*[]loadbalancer.ServerNameIndicator, error) {
-	serverNameIndicators := []ServerNameIndicator{}
-	diags := listener.ServerNameIndicators.ElementsAs(ctx, &serverNameIndicators, false)
+	listenersModel := []listener{}
+	diags := model.Listeners.ElementsAs(ctx, &listenersModel, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
 
-	payload := []loadbalancer.ServerNameIndicator{}
-	for i := range serverNameIndicators {
-		indicator := serverNameIndicators[i]
-		payload = append(payload, loadbalancer.ServerNameIndicator{
-			Name: conversion.StringValueToPointer(indicator.Name),
+	if len(listenersModel) == 0 {
+		return nil, nil
+	}
+
+	payload := []loadbalancer.Listener{}
+	for i := range listenersModel {
+		listenerModel := listenersModel[i]
+		serverNameIndicatorsPayload, err := toServerNameIndicatorsPayload(ctx, &listenerModel)
+		if err != nil {
+			return nil, fmt.Errorf("converting index %d: converting server_name_indicator: %w", i, err)
+		}
+		payload = append(payload, loadbalancer.Listener{
+			DisplayName:          conversion.StringValueToPointer(listenerModel.DisplayName),
+			Port:                 conversion.Int64ValueToPointer(listenerModel.Port),
+			Protocol:             conversion.StringValueToPointer(listenerModel.Protocol),
+			ServerNameIndicators: serverNameIndicatorsPayload,
+			TargetPool:           conversion.StringValueToPointer(listenerModel.TargetPool),
 		})
 	}
 
 	return &payload, nil
 }
 
-func toNetworksPayload(model *Model) *[]loadbalancer.Network {
-	if model.Networks == nil {
-		return nil
+func toServerNameIndicatorsPayload(ctx context.Context, l *listener) (*[]loadbalancer.ServerNameIndicator, error) {
+	if l.ServerNameIndicators.IsNull() || l.ServerNameIndicators.IsUnknown() {
+		return nil, nil
 	}
 
-	networks := []loadbalancer.Network{}
-	for _, network := range model.Networks {
-		networks = append(networks, loadbalancer.Network{
-			NetworkId: conversion.StringValueToPointer(network.NetworkId),
-			Role:      conversion.StringValueToPointer(network.Role),
+	serverNameIndicatorsModel := []serverNameIndicator{}
+	diags := l.ServerNameIndicators.ElementsAs(ctx, &serverNameIndicatorsModel, false)
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
+	payload := []loadbalancer.ServerNameIndicator{}
+	for i := range serverNameIndicatorsModel {
+		indicatorModel := serverNameIndicatorsModel[i]
+		payload = append(payload, loadbalancer.ServerNameIndicator{
+			Name: conversion.StringValueToPointer(indicatorModel.Name),
 		})
 	}
 
-	return &networks
+	return &payload, nil
+}
+
+func toNetworksPayload(ctx context.Context, model *Model) (*[]loadbalancer.Network, error) {
+	if model.Networks.IsNull() || model.Networks.IsUnknown() {
+		return nil, nil
+	}
+
+	networksModel := []network{}
+	diags := model.Networks.ElementsAs(ctx, &networksModel, false)
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
+	if len(networksModel) == 0 {
+		return nil, nil
+	}
+
+	payload := []loadbalancer.Network{}
+	for i := range networksModel {
+		networkModel := networksModel[i]
+		payload = append(payload, loadbalancer.Network{
+			NetworkId: conversion.StringValueToPointer(networkModel.NetworkId),
+			Role:      conversion.StringValueToPointer(networkModel.Role),
+		})
+	}
+
+	return &payload, nil
 }
 
 func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBalancerOptions, error) {
-	var optionsModel = &Options{}
-	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
-		diags := model.Options.As(ctx, optionsModel, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return nil, fmt.Errorf("%w", core.DiagsToError(diags))
-		}
+	if model.Options.IsNull() || model.Options.IsUnknown() {
+		return &loadbalancer.LoadBalancerOptions{
+			AccessControl: &loadbalancer.LoadbalancerOptionAccessControl{},
+		}, nil
 	}
 
-	accessControl := &loadbalancer.LoadbalancerOptionAccessControl{}
+	optionsModel := options{}
+	diags := model.Options.As(ctx, &optionsModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
+	accessControlPayload := &loadbalancer.LoadbalancerOptionAccessControl{}
 	if !(optionsModel.ACL.IsNull() || optionsModel.ACL.IsUnknown()) {
-		var acl []string
-		diags := optionsModel.ACL.ElementsAs(ctx, &acl, false)
+		var aclModel []string
+		diags := optionsModel.ACL.ElementsAs(ctx, &aclModel, false)
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting acl: %w", core.DiagsToError(diags))
 		}
-		accessControl.AllowedSourceRanges = &acl
+		accessControlPayload.AllowedSourceRanges = &aclModel
 	}
 
-	options := &loadbalancer.LoadBalancerOptions{
-		AccessControl:      accessControl,
+	payload := loadbalancer.LoadBalancerOptions{
+		AccessControl:      accessControlPayload,
 		PrivateNetworkOnly: conversion.BoolValueToPointer(optionsModel.PrivateNetworkOnly),
 	}
 
-	return options, nil
+	return &payload, nil
 }
 
 func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.TargetPool, error) {
-	if model.TargetPools == nil {
+	if model.TargetPools.IsNull() || model.TargetPools.IsUnknown() {
 		return nil, nil
 	}
 
-	var targetPools []loadbalancer.TargetPool
-	for _, targetPool := range model.TargetPools {
-		activeHealthCheck, err := toActiveHealthCheckPayload(ctx, utils.Ptr(targetPool))
+	targetPoolsModel := []targetPool{}
+	diags := model.TargetPools.ElementsAs(ctx, &targetPoolsModel, false)
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
+	if len(targetPoolsModel) == 0 {
+		return nil, nil
+	}
+
+	payload := []loadbalancer.TargetPool{}
+	for i := range targetPoolsModel {
+		targetPoolModel := targetPoolsModel[i]
+
+		activeHealthCheckPayload, err := toActiveHealthCheckPayload(ctx, &targetPoolModel)
 		if err != nil {
-			return nil, fmt.Errorf("converting target pool: %w", err)
+			return nil, fmt.Errorf("converting index %d: converting active_health_check: %w", i, err)
+		}
+		sessionPersistencePayload, err := toSessionPersistencePayload(ctx, &targetPoolModel)
+		if err != nil {
+			return nil, fmt.Errorf("converting index %d: converting session_persistence: %w", i, err)
+		}
+		targetsPayload, err := toTargetsPayload(ctx, &targetPoolModel)
+		if err != nil {
+			return nil, fmt.Errorf("converting index %d: converting targets: %w", i, err)
 		}
 
-		targets := toTargetsPayload(utils.Ptr(targetPool))
-		if err != nil {
-			return nil, fmt.Errorf("converting target pool: %w", err)
-		}
-
-		session_persistence, err := toSessionPersistencePayload(ctx, utils.Ptr(targetPool))
-		if err != nil {
-			return nil, fmt.Errorf("converting target pool: %w", err)
-		}
-		targetPools = append(targetPools, loadbalancer.TargetPool{
-			ActiveHealthCheck:  activeHealthCheck,
-			Name:               conversion.StringValueToPointer(targetPool.Name),
-			TargetPort:         conversion.Int64ValueToPointer(targetPool.TargetPort),
-			Targets:            targets,
-			SessionPersistence: session_persistence,
+		payload = append(payload, loadbalancer.TargetPool{
+			ActiveHealthCheck:  activeHealthCheckPayload,
+			Name:               conversion.StringValueToPointer(targetPoolModel.Name),
+			SessionPersistence: sessionPersistencePayload,
+			TargetPort:         conversion.Int64ValueToPointer(targetPoolModel.TargetPort),
+			Targets:            targetsPayload,
 		})
 	}
 
-	return &targetPools, nil
+	return &payload, nil
 }
 
-func toTargetPoolUpdatePayload(ctx context.Context, targetPool *TargetPool) (*loadbalancer.UpdateTargetPoolPayload, error) {
-	if targetPool == nil {
+func toTargetPoolUpdatePayload(ctx context.Context, tp *targetPool) (*loadbalancer.UpdateTargetPoolPayload, error) {
+	if tp == nil {
 		return nil, fmt.Errorf("nil target pool")
 	}
 
-	activeHealthCheck, err := toActiveHealthCheckPayload(ctx, targetPool)
+	activeHealthCheckPayload, err := toActiveHealthCheckPayload(ctx, tp)
 	if err != nil {
-		return nil, fmt.Errorf("converting target pool: %w", err)
+		return nil, fmt.Errorf("converting active_health_check: %w", err)
 	}
-
-	targets := toTargetsPayload(targetPool)
-
-	session_persistence, err := toSessionPersistencePayload(ctx, targetPool)
+	sessionPersistencePayload, err := toSessionPersistencePayload(ctx, tp)
 	if err != nil {
-		return nil, fmt.Errorf("converting target pool: %w", err)
+		return nil, fmt.Errorf("converting session_persistence: %w", err)
+	}
+	targetsPayload, err := toTargetsPayload(ctx, tp)
+	if err != nil {
+		return nil, fmt.Errorf("converting targets: %w", err)
 	}
 
 	return &loadbalancer.UpdateTargetPoolPayload{
-		ActiveHealthCheck:  activeHealthCheck,
-		Name:               conversion.StringValueToPointer(targetPool.Name),
-		TargetPort:         conversion.Int64ValueToPointer(targetPool.TargetPort),
-		Targets:            targets,
-		SessionPersistence: session_persistence,
+		ActiveHealthCheck:  activeHealthCheckPayload,
+		Name:               conversion.StringValueToPointer(tp.Name),
+		SessionPersistence: sessionPersistencePayload,
+		TargetPort:         conversion.Int64ValueToPointer(tp.TargetPort),
+		Targets:            targetsPayload,
 	}, nil
 }
 
-func toSessionPersistencePayload(ctx context.Context, targetPool *TargetPool) (*loadbalancer.SessionPersistence, error) {
-	if targetPool.SessionPersistence.IsNull() || targetPool.ActiveHealthCheck.IsUnknown() {
+func toSessionPersistencePayload(ctx context.Context, tp *targetPool) (*loadbalancer.SessionPersistence, error) {
+	if tp.SessionPersistence.IsNull() || tp.ActiveHealthCheck.IsUnknown() {
 		return nil, nil
 	}
 
-	var session_persistence SessionPersistence
-	diags := targetPool.SessionPersistence.As(ctx, &session_persistence, basetypes.ObjectAsOptions{})
+	sessionPersistenceModel := sessionPersistence{}
+	diags := tp.SessionPersistence.As(ctx, &sessionPersistenceModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		return nil, fmt.Errorf("converting session persistence: %w", core.DiagsToError(diags))
+		return nil, core.DiagsToError(diags)
 	}
 
 	return &loadbalancer.SessionPersistence{
-		UseSourceIpAddress: conversion.BoolValueToPointer(session_persistence.UseSourceIPAddress),
+		UseSourceIpAddress: conversion.BoolValueToPointer(sessionPersistenceModel.UseSourceIPAddress),
 	}, nil
 }
 
-func toActiveHealthCheckPayload(ctx context.Context, targetPool *TargetPool) (*loadbalancer.ActiveHealthCheck, error) {
-	if targetPool.ActiveHealthCheck.IsNull() || targetPool.ActiveHealthCheck.IsUnknown() {
+func toActiveHealthCheckPayload(ctx context.Context, tp *targetPool) (*loadbalancer.ActiveHealthCheck, error) {
+	if tp.ActiveHealthCheck.IsNull() || tp.ActiveHealthCheck.IsUnknown() {
 		return nil, nil
 	}
 
-	var activeHealthCheckModel ActiveHealthCheck
-	diags := targetPool.ActiveHealthCheck.As(ctx, &activeHealthCheckModel, basetypes.ObjectAsOptions{})
+	activeHealthCheckModel := activeHealthCheck{}
+	diags := tp.ActiveHealthCheck.As(ctx, &activeHealthCheckModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
 	}
@@ -938,23 +1022,34 @@ func toActiveHealthCheckPayload(ctx context.Context, targetPool *TargetPool) (*l
 	}, nil
 }
 
-func toTargetsPayload(targetPool *TargetPool) *[]loadbalancer.Target {
-	if targetPool.Targets == nil {
-		return nil
+func toTargetsPayload(ctx context.Context, tp *targetPool) (*[]loadbalancer.Target, error) {
+	if tp.Targets.IsNull() || tp.Targets.IsUnknown() {
+		return nil, nil
 	}
 
-	var targets []loadbalancer.Target
-	for _, target := range targetPool.Targets {
-		targets = append(targets, loadbalancer.Target{
-			DisplayName: conversion.StringValueToPointer(target.DisplayName),
-			Ip:          conversion.StringValueToPointer(target.Ip),
+	targetsModel := []target{}
+	diags := tp.Targets.ElementsAs(ctx, &targetsModel, false)
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting Targets list: %w", core.DiagsToError(diags))
+	}
+
+	if len(targetsModel) == 0 {
+		return nil, nil
+	}
+
+	payload := []loadbalancer.Target{}
+	for i := range targetsModel {
+		targetModel := targetsModel[i]
+		payload = append(payload, loadbalancer.Target{
+			DisplayName: conversion.StringValueToPointer(targetModel.DisplayName),
+			Ip:          conversion.StringValueToPointer(targetModel.Ip),
 		})
 	}
 
-	return &targets
+	return &payload, nil
 }
 
-func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) error {
+func mapFields(lb *loadbalancer.LoadBalancer, m *Model) error {
 	if lb == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -986,8 +1081,11 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) err
 	if err != nil {
 		return fmt.Errorf("mapping listeners: %w", err)
 	}
-	mapNetworks(lb, m)
-	err = mapOptions(ctx, lb, m)
+	err = mapNetworks(lb, m)
+	if err != nil {
+		return fmt.Errorf("mapping network: %w", err)
+	}
+	err = mapOptions(lb, m)
 	if err != nil {
 		return fmt.Errorf("mapping options: %w", err)
 	}
@@ -999,160 +1097,275 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) err
 	return nil
 }
 
-func mapServerNameIndicators(serverNameIndicatorsResp *[]loadbalancer.ServerNameIndicator, l *Listener) error {
-	if serverNameIndicatorsResp == nil || *serverNameIndicatorsResp == nil {
-		l.ServerNameIndicators = types.ListNull(types.ObjectType{AttrTypes: serverNameIndicatorTypes})
+func mapListeners(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
+	if loadBalancerResp.Listeners == nil {
+		m.Listeners = types.ListNull(types.ObjectType{AttrTypes: listenerTypes})
 		return nil
 	}
 
-	serverNameIndicators := []attr.Value{}
-	for i, serverNameIndicatorResp := range *serverNameIndicatorsResp {
-		serverNameIndicator := map[string]attr.Value{
-			"name": types.StringPointerValue(serverNameIndicatorResp.Name),
+	listenersList := []attr.Value{}
+	for i, listenerResp := range *loadBalancerResp.Listeners {
+		listenerMap := map[string]attr.Value{
+			"display_name": types.StringPointerValue(listenerResp.DisplayName),
+			"port":         types.Int64PointerValue(listenerResp.Port),
+			"protocol":     types.StringPointerValue(listenerResp.Protocol),
+			"target_pool":  types.StringPointerValue(listenerResp.TargetPool),
 		}
-		serverNameIndicatorTF, diags := basetypes.NewObjectValue(serverNameIndicatorTypes, serverNameIndicator)
+
+		err := mapServerNameIndicators(listenerResp.ServerNameIndicators, listenerMap)
+		if err != nil {
+			return fmt.Errorf("mapping index %d, field serverNameIndicators: %w", i, err)
+		}
+
+		listenerTF, diags := types.ObjectValue(listenerTypes, listenerMap)
 		if diags.HasError() {
 			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
 		}
-		serverNameIndicators = append(serverNameIndicators, serverNameIndicatorTF)
+
+		listenersList = append(listenersList, listenerTF)
 	}
 
-	serverNameIndicatorsTF, diags := basetypes.NewListValue(
-		types.ObjectType{AttrTypes: serverNameIndicatorTypes},
-		serverNameIndicators,
+	listenersTF, diags := types.ListValue(
+		types.ObjectType{AttrTypes: listenerTypes},
+		listenersList,
 	)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
 
-	l.ServerNameIndicators = serverNameIndicatorsTF
+	m.Listeners = listenersTF
 	return nil
 }
 
-func mapListeners(lb *loadbalancer.LoadBalancer, m *Model) error {
-	if lb.Listeners == nil {
+func mapServerNameIndicators(serverNameIndicatorsResp *[]loadbalancer.ServerNameIndicator, l map[string]attr.Value) error {
+	if serverNameIndicatorsResp == nil || *serverNameIndicatorsResp == nil {
+		l["server_name_indicators"] = types.ListNull(types.ObjectType{AttrTypes: serverNameIndicatorTypes})
 		return nil
 	}
 
-	var listeners []Listener
-	for i, listener := range *lb.Listeners {
-		listenerTF := Listener{
-			DisplayName: types.StringPointerValue(listener.DisplayName),
-			Port:        types.Int64PointerValue(listener.Port),
-			Protocol:    types.StringPointerValue(listener.Protocol),
-			TargetPool:  types.StringPointerValue(listener.TargetPool),
+	serverNameIndicatorsList := []attr.Value{}
+	for i, serverNameIndicatorResp := range *serverNameIndicatorsResp {
+		serverNameIndicatorMap := map[string]attr.Value{
+			"name": types.StringPointerValue(serverNameIndicatorResp.Name),
 		}
-		err := mapServerNameIndicators(listener.ServerNameIndicators, &listenerTF)
+
+		serverNameIndicatorTF, diags := types.ObjectValue(serverNameIndicatorTypes, serverNameIndicatorMap)
+		if diags.HasError() {
+			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
+		}
+
+		serverNameIndicatorsList = append(serverNameIndicatorsList, serverNameIndicatorTF)
+	}
+
+	serverNameIndicatorsTF, diags := types.ListValue(
+		types.ObjectType{AttrTypes: serverNameIndicatorTypes},
+		serverNameIndicatorsList,
+	)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	l["server_name_indicators"] = serverNameIndicatorsTF
+	return nil
+}
+
+func mapNetworks(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
+	if loadBalancerResp.Networks == nil {
+		m.Networks = types.ListNull(types.ObjectType{AttrTypes: networkTypes})
+		return nil
+	}
+
+	networksList := []attr.Value{}
+	for i, networkResp := range *loadBalancerResp.Networks {
+		networkMap := map[string]attr.Value{
+			"network_id": types.StringPointerValue(networkResp.NetworkId),
+			"role":       types.StringPointerValue(networkResp.Role),
+		}
+
+		networkTF, diags := types.ObjectValue(networkTypes, networkMap)
+		if diags.HasError() {
+			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
+		}
+
+		networksList = append(networksList, networkTF)
+	}
+
+	networksTF, diags := types.ListValue(
+		types.ObjectType{AttrTypes: networkTypes},
+		networksList,
+	)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	m.Networks = networksTF
+	return nil
+}
+
+func mapOptions(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
+	if loadBalancerResp.Options == nil {
+		m.Options = types.ObjectNull(optionsTypes)
+		return nil
+	}
+
+	optionsMap := map[string]attr.Value{
+		"private_network_only": types.BoolPointerValue(loadBalancerResp.Options.PrivateNetworkOnly),
+	}
+
+	err := mapACL(loadBalancerResp.Options.AccessControl, optionsMap)
+	if err != nil {
+		return fmt.Errorf("mapping field ACL: %w", err)
+	}
+
+	optionsTF, diags := types.ObjectValue(optionsTypes, optionsMap)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	m.Options = optionsTF
+	return nil
+}
+
+func mapACL(accessControlResp *loadbalancer.LoadbalancerOptionAccessControl, o map[string]attr.Value) error {
+	if accessControlResp == nil || accessControlResp.AllowedSourceRanges == nil {
+		o["acl"] = types.SetNull(types.StringType)
+		return nil
+	}
+
+	aclList := []attr.Value{}
+	for _, rangeResp := range *accessControlResp.AllowedSourceRanges {
+		rangeTF := types.StringValue(rangeResp)
+		aclList = append(aclList, rangeTF)
+	}
+
+	aclTF, diags := types.SetValue(types.StringType, aclList)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	o["acl"] = aclTF
+	return nil
+}
+
+func mapTargetPools(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
+	if loadBalancerResp.TargetPools == nil {
+		m.TargetPools = types.ListNull(types.ObjectType{AttrTypes: targetPoolTypes})
+		return nil
+	}
+
+	targetPoolsList := []attr.Value{}
+	for i, targetPoolResp := range *loadBalancerResp.TargetPools {
+		targetPoolMap := map[string]attr.Value{
+			"name":        types.StringPointerValue(targetPoolResp.Name),
+			"target_port": types.Int64PointerValue(targetPoolResp.TargetPort),
+		}
+
+		err := mapActiveHealthCheck(targetPoolResp.ActiveHealthCheck, targetPoolMap)
 		if err != nil {
-			return fmt.Errorf("mapping index %d, field serverNameIndicators: %w", i, err)
+			return fmt.Errorf("mapping index %d, field ActiveHealthCheck: %w", i, err)
 		}
-		listeners = append(listeners, listenerTF)
+
+		err = mapTargets(targetPoolResp.Targets, targetPoolMap)
+		if err != nil {
+			return fmt.Errorf("mapping index %d, field Targets: %w", i, err)
+		}
+
+		err = mapSessionPersistence(targetPoolResp.SessionPersistence, targetPoolMap)
+		if err != nil {
+			return fmt.Errorf("mapping index %d, field SessionPersistence: %w", i, err)
+		}
+
+		targetPoolTF, diags := types.ObjectValue(targetPoolTypes, targetPoolMap)
+		if diags.HasError() {
+			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
+		}
+
+		targetPoolsList = append(targetPoolsList, targetPoolTF)
 	}
-	m.Listeners = listeners
+
+	targetPoolsTF, diags := types.ListValue(
+		types.ObjectType{AttrTypes: targetPoolTypes},
+		targetPoolsList,
+	)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	m.TargetPools = targetPoolsTF
 	return nil
 }
 
-func mapNetworks(lb *loadbalancer.LoadBalancer, m *Model) {
-	if lb.Networks == nil {
-		return
-	}
-
-	var networks []Network
-	for _, network := range *lb.Networks {
-		networks = append(networks, Network{
-			NetworkId: types.StringPointerValue(network.NetworkId),
-			Role:      types.StringPointerValue(network.Role),
-		})
-	}
-	m.Networks = networks
-}
-
-func mapOptions(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) error {
-	if lb.Options == nil {
+func mapActiveHealthCheck(activeHealthCheckResp *loadbalancer.ActiveHealthCheck, tp map[string]attr.Value) error {
+	if activeHealthCheckResp == nil {
+		tp["active_health_check"] = types.ObjectNull(activeHealthCheckTypes)
 		return nil
 	}
 
-	var diags diag.Diagnostics
-	acl := types.SetNull(types.StringType)
-	if lb.Options.AccessControl != nil && lb.Options.AccessControl.AllowedSourceRanges != nil {
-		acl, diags = types.SetValueFrom(ctx, types.StringType, *lb.Options.AccessControl.AllowedSourceRanges)
-		if diags != nil {
-			return fmt.Errorf("converting acl: %w", core.DiagsToError(diags))
-		}
-	}
-	privateNetworkOnly := types.BoolNull()
-	if lb.Options.PrivateNetworkOnly != nil {
-		privateNetworkOnly = types.BoolValue(*lb.Options.PrivateNetworkOnly)
-	}
-	if acl.IsNull() && privateNetworkOnly.IsNull() {
-		return nil
+	activeHealthCheckMap := map[string]attr.Value{
+		"healthy_threshold":   types.Int64PointerValue(activeHealthCheckResp.HealthyThreshold),
+		"interval":            types.StringPointerValue(activeHealthCheckResp.Interval),
+		"interval_jitter":     types.StringPointerValue(activeHealthCheckResp.IntervalJitter),
+		"timeout":             types.StringPointerValue(activeHealthCheckResp.Timeout),
+		"unhealthy_threshold": types.Int64PointerValue(activeHealthCheckResp.UnhealthyThreshold),
 	}
 
-	optionsValues := map[string]attr.Value{
-		"acl":                  acl,
-		"private_network_only": privateNetworkOnly,
+	activeHealthCheckTF, diags := types.ObjectValue(activeHealthCheckTypes, activeHealthCheckMap)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
 	}
-	options, diags := types.ObjectValue(optionsTypes, optionsValues)
-	if diags != nil {
-		return fmt.Errorf("converting options: %w", core.DiagsToError(diags))
-	}
-	m.Options = options
 
+	tp["active_health_check"] = activeHealthCheckTF
 	return nil
 }
 
-func mapTargetPools(lb *loadbalancer.LoadBalancer, m *Model) error {
-	if lb.TargetPools == nil {
+func mapTargets(targetsResp *[]loadbalancer.Target, tp map[string]attr.Value) error {
+	if targetsResp == nil || *targetsResp == nil {
+		tp["targets"] = types.ListNull(types.ObjectType{AttrTypes: targetTypes})
 		return nil
 	}
 
-	var diags diag.Diagnostics
-	var targetPools []TargetPool
-	for _, targetPool := range *lb.TargetPools {
-		var activeHealthCheck basetypes.ObjectValue
-		var sessionPersistence basetypes.ObjectValue
-		if targetPool.ActiveHealthCheck != nil {
-			activeHealthCheckValues := map[string]attr.Value{
-				"healthy_threshold":   types.Int64Value(*targetPool.ActiveHealthCheck.HealthyThreshold),
-				"interval":            types.StringValue(*targetPool.ActiveHealthCheck.Interval),
-				"interval_jitter":     types.StringValue(*targetPool.ActiveHealthCheck.IntervalJitter),
-				"timeout":             types.StringValue(*targetPool.ActiveHealthCheck.Timeout),
-				"unhealthy_threshold": types.Int64Value(*targetPool.ActiveHealthCheck.UnhealthyThreshold),
-			}
-			activeHealthCheck, diags = types.ObjectValue(activeHealthCheckTypes, activeHealthCheckValues)
-			if diags != nil {
-				return fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
-			}
-		}
-		if targetPool.SessionPersistence != nil {
-			sessionPersistenceValues := map[string]attr.Value{
-				"use_source_ip_address": types.BoolValue(*targetPool.SessionPersistence.UseSourceIpAddress),
-			}
-			sessionPersistence, diags = types.ObjectValue(sessionPersistenceTypes, sessionPersistenceValues)
-			if diags != nil {
-				return fmt.Errorf("converting session persistence: %w", core.DiagsToError(diags))
-			}
+	targetsList := []attr.Value{}
+	for i, targetResp := range *targetsResp {
+		targetMap := map[string]attr.Value{
+			"display_name": types.StringPointerValue(targetResp.DisplayName),
+			"ip":           types.StringPointerValue(targetResp.Ip),
 		}
 
-		var targets []Target
-		if targetPool.Targets != nil {
-			for _, target := range *targetPool.Targets {
-				targets = append(targets, Target{
-					DisplayName: types.StringPointerValue(target.DisplayName),
-					Ip:          types.StringPointerValue(target.Ip),
-				})
-			}
+		targetTF, diags := types.ObjectValue(targetTypes, targetMap)
+		if diags.HasError() {
+			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
 		}
 
-		targetPools = append(targetPools, TargetPool{
-			ActiveHealthCheck:  activeHealthCheck,
-			Name:               types.StringPointerValue(targetPool.Name),
-			TargetPort:         types.Int64Value(*targetPool.TargetPort),
-			Targets:            targets,
-			SessionPersistence: sessionPersistence,
-		})
+		targetsList = append(targetsList, targetTF)
 	}
-	m.TargetPools = targetPools
 
+	targetsTF, diags := types.ListValue(
+		types.ObjectType{AttrTypes: targetTypes},
+		targetsList,
+	)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	tp["targets"] = targetsTF
+	return nil
+}
+
+func mapSessionPersistence(sessionPersistenceResp *loadbalancer.SessionPersistence, tp map[string]attr.Value) error {
+	if sessionPersistenceResp == nil {
+		tp["session_persistence"] = types.ObjectNull(sessionPersistenceTypes)
+		return nil
+	}
+
+	sessionPersistenceMap := map[string]attr.Value{
+		"use_source_ip_address": types.BoolPointerValue(sessionPersistenceResp.UseSourceIpAddress),
+	}
+
+	sessionPersistenceTF, diags := types.ObjectValue(sessionPersistenceTypes, sessionPersistenceMap)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	tp["session_persistence"] = sessionPersistenceTF
 	return nil
 }
