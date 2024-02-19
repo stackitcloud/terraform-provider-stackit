@@ -228,8 +228,9 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Description: descriptions["token_custom_endpoint"],
 			},
 			"jwks_custom_endpoint": schema.StringAttribute{
-				Optional:    true,
-				Description: descriptions["jwks_custom_endpoint"],
+				Optional:           true,
+				Description:        descriptions["jwks_custom_endpoint"],
+				DeprecationMessage: "Validation using JWKS was removed, for being redundant with token validation done in the APIs. This field has no effect, and will be removed in a later update",
 			},
 		},
 	}
@@ -320,9 +321,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	}
 	if !(providerConfig.TokenCustomEndpoint.IsUnknown() || providerConfig.TokenCustomEndpoint.IsNull()) {
 		sdkConfig.TokenCustomUrl = providerConfig.TokenCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.JWKSCustomEndpoint.IsUnknown() || providerConfig.JWKSCustomEndpoint.IsNull()) {
-		sdkConfig.JWKSCustomUrl = providerConfig.JWKSCustomEndpoint.ValueString()
 	}
 	roundTripper, err := sdkauth.SetupAuth(sdkConfig)
 	if err != nil {
