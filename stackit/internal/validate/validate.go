@@ -108,12 +108,8 @@ func RecordSet() *Validator {
 			case "ALIAS":
 			case "DNAME":
 			case "CAA":
+			case "PTR":
 			default:
-				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
-					req.Path,
-					"invalid record type",
-					req.ConfigValue.ValueString(),
-				))
 			}
 		},
 	}

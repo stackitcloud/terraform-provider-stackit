@@ -214,10 +214,16 @@ func TestRecordSet(t *testing.T) {
 			true,
 		},
 		{
+			"PTR record",
+			"some-record",
+			"PTR",
+			true,
+		},
+		{
 			"random record",
 			"some-record",
 			"random",
-			false,
+			true,
 		},
 	}
 	for _, tt := range tests {
