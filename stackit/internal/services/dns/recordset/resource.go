@@ -158,7 +158,7 @@ func (r *recordSetResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Validators: []validator.List{
 					listvalidator.SizeAtLeast(1),
 					listvalidator.UniqueValues(),
-					listvalidator.ValueStringsAre(validate.IP()),
+					listvalidator.ValueStringsAre(validate.RecordSet()),
 				},
 			},
 			"ttl": schema.Int64Attribute{
