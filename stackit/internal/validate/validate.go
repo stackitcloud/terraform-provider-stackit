@@ -108,7 +108,6 @@ func RecordSet() *Validator {
 			case "ALIAS":
 			case "DNAME":
 			case "CAA":
-			case "PTR":
 			default:
 			}
 		},
