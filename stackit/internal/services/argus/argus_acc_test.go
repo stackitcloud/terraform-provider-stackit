@@ -322,7 +322,9 @@ func testAccCheckArgusDestroy(s *terraform.State) error {
 	var client *argus.APIClient
 	var err error
 	if testutil.ArgusCustomEndpoint == "" {
-		client, err = argus.NewAPIClient()
+		client, err = argus.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
 	} else {
 		client, err = argus.NewAPIClient(
 			config.WithEndpoint(testutil.ArgusCustomEndpoint),

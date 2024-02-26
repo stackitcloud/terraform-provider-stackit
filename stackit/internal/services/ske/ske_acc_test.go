@@ -28,7 +28,7 @@ var clusterResource = map[string]string{
 	"kubernetes_version":                               "1.25",
 	"kubernetes_version_used":                          "1.25.16",
 	"kubernetes_version_new":                           "1.26",
-	"kubernetes_version_used_new":                      "1.26.13",
+	"kubernetes_version_used_new":                      "1.26.14",
 	"nodepool_name":                                    "np-acc-test",
 	"nodepool_name_min":                                "np-acc-min-test",
 	"nodepool_machine_type":                            "b1.2",
