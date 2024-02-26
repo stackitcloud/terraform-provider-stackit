@@ -65,7 +65,9 @@ var (
 
 func ArgusProviderConfig() string {
 	if ArgusCustomEndpoint == "" {
-		return `provider "stackit" {}`
+		return `provider "stackit" {
+			region = "eu01"
+		}`
 	}
 	return fmt.Sprintf(`
 		provider "stackit" {
