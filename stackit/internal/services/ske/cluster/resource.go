@@ -1337,11 +1337,13 @@ func latestMatchingVersion(availableVersions []ske.KubernetesVersion, providedVe
 	}
 
 	var versionUsed *string
+	var availableVersionsArray []string
 	// Get the higher available version that matches the major and minor version provided by the user
 	for _, v := range availableVersions {
 		if v.State == nil || v.Version == nil {
 			continue
 		}
+		availableVersionsArray = append(availableVersionsArray, *v.Version)
 		vPreffixed := "v" + *v.Version
 		if semver.MajorMinor(vPreffixed) == semver.MajorMinor(providedVersionPrefixed) &&
 			(semver.Compare(vPreffixed, providedVersionPrefixed) == 1 || semver.Compare(vPreffixed, providedVersionPrefixed) == 0) {
@@ -1357,7 +1359,7 @@ func latestMatchingVersion(availableVersions []ske.KubernetesVersion, providedVe
 
 	// Throwing error if we could not match the version with the available versions
 	if versionUsed == nil {
-		return nil, false, fmt.Errorf("provided version is not one of the available kubernetes versions")
+		return nil, false, fmt.Errorf("provided version is not one of the available kubernetes versions, available versions are: %s", strings.Join(availableVersionsArray, ","))
 	}
 
 	return versionUsed, deprecated, nil
