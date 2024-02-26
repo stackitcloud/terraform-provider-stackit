@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.21.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.6.0
-	github.com/stackitcloud/stackit-sdk-go/core v0.9.0
+	github.com/stackitcloud/stackit-sdk-go/core v0.10.0-beta-3
 	github.com/stackitcloud/stackit-sdk-go/services/argus v0.9.4
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.8.3
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.9.1
@@ -34,7 +34,6 @@ require (
 	github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
-	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/go-git/go-git/v5 v5.11.0 // indirect
