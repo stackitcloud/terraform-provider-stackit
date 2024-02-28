@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/mux"
@@ -464,7 +463,6 @@ func TestUpdateACLs(t *testing.T) {
 			client, err := secretsmanager.NewAPIClient(
 				config.WithEndpoint(mockedServer.URL),
 				config.WithoutAuthentication(),
-				config.WithRetryTimeout(time.Millisecond),
 			)
 			if err != nil {
 				t.Fatalf("Failed to initialize client: %v", err)
