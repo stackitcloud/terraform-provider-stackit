@@ -40,7 +40,7 @@ resource "stackit_mongodbflex_instance" "example" {
 ### Required
 
 - `acl` (List of String) The Access Control List (ACL) for the MongoDB Flex instance.
-- `backup_schedule` (String)
+- `backup_schedule` (String) The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").
 - `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
 - `name` (String) Instance name.
 - `options` (Attributes) (see [below for nested schema](#nestedatt--options))
