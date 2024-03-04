@@ -204,7 +204,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Required:    true,
 			},
 			"backup_schedule": schema.StringAttribute{
-				Required: true,
+				Description: descriptions["backup_schedule"],
+				Required:    true,
 			},
 			"flavor": schema.SingleNestedAttribute{
 				Required: true,
