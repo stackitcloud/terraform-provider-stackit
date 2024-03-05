@@ -27,7 +27,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.7.7
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.5.6
 	github.com/stackitcloud/stackit-sdk-go/services/ske v0.10.1
-	golang.org/x/mod v0.15.0
+	golang.org/x/mod v0.16.0
 )
 
 require (
