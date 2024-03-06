@@ -3,25 +3,25 @@
 page_title: "stackit_ske_cluster Resource - stackit"
 subcategory: ""
 description: |-
-  SKE Cluster Resource schema.
+  SKE Cluster Resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_ske_cluster (Resource)
 
-SKE Cluster Resource schema.
+SKE Cluster Resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
 ```terraform
 resource "stackit_ske_cluster" "example" {
   project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name               = "example-name"
+  name               = "example"
   kubernetes_version = "1.25"
   node_pools = [
     {
       name               = "np-example"
-      machine_type       = "b1.2"
-      os_version         = "3510.2.5"
+      machine_type       = "x.x"
+      os_version         = "x.x.x"
       minimum            = "2"
       maximum            = "3"
       availability_zones = ["eu01-3"]
@@ -58,7 +58,7 @@ Deprecated as of Kubernetes 1.25 and later
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`name`".
-- `kube_config` (String, Sensitive) Kube config file used for connecting to the cluster
+- `kube_config` (String, Sensitive, Deprecated) Static token kubeconfig used for connecting to the cluster. This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see How to rotate SKE credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).
 - `kubernetes_version_used` (String) Full Kubernetes version used. For example, if 1.22 was selected, this value may result to 1.22.15
 
 <a id="nestedatt--node_pools"></a>
@@ -111,8 +111,11 @@ Optional:
 
 Required:
 
-- `allowed_cidrs` (List of String) Specify a list of CIDRs to whitelist.
 - `enabled` (Boolean) Is ACL enabled?
+
+Optional:
+
+- `allowed_cidrs` (List of String) Specify a list of CIDRs to whitelist.
 
 
 <a id="nestedatt--extensions--argus"></a>

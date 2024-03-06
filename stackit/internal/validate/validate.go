@@ -6,10 +6,13 @@ import (
 	"net"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
@@ -72,6 +75,45 @@ func IP() *Validator {
 	}
 }
 
+func RecordSet() *Validator {
+	const typePath = "type"
+	return &Validator{
+		description: "value must be a valid record set",
+		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			recordType := basetypes.StringValue{}
+			req.Config.GetAttribute(ctx, path.Root(typePath), &recordType)
+			switch recordType.ValueString() {
+			case "A":
+				ip := net.ParseIP(req.ConfigValue.ValueString())
+				if ip == nil || ip.To4() == nil {
+					resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+						req.Path,
+						"value must be an IPv4 address",
+						req.ConfigValue.ValueString(),
+					))
+				}
+			case "AAAA":
+				ip := net.ParseIP(req.ConfigValue.ValueString())
+				if ip == nil || ip.To4() != nil || ip.To16() == nil {
+					resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+						req.Path,
+						"value must be an IPv6 address",
+						req.ConfigValue.ValueString(),
+					))
+				}
+			case "CNAME":
+			case "NS":
+			case "MX":
+			case "TXT":
+			case "ALIAS":
+			case "DNAME":
+			case "CAA":
+			default:
+			}
+		},
+	}
+}
+
 func NoSeparator() *Validator {
 	description := fmt.Sprintf("value must not contain identifier separator '%s'", core.Separator)
 
@@ -102,6 +144,52 @@ func MinorVersionNumber() *Validator {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
 					description,
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
+
+func RFC3339SecondsOnly() *Validator {
+	description := "value must be in RFC339 format (seconds only)"
+
+	return &Validator{
+		description: description,
+		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			t, err := time.Parse(time.RFC3339, req.ConfigValue.ValueString())
+			if err != nil {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
+				return
+			}
+
+			// Check if it failed because it has nanoseconds
+			if t.Nanosecond() != 0 {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					"value can't have fractional seconds",
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
+
+func CIDR() *Validator {
+	description := "value must be in CIDR notation"
+
+	return &Validator{
+		description: description,
+		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			_, _, err := net.ParseCIDR(req.ConfigValue.ValueString())
+			if err != nil {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					fmt.Sprintf("parsing value in CIDR notation: %s", err.Error()),
 					req.ConfigValue.ValueString(),
 				))
 			}

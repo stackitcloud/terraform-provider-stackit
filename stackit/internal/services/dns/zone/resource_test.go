@@ -56,12 +56,12 @@ func TestMapFields(t *testing.T) {
 					Active:            utils.Ptr(false),
 					CreationStarted:   utils.Ptr("bar"),
 					CreationFinished:  utils.Ptr("foo"),
-					DefaultTTL:        utils.Ptr(int32(1)),
-					ExpireTime:        utils.Ptr(int32(2)),
-					RefreshTime:       utils.Ptr(int32(3)),
-					RetryTime:         utils.Ptr(int32(4)),
-					SerialNumber:      utils.Ptr(int32(5)),
-					NegativeCache:     utils.Ptr(int32(6)),
+					DefaultTTL:        utils.Ptr(int64(1)),
+					ExpireTime:        utils.Ptr(int64(2)),
+					RefreshTime:       utils.Ptr(int64(3)),
+					RetryTime:         utils.Ptr(int64(4)),
+					SerialNumber:      utils.Ptr(int64(5)),
+					NegativeCache:     utils.Ptr(int64(6)),
 					State:             utils.Ptr("state"),
 					Type:              utils.Ptr("type"),
 					Primaries:         &[]string{"primary"},
@@ -73,7 +73,7 @@ func TestMapFields(t *testing.T) {
 					ContactEmail:      utils.Ptr("a@b.cd"),
 					Description:       utils.Ptr("description"),
 					IsReverseZone:     utils.Ptr(false),
-					RecordCount:       utils.Ptr(int32(3)),
+					RecordCount:       utils.Ptr(int64(3)),
 				},
 			},
 			Model{
@@ -115,12 +115,12 @@ func TestMapFields(t *testing.T) {
 					Active:            nil,
 					CreationStarted:   utils.Ptr("bar"),
 					CreationFinished:  utils.Ptr("foo"),
-					DefaultTTL:        utils.Ptr(int32(2123456789)),
-					ExpireTime:        utils.Ptr(int32(-2)),
-					RefreshTime:       utils.Ptr(int32(3)),
-					RetryTime:         utils.Ptr(int32(4)),
-					SerialNumber:      utils.Ptr(int32(5)),
-					NegativeCache:     utils.Ptr(int32(0)),
+					DefaultTTL:        utils.Ptr(int64(2123456789)),
+					ExpireTime:        utils.Ptr(int64(-2)),
+					RefreshTime:       utils.Ptr(int64(3)),
+					RetryTime:         utils.Ptr(int64(4)),
+					SerialNumber:      utils.Ptr(int64(5)),
+					NegativeCache:     utils.Ptr(int64(0)),
 					State:             utils.Ptr("state"),
 					Type:              utils.Ptr("type"),
 					Primaries:         nil,
@@ -131,7 +131,7 @@ func TestMapFields(t *testing.T) {
 					ContactEmail:      nil,
 					Description:       nil,
 					IsReverseZone:     nil,
-					RecordCount:       utils.Ptr(int32(-2123456789)),
+					RecordCount:       utils.Ptr(int64(-2123456789)),
 				},
 			},
 			Model{
@@ -242,11 +242,11 @@ func TestToCreatePayload(t *testing.T) {
 				Type:          utils.Ptr("Type"),
 				ContactEmail:  utils.Ptr("ContactEmail"),
 				Primaries:     &[]string{"primary"},
-				RetryTime:     utils.Ptr(int32(3)),
-				RefreshTime:   utils.Ptr(int32(4)),
-				ExpireTime:    utils.Ptr(int32(5)),
-				DefaultTTL:    utils.Ptr(int32(4534534)),
-				NegativeCache: utils.Ptr(int32(-4534534)),
+				RetryTime:     utils.Ptr(int64(3)),
+				RefreshTime:   utils.Ptr(int64(4)),
+				ExpireTime:    utils.Ptr(int64(5)),
+				DefaultTTL:    utils.Ptr(int64(4534534)),
+				NegativeCache: utils.Ptr(int64(-4534534)),
 				IsReverseZone: utils.Ptr(true),
 			},
 			true,
@@ -281,7 +281,7 @@ func TestToPayloadUpdate(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *dns.UpdateZonePayload
+		expected    *dns.PartialUpdateZonePayload
 		isValid     bool
 	}{
 		{
@@ -289,7 +289,7 @@ func TestToPayloadUpdate(t *testing.T) {
 			&Model{
 				Name: types.StringValue("Name"),
 			},
-			&dns.UpdateZonePayload{
+			&dns.PartialUpdateZonePayload{
 				Name: utils.Ptr("Name"),
 			},
 			true,
@@ -315,16 +315,16 @@ func TestToPayloadUpdate(t *testing.T) {
 				NegativeCache: types.Int64Value(-4534534),
 				IsReverseZone: types.BoolValue(true),
 			},
-			&dns.UpdateZonePayload{
+			&dns.PartialUpdateZonePayload{
 				Name:          utils.Ptr("Name"),
 				Acl:           utils.Ptr("Acl"),
 				Description:   utils.Ptr("Description"),
 				ContactEmail:  utils.Ptr("ContactEmail"),
-				RetryTime:     utils.Ptr(int32(3)),
-				RefreshTime:   utils.Ptr(int32(4)),
-				ExpireTime:    utils.Ptr(int32(5)),
-				DefaultTTL:    utils.Ptr(int32(4534534)),
-				NegativeCache: utils.Ptr(int32(-4534534)),
+				RetryTime:     utils.Ptr(int64(3)),
+				RefreshTime:   utils.Ptr(int64(4)),
+				ExpireTime:    utils.Ptr(int64(5)),
+				DefaultTTL:    utils.Ptr(int64(4534534)),
+				NegativeCache: utils.Ptr(int64(-4534534)),
 			},
 			true,
 		},

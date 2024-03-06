@@ -30,29 +30,44 @@ var (
 
 	// ProjectId is the id of project used for tests
 	ProjectId = os.Getenv("TF_ACC_PROJECT_ID")
-	// TestProjectParentContainerID is the container id of the organization under which projects are created as part of the resource-manager acceptance tests
+	// TestProjectParentContainerID is the container id of the parent resource under which projects are created as part of the resource-manager acceptance tests
 	TestProjectParentContainerID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID")
+	// TestProjectParentContainerID is the uuid of the parent resource under which projects are created as part of the resource-manager acceptance tests
+	TestProjectParentUUID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_UUID")
 	// TestProjectServiceAccountEmail is the e-mail of a service account with admin permissions on the organization under which projects are created as part of the resource-manager acceptance tests
 	TestProjectServiceAccountEmail = os.Getenv("TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL")
 
 	ArgusCustomEndpoint           = os.Getenv("TF_ACC_ARGUS_CUSTOM_ENDPOINT")
 	DnsCustomEndpoint             = os.Getenv("TF_ACC_DNS_CUSTOM_ENDPOINT")
+	LoadBalancerCustomEndpoint    = os.Getenv("TF_ACC_LOADBALANCER_CUSTOM_ENDPOINT")
 	LogMeCustomEndpoint           = os.Getenv("TF_ACC_LOGME_CUSTOM_ENDPOINT")
 	MariaDBCustomEndpoint         = os.Getenv("TF_ACC_MARIADB_CUSTOM_ENDPOINT")
+	MongoDBFlexCustomEndpoint     = os.Getenv("TF_ACC_MONGODBFLEX_CUSTOM_ENDPOINT")
 	OpenSearchCustomEndpoint      = os.Getenv("TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT")
+	ObjectStorageCustomEndpoint   = os.Getenv("TF_ACC_OBJECTSTORAGE_CUSTOM_ENDPOINT")
 	PostgreSQLCustomEndpoint      = os.Getenv("TF_ACC_POSTGRESQL_CUSTOM_ENDPOINT")
 	PostgresFlexCustomEndpoint    = os.Getenv("TF_ACC_POSTGRESFLEX_CUSTOM_ENDPOINT")
 	RabbitMQCustomEndpoint        = os.Getenv("TF_ACC_RABBITMQ_CUSTOM_ENDPOINT")
 	RedisCustomEndpoint           = os.Getenv("TF_ACC_REDIS_CUSTOM_ENDPOINT")
 	ResourceManagerCustomEndpoint = os.Getenv("TF_ACC_RESOURCEMANAGER_CUSTOM_ENDPOINT")
+	SecretsManagerCustomEndpoint  = os.Getenv("TF_ACC_SECRETSMANAGER_CUSTOM_ENDPOINT")
 	SKECustomEndpoint             = os.Getenv("TF_ACC_SKE_CUSTOM_ENDPOINT")
+
+	// OpenStack user domain name
+	OSUserDomainName = os.Getenv("TF_ACC_OS_USER_DOMAIN_NAME")
+	// OpenStack user name
+	OSUserName = os.Getenv("TF_ACC_OS_USER_NAME")
+	// OpenStack password
+	OSPassword = os.Getenv("TF_ACC_OS_PASSWORD")
 )
 
 // Provider config helper functions
 
 func ArgusProviderConfig() string {
 	if ArgusCustomEndpoint == "" {
-		return `provider "stackit" {}`
+		return `provider "stackit" {
+			region = "eu01"
+		}`
 	}
 	return fmt.Sprintf(`
 		provider "stackit" {
@@ -71,6 +86,21 @@ func DnsProviderConfig() string {
 			dns_custom_endpoint = "%s"
 		}`,
 		DnsCustomEndpoint,
+	)
+}
+
+func LoadBalancerProviderConfig() string {
+	if LoadBalancerCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			loadbalancer_custom_endpoint = "%s"
+		}`,
+		LoadBalancerCustomEndpoint,
 	)
 }
 
@@ -101,6 +131,36 @@ func MariaDBProviderConfig() string {
 			mariadb_custom_endpoint = "%s"
 		}`,
 		MariaDBCustomEndpoint,
+	)
+}
+
+func MongoDBFlexProviderConfig() string {
+	if MongoDBFlexCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			mongodbflex_custom_endpoint = "%s"
+		}`,
+		MongoDBFlexCustomEndpoint,
+	)
+}
+
+func ObjectStorageProviderConfig() string {
+	if ObjectStorageCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			objectstorage_custom_endpoint = "%s"
+		}`,
+		ObjectStorageCustomEndpoint,
 	)
 }
 
@@ -200,6 +260,21 @@ func ResourceManagerProviderConfig() string {
 		ResourceManagerCustomEndpoint,
 		TestProjectServiceAccountEmail,
 		token,
+	)
+}
+
+func SecretsManagerProviderConfig() string {
+	if SecretsManagerCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			secretsmanager_custom_endpoint = "%s"
+		}`,
+		SecretsManagerCustomEndpoint,
 	)
 }
 

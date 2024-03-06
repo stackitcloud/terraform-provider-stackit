@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -19,6 +18,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/argus"
+	"github.com/stackitcloud/stackit-sdk-go/services/argus/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -102,7 +103,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 
@@ -113,6 +114,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Argus instance resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
@@ -162,9 +164,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"plan_id": schema.StringAttribute{
 				Description: "The Argus plan ID.",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 				Validators: []validator.String{
 					validate.UUID(),
 				},
@@ -286,19 +285,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	instanceId := createResp.InstanceId
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	wr, err := argus.CreateInstanceWaitHandler(ctx, r.client, *instanceId, projectId).SetTimeout(20 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, *instanceId, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*argus.InstanceResponse)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
 	// Map response body to schema
-	err = mapFields(ctx, got, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -376,18 +370,13 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	wr, err := argus.UpdateInstanceWaitHandler(ctx, r.client, instanceId, projectId).SetTimeout(20 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, instanceId, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*argus.InstanceResponse)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
-	err = mapFields(ctx, got, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -419,7 +408,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = argus.DeleteInstanceWaitHandler(ctx, r.client, instanceId, projectId).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, instanceId, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -446,7 +435,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Argus instance state imported")
 }
 
-func mapFields(ctx context.Context, r *argus.InstanceResponse, model *Model) error {
+func mapFields(ctx context.Context, r *argus.GetInstanceResponse, model *Model) error {
 	if r == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -524,8 +513,8 @@ func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {
 		pa[k] = elements[k].String()
 	}
 	return &argus.CreateInstancePayload{
-		Name:      model.Name.ValueStringPointer(),
-		PlanId:    model.PlanId.ValueStringPointer(),
+		Name:      conversion.StringValueToPointer(model.Name),
+		PlanId:    conversion.StringValueToPointer(model.PlanId),
 		Parameter: &pa,
 	}, nil
 }
@@ -540,15 +529,15 @@ func toUpdatePayload(model *Model) (*argus.UpdateInstancePayload, error) {
 		pa[k] = v.String()
 	}
 	return &argus.UpdateInstancePayload{
-		Name:      model.Name.ValueStringPointer(),
-		PlanId:    model.PlanId.ValueStringPointer(),
+		Name:      conversion.StringValueToPointer(model.Name),
+		PlanId:    conversion.StringValueToPointer(model.PlanId),
 		Parameter: &pa,
 	}, nil
 }
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
-	res, err := r.client.GetPlans(ctx, projectId).Execute()
+	res, err := r.client.ListPlans(ctx, projectId).Execute()
 	if err != nil {
 		return err
 	}

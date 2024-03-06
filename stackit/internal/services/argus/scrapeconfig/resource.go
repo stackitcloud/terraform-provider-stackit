@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -14,6 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -23,6 +26,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/argus"
+	"github.com/stackitcloud/stackit-sdk-go/services/argus/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -32,6 +36,7 @@ const (
 	DefaultScheme                   = "https" // API default is "http"
 	DefaultScrapeInterval           = "5m"
 	DefaultScrapeTimeout            = "2m"
+	DefaultSampleLimit              = int64(5000)
 	DefaultSAML2EnableURLParameters = true
 )
 
@@ -51,6 +56,7 @@ type Model struct {
 	Scheme         types.String `tfsdk:"scheme"`
 	ScrapeInterval types.String `tfsdk:"scrape_interval"`
 	ScrapeTimeout  types.String `tfsdk:"scrape_timeout"`
+	SampleLimit    types.Int64  `tfsdk:"sample_limit"`
 	SAML2          *SAML2       `tfsdk:"saml2"`
 	BasicAuth      *BasicAuth   `tfsdk:"basic_auth"`
 	Targets        []Target     `tfsdk:"targets"`
@@ -113,7 +119,7 @@ func (r *scrapeConfigResource) Configure(ctx context.Context, req resource.Confi
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 	r.client = apiClient
@@ -123,6 +129,7 @@ func (r *scrapeConfigResource) Configure(ctx context.Context, req resource.Confi
 // Schema defines the schema for the resource.
 func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Argus scrape config resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`name`\".",
@@ -196,12 +203,32 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 				Default: stringdefault.StaticString(DefaultScrapeTimeout),
 			},
+			"sample_limit": schema.Int64Attribute{
+				Description: "Specifies the scrape sample limit. Upper limit depends on the service plan. Default is `5000`.",
+				Optional:    true,
+				Computed:    true,
+				Validators: []validator.Int64{
+					int64validator.Between(1, 3000000),
+				},
+				Default: int64default.StaticInt64(DefaultSampleLimit),
+			},
 			"saml2": schema.SingleNestedAttribute{
 				Description: "A SAML2 configuration block.",
 				Optional:    true,
+				Computed:    true,
+				Default: objectdefault.StaticValue(
+					types.ObjectValueMust(
+						map[string]attr.Type{
+							"enable_url_parameters": types.BoolType,
+						},
+						map[string]attr.Value{
+							"enable_url_parameters": types.BoolValue(DefaultSAML2EnableURLParameters),
+						},
+					),
+				),
 				Attributes: map[string]schema.Attribute{
 					"enable_url_parameters": schema.BoolAttribute{
-						Description: "Are URL parameters be enabled?",
+						Description: "Specifies if URL parameters are enabled.",
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(DefaultSAML2EnableURLParameters),
@@ -286,7 +313,7 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = argus.CreateScrapeConfigWaitHandler(ctx, r.client, instanceId, scName, projectId).SetTimeout(3 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.CreateScrapeConfigWaitHandler(ctx, r.client, instanceId, scName, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Scrape config creation waiting: %v", err))
 		return
@@ -409,7 +436,7 @@ func (r *scrapeConfigResource) Delete(ctx context.Context, req resource.DeleteRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting scrape config", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = argus.DeleteScrapeConfigWaitHandler(ctx, r.client, instanceId, scName, projectId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteScrapeConfigWaitHandler(ctx, r.client, instanceId, scName, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting scrape config", fmt.Sprintf("Scrape config deletion waiting: %v", err))
 		return
@@ -468,6 +495,7 @@ func mapFields(sc *argus.Job, model *Model) error {
 	model.Scheme = types.StringPointerValue(sc.Scheme)
 	model.ScrapeInterval = types.StringPointerValue(sc.ScrapeInterval)
 	model.ScrapeTimeout = types.StringPointerValue(sc.ScrapeTimeout)
+	model.SampleLimit = types.Int64PointerValue(sc.SampleLimit)
 	handleSAML2(sc, model)
 	handleBasicAuth(sc, model)
 	handleTargets(sc, model)
@@ -546,11 +574,13 @@ func toCreatePayload(ctx context.Context, model *Model) (*argus.CreateScrapeConf
 	}
 
 	sc := argus.CreateScrapeConfigPayload{
-		JobName:        model.Name.ValueStringPointer(),
-		MetricsPath:    model.MetricsPath.ValueStringPointer(),
-		ScrapeInterval: model.ScrapeInterval.ValueStringPointer(),
-		ScrapeTimeout:  model.ScrapeTimeout.ValueStringPointer(),
-		Scheme:         model.Scheme.ValueStringPointer(),
+		JobName:        conversion.StringValueToPointer(model.Name),
+		MetricsPath:    conversion.StringValueToPointer(model.MetricsPath),
+		ScrapeInterval: conversion.StringValueToPointer(model.ScrapeInterval),
+		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
+		// potentially lossy conversion, depending on the allowed range for sample_limit
+		SampleLimit: utils.Ptr(float64(model.SampleLimit.ValueInt64())),
+		Scheme:      conversion.StringValueToPointer(model.Scheme),
 	}
 	setDefaultsCreateScrapeConfig(&sc, model)
 
@@ -565,9 +595,9 @@ func toCreatePayload(ctx context.Context, model *Model) (*argus.CreateScrapeConf
 
 	if model.BasicAuth != nil {
 		if sc.BasicAuth == nil {
-			sc.BasicAuth = &argus.UpdateScrapeConfigPayloadBasicAuth{
-				Username: model.BasicAuth.Username.ValueStringPointer(),
-				Password: model.BasicAuth.Password.ValueStringPointer(),
+			sc.BasicAuth = &argus.CreateScrapeConfigPayloadBasicAuth{
+				Username: conversion.StringValueToPointer(model.BasicAuth.Username),
+				Password: conversion.StringValueToPointer(model.BasicAuth.Password),
 			}
 		}
 	}
@@ -605,6 +635,9 @@ func setDefaultsCreateScrapeConfig(sc *argus.CreateScrapeConfigPayload, model *M
 	if model.ScrapeTimeout.IsNull() || model.ScrapeTimeout.IsUnknown() {
 		sc.ScrapeTimeout = utils.Ptr(DefaultScrapeTimeout)
 	}
+	if model.SampleLimit.IsNull() || model.SampleLimit.IsUnknown() {
+		sc.SampleLimit = utils.Ptr(float64(DefaultSampleLimit))
+	}
 	// Make the API default more explicit by setting the field.
 	if model.SAML2 == nil || model.SAML2.EnableURLParameters.IsNull() || model.SAML2.EnableURLParameters.IsUnknown() {
 		m := map[string]interface{}{}
@@ -626,10 +659,12 @@ func toUpdatePayload(ctx context.Context, model *Model) (*argus.UpdateScrapeConf
 	}
 
 	sc := argus.UpdateScrapeConfigPayload{
-		MetricsPath:    model.MetricsPath.ValueStringPointer(),
-		ScrapeInterval: model.ScrapeInterval.ValueStringPointer(),
-		ScrapeTimeout:  model.ScrapeTimeout.ValueStringPointer(),
-		Scheme:         model.Scheme.ValueStringPointer(),
+		MetricsPath:    conversion.StringValueToPointer(model.MetricsPath),
+		ScrapeInterval: conversion.StringValueToPointer(model.ScrapeInterval),
+		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
+		// potentially lossy conversion, depending on the allowed range for sample_limit
+		SampleLimit: utils.Ptr(float64(model.SampleLimit.ValueInt64())),
+		Scheme:      conversion.StringValueToPointer(model.Scheme),
 	}
 	setDefaultsUpdateScrapeConfig(&sc, model)
 
@@ -644,9 +679,9 @@ func toUpdatePayload(ctx context.Context, model *Model) (*argus.UpdateScrapeConf
 
 	if model.BasicAuth != nil {
 		if sc.BasicAuth == nil {
-			sc.BasicAuth = &argus.UpdateScrapeConfigPayloadBasicAuth{
-				Username: model.BasicAuth.Username.ValueStringPointer(),
-				Password: model.BasicAuth.Password.ValueStringPointer(),
+			sc.BasicAuth = &argus.CreateScrapeConfigPayloadBasicAuth{
+				Username: conversion.StringValueToPointer(model.BasicAuth.Username),
+				Password: conversion.StringValueToPointer(model.BasicAuth.Password),
 			}
 		}
 	}
@@ -683,5 +718,8 @@ func setDefaultsUpdateScrapeConfig(sc *argus.UpdateScrapeConfigPayload, model *M
 	}
 	if model.ScrapeTimeout.IsNull() || model.ScrapeTimeout.IsUnknown() {
 		sc.ScrapeTimeout = utils.Ptr(DefaultScrapeTimeout)
+	}
+	if model.SampleLimit.IsNull() || model.SampleLimit.IsUnknown() {
+		sc.SampleLimit = utils.Ptr(float64(DefaultSampleLimit))
 	}
 }

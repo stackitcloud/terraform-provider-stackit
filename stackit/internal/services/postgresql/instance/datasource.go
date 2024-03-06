@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -31,12 +32,12 @@ type instanceDataSource struct {
 	client *postgresql.APIClient
 }
 
-// Metadata returns the resource type name.
+// Metadata returns the data source type name.
 func (r *instanceDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_postgresql_instance"
 }
 
-// Configure adds the provider configured client to the resource.
+// Configure adds the provider configured client to the data source.
 func (r *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -64,7 +65,7 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the data source configuration", err))
 		return
 	}
 
@@ -72,11 +73,20 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	tflog.Info(ctx, "PostgreSQL instance client configured")
 }
 
-// Schema defines the schema for the resource.
+// Schema defines the schema for the data source.
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "PostgreSQL instance data source schema.",
-		"id":          "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`\".",
+		"main": "PostgreSQL instance data source schema. Must have a `region` specified in the provider configuration.",
+		"deprecation_message": strings.Join(
+			[]string{
+				"The STACKIT PostgreSQL service will reach its end of support on June 30th 2024.",
+				"Data sources of this type will stop working after that.",
+				"Use stackit_postgresflex_instance instead.",
+				"For more details, check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html",
+			},
+			" ",
+		),
+		"id":          "Terraform's internal data source. identifier. It is structured as \"`project_id`,`instance_id`\".",
 		"instance_id": "ID of the PostgreSQL instance.",
 		"project_id":  "STACKIT Project ID to which the instance is associated.",
 		"name":        "Instance name.",
@@ -87,6 +97,9 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
+		// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
+		DeprecationMessage:  descriptions["deprecation_message"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],

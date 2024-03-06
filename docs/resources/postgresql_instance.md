@@ -3,12 +3,15 @@
 page_title: "stackit_postgresql_instance Resource - stackit"
 subcategory: ""
 description: |-
-  PostgreSQL instance resource schema.
+  PostgreSQL instance resource schema. Must have a region specified in the provider configuration.
+  !> The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Resources of this type will stop working after that. Use stackitpostgresflexinstance instead. Check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html on how to backup and restore an instance from PostgreSQL to PostgreSQL Flex, then import the resource to Terraform using an "import" block (https://developer.hashicorp.com/terraform/language/import)
 ---
 
 # stackit_postgresql_instance (Resource)
 
-PostgreSQL instance resource schema.
+PostgreSQL instance resource schema. Must have a `region` specified in the provider configuration.
+
+!> The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Resources of this type will stop working after that. Use stackit_postgresflex_instance instead. Check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html on how to backup and restore an instance from PostgreSQL to PostgreSQL Flex, then import the resource to Terraform using an "import" block (https://developer.hashicorp.com/terraform/language/import)
 
 ## Example Usage
 

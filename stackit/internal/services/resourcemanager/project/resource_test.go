@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
@@ -12,21 +13,26 @@ import (
 )
 
 func TestMapFields(t *testing.T) {
+	testUUID := uuid.New().String()
 	tests := []struct {
-		description    string
-		input          *resourcemanager.ProjectResponseWithParents
-		expected       Model
-		expectedLabels *map[string]string
-		isValid        bool
+		description           string
+		uuidContainerParentId bool
+		input                 *resourcemanager.ProjectResponseWithParents
+		expected              Model
+		expectedLabels        *map[string]string
+		isValid               bool
 	}{
 		{
 			"default_ok",
+			false,
 			&resourcemanager.ProjectResponseWithParents{
 				ContainerId: utils.Ptr("cid"),
+				ProjectId:   utils.Ptr("pid"),
 			},
 			Model{
 				Id:                types.StringValue("cid"),
 				ContainerId:       types.StringValue("cid"),
+				ProjectId:         types.StringValue("pid"),
 				ContainerParentId: types.StringNull(),
 				Name:              types.StringNull(),
 			},
@@ -34,22 +40,55 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
-			"values_ok",
+			"container_parent_id_ok",
+			false,
 			&resourcemanager.ProjectResponseWithParents{
 				ContainerId: utils.Ptr("cid"),
+				ProjectId:   utils.Ptr("pid"),
 				Labels: &map[string]string{
 					"label1": "ref1",
 					"label2": "ref2",
 				},
 				Parent: &resourcemanager.Parent{
-					ContainerId: utils.Ptr("pid"),
+					ContainerId: utils.Ptr("parent_cid"),
+					Id:          utils.Ptr("parent_pid"),
 				},
 				Name: utils.Ptr("name"),
 			},
 			Model{
 				Id:                types.StringValue("cid"),
 				ContainerId:       types.StringValue("cid"),
-				ContainerParentId: types.StringValue("pid"),
+				ProjectId:         types.StringValue("pid"),
+				ContainerParentId: types.StringValue("parent_cid"),
+				Name:              types.StringValue("name"),
+			},
+			&map[string]string{
+				"label1": "ref1",
+				"label2": "ref2",
+			},
+			true,
+		},
+		{
+			"uuid_parent_id_ok",
+			true,
+			&resourcemanager.ProjectResponseWithParents{
+				ContainerId: utils.Ptr("cid"),
+				ProjectId:   utils.Ptr("pid"),
+				Labels: &map[string]string{
+					"label1": "ref1",
+					"label2": "ref2",
+				},
+				Parent: &resourcemanager.Parent{
+					ContainerId: utils.Ptr("parent_cid"),
+					Id:          utils.Ptr(testUUID),
+				},
+				Name: utils.Ptr("name"),
+			},
+			Model{
+				Id:                types.StringValue("cid"),
+				ContainerId:       types.StringValue("cid"),
+				ProjectId:         types.StringValue("pid"),
+				ContainerParentId: types.StringValue(testUUID),
 				Name:              types.StringValue("name"),
 			},
 			&map[string]string{
@@ -60,6 +99,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"response_nil_fail",
+			false,
 			nil,
 			Model{},
 			nil,
@@ -67,6 +107,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"no_resource_id",
+			false,
 			&resourcemanager.ProjectResponseWithParents{},
 			Model{},
 			nil,
@@ -84,8 +125,13 @@ func TestMapFields(t *testing.T) {
 				}
 				tt.expected.Labels = convertedLabels
 			}
+			var containerParentId = types.StringNull()
+			if tt.uuidContainerParentId {
+				containerParentId = types.StringValue(testUUID)
+			}
 			state := &Model{
-				ContainerId: tt.expected.ContainerId,
+				ContainerId:       tt.expected.ContainerId,
+				ContainerParentId: containerParentId,
 			}
 
 			err := mapFields(context.Background(), tt.input, state)
@@ -204,14 +250,14 @@ func TestToUpdatePayload(t *testing.T) {
 		description string
 		input       *Model
 		inputLabels *map[string]string
-		expected    *resourcemanager.UpdateProjectPayload
+		expected    *resourcemanager.PartialUpdateProjectPayload
 		isValid     bool
 	}{
 		{
 			"default_ok",
 			&Model{},
 			nil,
-			&resourcemanager.UpdateProjectPayload{
+			&resourcemanager.PartialUpdateProjectPayload{
 				ContainerParentId: nil,
 				Labels:            nil,
 				Name:              nil,
@@ -229,7 +275,7 @@ func TestToUpdatePayload(t *testing.T) {
 				"label1": "1",
 				"label2": "2",
 			},
-			&resourcemanager.UpdateProjectPayload{
+			&resourcemanager.PartialUpdateProjectPayload{
 				ContainerParentId: utils.Ptr("pid"),
 				Labels: &map[string]string{
 					"label1": "1",

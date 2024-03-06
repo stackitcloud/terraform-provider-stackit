@@ -3,12 +3,12 @@
 page_title: "stackit_postgresflex_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  PostgresFlex instance data source schema.
+  PostgresFlex instance data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_postgresflex_instance (Data Source)
 
-PostgresFlex instance data source schema.
+PostgresFlex instance data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
@@ -32,7 +32,7 @@ data "stackit_postgresflex_instance" "example" {
 - `acl` (List of String) The Access Control List (ACL) for the PostgresFlex instance.
 - `backup_schedule` (String)
 - `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
+- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`instance_id`".
 - `name` (String) Instance name.
 - `replicas` (Number)
 - `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))

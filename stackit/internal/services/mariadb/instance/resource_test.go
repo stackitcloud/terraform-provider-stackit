@@ -221,14 +221,14 @@ func TestToUpdatePayload(t *testing.T) {
 		description     string
 		input           *Model
 		inputParameters *parametersModel
-		expected        *mariadb.UpdateInstancePayload
+		expected        *mariadb.PartialUpdateInstancePayload
 		isValid         bool
 	}{
 		{
 			"default_values",
 			&Model{},
 			&parametersModel{},
-			&mariadb.UpdateInstancePayload{
+			&mariadb.PartialUpdateInstancePayload{
 				Parameters: &mariadb.InstanceParameters{},
 			},
 			true,
@@ -241,7 +241,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&parametersModel{
 				SgwAcl: types.StringValue("sgw"),
 			},
-			&mariadb.UpdateInstancePayload{
+			&mariadb.PartialUpdateInstancePayload{
 				Parameters: &mariadb.InstanceParameters{
 					SgwAcl: utils.Ptr("sgw"),
 				},
@@ -257,7 +257,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&parametersModel{
 				SgwAcl: types.StringNull(),
 			},
-			&mariadb.UpdateInstancePayload{
+			&mariadb.PartialUpdateInstancePayload{
 				Parameters: &mariadb.InstanceParameters{
 					SgwAcl: nil,
 				},
@@ -278,7 +278,7 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			nil,
-			&mariadb.UpdateInstancePayload{
+			&mariadb.PartialUpdateInstancePayload{
 				PlanId: utils.Ptr("plan"),
 			},
 			true,

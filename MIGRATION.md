@@ -97,8 +97,8 @@ import {
 }
 
 import {
-  id = "project_id,instance_id,credentials_id"
-  to = stackit_logme_credentials.example-credentials
+  id = "project_id,instance_id,credential_id"
+  to = stackit_logme_credential.example-credential
 }
 ```
 
@@ -119,18 +119,45 @@ resource "stackit_logme_instance" "example-instance" {
   version    = null
 }
 
-# __generated__ by Terraform from "project_id,instance_id,credentials_id"
-resource "stackit_logme_credentials" "example-credentials" {
+# __generated__ by Terraform from "project_id,instance_id,credential_id"
+resource "stackit_logme_credential" "example-credential" {
   instance_id = "instance_id"
   project_id  = "project_id"
 }
 ```
 
-## Notes
+## Available resources
 
-### Import credentials
-
-There are some resources which provide fields **only** upon creation, such as users or credentials, which cannot be imported. Here is the list of the resources for which that happens:
-
-- Argus credentials: `import` is not available
-- PostgresFlex user: `import` is available but the `password` field will be empty
+| Community provider | Official provider | Import available? | `id` format | Notes|
+|-|-|-|-|-|
+| stackit_argus_credential | stackit_argus_credential | :x: |  |  |
+| stackit_argus_instance | stackit_argus_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_argus_job | stackit_argus_scrapeconfig | :white_check_mark: | [project_id],[instance_id],[name] |  |
+| stackit_elasticsearch_credential | | |  | Service deprecated |
+| stackit_elasticsearch_instance | | |  | Service deprecated |
+| stackit_kubernetes_cluster | stackit_ske_cluster | :white_check_mark: | [project_id],[name] |  |
+| stackit_kubernetes_project | stackit_ske_project | :white_check_mark: | [project_id] |  |
+| stackit_load_balancer | stackit_loadbalancer | :white_check_mark: | [project_id],[name] | |
+| stackit_logme_credential | stackit_logme_credential | :white_check_mark: | [project_id],[instance_id],[credential_id] |  |
+| stackit_logme_instance | stackit_logme_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_mariadb_credential | stackit_mariadb_credential | :white_check_mark: | [project_id],[instance_id],[credential_id] |  |
+| stackit_mariadb_instance | stackit_mariadb_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_mongodb_flex_instance | stackit_mongodbflex_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_mongodb_flex_user | stackit_mongodbflex_user | :warning: | [project_id],[instance_id],[user_id] | `password` field will be empty |
+| stackit_object_storage_bucket | stackit_objectstorage_bucket | :white_check_mark: | [project_id],[name] |  |
+| stackit_object_storage_credential | stackit_objectstorage_credential | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_object_storage_credentials_group | stackit_objectstorage_credentials_group | :white_check_mark: | [project_id],[credentials_group_id] |  |
+| stackit_object_storage_project |  | |  | Resource deprecated |
+| stackit_opensearch_credential | stackit_opensearch_credential | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_opensearch_instance | stackit_opensearch_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_postgres_credential | stackit_postgresql_credential | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_postgres_flex_instance | stackit_postgresflex_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_postgres_flex_user | stackit_postgresflex_user | :warning: | [project_id],[instance_id],[user_id] | `password` field will be empty |
+| stackit_postgres_instance | stackit_postgresql_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_project | stackit_resourcemanager_project | :white_check_mark: | [container_id] |  |
+| stackit_rabbitmq_credential | stackit_rabbitmq_credential | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_rabbitmq_instance | stackit_rabbitmq_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_redis_credential | stackit_redis_credential | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |  |
+| stackit_redis_instance | stackit_redis_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_secrets_manager_instance | stackit_secretsmanager_instance | :white_check_mark: | [project_id],[instance_id] |  |
+| stackit_secrets_manager_user | stackit_secretsmanager_user | :warning: | [project_id],[instance_id],[user_id] | `password` field will be empty |

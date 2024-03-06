@@ -54,7 +54,7 @@ func TestMapFields(t *testing.T) {
 						{Content: utils.Ptr("record_2")},
 					},
 					State: utils.Ptr("state"),
-					Ttl:   utils.Ptr(int32(1)),
+					Ttl:   utils.Ptr(int64(1)),
 					Type:  utils.Ptr("type"),
 				},
 			},
@@ -88,7 +88,7 @@ func TestMapFields(t *testing.T) {
 					Name:    utils.Ptr("name"),
 					Records: nil,
 					State:   utils.Ptr("state"),
-					Ttl:     utils.Ptr(int32(2123456789)),
+					Ttl:     utils.Ptr(int64(2123456789)),
 					Type:    utils.Ptr("type"),
 				},
 			},
@@ -178,7 +178,7 @@ func TestToCreatePayload(t *testing.T) {
 					{Content: utils.Ptr("record_1")},
 					{Content: utils.Ptr("record_2")},
 				},
-				Ttl:  utils.Ptr(int32(1)),
+				Ttl:  utils.Ptr(int64(1)),
 				Type: utils.Ptr("type"),
 			},
 			true,
@@ -196,7 +196,7 @@ func TestToCreatePayload(t *testing.T) {
 				Comment: nil,
 				Name:    utils.Ptr(""),
 				Records: &[]dns.RecordPayload{},
-				Ttl:     utils.Ptr(int32(2123456789)),
+				Ttl:     utils.Ptr(int64(2123456789)),
 				Type:    utils.Ptr(""),
 			},
 			true,
@@ -231,13 +231,13 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *dns.UpdateRecordSetPayload
+		expected    *dns.PartialUpdateRecordSetPayload
 		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
-			&dns.UpdateRecordSetPayload{
+			&dns.PartialUpdateRecordSetPayload{
 				Records: &[]dns.RecordPayload{},
 			},
 			true,
@@ -253,14 +253,14 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				TTL: types.Int64Value(1),
 			},
-			&dns.UpdateRecordSetPayload{
+			&dns.PartialUpdateRecordSetPayload{
 				Comment: utils.Ptr("comment"),
 				Name:    utils.Ptr("name"),
 				Records: &[]dns.RecordPayload{
 					{Content: utils.Ptr("record_1")},
 					{Content: utils.Ptr("record_2")},
 				},
-				Ttl: utils.Ptr(int32(1)),
+				Ttl: utils.Ptr(int64(1)),
 			},
 			true,
 		},
@@ -272,11 +272,11 @@ func TestToUpdatePayload(t *testing.T) {
 				Records: types.ListValueMust(types.StringType, nil),
 				TTL:     types.Int64Value(2123456789),
 			},
-			&dns.UpdateRecordSetPayload{
+			&dns.PartialUpdateRecordSetPayload{
 				Comment: nil,
 				Name:    utils.Ptr(""),
 				Records: &[]dns.RecordPayload{},
-				Ttl:     utils.Ptr(int32(2123456789)),
+				Ttl:     utils.Ptr(int64(2123456789)),
 			},
 			true,
 		},

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -11,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/argus"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -64,7 +66,7 @@ func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.C
 		)
 	}
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the data source configuration", err))
 		return
 	}
 	d.client = apiClient
@@ -73,9 +75,10 @@ func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.C
 // Schema defines the schema for the data source.
 func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Argus scrape config data source schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`name`\".",
+				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`,`name`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
@@ -120,16 +123,24 @@ func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed: true,
 			},
 
+			"sample_limit": schema.Int64Attribute{
+				Description: "Specifies the scrape sample limit.",
+				Computed:    true,
+				Validators: []validator.Int64{
+					int64validator.Between(1, 3000000),
+				},
+			},
+
 			"scrape_timeout": schema.StringAttribute{
 				Description: "Specifies the scrape timeout as duration string.",
 				Computed:    true,
 			},
 			"saml2": schema.SingleNestedAttribute{
-				Description: "A SAML2 configuration block",
+				Description: "A SAML2 configuration block.",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"enable_url_parameters": schema.BoolAttribute{
-						Description: "Are URL parameters be enabled?",
+						Description: "Specifies if URL parameters are enabled",
 						Computed:    true,
 					},
 				},
@@ -215,4 +226,5 @@ func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	tflog.Info(ctx, "Argus scrape config read")
 }

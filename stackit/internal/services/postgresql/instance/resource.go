@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -23,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresql"
+	"github.com/stackitcloud/stackit-sdk-go/services/postgresql/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -111,7 +111,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 
@@ -122,7 +122,16 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "PostgreSQL instance resource schema.",
+		"main": "PostgreSQL instance resource schema. Must have a `region` specified in the provider configuration.",
+		"deprecation_message": strings.Join(
+			[]string{
+				"The STACKIT PostgreSQL service will reach its end of support on June 30th 2024.",
+				"Resources of this type will stop working after that.",
+				"Use stackit_postgresflex_instance instead.",
+				"Check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html on how to backup and restore an instance from PostgreSQL to PostgreSQL Flex, then import the resource to Terraform using an \"import\" block (https://developer.hashicorp.com/terraform/language/import)",
+			},
+			" ",
+		),
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
 		"instance_id": "ID of the PostgreSQL instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
@@ -134,6 +143,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
+		// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
+		DeprecationMessage:  descriptions["deprecation_message"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -302,19 +314,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	instanceId := *createResp.InstanceId
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	wr, err := postgresql.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*postgresql.Instance)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
 	// Map response body to schema
-	err = mapFields(got, &model)
+	err = mapFields(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -336,21 +343,21 @@ func toCreatePayload(model *Model, parameters *parametersModel, parametersPlugin
 
 	if parameters == nil {
 		return &postgresql.CreateInstancePayload{
-			InstanceName: model.Name.ValueStringPointer(),
-			PlanId:       model.PlanId.ValueStringPointer(),
+			InstanceName: conversion.StringValueToPointer(model.Name),
+			PlanId:       conversion.StringValueToPointer(model.PlanId),
 		}, nil
 	}
 	return &postgresql.CreateInstancePayload{
-		InstanceName: model.Name.ValueStringPointer(),
+		InstanceName: conversion.StringValueToPointer(model.Name),
 		Parameters: &postgresql.InstanceParameters{
-			EnableMonitoring:     parameters.EnableMonitoring.ValueBoolPointer(),
-			MetricsFrequency:     conversion.ToPtrInt32(parameters.MetricsFrequency),
-			MetricsPrefix:        parameters.MetricsPrefix.ValueStringPointer(),
-			MonitoringInstanceId: parameters.MonitoringInstanceId.ValueStringPointer(),
+			EnableMonitoring:     conversion.BoolValueToPointer(parameters.EnableMonitoring),
+			MetricsFrequency:     conversion.Int64ValueToPointer(parameters.MetricsFrequency),
+			MetricsPrefix:        conversion.StringValueToPointer(parameters.MetricsPrefix),
+			MonitoringInstanceId: conversion.StringValueToPointer(parameters.MonitoringInstanceId),
 			Plugins:              parametersPlugins,
-			SgwAcl:               parameters.SgwAcl.ValueStringPointer(),
+			SgwAcl:               conversion.StringValueToPointer(parameters.SgwAcl),
 		},
-		PlanId: model.PlanId.ValueStringPointer(),
+		PlanId: conversion.StringValueToPointer(model.PlanId),
 	}, nil
 }
 
@@ -442,24 +449,19 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	err = r.client.UpdateInstance(ctx, projectId, instanceId).UpdateInstancePayload(*payload).Execute()
+	err = r.client.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	wr, err := postgresql.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*postgresql.Instance)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
 	// Map response body to schema
-	err = mapFields(got, &model)
+	err = mapFields(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -473,26 +475,26 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	tflog.Info(ctx, "PostgreSQL instance updated")
 }
 
-func toUpdatePayload(model *Model, parameters *parametersModel, parametersPlugins *[]string) (*postgresql.UpdateInstancePayload, error) {
+func toUpdatePayload(model *Model, parameters *parametersModel, parametersPlugins *[]string) (*postgresql.PartialUpdateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
 	if parameters == nil {
-		return &postgresql.UpdateInstancePayload{
-			PlanId: model.PlanId.ValueStringPointer(),
+		return &postgresql.PartialUpdateInstancePayload{
+			PlanId: conversion.StringValueToPointer(model.PlanId),
 		}, nil
 	}
-	return &postgresql.UpdateInstancePayload{
+	return &postgresql.PartialUpdateInstancePayload{
 		Parameters: &postgresql.InstanceParameters{
-			EnableMonitoring:     parameters.EnableMonitoring.ValueBoolPointer(),
-			MetricsFrequency:     conversion.ToPtrInt32(parameters.MetricsFrequency),
-			MetricsPrefix:        parameters.MetricsPrefix.ValueStringPointer(),
-			MonitoringInstanceId: parameters.MonitoringInstanceId.ValueStringPointer(),
+			EnableMonitoring:     conversion.BoolValueToPointer(parameters.EnableMonitoring),
+			MetricsFrequency:     conversion.Int64ValueToPointer(parameters.MetricsFrequency),
+			MetricsPrefix:        conversion.StringValueToPointer(parameters.MetricsPrefix),
+			MonitoringInstanceId: conversion.StringValueToPointer(parameters.MonitoringInstanceId),
 			Plugins:              parametersPlugins,
-			SgwAcl:               parameters.SgwAcl.ValueStringPointer(),
+			SgwAcl:               conversion.StringValueToPointer(parameters.SgwAcl),
 		},
-		PlanId: model.PlanId.ValueStringPointer(),
+		PlanId: conversion.StringValueToPointer(model.PlanId),
 	}, nil
 }
 
@@ -516,7 +518,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = postgresql.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -684,7 +686,7 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
-	res, err := r.client.GetOfferings(ctx, projectId).Execute()
+	res, err := r.client.ListOfferings(ctx, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting PostgreSQL offerings: %w", err)
 	}
@@ -722,7 +724,7 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 func loadPlanNameAndVersion(ctx context.Context, client *postgresql.APIClient, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	planId := model.PlanId.ValueString()
-	res, err := client.GetOfferings(ctx, projectId).Execute()
+	res, err := client.ListOfferings(ctx, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting PostgreSQL offerings: %w", err)
 	}

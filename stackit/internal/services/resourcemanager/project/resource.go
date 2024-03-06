@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
+	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -39,6 +40,7 @@ const (
 
 type Model struct {
 	Id                types.String `tfsdk:"id"` // needed by TF
+	ProjectId         types.String `tfsdk:"project_id"`
 	ContainerId       types.String `tfsdk:"container_id"`
 	ContainerParentId types.String `tfsdk:"parent_container_id"`
 	Name              types.String `tfsdk:"name"`
@@ -87,12 +89,11 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 		apiClient, err = resourcemanager.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithServiceAccountEmail(providerData.ServiceAccountEmail),
-			config.WithRegion(providerData.Region),
 		)
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 
@@ -103,10 +104,11 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 // Schema defines the schema for the resource.
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                "Resource Manager project resource schema.",
+		"main":                "Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.",
 		"id":                  "Terraform's internal resource ID. It is structured as \"`container_id`\".",
+		"project_id":          "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
 		"container_id":        "Project container ID. Globally unique, user-friendly identifier.",
-		"parent_container_id": "Parent container ID",
+		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
 		"name":                "Project name.",
 		"labels":              "Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}",
 		"owner_email":         "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
@@ -120,6 +122,16 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Description: descriptions["project_id"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
 				},
 			},
 			"container_id": schema.StringAttribute{
@@ -159,7 +171,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					),
 					mapvalidator.ValueStringsAre(
 						stringvalidator.RegexMatches(
-							regexp.MustCompile(`[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`),
+							regexp.MustCompile(`^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`),
 							"must match expression"),
 					),
 				},
@@ -206,19 +218,14 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// If the request has not been processed yet and the containerId doesnt exist,
 	// the waiter will fail with authentication error, so wait some time before checking the creation
-	wr, err := resourcemanager.CreateProjectWaitHandler(ctx, r.client, respContainerId).SetSleepBeforeWait(1 * time.Minute).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateProjectWaitHandler(ctx, r.client, respContainerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*resourcemanager.ProjectResponseWithParents)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
 	// Map response body to schema
-	err = mapFields(ctx, got, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -235,7 +242,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 // Read refreshes the Terraform state with the latest data.
 func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
-	diags := req.State.Get(ctx, model)
+	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -283,7 +290,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 	// Update existing project
-	_, err = r.client.UpdateProject(ctx, containerId).UpdateProjectPayload(*payload).Execute()
+	_, err = r.client.PartialUpdateProject(ctx, containerId).PartialUpdateProjectPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -328,7 +335,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	_, err = resourcemanager.DeleteProjectWaitHandler(ctx, r.client, containerId).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteProjectWaitHandler(ctx, r.client, containerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -363,6 +370,15 @@ func mapFields(ctx context.Context, projectResp *resourcemanager.ProjectResponse
 		return fmt.Errorf("model input is nil")
 	}
 
+	var projectId string
+	if model.ProjectId.ValueString() != "" {
+		projectId = model.ProjectId.ValueString()
+	} else if projectResp.ProjectId != nil {
+		projectId = *projectResp.ProjectId
+	} else {
+		return fmt.Errorf("project id not present")
+	}
+
 	var containerId string
 	if model.ContainerId.ValueString() != "" {
 		containerId = model.ContainerId.ValueString()
@@ -383,9 +399,16 @@ func mapFields(ctx context.Context, projectResp *resourcemanager.ProjectResponse
 	}
 
 	model.Id = types.StringValue(containerId)
+	model.ProjectId = types.StringValue(projectId)
 	model.ContainerId = types.StringValue(containerId)
 	if projectResp.Parent != nil {
-		model.ContainerParentId = types.StringPointerValue(projectResp.Parent.ContainerId)
+		if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
+			// the provided containerParentId is the UUID identifier
+			model.ContainerParentId = types.StringPointerValue(projectResp.Parent.Id)
+		} else {
+			// the provided containerParentId is the user-friendly container id
+			model.ContainerParentId = types.StringPointerValue(projectResp.Parent.ContainerId)
+		}
 	} else {
 		model.ContainerParentId = types.StringNull()
 	}
@@ -424,14 +447,14 @@ func toCreatePayload(model *Model, serviceAccountEmail string) (*resourcemanager
 	}
 
 	return &resourcemanager.CreateProjectPayload{
-		ContainerParentId: model.ContainerParentId.ValueStringPointer(),
+		ContainerParentId: conversion.StringValueToPointer(model.ContainerParentId),
 		Labels:            labels,
 		Members:           &members,
-		Name:              model.Name.ValueStringPointer(),
+		Name:              conversion.StringValueToPointer(model.Name),
 	}, nil
 }
 
-func toUpdatePayload(model *Model) (*resourcemanager.UpdateProjectPayload, error) {
+func toUpdatePayload(model *Model) (*resourcemanager.PartialUpdateProjectPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -442,9 +465,9 @@ func toUpdatePayload(model *Model) (*resourcemanager.UpdateProjectPayload, error
 		return nil, fmt.Errorf("converting to GO map: %w", err)
 	}
 
-	return &resourcemanager.UpdateProjectPayload{
-		ContainerParentId: model.ContainerParentId.ValueStringPointer(),
-		Name:              model.Name.ValueStringPointer(),
+	return &resourcemanager.PartialUpdateProjectPayload{
+		ContainerParentId: conversion.StringValueToPointer(model.ContainerParentId),
+		Name:              conversion.StringValueToPointer(model.Name),
 		Labels:            labels,
 	}, nil
 }

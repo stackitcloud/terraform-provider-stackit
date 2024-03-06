@@ -3,6 +3,7 @@ package ske
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -27,8 +28,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+	"github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -52,21 +55,22 @@ var (
 	_ resource.ResourceWithImportState = &clusterResource{}
 )
 
-type Cluster struct {
-	Id                        types.String  `tfsdk:"id"` // needed by TF
-	ProjectId                 types.String  `tfsdk:"project_id"`
-	Name                      types.String  `tfsdk:"name"`
-	KubernetesVersion         types.String  `tfsdk:"kubernetes_version"`
-	KubernetesVersionUsed     types.String  `tfsdk:"kubernetes_version_used"`
-	AllowPrivilegedContainers types.Bool    `tfsdk:"allow_privileged_containers"`
-	NodePools                 []NodePool    `tfsdk:"node_pools"`
-	Maintenance               types.Object  `tfsdk:"maintenance"`
-	Hibernations              []Hibernation `tfsdk:"hibernations"`
-	Extensions                *Extensions   `tfsdk:"extensions"`
-	KubeConfig                types.String  `tfsdk:"kube_config"`
+type Model struct {
+	Id                        types.String `tfsdk:"id"` // needed by TF
+	ProjectId                 types.String `tfsdk:"project_id"`
+	Name                      types.String `tfsdk:"name"`
+	KubernetesVersion         types.String `tfsdk:"kubernetes_version"`
+	KubernetesVersionUsed     types.String `tfsdk:"kubernetes_version_used"`
+	AllowPrivilegedContainers types.Bool   `tfsdk:"allow_privileged_containers"`
+	NodePools                 types.List   `tfsdk:"node_pools"`
+	Maintenance               types.Object `tfsdk:"maintenance"`
+	Hibernations              types.List   `tfsdk:"hibernations"`
+	Extensions                types.Object `tfsdk:"extensions"`
+	KubeConfig                types.String `tfsdk:"kube_config"`
 }
 
-type NodePool struct {
+// Struct corresponding to Model.NodePools[i]
+type nodePool struct {
 	Name              types.String `tfsdk:"name"`
 	MachineType       types.String `tfsdk:"machine_type"`
 	OSName            types.String `tfsdk:"os_name"`
@@ -78,24 +82,52 @@ type NodePool struct {
 	VolumeType        types.String `tfsdk:"volume_type"`
 	VolumeSize        types.Int64  `tfsdk:"volume_size"`
 	Labels            types.Map    `tfsdk:"labels"`
-	Taints            []Taint      `tfsdk:"taints"`
+	Taints            types.List   `tfsdk:"taints"`
 	CRI               types.String `tfsdk:"cri"`
 	AvailabilityZones types.List   `tfsdk:"availability_zones"`
 }
 
-type Taint struct {
+// Types corresponding to nodePool
+var nodePoolTypes = map[string]attr.Type{
+	"name":               basetypes.StringType{},
+	"machine_type":       basetypes.StringType{},
+	"os_name":            basetypes.StringType{},
+	"os_version":         basetypes.StringType{},
+	"minimum":            basetypes.Int64Type{},
+	"maximum":            basetypes.Int64Type{},
+	"max_surge":          basetypes.Int64Type{},
+	"max_unavailable":    basetypes.Int64Type{},
+	"volume_type":        basetypes.StringType{},
+	"volume_size":        basetypes.Int64Type{},
+	"labels":             basetypes.MapType{ElemType: types.StringType},
+	"taints":             basetypes.ListType{ElemType: types.ObjectType{AttrTypes: taintTypes}},
+	"cri":                basetypes.StringType{},
+	"availability_zones": basetypes.ListType{ElemType: types.StringType},
+}
+
+// Struct corresponding to nodePool.Taints[i]
+type taint struct {
 	Effect types.String `tfsdk:"effect"`
 	Key    types.String `tfsdk:"key"`
 	Value  types.String `tfsdk:"value"`
 }
 
-type Maintenance struct {
+// Types corresponding to taint
+var taintTypes = map[string]attr.Type{
+	"effect": basetypes.StringType{},
+	"key":    basetypes.StringType{},
+	"value":  basetypes.StringType{},
+}
+
+// Struct corresponding to Model.maintenance
+type maintenance struct {
 	EnableKubernetesVersionUpdates   types.Bool   `tfsdk:"enable_kubernetes_version_updates"`
 	EnableMachineImageVersionUpdates types.Bool   `tfsdk:"enable_machine_image_version_updates"`
 	Start                            types.String `tfsdk:"start"`
 	End                              types.String `tfsdk:"end"`
 }
 
+// Types corresponding to maintenance
 var maintenanceTypes = map[string]attr.Type{
 	"enable_kubernetes_version_updates":    basetypes.BoolType{},
 	"enable_machine_image_version_updates": basetypes.BoolType{},
@@ -103,25 +135,54 @@ var maintenanceTypes = map[string]attr.Type{
 	"end":                                  basetypes.StringType{},
 }
 
-type Hibernation struct {
+// Struct corresponding to Model.Hibernations[i]
+type hibernation struct {
 	Start    types.String `tfsdk:"start"`
 	End      types.String `tfsdk:"end"`
 	Timezone types.String `tfsdk:"timezone"`
 }
 
-type Extensions struct {
-	Argus *ArgusExtension `tfsdk:"argus"`
-	ACL   *ACL            `tfsdk:"acl"`
+// Types corresponding to hibernation
+var hibernationTypes = map[string]attr.Type{
+	"start":    basetypes.StringType{},
+	"end":      basetypes.StringType{},
+	"timezone": basetypes.StringType{},
 }
 
-type ACL struct {
+// Struct corresponding to Model.Extensions
+type extensions struct {
+	Argus types.Object `tfsdk:"argus"`
+	ACL   types.Object `tfsdk:"acl"`
+}
+
+// Types corresponding to extensions
+var extensionsTypes = map[string]attr.Type{
+	"argus": basetypes.ObjectType{AttrTypes: argusTypes},
+	"acl":   basetypes.ObjectType{AttrTypes: aclTypes},
+}
+
+// Struct corresponding to extensions.ACL
+type acl struct {
 	Enabled      types.Bool `tfsdk:"enabled"`
 	AllowedCIDRs types.List `tfsdk:"allowed_cidrs"`
 }
 
-type ArgusExtension struct {
+// Types corresponding to acl
+var aclTypes = map[string]attr.Type{
+	"enabled":       basetypes.BoolType{},
+	"allowed_cidrs": basetypes.ListType{ElemType: types.StringType},
+}
+
+// Struct corresponding to extensions.Argus
+type argus struct {
 	Enabled         types.Bool   `tfsdk:"enabled"`
 	ArgusInstanceId types.String `tfsdk:"argus_instance_id"`
+}
+
+// Types corresponding to argus
+var argusTypes = map[string]attr.Type{
+	"enabled":           basetypes.BoolType{},
+	"argus_instance_id": basetypes.StringType{},
 }
 
 // NewClusterResource is a helper function to simplify the provider implementation.
@@ -167,7 +228,7 @@ func (r *clusterResource) Configure(ctx context.Context, req resource.ConfigureR
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 
@@ -178,7 +239,7 @@ func (r *clusterResource) Configure(ctx context.Context, req resource.ConfigureR
 // Schema defines the schema for the resource.
 func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "SKE Cluster Resource schema.",
+		Description: "SKE Cluster Resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`name`\".",
@@ -202,10 +263,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "The cluster name.",
 				Required:    true,
 				Validators: []validator.String{
-					stringvalidator.RegexMatches(
-						regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,10}$`),
-						"must start with a letter, must have lower case letters, numbers or hyphens, no hyphen at the end and less than 11 characters.",
-					),
 					validate.NoSeparator(),
 				},
 			},
@@ -434,7 +491,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							},
 							"allowed_cidrs": schema.ListAttribute{
 								Description: "Specify a list of CIDRs to whitelist.",
-								Required:    true,
+								Optional:    true,
 								ElementType: types.StringType,
 							},
 						},
@@ -442,32 +499,18 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"kube_config": schema.StringAttribute{
-				Description: "Kube config file used for connecting to the cluster",
-				Sensitive:   true,
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				Description:        "Static token kubeconfig used for connecting to the cluster. This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see How to rotate SKE credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).",
+				Sensitive:          true,
+				Computed:           true,
+				DeprecationMessage: "This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see How to rotate SKE credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).",
 			},
 		},
 	}
 }
 
-func (r *clusterResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var model Cluster
-	diags := req.Config.Get(ctx, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	diags = checkAllowPrivilegedContainers(model.AllowPrivilegedContainers, model.KubernetesVersion)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-}
-
+// needs to be executed inside the Create and Update methods
+// since ValidateConfig runs before variables are rendered to their value,
+// which causes errors like this: https://github.com/stackitcloud/terraform-provider-stackit/issues/201
 func checkAllowPrivilegedContainers(allowPrivilegeContainers types.Bool, kubernetesVersion types.String) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -491,12 +534,19 @@ func checkAllowPrivilegedContainers(allowPrivilegeContainers types.Bool, kuberne
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Cluster
+	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	diags = checkAllowPrivilegedContainers(model.AllowPrivilegedContainers, model.KubernetesVersion)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	projectId := model.ProjectId.ValueString()
 	clusterName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -524,7 +574,7 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 
 func (r *clusterResource) loadAvaiableVersions(ctx context.Context) ([]ske.KubernetesVersion, error) {
 	c := r.client
-	res, err := c.GetOptions(ctx).Execute()
+	res, err := c.ListProviderOptions(ctx).Execute()
 	if err != nil {
 		return nil, fmt.Errorf("calling API: %w", err)
 	}
@@ -536,7 +586,7 @@ func (r *clusterResource) loadAvaiableVersions(ctx context.Context) ([]ske.Kuber
 	return *res.KubernetesVersions, nil
 }
 
-func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag.Diagnostics, model *Cluster, availableVersions []ske.KubernetesVersion) {
+func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag.Diagnostics, model *Model, availableVersions []ske.KubernetesVersion) {
 	// cluster vars
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
@@ -548,13 +598,21 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	if hasDeprecatedVersion {
 		diags.AddWarning("Deprecated Kubernetes version", fmt.Sprintf("Version %s of Kubernetes is deprecated, please update it", *kubernetes.Version))
 	}
-	nodePools := toNodepoolsPayload(ctx, model)
+	nodePools, err := toNodepoolsPayload(ctx, model)
+	if err != nil {
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating node pools API payload: %v", err))
+		return
+	}
 	maintenance, err := toMaintenancePayload(ctx, model)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating maintenance API payload: %v", err))
 		return
 	}
-	hibernations := toHibernationsPayload(model)
+	hibernations, err := toHibernationsPayload(ctx, model)
+	if err != nil {
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating hibernations API payload: %v", err))
+		return
+	}
 	extensions, err := toExtensionsPayload(ctx, model)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating extension API payload: %v", err))
@@ -574,55 +632,80 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		return
 	}
 
-	wr, err := ske.CreateOrUpdateClusterWaitHandler(ctx, r.client, projectId, name).SetTimeout(30 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateOrUpdateClusterWaitHandler(ctx, r.client, projectId, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Cluster creation waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*ske.ClusterResponse)
-	if !ok {
-		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
-	if got.Status.Error != nil && got.Status.Error.Message != nil && *got.Status.Error.Code == ske.InvalidArgusInstanceErrorCode {
-		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid argus instance id, the cluster is usable but metrics won't be forwarded: %s", *got.Status.Error.Message))
+	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == wait.InvalidArgusInstanceErrorCode {
+		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid argus instance id, the cluster is usable but metrics won't be forwarded: %s", *waitResp.Status.Error.Message))
 	}
 
-	err = mapFields(ctx, got, model)
+	err = mapFields(ctx, waitResp, model)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
 	// Handle credential
-	err = r.getCredential(ctx, model)
+	err = r.getCredential(ctx, diags, model)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Getting credential: %v", err))
 		return
 	}
 }
 
-func (r *clusterResource) getCredential(ctx context.Context, model *Cluster) error {
+func (r *clusterResource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Model) error {
 	c := r.client
+	// for kubernetes with version >= 1.27, the deprecated endpoint will not work, so we set kubeconfig to nil
+	if semver.Compare(fmt.Sprintf("v%s", model.KubernetesVersion.ValueString()), "v1.27") >= 0 {
+		core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "Kubernetes version is 1.27 or higher, you must use the stackit_ske_kubeconfig resource instead.")
+		model.KubeConfig = types.StringPointerValue(nil)
+		return nil
+	}
 	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute()
 	if err != nil {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if !ok {
+			return fmt.Errorf("fetch cluster credentials: could not convert error to oapierror.GenericOpenAPIError")
+		}
+		if oapiErr.StatusCode == http.StatusBadRequest {
+			// deprecated endpoint will return 400 if the new endpoints have been used
+			// if that's the case, we set the field to null
+			core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "Failed to get static token kubeconfig, which means the new credentials rotation flow might already been triggered for this cluster. If you are already using the stackit_ske_kubeconfig resource you can ignore this warning. If not, you must use it to access this cluster's short-lived admin kubeconfig.")
+			model.KubeConfig = types.StringPointerValue(nil)
+			return nil
+		}
 		return fmt.Errorf("fetching cluster credentials: %w", err)
 	}
 	model.KubeConfig = types.StringPointerValue(res.Kubeconfig)
 	return nil
 }
 
-func toNodepoolsPayload(ctx context.Context, m *Cluster) []ske.Nodepool {
+func toNodepoolsPayload(ctx context.Context, m *Model) ([]ske.Nodepool, error) {
+	nodePools := []nodePool{}
+	diags := m.NodePools.ElementsAs(ctx, &nodePools, false)
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
 	cnps := []ske.Nodepool{}
-	for i := range m.NodePools {
+	for i := range nodePools {
+		nodePool := nodePools[i]
+
 		// taints
+		taintsModel := []taint{}
+		diags := nodePool.Taints.ElementsAs(ctx, &taintsModel, false)
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
 		ts := []ske.Taint{}
-		nodePool := m.NodePools[i]
-		for _, v := range nodePool.Taints {
+		for _, v := range taintsModel {
 			t := ske.Taint{
-				Effect: v.Effect.ValueStringPointer(),
-				Key:    v.Key.ValueStringPointer(),
-				Value:  v.Value.ValueStringPointer(),
+				Effect: conversion.StringValueToPointer(v.Effect),
+				Key:    conversion.StringValueToPointer(v.Key),
+				Value:  conversion.StringValueToPointer(v.Value),
 			}
 			ts = append(ts, t)
 		}
@@ -658,24 +741,24 @@ func toNodepoolsPayload(ctx context.Context, m *Cluster) []ske.Nodepool {
 		}
 
 		cn := ske.CRI{
-			Name: nodePool.CRI.ValueStringPointer(),
+			Name: conversion.StringValueToPointer(nodePool.CRI),
 		}
 		cnp := ske.Nodepool{
-			Name:           nodePool.Name.ValueStringPointer(),
-			Minimum:        conversion.ToPtrInt32(nodePool.Minimum),
-			Maximum:        conversion.ToPtrInt32(nodePool.Maximum),
-			MaxSurge:       conversion.ToPtrInt32(nodePool.MaxSurge),
-			MaxUnavailable: conversion.ToPtrInt32(nodePool.MaxUnavailable),
+			Name:           conversion.StringValueToPointer(nodePool.Name),
+			Minimum:        conversion.Int64ValueToPointer(nodePool.Minimum),
+			Maximum:        conversion.Int64ValueToPointer(nodePool.Maximum),
+			MaxSurge:       conversion.Int64ValueToPointer(nodePool.MaxSurge),
+			MaxUnavailable: conversion.Int64ValueToPointer(nodePool.MaxUnavailable),
 			Machine: &ske.Machine{
-				Type: nodePool.MachineType.ValueStringPointer(),
+				Type: conversion.StringValueToPointer(nodePool.MachineType),
 				Image: &ske.Image{
-					Name:    nodePool.OSName.ValueStringPointer(),
-					Version: nodePool.OSVersion.ValueStringPointer(),
+					Name:    conversion.StringValueToPointer(nodePool.OSName),
+					Version: conversion.StringValueToPointer(nodePool.OSVersion),
 				},
 			},
 			Volume: &ske.Volume{
-				Type: nodePool.VolumeType.ValueStringPointer(),
-				Size: conversion.ToPtrInt32(nodePool.VolumeSize),
+				Type: conversion.StringValueToPointer(nodePool.VolumeType),
+				Size: conversion.Int64ValueToPointer(nodePool.VolumeSize),
 			},
 			Taints:            &ts,
 			Cri:               &cn,
@@ -684,15 +767,25 @@ func toNodepoolsPayload(ctx context.Context, m *Cluster) []ske.Nodepool {
 		}
 		cnps = append(cnps, cnp)
 	}
-	return cnps
+	return cnps, nil
 }
 
-func toHibernationsPayload(m *Cluster) *ske.Hibernation {
+func toHibernationsPayload(ctx context.Context, m *Model) (*ske.Hibernation, error) {
+	hibernation := []hibernation{}
+	diags := m.Hibernations.ElementsAs(ctx, &hibernation, false)
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
+	if len(hibernation) == 0 {
+		return nil, nil
+	}
+
 	scs := []ske.HibernationSchedule{}
-	for _, h := range m.Hibernations {
+	for _, h := range hibernation {
 		sc := ske.HibernationSchedule{
-			Start: h.Start.ValueStringPointer(),
-			End:   h.End.ValueStringPointer(),
+			Start: conversion.StringValueToPointer(h.Start),
+			End:   conversion.StringValueToPointer(h.End),
 		}
 		if !h.Timezone.IsNull() && !h.Timezone.IsUnknown() {
 			tz := h.Timezone.ValueString()
@@ -701,49 +794,71 @@ func toHibernationsPayload(m *Cluster) *ske.Hibernation {
 		scs = append(scs, sc)
 	}
 
-	if len(scs) == 0 {
-		return nil
-	}
-
 	return &ske.Hibernation{
 		Schedules: &scs,
-	}
+	}, nil
 }
 
-func toExtensionsPayload(ctx context.Context, m *Cluster) (*ske.Extension, error) {
-	if m.Extensions == nil {
+func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) {
+	if m.Extensions.IsNull() || m.Extensions.IsUnknown() {
 		return nil, nil
 	}
-	ex := &ske.Extension{}
-	if m.Extensions.Argus != nil {
-		ex.Argus = &ske.Argus{
-			Enabled:         m.Extensions.Argus.Enabled.ValueBoolPointer(),
-			ArgusInstanceId: m.Extensions.Argus.ArgusInstanceId.ValueStringPointer(),
-		}
+	ex := extensions{}
+	diags := m.Extensions.As(ctx, &ex, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting extensions object: %v", diags.Errors())
 	}
-	if m.Extensions.ACL != nil {
-		cidrs := []string{}
-		diags := m.Extensions.ACL.AllowedCIDRs.ElementsAs(ctx, &cidrs, true)
+
+	var skeAcl *ske.ACL
+	if !(ex.ACL.IsNull() || ex.ACL.IsUnknown()) {
+		acl := acl{}
+		diags = ex.ACL.As(ctx, &acl, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return nil, fmt.Errorf("error in extension object converion %v", diags.Errors())
+			return nil, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
 		}
-		ex.Acl = &ske.ACL{
-			Enabled:      m.Extensions.ACL.Enabled.ValueBoolPointer(),
+		aclEnabled := conversion.BoolValueToPointer(acl.Enabled)
+
+		cidrs := []string{}
+		diags = acl.AllowedCIDRs.ElementsAs(ctx, &cidrs, true)
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting extensions.acl.cidrs object: %v", diags.Errors())
+		}
+		skeAcl = &ske.ACL{
+			Enabled:      aclEnabled,
 			AllowedCidrs: &cidrs,
 		}
 	}
-	return ex, nil
+
+	var skeArgus *ske.Argus
+	if !(ex.Argus.IsNull() || ex.Argus.IsUnknown()) {
+		argus := argus{}
+		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
+		}
+		argusEnabled := conversion.BoolValueToPointer(argus.Enabled)
+		argusInstanceId := conversion.StringValueToPointer(argus.ArgusInstanceId)
+		skeArgus = &ske.Argus{
+			Enabled:         argusEnabled,
+			ArgusInstanceId: argusInstanceId,
+		}
+	}
+
+	return &ske.Extension{
+		Acl:   skeAcl,
+		Argus: skeArgus,
+	}, nil
 }
 
-func toMaintenancePayload(ctx context.Context, m *Cluster) (*ske.Maintenance, error) {
+func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, error) {
 	if m.Maintenance.IsNull() || m.Maintenance.IsUnknown() {
 		return nil, nil
 	}
 
-	maintenance := Maintenance{}
+	maintenance := maintenance{}
 	diags := m.Maintenance.As(ctx, &maintenance, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		return nil, fmt.Errorf("error in maintenance object conversion %v", diags.Errors())
+		return nil, fmt.Errorf("converting maintenance object: %v", diags.Errors())
 	}
 
 	var timeWindowStart *string
@@ -764,8 +879,8 @@ func toMaintenancePayload(ctx context.Context, m *Cluster) (*ske.Maintenance, er
 
 	return &ske.Maintenance{
 		AutoUpdate: &ske.MaintenanceAutoUpdate{
-			KubernetesVersion:   maintenance.EnableKubernetesVersionUpdates.ValueBoolPointer(),
-			MachineImageVersion: maintenance.EnableMachineImageVersionUpdates.ValueBoolPointer(),
+			KubernetesVersion:   conversion.BoolValueToPointer(maintenance.EnableKubernetesVersionUpdates),
+			MachineImageVersion: conversion.BoolValueToPointer(maintenance.EnableMachineImageVersionUpdates),
 		},
 		TimeWindow: &ske.TimeWindow{
 			Start: timeWindowStart,
@@ -774,7 +889,7 @@ func toMaintenancePayload(ctx context.Context, m *Cluster) (*ske.Maintenance, er
 	}, nil
 }
 
-func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
+func mapFields(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	if cl == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -809,104 +924,182 @@ func mapFields(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
 		m.KubernetesVersionUsed = types.StringPointerValue(cl.Kubernetes.Version)
 		m.AllowPrivilegedContainers = types.BoolPointerValue(cl.Kubernetes.AllowPrivilegedContainers)
 	}
-	if cl.Nodepools == nil {
-		m.NodePools = []NodePool{}
-	} else {
-		nodepools := *cl.Nodepools
-		m.NodePools = []NodePool{}
-		for i := range nodepools {
-			np := nodepools[i]
 
-			maimna := types.StringNull()
-			maimver := types.StringNull()
-			if np.Machine != nil && np.Machine.Image != nil {
-				maimna = types.StringPointerValue(np.Machine.Image.Name)
-				maimver = types.StringPointerValue(np.Machine.Image.Version)
-			}
-			vt := types.StringNull()
-			if np.Volume != nil {
-				vt = types.StringPointerValue(np.Volume.Type)
-			}
-			crin := types.StringNull()
-			if np.Cri != nil {
-				crin = types.StringPointerValue(np.Cri.Name)
-			}
-			n := NodePool{
-				Name:              types.StringPointerValue(np.Name),
-				MachineType:       types.StringPointerValue(np.Machine.Type),
-				OSName:            maimna,
-				OSVersion:         maimver,
-				Minimum:           conversion.ToTypeInt64(np.Minimum),
-				Maximum:           conversion.ToTypeInt64(np.Maximum),
-				MaxSurge:          conversion.ToTypeInt64(np.MaxSurge),
-				MaxUnavailable:    conversion.ToTypeInt64(np.MaxUnavailable),
-				VolumeType:        vt,
-				VolumeSize:        conversion.ToTypeInt64(np.Volume.Size),
-				Labels:            types.MapNull(types.StringType),
-				Taints:            nil,
-				CRI:               crin,
-				AvailabilityZones: types.ListNull(types.StringType),
-			}
-			if np.Labels != nil {
-				elems := map[string]attr.Value{}
-				for k, v := range *np.Labels {
-					elems[k] = types.StringValue(v)
-				}
-				n.Labels = types.MapValueMust(types.StringType, elems)
-			}
-			if np.Taints != nil {
-				for _, v := range *np.Taints {
-					if n.Taints == nil {
-						n.Taints = []Taint{}
-					}
-					n.Taints = append(n.Taints, Taint{
-						Effect: types.StringPointerValue(v.Effect),
-						Key:    types.StringPointerValue(v.Key),
-						Value:  types.StringPointerValue(v.Value),
-					})
-				}
-			}
-			if np.AvailabilityZones == nil {
-				n.AvailabilityZones = types.ListNull(types.StringType)
-			} else {
-				elems := []attr.Value{}
-				for _, v := range *np.AvailabilityZones {
-					elems = append(elems, types.StringValue(v))
-				}
-				n.AvailabilityZones = types.ListValueMust(types.StringType, elems)
-			}
-			m.NodePools = append(m.NodePools, n)
-		}
-	}
-
-	err := mapMaintenance(ctx, cl, m)
+	err := mapNodePools(ctx, cl, m)
 	if err != nil {
-		return err
+		return fmt.Errorf("mapping node_pools: %w", err)
 	}
-	mapHibernations(cl, m)
-	mapExtensions(cl, m)
+	err = mapMaintenance(ctx, cl, m)
+	if err != nil {
+		return fmt.Errorf("mapping maintenance: %w", err)
+	}
+	err = mapHibernations(cl, m)
+	if err != nil {
+		return fmt.Errorf("mapping hibernations: %w", err)
+	}
+	err = mapExtensions(ctx, cl, m)
+	if err != nil {
+		return fmt.Errorf("mapping extensions: %w", err)
+	}
 	return nil
 }
 
-func mapHibernations(cl *ske.ClusterResponse, m *Cluster) {
-	if cl.Hibernation == nil || cl.Hibernation.Schedules == nil {
-		return
+func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
+	if cl.Nodepools == nil {
+		m.NodePools = types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes})
+		return nil
 	}
 
-	m.Hibernations = []Hibernation{}
-	for _, h := range *cl.Hibernation.Schedules {
-		m.Hibernations = append(m.Hibernations, Hibernation{
-			Start:    types.StringPointerValue(h.Start),
-			End:      types.StringPointerValue(h.End),
-			Timezone: types.StringPointerValue(h.Timezone),
-		})
+	nodePools := []attr.Value{}
+	for i, nodePoolResp := range *cl.Nodepools {
+		nodePool := map[string]attr.Value{
+			"name":               types.StringPointerValue(nodePoolResp.Name),
+			"machine_type":       types.StringPointerValue(nodePoolResp.Machine.Type),
+			"os_name":            types.StringNull(),
+			"os_version":         types.StringNull(),
+			"minimum":            types.Int64PointerValue(nodePoolResp.Minimum),
+			"maximum":            types.Int64PointerValue(nodePoolResp.Maximum),
+			"max_surge":          types.Int64PointerValue(nodePoolResp.MaxSurge),
+			"max_unavailable":    types.Int64PointerValue(nodePoolResp.MaxUnavailable),
+			"volume_type":        types.StringNull(),
+			"volume_size":        types.Int64PointerValue(nodePoolResp.Volume.Size),
+			"labels":             types.MapNull(types.StringType),
+			"cri":                types.StringNull(),
+			"availability_zones": types.ListNull(types.StringType),
+		}
+
+		if nodePoolResp.Machine != nil && nodePoolResp.Machine.Image != nil {
+			nodePool["os_name"] = types.StringPointerValue(nodePoolResp.Machine.Image.Name)
+			nodePool["os_version"] = types.StringPointerValue(nodePoolResp.Machine.Image.Version)
+		}
+
+		if nodePoolResp.Volume != nil {
+			nodePool["volume_type"] = types.StringPointerValue(nodePoolResp.Volume.Type)
+		}
+
+		if nodePoolResp.Cri != nil {
+			nodePool["cri"] = types.StringPointerValue(nodePoolResp.Cri.Name)
+		}
+
+		err := mapTaints(nodePoolResp.Taints, nodePool)
+		if err != nil {
+			return fmt.Errorf("mapping index %d, field taints: %w", i, err)
+		}
+
+		if nodePoolResp.Labels != nil {
+			elems := map[string]attr.Value{}
+			for k, v := range *nodePoolResp.Labels {
+				elems[k] = types.StringValue(v)
+			}
+			elemsTF, diags := types.MapValue(types.StringType, elems)
+			if diags.HasError() {
+				return fmt.Errorf("mapping index %d, field labels: %w", i, core.DiagsToError(diags))
+			}
+			nodePool["labels"] = elemsTF
+		}
+
+		if nodePoolResp.AvailabilityZones != nil {
+			elemsTF, diags := types.ListValueFrom(ctx, types.StringType, *nodePoolResp.AvailabilityZones)
+			if diags.HasError() {
+				return fmt.Errorf("mapping index %d, field availability_zones: %w", i, core.DiagsToError(diags))
+			}
+			nodePool["availability_zones"] = elemsTF
+		}
+
+		nodePoolTF, diags := basetypes.NewObjectValue(nodePoolTypes, nodePool)
+		if diags.HasError() {
+			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
+		}
+		nodePools = append(nodePools, nodePoolTF)
 	}
+	nodePoolsTF, diags := basetypes.NewListValue(types.ObjectType{AttrTypes: nodePoolTypes}, nodePools)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+	m.NodePools = nodePoolsTF
+	return nil
 }
 
-func mapMaintenance(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) error {
-	// Aligned with SKE team that a flattened data structure is fine, because not extensions are planned.
+func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value) error {
+	if t == nil || len(*t) == 0 {
+		nodePool["taints"] = types.ListNull(types.ObjectType{AttrTypes: taintTypes})
+		return nil
+	}
+
+	taints := []attr.Value{}
+
+	for i, taintResp := range *t {
+		taint := map[string]attr.Value{
+			"effect": types.StringPointerValue(taintResp.Effect),
+			"key":    types.StringPointerValue(taintResp.Key),
+			"value":  types.StringPointerValue(taintResp.Value),
+		}
+		taintTF, diags := basetypes.NewObjectValue(taintTypes, taint)
+		if diags.HasError() {
+			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
+		}
+		taints = append(taints, taintTF)
+	}
+
+	taintsTF, diags := basetypes.NewListValue(types.ObjectType{AttrTypes: taintTypes}, taints)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	nodePool["taints"] = taintsTF
+	return nil
+}
+
+func mapHibernations(cl *ske.Cluster, m *Model) error {
+	if cl.Hibernation == nil {
+		if !m.Hibernations.IsNull() {
+			emptyHibernations, diags := basetypes.NewListValue(basetypes.ObjectType{AttrTypes: hibernationTypes}, []attr.Value{})
+			if diags.HasError() {
+				return fmt.Errorf("hibernations is an empty list, converting to terraform empty list: %w", core.DiagsToError(diags))
+			}
+			m.Hibernations = emptyHibernations
+			return nil
+		}
+		m.Hibernations = basetypes.NewListNull(basetypes.ObjectType{AttrTypes: hibernationTypes})
+		return nil
+	}
+
+	if cl.Hibernation.Schedules == nil {
+		emptyHibernations, diags := basetypes.NewListValue(basetypes.ObjectType{AttrTypes: hibernationTypes}, []attr.Value{})
+		if diags.HasError() {
+			return fmt.Errorf("hibernations is an empty list, converting to terraform empty list: %w", core.DiagsToError(diags))
+		}
+		m.Hibernations = emptyHibernations
+		return nil
+	}
+
+	hibernations := []attr.Value{}
+	for i, hibernationResp := range *cl.Hibernation.Schedules {
+		hibernation := map[string]attr.Value{
+			"start":    types.StringPointerValue(hibernationResp.Start),
+			"end":      types.StringPointerValue(hibernationResp.End),
+			"timezone": types.StringPointerValue(hibernationResp.Timezone),
+		}
+		hibernationTF, diags := basetypes.NewObjectValue(hibernationTypes, hibernation)
+		if diags.HasError() {
+			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
+		}
+		hibernations = append(hibernations, hibernationTF)
+	}
+
+	hibernationsTF, diags := basetypes.NewListValue(types.ObjectType{AttrTypes: hibernationTypes}, hibernations)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	m.Hibernations = hibernationsTF
+	return nil
+}
+
+func mapMaintenance(ctx context.Context, cl *ske.Cluster, m *Model) error {
+	// Aligned with SKE team that a flattened data structure is fine, because no extensions are planned.
 	if cl.Maintenance == nil {
-		m.Maintenance = types.ObjectNull(map[string]attr.Type{})
+		m.Maintenance = types.ObjectNull(maintenanceTypes)
 		return nil
 	}
 	ekvu := types.BoolNull()
@@ -919,7 +1112,7 @@ func mapMaintenance(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) er
 	}
 	startTime, endTime, err := getMaintenanceTimes(ctx, cl, m)
 	if err != nil {
-		return fmt.Errorf("failed to get maintenance times: %w", err)
+		return fmt.Errorf("getting maintenance times: %w", err)
 	}
 	maintenanceValues := map[string]attr.Value{
 		"enable_kubernetes_version_updates":    ekvu,
@@ -929,30 +1122,30 @@ func mapMaintenance(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) er
 	}
 	maintenanceObject, diags := types.ObjectValue(maintenanceTypes, maintenanceValues)
 	if diags.HasError() {
-		return fmt.Errorf("failed to create flavor: %w", core.DiagsToError(diags))
+		return fmt.Errorf("creating flavor: %w", core.DiagsToError(diags))
 	}
 	m.Maintenance = maintenanceObject
 	return nil
 }
 
-func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluster) (startTime, endTime string, err error) {
+func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startTime, endTime string, err error) {
 	startTimeAPI, err := time.Parse(time.RFC3339, *cl.Maintenance.TimeWindow.Start)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to parse start time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.Start, err)
+		return "", "", fmt.Errorf("parsing start time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.Start, err)
 	}
 	endTimeAPI, err := time.Parse(time.RFC3339, *cl.Maintenance.TimeWindow.End)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to parse end time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.End, err)
+		return "", "", fmt.Errorf("parsing end time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.End, err)
 	}
 
 	if m.Maintenance.IsNull() || m.Maintenance.IsUnknown() {
 		return startTimeAPI.Format("15:04:05Z07:00"), endTimeAPI.Format("15:04:05Z07:00"), nil
 	}
 
-	maintenance := &Maintenance{}
+	maintenance := &maintenance{}
 	diags := m.Maintenance.As(ctx, maintenance, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		return "", "", fmt.Errorf("error in maintenance object conversion %w", core.DiagsToError(diags.Errors()))
+		return "", "", fmt.Errorf("converting maintenance object %w", core.DiagsToError(diags.Errors()))
 	}
 
 	if maintenance.Start.IsNull() || maintenance.Start.IsUnknown() {
@@ -960,7 +1153,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluste
 	} else {
 		startTimeTF, err := time.Parse("15:04:05Z07:00", maintenance.Start.ValueString())
 		if err != nil {
-			return "", "", fmt.Errorf("failed to parse start time '%s' from TF config as RFC time: %w", maintenance.Start.ValueString(), err)
+			return "", "", fmt.Errorf("parsing start time '%s' from TF config as RFC time: %w", maintenance.Start.ValueString(), err)
 		}
 		if startTimeAPI.Format("15:04:05Z07:00") != startTimeTF.Format("15:04:05Z07:00") {
 			return "", "", fmt.Errorf("start time '%v' from API response doesn't match start time '%v' from TF config", *cl.Maintenance.TimeWindow.Start, maintenance.Start.ValueString())
@@ -973,7 +1166,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluste
 	} else {
 		endTimeTF, err := time.Parse("15:04:05Z07:00", maintenance.End.ValueString())
 		if err != nil {
-			return "", "", fmt.Errorf("failed to parse end time '%s' from TF config as RFC time: %w", maintenance.End.ValueString(), err)
+			return "", "", fmt.Errorf("parsing end time '%s' from TF config as RFC time: %w", maintenance.End.ValueString(), err)
 		}
 		if endTimeAPI.Format("15:04:05Z07:00") != endTimeTF.Format("15:04:05Z07:00") {
 			return "", "", fmt.Errorf("end time '%v' from API response doesn't match end time '%v' from TF config", *cl.Maintenance.TimeWindow.End, maintenance.End.ValueString())
@@ -984,43 +1177,144 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.ClusterResponse, m *Cluste
 	return startTime, endTime, nil
 }
 
-func mapExtensions(cl *ske.ClusterResponse, m *Cluster) {
-	if cl.Extensions == nil || (cl.Extensions.Argus == nil && cl.Extensions.Acl == nil) {
-		return
-	}
-	if m.Extensions == nil {
-		m.Extensions = &Extensions{}
-	}
-	if cl.Extensions.Argus != nil {
-		m.Extensions.Argus = &ArgusExtension{
-			Enabled:         types.BoolPointerValue(cl.Extensions.Argus.Enabled),
-			ArgusInstanceId: types.StringPointerValue(cl.Extensions.Argus.ArgusInstanceId),
+func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, argusDisabled bool, err error) {
+	var diags diag.Diagnostics
+	acl := acl{}
+	if ex.ACL.IsNull() {
+		acl.Enabled = types.BoolValue(false)
+	} else {
+		diags = ex.ACL.As(ctx, &acl, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return false, false, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
 		}
 	}
 
-	if cl.Extensions.Acl != nil {
-		cidr := []attr.Value{}
-		if cl.Extensions.Acl.AllowedCidrs != nil {
-			for _, v := range *cl.Extensions.Acl.AllowedCidrs {
-				cidr = append(cidr, types.StringValue(v))
-			}
-		}
-		m.Extensions.ACL = &ACL{
-			Enabled:      types.BoolPointerValue(cl.Extensions.Acl.Enabled),
-			AllowedCIDRs: types.ListValueMust(types.StringType, cidr),
+	argus := argus{}
+	if ex.Argus.IsNull() {
+		argus.Enabled = types.BoolValue(false)
+	} else {
+		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return false, false, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
 		}
 	}
+
+	return !acl.Enabled.ValueBool(), !argus.Enabled.ValueBool(), nil
 }
 
-func toKubernetesPayload(m *Cluster, availableVersions []ske.KubernetesVersion) (kubernetesPayload *ske.Kubernetes, hasDeprecatedVersion bool, err error) {
-	versionUsed, hasDeprecatedVersion, err := latestMatchingVersion(availableVersions, m.KubernetesVersion.ValueStringPointer())
+func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
+	if cl.Extensions == nil {
+		m.Extensions = types.ObjectNull(extensionsTypes)
+		return nil
+	}
+
+	var diags diag.Diagnostics
+	ex := extensions{}
+	if !m.Extensions.IsNull() {
+		diags := m.Extensions.As(ctx, &ex, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return fmt.Errorf("converting extensions object: %v", diags.Errors())
+		}
+	}
+
+	// If the user provides the extensions block with the enabled flags as false
+	// the SKE API will return an empty extensions block, which throws an inconsistent
+	// result after apply error. To prevent this error, if both flags are false,
+	// we set the fields provided by the user in the terraform model
+
+	// If the extensions field is not provided, the SKE API returns an empty object.
+	// If we parse that object into the terraform model, it will produce an inconsistent result after apply
+	// error
+
+	aclDisabled, argusDisabled, err := checkDisabledExtensions(ctx, ex)
+	if err != nil {
+		return fmt.Errorf("checking if extensions are disabled: %w", err)
+	}
+	disabledExtensions := false
+	if aclDisabled && argusDisabled {
+		disabledExtensions = true
+	}
+
+	emptyExtensions := &ske.Extension{}
+	if *cl.Extensions == *emptyExtensions && (disabledExtensions || m.Extensions.IsNull()) {
+		if m.Extensions.Attributes() == nil {
+			m.Extensions = types.ObjectNull(extensionsTypes)
+		}
+		return nil
+	}
+
+	aclExtension := types.ObjectNull(aclTypes)
+	if cl.Extensions.Acl != nil {
+		enabled := types.BoolNull()
+		if cl.Extensions.Acl.Enabled != nil {
+			enabled = types.BoolValue(*cl.Extensions.Acl.Enabled)
+		}
+
+		cidrsList, diags := types.ListValueFrom(ctx, types.StringType, cl.Extensions.Acl.AllowedCidrs)
+		if diags.HasError() {
+			return fmt.Errorf("creating allowed_cidrs list: %w", core.DiagsToError(diags))
+		}
+
+		aclValues := map[string]attr.Value{
+			"enabled":       enabled,
+			"allowed_cidrs": cidrsList,
+		}
+
+		aclExtension, diags = types.ObjectValue(aclTypes, aclValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating acl: %w", core.DiagsToError(diags))
+		}
+	} else if aclDisabled && !ex.ACL.IsNull() {
+		aclExtension = ex.ACL
+	}
+
+	argusExtension := types.ObjectNull(argusTypes)
+	if cl.Extensions.Argus != nil {
+		enabled := types.BoolNull()
+		if cl.Extensions.Argus.Enabled != nil {
+			enabled = types.BoolValue(*cl.Extensions.Argus.Enabled)
+		}
+
+		argusInstanceId := types.StringNull()
+		if cl.Extensions.Argus.ArgusInstanceId != nil {
+			argusInstanceId = types.StringValue(*cl.Extensions.Argus.ArgusInstanceId)
+		}
+
+		argusExtensionValues := map[string]attr.Value{
+			"enabled":           enabled,
+			"argus_instance_id": argusInstanceId,
+		}
+
+		argusExtension, diags = types.ObjectValue(argusTypes, argusExtensionValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating argus extension: %w", core.DiagsToError(diags))
+		}
+	} else if argusDisabled && !ex.Argus.IsNull() {
+		argusExtension = ex.Argus
+	}
+
+	extensionsValues := map[string]attr.Value{
+		"acl":   aclExtension,
+		"argus": argusExtension,
+	}
+
+	extensions, diags := types.ObjectValue(extensionsTypes, extensionsValues)
+	if diags.HasError() {
+		return fmt.Errorf("creating extensions: %w", core.DiagsToError(diags))
+	}
+	m.Extensions = extensions
+	return nil
+}
+
+func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion) (kubernetesPayload *ske.Kubernetes, hasDeprecatedVersion bool, err error) {
+	versionUsed, hasDeprecatedVersion, err := latestMatchingVersion(availableVersions, conversion.StringValueToPointer(m.KubernetesVersion))
 	if err != nil {
 		return nil, false, fmt.Errorf("getting latest matching kubernetes version: %w", err)
 	}
 
 	k := &ske.Kubernetes{
 		Version:                   versionUsed,
-		AllowPrivilegedContainers: m.AllowPrivilegedContainers.ValueBoolPointer(),
+		AllowPrivilegedContainers: conversion.BoolValueToPointer(m.AllowPrivilegedContainers),
 	}
 	return k, hasDeprecatedVersion, nil
 }
@@ -1043,11 +1337,13 @@ func latestMatchingVersion(availableVersions []ske.KubernetesVersion, providedVe
 	}
 
 	var versionUsed *string
+	var availableVersionsArray []string
 	// Get the higher available version that matches the major and minor version provided by the user
 	for _, v := range availableVersions {
 		if v.State == nil || v.Version == nil {
 			continue
 		}
+		availableVersionsArray = append(availableVersionsArray, *v.Version)
 		vPreffixed := "v" + *v.Version
 		if semver.MajorMinor(vPreffixed) == semver.MajorMinor(providedVersionPrefixed) &&
 			(semver.Compare(vPreffixed, providedVersionPrefixed) == 1 || semver.Compare(vPreffixed, providedVersionPrefixed) == 0) {
@@ -1063,14 +1359,14 @@ func latestMatchingVersion(availableVersions []ske.KubernetesVersion, providedVe
 
 	// Throwing error if we could not match the version with the available versions
 	if versionUsed == nil {
-		return nil, false, fmt.Errorf("provided version is not one of the available kubernetes versions")
+		return nil, false, fmt.Errorf("provided version is not one of the available kubernetes versions, available versions are: %s", strings.Join(availableVersionsArray, ","))
 	}
 
 	return versionUsed, deprecated, nil
 }
 
 func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var state Cluster
+	var state Model
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -1092,6 +1388,14 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
+	// Handle credential
+	err = r.getCredential(ctx, &resp.Diagnostics, &state)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Getting credential: %v", err))
+		return
+	}
+
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -1101,12 +1405,19 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 }
 
 func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Cluster
+	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	diags = checkAllowPrivilegedContainers(model.AllowPrivilegedContainers, model.KubernetesVersion)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	projectId := model.ProjectId.ValueString()
 	clName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -1132,7 +1443,7 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 }
 
 func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Cluster
+	var model Model
 	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -1148,7 +1459,7 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = ske.DeleteClusterWaitHandler(ctx, r.client, projectId, name).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteClusterWaitHandler(ctx, r.client, projectId, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Cluster deletion waiting: %v", err))
 		return

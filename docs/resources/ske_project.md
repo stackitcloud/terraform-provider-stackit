@@ -3,12 +3,12 @@
 page_title: "stackit_ske_project Resource - stackit"
 subcategory: ""
 description: |-
-  
+  SKE project resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_ske_project (Resource)
 
-
+SKE project resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

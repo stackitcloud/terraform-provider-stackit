@@ -1,0 +1,2 @@
+STACKIT Terraform Provider
+Copyright 2023 Schwarz IT GmBH & Co. KG

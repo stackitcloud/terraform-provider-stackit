@@ -3,12 +3,12 @@
 page_title: "stackit_postgresflex_user Data Source - stackit"
 subcategory: ""
 description: |-
-  PostgresFlex user data source schema.
+  PostgresFlex user data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_postgresflex_user (Data Source)
 
-PostgresFlex user data source schema.
+PostgresFlex user data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
@@ -32,8 +32,7 @@ data "stackit_postgresflex_user" "example" {
 ### Read-Only
 
 - `host` (String)
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`,`user_id`".
-- `password` (String, Sensitive)
+- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`instance_id`,`user_id`".
 - `port` (Number)
 - `roles` (Set of String)
 - `username` (String)

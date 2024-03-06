@@ -61,7 +61,7 @@ func (d *zoneDataSource) Configure(ctx context.Context, req datasource.Configure
 		)
 	}
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the data source configuration", err))
 		return
 	}
 
@@ -75,7 +75,7 @@ func (d *zoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 		Description: "DNS Zone resource schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`zone_id`\".",
+				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`zone_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{

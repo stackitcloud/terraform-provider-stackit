@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -16,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+	"github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -75,7 +75,7 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 
@@ -86,6 +86,7 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 // Schema returns the Terraform schema structure
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "SKE project resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`\".",
@@ -117,23 +118,19 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	_, err := r.client.CreateProject(ctx, projectId).Execute()
+	_, err := r.client.EnableService(ctx, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	model.Id = types.StringValue(projectId)
-	wr, err := ske.CreateProjectWaitHandler(ctx, r.client, projectId).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.EnableServiceWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Project creation waiting: %v", err))
 		return
 	}
-	_, ok := wr.(*ske.ProjectResponse)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
+
 	diags := resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -151,7 +148,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	_, err := r.client.GetProject(ctx, projectId).Execute()
+	_, err := r.client.GetServiceStatus(ctx, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -183,12 +180,12 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	c := r.client
-	_, err := c.DeleteProject(ctx, projectId).Execute()
+	_, err := c.DisableService(ctx, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = ske.DeleteProjectWaitHandler(ctx, r.client, projectId).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DisableServiceWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Project deletion waiting: %v", err))
 		return

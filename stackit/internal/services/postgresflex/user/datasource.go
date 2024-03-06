@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -45,12 +44,12 @@ type userDataSource struct {
 	client *postgresflex.APIClient
 }
 
-// Metadata returns the resource type name.
+// Metadata returns the data source type name.
 func (r *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_postgresflex_user"
 }
 
-// Configure adds the provider configured client to the resource.
+// Configure adds the provider configured client to the data source.
 func (r *userDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -78,7 +77,7 @@ func (r *userDataSource) Configure(ctx context.Context, req datasource.Configure
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the data source configuration", err))
 		return
 	}
 
@@ -86,11 +85,11 @@ func (r *userDataSource) Configure(ctx context.Context, req datasource.Configure
 	tflog.Info(ctx, "PostgresFlex user client configured")
 }
 
-// Schema defines the schema for the resource.
+// Schema defines the schema for the data source.
 func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "PostgresFlex user data source schema.",
-		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
+		"main":        "PostgresFlex user data source schema. Must have a `region` specified in the provider configuration.",
+		"id":          "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the PostgresFlex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
@@ -180,7 +179,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	tflog.Info(ctx, "PostgresFlex user read")
 }
 
-func mapDataSourceFields(userResp *postgresflex.UserResponse, model *DataSourceModel) error {
+func mapDataSourceFields(userResp *postgresflex.GetUserResponse, model *DataSourceModel) error {
 	if userResp == nil || userResp.Item == nil {
 		return fmt.Errorf("response is nil")
 	}
@@ -222,6 +221,6 @@ func mapDataSourceFields(userResp *postgresflex.UserResponse, model *DataSourceM
 		model.Roles = rolesSet
 	}
 	model.Host = types.StringPointerValue(user.Host)
-	model.Port = conversion.ToTypeInt64(user.Port)
+	model.Port = types.Int64PointerValue(user.Port)
 	return nil
 }

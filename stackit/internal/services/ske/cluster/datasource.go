@@ -3,6 +3,7 @@ package ske
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -11,9 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
+	"golang.org/x/mod/semver"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -31,12 +34,12 @@ type clusterDataSource struct {
 	client *ske.APIClient
 }
 
-// Metadata returns the resource type name.
+// Metadata returns the data source type name.
 func (r *clusterDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_ske_cluster"
 }
 
-// Configure adds the provider configured client to the resource.
+// Configure adds the provider configured client to the data source.
 func (r *clusterDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -64,7 +67,7 @@ func (r *clusterDataSource) Configure(ctx context.Context, req datasource.Config
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the data source configuration", err))
 		return
 	}
 
@@ -73,10 +76,10 @@ func (r *clusterDataSource) Configure(ctx context.Context, req datasource.Config
 }
 func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "SKE Cluster data source schema.",
+		Description: "SKE Cluster data source schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`name`\".",
+				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`name`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
@@ -269,9 +272,10 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				},
 			},
 			"kube_config": schema.StringAttribute{
-				Description: "Kube config file used for connecting to the cluster",
-				Sensitive:   true,
-				Computed:    true,
+				Description:        "Kube config file used for connecting to the cluster. This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see How to rotate SKE credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).",
+				Sensitive:          true,
+				Computed:           true,
+				DeprecationMessage: "This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see How to rotate SKE credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).",
 			},
 		},
 	}
@@ -279,7 +283,7 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 
 // Read refreshes the Terraform state with the latest data.
 func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var state Cluster
+	var state Model
 	diags := req.Config.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -301,7 +305,12 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-	r.getCredential(ctx, &diags, &state)
+	// Handle credential
+	err = r.getCredential(ctx, &resp.Diagnostics, &state)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Getting credential: %v", err))
+		return
+	}
 	// Set refreshed state
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
@@ -311,12 +320,29 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	tflog.Info(ctx, "SKE cluster read")
 }
 
-func (r *clusterDataSource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Cluster) {
+func (r *clusterDataSource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Model) error {
 	c := r.client
+	// for kubernetes with version >= 1.27, the deprecated endpoint will not work, so we set kubeconfig to nil
+	if semver.Compare(fmt.Sprintf("v%s", model.KubernetesVersion.ValueString()), "v1.27") >= 0 {
+		core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "Kubernetes version is 1.27 or higher, you must use the stackit_ske_kubeconfig resource instead.")
+		model.KubeConfig = types.StringPointerValue(nil)
+		return nil
+	}
 	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute()
 	if err != nil {
-		diags.AddError("failed fetching cluster credentials for data source", err.Error())
-		return
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if !ok {
+			return fmt.Errorf("fetch cluster credentials: could not convert error to oapierror.GenericOpenAPIError")
+		}
+		if oapiErr.StatusCode == http.StatusBadRequest {
+			// deprecated endpoint will return 400 if the new endpoints have been used
+			// if that's the case, we set the field to null
+			core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "The call to GetCredentials failed, which means the new credentials rotation flow might already been triggered for this cluster. If you are already using the stackit_ske_kubeconfig resource you can ignore this warning. If not, you must start using it.")
+			model.KubeConfig = types.StringPointerValue(nil)
+			return nil
+		}
+		return fmt.Errorf("fetching cluster credentials: %w", err)
 	}
 	model.KubeConfig = types.StringPointerValue(res.Kubeconfig)
+	return nil
 }

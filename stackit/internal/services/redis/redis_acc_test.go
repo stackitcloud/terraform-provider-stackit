@@ -12,6 +12,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/redis"
+	"github.com/stackitcloud/stackit-sdk-go/services/redis/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -24,7 +25,7 @@ var instanceResource = map[string]string{
 	"plan_name":       "stackit-qa-redis-1.4.10-single",
 	"version":         "6",
 	"sgw_acl_invalid": "1.2.3.4/4",
-	"sgw_acl_valid":   "1.2.3.4/31",
+	"sgw_acl_valid":   "192.168.0.0/16",
 }
 
 func resourceConfig(acls *string) string {
@@ -55,7 +56,7 @@ func resourceConfig(acls *string) string {
 		instanceResource["version"],
 		aclsLine,
 		instanceResource["metrics_frequency"],
-		resourceConfigCredentials(),
+		resourceConfigCredential(),
 	)
 }
 
@@ -81,13 +82,13 @@ func resourceConfigWithUpdate() string {
 		instanceResource["plan_name"],
 		instanceResource["version"],
 		instanceResource["sgw_acl_valid"],
-		resourceConfigCredentials(),
+		resourceConfigCredential(),
 	)
 }
 
-func resourceConfigCredentials() string {
+func resourceConfigCredential() string {
 	return `
-		resource "stackit_redis_credentials" "credentials" {
+		resource "stackit_redis_credential" "credential" {
 			project_id = stackit_redis_instance.instance.project_id
 			instance_id = stackit_redis_instance.instance.instance_id
 		}
@@ -118,17 +119,17 @@ func TestAccRedisResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttrSet("stackit_redis_instance.instance", "parameters.sgw_acl"),
 
-					// Credentials data
+					// Credential data
 					resource.TestCheckResourceAttrPair(
-						"stackit_redis_credentials.credentials", "project_id",
+						"stackit_redis_credential.credential", "project_id",
 						"stackit_redis_instance.instance", "project_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_redis_credentials.credentials", "instance_id",
+						"stackit_redis_credential.credential", "instance_id",
 						"stackit_redis_instance.instance", "instance_id",
 					),
-					resource.TestCheckResourceAttrSet("stackit_redis_credentials.credentials", "credentials_id"),
-					resource.TestCheckResourceAttrSet("stackit_redis_credentials.credentials", "host"),
+					resource.TestCheckResourceAttrSet("stackit_redis_credential.credential", "credential_id"),
+					resource.TestCheckResourceAttrSet("stackit_redis_credential.credential", "host"),
 				),
 			},
 			// data source
@@ -141,10 +142,10 @@ func TestAccRedisResource(t *testing.T) {
 						instance_id = stackit_redis_instance.instance.instance_id
 					}
 
-					data "stackit_redis_credentials" "credentials" {
-						project_id     = stackit_redis_credentials.credentials.project_id
-						instance_id    = stackit_redis_credentials.credentials.instance_id
-					    credentials_id = stackit_redis_credentials.credentials.credentials_id
+					data "stackit_redis_credential" "credential" {
+						project_id     = stackit_redis_credential.credential.project_id
+						instance_id    = stackit_redis_credential.credential.instance_id
+					    credential_id = stackit_redis_credential.credential.credential_id
 					}`,
 					resourceConfig(nil),
 				),
@@ -152,19 +153,19 @@ func TestAccRedisResource(t *testing.T) {
 					// Instance data
 					resource.TestCheckResourceAttr("data.stackit_redis_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrPair("stackit_redis_instance.instance", "instance_id",
-						"data.stackit_redis_credentials.credentials", "instance_id"),
+						"data.stackit_redis_credential.credential", "instance_id"),
 					resource.TestCheckResourceAttrPair("data.stackit_redis_instance.instance", "instance_id",
-						"data.stackit_redis_credentials.credentials", "instance_id"),
+						"data.stackit_redis_credential.credential", "instance_id"),
 					resource.TestCheckResourceAttr("data.stackit_redis_instance.instance", "plan_id", instanceResource["plan_id"]),
 					resource.TestCheckResourceAttr("data.stackit_redis_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttrSet("data.stackit_redis_instance.instance", "parameters.sgw_acl"),
 
 					// Credentials data
-					resource.TestCheckResourceAttr("data.stackit_redis_credentials.credentials", "project_id", instanceResource["project_id"]),
-					resource.TestCheckResourceAttrSet("data.stackit_redis_credentials.credentials", "credentials_id"),
-					resource.TestCheckResourceAttrSet("data.stackit_redis_credentials.credentials", "host"),
-					resource.TestCheckResourceAttrSet("data.stackit_redis_credentials.credentials", "port"),
-					resource.TestCheckResourceAttrSet("data.stackit_redis_credentials.credentials", "uri"),
+					resource.TestCheckResourceAttr("data.stackit_redis_credential.credential", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrSet("data.stackit_redis_credential.credential", "credential_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_redis_credential.credential", "host"),
+					resource.TestCheckResourceAttrSet("data.stackit_redis_credential.credential", "port"),
+					resource.TestCheckResourceAttrSet("data.stackit_redis_credential.credential", "uri"),
 				),
 			},
 			// Import
@@ -185,21 +186,21 @@ func TestAccRedisResource(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				ResourceName: "stackit_redis_credentials.credentials",
+				ResourceName: "stackit_redis_credential.credential",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_redis_credentials.credentials"]
+					r, ok := s.RootModule().Resources["stackit_redis_credential.credential"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_redis_credentials.credentials")
+						return "", fmt.Errorf("couldn't find resource stackit_redis_credential.credential")
 					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
-					credentialsId, ok := r.Primary.Attributes["credentials_id"]
+					credentialId, ok := r.Primary.Attributes["credential_id"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find attribute credentials_id")
+						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialsId), nil
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -224,12 +225,12 @@ func TestAccRedisResource(t *testing.T) {
 }
 
 func checkInstanceDeleteSuccess(i *redis.Instance) bool {
-	if *i.LastOperation.Type != redis.InstanceTypeDelete {
+	if *i.LastOperation.Type != wait.InstanceTypeDelete {
 		return false
 	}
 
-	if *i.LastOperation.Type == redis.InstanceTypeDelete {
-		if *i.LastOperation.State != redis.InstanceStateSuccess {
+	if *i.LastOperation.Type == wait.InstanceTypeDelete {
+		if *i.LastOperation.State != wait.InstanceStateSuccess {
 			return false
 		} else if strings.Contains(*i.LastOperation.Description, "DeleteFailed") || strings.Contains(*i.LastOperation.Description, "failed") {
 			return false
@@ -263,7 +264,7 @@ func testAccCheckRedisDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.GetInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
@@ -279,7 +280,7 @@ func testAccCheckRedisDestroy(s *terraform.State) error {
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
-				_, err = redis.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
 				}

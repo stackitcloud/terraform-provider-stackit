@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -24,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
+	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -104,7 +104,7 @@ func (r *zoneResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 
@@ -231,6 +231,7 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				ElementType: types.StringType,
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.RequiresReplace(),
+					listplanmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.List{
 					listvalidator.SizeAtMost(10),
@@ -321,19 +322,14 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	zoneId := *createResp.Zone.Id
 
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
-	wr, err := dns.CreateZoneWaitHandler(ctx, r.client, projectId, zoneId).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Zone creation waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*dns.ZoneResponse)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
 	// Map response body to schema
-	err = mapFields(got, &model)
+	err = mapFields(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -402,29 +398,18 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 	// Update existing zone
-	_, err = r.client.UpdateZone(ctx, projectId, zoneId).UpdateZonePayload(*payload).Execute()
+	_, err = r.client.PartialUpdateZone(ctx, projectId, zoneId).PartialUpdateZonePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	wr, err := dns.UpdateZoneWaitHandler(ctx, r.client, projectId, zoneId).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Zone update waiting: %v", err))
 		return
 	}
-	_, ok := wr.(*dns.ZoneResponse)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
-	// Fetch updated zone
-	zoneResp, err := r.client.GetZone(ctx, projectId, zoneId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Calling API for updated data: %v", err))
-		return
-	}
-	err = mapFields(zoneResp, &model)
+	err = mapFields(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -458,7 +443,7 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = dns.DeleteZoneWaitHandler(ctx, r.client, projectId, zoneId).SetTimeout(10 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Zone deletion waiting: %v", err))
 		return
@@ -542,17 +527,17 @@ func mapFields(zoneResp *dns.ZoneResponse, model *Model) error {
 	model.Acl = types.StringPointerValue(z.Acl)
 	model.Active = types.BoolPointerValue(z.Active)
 	model.ContactEmail = types.StringPointerValue(z.ContactEmail)
-	model.DefaultTTL = conversion.ToTypeInt64(z.DefaultTTL)
+	model.DefaultTTL = types.Int64PointerValue(z.DefaultTTL)
 	model.DnsName = types.StringPointerValue(z.DnsName)
-	model.ExpireTime = conversion.ToTypeInt64(z.ExpireTime)
+	model.ExpireTime = types.Int64PointerValue(z.ExpireTime)
 	model.IsReverseZone = types.BoolPointerValue(z.IsReverseZone)
 	model.Name = types.StringPointerValue(z.Name)
-	model.NegativeCache = conversion.ToTypeInt64(z.NegativeCache)
+	model.NegativeCache = types.Int64PointerValue(z.NegativeCache)
 	model.PrimaryNameServer = types.StringPointerValue(z.PrimaryNameServer)
 	model.RecordCount = types.Int64PointerValue(rc)
-	model.RefreshTime = conversion.ToTypeInt64(z.RefreshTime)
-	model.RetryTime = conversion.ToTypeInt64(z.RetryTime)
-	model.SerialNumber = conversion.ToTypeInt64(z.SerialNumber)
+	model.RefreshTime = types.Int64PointerValue(z.RefreshTime)
+	model.RetryTime = types.Int64PointerValue(z.RetryTime)
+	model.SerialNumber = types.Int64PointerValue(z.SerialNumber)
 	model.State = types.StringPointerValue(z.State)
 	model.Type = types.StringPointerValue(z.Type)
 	model.Visibility = types.StringPointerValue(z.Visibility)
@@ -573,37 +558,37 @@ func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
 		modelPrimaries = append(modelPrimaries, primaryString.ValueString())
 	}
 	return &dns.CreateZonePayload{
-		Name:          model.Name.ValueStringPointer(),
-		DnsName:       model.DnsName.ValueStringPointer(),
-		ContactEmail:  model.ContactEmail.ValueStringPointer(),
-		Description:   model.Description.ValueStringPointer(),
-		Acl:           model.Acl.ValueStringPointer(),
-		Type:          model.Type.ValueStringPointer(),
-		DefaultTTL:    conversion.ToPtrInt32(model.DefaultTTL),
-		ExpireTime:    conversion.ToPtrInt32(model.ExpireTime),
-		RefreshTime:   conversion.ToPtrInt32(model.RefreshTime),
-		RetryTime:     conversion.ToPtrInt32(model.RetryTime),
-		NegativeCache: conversion.ToPtrInt32(model.NegativeCache),
-		IsReverseZone: model.IsReverseZone.ValueBoolPointer(),
+		Name:          conversion.StringValueToPointer(model.Name),
+		DnsName:       conversion.StringValueToPointer(model.DnsName),
+		ContactEmail:  conversion.StringValueToPointer(model.ContactEmail),
+		Description:   conversion.StringValueToPointer(model.Description),
+		Acl:           conversion.StringValueToPointer(model.Acl),
+		Type:          conversion.StringValueToPointer(model.Type),
+		DefaultTTL:    conversion.Int64ValueToPointer(model.DefaultTTL),
+		ExpireTime:    conversion.Int64ValueToPointer(model.ExpireTime),
+		RefreshTime:   conversion.Int64ValueToPointer(model.RefreshTime),
+		RetryTime:     conversion.Int64ValueToPointer(model.RetryTime),
+		NegativeCache: conversion.Int64ValueToPointer(model.NegativeCache),
+		IsReverseZone: conversion.BoolValueToPointer(model.IsReverseZone),
 		Primaries:     &modelPrimaries,
 	}, nil
 }
 
-func toUpdatePayload(model *Model) (*dns.UpdateZonePayload, error) {
+func toUpdatePayload(model *Model) (*dns.PartialUpdateZonePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	return &dns.UpdateZonePayload{
-		Name:          model.Name.ValueStringPointer(),
-		ContactEmail:  model.ContactEmail.ValueStringPointer(),
-		Description:   model.Description.ValueStringPointer(),
-		Acl:           model.Acl.ValueStringPointer(),
-		DefaultTTL:    conversion.ToPtrInt32(model.DefaultTTL),
-		ExpireTime:    conversion.ToPtrInt32(model.ExpireTime),
-		RefreshTime:   conversion.ToPtrInt32(model.RefreshTime),
-		RetryTime:     conversion.ToPtrInt32(model.RetryTime),
-		NegativeCache: conversion.ToPtrInt32(model.NegativeCache),
+	return &dns.PartialUpdateZonePayload{
+		Name:          conversion.StringValueToPointer(model.Name),
+		ContactEmail:  conversion.StringValueToPointer(model.ContactEmail),
+		Description:   conversion.StringValueToPointer(model.Description),
+		Acl:           conversion.StringValueToPointer(model.Acl),
+		DefaultTTL:    conversion.Int64ValueToPointer(model.DefaultTTL),
+		ExpireTime:    conversion.Int64ValueToPointer(model.ExpireTime),
+		RefreshTime:   conversion.Int64ValueToPointer(model.RefreshTime),
+		RetryTime:     conversion.Int64ValueToPointer(model.RetryTime),
+		NegativeCache: conversion.Int64ValueToPointer(model.NegativeCache),
 		Primaries:     nil, // API returns error if this field is set, even if nothing changes
 	}, nil
 }

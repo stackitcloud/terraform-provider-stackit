@@ -3,12 +3,12 @@
 page_title: "stackit_ske_cluster Data Source - stackit"
 subcategory: ""
 description: |-
-  SKE Cluster data source schema.
+  SKE Cluster data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_ske_cluster (Data Source)
 
-SKE Cluster data source schema.
+SKE Cluster data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
@@ -34,8 +34,8 @@ data "stackit_ske_cluster" "example" {
 This should be used with care since it also disables a couple of other features like the use of some volume type (e.g. PVCs).
 - `extensions` (Attributes) A single extensions block as defined below (see [below for nested schema](#nestedatt--extensions))
 - `hibernations` (Attributes List) One or more hibernation block as defined below. (see [below for nested schema](#nestedatt--hibernations))
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`name`".
-- `kube_config` (String, Sensitive) Kube config file used for connecting to the cluster
+- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`name`".
+- `kube_config` (String, Sensitive, Deprecated) Kube config file used for connecting to the cluster. This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see How to rotate SKE credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).
 - `kubernetes_version` (String) Kubernetes version.
 - `kubernetes_version_used` (String) Full Kubernetes version used. For example, if `1.22` was selected, this value may result to `1.22.15`
 - `maintenance` (Attributes) A single maintenance block as defined below (see [below for nested schema](#nestedatt--maintenance))

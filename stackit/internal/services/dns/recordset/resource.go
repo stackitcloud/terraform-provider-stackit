@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -21,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
+	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -90,7 +90,7 @@ func (r *recordSetResource) Configure(ctx context.Context, req resource.Configur
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 
@@ -158,7 +158,7 @@ func (r *recordSetResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Validators: []validator.List{
 					listvalidator.SizeAtLeast(1),
 					listvalidator.UniqueValues(),
-					listvalidator.ValueStringsAre(validate.IP()),
+					listvalidator.ValueStringsAre(validate.RecordSet()),
 				},
 			},
 			"ttl": schema.Int64Attribute{
@@ -236,19 +236,14 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 	}
 	ctx = tflog.SetField(ctx, "record_set_id", *recordSetResp.Rrset.Id)
 
-	wr, err := dns.CreateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, *recordSetResp.Rrset.Id).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, *recordSetResp.Rrset.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*dns.RecordSetResponse)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
 	// Map response body to schema
-	err = mapFields(got, &model)
+	err = mapFields(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -323,29 +318,18 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 	// Update recordset
-	_, err = r.client.UpdateRecordSet(ctx, projectId, zoneId, recordSetId).UpdateRecordSetPayload(*payload).Execute()
+	_, err = r.client.PartialUpdateRecordSet(ctx, projectId, zoneId, recordSetId).PartialUpdateRecordSetPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", err.Error())
 		return
 	}
-	wr, err := dns.UpdateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
-	_, ok := wr.(*dns.RecordSetResponse)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
-	// Fetch updated record set
-	recordSetResp, err := r.client.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Calling API for updated data: %v", err))
-		return
-	}
-	err = mapFields(recordSetResp, &model)
+	err = mapFields(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -380,7 +364,7 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Calling API: %v", err))
 	}
-	_, err = dns.DeleteRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -451,7 +435,7 @@ func mapFields(recordSetResp *dns.RecordSetResponse, model *Model) error {
 	model.Error = types.StringPointerValue(recordSet.Error)
 	model.Name = types.StringPointerValue(recordSet.Name)
 	model.State = types.StringPointerValue(recordSet.State)
-	model.TTL = conversion.ToTypeInt64(recordSet.Ttl)
+	model.TTL = types.Int64PointerValue(recordSet.Ttl)
 	model.Type = types.StringPointerValue(recordSet.Type)
 	return nil
 }
@@ -468,20 +452,20 @@ func toCreatePayload(model *Model) (*dns.CreateRecordSetPayload, error) {
 			return nil, fmt.Errorf("expected record at index %d to be of type %T, got %T", i, types.String{}, record)
 		}
 		records = append(records, dns.RecordPayload{
-			Content: recordString.ValueStringPointer(),
+			Content: conversion.StringValueToPointer(recordString),
 		})
 	}
 
 	return &dns.CreateRecordSetPayload{
-		Comment: model.Comment.ValueStringPointer(),
-		Name:    model.Name.ValueStringPointer(),
+		Comment: conversion.StringValueToPointer(model.Comment),
+		Name:    conversion.StringValueToPointer(model.Name),
 		Records: &records,
-		Ttl:     conversion.ToPtrInt32(model.TTL),
-		Type:    model.Type.ValueStringPointer(),
+		Ttl:     conversion.Int64ValueToPointer(model.TTL),
+		Type:    conversion.StringValueToPointer(model.Type),
 	}, nil
 }
 
-func toUpdatePayload(model *Model) (*dns.UpdateRecordSetPayload, error) {
+func toUpdatePayload(model *Model) (*dns.PartialUpdateRecordSetPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -493,14 +477,14 @@ func toUpdatePayload(model *Model) (*dns.UpdateRecordSetPayload, error) {
 			return nil, fmt.Errorf("expected record at index %d to be of type %T, got %T", i, types.String{}, record)
 		}
 		records = append(records, dns.RecordPayload{
-			Content: recordString.ValueStringPointer(),
+			Content: conversion.StringValueToPointer(recordString),
 		})
 	}
 
-	return &dns.UpdateRecordSetPayload{
-		Comment: model.Comment.ValueStringPointer(),
-		Name:    model.Name.ValueStringPointer(),
+	return &dns.PartialUpdateRecordSetPayload{
+		Comment: conversion.StringValueToPointer(model.Comment),
+		Name:    conversion.StringValueToPointer(model.Name),
 		Records: &records,
-		Ttl:     conversion.ToPtrInt32(model.TTL),
+		Ttl:     conversion.Int64ValueToPointer(model.TTL),
 	}, nil
 }

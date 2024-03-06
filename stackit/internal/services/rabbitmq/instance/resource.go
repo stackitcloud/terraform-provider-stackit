@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq"
+	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -100,7 +101,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 
@@ -111,7 +112,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "RabbitMQ instance resource schema.",
+		"main":        "RabbitMQ instance resource schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
 		"instance_id": "ID of the RabbitMQ instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
@@ -261,19 +262,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	instanceId := *createResp.InstanceId
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	wr, err := rabbitmq.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*rabbitmq.Instance)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
 	// Map response body to schema
-	err = mapFields(got, &model)
+	err = mapFields(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -365,24 +361,19 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	err = r.client.UpdateInstance(ctx, projectId, instanceId).UpdateInstancePayload(*payload).Execute()
+	err = r.client.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	wr, err := rabbitmq.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*rabbitmq.Instance)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
 	// Map response body to schema
-	err = mapFields(got, &model)
+	err = mapFields(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -416,7 +407,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = rabbitmq.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -588,42 +579,42 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*rabbitmq.Creat
 	}
 	if parameters == nil {
 		return &rabbitmq.CreateInstancePayload{
-			InstanceName: model.Name.ValueStringPointer(),
-			PlanId:       model.PlanId.ValueStringPointer(),
+			InstanceName: conversion.StringValueToPointer(model.Name),
+			PlanId:       conversion.StringValueToPointer(model.PlanId),
 		}, nil
 	}
 	payloadParams := &rabbitmq.InstanceParameters{}
 	if parameters.SgwAcl.ValueString() != "" {
-		payloadParams.SgwAcl = parameters.SgwAcl.ValueStringPointer()
+		payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
 	}
 	return &rabbitmq.CreateInstancePayload{
-		InstanceName: model.Name.ValueStringPointer(),
+		InstanceName: conversion.StringValueToPointer(model.Name),
 		Parameters:   payloadParams,
-		PlanId:       model.PlanId.ValueStringPointer(),
+		PlanId:       conversion.StringValueToPointer(model.PlanId),
 	}, nil
 }
 
-func toUpdatePayload(model *Model, parameters *parametersModel) (*rabbitmq.UpdateInstancePayload, error) {
+func toUpdatePayload(model *Model, parameters *parametersModel) (*rabbitmq.PartialUpdateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
 	if parameters == nil {
-		return &rabbitmq.UpdateInstancePayload{
-			PlanId: model.PlanId.ValueStringPointer(),
+		return &rabbitmq.PartialUpdateInstancePayload{
+			PlanId: conversion.StringValueToPointer(model.PlanId),
 		}, nil
 	}
-	return &rabbitmq.UpdateInstancePayload{
+	return &rabbitmq.PartialUpdateInstancePayload{
 		Parameters: &rabbitmq.InstanceParameters{
-			SgwAcl: parameters.SgwAcl.ValueStringPointer(),
+			SgwAcl: conversion.StringValueToPointer(parameters.SgwAcl),
 		},
-		PlanId: model.PlanId.ValueStringPointer(),
+		PlanId: conversion.StringValueToPointer(model.PlanId),
 	}, nil
 }
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
-	res, err := r.client.GetOfferings(ctx, projectId).Execute()
+	res, err := r.client.ListOfferings(ctx, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting RabbitMQ offerings: %w", err)
 	}
@@ -661,7 +652,7 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 func loadPlanNameAndVersion(ctx context.Context, client *rabbitmq.APIClient, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	planId := model.PlanId.ValueString()
-	res, err := client.GetOfferings(ctx, projectId).Execute()
+	res, err := client.ListOfferings(ctx, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting RabbitMQ offerings: %w", err)
 	}

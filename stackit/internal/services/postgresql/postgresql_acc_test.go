@@ -11,6 +11,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresql"
+	"github.com/stackitcloud/stackit-sdk-go/services/postgresql/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -46,7 +47,7 @@ func resourceConfig(acls, frequency, plugins string) string {
 					}
 				}
 
-				resource "stackit_postgresql_credentials" "credentials" {
+				resource "stackit_postgresql_credential" "credential" {
 					project_id = stackit_postgresql_instance.instance.project_id
 					instance_id = stackit_postgresql_instance.instance.instance_id
 				}
@@ -80,17 +81,17 @@ func TestAccPostgreSQLResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("stackit_postgresql_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl"]),
 
-					// Credentials data
+					// Credential data
 					resource.TestCheckResourceAttrPair(
-						"stackit_postgresql_credentials.credentials", "project_id",
+						"stackit_postgresql_credential.credential", "project_id",
 						"stackit_postgresql_instance.instance", "project_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_postgresql_credentials.credentials", "instance_id",
+						"stackit_postgresql_credential.credential", "instance_id",
 						"stackit_postgresql_instance.instance", "instance_id",
 					),
-					resource.TestCheckResourceAttrSet("stackit_postgresql_credentials.credentials", "credentials_id"),
-					resource.TestCheckResourceAttrSet("stackit_postgresql_credentials.credentials", "host"),
+					resource.TestCheckResourceAttrSet("stackit_postgresql_credential.credential", "credential_id"),
+					resource.TestCheckResourceAttrSet("stackit_postgresql_credential.credential", "host"),
 				),
 			},
 			{ // Data source
@@ -102,10 +103,10 @@ func TestAccPostgreSQLResource(t *testing.T) {
 						instance_id = stackit_postgresql_instance.instance.instance_id
 					}
 
-					data "stackit_postgresql_credentials" "credentials" {
-						project_id     = stackit_postgresql_credentials.credentials.project_id
-						instance_id    = stackit_postgresql_credentials.credentials.instance_id
-					    credentials_id = stackit_postgresql_credentials.credentials.credentials_id
+					data "stackit_postgresql_credential" "credential" {
+						project_id     = stackit_postgresql_credential.credential.project_id
+						instance_id    = stackit_postgresql_credential.credential.instance_id
+					    credential_id = stackit_postgresql_credential.credential.credential_id
 					}`,
 					resourceConfig(instanceResource["sgw_acl"], instanceResource["metrics_frequency"], instanceResource["plugins"]),
 				),
@@ -114,20 +115,20 @@ func TestAccPostgreSQLResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_postgresql_instance.instance", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttrPair("stackit_postgresql_instance.instance", "instance_id",
 						"data.stackit_postgresql_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttrPair("stackit_postgresql_credentials.credentials", "credentials_id",
-						"data.stackit_postgresql_credentials.credentials", "credentials_id"),
+					resource.TestCheckResourceAttrPair("stackit_postgresql_credential.credential", "credential_id",
+						"data.stackit_postgresql_credential.credential", "credential_id"),
 					resource.TestCheckResourceAttr("data.stackit_postgresql_instance.instance", "plan_id", instanceResource["plan_id"]),
 					resource.TestCheckResourceAttr("data.stackit_postgresql_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_postgresql_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl"]),
 					resource.TestCheckResourceAttr("data.stackit_postgresql_instance.instance", "parameters.plugins.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_postgresql_instance.instance", "parameters.plugins.0", instanceResource["plugins"]),
 
-					// Credentials data
-					resource.TestCheckResourceAttr("data.stackit_postgresql_credentials.credentials", "project_id", instanceResource["project_id"]),
-					resource.TestCheckResourceAttrSet("data.stackit_postgresql_credentials.credentials", "credentials_id"),
-					resource.TestCheckResourceAttrSet("data.stackit_postgresql_credentials.credentials", "host"),
-					resource.TestCheckResourceAttrSet("data.stackit_postgresql_credentials.credentials", "port"),
-					resource.TestCheckResourceAttrSet("data.stackit_postgresql_credentials.credentials", "uri"),
+					// Credential data
+					resource.TestCheckResourceAttr("data.stackit_postgresql_credential.credential", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrSet("data.stackit_postgresql_credential.credential", "credential_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_postgresql_credential.credential", "host"),
+					resource.TestCheckResourceAttrSet("data.stackit_postgresql_credential.credential", "port"),
+					resource.TestCheckResourceAttrSet("data.stackit_postgresql_credential.credential", "uri"),
 				),
 			},
 			// Import
@@ -148,21 +149,21 @@ func TestAccPostgreSQLResource(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				ResourceName: "stackit_postgresql_credentials.credentials",
+				ResourceName: "stackit_postgresql_credential.credential",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_postgresql_credentials.credentials"]
+					r, ok := s.RootModule().Resources["stackit_postgresql_credential.credential"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_postgresql_credentials.credentials")
+						return "", fmt.Errorf("couldn't find resource stackit_postgresql_credential.credential")
 					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
-					credentialsId, ok := r.Primary.Attributes["credentials_id"]
+					credentialId, ok := r.Primary.Attributes["credential_id"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find attribute credentials_id")
+						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialsId), nil
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -212,7 +213,7 @@ func testAccCheckPostgreSQLDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.GetInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
@@ -228,7 +229,7 @@ func testAccCheckPostgreSQLDestroy(s *terraform.State) error {
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
-				_, err = postgresql.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
 				}
@@ -239,12 +240,12 @@ func testAccCheckPostgreSQLDestroy(s *terraform.State) error {
 }
 
 func checkInstanceDeleteSuccess(i *postgresql.Instance) bool {
-	if *i.LastOperation.Type != postgresql.InstanceTypeDelete {
+	if *i.LastOperation.Type != wait.InstanceTypeDelete {
 		return false
 	}
 
-	if *i.LastOperation.Type == postgresql.InstanceTypeDelete {
-		if *i.LastOperation.State != postgresql.InstanceStateSuccess {
+	if *i.LastOperation.Type == wait.InstanceTypeDelete {
+		if *i.LastOperation.State != wait.InstanceStateSuccess {
 			return false
 		} else if strings.Contains(*i.LastOperation.Description, "DeleteFailed") || strings.Contains(*i.LastOperation.Description, "failed") {
 			return false

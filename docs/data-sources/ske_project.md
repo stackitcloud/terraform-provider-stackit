@@ -3,12 +3,12 @@
 page_title: "stackit_ske_project Data Source - stackit"
 subcategory: ""
 description: |-
-  
+  SKE project data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_ske_project (Data Source)
 
-
+SKE project data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
@@ -27,4 +27,4 @@ data "stackit_ske_project" "example" {
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`".
+- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`".

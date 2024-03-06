@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -25,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
+	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -63,7 +63,7 @@ var flavorTypes = map[string]attr.Type{
 	"ram":         basetypes.Int64Type{},
 }
 
-// Struct corresponding to DataSourceModel.Storage
+// Struct corresponding to Model.Storage
 type storageModel struct {
 	Class types.String `tfsdk:"class"`
 	Size  types.Int64  `tfsdk:"size"`
@@ -118,7 +118,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 
@@ -129,7 +129,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "PostgresFlex instance resource schema.",
+		"main":        "PostgresFlex instance resource schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
 		"instance_id": "ID of the PostgresFlex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
@@ -260,8 +260,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		r.loadFlavorId(ctx, &resp.Diagnostics, &model, flavor)
-		if resp.Diagnostics.HasError() {
+		err := loadFlavorId(ctx, r.client, &model, flavor)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
 		}
 	}
@@ -288,19 +289,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	instanceId := *createResp.Id
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	wr, err := postgresflex.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*postgresflex.InstanceResponse)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
 	// Map response body to schema
-	err = mapFields(got, &model, flavor, storage)
+	err = mapFields(waitResp, &model, flavor, storage)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -394,8 +390,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		r.loadFlavorId(ctx, &resp.Diagnostics, &model, flavor)
-		if resp.Diagnostics.HasError() {
+		err := loadFlavorId(ctx, r.client, &model, flavor)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
 		}
 	}
@@ -415,26 +412,21 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	_, err = r.client.UpdateInstance(ctx, projectId, instanceId).UpdateInstancePayload(*payload).Execute()
+	_, err = r.client.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
 	}
-	wr, err := postgresflex.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
-	got, ok := wr.(*postgresflex.InstanceResponse)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Wait result conversion, got %+v", wr))
-		return
-	}
 
 	// Map response body to schema
-	err = mapFields(got, &model, flavor, storage)
+	err = mapFields(waitResp, &model, flavor, storage)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping fields in update", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
@@ -465,7 +457,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = postgresflex.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(15 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -523,15 +515,15 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 		}
 		aclList, diags = types.ListValue(types.StringType, acl)
 		if diags.HasError() {
-			return fmt.Errorf("failed to map ACL: %w", core.DiagsToError(diags))
+			return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
 		}
 	}
 
 	var flavorValues map[string]attr.Value
 	if instance.Flavor == nil {
 		flavorValues = map[string]attr.Value{
-			"id":          types.StringNull(),
-			"description": types.StringNull(),
+			"id":          flavor.Id,
+			"description": flavor.Description,
 			"cpu":         flavor.CPU,
 			"ram":         flavor.RAM,
 		}
@@ -539,13 +531,13 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 		flavorValues = map[string]attr.Value{
 			"id":          types.StringValue(*instance.Flavor.Id),
 			"description": types.StringValue(*instance.Flavor.Description),
-			"cpu":         types.Int64Value(int64(*instance.Flavor.Cpu)),
-			"ram":         types.Int64Value(int64(*instance.Flavor.Memory)),
+			"cpu":         types.Int64PointerValue(instance.Flavor.Cpu),
+			"ram":         types.Int64PointerValue(instance.Flavor.Memory),
 		}
 	}
 	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
 	if diags.HasError() {
-		return fmt.Errorf("failed to create flavor: %w", core.DiagsToError(diags))
+		return fmt.Errorf("creating flavor: %w", core.DiagsToError(diags))
 	}
 
 	var storageValues map[string]attr.Value
@@ -557,12 +549,12 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 	} else {
 		storageValues = map[string]attr.Value{
 			"class": types.StringValue(*instance.Storage.Class),
-			"size":  types.Int64Value(int64(*instance.Storage.Size)),
+			"size":  types.Int64PointerValue(instance.Storage.Size),
 		}
 	}
 	storageObject, diags := types.ObjectValue(storageTypes, storageValues)
 	if diags.HasError() {
-		return fmt.Errorf("failed to create storage: %w", core.DiagsToError(diags))
+		return fmt.Errorf("creating storage: %w", core.DiagsToError(diags))
 	}
 
 	idParts := []string{
@@ -573,29 +565,13 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 		strings.Join(idParts, core.Separator),
 	)
 	model.InstanceId = types.StringValue(instanceId)
-	if instance.Name == nil {
-		model.Name = types.StringNull()
-	} else {
-		model.Name = types.StringValue(*instance.Name)
-	}
+	model.Name = types.StringPointerValue(instance.Name)
 	model.ACL = aclList
-	if instance.BackupSchedule == nil {
-		model.BackupSchedule = types.StringNull()
-	} else {
-		model.BackupSchedule = types.StringValue(*instance.BackupSchedule)
-	}
+	model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
 	model.Flavor = flavorObject
-	if instance.Replicas == nil {
-		model.Replicas = types.Int64Null()
-	} else {
-		model.Replicas = types.Int64Value(int64(*instance.Replicas))
-	}
+	model.Replicas = types.Int64PointerValue(instance.Replicas)
 	model.Storage = storageObject
-	if instance.Version == nil {
-		model.Version = types.StringNull()
-	} else {
-		model.Version = types.StringValue(*instance.Version)
-	}
+	model.Version = types.StringPointerValue(instance.Version)
 	return nil
 }
 
@@ -614,22 +590,22 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}
 
 	return &postgresflex.CreateInstancePayload{
-		Acl: &postgresflex.InstanceAcl{
+		Acl: &postgresflex.ACL{
 			Items: &acl,
 		},
-		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
-		FlavorId:       flavor.Id.ValueStringPointer(),
-		Name:           model.Name.ValueStringPointer(),
-		Replicas:       conversion.ToPtrInt32(model.Replicas),
-		Storage: &postgresflex.InstanceStorage{
-			Class: storage.Class.ValueStringPointer(),
-			Size:  conversion.ToPtrInt32(storage.Size),
+		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
+		FlavorId:       conversion.StringValueToPointer(flavor.Id),
+		Name:           conversion.StringValueToPointer(model.Name),
+		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
+		Storage: &postgresflex.Storage{
+			Class: conversion.StringValueToPointer(storage.Class),
+			Size:  conversion.Int64ValueToPointer(storage.Size),
 		},
-		Version: model.Version.ValueStringPointer(),
+		Version: conversion.StringValueToPointer(model.Version),
 	}, nil
 }
 
-func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel) (*postgresflex.UpdateInstancePayload, error) {
+func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel) (*postgresflex.PartialUpdateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -643,53 +619,51 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		return nil, fmt.Errorf("nil storage")
 	}
 
-	return &postgresflex.UpdateInstancePayload{
-		Acl: &postgresflex.InstanceAcl{
+	return &postgresflex.PartialUpdateInstancePayload{
+		Acl: &postgresflex.ACL{
 			Items: &acl,
 		},
-		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
-		FlavorId:       flavor.Id.ValueStringPointer(),
-		Name:           model.Name.ValueStringPointer(),
-		Replicas:       conversion.ToPtrInt32(model.Replicas),
-		Storage: &postgresflex.InstanceStorage{
-			Class: storage.Class.ValueStringPointer(),
-			Size:  conversion.ToPtrInt32(storage.Size),
+		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
+		FlavorId:       conversion.StringValueToPointer(flavor.Id),
+		Name:           conversion.StringValueToPointer(model.Name),
+		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
+		Storage: &postgresflex.Storage{
+			Class: conversion.StringValueToPointer(storage.Class),
+			Size:  conversion.Int64ValueToPointer(storage.Size),
 		},
-		Version: model.Version.ValueStringPointer(),
+		Version: conversion.StringValueToPointer(model.Version),
 	}, nil
 }
 
-func (r *instanceResource) loadFlavorId(ctx context.Context, diags *diag.Diagnostics, model *Model, flavor *flavorModel) {
+type postgresFlexClient interface {
+	ListFlavorsExecute(ctx context.Context, projectId string) (*postgresflex.ListFlavorsResponse, error)
+}
+
+func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, flavor *flavorModel) error {
 	if model == nil {
-		diags.AddError("invalid model", "nil model")
-		return
+		return fmt.Errorf("nil model")
 	}
 	if flavor == nil {
-		diags.AddError("invalid flavor", "nil flavor")
-		return
+		return fmt.Errorf("nil flavor")
 	}
-	cpu := conversion.ToPtrInt32(flavor.CPU)
+	cpu := conversion.Int64ValueToPointer(flavor.CPU)
 	if cpu == nil {
-		diags.AddError("invalid flavor", "nil CPU")
-		return
+		return fmt.Errorf("nil CPU")
 	}
-	ram := conversion.ToPtrInt32(flavor.RAM)
+	ram := conversion.Int64ValueToPointer(flavor.RAM)
 	if ram == nil {
-		diags.AddError("invalid flavor", "nil RAM")
-		return
+		return fmt.Errorf("nil RAM")
 	}
 
 	projectId := model.ProjectId.ValueString()
-	res, err := r.client.GetFlavors(ctx, projectId).Execute()
+	res, err := client.ListFlavorsExecute(ctx, projectId)
 	if err != nil {
-		diags.AddError("failed to list postgresflex flavors", err.Error())
-		return
+		return fmt.Errorf("listing postgresflex flavors: %w", err)
 	}
 
 	avl := ""
 	if res.Flavors == nil {
-		diags.AddError("no flavors", fmt.Sprintf("couldn't find flavors for id %s", flavor.Id.ValueString()))
-		return
+		return fmt.Errorf("finding flavors for project %s", projectId)
 	}
 	for _, f := range *res.Flavors {
 		if f.Id == nil || f.Cpu == nil || f.Memory == nil {
@@ -697,12 +671,14 @@ func (r *instanceResource) loadFlavorId(ctx context.Context, diags *diag.Diagnos
 		}
 		if *f.Cpu == *cpu && *f.Memory == *ram {
 			flavor.Id = types.StringValue(*f.Id)
+			flavor.Description = types.StringValue(*f.Description)
 			break
 		}
 		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, *f.Cpu, *f.Cpu)
 	}
 	if flavor.Id.ValueString() == "" {
-		diags.AddError("invalid flavor", fmt.Sprintf("couldn't find flavor.\navailable specs are:%s", avl))
-		return
+		return fmt.Errorf("couldn't find flavor, available specs are:%s", avl)
 	}
+
+	return nil
 }

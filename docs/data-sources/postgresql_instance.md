@@ -3,12 +3,15 @@
 page_title: "stackit_postgresql_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  PostgreSQL instance data source schema.
+  PostgreSQL instance data source schema. Must have a region specified in the provider configuration.
+  !> The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Data sources of this type will stop working after that. Use stackitpostgresflexinstance instead. For more details, check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html
 ---
 
 # stackit_postgresql_instance (Data Source)
 
-PostgreSQL instance data source schema.
+PostgreSQL instance data source schema. Must have a `region` specified in the provider configuration.
+
+!> The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Data sources of this type will stop working after that. Use stackit_postgresflex_instance instead. For more details, check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html
 
 ## Example Usage
 
@@ -33,7 +36,7 @@ data "stackit_postgresql_instance" "example" {
 - `cf_organization_guid` (String)
 - `cf_space_guid` (String)
 - `dashboard_url` (String)
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`instance_id`".
+- `id` (String) Terraform's internal data source. identifier. It is structured as "`project_id`,`instance_id`".
 - `image_url` (String)
 - `name` (String) Instance name.
 - `parameters` (Attributes) (see [below for nested schema](#nestedatt--parameters))

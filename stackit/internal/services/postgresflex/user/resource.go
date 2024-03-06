@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -24,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
+	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -88,7 +88,7 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 
@@ -99,7 +99,7 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 // Schema defines the schema for the resource.
 func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "PostgresFlex user resource schema.",
+		"main":        "PostgresFlex user resource schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the PostgresFlex instance.",
@@ -303,7 +303,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
 	}
-	_, err = postgresflex.DeleteUserWaitHandler(ctx, r.client, projectId, instanceId, userId).SetTimeout(1 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteUserWaitHandler(ctx, r.client, projectId, instanceId, userId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -376,11 +376,11 @@ func mapFieldsCreate(userResp *postgresflex.CreateUserResponse, model *Model) er
 		model.Roles = rolesSet
 	}
 	model.Host = types.StringPointerValue(user.Host)
-	model.Port = conversion.ToTypeInt64(user.Port)
+	model.Port = types.Int64PointerValue(user.Port)
 	return nil
 }
 
-func mapFields(userResp *postgresflex.UserResponse, model *Model) error {
+func mapFields(userResp *postgresflex.GetUserResponse, model *Model) error {
 	if userResp == nil || userResp.Item == nil {
 		return fmt.Errorf("response is nil")
 	}
@@ -422,7 +422,7 @@ func mapFields(userResp *postgresflex.UserResponse, model *Model) error {
 		model.Roles = rolesSet
 	}
 	model.Host = types.StringPointerValue(user.Host)
-	model.Port = conversion.ToTypeInt64(user.Port)
+	model.Port = types.Int64PointerValue(user.Port)
 	return nil
 }
 
@@ -436,6 +436,6 @@ func toCreatePayload(model *Model, roles []string) (*postgresflex.CreateUserPayl
 
 	return &postgresflex.CreateUserPayload{
 		Roles:    &roles,
-		Username: model.Username.ValueStringPointer(),
+		Username: conversion.StringValueToPointer(model.Username),
 	}, nil
 }
