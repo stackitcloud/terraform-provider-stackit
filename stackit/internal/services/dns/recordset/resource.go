@@ -166,7 +166,7 @@ func (r *recordSetResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.Int64{
-					int64validator.AtLeast(30),
+					int64validator.AtLeast(60),
 					int64validator.AtMost(99999999),
 				},
 			},
