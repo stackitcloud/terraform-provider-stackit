@@ -20,7 +20,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.11.1
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.8.6
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.10.1
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.9.2
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.12.1
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.10.1
@@ -36,7 +36,7 @@ require (
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0 // indirect
