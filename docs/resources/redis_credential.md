@@ -37,5 +37,5 @@ resource "stackit_redis_credential" "example" {
 - `name` (String)
 - `password` (String, Sensitive)
 - `port` (Number)
-- `uri` (String) Connection uri. Currently the returned uri doesn't support ssl, but you can enable it by using rediss:// instead of redis://. We will provide the ssl connection in a future release
+- `uri` (String) Connection URI. Currently the returned uri doesn't support SSL, but you can enable it by using `rediss://` instead of `redis://`. We will provide the SSL connection in a future release
 - `username` (String)
