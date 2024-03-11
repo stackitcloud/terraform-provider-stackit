@@ -86,7 +86,7 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 // Schema returns the Terraform schema structure
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "SKE project resource schema. Must have a `region` specified in the provider configuration.",
+		Description: "SKE project resource schema. Must have a `region` specified in the provider configuration. Deleting this resource will destroy any SKE clusters associated to the project",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`\".",
@@ -171,6 +171,8 @@ func (r *projectResource) Update(ctx context.Context, _ resource.UpdateRequest, 
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+	core.LogAndAddWarning(ctx, &resp.Diagnostics, "Deleting project", "Deleting this resource will destroy any existing clusters under the project")
+
 	var model Model
 	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
@@ -182,12 +184,12 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	c := r.client
 	_, err := c.DisableService(ctx, projectId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	_, err = wait.DisableServiceWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Project deletion waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Project deletion waiting: %v", err))
 		return
 	}
 	tflog.Info(ctx, "SKE project deleted")
