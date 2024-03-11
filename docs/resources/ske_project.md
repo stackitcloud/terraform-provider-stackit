@@ -3,12 +3,12 @@
 page_title: "stackit_ske_project Resource - stackit"
 subcategory: ""
 description: |-
-  SKE project resource schema. Must have a region specified in the provider configuration.
+  SKE project resource schema. Must have a region specified in the provider configuration. This resource allows you to enable the SKE service and you can only have one per project. Deleting this resource will destroy any SKE clusters associated to the project
 ---
 
 # stackit_ske_project (Resource)
 
-SKE project resource schema. Must have a `region` specified in the provider configuration.
+SKE project resource schema. Must have a `region` specified in the provider configuration. This resource allows you to enable the SKE service and you can only have one per project. Deleting this resource will destroy any SKE clusters associated to the project
 
 ## Example Usage
 
