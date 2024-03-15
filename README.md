@@ -1,3 +1,5 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/stackitcloud/terraform-provider-stackit)](https://goreportcard.com/report/github.com/stackitcloud/terraform-provider-stackit) [![GitHub Release](https://img.shields.io/github/v/release/stackitcloud/terraform-provider-stackit)](https://registry.terraform.io/providers/stackitcloud/stackit/latest) ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/stackitcloud/terraform-provider-stackit) [![GitHub License](https://img.shields.io/github/license/stackitcloud/terraform-provider-stackit)](https://www.apache.org/licenses/LICENSE-2.0)
+
 # Introduction
 
 This project is the official Terraform provider for STACKIT.
