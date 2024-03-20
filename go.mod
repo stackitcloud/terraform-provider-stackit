@@ -11,10 +11,10 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.22.1
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.7.0
-	github.com/stackitcloud/stackit-sdk-go/core v0.10.0
+	github.com/stackitcloud/stackit-sdk-go/core v0.10.1
 	github.com/stackitcloud/stackit-sdk-go/services/argus v0.9.5
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.8.4
-	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.9.2
+	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.9.3
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.10.1
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.10.1
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.11.1
