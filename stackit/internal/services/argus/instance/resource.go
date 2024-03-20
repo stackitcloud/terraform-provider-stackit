@@ -278,6 +278,15 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	acl := []string{}
+	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
+		diags = model.ACL.ElementsAs(ctx, &acl, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
@@ -311,7 +320,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-	// Set state to fully populated data
+	// Set state to instance populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -319,21 +328,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Create ACL
-
-	var acl []string
-	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
-		diags = model.ACL.ElementsAs(ctx, &acl, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	updatePayload := argus.UpdateACLPayload{
-		Acl: utils.Ptr(acl),
-	}
-
-	_, err = r.client.UpdateACL(ctx, *instanceId, projectId).UpdateACLPayload(updatePayload).Execute()
+	err = updateACL(ctx, projectId, *instanceId, acl, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACL: %v", err))
 		return
@@ -350,7 +345,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-	// Set state to fully populated data
+	// Set state to ACL populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
