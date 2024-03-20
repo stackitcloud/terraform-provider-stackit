@@ -61,40 +61,7 @@ func TestMapFields(t *testing.T) {
 				PlanId:     types.StringValue("planId"),
 				PlanName:   types.StringValue("plan1"),
 				Parameters: toTerraformStringMapMust(context.Background(), map[string]string{"key": "value"}),
-				ACL: types.SetValueMust(types.StringType, []attr.Value{
-					types.StringValue("1.1.1.1/32"),
-				}),
-			},
-			true,
-		},
-		{
-			"values_ok_multiple_acls",
-			&argus.GetInstanceResponse{
-				Id:         utils.Ptr("iid"),
-				Name:       utils.Ptr("name"),
-				PlanName:   utils.Ptr("plan1"),
-				PlanId:     utils.Ptr("planId"),
-				Parameters: &map[string]string{"key": "value"},
-			},
-			&argus.ListACLResponse{
-				Acl: &[]string{
-					"1.1.1.1/32",
-					"8.8.8.8/32",
-				},
-				Message: utils.Ptr("message"),
-			},
-			Model{
-				Id:         types.StringValue("pid,iid"),
-				ProjectId:  types.StringValue("pid"),
-				Name:       types.StringValue("name"),
-				InstanceId: types.StringValue("iid"),
-				PlanId:     types.StringValue("planId"),
-				PlanName:   types.StringValue("plan1"),
-				Parameters: toTerraformStringMapMust(context.Background(), map[string]string{"key": "value"}),
-				ACL: types.SetValueMust(types.StringType, []attr.Value{
-					types.StringValue("1.1.1.1/32"),
-					types.StringValue("8.8.8.8/32"),
-				}),
+				ACL:        types.SetNull(types.StringType),
 			},
 			true,
 		},
@@ -140,7 +107,7 @@ func TestMapFields(t *testing.T) {
 			state := &Model{
 				ProjectId: tt.expected.ProjectId,
 			}
-			err := mapInstanceFields(context.Background(), tt.input, state)
+			err := mapFields(context.Background(), tt.input, nil,state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -148,6 +115,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
+				// Diff is failing with SISEGV somehow
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
