@@ -32,6 +32,7 @@ func TestMapFields(t *testing.T) {
 				PlanName:   types.StringNull(),
 				Name:       types.StringNull(),
 				Parameters: types.MapNull(types.StringType),
+				ACL:        types.SetNull(types.StringType),
 			},
 			true,
 		},
@@ -52,6 +53,7 @@ func TestMapFields(t *testing.T) {
 				PlanId:     types.StringValue("planId"),
 				PlanName:   types.StringValue("plan1"),
 				Parameters: toTerraformStringMapMust(context.Background(), map[string]string{"key": "value"}),
+				ACL:        types.SetNull(types.StringType),
 			},
 			true,
 		},
@@ -69,6 +71,7 @@ func TestMapFields(t *testing.T) {
 				PlanName:   types.StringNull(),
 				Name:       types.StringNull(),
 				Parameters: types.MapNull(types.StringType),
+				ACL:        types.SetNull(types.StringType),
 			},
 			true,
 		},
@@ -90,7 +93,7 @@ func TestMapFields(t *testing.T) {
 			state := &Model{
 				ProjectId: tt.expected.ProjectId,
 			}
-			err := mapInstanceFields(context.Background(), tt.input, state)
+			err := mapFields(context.Background(), tt.input, nil,state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -98,6 +101,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
+				// Diff is failing with SISEGV somehow
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)

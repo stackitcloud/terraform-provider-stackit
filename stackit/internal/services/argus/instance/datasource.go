@@ -216,7 +216,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	err = mapInstanceFields(ctx, instanceResponse, &model)
+	err = mapFields(ctx, instanceResponse, nil, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
