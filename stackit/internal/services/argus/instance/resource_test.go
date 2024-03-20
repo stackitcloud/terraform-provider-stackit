@@ -90,7 +90,7 @@ func TestMapFields(t *testing.T) {
 			state := &Model{
 				ProjectId: tt.expected.ProjectId,
 			}
-			err := mapFields(context.Background(), tt.input, state)
+			err := mapInstanceFields(context.Background(), tt.input, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
