@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
@@ -254,7 +255,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Computed: true,
 			},
 			"acl": schema.SetAttribute{
-				Description: "The access control list for this instance. Each entry is a single IP address that is permitted to access, in CIDR notation (/32).",
+				Description: "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation.",
 				ElementType: types.StringType,
 				Optional:    true,
 				Validators: []validator.Set{
@@ -314,7 +315,46 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, nil, &model)
+	err = mapInstanceFields(ctx, waitResp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+	// Set state to fully populated data
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Create ACL
+
+	var acl []string
+	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
+		diags = model.ACL.ElementsAs(ctx, &acl, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	updatePayload := argus.UpdateACLPayload{
+		Acl: utils.Ptr(acl),
+	}
+
+	_, err = r.client.UpdateACL(ctx, *instanceId, projectId).UpdateACLPayload(updatePayload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACL: %v", err))
+		return
+	}
+	aclList, err := r.client.ListACL(ctx, *instanceId, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API for ACL data: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapACLField(aclList, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -381,7 +421,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, instanceResp, aclList, &model)
+	err = mapInstanceFields(ctx, instanceResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -442,7 +482,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	err = mapFields(ctx, waitResp, nil, &model)
+	err = mapInstanceFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -528,7 +568,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Argus instance state imported")
 }
 
-func mapFields(ctx context.Context, r *argus.GetInstanceResponse, acl *argus.ListACLResponse, model *Model) error {
+func mapInstanceFields(ctx context.Context, r *argus.GetInstanceResponse, model *Model) error {
 	if r == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -592,11 +632,8 @@ func mapFields(ctx context.Context, r *argus.GetInstanceResponse, acl *argus.Lis
 		model.JaegerUIURL = types.StringPointerValue(i.JaegerUiUrl)
 		model.OtlpTracesURL = types.StringPointerValue(i.OtlpTracesUrl)
 		model.ZipkinSpansURL = types.StringPointerValue(i.ZipkinSpansUrl)
-	}
-
-	err := mapACLField(acl, model)
-	if err != nil {
-		return err
+		// ACL is set later
+		model.ACL = basetypes.NewSetNull(types.StringType)
 	}
 
 	return nil
@@ -604,12 +641,8 @@ func mapFields(ctx context.Context, r *argus.GetInstanceResponse, acl *argus.Lis
 
 func mapACLField(aclList *argus.ListACLResponse, model *Model) error {
 	if aclList == nil {
-		if model.ACL.IsNull() || model.ACL.IsUnknown() {
-			model.ACL = types.SetNull(types.StringType)
-		}
-		return nil
+		return fmt.Errorf("nil ACL list")
 	}
-
 	if aclList.Acl == nil || len(*aclList.Acl) == 0 {
 		model.ACL = types.SetNull(types.StringType)
 		return nil
@@ -619,11 +652,11 @@ func mapACLField(aclList *argus.ListACLResponse, model *Model) error {
 	for _, cidr := range *aclList.Acl {
 		acl = append(acl, types.StringValue(cidr))
 	}
-	aclTF, diags := types.SetValue(types.StringType, acl)
+	aclsList, diags := types.SetValue(types.StringType, acl)
 	if diags.HasError() {
 		return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
 	}
-	model.ACL = aclTF
+	model.ACL = aclsList
 	return nil
 }
 
