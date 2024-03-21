@@ -381,20 +381,20 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, instanceResp, nil, &model)
+	err = mapFields(ctx, instanceResp, aclList, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing ACL API payload: %v", err))
 		return
 	}
 
-	// Set state to fully populated data
+	// Set state to ACL populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	tflog.Info(ctx, "Argus instance read")
+	tflog.Info(ctx, "Argus instance created")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -453,7 +453,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	// Create ACL
+	// Update ACL
 	err = updateACL(ctx, projectId, instanceId, acl, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACL: %v", err))
@@ -478,7 +478,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 
 	tflog.Info(ctx, "Argus instance updated")
 }
