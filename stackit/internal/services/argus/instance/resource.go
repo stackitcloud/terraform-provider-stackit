@@ -319,6 +319,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	// Set state to instance populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
