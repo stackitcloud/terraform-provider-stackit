@@ -374,18 +374,26 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	// Map response body to schema
-	err = mapFields(ctx, instanceResp, nil, &model)
+	aclList, err := r.client.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACL data: %v", err))
 		return
 	}
-	// Set refreshed model
+
+	// Map response body to schema
+	err = mapFields(ctx, instanceResp, aclList, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing ACL API payload: %v", err))
+		return
+	}
+
+	// Set state to ACL populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Argus instance created")
 }
 
@@ -445,7 +453,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	// Create ACL
+	// Update ACL
 	err = updateACL(ctx, projectId, instanceId, acl, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACL: %v", err))
@@ -470,7 +478,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 
 	tflog.Info(ctx, "Argus instance updated")
 }
