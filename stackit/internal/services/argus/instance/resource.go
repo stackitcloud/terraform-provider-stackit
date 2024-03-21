@@ -453,7 +453,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	// Update ACL
+	// Create ACL
 	err = updateACL(ctx, projectId, instanceId, acl, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACL: %v", err))
@@ -461,7 +461,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 	aclList, err := r.client.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API to list ACL data: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API for ACL data: %v", err))
 		return
 	}
 
@@ -478,6 +478,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 
 	tflog.Info(ctx, "Argus instance updated")
 }
