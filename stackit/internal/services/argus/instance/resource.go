@@ -401,6 +401,15 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 
+	acl := []string{}
+	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
+		diags = model.ACL.ElementsAs(ctx, &acl, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	err := r.loadPlanId(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading service plan: %v", err))
@@ -435,6 +444,34 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Create ACL
+	err = updateACL(ctx, projectId, instanceId, acl, r.client)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACL: %v", err))
+		return
+	}
+	aclList, err := r.client.ListACL(ctx, instanceId, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API for ACL data: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapFields(ctx, waitResp, aclList, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing ACL API payload: %v", err))
+		return
+	}
+
+	// Set state to ACL populated data
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+
 	tflog.Info(ctx, "Argus instance updated")
 }
 
