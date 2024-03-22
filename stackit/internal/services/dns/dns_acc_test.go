@@ -222,7 +222,7 @@ func TestAccDnsResource(t *testing.T) {
 
 					// Record set data
 					resource.TestCheckResourceAttrSet("data.stackit_dns_record_set.record_set", "record_set_id"),
-					resource.TestCheckNoResourceAttr("data.stackit_dns_record_set.record_set", "name"),
+					resource.TestCheckResourceAttr("data.stackit_dns_record_set.record_set", "name", recordSetResource["name"]+"."+zoneResource["dns_name"]+"."),
 					resource.TestCheckResourceAttr("data.stackit_dns_record_set.record_set", "fqdn", recordSetResource["name"]+"."+zoneResource["dns_name"]+"."),
 					resource.TestCheckResourceAttr("data.stackit_dns_record_set.record_set", "records.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_dns_record_set.record_set", "type", recordSetResource["type"]),
@@ -463,7 +463,7 @@ func TestAccDnsMinimalResource(t *testing.T) {
 
 					// Record set data
 					resource.TestCheckResourceAttrSet("data.stackit_dns_record_set.record_set_min", "record_set_id"),
-					resource.TestCheckNoResourceAttr("data.stackit_dns_record_set.record_set_min", "name"),
+					resource.TestCheckResourceAttr("data.stackit_dns_record_set.record_set_min", "name", recordSetResource["name_min"]+"."+zoneResource["dns_name_min"]+"."),
 					resource.TestCheckResourceAttr("data.stackit_dns_record_set.record_set_min", "fqdn", recordSetResource["name_min"]+"."+zoneResource["dns_name_min"]+"."),
 					resource.TestCheckResourceAttr("data.stackit_dns_record_set.record_set_min", "records.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_dns_record_set.record_set_min", "records.0", strings.ReplaceAll(recordSetResource["records"], "\"", "")),

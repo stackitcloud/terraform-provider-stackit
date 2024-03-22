@@ -108,7 +108,7 @@ func (d *recordSetDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				Computed:    true,
 			},
 			"fqdn": schema.StringAttribute{
-				Description: "FQDN of the record set.",
+				Description: "Fully qualified domain name (FQDN) of the record set.",
 				Computed:    true,
 			},
 			"records": schema.ListAttribute{

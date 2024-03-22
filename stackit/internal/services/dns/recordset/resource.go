@@ -153,7 +153,7 @@ func (r *recordSetResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				},
 			},
 			"fqdn": schema.StringAttribute{
-				Description: "FQDN of the record set.",
+				Description: "Fully qualified domain name (FQDN) of the record set.",
 				Computed:    true,
 			},
 			"records": schema.ListAttribute{
@@ -438,6 +438,9 @@ func mapFields(recordSetResp *dns.RecordSetResponse, model *Model) error {
 	model.Active = types.BoolPointerValue(recordSet.Active)
 	model.Comment = types.StringPointerValue(recordSet.Comment)
 	model.Error = types.StringPointerValue(recordSet.Error)
+	if model.Name.IsNull() || model.Name.IsUnknown() {
+		model.Name = types.StringPointerValue(recordSet.Name)
+	}
 	model.FQDN = types.StringPointerValue(recordSet.Name)
 	model.State = types.StringPointerValue(recordSet.State)
 	model.TTL = types.Int64PointerValue(recordSet.Ttl)
