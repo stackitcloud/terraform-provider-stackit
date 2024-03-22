@@ -603,7 +603,6 @@ func mapFields(ctx context.Context, r *argus.GetInstanceResponse, acl *argus.Lis
 }
 
 func mapACLField(aclList *argus.ListACLResponse, model *Model) error {
-	// nothing to update
 	if aclList == nil {
 		if model.ACL.IsNull() || model.ACL.IsUnknown() {
 			model.ACL = types.SetNull(types.StringType)
