@@ -34,6 +34,7 @@ data "stackit_dns_record_set" "example" {
 - `active` (Boolean) Specifies if the record set is active or not.
 - `comment` (String) Comment.
 - `error` (String) Error shows error in case create/update/delete failed.
+- `fqdn` (String) FQDN of the record set.
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`zone_id`,`record_set_id`".
 - `name` (String) Name of the record which should be a valid domain according to rfc1035 Section 2.3.4. E.g. `example.com`
 - `records` (List of String) Records.

@@ -16,7 +16,7 @@ DNS Zone resource schema.
 resource "stackit_dns_zone" "example" {
   project_id    = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name          = "Example zone"
-  dns_name      = "www.example-zone.com"
+  dns_name      = "example-zone.com"
   contact_email = "aa@bb.ccc"
   type          = "primary"
   acl           = "192.168.0.0/24"
