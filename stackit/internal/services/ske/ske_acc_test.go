@@ -519,7 +519,9 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 	var client *ske.APIClient
 	var err error
 	if testutil.SKECustomEndpoint == "" {
-		client, err = ske.NewAPIClient()
+		client, err = ske.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
 	} else {
 		client, err = ske.NewAPIClient(
 			config.WithEndpoint(testutil.SKECustomEndpoint),
