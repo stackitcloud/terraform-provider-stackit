@@ -197,7 +197,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed: true,
 			},
 			"acl": schema.SetAttribute{
-				Description: "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation.",
+				Description: "The access control list for this instance. Each entry is a single IP address that is permitted to access, in CIDR notation (/32).",
 				ElementType: types.StringType,
 				Computed:    true,
 			},

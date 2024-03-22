@@ -254,7 +254,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Computed: true,
 			},
 			"acl": schema.SetAttribute{
-				Description: "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation.",
+				Description: "The access control list for this instance. Each entry is a single IP address that is permitted to access, in CIDR notation (/32).",
 				ElementType: types.StringType,
 				Optional:    true,
 				Validators: []validator.Set{
@@ -346,7 +346,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	// Set state to ACL populated data
+	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -387,7 +387,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	// Set state to ACL populated data
+	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
