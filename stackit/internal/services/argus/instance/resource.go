@@ -335,7 +335,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	aclList, err := r.client.ListACL(ctx, *instanceId, projectId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API for ACL data: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API to list ACL data: %v", err))
 		return
 	}
 
@@ -383,7 +383,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	// Map response body to schema
 	err = mapFields(ctx, instanceResp, aclList, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing ACL API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -461,7 +461,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 	aclList, err := r.client.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API for ACL data: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API to list ACL data: %v", err))
 		return
 	}
 

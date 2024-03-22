@@ -223,7 +223,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	aclList, err := d.client.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACL data: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to list ACL data: %v", err))
 		return
 	}
 
