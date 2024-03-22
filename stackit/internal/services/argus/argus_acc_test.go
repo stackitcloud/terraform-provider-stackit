@@ -203,7 +203,73 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "username"),
 					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "password"),
 				),
-			}, {
+			},
+			// Creation without ACL
+			{
+				Config: resourceConfig(
+					nil,
+					instanceResource["name"],
+					instanceResource["plan_name"],
+					scrapeConfigResource["urls"],
+					scrapeConfigResource["saml2_enable_url_parameters"],
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance data
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "instance_id"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "plan_name", instanceResource["plan_name"]),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "dashboard_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "is_updatable"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "grafana_public_read_access"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "grafana_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "grafana_initial_admin_user"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "grafana_initial_admin_password"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_retention_days"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_retention_days_5m_downsampling"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_retention_days_1h_downsampling"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_push_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "targets_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "alerting_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "logs_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "logs_push_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "jaeger_traces_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "jaeger_ui_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "otlp_traces_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "zipkin_spans_url"),
+
+					// ACL
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "acl.#", "0"),
+
+					// scrape config data
+					resource.TestCheckResourceAttrPair(
+						"stackit_argus_instance.instance", "project_id",
+						"stackit_argus_scrapeconfig.scrapeconfig", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_argus_instance.instance", "instance_id",
+						"stackit_argus_scrapeconfig.scrapeconfig", "instance_id",
+					),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "name", scrapeConfigResource["name"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "targets.0.urls.#", "2"),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "metrics_path", scrapeConfigResource["metrics_path"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "scheme", scrapeConfigResource["scheme"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "scrape_interval", scrapeConfigResource["scrape_interval"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "sample_limit", scrapeConfigResource["sample_limit"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "saml2.enable_url_parameters", scrapeConfigResource["saml2_enable_url_parameters"]),
+
+					// credentials
+					resource.TestCheckResourceAttr("stackit_argus_credential.credential", "project_id", credentialResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_argus_instance.instance", "instance_id",
+						"stackit_argus_credential.credential", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "username"),
+					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "password"),
+				),
+			},
+			{
 				// Data source
 				Config: fmt.Sprintf(`
 					%s
