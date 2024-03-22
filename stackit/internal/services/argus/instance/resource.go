@@ -342,7 +342,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	// Map response body to schema
 	err = mapFields(ctx, waitResp, aclList, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing ACL API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response: %v", err))
 		return
 	}
 
@@ -394,7 +394,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	tflog.Info(ctx, "Argus instance created")
+	tflog.Info(ctx, "Argus instance read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -619,11 +619,11 @@ func mapACLField(aclList *argus.ListACLResponse, model *Model) error {
 	for _, cidr := range *aclList.Acl {
 		acl = append(acl, types.StringValue(cidr))
 	}
-	aclsList, diags := types.SetValue(types.StringType, acl)
+	aclTF, diags := types.SetValue(types.StringType, acl)
 	if diags.HasError() {
 		return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
 	}
-	model.ACL = aclsList
+	model.ACL = aclTF
 	return nil
 }
 
