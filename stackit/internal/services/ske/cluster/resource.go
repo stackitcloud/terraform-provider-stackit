@@ -552,7 +552,21 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", clusterName)
 
-	availableVersions, err := r.loadAvaiableVersions(ctx)
+	// If SKE functionality is not enabled, enable it
+	_, err := r.client.EnableService(ctx, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	model.Id = types.StringValue(projectId)
+	_, err = wait.EnableServiceWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Project creation waiting: %v", err))
+		return
+	}
+
+	availableVersions, err := r.loadAvailableVersions(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Loading available Kubernetes versions: %v", err))
 		return
@@ -572,7 +586,7 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	tflog.Info(ctx, "SKE cluster created")
 }
 
-func (r *clusterResource) loadAvaiableVersions(ctx context.Context) ([]ske.KubernetesVersion, error) {
+func (r *clusterResource) loadAvailableVersions(ctx context.Context) ([]ske.KubernetesVersion, error) {
 	c := r.client
 	res, err := c.ListProviderOptions(ctx).Execute()
 	if err != nil {
@@ -1423,7 +1437,7 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", clName)
 
-	availableVersions, err := r.loadAvaiableVersions(ctx)
+	availableVersions, err := r.loadAvailableVersions(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating cluster", fmt.Sprintf("Loading available Kubernetes versions: %v", err))
 		return
