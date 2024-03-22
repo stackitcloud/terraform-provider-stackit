@@ -29,6 +29,7 @@ data "stackit_argus_instance" "example" {
 
 ### Read-Only
 
+- `acl` (Set of String) The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation.
 - `alerting_url` (String) Specifies Alerting URL.
 - `dashboard_url` (String) Specifies Argus instance dashboard URL.
 - `grafana_initial_admin_password` (String, Sensitive) Specifies an initial Grafana admin password.

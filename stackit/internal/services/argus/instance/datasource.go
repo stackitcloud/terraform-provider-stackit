@@ -196,6 +196,11 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"zipkin_spans_url": schema.StringAttribute{
 				Computed: true,
 			},
+			"acl": schema.SetAttribute{
+				Description: "The access control list for this instance. Each entry is a single IP address that is permitted to access, in CIDR notation (/32).",
+				ElementType: types.StringType,
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -216,7 +221,13 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	err = mapFields(ctx, instanceResponse, &model)
+	aclList, err := d.client.ListACL(ctx, instanceId, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to list ACL data: %v", err))
+		return
+	}
+
+	err = mapFields(ctx, instanceResponse, aclList, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
