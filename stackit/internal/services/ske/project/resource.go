@@ -190,11 +190,9 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	if clusters != nil {
-		if len(*clusters.Items) > 0 {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintln("You still have clusters in the project. Please delete them before deleting the project."))
-			return
-		}
+	if clusters != nil && len(*clusters.Items) > 0 {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintln("You still have clusters in the project. Please delete them before deleting the project."))
+		return
 	}
 
 	_, err = c.DisableService(ctx, projectId).Execute()
