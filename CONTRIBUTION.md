@@ -30,7 +30,7 @@ These commands can be executed from the project root:
 
 #### Local development
 
-To test your changes locally, you have to compile the provider (requires Go 1.21) and configure the Terraform CLI to use the local version.
+To test your changes locally, you have to compile the provider (requires Go 1.22) and configure the Terraform CLI to use the local version.
 
 1. Clone the repository.
 2. Set the provider address to a custom address for local development. It must correspond to the same address that is included in the dev_overrides block, in step 4.
