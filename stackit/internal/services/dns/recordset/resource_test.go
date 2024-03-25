@@ -13,12 +13,17 @@ import (
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
+		state       Model
 		input       *dns.RecordSetResponse
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_values",
+			Model{
+				ProjectId: types.StringValue("pid"),
+				ZoneId:    types.StringValue("zid"),
+			},
 			&dns.RecordSetResponse{
 				Rrset: &dns.RecordSet{
 					Id: utils.Ptr("rid"),
@@ -33,6 +38,7 @@ func TestMapFields(t *testing.T) {
 				Comment:     types.StringNull(),
 				Error:       types.StringNull(),
 				Name:        types.StringNull(),
+				FQDN:        types.StringNull(),
 				Records:     types.ListNull(types.StringType),
 				State:       types.StringNull(),
 				TTL:         types.Int64Null(),
@@ -42,6 +48,10 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"simple_values",
+			Model{
+				ProjectId: types.StringValue("pid"),
+				ZoneId:    types.StringValue("zid"),
+			},
 			&dns.RecordSetResponse{
 				Rrset: &dns.RecordSet{
 					Id:      utils.Ptr("rid"),
@@ -67,6 +77,7 @@ func TestMapFields(t *testing.T) {
 				Comment:     types.StringValue("comment"),
 				Error:       types.StringValue("error"),
 				Name:        types.StringValue("name"),
+				FQDN:        types.StringValue("name"),
 				Records: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("record_1"),
 					types.StringValue("record_2"),
@@ -79,6 +90,11 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"null_fields_and_int_conversions",
+			Model{
+				ProjectId: types.StringValue("pid"),
+				ZoneId:    types.StringValue("zid"),
+				Name:      types.StringValue("other-name"),
+			},
 			&dns.RecordSetResponse{
 				Rrset: &dns.RecordSet{
 					Id:      utils.Ptr("rid"),
@@ -100,7 +116,8 @@ func TestMapFields(t *testing.T) {
 				Active:      types.BoolNull(),
 				Comment:     types.StringNull(),
 				Error:       types.StringNull(),
-				Name:        types.StringValue("name"),
+				Name:        types.StringValue("other-name"),
+				FQDN:        types.StringValue("name"),
 				Records:     types.ListNull(types.StringType),
 				State:       types.StringValue("state"),
 				TTL:         types.Int64Value(2123456789),
@@ -110,12 +127,20 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"nil_response",
+			Model{
+				ProjectId: types.StringValue("pid"),
+				ZoneId:    types.StringValue("zid"),
+			},
 			nil,
 			Model{},
 			false,
 		},
 		{
 			"no_resource_id",
+			Model{
+				ProjectId: types.StringValue("pid"),
+				ZoneId:    types.StringValue("zid"),
+			},
 			&dns.RecordSetResponse{},
 			Model{},
 			false,
@@ -123,11 +148,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			state := &Model{
-				ProjectId: tt.expected.ProjectId,
-				ZoneId:    tt.expected.ZoneId,
-			}
-			err := mapFields(tt.input, state)
+			err := mapFields(tt.input, &tt.state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -135,7 +156,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(state, &tt.expected)
+				diff := cmp.Diff(tt.state, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

@@ -16,7 +16,7 @@ DNS Record Set Resource schema.
 resource "stackit_dns_record_set" "example" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   zone_id    = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name       = "example-record-set.www.example-zone.com"
+  name       = "example-record-set"
   type       = "A"
   comment    = "Example comment"
   records    = ["1.2.3.4"]
@@ -43,6 +43,7 @@ resource "stackit_dns_record_set" "example" {
 ### Read-Only
 
 - `error` (String) Error shows error in case create/update/delete failed.
+- `fqdn` (String) Fully qualified domain name (FQDN) of the record set.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`zone_id`,`record_set_id`".
 - `record_set_id` (String) The rr set id.
 - `state` (String) Record set state.

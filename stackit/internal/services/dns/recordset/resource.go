@@ -46,6 +46,7 @@ type Model struct {
 	Type        types.String `tfsdk:"type"`
 	Error       types.String `tfsdk:"error"`
 	State       types.String `tfsdk:"state"`
+	FQDN        types.String `tfsdk:"fqdn"`
 }
 
 // NewRecordSetResource is a helper function to simplify the provider implementation.
@@ -150,6 +151,10 @@ func (r *recordSetResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 					stringvalidator.LengthAtLeast(1),
 					stringvalidator.LengthAtMost(63),
 				},
+			},
+			"fqdn": schema.StringAttribute{
+				Description: "Fully qualified domain name (FQDN) of the record set.",
+				Computed:    true,
 			},
 			"records": schema.ListAttribute{
 				Description: "Records.",
@@ -433,7 +438,10 @@ func mapFields(recordSetResp *dns.RecordSetResponse, model *Model) error {
 	model.Active = types.BoolPointerValue(recordSet.Active)
 	model.Comment = types.StringPointerValue(recordSet.Comment)
 	model.Error = types.StringPointerValue(recordSet.Error)
-	model.Name = types.StringPointerValue(recordSet.Name)
+	if model.Name.IsNull() || model.Name.IsUnknown() {
+		model.Name = types.StringPointerValue(recordSet.Name)
+	}
+	model.FQDN = types.StringPointerValue(recordSet.Name)
 	model.State = types.StringPointerValue(recordSet.State)
 	model.TTL = types.Int64PointerValue(recordSet.Ttl)
 	model.Type = types.StringPointerValue(recordSet.Type)

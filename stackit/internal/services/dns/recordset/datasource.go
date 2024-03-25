@@ -107,6 +107,10 @@ func (d *recordSetDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				Description: "Name of the record which should be a valid domain according to rfc1035 Section 2.3.4. E.g. `example.com`",
 				Computed:    true,
 			},
+			"fqdn": schema.StringAttribute{
+				Description: "Fully qualified domain name (FQDN) of the record set.",
+				Computed:    true,
+			},
 			"records": schema.ListAttribute{
 				Description: "Records.",
 				Computed:    true,
