@@ -43,7 +43,7 @@ resource "stackit_dns_record_set" "example" {
 ### Read-Only
 
 - `error` (String) Error shows error in case create/update/delete failed.
-- `fqdn` (String) FQDN of the record set.
+- `fqdn` (String) Fully qualified domain name (FQDN) of the record set.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`zone_id`,`record_set_id`".
 - `record_set_id` (String) The rr set id.
 - `state` (String) Record set state.
