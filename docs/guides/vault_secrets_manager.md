@@ -1,8 +1,5 @@
 ---
 page_title: "Using Vault Provider with STACKIT Secrets Manager"
-subcategory: ""
-description: |-
-   Guide on how to write secrets from Terraform deployed resources on STACKIT cloud to the STACKIT Secrets Manager 
 ---
 # Using Vault Provider with STACKIT Secrets Manager
 
