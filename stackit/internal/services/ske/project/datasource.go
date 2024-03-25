@@ -75,7 +75,7 @@ func (r *projectDataSource) Configure(ctx context.Context, req datasource.Config
 func (r *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:        "SKE project data source schema. Must have a `region` specified in the provider configuration. Warning: SKE project resource is no longer in use and will be removed with the next release. SKE service enablement is done automatically when a new cluster is created.",
-		DeprecationMessage: "SKE project resource is no longer in use and will be removed with the next release. SKE service enablement is done automatically when a new cluster is created.",
+		DeprecationMessage: "SKE project datasource is no longer in use and will be removed with the next minor release. SKE service enablement is done automatically when a new cluster is created.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`\".",
