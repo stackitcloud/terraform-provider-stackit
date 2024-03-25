@@ -8,15 +8,7 @@ description: |-
 
 ### Overview
 
-This guide outlines the process of utilizing the HashiCorp Vault provider alongside the STACKIT provider to write secrets into the STACKIT Secrets Manager. Due to the current limitation in the STACKIT Terraform provider where direct writing of secrets isn't supported, this workaround is necessary.
-
-### Problem
-
-Writing credentials from provisioned STACKIT services into a Secrets Manager instance is currently not supported by the STACKIT Terraform provider.
-
-### Solution
-
-To overcome this limitation, you can integrate the HashiCorp Vault provider with the STACKIT provider. This solution involves configuring the Vault provider to interface with the STACKIT Secrets Manager.
+This guide outlines the process of utilizing the HashiCorp Vault provider alongside the STACKIT provider to write datasources from STACKIT cloud resources (deployed with Terraform) as secrets in the STACKIT Secrets Manager.
 
 ### Steps
 
@@ -62,19 +54,14 @@ To overcome this limitation, you can integrate the HashiCorp Vault provider with
     }
     ```
 
-5. **Define Terraform Resource (Example: DNS Zone)**
+5. **Define Terraform Resource (Example: Argus Monitoring Instance)**
 
     ```hcl
-    resource "stackit_dns_zone" "example" {
-      project_id    = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      name          = "Example zone"
-      dns_name      = "www.example-zone.com"
-      contact_email = "aa@bb.ccc"
-      type          = "primary"
-      acl           = "192.168.0.0/24"
-      description   = "Example description"
-      default_ttl   = 1230
-    }
+   resource "stackit_argus_instance" "example" {
+     project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+     name       = "example-instance"
+     plan_name  = "Monitoring-Medium-EU01"
+   }
     ```
 
 6. **Store Secret in Vault**
@@ -87,7 +74,7 @@ To overcome this limitation, you can integrate the HashiCorp Vault provider with
       delete_all_versions = true
       data_json = jsonencode(
         {
-          dns_zone_name = stackit_dns_zone.example.dns_name,
+         grafana_password = stackit_argus_instance.example.grafana_initial_admin_password,
         }
       )
     }
@@ -95,4 +82,4 @@ To overcome this limitation, you can integrate the HashiCorp Vault provider with
 
 ### Note
 
-This example can be adapted for various resources within the provider by replacing the DNS zone with the appropriate resource and associated variables.
+This example can be adapted for various resources within the provider by replacing the Argus Monitoring Grafana password with the appropriate resource and associated variables.
