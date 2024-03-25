@@ -5,7 +5,7 @@ page_title: "Using Vault Provider with STACKIT Secrets Manager"
 
 ### Overview
 
-This guide outlines the process of utilizing the HashiCorp Vault provider alongside the STACKIT provider to write datasources from STACKIT cloud resources (deployed with Terraform) as secrets in the STACKIT Secrets Manager.
+This guide outlines the process of utilizing the HashiCorp Vault provider alongside the STACKIT provider to write secrets in the STACKIT Secrets Manager. The guide focuses on secrets from STACKIT Cloud resources but can be adapted for any secret.
 
 ### Steps
 
@@ -72,6 +72,7 @@ This guide outlines the process of utilizing the HashiCorp Vault provider alongs
       data_json = jsonencode(
         {
          grafana_password = stackit_argus_instance.example.grafana_initial_admin_password,
+         other_secret = ...,
         }
       )
     }
@@ -79,4 +80,4 @@ This guide outlines the process of utilizing the HashiCorp Vault provider alongs
 
 ### Note
 
-This example can be adapted for various resources within the provider by replacing the Argus Monitoring Grafana password with the appropriate resource and associated variables.
+This example can be adapted for various resources within the provider as well as any other Secret the user wants to set in the Secrets Manager instance. Adapting this examples means replacing the Argus Monitoring Grafana password with the appropriate value.
