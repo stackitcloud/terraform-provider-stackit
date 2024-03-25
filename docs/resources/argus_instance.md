@@ -32,7 +32,7 @@ resource "stackit_argus_instance" "example" {
 
 ### Optional
 
-- `acl` (Set of String) The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation.
+- `acl` (Set of String) The access control list for this instance. Each entry is an IP address range that is permitted to access, in CIDR notation.
 - `parameters` (Map of String) Additional parameters.
 
 ### Read-Only
