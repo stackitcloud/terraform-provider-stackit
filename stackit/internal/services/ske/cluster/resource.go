@@ -562,7 +562,7 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	model.Id = types.StringValue(projectId)
 	_, err = wait.EnableServiceWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Project creation waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Wait for SKE enablement: %v", err))
 		return
 	}
 
