@@ -32,8 +32,8 @@ var clusterResource = map[string]string{
 	"nodepool_name":                                    "np-acc-test",
 	"nodepool_name_min":                                "np-acc-min-test",
 	"nodepool_machine_type":                            "b1.2",
-	"nodepool_os_version":                              "3602.2.2",
-	"nodepool_os_version_min":                          "3602.2.2",
+	"nodepool_os_version":                              "3760.2.0",
+	"nodepool_os_version_min":                          "3760.2.0",
 	"nodepool_os_name":                                 "flatcar",
 	"nodepool_minimum":                                 "2",
 	"nodepool_maximum":                                 "3",
@@ -519,7 +519,9 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 	var client *ske.APIClient
 	var err error
 	if testutil.SKECustomEndpoint == "" {
-		client, err = ske.NewAPIClient()
+		client, err = ske.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
 	} else {
 		client, err = ske.NewAPIClient(
 			config.WithEndpoint(testutil.SKECustomEndpoint),

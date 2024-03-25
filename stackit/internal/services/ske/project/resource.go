@@ -86,7 +86,8 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 // Schema returns the Terraform schema structure
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "SKE project resource schema. Must have a `region` specified in the provider configuration. This resource allows you to enable the SKE service and you can only have one per project. Deleting this resource will destroy any SKE clusters associated to the project",
+		Description:        "SKE project resource schema. Must have a `region` specified in the provider configuration. This resource allows you to enable the SKE service and you can only have one per project. Before deleting this resource, all SKE clusters associated to the project must be deleted. Warning: SKE project resource is no longer in use and will be removed with the next minor release. SKE service enablement is done automatically when a new cluster is created.",
+		DeprecationMessage: "SKE project resource is no longer in use and will be removed with the next minor release. SKE service enablement is done automatically when a new cluster is created.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`\".",
@@ -182,7 +183,19 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	c := r.client
-	_, err := c.DisableService(ctx, projectId).Execute()
+
+	clusters, err := c.ListClusters(ctx, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Calling API to get the list of clusters: %v", err))
+		return
+	}
+
+	if clusters != nil && len(*clusters.Items) > 0 {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintln("You still have clusters in the project. Please delete them before deleting the project."))
+		return
+	}
+
+	_, err = c.DisableService(ctx, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Calling API: %v", err))
 		return

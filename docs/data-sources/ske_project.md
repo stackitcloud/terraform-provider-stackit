@@ -3,12 +3,12 @@
 page_title: "stackit_ske_project Data Source - stackit"
 subcategory: ""
 description: |-
-  SKE project data source schema. Must have a region specified in the provider configuration.
+  SKE project data source schema. Must have a region specified in the provider configuration. Warning: SKE project resource is no longer in use and will be removed with the next release. SKE service enablement is done automatically when a new cluster is created.
 ---
 
 # stackit_ske_project (Data Source)
 
-SKE project data source schema. Must have a `region` specified in the provider configuration.
+SKE project data source schema. Must have a `region` specified in the provider configuration. Warning: SKE project resource is no longer in use and will be removed with the next release. SKE service enablement is done automatically when a new cluster is created.
 
 ## Example Usage
 
