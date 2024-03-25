@@ -190,13 +190,8 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	clusterCount := len(*clusters.Items)
-	if clusterCount > 0 {
-		if clusterCount == 1 {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintln("One cluster found in project. Resources must be cleaned up before deleting the project."))
-			return
-		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("%v clusters found in project. Resources must be cleaned up before deleting the project.", clusterCount))
+	if len(*clusters.Items) > 0 {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintln("You still have clusters in the project. Please delete them before deleting the project."))
 		return
 	}
 
