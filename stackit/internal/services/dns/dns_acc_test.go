@@ -267,8 +267,9 @@ func TestAccDnsResource(t *testing.T) {
 
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, zoneId, recordSetId), nil
 				},
-				ImportState:             true,
-				ImportStateVerify:       true,
+				ImportState:       true,
+				ImportStateVerify: true,
+				// Will be different because of the name vs fqdn problem, but the value is already tested in the datasource acc test
 				ImportStateVerifyIgnore: []string{"name"},
 			},
 			// Update. The zone ttl should not be updated according to the DNS API.
