@@ -254,7 +254,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Computed: true,
 			},
 			"acl": schema.SetAttribute{
-				Description: "The access control list for this instance. Each entry is a single IP address that is permitted to access, in CIDR notation (/32).",
+				Description: "The access control list for this instance. Each entry is an IP address range that is permitted to access, in CIDR notation.",
 				ElementType: types.StringType,
 				Optional:    true,
 				Validators: []validator.Set{
