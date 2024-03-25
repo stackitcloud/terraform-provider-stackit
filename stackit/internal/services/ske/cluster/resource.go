@@ -555,7 +555,7 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	// If SKE functionality is not enabled, enable it
 	_, err := r.client.EnableService(ctx, projectId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Calling API to enable SKE: %v", err))
 		return
 	}
 
