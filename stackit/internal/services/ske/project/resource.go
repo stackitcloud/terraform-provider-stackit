@@ -186,7 +186,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	clusters, err := c.ListClusters(ctx, projectId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error getting the list of clusters", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Calling API to get the list of clusters: %v", err))
 		return
 	}
 
