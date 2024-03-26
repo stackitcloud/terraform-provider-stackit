@@ -269,6 +269,17 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"kubernetes_version": schema.StringAttribute{
 				Description: "Kubernetes version. Must only contain major and minor version (e.g. 1.22)",
 				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(ctx context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+						if sr.StateValue.IsNull() || sr.PlanValue.IsNull() {
+							return
+						}
+						planVersion := fmt.Sprintf("v%s", sr.PlanValue.ValueString())
+						stateVersion := fmt.Sprintf("v%s", sr.StateValue.ValueString())
+
+						rrifr.RequiresReplace = semver.Compare(planVersion, stateVersion) < 0
+					}), "Kubernetes version", "If the Kubernetes version is a downgrade, the cluster will be replaced"),
+				},
 				Validators: []validator.String{
 					validate.MinorVersionNumber(),
 				},
