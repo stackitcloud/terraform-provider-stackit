@@ -254,7 +254,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Computed: true,
 			},
 			"acl": schema.SetAttribute{
-				Description: "The access control list for this instance. Each entry is an IP address range that is permitted to access, in CIDR notation.",
+				Description: "The access control list for this instance. Each entry is a single IP address that is permitted to access, in CIDR notation (/32).",
 				ElementType: types.StringType,
 				Optional:    true,
 				Validators: []validator.Set{
@@ -603,15 +603,7 @@ func mapFields(ctx context.Context, r *argus.GetInstanceResponse, acl *argus.Lis
 }
 
 func mapACLField(aclList *argus.ListACLResponse, model *Model) error {
-	if aclList == nil {
-		if model.ACL.IsNull() || model.ACL.IsUnknown() {
-			model.ACL = types.SetNull(types.StringType)
-		}
-		return nil
-	}
-
-	if aclList.Acl == nil || len(*aclList.Acl) == 0 {
-		model.ACL = types.SetNull(types.StringType)
+	if aclList == nil || aclList.Acl == nil || len(*aclList.Acl) == 0 {
 		return nil
 	}
 
