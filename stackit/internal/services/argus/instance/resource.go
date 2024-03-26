@@ -606,7 +606,7 @@ func mapFields(ctx context.Context, r *argus.GetInstanceResponse, model *Model) 
 
 func mapACLField(aclList *argus.ListACLResponse, model *Model) error {
 	if aclList == nil {
-		return fmt.Errorf("mapping ACL: invalid API response")
+		return fmt.Errorf("mapping ACL: nil API response")
 	}
 
 	if aclList.Acl == nil || len(*aclList.Acl) == 0 {
