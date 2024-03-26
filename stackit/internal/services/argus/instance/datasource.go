@@ -227,9 +227,15 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	err = mapFields(ctx, instanceResponse, aclList, &model)
+	// Map response body to schema
+	err = mapFields(ctx, instanceResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+	err = mapACLField(aclList, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API response for the ACL: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
