@@ -172,7 +172,6 @@ func (r *projectResource) Update(ctx context.Context, _ resource.UpdateRequest, 
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
-	core.LogAndAddWarning(ctx, &resp.Diagnostics, "Deleting project", "Deleting this resource will destroy any existing clusters under the project")
 
 	var model Model
 	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
