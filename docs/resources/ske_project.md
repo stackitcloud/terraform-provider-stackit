@@ -3,12 +3,12 @@
 page_title: "stackit_ske_project Resource - stackit"
 subcategory: ""
 description: |-
-  SKE project resource schema. Must have a region specified in the provider configuration. This resource allows you to enable the SKE service and you can only have one per project. Before deleting this resource, all SKE clusters associated to the project must be deleted. Warning: SKE project resource is no longer in use and will be removed with the next minor release. SKE service enablement is done automatically when a new cluster is created.
+  SKE project resource schema. Must have a region specified in the provider configuration. This resource allows you to enable the SKE service and you can only have one per project. Before deleting this resource, all SKE clusters associated to the project must be deleted. Otherwise, error would occur due to the existing clusters. In such case, it is highly recommended to remove the SKE project from the state, directly using the "terraform state rm".Warning: SKE project resource is no longer in use and will be removed with the next minor release. SKE service enablement is done automatically when a new cluster is created.
 ---
 
 # stackit_ske_project (Resource)
 
-SKE project resource schema. Must have a `region` specified in the provider configuration. This resource allows you to enable the SKE service and you can only have one per project. Before deleting this resource, all SKE clusters associated to the project must be deleted. Warning: SKE project resource is no longer in use and will be removed with the next minor release. SKE service enablement is done automatically when a new cluster is created.
+SKE project resource schema. Must have a `region` specified in the provider configuration. This resource allows you to enable the SKE service and you can only have one per project. Before deleting this resource, all SKE clusters associated to the project must be deleted. Otherwise, error would occur due to the existing clusters. In such case, it is highly recommended to remove the SKE project from the state, directly using the "`terraform state rm`".Warning: SKE project resource is no longer in use and will be removed with the next minor release. SKE service enablement is done automatically when a new cluster is created.
 
 ## Example Usage
 
