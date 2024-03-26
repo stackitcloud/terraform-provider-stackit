@@ -189,7 +189,7 @@ func CIDR() *Validator {
 			if err != nil {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
-					fmt.Sprintf("parsing value in CIDR notation: %s", err.Error()),
+					"parsing value in CIDR notation: invalid CIDR address",
 					req.ConfigValue.ValueString(),
 				))
 			}

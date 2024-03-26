@@ -314,7 +314,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, nil, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -340,9 +340,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, aclList, &model)
+	err = mapACLField(aclList, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the ACL: %v", err))
 		return
 	}
 
@@ -381,9 +381,16 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, instanceResp, aclList, &model)
+	err = mapFields(ctx, instanceResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapACLField(aclList, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the ACL: %v", err))
 		return
 	}
 
@@ -442,7 +449,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	err = mapFields(ctx, waitResp, nil, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -466,9 +473,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, aclList, &model)
+	err = mapACLField(aclList, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing ACL API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API response for the ACL: %v", err))
 		return
 	}
 
@@ -528,7 +535,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Argus instance state imported")
 }
 
-func mapFields(ctx context.Context, r *argus.GetInstanceResponse, acl *argus.ListACLResponse, model *Model) error {
+func mapFields(ctx context.Context, r *argus.GetInstanceResponse, model *Model) error {
 	if r == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -594,24 +601,18 @@ func mapFields(ctx context.Context, r *argus.GetInstanceResponse, acl *argus.Lis
 		model.ZipkinSpansURL = types.StringPointerValue(i.ZipkinSpansUrl)
 	}
 
-	err := mapACLField(acl, model)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
 func mapACLField(aclList *argus.ListACLResponse, model *Model) error {
 	if aclList == nil {
-		if model.ACL.IsNull() || model.ACL.IsUnknown() {
-			model.ACL = types.SetNull(types.StringType)
-		}
-		return nil
+		return fmt.Errorf("mapping ACL: nil API response")
 	}
 
 	if aclList.Acl == nil || len(*aclList.Acl) == 0 {
-		model.ACL = types.SetNull(types.StringType)
+		if !(model.ACL.IsNull() || model.ACL.IsUnknown() || model.ACL.Equal(types.SetValueMust(types.StringType, []attr.Value{}))) {
+			model.ACL = types.SetNull(types.StringType)
+		}
 		return nil
 	}
 

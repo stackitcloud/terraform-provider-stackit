@@ -25,7 +25,7 @@ func TestMapFields(t *testing.T) {
 			&argus.GetInstanceResponse{
 				Id: utils.Ptr("iid"),
 			},
-			nil,
+			&argus.ListACLResponse{},
 			Model{
 				Id:         types.StringValue("pid,iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -139,14 +139,17 @@ func TestMapFields(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &Model{
 				ProjectId: tt.expected.ProjectId,
+				ACL:       types.SetNull(types.StringType),
 			}
-			err := mapFields(context.Background(), tt.instanceResp, tt.listACLResp, state)
-			if !tt.isValid && err == nil {
+			err := mapFields(context.Background(), tt.instanceResp, state)
+			aclErr := mapACLField(tt.listACLResp, state)
+			if !tt.isValid && err == nil && aclErr == nil {
 				t.Fatalf("Should have failed")
 			}
-			if tt.isValid && err != nil {
+			if tt.isValid && (err != nil || aclErr != nil) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
