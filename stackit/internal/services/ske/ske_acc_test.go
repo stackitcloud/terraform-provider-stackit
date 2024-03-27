@@ -443,7 +443,7 @@ func TestAccSKE(t *testing.T) {
 				// The fields are not provided in the SKE API when disabled, although set actively.
 				ImportStateVerifyIgnore: []string{"kube_config", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%"},
 			},
-			// ) Import minimal cluster
+			// 5) Import minimal cluster
 			{
 				ResourceName: "stackit_ske_cluster.cluster_min",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
@@ -507,6 +507,17 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end_new"]),
 
 					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster", "kube_config"), // when using the kubeconfig resource, the kubeconfig field becomes null
+				),
+			},
+			// 7) Downgrade kubernetes version
+			{
+				Config: getConfig(clusterResource["kubernetes_version"], utils.Ptr(clusterResource["maintenance_end_new"])),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// cluster data
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", clusterResource["name"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version", clusterResource["kubernetes_version"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_used", clusterResource["kubernetes_version_used"]),
 				),
 			},
 			// Deletion is done by the framework implicitly
