@@ -5,20 +5,20 @@ Your contribution is welcome! Thank you for your interest in contributing to the
 ## Table of contents
 
 - [Developer Guide](#developer-guide)
+  - [Useful Make commands](#useful-make-commands)
+  - [Repository structure](#repository-structure)
+  - [Implementing a new resource](#implementing-a-new-resource)
+  	- [Resource file structure](#resource-file-structure)
+  - [Implementing a new datasource](#implementing-a-new-datasource)
+  - [Onboarding a new STACKIT service](#onboarding-a-new-stackit-service)
+  - [Local development](#local-development)
+  	- [Setup centralized Terraform state](#setup-centralized-terraform-state)
 - [Code Contributions](#code-contributions)
 - [Bug Reports](#bug-reports)
 
 ## Developer Guide
 
-### Repository structure
-
-The provider resources and data sources for the STACKIT services are located under `stackit/services`. Inside `stackit` you can find several other useful packages such as `validate` and `testutil`. Examples of usage of the provider are located under the `examples` folder.
-
-### Getting started
-
-Check the [Authentication](README.md#authentication) section on the README.
-
-#### Useful Make commands
+### Useful Make commands
 
 These commands can be executed from the project root:
 
@@ -28,7 +28,363 @@ These commands can be executed from the project root:
 - `make test`: run unit tests
 - `make test-acceptance-tf`: run acceptance tests
 
-#### Local development
+### Repository structure
+
+The provider resources and data sources for the STACKIT services are located under `stackit/services`. Inside `stackit` you can find several other useful packages such as `validate` and `testutil`. Examples of usage of the provider are located under the `examples` folder.
+
+We make use of the [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework) to write the Terraform provider. [Here](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-provider) you can find a tutorial on how to implement a provider using this framework.
+
+### Implementing a new resource
+
+Let's suppose you want to want to implement a new resource `bar` of service `foo`:
+
+1. You would start by creating a new folder `bar/` inside `stackit/internal/services/foo/`
+2. Following with the creation of a file `resource.go` inside your new folder `stackit/internal/services/foo/bar/`
+   1. The Go package should be similar to the service name, in this case `foo` would be an adequate package name
+   2. Please refer to the [Resource file structure](./CONTRIBUTION.md/#resource-file-structure) section for details on the structure of the file itself
+3. To register the new resource `bar` in the provider, add it to the `Resources` in `stackit/provider.go`, using the `NewBarResource` method
+4. Add an example in `examples/resources/stackit_foo_bar/resource.tf` with an example configuration for the new resource, e.g.:
+   ```tf
+    resource "stackit_foo_bar" "example" {
+      project_id    = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      my_required_field      = "my-required-field-value"
+      my_optional_field      = "my-optional-field-value"
+    }
+   ```
+
+Please remeber to always add unit tests for the helper functions (in this case `mapFields` and `toCreatePayload`), as well implementing/extending the acceptance (end-to-end) tests. Our acceptance tests are implemented using Hashicorp's [terraform-plugin-testing](https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests) package.
+
+Additionally, remember to run `make generate-docs` after your changes to keep the commands' documentation in `docs/` updated, which is used as a source for the [Terraform Registry documentation page](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs).
+
+#### Resource file structure
+
+Below is a typical structure of a STACKIT Terraform provider resource:
+
+```go
+package foo
+
+import (
+	(...)
+	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/services/foo" // Import service "foo" from the STACKIT SDK for Go
+)
+
+// Ensure the implementation satisfies the expected interfaces.
+var (
+	_ resource.Resource                = &barResource{}
+	_ resource.ResourceWithConfigure   = &barResource{}
+	_ resource.ResourceWithImportState = &barResource{}
+)
+
+// Provider's internal model
+type Model struct {
+	Id              types.String `tfsdk:"id"` // needed by TF
+	ProjectId       types.String `tfsdk:"project_id"`
+	BarId           types.String `tfsdk:"bar_id"`
+	MyRequiredField types.String `tfsdk:"my_required_field"`
+	MyOptionalField         types.String `tfsdk:"my_optional_field"`
+	MyReadOnlyField types.String `tfsdk:"my_read_only_field"`
+}
+
+// NewBarResource is a helper function to simplify the provider implementation.
+func NewBarResource() resource.Resource {
+	return &barResource{}
+}
+
+// barResource is the resource implementation.
+type barResource struct {
+	client *foo.APIClient
+}
+
+// Metadata returns the resource type name.
+func (r *barResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_foo_bar"
+}
+
+// Configure adds the provider configured client to the resource.
+func (r *barResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
+
+	providerData, ok := req.ProviderData.(core.ProviderData)
+	if !ok {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
+		return
+	}
+
+	var apiClient *foo.APIClient
+	var err error
+	if providerData.FooCustomEndpoint != "" {
+		apiClient, err = foo.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithEndpoint(providerData.FooCustomEndpoint),
+		)
+	} else {
+		apiClient, err = foo.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithRegion(providerData.Region),
+		)
+	}
+
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+		return
+	}
+
+	r.client = apiClient
+	tflog.Info(ctx, "Foo bar client configured")
+}
+
+// Schema defines the schema for the resource.
+func (r *barResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	descriptions := map[string]string{
+		"main":               "Foo bar resource schema.",
+		"id":                 "Terraform's internal resource identifier. It is structured as \"`project_id`,`bar_id`\".",
+		"project_id":         "STACKIT Project ID to which the bar is associated.",
+		"bar_id":             "The bar ID.",
+		"my_required_field":  "My required field description.",
+		"my_optional_field":  "My optional field description.",
+		"my_read_only_field": "My read-only field description.",
+	}
+
+	resp.Schema = schema.Schema{
+		Description: descriptions["main"],
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Description: descriptions["id"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Description: descriptions["project_id"],
+				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					// "RequiresReplace" makes the provider recreate the resource when the field is changed in the configuration
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					// Validators can be used to validate the values set to a field
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
+			},
+			"bar_id": schema.StringAttribute{
+				Description: descriptions["bar_id"],
+				Computed:    true,
+			},
+			"my_required_field": schema.StringAttribute{
+				Description: descriptions["my_required_field"],
+				Required: true,
+				PlanModifiers: []planmodifier.String{
+					// "RequiresReplace" makes the provider recreate the resource when the field is changed in the configuration
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"my_optional_field": schema.StringAttribute{
+				Description: descriptions["my_optional_field"],
+				Optional: true,
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					// "UseStateForUnknown" can be used to copy a prior state value into the planned value. It should be used when it is known that an unconfigured value will remain the same after a resource update
+					stringplanmodifier.UseStateForUnknown(),
+				}
+			},
+			"my_read_only_field": schema.StringAttribute{
+				Description: descriptions["my_read_only_field"],
+				Computed: true,
+			},
+		},
+	}
+}
+
+// Create creates the resource and sets the initial Terraform state.
+func (r *barResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	projectId := model.ProjectId.ValueString()
+	barId := model.BarId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+
+	// Create new bar
+	payload, err := toCreatePayload(&model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Creating API payload: %v", err))
+		return
+	}
+	resp, err := r.client.CreateBar(ctx, projectId, barId).CreateBarPayload(*payload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bar", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+	ctx = tflog.SetField(ctx, "bar_id", resp.BarId)
+
+	// Map response body to schema
+	err = mapFields(resp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bar", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Foo bar created")
+}
+
+// Read refreshes the Terraform state with the latest data.
+func (r *barResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.State.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	projectId := model.ProjectId.ValueString()
+	barId := model.BarId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "bar_id", barId)
+
+	barResp, err := r.client.GetBar(ctx, projectId, barId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading bar", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapFields(barResp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading bar", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	// Set refreshed state
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Foo bar read")
+}
+
+// Update updates the resource and sets the updated Terraform state on success.
+func (r *barResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	// Similar to Create method, calls r.client.UpdateBar instead
+}
+
+// Delete deletes the resource and removes the Terraform state on success.
+func (r *barResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.State.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	projectId := model.ProjectId.ValueString()
+	barId := model.BarId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "bar_id", barId)
+
+	// Delete existing bar
+	_, err := r.client.DeleteBar(ctx, projectId, barId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bar", fmt.Sprintf("Calling API: %v", err))
+	}
+
+	tflog.Info(ctx, "Foo bar deleted")
+}
+
+// ImportState imports a resource into the Terraform state on success.
+// The expected format of the bar resource import identifier is: project_id,bar_id
+func (r *barResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	idParts := strings.Split(req.ID, core.Separator)
+	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing bar",
+			fmt.Sprintf("Expected import identifier with format [project_id],[bar_id], got %q", req.ID),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("bar_id"), idParts[1])...)
+	tflog.Info(ctx, "Foo bar state imported")
+}
+
+// Maps bar fields to the provider's internal model
+func mapFields(barResp *foo.GetBarResponse, model *Model) error {
+	if barResp == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if barResp.Bar == nil {
+		return fmt.Errorf("response bar is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+	bar := barResp.Bar
+	model.BarId = types.StringPointerValue(bar.BarId)
+
+	idParts := []string{
+		model.ProjectId.ValueString(),
+		model.BarId.ValueString(),
+	}
+	model.Id = types.StringValue(
+		strings.Join(idParts, core.Separator),
+	)
+
+	model.MyRequiredField = types.StringPointerValue(bar.MyRequiredField)
+	model.MyOptionalField = types.StringPointerValue(bar.MyOptionalField)
+	model.MyReadOnlyField = types.StringPointerValue(bar.MyOtherField)
+	return nil
+}
+
+//  Build CreateBarPayload from provider's model
+func toCreatePayload(model *Model) *foo.CreateBarPayload {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
+
+	myRequiredFieldValue := conversion.StringValueToPointer(model.MyRequiredField)
+	myOptionalFieldValue := conversion.StringValueToPointer(model.MyOptionalField)
+	return &foo.CreateBarPayload{
+		MyRequiredField: myRequiredFieldValue,
+		MyOptionalField: myOptionalFieldValue,
+	}, nil
+}
+```
+
+If the new resource `bar` is the first resource in the TFP using a STACKIT service `foo`, please refer to [Onboarding a new STACKIT service](./CONTRIBUTION.md/#onboarding-a-new-stackit-service).
+
+### Implementing a new datasource
+
+The process to implement a new datasource is similar to [implementing a new resource](#implementing-a-new-resource). Some differences worth noting are:
+
+- The datasource schema will have all attributes set as `Computed` only, with the exception of the ones needed to identify the datasource (usually are the same attributes used to compose the `id` field), which will be set as `Required`
+- To register the new datasource bar in the provider, it should be added the `DataSources` in `stackit/provider.go`, using the `New...Datasource` method
+
+### Onboarding a new STACKIT service
+
+If you want to onboard resources of a STACKIT service `foo` that was not yet in the provider, you will need to do a few additional steps in `stackit/provider.go`:
+
+1. Add `FooCustomEndpoint` fields to `providerModel` and `ProviderData` types, in `stackit/provider.go` and `stackit/internal/core/core.go`, respectively
+2. Add a `foo_custom_endpoint` attribute to the provider's `Schema`, in `stackit/provider.go`
+3. Check if the custom endpoint is defined and, if yes, use it. In the `Configure` method, add:
+   ```go
+   if !(providerConfig.FooCustomEndpoint.IsUnknown() || providerConfig.FooCustomEndpoint.IsNull()) {
+     providerData.FooCustomEndpoint = providerConfig.FooCustomEndpoint.ValueString()
+   }
+   ```
+
+### Local development
 
 To test your changes locally, you have to compile the provider (requires Go 1.22) and configure the Terraform CLI to use the local version.
 
