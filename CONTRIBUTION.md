@@ -4,16 +4,15 @@ Your contribution is welcome! Thank you for your interest in contributing to the
 
 ## Table of contents
 
-
 - [Developer Guide](#developer-guide)
-  - [Useful Make commands](#useful-make-commands)
-  - [Repository structure](#repository-structure)
-  - [Implementing a new resource](#implementing-a-new-resource)
-    - [Resource file structure](#resource-file-structure)
-  - [Implementing a new datasource](#implementing-a-new-datasource)
-  - [Onboarding a new STACKIT service](#onboarding-a-new-stackit-service)
-  - [Local development](#local-development)
-    - [Setup centralized Terraform state](#setup-centralized-terraform-state)
+- [Useful Make commands](#useful-make-commands)
+- [Repository structure](#repository-structure)
+- [Implementing a new resource](#implementing-a-new-resource)
+	- [Resource file structure](#resource-file-structure)
+- [Implementing a new datasource](#implementing-a-new-datasource)
+- [Onboarding a new STACKIT service](#onboarding-a-new-stackit-service)
+- [Local development](#local-development)
+	- [Setup centralized Terraform state](#setup-centralized-terraform-state)
 - [Code Contributions](#code-contributions)
 - [Bug Reports](#bug-reports)
 
@@ -33,7 +32,7 @@ These commands can be executed from the project root:
 
 The provider resources and data sources for the STACKIT services are located under `stackit/services`. Inside `stackit` you can find several other useful packages such as `validate` and `testutil`. Examples of usage of the provider are located under the `examples` folder.
 
-We make use of the [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-provider) to write the Terraform provider.
+We make use of the [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework) to write the Terraform provider. [Here](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-provider) you can find a tutorial on how to implement a provider using this framework.
 
 ### Implementing a new resource
 
@@ -41,14 +40,14 @@ Let's suppose you want to want to implement a new resource `bar` of service `foo
 
 1. You would start by creating a new folder `bar/` inside `stackit/internal/services/foo/`
 2. Following with the creation of a file `resource.go` inside your new folder `stackit/internal/services/foo/bar/`
-   1. The Go package should be similar to the service name, in this case `package foo` would be an adequate name
-   2. Please refer to the [Resource file structure](./CONTRIBUTION.md/#resource-file-structure) section for details on the strcutre of the file itself
+   1. The Go package should be similar to the service name, in this case `foo` would be an adequate package name
+   2. Please refer to the [Resource file structure](./CONTRIBUTION.md/#resource-file-structure) section for details on the structure of the file itself
 3. To register the new resource `bar` in the provider, add it to the `Resources` in `stackit/provider.go`, using the `NewBarResource` method
 4. Add an example in `examples/resources/stackit_foo_bar/resource.tf` with an example configuration for the new resource, e.g.:
    ```tf
     resource "stackit_foo_bar" "example" {
       project_id    = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      my_field      = "my-field-value"
+      my_optional_field      = "my-field-value"
     }
    ```
 
@@ -65,6 +64,8 @@ package foo
 
 import (
 	(...)
+	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/services/foo" // Import service "foo" from the STACKIT SDK for Go
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -79,7 +80,8 @@ type Model struct {
 	Id              types.String `tfsdk:"id"` // needed by TF
 	ProjectId       types.String `tfsdk:"project_id"`
 	BarId           types.String `tfsdk:"bar_id"`
-	MyField         types.String `tfsdk:"my_field"`
+	MyRequiredField types.String `tfsdk:"my_required_field"`
+	MyOptionalField         types.String `tfsdk:"my_optional_field"`
 	MyReadOnlyField types.String `tfsdk:"my_read_only_field"`
 }
 
@@ -141,7 +143,8 @@ func (r *barResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 		"id":                 "Terraform's internal resource identifier. It is structured as \"`project_id`,`bar_id`\".",
 		"project_id":         "STACKIT Project ID to which the bar is associated.",
 		"bar_id":             "The bar ID.",
-		"my_field":           "My field description.",
+		"my_required_field":  "My required field description.",
+		"my_optional_field":  "My optional field description.",
 		"my_read_only_field": "My read-only field description.",
 	}
 
@@ -169,7 +172,7 @@ func (r *barResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 			},
 			"bar_id": schema.StringAttribute{
 				Description: descriptions["bar_id"],
-				Required:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					// "RequiresReplace" makes the provider recreate the resource when the field is changed in the configuration
 					stringplanmodifier.RequiresReplace(),
@@ -179,7 +182,10 @@ func (r *barResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 					validate.NoSeparator(),
 				},
 			},
-			"my_field": schema.StringAttribute{
+			"my_required_field": schema.StringAttribute{
+				Required: true,
+			},
+			"my_optional_field": schema.StringAttribute{
 				Optional: true,
 				Computed: true,
 				PlanModifiers: []planmodifier.String{
@@ -205,7 +211,6 @@ func (r *barResource) Create(ctx context.Context, req resource.CreateRequest, re
 	projectId := model.ProjectId.ValueString()
 	barId := model.BarId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "bar_id", barId)
 
 	// Create new bar
 	payload, err := toCreatePayload(&model)
@@ -218,6 +223,7 @@ func (r *barResource) Create(ctx context.Context, req resource.CreateRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bar", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = tflog.SetField(ctx, "bar_id", resp.BarId)
 
 	// Map response body to schema
 	err = mapFields(resp, &model)
@@ -244,7 +250,7 @@ func (r *barResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	projectId := model.ProjectId.ValueString()
 	barId := model.BarId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "my_field", barId)
+	ctx = tflog.SetField(ctx, "barId", barId)
 
 	barResp, err := r.client.GetBar(ctx, projectId, barId).Execute()
 	if err != nil {
@@ -282,7 +288,7 @@ func (r *barResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	barId := model.MyField.ValueString()
+	barId := model.BarId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "bar_id", barId)
 
@@ -324,6 +330,7 @@ func mapFields(barResp *foo.GetBarResponse, model *Model) error {
 		return fmt.Errorf("model input is nil")
 	}
 	bar := barResp.Bar
+	model.BarId = types.StringPointerValue(bar.BarId)
 
 	idParts := []string{
 		model.ProjectId.ValueString(),
@@ -332,7 +339,9 @@ func mapFields(barResp *foo.GetBarResponse, model *Model) error {
 	model.Id = types.StringValue(
 		strings.Join(idParts, core.Separator),
 	)
-	model.MyField = types.StringPointerValue(bar.MyField)
+
+	model.MyRequiredField = types.StringPointerValue(bar.MyRequiredField)
+	model.MyOptionalField = types.StringPointerValue(bar.MyOptionalField)
 	model.MyReadOnlyField = types.StringPointerValue(bar.MyOtherField)
 	return nil
 }
@@ -343,12 +352,11 @@ func toCreatePayload(model *Model) *foo.CreateBarPayload {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	myFieldValue := conversion.StringValueToPointer(model.MyField)
-	if myFieldValue == nil {
-		return &foo.CreateBarPayload{}, nil
-	}
+	myRequiredFieldValue := conversion.StringValueToPointer(model.MyRequiredField)
+	myOptionalFieldValue := conversion.StringValueToPointer(model.MyOptionalField)
 	return &foo.CreateBarPayload{
-		MyField: myFieldValue,
+		MyRequiredField: myRequiredFieldValue,
+		MyOptionalField: myOptionalFieldValue,
 	}, nil
 }
 ```
