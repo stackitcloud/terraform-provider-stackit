@@ -181,6 +181,7 @@ func (r *recordSetResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"active": schema.BoolAttribute{
