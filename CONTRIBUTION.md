@@ -5,14 +5,14 @@ Your contribution is welcome! Thank you for your interest in contributing to the
 ## Table of contents
 
 - [Developer Guide](#developer-guide)
-- [Useful Make commands](#useful-make-commands)
-- [Repository structure](#repository-structure)
-- [Implementing a new resource](#implementing-a-new-resource)
-	- [Resource file structure](#resource-file-structure)
-- [Implementing a new datasource](#implementing-a-new-datasource)
-- [Onboarding a new STACKIT service](#onboarding-a-new-stackit-service)
-- [Local development](#local-development)
-	- [Setup centralized Terraform state](#setup-centralized-terraform-state)
+  - [Useful Make commands](#useful-make-commands)
+  - [Repository structure](#repository-structure)
+  - [Implementing a new resource](#implementing-a-new-resource)
+  	- [Resource file structure](#resource-file-structure)
+  - [Implementing a new datasource](#implementing-a-new-datasource)
+  - [Onboarding a new STACKIT service](#onboarding-a-new-stackit-service)
+  - [Local development](#local-development)
+  	- [Setup centralized Terraform state](#setup-centralized-terraform-state)
 - [Code Contributions](#code-contributions)
 - [Bug Reports](#bug-reports)
 
