@@ -163,6 +163,7 @@ func (r *barResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				Description: descriptions["project_id"],
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
+					// "RequiresReplace" makes the provider recreate the resource when the field is changed in the configuration
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
@@ -174,19 +175,17 @@ func (r *barResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 			"bar_id": schema.StringAttribute{
 				Description: descriptions["bar_id"],
 				Computed:    true,
+			},
+			"my_required_field": schema.StringAttribute{
+				Description: descriptions["my_required_field"],
+				Required: true,
 				PlanModifiers: []planmodifier.String{
 					// "RequiresReplace" makes the provider recreate the resource when the field is changed in the configuration
 					stringplanmodifier.RequiresReplace(),
 				},
-				Validators: []validator.String{
-					validate.UUID(),
-					validate.NoSeparator(),
-				},
-			},
-			"my_required_field": schema.StringAttribute{
-				Required: true,
 			},
 			"my_optional_field": schema.StringAttribute{
+				Description: descriptions["my_optional_field"],
 				Optional: true,
 				Computed: true,
 				PlanModifiers: []planmodifier.String{
@@ -195,6 +194,7 @@ func (r *barResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				}
 			},
 			"my_read_only_field": schema.StringAttribute{
+				Description: descriptions["my_read_only_field"],
 				Computed: true,
 			},
 		},
@@ -251,7 +251,7 @@ func (r *barResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	projectId := model.ProjectId.ValueString()
 	barId := model.BarId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "barId", barId)
+	ctx = tflog.SetField(ctx, "bar_id", barId)
 
 	barResp, err := r.client.GetBar(ctx, projectId, barId).Execute()
 	if err != nil {
