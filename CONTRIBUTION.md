@@ -47,7 +47,8 @@ Let's suppose you want to want to implement a new resource `bar` of service `foo
    ```tf
     resource "stackit_foo_bar" "example" {
       project_id    = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      my_optional_field      = "my-field-value"
+      my_required_field      = "my-required-field-value"
+      my_optional_field      = "my-optional-field-value"
     }
    ```
 
