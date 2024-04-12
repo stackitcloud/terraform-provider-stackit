@@ -36,8 +36,6 @@ type Model struct {
 	ProjectId    types.String `tfsdk:"project_id"`
 	Host         types.String `tfsdk:"host"`
 	Hosts        types.List   `tfsdk:"hosts"`
-	HttpAPIURI   types.String `tfsdk:"http_api_uri"`
-	Name         types.String `tfsdk:"name"`
 	Password     types.String `tfsdk:"password"`
 	Port         types.Int64  `tfsdk:"port"`
 	Uri          types.String `tfsdk:"uri"`
@@ -157,12 +155,6 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			"hosts": schema.ListAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
-			},
-			"http_api_uri": schema.StringAttribute{
-				Computed: true,
-			},
-			"name": schema.StringAttribute{
-				Computed: true,
 			},
 			"password": schema.StringAttribute{
 				Computed:  true,
@@ -362,8 +354,6 @@ func mapFields(credentialsResp *redis.CredentialsResponse, model *Model) error {
 			model.Hosts = hostsList
 		}
 		model.Host = types.StringPointerValue(credentials.Host)
-		model.HttpAPIURI = types.StringPointerValue(credentials.HttpApiUri)
-		model.Name = types.StringPointerValue(credentials.Name)
 		model.Password = types.StringPointerValue(credentials.Password)
 		model.Port = types.Int64PointerValue(credentials.Port)
 		model.Uri = types.StringPointerValue(credentials.Uri)
