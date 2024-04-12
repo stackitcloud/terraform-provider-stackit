@@ -3,6 +3,7 @@ package argus
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -549,6 +550,10 @@ func handleTargets(sc *argus.Job, model *Model) {
 			URLs: []types.String{},
 		}
 		if sc.Targets != nil {
+			// Sort the URLs to ensure the order is consistent
+			// Avoids unnecessary diffs in the Terraform state
+			sort.Strings(*sc.Targets)
+
 			for _, v := range *sc.Targets {
 				nt.URLs = append(nt.URLs, types.StringValue(v))
 			}

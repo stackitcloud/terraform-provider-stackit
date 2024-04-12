@@ -3,6 +3,7 @@ package mariadb
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -350,6 +351,11 @@ func mapFields(credentialsResp *mariadb.CredentialsResponse, model *Model) error
 	if credentials != nil {
 		if credentials.Hosts != nil {
 			var hosts []attr.Value
+
+			// Sort the Hosts to ensure the order is consistent
+			// Avoids unnecessary diffs in the Terraform state
+			sort.Strings(*credentials.Hosts)
+
 			for _, host := range *credentials.Hosts {
 				hosts = append(hosts, types.StringValue(host))
 			}

@@ -3,6 +3,7 @@ package dns
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -418,8 +419,19 @@ func mapFields(recordSetResp *dns.RecordSetResponse, model *Model) error {
 		model.Records = types.ListNull(types.StringType)
 	} else {
 		records := []attr.Value{}
+		recordStr := []string{}
+
+		//Collect recordSet.Recordss into a list of strings
 		for _, record := range *recordSet.Records {
-			records = append(records, types.StringPointerValue(record.Content))
+			recordStr = append(recordStr, *record.Content)
+		}
+
+		// Sort the Records to ensure the order is consistent
+		// Avoids unnecessary diffs in the Terraform state
+		sort.Strings(recordStr)
+
+		for _, record := range recordStr {
+			records = append(records, types.StringValue(record))
 		}
 		recordsList, diags := types.ListValue(types.StringType, records)
 		if diags.HasError() {

@@ -100,9 +100,68 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("name"),
 				ACL: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue(""),
 					types.StringValue("ip1"),
 					types.StringValue("ip2"),
+				}),
+				BackupSchedule: types.StringValue("schedule"),
+				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
+					"id":          types.StringValue("flavor_id"),
+					"description": types.StringValue("description"),
+					"cpu":         types.Int64Value(12),
+					"ram":         types.Int64Value(34),
+				}),
+				Replicas: types.Int64Value(56),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("class"),
+					"size":  types.Int64Value(78),
+				}),
+				Version: types.StringValue("version"),
+			},
+			true,
+		},
+		{
+			"acls_order_ok",
+			&postgresflex.InstanceResponse{
+				Item: &postgresflex.Instance{
+					Acl: &postgresflex.ACL{
+						Items: &[]string{
+							"ip1",
+							"ip3",
+							"ip2",
+							"",
+						},
+					},
+					BackupSchedule: utils.Ptr("schedule"),
+					Flavor: &postgresflex.Flavor{
+						Cpu:         utils.Ptr(int64(12)),
+						Description: utils.Ptr("description"),
+						Id:          utils.Ptr("flavor_id"),
+						Memory:      utils.Ptr(int64(34)),
+					},
+					Id:       utils.Ptr("iid"),
+					Name:     utils.Ptr("name"),
+					Replicas: utils.Ptr(int64(56)),
+					Status:   utils.Ptr("status"),
+					Storage: &postgresflex.Storage{
+						Class: utils.Ptr("class"),
+						Size:  utils.Ptr(int64(78)),
+					},
+					Version: utils.Ptr("version"),
+				},
+			},
+			&flavorModel{},
+			&storageModel{},
+			Model{
+				Id:         types.StringValue("pid,iid"),
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+				Name:       types.StringValue("name"),
+				ACL: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue(""),
+					types.StringValue("ip1"),
+					types.StringValue("ip2"),
+					types.StringValue("ip3"),
 				}),
 				BackupSchedule: types.StringValue("schedule"),
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
@@ -155,9 +214,9 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("name"),
 				ACL: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue(""),
 					types.StringValue("ip1"),
 					types.StringValue("ip2"),
-					types.StringValue(""),
 				}),
 				BackupSchedule: types.StringValue("schedule"),
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{

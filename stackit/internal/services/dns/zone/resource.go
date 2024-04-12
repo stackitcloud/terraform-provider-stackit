@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -513,6 +514,11 @@ func mapFields(zoneResp *dns.ZoneResponse, model *Model) error {
 		model.Primaries = types.ListNull(types.StringType)
 	} else {
 		respZonePrimaries := []attr.Value{}
+
+		// Sort the Primaries to ensure the order is consistent
+		// Avoids unnecessary diffs in the Terraform state
+		sort.Strings(*z.Primaries)
+
 		for _, primary := range *z.Primaries {
 			respZonePrimaries = append(respZonePrimaries, types.StringValue(primary))
 			respZonePrimariesList, diags := types.ListValue(types.StringType, respZonePrimaries)

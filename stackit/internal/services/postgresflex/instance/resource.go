@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -511,6 +512,11 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 		aclList = types.ListNull(types.StringType)
 	} else {
 		acl := []attr.Value{}
+
+		// Sort the ACLs to ensure the order is consistent
+		// Avoids unnecessary diffs in the Terraform state
+		sort.Strings(*instance.Acl.Items)
+
 		for _, ip := range *instance.Acl.Items {
 			acl = append(acl, types.StringValue(ip))
 		}
