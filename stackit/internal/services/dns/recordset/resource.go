@@ -421,7 +421,6 @@ func mapFields(recordSetResp *dns.RecordSetResponse, model *Model) error {
 		records := []attr.Value{}
 		recordStr := []string{}
 
-		//Collect recordSet.Recordss into a list of strings
 		for _, record := range *recordSet.Records {
 			recordStr = append(recordStr, *record.Content)
 		}
