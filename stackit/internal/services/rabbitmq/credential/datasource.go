@@ -123,9 +123,6 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			"http_api_uri": schema.StringAttribute{
 				Computed: true,
 			},
-			"name": schema.StringAttribute{
-				Computed: true,
-			},
 			"password": schema.StringAttribute{
 				Computed:  true,
 				Sensitive: true,

@@ -11,7 +11,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/logme"
 )
@@ -114,16 +113,6 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				},
 			},
 			"host": schema.StringAttribute{
-				Computed: true,
-			},
-			"hosts": schema.ListAttribute{
-				ElementType: types.StringType,
-				Computed:    true,
-			},
-			"http_api_uri": schema.StringAttribute{
-				Computed: true,
-			},
-			"name": schema.StringAttribute{
 				Computed: true,
 			},
 			"password": schema.StringAttribute{
