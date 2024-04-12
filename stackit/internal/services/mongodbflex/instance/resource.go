@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -560,6 +561,11 @@ func mapFields(resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flav
 		aclList = types.ListNull(types.StringType)
 	} else {
 		acl := []attr.Value{}
+
+		// Sort the array of strings  *instance.Acl.Items to ensure the order is consistent
+		// Avoids unnecessary diffs in the Terraform state
+		sort.Strings(*instance.Acl.Items)
+
 		for _, ip := range *instance.Acl.Items {
 			acl = append(acl, types.StringValue(ip))
 		}
