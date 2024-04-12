@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/logme"
@@ -29,9 +28,6 @@ func TestMapFields(t *testing.T) {
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
 				Host:         types.StringNull(),
-				Hosts:        types.ListNull(types.StringType),
-				HttpAPIURI:   types.StringNull(),
-				Name:         types.StringNull(),
 				Password:     types.StringNull(),
 				Port:         types.Int64Null(),
 				Uri:          types.StringNull(),
@@ -45,17 +41,11 @@ func TestMapFields(t *testing.T) {
 				Id: utils.Ptr("cid"),
 				Raw: &logme.RawCredentials{
 					Credentials: &logme.Credentials{
-						Host: utils.Ptr("host"),
-						Hosts: &[]string{
-							"host_1",
-							"",
-						},
-						HttpApiUri: utils.Ptr("http"),
-						Name:       utils.Ptr("name"),
-						Password:   utils.Ptr("password"),
-						Port:       utils.Ptr(int64(1234)),
-						Uri:        utils.Ptr("uri"),
-						Username:   utils.Ptr("username"),
+						Host:     utils.Ptr("host"),
+						Password: utils.Ptr("password"),
+						Port:     utils.Ptr(int64(1234)),
+						Uri:      utils.Ptr("uri"),
+						Username: utils.Ptr("username"),
 					},
 				},
 			},
@@ -65,16 +55,10 @@ func TestMapFields(t *testing.T) {
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
 				Host:         types.StringValue("host"),
-				Hosts: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("host_1"),
-					types.StringValue(""),
-				}),
-				HttpAPIURI: types.StringValue("http"),
-				Name:       types.StringValue("name"),
-				Password:   types.StringValue("password"),
-				Port:       types.Int64Value(1234),
-				Uri:        types.StringValue("uri"),
-				Username:   types.StringValue("username"),
+				Password:     types.StringValue("password"),
+				Port:         types.Int64Value(1234),
+				Uri:          types.StringValue("uri"),
+				Username:     types.StringValue("username"),
 			},
 			true,
 		},
@@ -84,14 +68,11 @@ func TestMapFields(t *testing.T) {
 				Id: utils.Ptr("cid"),
 				Raw: &logme.RawCredentials{
 					Credentials: &logme.Credentials{
-						Host:       utils.Ptr(""),
-						Hosts:      &[]string{},
-						HttpApiUri: nil,
-						Name:       nil,
-						Password:   utils.Ptr(""),
-						Port:       utils.Ptr(int64(2123456789)),
-						Uri:        nil,
-						Username:   utils.Ptr(""),
+						Host:     utils.Ptr(""),
+						Password: utils.Ptr(""),
+						Port:     utils.Ptr(int64(2123456789)),
+						Uri:      nil,
+						Username: utils.Ptr(""),
 					},
 				},
 			},
@@ -101,9 +82,6 @@ func TestMapFields(t *testing.T) {
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
 				Host:         types.StringValue(""),
-				Hosts:        types.ListValueMust(types.StringType, []attr.Value{}),
-				HttpAPIURI:   types.StringNull(),
-				Name:         types.StringNull(),
 				Password:     types.StringValue(""),
 				Port:         types.Int64Value(2123456789),
 				Uri:          types.StringNull(),
