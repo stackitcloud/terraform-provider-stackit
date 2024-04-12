@@ -121,6 +121,9 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				ElementType: types.StringType,
 				Computed:    true,
 			},
+			"load_balanced_host": schema.StringAttribute{
+				Computed: true,
+			},
 			"password": schema.StringAttribute{
 				Computed:  true,
 				Sensitive: true,

@@ -127,6 +127,9 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			"port": schema.Int64Attribute{
 				Computed: true,
 			},
+			"scheme": schema.StringAttribute{
+				Computed: true,
+			},
 			"uri": schema.StringAttribute{
 				Computed: true,
 			},
