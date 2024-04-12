@@ -38,6 +38,7 @@ type Model struct {
 	Hosts        types.List   `tfsdk:"hosts"`
 	Password     types.String `tfsdk:"password"`
 	Port         types.Int64  `tfsdk:"port"`
+	Scheme       types.String `tfsdk:"scheme"`
 	Uri          types.String `tfsdk:"uri"`
 	Username     types.String `tfsdk:"username"`
 }
@@ -160,6 +161,9 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Sensitive: true,
 			},
 			"port": schema.Int64Attribute{
+				Computed: true,
+			},
+			"scheme": schema.StringAttribute{
 				Computed: true,
 			},
 			"uri": schema.StringAttribute{
@@ -354,6 +358,7 @@ func mapFields(credentialsResp *opensearch.CredentialsResponse, model *Model) er
 		model.Host = types.StringPointerValue(credentials.Host)
 		model.Password = types.StringPointerValue(credentials.Password)
 		model.Port = types.Int64PointerValue(credentials.Port)
+		model.Scheme = types.StringPointerValue(credentials.Scheme)
 		model.Uri = types.StringPointerValue(credentials.Uri)
 		model.Username = types.StringPointerValue(credentials.Username)
 	}

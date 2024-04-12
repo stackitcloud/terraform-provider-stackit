@@ -30,16 +30,17 @@ var (
 )
 
 type Model struct {
-	Id           types.String `tfsdk:"id"` // needed by TF
-	CredentialId types.String `tfsdk:"credential_id"`
-	InstanceId   types.String `tfsdk:"instance_id"`
-	ProjectId    types.String `tfsdk:"project_id"`
-	Host         types.String `tfsdk:"host"`
-	Hosts        types.List   `tfsdk:"hosts"`
-	Password     types.String `tfsdk:"password"`
-	Port         types.Int64  `tfsdk:"port"`
-	Uri          types.String `tfsdk:"uri"`
-	Username     types.String `tfsdk:"username"`
+	Id               types.String `tfsdk:"id"` // needed by TF
+	CredentialId     types.String `tfsdk:"credential_id"`
+	InstanceId       types.String `tfsdk:"instance_id"`
+	ProjectId        types.String `tfsdk:"project_id"`
+	Host             types.String `tfsdk:"host"`
+	Hosts            types.List   `tfsdk:"hosts"`
+	LoadBalancedHost types.String `tfsdk:"load_balanced_host"`
+	Password         types.String `tfsdk:"password"`
+	Port             types.Int64  `tfsdk:"port"`
+	Uri              types.String `tfsdk:"uri"`
+	Username         types.String `tfsdk:"username"`
 }
 
 // NewCredentialResource is a helper function to simplify the provider implementation.
@@ -155,6 +156,9 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			"hosts": schema.ListAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
+			},
+			"load_balanced_host": schema.StringAttribute{
+				Computed: true,
 			},
 			"password": schema.StringAttribute{
 				Computed:  true,
@@ -354,6 +358,7 @@ func mapFields(credentialsResp *redis.CredentialsResponse, model *Model) error {
 			model.Hosts = hostsList
 		}
 		model.Host = types.StringPointerValue(credentials.Host)
+		model.LoadBalancedHost = types.StringPointerValue(credentials.LoadBalancedHost)
 		model.Password = types.StringPointerValue(credentials.Password)
 		model.Port = types.Int64PointerValue(credentials.Port)
 		model.Uri = types.StringPointerValue(credentials.Uri)
