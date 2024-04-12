@@ -22,7 +22,7 @@ var instanceResource = map[string]string{
 	"project_id":      testutil.ProjectId,
 	"name":            testutil.ResourceNameWithDateTime("redis"),
 	"plan_id":         "96e24604-7a43-4ff8-9ba4-609d4235a137",
-	"plan_name":       "stackit-qa-redis-1.4.10-single",
+	"plan_name":       "stackit-redis-1.4.10-single",
 	"version":         "6",
 	"sgw_acl_invalid": "1.2.3.4/4",
 	"sgw_acl_valid":   "192.168.0.0/16",
@@ -166,6 +166,7 @@ func TestAccRedisResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_redis_credential.credential", "host"),
 					resource.TestCheckResourceAttrSet("data.stackit_redis_credential.credential", "port"),
 					resource.TestCheckResourceAttrSet("data.stackit_redis_credential.credential", "uri"),
+					resource.TestCheckResourceAttrSet("data.stackit_redis_credential.credential", "load_balanced_host"),
 				),
 			},
 			// Import
@@ -244,7 +245,9 @@ func testAccCheckRedisDestroy(s *terraform.State) error {
 	var client *redis.APIClient
 	var err error
 	if testutil.RedisCustomEndpoint == "" {
-		client, err = redis.NewAPIClient()
+		client, err = redis.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
 	} else {
 		client, err = redis.NewAPIClient(
 			config.WithEndpoint(testutil.RedisCustomEndpoint),
