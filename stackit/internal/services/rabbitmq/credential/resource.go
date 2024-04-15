@@ -379,30 +379,42 @@ func mapFields(credentialsResp *rabbitmq.CredentialsResponse, model *Model) erro
 		}
 		model.Host = types.StringPointerValue(credentials.Host)
 		if credentials.HttpApiUris != nil {
-			var httpApiUris []attr.Value
-			for _, httpApiUri := range *credentials.HttpApiUris {
-				httpApiUris = append(httpApiUris, types.StringValue(httpApiUri))
-			}
-			httpApiUrisList, diags := types.ListValue(types.StringType, httpApiUris)
+			modelHttpApiUris := []string{}
+
+			diags := model.HttpAPIURIs.ElementsAs(context.Background(), &modelHttpApiUris, false)
 			if diags.HasError() {
-				return fmt.Errorf("failed to map httpApiUris: %w", core.DiagsToError(diags))
+				return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
 			}
-			model.HttpAPIURIs = httpApiUrisList
+
+			reconciledHttpApiUris := utils.ReconcileStrLists(modelHttpApiUris, *credentials.HttpApiUris)
+
+			httpApiUrisTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledHttpApiUris)
+			if diags.HasError() {
+				return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
+			}
+
+			model.HttpAPIURIs = httpApiUrisTF
 		}
 		model.HttpAPIURI = types.StringPointerValue(credentials.HttpApiUri)
 		model.Management = types.StringPointerValue(credentials.Management)
 		model.Password = types.StringPointerValue(credentials.Password)
 		model.Port = types.Int64PointerValue(credentials.Port)
 		if credentials.Uris != nil {
-			var uris []attr.Value
-			for _, uri := range *credentials.Uris {
-				uris = append(uris, types.StringValue(uri))
-			}
-			urisList, diags := types.ListValue(types.StringType, uris)
+			modelUris := []string{}
+
+			diags := model.Uris.ElementsAs(context.Background(), &modelUris, false)
 			if diags.HasError() {
-				return fmt.Errorf("failed to map uris: %w", core.DiagsToError(diags))
+				return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
 			}
-			model.Uris = urisList
+
+			reconciledUris := utils.ReconcileStrLists(modelUris, *credentials.Uris)
+
+			urisTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledUris)
+			if diags.HasError() {
+				return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
+			}
+
+			model.Uris = urisTF
 		}
 		model.Uri = types.StringPointerValue(credentials.Uri)
 		model.Username = types.StringPointerValue(credentials.Username)
