@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -202,7 +203,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(tt.input, &tt.state)
+			err := mapFields(context.Background(), tt.input, &tt.state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

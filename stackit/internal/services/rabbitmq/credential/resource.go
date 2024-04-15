@@ -223,7 +223,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -258,7 +258,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	// Map response body to schema
-	err = mapFields(recordSetResp, &model)
+	err = mapFields(ctx, recordSetResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -326,7 +326,7 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 	tflog.Info(ctx, "RabbitMQ credential state imported")
 }
 
-func mapFields(credentialsResp *rabbitmq.CredentialsResponse, model *Model) error {
+func mapFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsResponse, model *Model) error {
 	if credentialsResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -376,9 +376,9 @@ func mapFields(credentialsResp *rabbitmq.CredentialsResponse, model *Model) erro
 	if credentials != nil {
 		if credentials.Hosts != nil {
 			respHosts := *credentials.Hosts
-			reconciledHosts := utils.ReconcileStringLists(modelHosts, respHosts)
+			reconciledHosts := utils.ReconcileStringSlices(modelHosts, respHosts)
 
-			hostsTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledHosts)
+			hostsTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledHosts)
 			if diags.HasError() {
 				return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
 			}
@@ -389,11 +389,11 @@ func mapFields(credentialsResp *rabbitmq.CredentialsResponse, model *Model) erro
 		if credentials.HttpApiUris != nil {
 			respHttpApiUris := *credentials.HttpApiUris
 
-			reconciledHttpApiUris := utils.ReconcileStringLists(modelHttpApiUris, respHttpApiUris)
+			reconciledHttpApiUris := utils.ReconcileStringSlices(modelHttpApiUris, respHttpApiUris)
 
-			httpApiUrisTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledHttpApiUris)
+			httpApiUrisTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledHttpApiUris)
 			if diags.HasError() {
-				return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
+				return fmt.Errorf("failed to map httpApiUris: %w", core.DiagsToError(diags))
 			}
 
 			model.HttpAPIURIs = httpApiUrisTF
@@ -402,9 +402,9 @@ func mapFields(credentialsResp *rabbitmq.CredentialsResponse, model *Model) erro
 		if credentials.Uris != nil {
 			respUris := *credentials.Uris
 
-			reconciledUris := utils.ReconcileStringLists(modelUris, respUris)
+			reconciledUris := utils.ReconcileStringSlices(modelUris, respUris)
 
-			urisTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledUris)
+			urisTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledUris)
 			if diags.HasError() {
 				return fmt.Errorf("failed to map uris: %w", core.DiagsToError(diags))
 			}

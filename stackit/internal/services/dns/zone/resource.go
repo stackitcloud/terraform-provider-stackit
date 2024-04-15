@@ -329,7 +329,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -363,7 +363,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	// Map response body to schema
-	err = mapFields(zoneResp, &model)
+	err = mapFields(ctx, zoneResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -409,7 +409,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	err = mapFields(waitResp, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -475,7 +475,7 @@ func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportState
 	tflog.Info(ctx, "DNS zone state imported")
 }
 
-func mapFields(zoneResp *dns.ZoneResponse, model *Model) error {
+func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) error {
 	if zoneResp == nil || zoneResp.Zone == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -518,9 +518,9 @@ func mapFields(zoneResp *dns.ZoneResponse, model *Model) error {
 			return err
 		}
 
-		reconciledPrimaries := utils.ReconcileStringLists(modelPrimaries, respPrimaries)
+		reconciledPrimaries := utils.ReconcileStringSlices(modelPrimaries, respPrimaries)
 
-		primariesTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledPrimaries)
+		primariesTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledPrimaries)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map zone primaries: %w", core.DiagsToError(diags))
 		}

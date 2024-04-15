@@ -8,13 +8,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// ReconcileStringLists reconciles two string lists by removing elements from the
+// ReconcileStringSlices reconciles two string lists by removing elements from the
 // first list that are not in the second list and appending elements from the
 // second list that are not in the first list.
 // This preserves the order of the elements in the first list that are also in
 // the second list, which is useful when using ListAttributes in Terraform.
-// The source of truth is the second list.
-func ReconcileStringLists(list1, list2 []string) []string {
+// The source of truth for the order is the first list and the source of truth for the content is the second list.
+func ReconcileStringSlices(list1, list2 []string) []string {
 	// Create a copy of list1 to avoid modifying the original list
 	list1Copy := append([]string{}, list1...)
 

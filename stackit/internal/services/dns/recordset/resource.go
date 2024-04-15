@@ -249,7 +249,7 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -285,7 +285,7 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	// Map response body to schema
-	err = mapFields(recordSetResp, &model)
+	err = mapFields(ctx, recordSetResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -335,7 +335,7 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	err = mapFields(waitResp, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -396,7 +396,7 @@ func (r *recordSetResource) ImportState(ctx context.Context, req resource.Import
 	tflog.Info(ctx, "DNS record set state imported")
 }
 
-func mapFields(recordSetResp *dns.RecordSetResponse, model *Model) error {
+func mapFields(ctx context.Context, recordSetResp *dns.RecordSetResponse, model *Model) error {
 	if recordSetResp == nil || recordSetResp.Rrset == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -428,9 +428,9 @@ func mapFields(recordSetResp *dns.RecordSetResponse, model *Model) error {
 			return err
 		}
 
-		reconciledRecords := utils.ReconcileStringLists(modelRecords, respRecords)
+		reconciledRecords := utils.ReconcileStringSlices(modelRecords, respRecords)
 
-		recordsTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledRecords)
+		recordsTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledRecords)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map records: %w", core.DiagsToError(diags))
 		}

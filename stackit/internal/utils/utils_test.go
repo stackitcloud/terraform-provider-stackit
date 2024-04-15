@@ -61,7 +61,7 @@ func TestReconcileStrLists(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output := ReconcileStringLists(tt.list1, tt.list2)
+			output := ReconcileStringSlices(tt.list1, tt.list2)
 			diff := cmp.Diff(output, tt.expected)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)

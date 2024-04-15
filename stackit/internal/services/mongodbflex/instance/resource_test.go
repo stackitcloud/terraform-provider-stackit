@@ -311,7 +311,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(tt.input, &tt.state, tt.flavor, tt.storage, tt.options)
+			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.storage, tt.options)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

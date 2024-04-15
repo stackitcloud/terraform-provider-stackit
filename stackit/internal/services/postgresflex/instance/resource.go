@@ -298,7 +298,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model, flavor, storage)
+	err = mapFields(ctx, waitResp, &model, flavor, storage)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -349,7 +349,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(instanceResp, &model, flavor, storage)
+	err = mapFields(ctx, instanceResp, &model, flavor, storage)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -426,7 +426,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model, flavor, storage)
+	err = mapFields(ctx, waitResp, &model, flavor, storage)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -485,7 +485,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Postgresql instance state imported")
 }
 
-func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavorModel, storage *storageModel) error {
+func mapFields(ctx context.Context, resp *postgresflex.InstanceResponse, model *Model, flavor *flavorModel, storage *storageModel) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -517,9 +517,9 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 			return err
 		}
 
-		reconciledACL := utils.ReconcileStringLists(modelACL, respACL)
+		reconciledACL := utils.ReconcileStringSlices(modelACL, respACL)
 
-		aclList, diags = types.ListValueFrom(context.Background(), types.StringType, reconciledACL)
+		aclList, diags = types.ListValueFrom(ctx, types.StringType, reconciledACL)
 		if diags.HasError() {
 			return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
 		}
