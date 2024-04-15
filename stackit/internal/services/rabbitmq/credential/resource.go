@@ -37,10 +37,12 @@ type Model struct {
 	Host         types.String `tfsdk:"host"`
 	Hosts        types.List   `tfsdk:"hosts"`
 	HttpAPIURI   types.String `tfsdk:"http_api_uri"`
-	Name         types.String `tfsdk:"name"`
+	HttpAPIURIs  types.List   `tfsdk:"http_api_uris"`
+	Management   types.String `tfsdk:"management"`
 	Password     types.String `tfsdk:"password"`
 	Port         types.Int64  `tfsdk:"port"`
 	Uri          types.String `tfsdk:"uri"`
+	Uris         types.List   `tfsdk:"uris"`
 	Username     types.String `tfsdk:"username"`
 }
 
@@ -160,7 +162,11 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			"http_api_uri": schema.StringAttribute{
 				Computed: true,
 			},
-			"name": schema.StringAttribute{
+			"http_api_uris": schema.ListAttribute{
+				ElementType: types.StringType,
+				Computed:    true,
+			},
+			"management": schema.StringAttribute{
 				Computed: true,
 			},
 			"password": schema.StringAttribute{
@@ -172,6 +178,10 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			},
 			"uri": schema.StringAttribute{
 				Computed: true,
+			},
+			"uris": schema.ListAttribute{
+				ElementType: types.StringType,
+				Computed:    true,
 			},
 			"username": schema.StringAttribute{
 				Computed: true,
@@ -347,6 +357,8 @@ func mapFields(credentialsResp *rabbitmq.CredentialsResponse, model *Model) erro
 	)
 	model.CredentialId = types.StringValue(credentialId)
 	model.Hosts = types.ListNull(types.StringType)
+	model.Uris = types.ListNull(types.StringType)
+	model.HttpAPIURIs = types.ListNull(types.StringType)
 	if credentials != nil {
 		if credentials.Hosts != nil {
 			var hosts []attr.Value
@@ -360,10 +372,32 @@ func mapFields(credentialsResp *rabbitmq.CredentialsResponse, model *Model) erro
 			model.Hosts = hostsList
 		}
 		model.Host = types.StringPointerValue(credentials.Host)
+		if credentials.HttpApiUris != nil {
+			var httpApiUris []attr.Value
+			for _, httpApiUri := range *credentials.HttpApiUris {
+				httpApiUris = append(httpApiUris, types.StringValue(httpApiUri))
+			}
+			httpApiUrisList, diags := types.ListValue(types.StringType, httpApiUris)
+			if diags.HasError() {
+				return fmt.Errorf("failed to map httpApiUris: %w", core.DiagsToError(diags))
+			}
+			model.HttpAPIURIs = httpApiUrisList
+		}
 		model.HttpAPIURI = types.StringPointerValue(credentials.HttpApiUri)
-		model.Name = types.StringPointerValue(credentials.Name)
+		model.Management = types.StringPointerValue(credentials.Management)
 		model.Password = types.StringPointerValue(credentials.Password)
 		model.Port = types.Int64PointerValue(credentials.Port)
+		if credentials.Uris != nil {
+			var uris []attr.Value
+			for _, uri := range *credentials.Uris {
+				uris = append(uris, types.StringValue(uri))
+			}
+			urisList, diags := types.ListValue(types.StringType, uris)
+			if diags.HasError() {
+				return fmt.Errorf("failed to map uris: %w", core.DiagsToError(diags))
+			}
+			model.Uris = urisList
+		}
 		model.Uri = types.StringPointerValue(credentials.Uri)
 		model.Username = types.StringPointerValue(credentials.Username)
 	}
