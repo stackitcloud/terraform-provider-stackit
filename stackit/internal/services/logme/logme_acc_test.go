@@ -21,7 +21,7 @@ var instanceResource = map[string]string{
 	"project_id": testutil.ProjectId,
 	"name":       testutil.ResourceNameWithDateTime("logme"),
 	"plan_id":    "201d743c-0f06-4af2-8f20-649baf4819ae",
-	"plan_name":  "stackit-qa-logme2-1.2.50-replica",
+	"plan_name":  "stackit-logme2-1.2.50-replica",
 	"version":    "2",
 	"sgw_acl-1":  "192.168.0.0/16",
 	"sgw_acl-2":  "192.168.0.0/24",
@@ -184,7 +184,9 @@ func testAccCheckLogMeDestroy(s *terraform.State) error {
 	var client *logme.APIClient
 	var err error
 	if testutil.LogMeCustomEndpoint == "" {
-		client, err = logme.NewAPIClient()
+		client, err = logme.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
 	} else {
 		client, err = logme.NewAPIClient(
 			config.WithEndpoint(testutil.LogMeCustomEndpoint),

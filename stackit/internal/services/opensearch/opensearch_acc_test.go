@@ -21,7 +21,7 @@ var instanceResource = map[string]string{
 	"project_id": testutil.ProjectId,
 	"name":       testutil.ResourceNameWithDateTime("opensearch"),
 	"plan_id":    "9e4eac4b-b03d-4d7b-b01b-6d1224aa2d68",
-	"plan_name":  "stackit-qa-opensearch-1.2.10-replica",
+	"plan_name":  "stackit-opensearch-1.2.10-replica",
 	"version":    "2",
 	"sgw_acl":    "192.168.0.0/24",
 }
@@ -144,6 +144,7 @@ func TestAccOpenSearchResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_opensearch_credential.credential", "host"),
 					resource.TestCheckResourceAttrSet("data.stackit_opensearch_credential.credential", "port"),
 					resource.TestCheckResourceAttrSet("data.stackit_opensearch_credential.credential", "uri"),
+					resource.TestCheckResourceAttrSet("data.stackit_opensearch_credential.credential", "scheme"),
 				),
 			},
 			// Import
@@ -208,7 +209,9 @@ func testAccCheckOpenSearchDestroy(s *terraform.State) error {
 	var client *opensearch.APIClient
 	var err error
 	if testutil.OpenSearchCustomEndpoint == "" {
-		client, err = opensearch.NewAPIClient()
+		client, err = opensearch.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
 	} else {
 		client, err = opensearch.NewAPIClient(
 			config.WithEndpoint(testutil.OpenSearchCustomEndpoint),

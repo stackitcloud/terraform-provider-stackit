@@ -21,7 +21,7 @@ var instanceResource = map[string]string{
 	"project_id": testutil.ProjectId,
 	"name":       testutil.ResourceNameWithDateTime("mariadb"),
 	"plan_id":    "683be856-3587-42de-b1b5-a792ff854f52",
-	"plan_name":  "stackit-qa-mariadb-1.4.10-single",
+	"plan_name":  "stackit-mariadb-1.4.10-single",
 	"version":    "10.6",
 	"sgw_acl-1":  "192.168.0.0/16",
 	"sgw_acl-2":  "192.168.0.0/24",
@@ -183,7 +183,9 @@ func testAccCheckMariaDBDestroy(s *terraform.State) error {
 	var client *mariadb.APIClient
 	var err error
 	if testutil.MariaDBCustomEndpoint == "" {
-		client, err = mariadb.NewAPIClient()
+		client, err = mariadb.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
 	} else {
 		client, err = mariadb.NewAPIClient(
 			config.WithEndpoint(testutil.MariaDBCustomEndpoint),

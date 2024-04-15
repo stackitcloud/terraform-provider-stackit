@@ -22,7 +22,7 @@ var instanceResource = map[string]string{
 	"project_id":      testutil.ProjectId,
 	"name":            testutil.ResourceNameWithDateTime("rabbitmq"),
 	"plan_id":         "7e1f8394-5dd5-40b1-8608-16b4344eb51b",
-	"plan_name":       "stackit-qa-rabbitmq-2.4.10-single",
+	"plan_name":       "stackit-rabbitmq-2.4.10-single",
 	"version":         "3.10",
 	"sgw_acl_invalid": "1.2.3.4/4",
 	"sgw_acl_valid":   "192.168.0.0/16",
@@ -166,6 +166,8 @@ func TestAccRabbitMQResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_rabbitmq_credential.credential", "host"),
 					resource.TestCheckResourceAttrSet("data.stackit_rabbitmq_credential.credential", "port"),
 					resource.TestCheckResourceAttrSet("data.stackit_rabbitmq_credential.credential", "uri"),
+					resource.TestCheckResourceAttrSet("data.stackit_rabbitmq_credential.credential", "management"),
+					resource.TestCheckResourceAttrSet("data.stackit_rabbitmq_credential.credential", "http_api_uri"),
 				),
 			},
 			// Import
@@ -229,7 +231,9 @@ func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 	var client *rabbitmq.APIClient
 	var err error
 	if testutil.RabbitMQCustomEndpoint == "" {
-		client, err = rabbitmq.NewAPIClient()
+		client, err = rabbitmq.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
 	} else {
 		client, err = rabbitmq.NewAPIClient(
 			config.WithEndpoint(testutil.RabbitMQCustomEndpoint),

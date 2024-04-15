@@ -35,9 +35,6 @@ type Model struct {
 	InstanceId   types.String `tfsdk:"instance_id"`
 	ProjectId    types.String `tfsdk:"project_id"`
 	Host         types.String `tfsdk:"host"`
-	Hosts        types.List   `tfsdk:"hosts"`
-	HttpAPIURI   types.String `tfsdk:"http_api_uri"`
-	Name         types.String `tfsdk:"name"`
 	Password     types.String `tfsdk:"password"`
 	Port         types.Int64  `tfsdk:"port"`
 	Uri          types.String `tfsdk:"uri"`
@@ -151,16 +148,6 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				},
 			},
 			"host": schema.StringAttribute{
-				Computed: true,
-			},
-			"hosts": schema.ListAttribute{
-				ElementType: types.StringType,
-				Computed:    true,
-			},
-			"http_api_uri": schema.StringAttribute{
-				Computed: true,
-			},
-			"name": schema.StringAttribute{
 				Computed: true,
 			},
 			"password": schema.StringAttribute{
@@ -346,28 +333,8 @@ func mapFields(credentialsResp *logme.CredentialsResponse, model *Model) error {
 		strings.Join(idParts, core.Separator),
 	)
 	model.CredentialId = types.StringValue(credentialId)
-	model.Hosts = types.ListNull(types.StringType)
 	if credentials != nil {
-		if credentials.Hosts != nil {
-			modelHosts := []string{}
-
-			diags := model.Hosts.ElementsAs(context.Background(), &modelHosts, false)
-			if diags.HasError() {
-				return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
-			}
-
-			reconciledHosts := utils.ReconcileStrLists(modelHosts, *credentials.Hosts)
-
-			hostsTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledHosts)
-			if diags.HasError() {
-				return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
-			}
-
-			model.Hosts = hostsTF
-		}
 		model.Host = types.StringPointerValue(credentials.Host)
-		model.HttpAPIURI = types.StringPointerValue(credentials.HttpApiUri)
-		model.Name = types.StringPointerValue(credentials.Name)
 		model.Password = types.StringPointerValue(credentials.Password)
 		model.Port = types.Int64PointerValue(credentials.Port)
 		model.Uri = types.StringPointerValue(credentials.Uri)
