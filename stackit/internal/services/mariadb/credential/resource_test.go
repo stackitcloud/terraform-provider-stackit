@@ -13,12 +13,17 @@ import (
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
+		state       Model
 		input       *mariadb.CredentialsResponse
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_values",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
 			&mariadb.CredentialsResponse{
 				Id:  utils.Ptr("cid"),
 				Raw: &mariadb.RawCredentials{},
@@ -40,6 +45,10 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"simple_values",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
 			&mariadb.CredentialsResponse{
 				Id: utils.Ptr("cid"),
 				Raw: &mariadb.RawCredentials{
@@ -76,7 +85,59 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
+			"hosts_unordered",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+				Hosts: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("host_2"),
+					types.StringValue(""),
+					types.StringValue("host_1"),
+				}),
+			},
+			&mariadb.CredentialsResponse{
+				Id: utils.Ptr("cid"),
+				Raw: &mariadb.RawCredentials{
+					Credentials: &mariadb.Credentials{
+						Host: utils.Ptr("host"),
+						Hosts: &[]string{
+							"",
+							"host_1",
+							"host_2",
+						},
+						Name:     utils.Ptr("name"),
+						Password: utils.Ptr("password"),
+						Port:     utils.Ptr(int64(1234)),
+						Uri:      utils.Ptr("uri"),
+						Username: utils.Ptr("username"),
+					},
+				},
+			},
+			Model{
+				Id:           types.StringValue("pid,iid,cid"),
+				CredentialId: types.StringValue("cid"),
+				InstanceId:   types.StringValue("iid"),
+				ProjectId:    types.StringValue("pid"),
+				Host:         types.StringValue("host"),
+				Hosts: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("host_2"),
+					types.StringValue(""),
+					types.StringValue("host_1"),
+				}),
+				Name:     types.StringValue("name"),
+				Password: types.StringValue("password"),
+				Port:     types.Int64Value(1234),
+				Uri:      types.StringValue("uri"),
+				Username: types.StringValue("username"),
+			},
+			true,
+		},
+		{
 			"null_fields_and_int_conversions",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
 			&mariadb.CredentialsResponse{
 				Id: utils.Ptr("cid"),
 				Raw: &mariadb.RawCredentials{
@@ -108,18 +169,30 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"nil_response",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
 			nil,
 			Model{},
 			false,
 		},
 		{
 			"no_resource_id",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
 			&mariadb.CredentialsResponse{},
 			Model{},
 			false,
 		},
 		{
 			"nil_raw_credential",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
 			&mariadb.CredentialsResponse{
 				Id: utils.Ptr("cid"),
 			},
@@ -129,11 +202,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			model := &Model{
-				ProjectId:  tt.expected.ProjectId,
-				InstanceId: tt.expected.InstanceId,
-			}
-			err := mapFields(tt.input, model)
+			err := mapFields(tt.input, &tt.state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -141,7 +210,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(model, &tt.expected)
+				diff := cmp.Diff(tt.state, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

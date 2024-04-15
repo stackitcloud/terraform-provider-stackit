@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -357,17 +356,27 @@ func mapFields(credentialsResp *rabbitmq.CredentialsResponse, model *Model) erro
 		strings.Join(idParts, core.Separator),
 	)
 	model.CredentialId = types.StringValue(credentialId)
+
+	modelHosts, err := utils.ListValuetoStringSlice(model.Hosts)
+	if err != nil {
+		return err
+	}
+	modelHttpApiUris, err := utils.ListValuetoStringSlice(model.HttpAPIURIs)
+	if err != nil {
+		return err
+	}
+	modelUris, err := utils.ListValuetoStringSlice(model.Uris)
+	if err != nil {
+		return err
+	}
+
 	model.Hosts = types.ListNull(types.StringType)
 	model.Uris = types.ListNull(types.StringType)
 	model.HttpAPIURIs = types.ListNull(types.StringType)
 	if credentials != nil {
 		if credentials.Hosts != nil {
-			modelHosts, err := utils.ListValuetoStrSlice(model.Hosts)
-			if err != nil {
-				return err
-			}
-
-			reconciledHosts := utils.ReconcileStrLists(modelHosts, *credentials.Hosts)
+			respHosts := *credentials.Hosts
+			reconciledHosts := utils.ReconcileStringLists(modelHosts, respHosts)
 
 			hostsTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledHosts)
 			if diags.HasError() {
@@ -378,12 +387,9 @@ func mapFields(credentialsResp *rabbitmq.CredentialsResponse, model *Model) erro
 		}
 		model.Host = types.StringPointerValue(credentials.Host)
 		if credentials.HttpApiUris != nil {
-			modelHttpApiUris, err := utils.ListValuetoStrSlice(model.HttpAPIURIs)
-			if err != nil {
-				return err
-			}
+			respHttpApiUris := *credentials.HttpApiUris
 
-			reconciledHttpApiUris := utils.ReconcileStrLists(modelHttpApiUris, *credentials.HttpApiUris)
+			reconciledHttpApiUris := utils.ReconcileStringLists(modelHttpApiUris, respHttpApiUris)
 
 			httpApiUrisTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledHttpApiUris)
 			if diags.HasError() {
@@ -392,21 +398,24 @@ func mapFields(credentialsResp *rabbitmq.CredentialsResponse, model *Model) erro
 
 			model.HttpAPIURIs = httpApiUrisTF
 		}
+
+		if credentials.Uris != nil {
+			respUris := *credentials.Uris
+
+			reconciledUris := utils.ReconcileStringLists(modelUris, respUris)
+
+			urisTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledUris)
+			if diags.HasError() {
+				return fmt.Errorf("failed to map uris: %w", core.DiagsToError(diags))
+			}
+
+			model.Uris = urisTF
+		}
+
 		model.HttpAPIURI = types.StringPointerValue(credentials.HttpApiUri)
 		model.Management = types.StringPointerValue(credentials.Management)
 		model.Password = types.StringPointerValue(credentials.Password)
 		model.Port = types.Int64PointerValue(credentials.Port)
-		if credentials.Uris != nil {
-			var uris []attr.Value
-			for _, uri := range *credentials.Uris {
-				uris = append(uris, types.StringValue(uri))
-			}
-			urisList, diags := types.ListValue(types.StringType, uris)
-			if diags.HasError() {
-				return fmt.Errorf("failed to map uris: %w", core.DiagsToError(diags))
-			}
-			model.Uris = urisList
-		}
 		model.Uri = types.StringPointerValue(credentials.Uri)
 		model.Username = types.StringPointerValue(credentials.Username)
 	}

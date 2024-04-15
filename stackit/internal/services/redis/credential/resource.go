@@ -343,16 +343,19 @@ func mapFields(credentialsResp *redis.CredentialsResponse, model *Model) error {
 	model.Id = types.StringValue(
 		strings.Join(idParts, core.Separator),
 	)
+
+	modelHosts, err := utils.ListValuetoStringSlice(model.Hosts)
+	if err != nil {
+		return err
+	}
+
 	model.CredentialId = types.StringValue(credentialId)
 	model.Hosts = types.ListNull(types.StringType)
 	if credentials != nil {
 		if credentials.Hosts != nil {
-			modelHosts, err := utils.ListValuetoStrSlice(model.Hosts)
-			if err != nil {
-				return err
-			}
+			respHosts := *credentials.Hosts
 
-			reconciledHosts := utils.ReconcileStrLists(modelHosts, *credentials.Hosts)
+			reconciledHosts := utils.ReconcileStringLists(modelHosts, respHosts)
 
 			hostsTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledHosts)
 			if diags.HasError() {

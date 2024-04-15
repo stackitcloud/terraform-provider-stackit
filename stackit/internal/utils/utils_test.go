@@ -47,6 +47,12 @@ func TestReconcileStrLists(t *testing.T) {
 			[]string{"d", "c", "b", "e"},
 		},
 		{
+			"common elements with empty string",
+			[]string{"d", "", "c"},
+			[]string{"", "c", "d"},
+			[]string{"d", "", "c"},
+		},
+		{
 			"common elements with duplicates",
 			[]string{"a", "b", "c", "c"},
 			[]string{"b", "c", "d", "e"},
@@ -55,7 +61,7 @@ func TestReconcileStrLists(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output := ReconcileStrLists(tt.list1, tt.list2)
+			output := ReconcileStringLists(tt.list1, tt.list2)
 			diff := cmp.Diff(output, tt.expected)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
@@ -97,7 +103,7 @@ func TestListValuetoStrSlice(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := ListValuetoStrSlice(tt.input)
+			output, err := ListValuetoStringSlice(tt.input)
 			if err != nil {
 				if !tt.isValid {
 					return

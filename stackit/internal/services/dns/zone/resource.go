@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -513,22 +512,20 @@ func mapFields(zoneResp *dns.ZoneResponse, model *Model) error {
 	if z.Primaries == nil {
 		model.Primaries = types.ListNull(types.StringType)
 	} else {
-		respZonePrimaries := []attr.Value{}
-		modelPrimaries, err := utils.ListValuetoStrSlice(model.Primaries)
+		respPrimaries := *z.Primaries
+		modelPrimaries, err := utils.ListValuetoStringSlice(model.Primaries)
 		if err != nil {
 			return err
 		}
 
-		reconciledPrimaries := utils.ReconcileStrLists(modelPrimaries, *z.Primaries)
+		reconciledPrimaries := utils.ReconcileStringLists(modelPrimaries, respPrimaries)
 
-		for _, primary := range reconciledPrimaries {
-			respZonePrimaries = append(respZonePrimaries, types.StringValue(primary))
-			respZonePrimariesList, diags := types.ListValue(types.StringType, respZonePrimaries)
-			if diags.HasError() {
-				return fmt.Errorf("creating primaries list: %w", core.DiagsToError(diags))
-			}
-			model.Primaries = respZonePrimariesList
+		primariesTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledPrimaries)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map zone primaries: %w", core.DiagsToError(diags))
 		}
+
+		model.Primaries = primariesTF
 	}
 	model.ZoneId = types.StringValue(zoneId)
 	model.Description = types.StringPointerValue(z.Description)

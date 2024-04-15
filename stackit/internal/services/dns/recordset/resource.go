@@ -417,18 +417,18 @@ func mapFields(recordSetResp *dns.RecordSetResponse, model *Model) error {
 	if recordSet.Records == nil {
 		model.Records = types.ListNull(types.StringType)
 	} else {
-		recordStr := []string{}
+		respRecords := []string{}
 
 		for _, record := range *recordSet.Records {
-			recordStr = append(recordStr, *record.Content)
+			respRecords = append(respRecords, *record.Content)
 		}
 
-		modelRecords, err := utils.ListValuetoStrSlice(model.Records)
+		modelRecords, err := utils.ListValuetoStringSlice(model.Records)
 		if err != nil {
 			return err
 		}
 
-		reconciledRecords := utils.ReconcileStrLists(modelRecords, recordStr)
+		reconciledRecords := utils.ReconcileStringLists(modelRecords, respRecords)
 
 		recordsTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledRecords)
 		if diags.HasError() {
