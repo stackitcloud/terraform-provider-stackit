@@ -418,15 +418,14 @@ func mapFields(recordSetResp *dns.RecordSetResponse, model *Model) error {
 		model.Records = types.ListNull(types.StringType)
 	} else {
 		recordStr := []string{}
-		modelRecords := []string{}
 
 		for _, record := range *recordSet.Records {
 			recordStr = append(recordStr, *record.Content)
 		}
 
-		diags := model.Records.ElementsAs(context.Background(), &modelRecords, false)
-		if diags.HasError() {
-			return fmt.Errorf("failed to map records: %w", core.DiagsToError(diags))
+		modelRecords, err := utils.ListValuetoStrSlice(model.Records)
+		if err != nil {
+			return err
 		}
 
 		reconciledRecords := utils.ReconcileStrLists(modelRecords, recordStr)

@@ -511,11 +511,9 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 	if instance.Acl == nil || instance.Acl.Items == nil {
 		aclList = types.ListNull(types.StringType)
 	} else {
-		modelACL := []string{}
-
-		diags := model.ACL.ElementsAs(context.Background(), &modelACL, false)
-		if diags.HasError() {
-			return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
+		modelACL, err := utils.ListValuetoStrSlice(model.ACL)
+		if err != nil {
+			return err
 		}
 
 		reconciledACL := utils.ReconcileStrLists(modelACL, *instance.Acl.Items)

@@ -514,11 +514,9 @@ func mapFields(zoneResp *dns.ZoneResponse, model *Model) error {
 		model.Primaries = types.ListNull(types.StringType)
 	} else {
 		respZonePrimaries := []attr.Value{}
-		modelPrimaries := []string{}
-
-		diags := model.Primaries.ElementsAs(context.Background(), &modelPrimaries, false)
-		if diags.HasError() {
-			return fmt.Errorf("failed to map primaries: %w", core.DiagsToError(diags))
+		modelPrimaries, err := utils.ListValuetoStrSlice(model.Primaries)
+		if err != nil {
+			return err
 		}
 
 		reconciledPrimaries := utils.ReconcileStrLists(modelPrimaries, *z.Primaries)

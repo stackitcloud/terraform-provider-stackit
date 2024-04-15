@@ -345,11 +345,9 @@ func mapFields(credentialsResp *mariadb.CredentialsResponse, model *Model) error
 	model.Hosts = types.ListNull(types.StringType)
 	if credentials != nil {
 		if credentials.Hosts != nil {
-			modelHosts := []string{}
-
-			diags := model.Hosts.ElementsAs(context.Background(), &modelHosts, false)
-			if diags.HasError() {
-				return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
+			modelHosts, err := utils.ListValuetoStrSlice(model.Hosts)
+			if err != nil {
+				return err
 			}
 
 			reconciledHosts := utils.ReconcileStrLists(modelHosts, *credentials.Hosts)

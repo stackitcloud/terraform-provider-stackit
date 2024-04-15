@@ -1,5 +1,13 @@
 package utils
 
+import (
+	"fmt"
+
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+
+	"github.com/hashicorp/terraform-plugin-framework/types"
+)
+
 // ReconcileStrLists reconciles two string lists by removing elements from the
 // first list that are not in the second list and appending elements from the
 // second list that are not in the first list.
@@ -38,4 +46,17 @@ func ReconcileStrLists(list1, list2 []string) []string {
 	}
 
 	return list1Copy
+}
+
+func ListValuetoStrSlice(list basetypes.ListValue) ([]string, error) {
+	result := []string{}
+	for _, el := range list.Elements() {
+		elStr, ok := el.(types.String)
+		if !ok {
+			return result, fmt.Errorf("expected record to be of type %T, got %T", types.String{}, elStr)
+		}
+		result = append(result, elStr.ValueString())
+	}
+
+	return result, nil
 }
