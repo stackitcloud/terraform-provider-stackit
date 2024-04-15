@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
@@ -1024,10 +1023,6 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		}
 
 		if nodePoolResp.AvailabilityZones != nil {
-			// Sort the availability zones to ensure consistent ordering
-			// Avoids unnecessary diffs in the Terraform state
-			sort.Strings(*nodePoolResp.AvailabilityZones)
-
 			elemsTF, diags := types.ListValueFrom(ctx, types.StringType, *nodePoolResp.AvailabilityZones)
 			if diags.HasError() {
 				return fmt.Errorf("mapping index %d, field availability_zones: %w", i, core.DiagsToError(diags))
@@ -1279,11 +1274,6 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 			enabled = types.BoolValue(*cl.Extensions.Acl.Enabled)
 		}
 
-		// Sort the allowed_cidrs to ensure consistent ordering
-		// Avoids unnecessary diffs in the Terraform state
-		if cl.Extensions.Acl.AllowedCidrs != nil {
-			sort.Strings(*cl.Extensions.Acl.AllowedCidrs)
-		}
 		cidrsList, diags := types.ListValueFrom(ctx, types.StringType, cl.Extensions.Acl.AllowedCidrs)
 		if diags.HasError() {
 			return fmt.Errorf("creating allowed_cidrs list: %w", core.DiagsToError(diags))

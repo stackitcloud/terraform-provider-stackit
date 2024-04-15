@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -27,6 +26,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -514,12 +514,16 @@ func mapFields(zoneResp *dns.ZoneResponse, model *Model) error {
 		model.Primaries = types.ListNull(types.StringType)
 	} else {
 		respZonePrimaries := []attr.Value{}
+		modelPrimaries := []string{}
 
-		// Sort the Primaries to ensure the order is consistent
-		// Avoids unnecessary diffs in the Terraform state
-		sort.Strings(*z.Primaries)
+		diags := model.Primaries.ElementsAs(context.Background(), &modelPrimaries, false)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map primaries: %w", core.DiagsToError(diags))
+		}
 
-		for _, primary := range *z.Primaries {
+		reconciledPrimaries := utils.ReconcileStrLists(modelPrimaries, *z.Primaries)
+
+		for _, primary := range reconciledPrimaries {
 			respZonePrimaries = append(respZonePrimaries, types.StringValue(primary))
 			respZonePrimariesList, diags := types.ListValue(types.StringType, respZonePrimaries)
 			if diags.HasError() {

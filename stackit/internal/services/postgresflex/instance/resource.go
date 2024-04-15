@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -511,16 +511,16 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 	if instance.Acl == nil || instance.Acl.Items == nil {
 		aclList = types.ListNull(types.StringType)
 	} else {
-		acl := []attr.Value{}
+		modelACL := []string{}
 
-		// Sort the ACLs to ensure the order is consistent
-		// Avoids unnecessary diffs in the Terraform state
-		sort.Strings(*instance.Acl.Items)
-
-		for _, ip := range *instance.Acl.Items {
-			acl = append(acl, types.StringValue(ip))
+		diags := model.ACL.ElementsAs(context.Background(), &modelACL, false)
+		if diags.HasError() {
+			return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
 		}
-		aclList, diags = types.ListValue(types.StringType, acl)
+
+		reconciledACL := utils.ReconcileStrLists(modelACL, *instance.Acl.Items)
+
+		aclList, diags = types.ListValueFrom(context.Background(), types.StringType, reconciledACL)
 		if diags.HasError() {
 			return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
 		}

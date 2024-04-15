@@ -3,15 +3,14 @@ package redis
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -352,20 +351,21 @@ func mapFields(credentialsResp *redis.CredentialsResponse, model *Model) error {
 	model.Hosts = types.ListNull(types.StringType)
 	if credentials != nil {
 		if credentials.Hosts != nil {
-			var hosts []attr.Value
+			modelHosts := []string{}
 
-			// Sort the Hosts to ensure the order is consistent
-			// Avoids unnecessary diffs in the Terraform state
-			sort.Strings(*credentials.Hosts)
-
-			for _, host := range *credentials.Hosts {
-				hosts = append(hosts, types.StringValue(host))
-			}
-			hostsList, diags := types.ListValue(types.StringType, hosts)
+			diags := model.Hosts.ElementsAs(context.Background(), &modelHosts, false)
 			if diags.HasError() {
 				return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
 			}
-			model.Hosts = hostsList
+
+			reconciledHosts := utils.ReconcileStrLists(modelHosts, *credentials.Hosts)
+
+			hostsTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledHosts)
+			if diags.HasError() {
+				return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
+			}
+
+			model.Hosts = hostsTF
 		}
 		model.Host = types.StringPointerValue(credentials.Host)
 		model.HttpAPIURI = types.StringPointerValue(credentials.HttpApiUri)

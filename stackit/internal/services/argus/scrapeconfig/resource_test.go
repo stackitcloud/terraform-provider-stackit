@@ -62,10 +62,6 @@ func TestMapFields(t *testing.T) {
 						Targets: &[]string{"url1", "url3"},
 					},
 					{
-						Labels:  &map[string]string{"k2": "v2", "k3": "v3"},
-						Targets: &[]string{"url4", "url2", "url3", "url1"},
-					},
-					{
 						Labels:  nil,
 						Targets: &[]string{},
 					},
@@ -97,14 +93,6 @@ func TestMapFields(t *testing.T) {
 					},
 					{
 						URLs: []types.String{types.StringValue("url1"), types.StringValue("url3")},
-						Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
-							"k2": types.StringValue("v2"),
-							"k3": types.StringValue("v3"),
-						}),
-					},
-					// test the sorting
-					{
-						URLs: []types.String{types.StringValue("url1"), types.StringValue("url2"), types.StringValue("url3"), types.StringValue("url4")},
 						Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 							"k2": types.StringValue("v2"),
 							"k3": types.StringValue("v3"),

@@ -3,13 +3,11 @@ package dns
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -24,6 +22,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -418,25 +417,26 @@ func mapFields(recordSetResp *dns.RecordSetResponse, model *Model) error {
 	if recordSet.Records == nil {
 		model.Records = types.ListNull(types.StringType)
 	} else {
-		records := []attr.Value{}
 		recordStr := []string{}
+		modelRecords := []string{}
 
 		for _, record := range *recordSet.Records {
 			recordStr = append(recordStr, *record.Content)
 		}
 
-		// Sort the Records to ensure the order is consistent
-		// Avoids unnecessary diffs in the Terraform state
-		sort.Strings(recordStr)
-
-		for _, record := range recordStr {
-			records = append(records, types.StringValue(record))
-		}
-		recordsList, diags := types.ListValue(types.StringType, records)
+		diags := model.Records.ElementsAs(context.Background(), &modelRecords, false)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map records: %w", core.DiagsToError(diags))
 		}
-		model.Records = recordsList
+
+		reconciledRecords := utils.ReconcileStrLists(modelRecords, recordStr)
+
+		recordsTF, diags := types.ListValueFrom(context.Background(), types.StringType, reconciledRecords)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map records: %w", core.DiagsToError(diags))
+		}
+
+		model.Records = recordsTF
 	}
 	idParts := []string{
 		model.ProjectId.ValueString(),

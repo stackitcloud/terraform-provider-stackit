@@ -89,50 +89,6 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
-			"records_sorting",
-			Model{
-				ProjectId: types.StringValue("pid"),
-				ZoneId:    types.StringValue("zid"),
-			},
-			&dns.RecordSetResponse{
-				Rrset: &dns.RecordSet{
-					Id:      utils.Ptr("rid"),
-					Active:  utils.Ptr(true),
-					Comment: utils.Ptr("comment"),
-					Error:   utils.Ptr("error"),
-					Name:    utils.Ptr("name"),
-					Records: &[]dns.Record{
-						{Content: utils.Ptr("record_2")},
-						{Content: utils.Ptr("record_3")},
-						{Content: utils.Ptr("record_1")},
-					},
-					State: utils.Ptr("state"),
-					Ttl:   utils.Ptr(int64(1)),
-					Type:  utils.Ptr("type"),
-				},
-			},
-			Model{
-				Id:          types.StringValue("pid,zid,rid"),
-				RecordSetId: types.StringValue("rid"),
-				ZoneId:      types.StringValue("zid"),
-				ProjectId:   types.StringValue("pid"),
-				Active:      types.BoolValue(true),
-				Comment:     types.StringValue("comment"),
-				Error:       types.StringValue("error"),
-				Name:        types.StringValue("name"),
-				FQDN:        types.StringValue("name"),
-				Records: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("record_1"),
-					types.StringValue("record_2"),
-					types.StringValue("record_3"),
-				}),
-				State: types.StringValue("state"),
-				TTL:   types.Int64Value(1),
-				Type:  types.StringValue("type"),
-			},
-			true,
-		},
-		{
 			"null_fields_and_int_conversions",
 			Model{
 				ProjectId: types.StringValue("pid"),
