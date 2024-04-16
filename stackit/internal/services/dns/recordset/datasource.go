@@ -164,7 +164,7 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	err = mapFields(zoneResp, &model)
+	err = mapFields(ctx, zoneResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Processing API payload: %v", err))
 		return

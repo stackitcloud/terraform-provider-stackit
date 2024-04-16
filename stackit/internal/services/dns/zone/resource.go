@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -26,6 +25,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -329,7 +329,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -363,7 +363,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	// Map response body to schema
-	err = mapFields(zoneResp, &model)
+	err = mapFields(ctx, zoneResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -409,7 +409,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	err = mapFields(waitResp, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -475,7 +475,7 @@ func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportState
 	tflog.Info(ctx, "DNS zone state imported")
 }
 
-func mapFields(zoneResp *dns.ZoneResponse, model *Model) error {
+func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) error {
 	if zoneResp == nil || zoneResp.Zone == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -512,15 +512,20 @@ func mapFields(zoneResp *dns.ZoneResponse, model *Model) error {
 	if z.Primaries == nil {
 		model.Primaries = types.ListNull(types.StringType)
 	} else {
-		respZonePrimaries := []attr.Value{}
-		for _, primary := range *z.Primaries {
-			respZonePrimaries = append(respZonePrimaries, types.StringValue(primary))
-			respZonePrimariesList, diags := types.ListValue(types.StringType, respZonePrimaries)
-			if diags.HasError() {
-				return fmt.Errorf("creating primaries list: %w", core.DiagsToError(diags))
-			}
-			model.Primaries = respZonePrimariesList
+		respPrimaries := *z.Primaries
+		modelPrimaries, err := utils.ListValuetoStringSlice(model.Primaries)
+		if err != nil {
+			return err
 		}
+
+		reconciledPrimaries := utils.ReconcileStringSlices(modelPrimaries, respPrimaries)
+
+		primariesTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledPrimaries)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map zone primaries: %w", core.DiagsToError(diags))
+		}
+
+		model.Primaries = primariesTF
 	}
 	model.ZoneId = types.StringValue(zoneId)
 	model.Description = types.StringPointerValue(z.Description)

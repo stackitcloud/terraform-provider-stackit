@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -297,7 +298,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model, flavor, storage)
+	err = mapFields(ctx, waitResp, &model, flavor, storage)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -348,7 +349,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(instanceResp, &model, flavor, storage)
+	err = mapFields(ctx, instanceResp, &model, flavor, storage)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -425,7 +426,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model, flavor, storage)
+	err = mapFields(ctx, waitResp, &model, flavor, storage)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -484,7 +485,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Postgresql instance state imported")
 }
 
-func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavorModel, storage *storageModel) error {
+func mapFields(ctx context.Context, resp *postgresflex.InstanceResponse, model *Model, flavor *flavorModel, storage *storageModel) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -510,11 +511,15 @@ func mapFields(resp *postgresflex.InstanceResponse, model *Model, flavor *flavor
 	if instance.Acl == nil || instance.Acl.Items == nil {
 		aclList = types.ListNull(types.StringType)
 	} else {
-		acl := []attr.Value{}
-		for _, ip := range *instance.Acl.Items {
-			acl = append(acl, types.StringValue(ip))
+		respACL := *instance.Acl.Items
+		modelACL, err := utils.ListValuetoStringSlice(model.ACL)
+		if err != nil {
+			return err
 		}
-		aclList, diags = types.ListValue(types.StringType, acl)
+
+		reconciledACL := utils.ReconcileStringSlices(modelACL, respACL)
+
+		aclList, diags = types.ListValueFrom(ctx, types.StringType, reconciledACL)
 		if diags.HasError() {
 			return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
 		}
