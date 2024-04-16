@@ -33,9 +33,8 @@ data "stackit_redis_credential" "example" {
 
 - `host` (String)
 - `hosts` (List of String)
-- `http_api_uri` (String)
 - `id` (String) Terraform's internal data source. identifier. It is structured as "`project_id`,`instance_id`,`credential_id`".
-- `name` (String)
+- `load_balanced_host` (String)
 - `password` (String, Sensitive)
 - `port` (Number)
 - `uri` (String) Connection URI. Currently the returned uri doesn't support SSL, but you can enable it by using `rediss://` instead of `redis://`. We will provide the SSL connection in a future release

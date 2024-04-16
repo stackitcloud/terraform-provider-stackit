@@ -32,10 +32,7 @@ data "stackit_logme_credential" "example" {
 ### Read-Only
 
 - `host` (String)
-- `hosts` (List of String)
-- `http_api_uri` (String)
 - `id` (String) Terraform's internal data source. identifier. It is structured as "`project_id`,`instance_id`,`credential_id`".
-- `name` (String)
 - `password` (String, Sensitive)
 - `port` (Number)
 - `uri` (String)

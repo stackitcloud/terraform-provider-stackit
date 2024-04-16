@@ -34,9 +34,11 @@ data "stackit_rabbitmq_credential" "example" {
 - `host` (String)
 - `hosts` (List of String)
 - `http_api_uri` (String)
+- `http_api_uris` (List of String)
 - `id` (String) Terraform's internal data source. identifier. It is structured as "`project_id`,`instance_id`,`credential_id`".
-- `name` (String)
+- `management` (String)
 - `password` (String, Sensitive)
 - `port` (Number)
 - `uri` (String)
+- `uris` (List of String)
 - `username` (String)
