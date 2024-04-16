@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -22,7 +23,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -249,7 +249,7 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model)
+	err = mapFields(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -285,7 +285,7 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, recordSetResp, &model)
+	err = mapFields(recordSetResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -335,7 +335,7 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	err = mapFields(ctx, waitResp, &model)
+	err = mapFields(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -396,7 +396,7 @@ func (r *recordSetResource) ImportState(ctx context.Context, req resource.Import
 	tflog.Info(ctx, "DNS record set state imported")
 }
 
-func mapFields(ctx context.Context, recordSetResp *dns.RecordSetResponse, model *Model) error {
+func mapFields(recordSetResp *dns.RecordSetResponse, model *Model) error {
 	if recordSetResp == nil || recordSetResp.Rrset == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -417,25 +417,15 @@ func mapFields(ctx context.Context, recordSetResp *dns.RecordSetResponse, model 
 	if recordSet.Records == nil {
 		model.Records = types.ListNull(types.StringType)
 	} else {
-		respRecords := []string{}
-
+		records := []attr.Value{}
 		for _, record := range *recordSet.Records {
-			respRecords = append(respRecords, *record.Content)
+			records = append(records, types.StringPointerValue(record.Content))
 		}
-
-		modelRecords, err := utils.ListValuetoStringSlice(model.Records)
-		if err != nil {
-			return err
-		}
-
-		reconciledRecords := utils.ReconcileStringSlices(modelRecords, respRecords)
-
-		recordsTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledRecords)
+		recordsList, diags := types.ListValue(types.StringType, records)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map records: %w", core.DiagsToError(diags))
 		}
-
-		model.Records = recordsTF
+		model.Records = recordsList
 	}
 	idParts := []string{
 		model.ProjectId.ValueString(),

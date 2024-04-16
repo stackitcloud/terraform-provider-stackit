@@ -8,9 +8,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -223,7 +223,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model)
+	err = mapFields(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -258,7 +258,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, recordSetResp, &model)
+	err = mapFields(recordSetResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -326,7 +326,7 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 	tflog.Info(ctx, "RabbitMQ credential state imported")
 }
 
-func mapFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsResponse, model *Model) error {
+func mapFields(credentialsResp *rabbitmq.CredentialsResponse, model *Model) error {
 	if credentialsResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -356,66 +356,48 @@ func mapFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsRespons
 		strings.Join(idParts, core.Separator),
 	)
 	model.CredentialId = types.StringValue(credentialId)
-
-	modelHosts, err := utils.ListValuetoStringSlice(model.Hosts)
-	if err != nil {
-		return err
-	}
-	modelHttpApiUris, err := utils.ListValuetoStringSlice(model.HttpAPIURIs)
-	if err != nil {
-		return err
-	}
-	modelUris, err := utils.ListValuetoStringSlice(model.Uris)
-	if err != nil {
-		return err
-	}
-
 	model.Hosts = types.ListNull(types.StringType)
 	model.Uris = types.ListNull(types.StringType)
 	model.HttpAPIURIs = types.ListNull(types.StringType)
 	if credentials != nil {
 		if credentials.Hosts != nil {
-			respHosts := *credentials.Hosts
-			reconciledHosts := utils.ReconcileStringSlices(modelHosts, respHosts)
-
-			hostsTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledHosts)
+			var hosts []attr.Value
+			for _, host := range *credentials.Hosts {
+				hosts = append(hosts, types.StringValue(host))
+			}
+			hostsList, diags := types.ListValue(types.StringType, hosts)
 			if diags.HasError() {
 				return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
 			}
-
-			model.Hosts = hostsTF
+			model.Hosts = hostsList
 		}
 		model.Host = types.StringPointerValue(credentials.Host)
 		if credentials.HttpApiUris != nil {
-			respHttpApiUris := *credentials.HttpApiUris
-
-			reconciledHttpApiUris := utils.ReconcileStringSlices(modelHttpApiUris, respHttpApiUris)
-
-			httpApiUrisTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledHttpApiUris)
+			var httpApiUris []attr.Value
+			for _, httpApiUri := range *credentials.HttpApiUris {
+				httpApiUris = append(httpApiUris, types.StringValue(httpApiUri))
+			}
+			httpApiUrisList, diags := types.ListValue(types.StringType, httpApiUris)
 			if diags.HasError() {
 				return fmt.Errorf("failed to map httpApiUris: %w", core.DiagsToError(diags))
 			}
-
-			model.HttpAPIURIs = httpApiUrisTF
+			model.HttpAPIURIs = httpApiUrisList
 		}
-
-		if credentials.Uris != nil {
-			respUris := *credentials.Uris
-
-			reconciledUris := utils.ReconcileStringSlices(modelUris, respUris)
-
-			urisTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledUris)
-			if diags.HasError() {
-				return fmt.Errorf("failed to map uris: %w", core.DiagsToError(diags))
-			}
-
-			model.Uris = urisTF
-		}
-
 		model.HttpAPIURI = types.StringPointerValue(credentials.HttpApiUri)
 		model.Management = types.StringPointerValue(credentials.Management)
 		model.Password = types.StringPointerValue(credentials.Password)
 		model.Port = types.Int64PointerValue(credentials.Port)
+		if credentials.Uris != nil {
+			var uris []attr.Value
+			for _, uri := range *credentials.Uris {
+				uris = append(uris, types.StringValue(uri))
+			}
+			urisList, diags := types.ListValue(types.StringType, uris)
+			if diags.HasError() {
+				return fmt.Errorf("failed to map uris: %w", core.DiagsToError(diags))
+			}
+			model.Uris = urisList
+		}
 		model.Uri = types.StringPointerValue(credentials.Uri)
 		model.Username = types.StringPointerValue(credentials.Username)
 	}

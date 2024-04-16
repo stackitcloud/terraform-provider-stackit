@@ -164,7 +164,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, recordSetResp, &model)
+	err = mapFields(recordSetResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
 		return

@@ -28,7 +28,6 @@ func (c *postgresFlexClientMocked) ListFlavorsExecute(_ context.Context, _ strin
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
-		state       Model
 		input       *postgresflex.InstanceResponse
 		flavor      *flavorModel
 		storage     *storageModel
@@ -37,10 +36,6 @@ func TestMapFields(t *testing.T) {
 	}{
 		{
 			"default_values",
-			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-			},
 			&postgresflex.InstanceResponse{
 				Item: &postgresflex.Instance{},
 			},
@@ -70,10 +65,6 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"simple_values",
-			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-			},
 			&postgresflex.InstanceResponse{
 				Item: &postgresflex.Instance{
 					Acl: &postgresflex.ACL{
@@ -131,10 +122,6 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"simple_values_no_flavor_and_storage",
-			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-			},
 			&postgresflex.InstanceResponse{
 				Item: &postgresflex.Instance{
 					Acl: &postgresflex.ACL{
@@ -171,70 +158,6 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("ip1"),
 					types.StringValue("ip2"),
 					types.StringValue(""),
-				}),
-				BackupSchedule: types.StringValue("schedule"),
-				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
-					"id":          types.StringNull(),
-					"description": types.StringNull(),
-					"cpu":         types.Int64Value(12),
-					"ram":         types.Int64Value(34),
-				}),
-				Replicas: types.Int64Value(56),
-				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
-					"class": types.StringValue("class"),
-					"size":  types.Int64Value(78),
-				}),
-				Version: types.StringValue("version"),
-			},
-			true,
-		},
-		{
-			"acl_unordered",
-			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-				ACL: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("ip2"),
-					types.StringValue(""),
-					types.StringValue("ip1"),
-				}),
-			},
-			&postgresflex.InstanceResponse{
-				Item: &postgresflex.Instance{
-					Acl: &postgresflex.ACL{
-						Items: &[]string{
-							"",
-							"ip1",
-							"ip2",
-						},
-					},
-					BackupSchedule: utils.Ptr("schedule"),
-					Flavor:         nil,
-					Id:             utils.Ptr("iid"),
-					Name:           utils.Ptr("name"),
-					Replicas:       utils.Ptr(int64(56)),
-					Status:         utils.Ptr("status"),
-					Storage:        nil,
-					Version:        utils.Ptr("version"),
-				},
-			},
-			&flavorModel{
-				CPU: types.Int64Value(12),
-				RAM: types.Int64Value(34),
-			},
-			&storageModel{
-				Class: types.StringValue("class"),
-				Size:  types.Int64Value(78),
-			},
-			Model{
-				Id:         types.StringValue("pid,iid"),
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-				Name:       types.StringValue("name"),
-				ACL: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("ip2"),
-					types.StringValue(""),
-					types.StringValue("ip1"),
 				}),
 				BackupSchedule: types.StringValue("schedule"),
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
@@ -254,10 +177,6 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"nil_response",
-			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-			},
 			nil,
 			&flavorModel{},
 			&storageModel{},
@@ -266,10 +185,6 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"no_resource_id",
-			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-			},
 			&postgresflex.InstanceResponse{},
 			&flavorModel{},
 			&storageModel{},
@@ -279,7 +194,11 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.storage)
+			state := &Model{
+				ProjectId:  tt.expected.ProjectId,
+				InstanceId: tt.expected.InstanceId,
+			}
+			err := mapFields(tt.input, state, tt.flavor, tt.storage)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -287,7 +206,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(tt.state, tt.expected)
+				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
