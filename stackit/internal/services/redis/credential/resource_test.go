@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -13,12 +14,17 @@ import (
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
+		state       Model
 		input       *redis.CredentialsResponse
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_values",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
 			&redis.CredentialsResponse{
 				Id:  utils.Ptr("cid"),
 				Raw: &redis.RawCredentials{},
@@ -40,6 +46,10 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"simple_values",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
 			&redis.CredentialsResponse{
 				Id: utils.Ptr("cid"),
 				Raw: &redis.RawCredentials{
@@ -76,7 +86,59 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
+			"hosts_unordered",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+				Hosts: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("host_2"),
+					types.StringValue(""),
+					types.StringValue("host_1"),
+				}),
+			},
+			&redis.CredentialsResponse{
+				Id: utils.Ptr("cid"),
+				Raw: &redis.RawCredentials{
+					Credentials: &redis.Credentials{
+						Host: utils.Ptr("host"),
+						Hosts: &[]string{
+							"",
+							"host_1",
+							"host_2",
+						},
+						LoadBalancedHost: utils.Ptr("load_balanced_host"),
+						Password:         utils.Ptr("password"),
+						Port:             utils.Ptr(int64(1234)),
+						Uri:              utils.Ptr("uri"),
+						Username:         utils.Ptr("username"),
+					},
+				},
+			},
+			Model{
+				Id:           types.StringValue("pid,iid,cid"),
+				CredentialId: types.StringValue("cid"),
+				InstanceId:   types.StringValue("iid"),
+				ProjectId:    types.StringValue("pid"),
+				Host:         types.StringValue("host"),
+				Hosts: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("host_2"),
+					types.StringValue(""),
+					types.StringValue("host_1"),
+				}),
+				LoadBalancedHost: types.StringValue("load_balanced_host"),
+				Password:         types.StringValue("password"),
+				Port:             types.Int64Value(1234),
+				Uri:              types.StringValue("uri"),
+				Username:         types.StringValue("username"),
+			},
+			true,
+		},
+		{
 			"null_fields_and_int_conversions",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
 			&redis.CredentialsResponse{
 				Id: utils.Ptr("cid"),
 				Raw: &redis.RawCredentials{
@@ -108,18 +170,30 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"nil_response",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
 			nil,
 			Model{},
 			false,
 		},
 		{
 			"no_resource_id",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
 			&redis.CredentialsResponse{},
 			Model{},
 			false,
 		},
 		{
 			"nil_raw_credential",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
 			&redis.CredentialsResponse{
 				Id: utils.Ptr("cid"),
 			},
@@ -129,11 +203,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			model := &Model{
-				ProjectId:  tt.expected.ProjectId,
-				InstanceId: tt.expected.InstanceId,
-			}
-			err := mapFields(tt.input, model)
+			err := mapFields(context.Background(), tt.input, &tt.state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -141,7 +211,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(model, &tt.expected)
+				diff := cmp.Diff(tt.state, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

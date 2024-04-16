@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -13,12 +14,17 @@ import (
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
+		state       Model
 		input       *dns.ZoneResponse
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_ok",
+			Model{
+				ProjectId: types.StringValue("pid"),
+				ZoneId:    types.StringValue("zid"),
+			},
 			&dns.ZoneResponse{
 				Zone: &dns.Zone{
 					Id: utils.Ptr("zid"),
@@ -47,6 +53,10 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"values_ok",
+			Model{
+				ProjectId: types.StringValue("pid"),
+				ZoneId:    types.StringValue("zid"),
+			},
 			&dns.ZoneResponse{
 				Zone: &dns.Zone{
 					Id:                utils.Ptr("zid"),
@@ -105,7 +115,83 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
+			"primaries_unordered",
+			Model{
+				ProjectId: types.StringValue("pid"),
+				ZoneId:    types.StringValue("zid"),
+				Primaries: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("primary2"),
+					types.StringValue("primary1"),
+				}),
+			},
+			&dns.ZoneResponse{
+				Zone: &dns.Zone{
+					Id:               utils.Ptr("zid"),
+					Name:             utils.Ptr("name"),
+					DnsName:          utils.Ptr("dnsname"),
+					Acl:              utils.Ptr("acl"),
+					Active:           utils.Ptr(false),
+					CreationStarted:  utils.Ptr("bar"),
+					CreationFinished: utils.Ptr("foo"),
+					DefaultTTL:       utils.Ptr(int64(1)),
+					ExpireTime:       utils.Ptr(int64(2)),
+					RefreshTime:      utils.Ptr(int64(3)),
+					RetryTime:        utils.Ptr(int64(4)),
+					SerialNumber:     utils.Ptr(int64(5)),
+					NegativeCache:    utils.Ptr(int64(6)),
+					State:            utils.Ptr("state"),
+					Type:             utils.Ptr("type"),
+					Primaries: &[]string{
+						"primary1",
+						"primary2",
+					},
+					PrimaryNameServer: utils.Ptr("pns"),
+					UpdateStarted:     utils.Ptr("ufoo"),
+					UpdateFinished:    utils.Ptr("ubar"),
+					Visibility:        utils.Ptr("visibility"),
+					Error:             utils.Ptr("error"),
+					ContactEmail:      utils.Ptr("a@b.cd"),
+					Description:       utils.Ptr("description"),
+					IsReverseZone:     utils.Ptr(false),
+					RecordCount:       utils.Ptr(int64(3)),
+				},
+			},
+			Model{
+				Id:                types.StringValue("pid,zid"),
+				ProjectId:         types.StringValue("pid"),
+				ZoneId:            types.StringValue("zid"),
+				Name:              types.StringValue("name"),
+				DnsName:           types.StringValue("dnsname"),
+				Acl:               types.StringValue("acl"),
+				Active:            types.BoolValue(false),
+				DefaultTTL:        types.Int64Value(1),
+				ExpireTime:        types.Int64Value(2),
+				RefreshTime:       types.Int64Value(3),
+				RetryTime:         types.Int64Value(4),
+				SerialNumber:      types.Int64Value(5),
+				NegativeCache:     types.Int64Value(6),
+				Type:              types.StringValue("type"),
+				State:             types.StringValue("state"),
+				PrimaryNameServer: types.StringValue("pns"),
+				Primaries: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("primary2"),
+					types.StringValue("primary1"),
+				}),
+				Visibility:    types.StringValue("visibility"),
+				ContactEmail:  types.StringValue("a@b.cd"),
+				Description:   types.StringValue("description"),
+				IsReverseZone: types.BoolValue(false),
+				RecordCount:   types.Int64Value(3),
+			},
+			true,
+		},
+		{
 			"nullable_fields_and_int_conversions_ok",
+			Model{
+				Id:        types.StringValue("pid,zid"),
+				ProjectId: types.StringValue("pid"),
+				ZoneId:    types.StringValue("zid"),
+			},
 			&dns.ZoneResponse{
 				Zone: &dns.Zone{
 					Id:                utils.Ptr("zid"),
@@ -162,12 +248,17 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"response_nil_fail",
+			Model{},
 			nil,
 			Model{},
 			false,
 		},
 		{
 			"no_resource_id",
+			Model{
+				ProjectId: types.StringValue("pid"),
+				ZoneId:    types.StringValue("zid"),
+			},
 			&dns.ZoneResponse{},
 			Model{},
 			false,
@@ -175,10 +266,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			state := &Model{
-				ProjectId: tt.expected.ProjectId,
-			}
-			err := mapFields(tt.input, state)
+			err := mapFields(context.Background(), tt.input, &tt.state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -186,7 +274,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(state, &tt.expected)
+				diff := cmp.Diff(tt.state, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
