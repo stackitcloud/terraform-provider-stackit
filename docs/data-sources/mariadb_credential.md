@@ -33,7 +33,6 @@ data "stackit_mariadb_credential" "example" {
 
 - `host` (String)
 - `hosts` (List of String)
-- `http_api_uri` (String)
 - `id` (String) Terraform's internal data source. identifier. It is structured as "`project_id`,`instance_id`,`credential_id`".
 - `name` (String)
 - `password` (String, Sensitive)
