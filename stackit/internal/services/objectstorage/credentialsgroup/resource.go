@@ -198,9 +198,13 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 
-	err := readCredentialsGroups(ctx, &model, r.client)
+	found, err := readCredentialsGroups(ctx, &model, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentialsGroup", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
+		return
+	}
+	if !found {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -319,20 +323,20 @@ func enableProject(ctx context.Context, model *Model, client objectStorageClient
 
 // readCredentialsGroups gets all the existing credentials groups for the specified project,
 // finds the credentials group that is being read and updates the state. If the credentials group cannot be found, it throws an error
-func readCredentialsGroups(ctx context.Context, model *Model, client objectStorageClient) error {
+func readCredentialsGroups(ctx context.Context, model *Model, client objectStorageClient) (bool, error) {
 	found := false
 
 	if model.CredentialsGroupId.ValueString() == "" && model.Name.ValueString() == "" {
-		return fmt.Errorf("missing configuration: either name or credentials group id must be provided")
+		return found, fmt.Errorf("missing configuration: either name or credentials group id must be provided")
 	}
 
 	credentialsGroupsResp, err := client.ListCredentialsGroupsExecute(ctx, model.ProjectId.ValueString())
 	if err != nil {
-		return fmt.Errorf("getting credentials groups: %w", err)
+		return found, fmt.Errorf("getting credentials groups: %w", err)
 	}
 
 	if credentialsGroupsResp == nil {
-		return fmt.Errorf("nil response from GET credentials groups")
+		return found, fmt.Errorf("nil response from GET credentials groups")
 	}
 
 	for _, credentialsGroup := range *credentialsGroupsResp.CredentialsGroups {
@@ -342,14 +346,14 @@ func readCredentialsGroups(ctx context.Context, model *Model, client objectStora
 		found = true
 		err = mapCredentialsGroup(credentialsGroup, model)
 		if err != nil {
-			return err
+			return found, err
 		}
 		break
 	}
 
 	if !found {
-		return fmt.Errorf("credentials group could not be found")
+		return found, nil
 	}
 
-	return nil
+	return found, nil
 }

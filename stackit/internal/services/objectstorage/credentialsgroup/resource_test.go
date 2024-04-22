@@ -162,7 +162,8 @@ func TestReadCredentialsGroups(t *testing.T) {
 	tests := []struct {
 		description               string
 		mockedResp                *objectstorage.ListCredentialsGroupsResponse
-		expected                  Model
+		expectedModel             Model
+		expectedFound             bool
 		getCredentialsGroupsFails bool
 		isValid                   bool
 	}{
@@ -185,6 +186,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 				CredentialsGroupId: types.StringValue("cid"),
 				URN:                types.StringNull(),
 			},
+			true,
 			false,
 			true,
 		},
@@ -211,6 +213,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 				CredentialsGroupId: types.StringValue("cid"),
 				URN:                types.StringValue("urn"),
 			},
+			true,
 			false,
 			true,
 		},
@@ -222,6 +225,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 			Model{},
 			false,
 			false,
+			false,
 		},
 		{
 			"nil_credentials_groups",
@@ -231,11 +235,13 @@ func TestReadCredentialsGroups(t *testing.T) {
 			Model{},
 			false,
 			false,
+			false,
 		},
 		{
 			"nil_response",
 			nil,
 			Model{},
+			false,
 			false,
 			false,
 		},
@@ -253,6 +259,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 			Model{},
 			false,
 			false,
+			false,
 		},
 		{
 			"error_response",
@@ -266,6 +273,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 				},
 			},
 			Model{},
+			false,
 			true,
 			false,
 		},
@@ -277,10 +285,10 @@ func TestReadCredentialsGroups(t *testing.T) {
 				listCredentialsGroupsResp: tt.mockedResp,
 			}
 			model := &Model{
-				ProjectId:          tt.expected.ProjectId,
-				CredentialsGroupId: tt.expected.CredentialsGroupId,
+				ProjectId:          tt.expectedModel.ProjectId,
+				CredentialsGroupId: tt.expectedModel.CredentialsGroupId,
 			}
-			err := readCredentialsGroups(context.Background(), model, client)
+			found, err := readCredentialsGroups(context.Background(), model, client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -288,9 +296,13 @@ func TestReadCredentialsGroups(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(model, &tt.expected)
+				diff := cmp.Diff(model, &tt.expectedModel)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
+				}
+
+				if found != tt.expectedFound {
+					t.Fatalf("Found does not match")
 				}
 			}
 		})

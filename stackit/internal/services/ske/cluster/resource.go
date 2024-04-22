@@ -1403,6 +1403,11 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	clResp, err := r.client.GetCluster(ctx, projectId, name).Execute()
 	if err != nil {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
