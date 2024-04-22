@@ -3,8 +3,9 @@
 # Introduction
 
 This project is the official Terraform provider for STACKIT.
+        
+# Getting Started
 
-# How to use the provider
 To install STACKIT Terraform Provider, copy and paste this code into your Terraform configuration. Then, run `terraform init`.
 
 ```
@@ -21,8 +22,6 @@ provider "stackit" {
   # Configuration options
 }
 ```
-        
-# Getting Started
 
 Check one of the examples in the [examples](examples/) folder.
 
