@@ -3,6 +3,7 @@ package mariadb
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/mariadb"
 )
 
@@ -157,6 +159,10 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	recordSetResp, err := r.client.GetCredentials(ctx, projectId, instanceId, credentialId).Execute()
 	if err != nil {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

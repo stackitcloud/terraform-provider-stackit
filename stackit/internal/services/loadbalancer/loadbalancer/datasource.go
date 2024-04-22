@@ -3,6 +3,7 @@ package loadbalancer
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
 )
 
@@ -319,6 +321,10 @@ func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, name).Execute()
 	if err != nil {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
