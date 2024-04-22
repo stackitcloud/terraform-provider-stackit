@@ -149,7 +149,6 @@ func (r *recordSetResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
-					stringvalidator.LengthAtMost(253),
 				},
 			},
 			"fqdn": schema.StringAttribute{
