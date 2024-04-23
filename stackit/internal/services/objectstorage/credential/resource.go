@@ -437,9 +437,6 @@ func readCredentials(ctx context.Context, model *Model, client *objectstorage.AP
 		}
 		break
 	}
-	if !foundCredential {
-		return foundCredential, nil
-	}
 
 	return foundCredential, nil
 }

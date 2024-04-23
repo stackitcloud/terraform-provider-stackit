@@ -351,9 +351,5 @@ func readCredentialsGroups(ctx context.Context, model *Model, client objectStora
 		break
 	}
 
-	if !found {
-		return found, nil
-	}
-
 	return found, nil
 }
