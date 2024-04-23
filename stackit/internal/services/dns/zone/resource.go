@@ -361,6 +361,10 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	if zoneResp != nil && zoneResp.Zone.State != nil && *zoneResp.Zone.State == wait.DeleteSuccess {
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
 	// Map response body to schema
 	err = mapFields(ctx, zoneResp, &model)

@@ -282,6 +282,10 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	if recordSetResp != nil && recordSetResp.Rrset.State != nil && *recordSetResp.Rrset.State == wait.DeleteSuccess {
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
 	// Map response body to schema
 	err = mapFields(ctx, recordSetResp, &model)

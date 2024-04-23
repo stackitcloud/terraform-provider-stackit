@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
+	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -191,6 +192,11 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	zoneResp, err := d.client.GetZone(ctx, projectId, zoneId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+	if zoneResp != nil && zoneResp.Zone.State != nil && *zoneResp.Zone.State == wait.DeleteSuccess {
+		resp.State.RemoveResource(ctx)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", "Zone was deleted successfully")
 		return
 	}
 
