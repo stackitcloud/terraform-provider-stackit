@@ -392,7 +392,7 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 
 // readCredentials gets all the existing credentials for the specified credentials group,
 // finds the credential that is being read and updates the state.
-// If the credential cannot be found, it throws an error
+// Returns True if the credential was found, False otherwise.
 func readCredentials(ctx context.Context, model *Model, client *objectstorage.APIClient) (bool, error) {
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
