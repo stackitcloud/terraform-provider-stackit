@@ -322,7 +322,7 @@ func enableProject(ctx context.Context, model *Model, client objectStorageClient
 }
 
 // readCredentialsGroups gets all the existing credentials groups for the specified project,
-// finds the credentials group that is being read and updates the state. 
+// finds the credentials group that is being read and updates the state.
 // Returns True if the credential was found, False otherwise.
 func readCredentialsGroups(ctx context.Context, model *Model, client objectStorageClient) (bool, error) {
 	found := false
