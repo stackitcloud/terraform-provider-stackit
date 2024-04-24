@@ -32,9 +32,9 @@ func TestMapFields(t *testing.T) {
 				Scheme:         types.StringNull(),
 				ScrapeInterval: types.StringNull(),
 				ScrapeTimeout:  types.StringNull(),
-				SAML2:          nil,
+				SAML2:          types.ObjectNull(saml2Types),
 				BasicAuth:      nil,
-				Targets:        []Target{},
+				Targets:        []targetModel{},
 			},
 			true,
 		},
@@ -77,14 +77,14 @@ func TestMapFields(t *testing.T) {
 				ScrapeInterval: types.StringValue("1"),
 				ScrapeTimeout:  types.StringValue("2"),
 				SampleLimit:    types.Int64Value(17),
-				SAML2: &SAML2{
-					EnableURLParameters: types.BoolValue(false),
-				},
-				BasicAuth: &BasicAuth{
+				SAML2: types.ObjectValueMust(saml2Types, map[string]attr.Value{
+					"enable_url_parameters": types.BoolValue(false),
+				}),
+				BasicAuth: &basicAuthModel{
 					Username: types.StringValue("u"),
 					Password: types.StringValue("p"),
 				},
-				Targets: []Target{
+				Targets: []targetModel{
 					{
 						URLs: []types.String{types.StringValue("url1")},
 						Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
@@ -146,6 +146,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
+		inputSAML2  *saml2Model
 		expected    *argus.CreateScrapeConfigPayload
 		isValid     bool
 	}{
@@ -154,6 +155,7 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{
 				MetricsPath: types.StringValue("/metrics"),
 			},
+			&saml2Model{},
 			&argus.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
@@ -167,10 +169,35 @@ func TestToCreatePayload(t *testing.T) {
 			true,
 		},
 		{
-			"ok",
+			"ok - false enable_url_parameters",
 			&Model{
 				MetricsPath: types.StringValue("/metrics"),
 				Name:        types.StringValue("Name"),
+			},
+			&saml2Model{
+				EnableURLParameters: types.BoolValue(false),
+			},
+			&argus.CreateScrapeConfigPayload{
+				MetricsPath: utils.Ptr("/metrics"),
+				JobName:     utils.Ptr("Name"),
+				// Defaults
+				Scheme:         utils.Ptr("https"),
+				ScrapeInterval: utils.Ptr("5m"),
+				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
+				StaticConfigs:  &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
+				Params:         &map[string]any{"saml2": []string{"disabled"}},
+			},
+			true,
+		},
+		{
+			"ok -  true enable_url_parameters",
+			&Model{
+				MetricsPath: types.StringValue("/metrics"),
+				Name:        types.StringValue("Name"),
+			},
+			&saml2Model{
+				EnableURLParameters: types.BoolValue(true),
 			},
 			&argus.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
@@ -189,12 +216,13 @@ func TestToCreatePayload(t *testing.T) {
 			"nil_model",
 			nil,
 			nil,
+			nil,
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(context.Background(), tt.input)
+			output, err := toCreatePayload(context.Background(), tt.input, tt.inputSAML2)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -215,6 +243,7 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
+		inputSAML2  *saml2Model
 		expected    *argus.UpdateScrapeConfigPayload
 		isValid     bool
 	}{
@@ -223,6 +252,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{
 				MetricsPath: types.StringValue("/metrics"),
 			},
+			&saml2Model{},
 			&argus.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
@@ -235,10 +265,13 @@ func TestToUpdatePayload(t *testing.T) {
 			true,
 		},
 		{
-			"ok",
+			"ok -  true enable_url_parameters",
 			&Model{
 				MetricsPath: types.StringValue("/metrics"),
 				Scheme:      types.StringValue("http"),
+			},
+			&saml2Model{
+				EnableURLParameters: types.BoolValue(true),
 			},
 			&argus.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
@@ -248,6 +281,28 @@ func TestToUpdatePayload(t *testing.T) {
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
 				StaticConfigs:  &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
+				Params:         &map[string]any{"saml2": []string{"enabled"}},
+			},
+			true,
+		},
+		{
+			"ok -  false enable_url_parameters",
+			&Model{
+				MetricsPath: types.StringValue("/metrics"),
+				Scheme:      types.StringValue("http"),
+			},
+			&saml2Model{
+				EnableURLParameters: types.BoolValue(false),
+			},
+			&argus.UpdateScrapeConfigPayload{
+				MetricsPath: utils.Ptr("/metrics"),
+				// Defaults
+				Scheme:         utils.Ptr("http"),
+				ScrapeInterval: utils.Ptr("5m"),
+				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
+				StaticConfigs:  &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
+				Params:         &map[string]any{"saml2": []string{"disabled"}},
 			},
 			true,
 		},
@@ -255,12 +310,13 @@ func TestToUpdatePayload(t *testing.T) {
 			"nil_model",
 			nil,
 			nil,
+			nil,
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(context.Background(), tt.input)
+			output, err := toUpdatePayload(context.Background(), tt.input, tt.inputSAML2)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

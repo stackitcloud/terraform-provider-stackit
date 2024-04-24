@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
@@ -48,33 +49,54 @@ var (
 )
 
 type Model struct {
-	Id             types.String `tfsdk:"id"` // needed by TF
-	ProjectId      types.String `tfsdk:"project_id"`
-	InstanceId     types.String `tfsdk:"instance_id"`
-	Name           types.String `tfsdk:"name"`
-	MetricsPath    types.String `tfsdk:"metrics_path"`
-	Scheme         types.String `tfsdk:"scheme"`
-	ScrapeInterval types.String `tfsdk:"scrape_interval"`
-	ScrapeTimeout  types.String `tfsdk:"scrape_timeout"`
-	SampleLimit    types.Int64  `tfsdk:"sample_limit"`
-	SAML2          *SAML2       `tfsdk:"saml2"`
-	BasicAuth      *BasicAuth   `tfsdk:"basic_auth"`
-	Targets        []Target     `tfsdk:"targets"`
+	Id             types.String    `tfsdk:"id"` // needed by TF
+	ProjectId      types.String    `tfsdk:"project_id"`
+	InstanceId     types.String    `tfsdk:"instance_id"`
+	Name           types.String    `tfsdk:"name"`
+	MetricsPath    types.String    `tfsdk:"metrics_path"`
+	Scheme         types.String    `tfsdk:"scheme"`
+	ScrapeInterval types.String    `tfsdk:"scrape_interval"`
+	ScrapeTimeout  types.String    `tfsdk:"scrape_timeout"`
+	SampleLimit    types.Int64     `tfsdk:"sample_limit"`
+	SAML2          types.Object    `tfsdk:"saml2"`
+	BasicAuth      *basicAuthModel `tfsdk:"basic_auth"`
+	// BasicAuth      types.Object `tfsdk:"basic_auth"`
+	Targets []targetModel `tfsdk:"targets"`
 }
 
-type SAML2 struct {
+// Struct corresponding to Model.SAML2[i]
+type saml2Model struct {
 	EnableURLParameters types.Bool `tfsdk:"enable_url_parameters"`
 }
 
-type Target struct {
+// Types corresponding to saml2
+var saml2Types = map[string]attr.Type{
+	"enable_url_parameters": types.BoolType,
+}
+
+// Struct corresponding to Model.BasicAuth[i]
+type basicAuthModel struct {
+	Username types.String `tfsdk:"username"`
+	Password types.String `tfsdk:"password"`
+}
+
+// Types corresponding to basicAuth
+// var basicAuthTypes = map[string]attr.Type{
+// 	"username": types.BoolType,
+// 	"password": types.BoolType,
+// }
+
+// Struct corresponding to Model.Targets[i]
+type targetModel struct {
 	URLs   []types.String `tfsdk:"urls"`
 	Labels types.Map      `tfsdk:"labels"`
 }
 
-type BasicAuth struct {
-	Username types.String `tfsdk:"username"`
-	Password types.String `tfsdk:"password"`
-}
+// Types corresponding to target
+// var targetTypes = map[string]attr.Type{
+// 	"urls":   types.StringType,
+// 	"labels": types.MapType{ElemType: types.StringType},
+// }
 
 // NewScrapeConfigResource is a helper function to simplify the provider implementation.
 func NewScrapeConfigResource() resource.Resource {
@@ -302,8 +324,15 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	instanceId := model.InstanceId.ValueString()
 	scName := model.Name.ValueString()
 
+	saml2Model := saml2Model{}
+	diags = model.SAML2.As(context.Background(), &saml2Model, basetypes.ObjectAsOptions{})
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Generate API request body from model
-	payload, err := toCreatePayload(ctx, &model)
+	payload, err := toCreatePayload(ctx, &model, &saml2Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -383,8 +412,15 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 	instanceId := model.InstanceId.ValueString()
 	scName := model.Name.ValueString()
 
+	saml2Model := saml2Model{}
+	diags = model.SAML2.As(context.Background(), &saml2Model, basetypes.ObjectAsOptions{})
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Generate API request body from model
-	payload, err := toUpdatePayload(ctx, &model)
+	payload, err := toUpdatePayload(ctx, &model, &saml2Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -496,35 +532,38 @@ func mapFields(sc *argus.Job, model *Model) error {
 	model.ScrapeInterval = types.StringPointerValue(sc.ScrapeInterval)
 	model.ScrapeTimeout = types.StringPointerValue(sc.ScrapeTimeout)
 	model.SampleLimit = types.Int64PointerValue(sc.SampleLimit)
-	handleSAML2(sc, model)
-	handleBasicAuth(sc, model)
-	handleTargets(sc, model)
+	err := mapSAML2(sc, model)
+	if err != nil {
+		return fmt.Errorf("map saml2: %w", err)
+	}
+	mapBasicAuth(sc, model)
+	mapTargets(sc, model)
 	return nil
 }
 
-func handleBasicAuth(sc *argus.Job, model *Model) {
+func mapBasicAuth(sc *argus.Job, model *Model) {
 	if sc.BasicAuth == nil {
 		model.BasicAuth = nil
 		return
 	}
-	model.BasicAuth = &BasicAuth{
+	model.BasicAuth = &basicAuthModel{
 		Username: types.StringPointerValue(sc.BasicAuth.Username),
 		Password: types.StringPointerValue(sc.BasicAuth.Password),
 	}
 }
 
-func handleSAML2(sc *argus.Job, model *Model) {
-	if (sc.Params == nil || *sc.Params == nil) && model.SAML2 == nil {
-		return
+func mapSAML2(sc *argus.Job, model *Model) error {
+	if (sc.Params == nil || *sc.Params == nil) && (model.SAML2.IsNull() || model.SAML2.IsUnknown()) {
+		return nil
 	}
 
-	if model.SAML2 == nil {
-		model.SAML2 = &SAML2{}
+	if model.SAML2.IsNull() || model.SAML2.IsUnknown() {
+		model.SAML2 = types.ObjectNull(saml2Types)
 	}
 
 	flag := true
 	if sc.Params == nil || *sc.Params == nil {
-		return
+		return nil
 	}
 	p := *sc.Params
 	if v, ok := p["saml2"]; ok {
@@ -533,19 +572,25 @@ func handleSAML2(sc *argus.Job, model *Model) {
 		}
 	}
 
-	model.SAML2 = &SAML2{
-		EnableURLParameters: types.BoolValue(flag),
+	saml2Map := map[string]attr.Value{
+		"enable_url_parameters": types.BoolValue(flag),
 	}
+	saml2TF, diags := types.ObjectValue(saml2Types, saml2Map)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+	model.SAML2 = saml2TF
+	return nil
 }
 
-func handleTargets(sc *argus.Job, model *Model) {
+func mapTargets(sc *argus.Job, model *Model) {
 	if sc == nil || sc.StaticConfigs == nil {
-		model.Targets = []Target{}
+		model.Targets = []targetModel{}
 		return
 	}
-	newTargets := []Target{}
+	newTargets := []targetModel{}
 	for i, sc := range *sc.StaticConfigs {
-		nt := Target{
+		nt := targetModel{
 			URLs: []types.String{},
 		}
 		if sc.Targets != nil {
@@ -568,7 +613,7 @@ func handleTargets(sc *argus.Job, model *Model) {
 	model.Targets = newTargets
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*argus.CreateScrapeConfigPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model) (*argus.CreateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -582,14 +627,18 @@ func toCreatePayload(ctx context.Context, model *Model) (*argus.CreateScrapeConf
 		SampleLimit: utils.Ptr(float64(model.SampleLimit.ValueInt64())),
 		Scheme:      conversion.StringValueToPointer(model.Scheme),
 	}
-	setDefaultsCreateScrapeConfig(&sc, model)
+	setDefaultsCreateScrapeConfig(&sc, model, saml2Model)
 
-	if model.SAML2 != nil && !model.SAML2.EnableURLParameters.ValueBool() {
+	if !saml2Model.EnableURLParameters.IsNull() && !saml2Model.EnableURLParameters.IsUnknown() {
 		m := make(map[string]interface{})
 		if sc.Params != nil {
 			m = *sc.Params
 		}
-		m["saml2"] = []string{"disabled"}
+		if saml2Model.EnableURLParameters.ValueBool() {
+			m["saml2"] = []string{"enabled"}
+		} else {
+			m["saml2"] = []string{"disabled"}
+		}
 		sc.Params = &m
 	}
 
@@ -622,7 +671,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*argus.CreateScrapeConf
 	return &sc, nil
 }
 
-func setDefaultsCreateScrapeConfig(sc *argus.CreateScrapeConfigPayload, model *Model) {
+func setDefaultsCreateScrapeConfig(sc *argus.CreateScrapeConfigPayload, model *Model, saml2Model *saml2Model) {
 	if sc == nil {
 		return
 	}
@@ -639,7 +688,7 @@ func setDefaultsCreateScrapeConfig(sc *argus.CreateScrapeConfigPayload, model *M
 		sc.SampleLimit = utils.Ptr(float64(DefaultSampleLimit))
 	}
 	// Make the API default more explicit by setting the field.
-	if model.SAML2 == nil || model.SAML2.EnableURLParameters.IsNull() || model.SAML2.EnableURLParameters.IsUnknown() {
+	if saml2Model.EnableURLParameters.IsNull() || saml2Model.EnableURLParameters.IsUnknown() {
 		m := map[string]interface{}{}
 		if sc.Params != nil {
 			m = *sc.Params
@@ -653,7 +702,7 @@ func setDefaultsCreateScrapeConfig(sc *argus.CreateScrapeConfigPayload, model *M
 	}
 }
 
-func toUpdatePayload(ctx context.Context, model *Model) (*argus.UpdateScrapeConfigPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model) (*argus.UpdateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -668,12 +717,16 @@ func toUpdatePayload(ctx context.Context, model *Model) (*argus.UpdateScrapeConf
 	}
 	setDefaultsUpdateScrapeConfig(&sc, model)
 
-	if model.SAML2 != nil && !model.SAML2.EnableURLParameters.ValueBool() {
+	if !saml2Model.EnableURLParameters.IsNull() && !saml2Model.EnableURLParameters.IsUnknown() {
 		m := make(map[string]interface{})
 		if sc.Params != nil {
 			m = *sc.Params
 		}
-		m["saml2"] = []string{"disabled"}
+		if saml2Model.EnableURLParameters.ValueBool() {
+			m["saml2"] = []string{"enabled"}
+		} else {
+			m["saml2"] = []string{"disabled"}
+		}
 		sc.Params = &m
 	}
 
