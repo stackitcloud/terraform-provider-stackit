@@ -49,18 +49,18 @@ var (
 )
 
 type Model struct {
-	Id             types.String  `tfsdk:"id"` // needed by TF
-	ProjectId      types.String  `tfsdk:"project_id"`
-	InstanceId     types.String  `tfsdk:"instance_id"`
-	Name           types.String  `tfsdk:"name"`
-	MetricsPath    types.String  `tfsdk:"metrics_path"`
-	Scheme         types.String  `tfsdk:"scheme"`
-	ScrapeInterval types.String  `tfsdk:"scrape_interval"`
-	ScrapeTimeout  types.String  `tfsdk:"scrape_timeout"`
-	SampleLimit    types.Int64   `tfsdk:"sample_limit"`
-	SAML2          types.Object  `tfsdk:"saml2"`
-	BasicAuth      types.Object  `tfsdk:"basic_auth"`
-	Targets        []targetModel `tfsdk:"targets"`
+	Id             types.String `tfsdk:"id"` // needed by TF
+	ProjectId      types.String `tfsdk:"project_id"`
+	InstanceId     types.String `tfsdk:"instance_id"`
+	Name           types.String `tfsdk:"name"`
+	MetricsPath    types.String `tfsdk:"metrics_path"`
+	Scheme         types.String `tfsdk:"scheme"`
+	ScrapeInterval types.String `tfsdk:"scrape_interval"`
+	ScrapeTimeout  types.String `tfsdk:"scrape_timeout"`
+	SampleLimit    types.Int64  `tfsdk:"sample_limit"`
+	SAML2          types.Object `tfsdk:"saml2"`
+	BasicAuth      types.Object `tfsdk:"basic_auth"`
+	Targets        types.List   `tfsdk:"targets"`
 }
 
 // Struct corresponding to Model.SAML2[i]
@@ -87,15 +87,15 @@ var basicAuthTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.Targets[i]
 type targetModel struct {
-	URLs   []types.String `tfsdk:"urls"`
-	Labels types.Map      `tfsdk:"labels"`
+	URLs   types.List `tfsdk:"urls"`
+	Labels types.Map  `tfsdk:"labels"`
 }
 
 // Types corresponding to targetModel
-// var targetTypes = map[string]attr.Type{
-// 	"urls":   types.StringType,
-// 	"labels": types.MapType{ElemType: types.StringType},
-// }
+var targetTypes = map[string]attr.Type{
+	"urls":   types.ListType{ElemType: types.StringType},
+	"labels": types.MapType{ElemType: types.StringType},
+}
 
 // NewScrapeConfigResource is a helper function to simplify the provider implementation.
 func NewScrapeConfigResource() resource.Resource {
@@ -337,8 +337,15 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
+	targetsModel := []targetModel{}
+	diags = model.Targets.ElementsAs(context.Background(), &targetsModel, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Generate API request body from model
-	payload, err := toCreatePayload(ctx, &model, &saml2Model, &basicAuthModel)
+	payload, err := toCreatePayload(ctx, &model, &saml2Model, &basicAuthModel, targetsModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -432,8 +439,15 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
+	targetsModel := []targetModel{}
+	diags = model.Targets.ElementsAs(context.Background(), &targetsModel, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Generate API request body from model
-	payload, err := toUpdatePayload(ctx, &model, &saml2Model, &basicAuthModel)
+	payload, err := toUpdatePayload(ctx, &model, &saml2Model, &basicAuthModel, targetsModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -553,7 +567,10 @@ func mapFields(sc *argus.Job, model *Model) error {
 	if err != nil {
 		return fmt.Errorf("map basic auth: %w", err)
 	}
-	mapTargets(sc, model)
+	err = mapTargets(sc, model)
+	if err != nil {
+		return fmt.Errorf("map targets: %w", err)
+	}
 	return nil
 }
 
@@ -605,23 +622,35 @@ func mapSAML2(sc *argus.Job, model *Model) error {
 	return nil
 }
 
-func mapTargets(sc *argus.Job, model *Model) {
+func mapTargets(sc *argus.Job, model *Model) error {
 	if sc == nil || sc.StaticConfigs == nil {
-		model.Targets = []targetModel{}
-		return
+		model.Targets = types.ListNull(types.ObjectType{AttrTypes: targetTypes})
+		return nil
 	}
-	newTargets := []targetModel{}
-	for i, sc := range *sc.StaticConfigs {
-		nt := targetModel{
-			URLs: []types.String{},
+
+	targetsModel := []targetModel{}
+	if !model.Targets.IsNull() && !model.Targets.IsUnknown() {
+		diags := model.Targets.ElementsAs(context.Background(), &targetsModel, false)
+		if diags.HasError() {
+			return core.DiagsToError(diags)
 		}
+	}
+
+	newTargets := []attr.Value{}
+	for i, sc := range *sc.StaticConfigs {
+		nt := targetModel{}
+
+		// Map URLs
+		urls := []attr.Value{}
 		if sc.Targets != nil {
 			for _, v := range *sc.Targets {
-				nt.URLs = append(nt.URLs, types.StringValue(v))
+				urls = append(urls, types.StringValue(v))
 			}
 		}
+		nt.URLs = types.ListValueMust(types.StringType, urls)
 
-		if len(model.Targets) > i && model.Targets[i].Labels.IsNull() || sc.Labels == nil {
+		// Map Labels
+		if len(model.Targets.Elements()) > i && targetsModel[i].Labels.IsNull() || sc.Labels == nil {
 			nt.Labels = types.MapNull(types.StringType)
 		} else {
 			newl := map[string]attr.Value{}
@@ -630,12 +659,30 @@ func mapTargets(sc *argus.Job, model *Model) {
 			}
 			nt.Labels = types.MapValueMust(types.StringType, newl)
 		}
-		newTargets = append(newTargets, nt)
+
+		// Build target
+		targetMap := map[string]attr.Value{
+			"urls":   nt.URLs,
+			"labels": nt.Labels,
+		}
+		targetTF, diags := types.ObjectValue(targetTypes, targetMap)
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+
+		newTargets = append(newTargets, targetTF)
 	}
-	model.Targets = newTargets
+
+	targetsTF, diags := types.ListValue(types.ObjectType{AttrTypes: targetTypes}, newTargets)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	model.Targets = targetsTF
+	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel) (*argus.CreateScrapeConfigPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel []targetModel) (*argus.CreateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -671,23 +718,26 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		}
 	}
 
-	t := make([]argus.CreateScrapeConfigPayloadStaticConfigsInner, len(model.Targets))
-	for i, target := range model.Targets {
+	t := make([]argus.CreateScrapeConfigPayloadStaticConfigsInner, len(targetsModel))
+	for i, target := range targetsModel {
 		ti := argus.CreateScrapeConfigPayloadStaticConfigsInner{}
-		tgts := []string{}
-		for _, v := range target.URLs {
-			tgts = append(tgts, v.ValueString())
-		}
-		ti.Targets = &tgts
 
-		ls := map[string]interface{}{}
-		for k, v := range target.Labels.Elements() {
-			ls[k], _ = conversion.ToString(ctx, v)
+		urls := []string{}
+		diags := target.URLs.ElementsAs(context.Background(), &urls, false)
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
 		}
-		ti.Labels = &ls
+		ti.Targets = &urls
+
+		labels := map[string]interface{}{}
+		for k, v := range target.Labels.Elements() {
+			labels[k], _ = conversion.ToString(ctx, v)
+		}
+		ti.Labels = &labels
 		t[i] = ti
 	}
 	sc.StaticConfigs = &t
+
 	return &sc, nil
 }
 
@@ -722,7 +772,7 @@ func setDefaultsCreateScrapeConfig(sc *argus.CreateScrapeConfigPayload, model *M
 	}
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel) (*argus.UpdateScrapeConfigPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel []targetModel) (*argus.UpdateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -757,14 +807,16 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		}
 	}
 
-	t := make([]argus.UpdateScrapeConfigPayloadStaticConfigsInner, len(model.Targets))
-	for i, target := range model.Targets {
+	t := make([]argus.UpdateScrapeConfigPayloadStaticConfigsInner, len(targetsModel))
+	for i, target := range targetsModel {
 		ti := argus.UpdateScrapeConfigPayloadStaticConfigsInner{}
-		tgts := []string{}
-		for _, v := range target.URLs {
-			tgts = append(tgts, v.ValueString())
+
+		urls := []string{}
+		diags := target.URLs.ElementsAs(context.Background(), &urls, false)
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
 		}
-		ti.Targets = &tgts
+		ti.Targets = &urls
 
 		ls := map[string]interface{}{}
 		for k, v := range target.Labels.Elements() {
@@ -774,6 +826,7 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		t[i] = ti
 	}
 	sc.StaticConfigs = &t
+
 	return &sc, nil
 }
 

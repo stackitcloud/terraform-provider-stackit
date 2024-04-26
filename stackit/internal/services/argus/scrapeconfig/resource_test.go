@@ -34,7 +34,7 @@ func TestMapFields(t *testing.T) {
 				ScrapeTimeout:  types.StringNull(),
 				SAML2:          types.ObjectNull(saml2Types),
 				BasicAuth:      types.ObjectNull(basicAuthTypes),
-				Targets:        []targetModel{},
+				Targets:        types.ListNull(types.ObjectType{AttrTypes: targetTypes}),
 			},
 			true,
 		},
@@ -84,25 +84,25 @@ func TestMapFields(t *testing.T) {
 					"username": types.StringValue("u"),
 					"password": types.StringValue("p"),
 				}),
-				Targets: []targetModel{
-					{
-						URLs: []types.String{types.StringValue("url1")},
-						Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+				Targets: types.ListValueMust(types.ObjectType{AttrTypes: targetTypes}, []attr.Value{
+					types.ObjectValueMust(targetTypes, map[string]attr.Value{
+						"urls": types.ListValueMust(types.StringType, []attr.Value{types.StringValue("url1")}),
+						"labels": types.MapValueMust(types.StringType, map[string]attr.Value{
 							"k1": types.StringValue("v1"),
 						}),
-					},
-					{
-						URLs: []types.String{types.StringValue("url1"), types.StringValue("url3")},
-						Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					}),
+					types.ObjectValueMust(targetTypes, map[string]attr.Value{
+						"urls": types.ListValueMust(types.StringType, []attr.Value{types.StringValue("url1"), types.StringValue("url3")}),
+						"labels": types.MapValueMust(types.StringType, map[string]attr.Value{
 							"k2": types.StringValue("v2"),
 							"k3": types.StringValue("v3"),
 						}),
-					},
-					{
-						URLs:   []types.String{},
-						Labels: types.MapNull(types.StringType),
-					},
-				},
+					}),
+					types.ObjectValueMust(targetTypes, map[string]attr.Value{
+						"urls":   types.ListValueMust(types.StringType, []attr.Value{}),
+						"labels": types.MapNull(types.StringType),
+					}),
+				}),
 			},
 			isValid: true,
 		},
@@ -148,6 +148,7 @@ func TestToCreatePayload(t *testing.T) {
 		input          *Model
 		inputSAML2     *saml2Model
 		inputBasicAuth *basicAuthModel
+		inputTargets   []targetModel
 		expected       *argus.CreateScrapeConfigPayload
 		isValid        bool
 	}{
@@ -158,6 +159,7 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&saml2Model{},
 			&basicAuthModel{},
+			[]targetModel{},
 			&argus.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
@@ -180,6 +182,7 @@ func TestToCreatePayload(t *testing.T) {
 				EnableURLParameters: types.BoolValue(false),
 			},
 			&basicAuthModel{},
+			[]targetModel{},
 			&argus.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				JobName:     utils.Ptr("Name"),
@@ -203,6 +206,7 @@ func TestToCreatePayload(t *testing.T) {
 				EnableURLParameters: types.BoolValue(true),
 			},
 			&basicAuthModel{},
+			[]targetModel{},
 			&argus.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				JobName:     utils.Ptr("Name"),
@@ -227,6 +231,7 @@ func TestToCreatePayload(t *testing.T) {
 				Username: types.StringValue("u"),
 				Password: types.StringValue("p"),
 			},
+			[]targetModel{},
 			&argus.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				JobName:     utils.Ptr("Name"),
@@ -245,7 +250,56 @@ func TestToCreatePayload(t *testing.T) {
 			true,
 		},
 		{
+			"ok - with targets",
+			&Model{
+				MetricsPath: types.StringValue("/metrics"),
+				Name:        types.StringValue("Name"),
+			},
+			&saml2Model{},
+			&basicAuthModel{},
+			[]targetModel{
+				{
+					URLs:   types.ListValueMust(types.StringType, []attr.Value{types.StringValue("url1")}),
+					Labels: types.MapValueMust(types.StringType, map[string]attr.Value{"k1": types.StringValue("v1")}),
+				},
+				{
+					URLs:   types.ListValueMust(types.StringType, []attr.Value{types.StringValue("url1"), types.StringValue("url3")}),
+					Labels: types.MapValueMust(types.StringType, map[string]attr.Value{"k2": types.StringValue("v2"), "k3": types.StringValue("v3")}),
+				},
+				{
+					URLs:   types.ListValueMust(types.StringType, []attr.Value{}),
+					Labels: types.MapNull(types.StringType),
+				},
+			},
+			&argus.CreateScrapeConfigPayload{
+				MetricsPath: utils.Ptr("/metrics"),
+				JobName:     utils.Ptr("Name"),
+				StaticConfigs: &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{
+					{
+						Targets: &[]string{"url1"},
+						Labels:  &map[string]interface{}{"k1": "v1"},
+					},
+					{
+						Targets: &[]string{"url1", "url3"},
+						Labels:  &map[string]interface{}{"k2": "v2", "k3": "v3"},
+					},
+					{
+						Targets: &[]string{},
+						Labels:  &map[string]interface{}{},
+					},
+				},
+				// Defaults
+				Scheme:         utils.Ptr("https"),
+				ScrapeInterval: utils.Ptr("5m"),
+				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
+				Params:         &map[string]any{"saml2": []string{"enabled"}},
+			},
+			true,
+		},
+		{
 			"nil_model",
+			nil,
 			nil,
 			nil,
 			nil,
@@ -255,7 +309,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(context.Background(), tt.input, tt.inputSAML2, tt.inputBasicAuth)
+			output, err := toCreatePayload(context.Background(), tt.input, tt.inputSAML2, tt.inputBasicAuth, tt.inputTargets)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -278,6 +332,7 @@ func TestToUpdatePayload(t *testing.T) {
 		input          *Model
 		inputSAML2     *saml2Model
 		basicAuthModel *basicAuthModel
+		inputTargets   []targetModel
 		expected       *argus.UpdateScrapeConfigPayload
 		isValid        bool
 	}{
@@ -288,6 +343,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&saml2Model{},
 			&basicAuthModel{},
+			[]targetModel{},
 			&argus.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
@@ -309,6 +365,7 @@ func TestToUpdatePayload(t *testing.T) {
 				EnableURLParameters: types.BoolValue(true),
 			},
 			&basicAuthModel{},
+			[]targetModel{},
 			&argus.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
@@ -331,6 +388,7 @@ func TestToUpdatePayload(t *testing.T) {
 				EnableURLParameters: types.BoolValue(false),
 			},
 			&basicAuthModel{},
+			[]targetModel{},
 			&argus.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
@@ -354,6 +412,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Username: types.StringValue("u"),
 				Password: types.StringValue("p"),
 			},
+			[]targetModel{},
 			&argus.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				BasicAuth: &argus.CreateScrapeConfigPayloadBasicAuth{
@@ -370,7 +429,54 @@ func TestToUpdatePayload(t *testing.T) {
 			true,
 		},
 		{
+			"ok - with targets",
+			&Model{
+				MetricsPath: types.StringValue("/metrics"),
+				Name:        types.StringValue("Name"),
+			},
+			&saml2Model{},
+			&basicAuthModel{},
+			[]targetModel{
+				{
+					URLs:   types.ListValueMust(types.StringType, []attr.Value{types.StringValue("url1")}),
+					Labels: types.MapValueMust(types.StringType, map[string]attr.Value{"k1": types.StringValue("v1")}),
+				},
+				{
+					URLs:   types.ListValueMust(types.StringType, []attr.Value{types.StringValue("url1"), types.StringValue("url3")}),
+					Labels: types.MapValueMust(types.StringType, map[string]attr.Value{"k2": types.StringValue("v2"), "k3": types.StringValue("v3")}),
+				},
+				{
+					URLs:   types.ListValueMust(types.StringType, []attr.Value{}),
+					Labels: types.MapNull(types.StringType),
+				},
+			},
+			&argus.UpdateScrapeConfigPayload{
+				MetricsPath: utils.Ptr("/metrics"),
+				StaticConfigs: &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{
+					{
+						Targets: &[]string{"url1"},
+						Labels:  &map[string]interface{}{"k1": "v1"},
+					},
+					{
+						Targets: &[]string{"url1", "url3"},
+						Labels:  &map[string]interface{}{"k2": "v2", "k3": "v3"},
+					},
+					{
+						Targets: &[]string{},
+						Labels:  &map[string]interface{}{},
+					},
+				},
+				// Defaults
+				Scheme:         utils.Ptr("https"),
+				ScrapeInterval: utils.Ptr("5m"),
+				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
+			},
+			true,
+		},
+		{
 			"nil_model",
+			nil,
 			nil,
 			nil,
 			nil,
@@ -380,7 +486,7 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(context.Background(), tt.input, tt.inputSAML2, tt.basicAuthModel)
+			output, err := toUpdatePayload(context.Background(), tt.input, tt.inputSAML2, tt.basicAuthModel, tt.inputTargets)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
