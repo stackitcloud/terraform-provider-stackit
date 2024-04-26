@@ -63,7 +63,7 @@ type Model struct {
 	Targets        types.List   `tfsdk:"targets"`
 }
 
-// Struct corresponding to Model.SAML2[i]
+// Struct corresponding to Model.SAML2
 type saml2Model struct {
 	EnableURLParameters types.Bool `tfsdk:"enable_url_parameters"`
 }
@@ -73,7 +73,7 @@ var saml2Types = map[string]attr.Type{
 	"enable_url_parameters": types.BoolType,
 }
 
-// Struct corresponding to Model.BasicAuth[i]
+// Struct corresponding to Model.BasicAuth
 type basicAuthModel struct {
 	Username types.String `tfsdk:"username"`
 	Password types.String `tfsdk:"password"`
@@ -259,6 +259,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 			"basic_auth": schema.SingleNestedAttribute{
 				Description: "A basic authentication block.",
 				Optional:    true,
+				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"username": schema.StringAttribute{
 						Description: "Specifies basic auth username.",
@@ -324,24 +325,30 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	scName := model.Name.ValueString()
 
 	saml2Model := saml2Model{}
-	diags = model.SAML2.As(context.Background(), &saml2Model, basetypes.ObjectAsOptions{})
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	if !model.SAML2.IsNull() && !model.SAML2.IsUnknown() {
+		diags = model.SAML2.As(ctx, &saml2Model, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	basicAuthModel := basicAuthModel{}
-	diags = model.BasicAuth.As(context.Background(), &basicAuthModel, basetypes.ObjectAsOptions{})
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	if !model.BasicAuth.IsNull() && !model.BasicAuth.IsUnknown() {
+		diags = model.BasicAuth.As(ctx, &basicAuthModel, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	targetsModel := []targetModel{}
-	diags = model.Targets.ElementsAs(context.Background(), &targetsModel, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	if !model.Targets.IsNull() && !model.Targets.IsUnknown() {
+		diags = model.Targets.ElementsAs(ctx, &targetsModel, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	// Generate API request body from model
@@ -365,7 +372,7 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Calling API for updated data: %v", err))
 		return
 	}
-	err = mapFields(got.Data, &model)
+	err = mapFields(ctx, got.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -398,7 +405,7 @@ func (r *scrapeConfigResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	// Map response body to schema
-	err = mapFields(scResp.Data, &model)
+	err = mapFields(ctx, scResp.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading scrape config", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -426,24 +433,30 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 	scName := model.Name.ValueString()
 
 	saml2Model := saml2Model{}
-	diags = model.SAML2.As(context.Background(), &saml2Model, basetypes.ObjectAsOptions{})
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	if !model.SAML2.IsNull() && !model.SAML2.IsUnknown() {
+		diags = model.SAML2.As(ctx, &saml2Model, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	basicAuthModel := basicAuthModel{}
-	diags = model.BasicAuth.As(context.Background(), &basicAuthModel, basetypes.ObjectAsOptions{})
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	if !model.BasicAuth.IsNull() && !model.BasicAuth.IsUnknown() {
+		diags = model.BasicAuth.As(ctx, &basicAuthModel, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	targetsModel := []targetModel{}
-	diags = model.Targets.ElementsAs(context.Background(), &targetsModel, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	if !model.Targets.IsNull() && !model.Targets.IsUnknown() {
+		diags = model.Targets.ElementsAs(ctx, &targetsModel, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	// Generate API request body from model
@@ -466,7 +479,7 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Calling API for updated data: %v", err))
 		return
 	}
-	err = mapFields(scResp.Data, &model)
+	err = mapFields(ctx, scResp.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -527,7 +540,7 @@ func (r *scrapeConfigResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, "Argus scrape config state imported")
 }
 
-func mapFields(sc *argus.Job, model *Model) error {
+func mapFields(ctx context.Context, sc *argus.Job, model *Model) error {
 	if sc == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -567,7 +580,7 @@ func mapFields(sc *argus.Job, model *Model) error {
 	if err != nil {
 		return fmt.Errorf("map basic auth: %w", err)
 	}
-	err = mapTargets(sc, model)
+	err = mapTargets(ctx, sc, model)
 	if err != nil {
 		return fmt.Errorf("map targets: %w", err)
 	}
@@ -576,7 +589,7 @@ func mapFields(sc *argus.Job, model *Model) error {
 
 func mapBasicAuth(sc *argus.Job, model *Model) error {
 	if sc.BasicAuth == nil {
-		model.BasicAuth = types.ObjectNull(saml2Types)
+		model.BasicAuth = types.ObjectNull(basicAuthTypes)
 		return nil
 	}
 	basicAuthMap := map[string]attr.Value{
@@ -592,7 +605,7 @@ func mapBasicAuth(sc *argus.Job, model *Model) error {
 }
 
 func mapSAML2(sc *argus.Job, model *Model) error {
-	if (sc.Params == nil || *sc.Params == nil) && (model.SAML2.IsNull() || model.SAML2.IsUnknown()) {
+	if (sc.Params == nil || *sc.Params == nil) && model.SAML2.IsNull() {
 		return nil
 	}
 
@@ -622,7 +635,7 @@ func mapSAML2(sc *argus.Job, model *Model) error {
 	return nil
 }
 
-func mapTargets(sc *argus.Job, model *Model) error {
+func mapTargets(ctx context.Context, sc *argus.Job, model *Model) error {
 	if sc == nil || sc.StaticConfigs == nil {
 		model.Targets = types.ListNull(types.ObjectType{AttrTypes: targetTypes})
 		return nil
@@ -630,7 +643,7 @@ func mapTargets(sc *argus.Job, model *Model) error {
 
 	targetsModel := []targetModel{}
 	if !model.Targets.IsNull() && !model.Targets.IsUnknown() {
-		diags := model.Targets.ElementsAs(context.Background(), &targetsModel, false)
+		diags := model.Targets.ElementsAs(ctx, &targetsModel, false)
 		if diags.HasError() {
 			return core.DiagsToError(diags)
 		}
@@ -723,7 +736,7 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ti := argus.CreateScrapeConfigPayloadStaticConfigsInner{}
 
 		urls := []string{}
-		diags := target.URLs.ElementsAs(context.Background(), &urls, false)
+		diags := target.URLs.ElementsAs(ctx, &urls, false)
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
@@ -812,7 +825,7 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ti := argus.UpdateScrapeConfigPayloadStaticConfigsInner{}
 
 		urls := []string{}
-		diags := target.URLs.ElementsAs(context.Background(), &urls, false)
+		diags := target.URLs.ElementsAs(ctx, &urls, false)
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}

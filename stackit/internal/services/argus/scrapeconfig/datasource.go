@@ -216,7 +216,7 @@ func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	err = mapFields(scResp.Data, &model)
+	err = mapFields(ctx, scResp.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping fields", err.Error())
 		return
