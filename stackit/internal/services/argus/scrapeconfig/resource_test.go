@@ -33,7 +33,7 @@ func TestMapFields(t *testing.T) {
 				ScrapeInterval: types.StringNull(),
 				ScrapeTimeout:  types.StringNull(),
 				SAML2:          types.ObjectNull(saml2Types),
-				BasicAuth:      nil,
+				BasicAuth:      types.ObjectNull(basicAuthTypes),
 				Targets:        []targetModel{},
 			},
 			true,
@@ -80,10 +80,10 @@ func TestMapFields(t *testing.T) {
 				SAML2: types.ObjectValueMust(saml2Types, map[string]attr.Value{
 					"enable_url_parameters": types.BoolValue(false),
 				}),
-				BasicAuth: &basicAuthModel{
-					Username: types.StringValue("u"),
-					Password: types.StringValue("p"),
-				},
+				BasicAuth: types.ObjectValueMust(basicAuthTypes, map[string]attr.Value{
+					"username": types.StringValue("u"),
+					"password": types.StringValue("p"),
+				}),
 				Targets: []targetModel{
 					{
 						URLs: []types.String{types.StringValue("url1")},
@@ -144,11 +144,12 @@ func TestMapFields(t *testing.T) {
 
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
-		description string
-		input       *Model
-		inputSAML2  *saml2Model
-		expected    *argus.CreateScrapeConfigPayload
-		isValid     bool
+		description    string
+		input          *Model
+		inputSAML2     *saml2Model
+		inputBasicAuth *basicAuthModel
+		expected       *argus.CreateScrapeConfigPayload
+		isValid        bool
 	}{
 		{
 			"basic_ok",
@@ -156,6 +157,7 @@ func TestToCreatePayload(t *testing.T) {
 				MetricsPath: types.StringValue("/metrics"),
 			},
 			&saml2Model{},
+			&basicAuthModel{},
 			&argus.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
@@ -177,16 +179,17 @@ func TestToCreatePayload(t *testing.T) {
 			&saml2Model{
 				EnableURLParameters: types.BoolValue(false),
 			},
+			&basicAuthModel{},
 			&argus.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				JobName:     utils.Ptr("Name"),
+				Params:      &map[string]any{"saml2": []string{"disabled"}},
 				// Defaults
 				Scheme:         utils.Ptr("https"),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
 				StaticConfigs:  &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
-				Params:         &map[string]any{"saml2": []string{"disabled"}},
 			},
 			true,
 		},
@@ -199,9 +202,38 @@ func TestToCreatePayload(t *testing.T) {
 			&saml2Model{
 				EnableURLParameters: types.BoolValue(true),
 			},
+			&basicAuthModel{},
 			&argus.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				JobName:     utils.Ptr("Name"),
+				Params:      &map[string]any{"saml2": []string{"enabled"}},
+				// Defaults
+				Scheme:         utils.Ptr("https"),
+				ScrapeInterval: utils.Ptr("5m"),
+				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
+				StaticConfigs:  &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
+			},
+			true,
+		},
+		{
+			"ok - with basic auth",
+			&Model{
+				MetricsPath: types.StringValue("/metrics"),
+				Name:        types.StringValue("Name"),
+			},
+			&saml2Model{},
+			&basicAuthModel{
+				Username: types.StringValue("u"),
+				Password: types.StringValue("p"),
+			},
+			&argus.CreateScrapeConfigPayload{
+				MetricsPath: utils.Ptr("/metrics"),
+				JobName:     utils.Ptr("Name"),
+				BasicAuth: &argus.CreateScrapeConfigPayloadBasicAuth{
+					Username: utils.Ptr("u"),
+					Password: utils.Ptr("p"),
+				},
 				// Defaults
 				Scheme:         utils.Ptr("https"),
 				ScrapeInterval: utils.Ptr("5m"),
@@ -217,12 +249,13 @@ func TestToCreatePayload(t *testing.T) {
 			nil,
 			nil,
 			nil,
+			nil,
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(context.Background(), tt.input, tt.inputSAML2)
+			output, err := toCreatePayload(context.Background(), tt.input, tt.inputSAML2, tt.inputBasicAuth)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -241,11 +274,12 @@ func TestToCreatePayload(t *testing.T) {
 
 func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
-		description string
-		input       *Model
-		inputSAML2  *saml2Model
-		expected    *argus.UpdateScrapeConfigPayload
-		isValid     bool
+		description    string
+		input          *Model
+		inputSAML2     *saml2Model
+		basicAuthModel *basicAuthModel
+		expected       *argus.UpdateScrapeConfigPayload
+		isValid        bool
 	}{
 		{
 			"basic_ok",
@@ -253,6 +287,7 @@ func TestToUpdatePayload(t *testing.T) {
 				MetricsPath: types.StringValue("/metrics"),
 			},
 			&saml2Model{},
+			&basicAuthModel{},
 			&argus.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
@@ -273,6 +308,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&saml2Model{
 				EnableURLParameters: types.BoolValue(true),
 			},
+			&basicAuthModel{},
 			&argus.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
@@ -294,6 +330,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&saml2Model{
 				EnableURLParameters: types.BoolValue(false),
 			},
+			&basicAuthModel{},
 			&argus.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
@@ -307,7 +344,34 @@ func TestToUpdatePayload(t *testing.T) {
 			true,
 		},
 		{
+			"ok - with basic auth",
+			&Model{
+				MetricsPath: types.StringValue("/metrics"),
+				Name:        types.StringValue("Name"),
+			},
+			&saml2Model{},
+			&basicAuthModel{
+				Username: types.StringValue("u"),
+				Password: types.StringValue("p"),
+			},
+			&argus.UpdateScrapeConfigPayload{
+				MetricsPath: utils.Ptr("/metrics"),
+				BasicAuth: &argus.CreateScrapeConfigPayloadBasicAuth{
+					Username: utils.Ptr("u"),
+					Password: utils.Ptr("p"),
+				},
+				// Defaults
+				Scheme:         utils.Ptr("https"),
+				ScrapeInterval: utils.Ptr("5m"),
+				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
+				StaticConfigs:  &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
+			},
+			true,
+		},
+		{
 			"nil_model",
+			nil,
 			nil,
 			nil,
 			nil,
@@ -316,7 +380,7 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(context.Background(), tt.input, tt.inputSAML2)
+			output, err := toUpdatePayload(context.Background(), tt.input, tt.inputSAML2, tt.basicAuthModel)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

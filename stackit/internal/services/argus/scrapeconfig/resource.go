@@ -49,19 +49,18 @@ var (
 )
 
 type Model struct {
-	Id             types.String    `tfsdk:"id"` // needed by TF
-	ProjectId      types.String    `tfsdk:"project_id"`
-	InstanceId     types.String    `tfsdk:"instance_id"`
-	Name           types.String    `tfsdk:"name"`
-	MetricsPath    types.String    `tfsdk:"metrics_path"`
-	Scheme         types.String    `tfsdk:"scheme"`
-	ScrapeInterval types.String    `tfsdk:"scrape_interval"`
-	ScrapeTimeout  types.String    `tfsdk:"scrape_timeout"`
-	SampleLimit    types.Int64     `tfsdk:"sample_limit"`
-	SAML2          types.Object    `tfsdk:"saml2"`
-	BasicAuth      *basicAuthModel `tfsdk:"basic_auth"`
-	// BasicAuth      types.Object `tfsdk:"basic_auth"`
-	Targets []targetModel `tfsdk:"targets"`
+	Id             types.String  `tfsdk:"id"` // needed by TF
+	ProjectId      types.String  `tfsdk:"project_id"`
+	InstanceId     types.String  `tfsdk:"instance_id"`
+	Name           types.String  `tfsdk:"name"`
+	MetricsPath    types.String  `tfsdk:"metrics_path"`
+	Scheme         types.String  `tfsdk:"scheme"`
+	ScrapeInterval types.String  `tfsdk:"scrape_interval"`
+	ScrapeTimeout  types.String  `tfsdk:"scrape_timeout"`
+	SampleLimit    types.Int64   `tfsdk:"sample_limit"`
+	SAML2          types.Object  `tfsdk:"saml2"`
+	BasicAuth      types.Object  `tfsdk:"basic_auth"`
+	Targets        []targetModel `tfsdk:"targets"`
 }
 
 // Struct corresponding to Model.SAML2[i]
@@ -69,7 +68,7 @@ type saml2Model struct {
 	EnableURLParameters types.Bool `tfsdk:"enable_url_parameters"`
 }
 
-// Types corresponding to saml2
+// Types corresponding to saml2Model
 var saml2Types = map[string]attr.Type{
 	"enable_url_parameters": types.BoolType,
 }
@@ -80,11 +79,11 @@ type basicAuthModel struct {
 	Password types.String `tfsdk:"password"`
 }
 
-// Types corresponding to basicAuth
-// var basicAuthTypes = map[string]attr.Type{
-// 	"username": types.BoolType,
-// 	"password": types.BoolType,
-// }
+// Types corresponding to basicAuthModel
+var basicAuthTypes = map[string]attr.Type{
+	"username": types.StringType,
+	"password": types.StringType,
+}
 
 // Struct corresponding to Model.Targets[i]
 type targetModel struct {
@@ -92,7 +91,7 @@ type targetModel struct {
 	Labels types.Map      `tfsdk:"labels"`
 }
 
-// Types corresponding to target
+// Types corresponding to targetModel
 // var targetTypes = map[string]attr.Type{
 // 	"urls":   types.StringType,
 // 	"labels": types.MapType{ElemType: types.StringType},
@@ -331,8 +330,15 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
+	basicAuthModel := basicAuthModel{}
+	diags = model.BasicAuth.As(context.Background(), &basicAuthModel, basetypes.ObjectAsOptions{})
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Generate API request body from model
-	payload, err := toCreatePayload(ctx, &model, &saml2Model)
+	payload, err := toCreatePayload(ctx, &model, &saml2Model, &basicAuthModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -419,8 +425,15 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
+	basicAuthModel := basicAuthModel{}
+	diags = model.BasicAuth.As(context.Background(), &basicAuthModel, basetypes.ObjectAsOptions{})
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Generate API request body from model
-	payload, err := toUpdatePayload(ctx, &model, &saml2Model)
+	payload, err := toUpdatePayload(ctx, &model, &saml2Model, &basicAuthModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -536,20 +549,29 @@ func mapFields(sc *argus.Job, model *Model) error {
 	if err != nil {
 		return fmt.Errorf("map saml2: %w", err)
 	}
-	mapBasicAuth(sc, model)
+	err = mapBasicAuth(sc, model)
+	if err != nil {
+		return fmt.Errorf("map basic auth: %w", err)
+	}
 	mapTargets(sc, model)
 	return nil
 }
 
-func mapBasicAuth(sc *argus.Job, model *Model) {
+func mapBasicAuth(sc *argus.Job, model *Model) error {
 	if sc.BasicAuth == nil {
-		model.BasicAuth = nil
-		return
+		model.BasicAuth = types.ObjectNull(saml2Types)
+		return nil
 	}
-	model.BasicAuth = &basicAuthModel{
-		Username: types.StringPointerValue(sc.BasicAuth.Username),
-		Password: types.StringPointerValue(sc.BasicAuth.Password),
+	basicAuthMap := map[string]attr.Value{
+		"username": types.StringValue(*sc.BasicAuth.Username),
+		"password": types.StringValue(*sc.BasicAuth.Password),
 	}
+	basicAuthTF, diags := types.ObjectValue(basicAuthTypes, basicAuthMap)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+	model.BasicAuth = basicAuthTF
+	return nil
 }
 
 func mapSAML2(sc *argus.Job, model *Model) error {
@@ -613,7 +635,7 @@ func mapTargets(sc *argus.Job, model *Model) {
 	model.Targets = newTargets
 }
 
-func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model) (*argus.CreateScrapeConfigPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel) (*argus.CreateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -642,12 +664,10 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model) 
 		sc.Params = &m
 	}
 
-	if model.BasicAuth != nil {
-		if sc.BasicAuth == nil {
-			sc.BasicAuth = &argus.CreateScrapeConfigPayloadBasicAuth{
-				Username: conversion.StringValueToPointer(model.BasicAuth.Username),
-				Password: conversion.StringValueToPointer(model.BasicAuth.Password),
-			}
+	if sc.BasicAuth == nil && !basicAuthModel.Username.IsNull() && !basicAuthModel.Password.IsNull() {
+		sc.BasicAuth = &argus.CreateScrapeConfigPayloadBasicAuth{
+			Username: conversion.StringValueToPointer(basicAuthModel.Username),
+			Password: conversion.StringValueToPointer(basicAuthModel.Password),
 		}
 	}
 
@@ -702,7 +722,7 @@ func setDefaultsCreateScrapeConfig(sc *argus.CreateScrapeConfigPayload, model *M
 	}
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model) (*argus.UpdateScrapeConfigPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel) (*argus.UpdateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -730,12 +750,10 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model) 
 		sc.Params = &m
 	}
 
-	if model.BasicAuth != nil {
-		if sc.BasicAuth == nil {
-			sc.BasicAuth = &argus.CreateScrapeConfigPayloadBasicAuth{
-				Username: conversion.StringValueToPointer(model.BasicAuth.Username),
-				Password: conversion.StringValueToPointer(model.BasicAuth.Password),
-			}
+	if sc.BasicAuth == nil && !basicAuthModel.Username.IsNull() && !basicAuthModel.Password.IsNull() {
+		sc.BasicAuth = &argus.CreateScrapeConfigPayloadBasicAuth{
+			Username: conversion.StringValueToPointer(basicAuthModel.Username),
+			Password: conversion.StringValueToPointer(basicAuthModel.Password),
 		}
 	}
 
