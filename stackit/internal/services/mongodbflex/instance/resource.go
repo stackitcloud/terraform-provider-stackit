@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -235,6 +236,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Attributes: map[string]schema.Attribute{
 					"class": schema.StringAttribute{
 						Required: true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
 					},
 					"size": schema.Int64Attribute{
 						Required: true,
@@ -520,6 +524,11 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
+
+	// This is needed because the waiter is currently not working properly
+	// After the get request returns 404 (instance is deleted), creating a new instance with the same name still fails for a short period of time
+	time.Sleep(30 * time.Second)
+
 	tflog.Info(ctx, "MongoDB Flex instance deleted")
 }
 
