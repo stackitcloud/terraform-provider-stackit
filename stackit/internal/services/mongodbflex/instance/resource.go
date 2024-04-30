@@ -526,7 +526,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	}
 
 	// This is needed because the waiter is currently not working properly
-	time.Sleep(15 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	tflog.Info(ctx, "MongoDB Flex instance deleted")
 }
