@@ -526,6 +526,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	}
 
 	// This is needed because the waiter is currently not working properly
+	// After the get request returns 404 (instance is deleted), creating a new instance with the same name still fails for a short period of time
 	time.Sleep(30 * time.Second)
 
 	tflog.Info(ctx, "MongoDB Flex instance deleted")
