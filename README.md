@@ -27,20 +27,20 @@ Check one of the examples in the [examples](examples/) folder.
 
 ## Authentication
 
-To authenticate, you will need a [service account](https://docs.stackit.cloud/stackit/en/service-accounts-134415819.html). Create it in the [STACKIT Portal](https://portal.stackit.cloud/) an assign it the necessary permissions, e.g. `project.owner`. There are multiple ways to authenticate:
+To authenticate, you will need a [service account](https://docs.stackit.cloud/stackit/en/service-accounts-134415819.html). Create it in the [STACKIT Portal](https://portal.stackit.cloud/) and assign the necessary permissions to it, e.g. `project.owner`. There are multiple ways to authenticate:
 
 - Key flow (recommended)
 - Token flow
 
 When setting up authentication, the provider will always try to use the key flow first and search for credentials in several locations, following a specific order:
 
-1. Explicit configuration, e.g. by seting the field `stackit_service_account_key_path` in the provider block (see example below)
+1. Explicit configuration, e.g. by setting the field `stackit_service_account_key_path` in the provider block (see example below)
 2. Environment variable, e.g. by setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH`
 3. Credentials file
 
    The SDK will check the credentials file located in the path defined by the `STACKIT_CREDENTIALS_PATH` env var, if specified,
    or in `$HOME/.stackit/credentials.json` as a fallback.
-   The credentials file should be a json and each credential should be set using the name of the respective environment variable, as stated below in each flow. Example:
+   The credentials file should be a JSON and each credential should be set using the name of the respective environment variable, as stated below in each flow. Example:
 
    ```json
    {
@@ -51,13 +51,13 @@ When setting up authentication, the provider will always try to use the key flow
 
 ### Key flow
 
-    The following instructions assume that you have created a service account and assigned it the necessary permissions, e.g. `project.owner`.
+    The following instructions assume that you have created a service account and assigned the necessary permissions to it, e.g. `project.owner`.
 
 To use the key flow, you need to have a service account key, which must have an RSA key-pair attached to it.
 
-When creating the service account key, a new pair can be created automatically, which will be included in the service account key. This will make it much easier to configure the key flow authentication in the CLI, by just providing the service account key.
+When creating the service account key, a new pair can be created automatically, which will be included in the service account key. This will make it much easier to configure the key flow authentication in the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli/tree/main), by just providing the service account key.
 
-**Optionally**, you can provide your own private key when creating the service account key, which will then require you to also provide it explicitly to the CLI, additionaly to the service account key. Check the STACKIT Knowledge Base for an [example of how to create your own key-pair](https://docs.stackit.cloud/stackit/en/usage-of-the-service-account-keys-in-stackit-175112464.html#UsageoftheserviceaccountkeysinSTACKIT-CreatinganRSAkey-pair).
+**Optionally**, you can provide your own private key when creating the service account key, which will then require you to also provide it explicitly to the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli/tree/main), additionally to the service account key. Check the STACKIT Knowledge Base for an [example of how to create your own key-pair](https://docs.stackit.cloud/stackit/en/usage-of-the-service-account-keys-in-stackit-175112464.html#UsageoftheserviceaccountkeysinSTACKIT-CreatinganRSAkey-pair).
 
 To configure the key flow, follow this steps:
 
@@ -67,7 +67,7 @@ To configure the key flow, follow this steps:
 
 2.  Save the content of the service account key by copying it and saving it in a JSON file.
 
-    The expected format of the service account key is a **json** with the following structure:
+    The expected format of the service account key is a **JSON** with the following structure:
 
 ```json
 {
@@ -91,7 +91,7 @@ To configure the key flow, follow this steps:
 
 3. Configure the service account key for authentication in the SDK by following one of the alternatives below:
 
-   - setting the fiels in the provider block: `service_account_key` or `service_account_key_path`
+   - setting the fields in the provider block: `service_account_key` or `service_account_key_path`
    - setting the environment variable: `STACKIT_SERVICE_ACCOUNT_KEY_PATH`
    - setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH` in the credentials file (see above)
 
@@ -111,11 +111,11 @@ Using this flow is less secure since the token is long-lived. You can provide th
 
 ## Backend configuration
 
-To keep track of your terraform state, you can configure an [S3 backend](https://developer.hashicorp.com/terraform/language/settings/backends/s3) using [STACKIT Object Storage](https://docs.stackit.cloud/stackit/en/object-storage-s3-compatible-71009778.html).
+To keep track of your Terraform state, you can configure an [S3 backend](https://developer.hashicorp.com/terraform/language/settings/backends/s3) using [STACKIT Object Storage](https://docs.stackit.cloud/stackit/en/object-storage-s3-compatible-71009778.html).
 
 To do so, you need an Object Storage [S3 bucket](https://docs.stackit.cloud/stackit/en/basic-concept-objectstorage-71009785.html#BasicConceptObjectStorage-Buckets) and [credentials](https://docs.stackit.cloud/stackit/en/basic-concept-objectstorage-71009785.html#BasicConceptObjectStorage-Credentials) to access it. If you need to create them, check [Getting Started - Object Storage](https://docs.stackit.cloud/stackit/en/getting-started-objectstorage-71009792.html).
 
-Once you have everything setup, you can configure the backend by adding the following block to your terraform configuration:
+Once you have everything setup, you can configure the backend by adding the following block to your Terraform configuration:
 
 ```
 terraform {
@@ -154,7 +154,7 @@ Additionally:
   - The env var `TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN` must be set as a valid token of the service account. Can also be set in the credentials file used by authentication (see [Authentication](#authentication) for more details)
   - The env var `TF_ACC_PROJECT_ID` is ignored
 - For the Load Balancer service:
-  - OpenStack credentials are required, as the acceptance tests use the OpenStack provider to setup the supporting infrastructure
+  - OpenStack credentials are required, as the acceptance tests use the OpenStack provider to set up the supporting infrastructure
     - These can be obtained after creating a user token through the [STACKIT Portal](https://portal.stackit.cloud/), in your project's Infrastructure API page
   - The env var `TF_ACC_OS_USER_DOMAIN_NAME` must be set as the OpenStack user domain name
   - The env var `TF_ACC_OS_USER_NAME` must be set as the OpenStack username
@@ -168,7 +168,7 @@ For guidance on how to migrate to using this provider, please see our [Migration
 
 ## Reporting Issues
 
-If you encounter any issues or have suggestions for improvements, please open an issue in the repository.
+If you encounter any issues or have suggestions for improvements, please open an issue in the [repository](https://github.com/SchwarzIT/terraform-provider-stackit/issues).
 
 ## Contribute
 
