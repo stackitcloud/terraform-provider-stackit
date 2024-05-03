@@ -4,7 +4,7 @@
 
 This project is the official Terraform Provider to integrate all the resources developed by STACKIT.
         
-# Getting Started
+## Getting Started
 
 To install STACKIT Terraform Provider, copy and paste this code into your Terraform configuration. Then, run `terraform init`.
 
@@ -25,7 +25,7 @@ provider "stackit" {
 
 Check one of the examples in the [examples](examples/) folder.
 
-# Authentication
+## Authentication
 
 To authenticate, you will need a [service account](https://docs.stackit.cloud/stackit/en/service-accounts-134415819.html). Create it in the STACKIT Portal an assign it the necessary permissions, e.g. `project.owner`. There are multiple ways to authenticate:
 
@@ -49,7 +49,7 @@ When setting up authentication, the provider will always try to use the key flow
    }
    ```
 
-## Key flow
+### Key flow
 
     The following instructions assume that you have created a service account and assigned it the necessary permissions, e.g. `project.owner`.
 
@@ -101,7 +101,7 @@ To configure the key flow, follow this steps:
 > - setting the environment variable: `STACKIT_PRIVATE_KEY_PATH`
 > - setting `STACKIT_PRIVATE_KEY_PATH` in the credentials file (see above)
 
-## Token flow
+### Token flow
 
 Using this flow is less secure since the token is long-lived. You can provide the token in several ways:
 
@@ -109,7 +109,7 @@ Using this flow is less secure since the token is long-lived. You can provide th
 2. Setting the environment variable `STACKIT_SERVICE_ACCOUNT_TOKEN`
 3. Setting it in the credentials file (see above)
 
-# Backend configuration
+## Backend configuration
 
 To keep track of your terraform state, you can configure an [S3 backend](https://developer.hashicorp.com/terraform/language/settings/backends/s3) using [STACKIT Object Storage](https://docs.stackit.cloud/stackit/en/object-storage-s3-compatible-71009778.html).
 
@@ -138,7 +138,7 @@ terraform {
 
 Note: AWS specific checks must be skipped as they do not work on STACKIT. For details on what those validations do, see [here](https://developer.hashicorp.com/terraform/language/settings/backends/s3#configuration).
 
-# Acceptance Tests
+## Acceptance Tests
 
 Terraform acceptance tests are run using the command `make test-acceptance-tf`. For all services,
 
@@ -162,18 +162,18 @@ Additionally:
 
 **WARNING:** Acceptance tests will create real resources, which may incur in costs.
 
-# Migration
+## Migration
 
 For guidance on how to migrate to using this provider, please see our [Migration Guide](./MIGRATION.md).
 
-# Reporting Issues
+## Reporting Issues
 
 If you encounter any issues or have suggestions for improvements, please open an issue in the repository.
 
-# Contribute
+## Contribute
 
 Your contribution is welcome! For more details on how to contribute, refer to our [Contribution Guide](./CONTRIBUTION.md).
 
-# License
+## License
 
 Apache 2.0
