@@ -2,11 +2,11 @@
 
 # STACKIT Terraform Provider
 
-This project is the official Terraform Provider to integrate all the resources developed by STACKIT.
+This project is the official [Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs) to integrate all the resources developed by [STACKIT](https://www.stackit.de/en/).
         
 ## Getting Started
 
-To install STACKIT Terraform Provider, copy and paste this code into your Terraform configuration. Then, run `terraform init`.
+To install [STACKIT Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs), copy and paste this code into your Terraform configuration. Then, run `terraform init`.
 
 ```
 terraform {
@@ -27,7 +27,7 @@ Check one of the examples in the [examples](examples/) folder.
 
 ## Authentication
 
-To authenticate, you will need a [service account](https://docs.stackit.cloud/stackit/en/service-accounts-134415819.html). Create it in the STACKIT Portal an assign it the necessary permissions, e.g. `project.owner`. There are multiple ways to authenticate:
+To authenticate, you will need a [service account](https://docs.stackit.cloud/stackit/en/service-accounts-134415819.html). Create it in the [STACKIT Portal](https://portal.stackit.cloud/) an assign it the necessary permissions, e.g. `project.owner`. There are multiple ways to authenticate:
 
 - Key flow (recommended)
 - Token flow
@@ -63,7 +63,7 @@ To configure the key flow, follow this steps:
 
 1.  Create a service account key:
 
-- Use the STACKIT Portal: go to the `Service Accounts` tab, choose a `Service Account` and go to `Service Account Keys` to create a key. For more details, see [Create a service account key](https://docs.stackit.cloud/stackit/en/create-a-service-account-key-175112456.html)
+- Use the [STACKIT Portal](https://portal.stackit.cloud/): go to the `Service Accounts` tab, choose a `Service Account` and go to `Service Account Keys` to create a key. For more details, see [Create a service account key](https://docs.stackit.cloud/stackit/en/create-a-service-account-key-175112456.html)
 
 2.  Save the content of the service account key by copying it and saving it in a JSON file.
 
