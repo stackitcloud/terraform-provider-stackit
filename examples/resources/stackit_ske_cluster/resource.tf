@@ -1,7 +1,7 @@
 resource "stackit_ske_cluster" "example" {
   project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name               = "example"
-  kubernetes_version = "1.25"
+  kubernetes_version = "x.x"
   node_pools = [
     {
       name               = "np-example"
