@@ -38,7 +38,7 @@ When setting up authentication, the provider will always try to use the key flow
 2. Environment variable, e.g. by setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH`
 3. Credentials file
 
-   The SDK will check the credentials file located in the path defined by the `STACKIT_CREDENTIALS_PATH` env var, if specified,
+   The provider will check the credentials file located in the path defined by the `STACKIT_CREDENTIALS_PATH` env var, if specified,
    or in `$HOME/.stackit/credentials.json` as a fallback.
    The credentials file should be a json and each credential should be set using the name of the respective environment variable, as stated below in each flow. Example:
 
@@ -89,7 +89,7 @@ To configure the key flow, follow this steps:
 }
 ```
 
-3. Configure the service account key for authentication in the SDK by following one of the alternatives below:
+3. Configure the service account key for authentication in the provider by following one of the alternatives below:
 
    - setting the fiels in the provider block: `service_account_key` or `service_account_key_path`
    - setting the environment variable: `STACKIT_SERVICE_ACCOUNT_KEY_PATH`
