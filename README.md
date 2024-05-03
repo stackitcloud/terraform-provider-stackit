@@ -177,3 +177,15 @@ Your contribution is welcome! For more details on how to contribute, refer to ou
 ## License
 
 Apache 2.0
+
+## Useful Links
+
+- [STACKIT Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs)
+
+- [STACKIT Portal](https://portal.stackit.cloud/)
+
+- [STACKIT](https://www.stackit.de/en/)
+
+- [STACKIT Knowledge Base](https://docs.stackit.cloud/stackit/en/knowledge-base-85301704.html)
+
+- [STACKIT CLI](https://github.com/stackitcloud/stackit-cli/tree/main)
