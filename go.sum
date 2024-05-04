@@ -176,8 +176,8 @@ github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.8.0 h1:7AIvLk
 github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.8.0/go.mod h1:p16qz/pAW8b1gEhqMpIgJfutRPeDPqQLlbVGyCo3f8o=
 github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.7.0 h1:1Ho+M4DyZHrwbDe1peW//x+/hegIuaUdZqbQEbPlr4k=
 github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.7.0/go.mod h1:LX0Mcyr7/QP77zf7e05fHCJO38RMuTxr7nEDUDZ3oPQ=
-github.com/stackitcloud/stackit-sdk-go/services/ske v0.13.0 h1:fL7vll37c1Wv8LM1/F/vcyhyUKSL2UqkXd44x1J/6OU=
-github.com/stackitcloud/stackit-sdk-go/services/ske v0.13.0/go.mod h1:0fFs4R7kg+gU7FNAIzzFvlCZJz6gyZ8CFhbK3eSrAwQ=
+github.com/stackitcloud/stackit-sdk-go/services/ske v0.14.0 h1:GH67aTvjXiXC2XmYhgmqNXfG13JHKB3wsk5JlTErsjg=
+github.com/stackitcloud/stackit-sdk-go/services/ske v0.14.0/go.mod h1:0fFs4R7kg+gU7FNAIzzFvlCZJz6gyZ8CFhbK3eSrAwQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
