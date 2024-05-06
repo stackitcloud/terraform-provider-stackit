@@ -7,7 +7,8 @@ This project is the official [Terraform Provider](https://registry.terraform.io/
         
 ## Getting Started
 
-To install [STACKIT Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs), copy and paste this code into your Terraform configuration. Then, run `terraform init`.
+To install the [STACKIT Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs), copy and paste this code into your Terraform configuration. Then, run `terraform init`.
+
 
 ```
 terraform {
