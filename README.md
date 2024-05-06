@@ -2,7 +2,8 @@
 
 # STACKIT Terraform Provider
 
-This project is the official [Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs) to integrate all the resources developed by [STACKIT](https://www.stackit.de/en/).
+This project is the official [Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs) for [STACKIT](https://www.stackit.de/en/), which allows you to manage STACKIT resources through Terraform.
+
         
 ## Getting Started
 
