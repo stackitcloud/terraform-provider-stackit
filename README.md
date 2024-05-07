@@ -170,7 +170,7 @@ For guidance on how to migrate to using this provider, please see our [Migration
 
 ## Reporting Issues
 
-If you encounter any issues or have suggestions for improvements, please open an issue in the [repository](https://github.com/SchwarzIT/terraform-provider-stackit/issues).
+If you encounter any issues or have suggestions for improvements, please open an issue in the [repository](https://github.com/stackitcloud/terraform-provider-stackit/issues).
 
 ## Contribute
 
