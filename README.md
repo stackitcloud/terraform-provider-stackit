@@ -1,12 +1,14 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/stackitcloud/terraform-provider-stackit)](https://goreportcard.com/report/github.com/stackitcloud/terraform-provider-stackit) [![GitHub Release](https://img.shields.io/github/v/release/stackitcloud/terraform-provider-stackit)](https://registry.terraform.io/providers/stackitcloud/stackit/latest) ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/stackitcloud/terraform-provider-stackit) [![GitHub License](https://img.shields.io/github/license/stackitcloud/terraform-provider-stackit)](https://www.apache.org/licenses/LICENSE-2.0)
 
-# Introduction
+# STACKIT Terraform Provider
 
-This project is the official Terraform provider for STACKIT.
+This project is the official [Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs) for [STACKIT](https://www.stackit.de/en/), which allows you to manage STACKIT resources through Terraform.
+
         
-# Getting Started
+## Getting Started
 
-To install STACKIT Terraform Provider, copy and paste this code into your Terraform configuration. Then, run `terraform init`.
+To install the [STACKIT Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs), copy and paste this code into your Terraform configuration. Then, run `terraform init`.
+
 
 ```
 terraform {
@@ -25,22 +27,22 @@ provider "stackit" {
 
 Check one of the examples in the [examples](examples/) folder.
 
-# Authentication
+## Authentication
 
-To authenticate, you will need a [service account](https://docs.stackit.cloud/stackit/en/service-accounts-134415819.html). Create it in the STACKIT Portal an assign it the necessary permissions, e.g. `project.owner`. There are multiple ways to authenticate:
+To authenticate, you will need a [service account](https://docs.stackit.cloud/stackit/en/service-accounts-134415819.html). Create it in the [STACKIT Portal](https://portal.stackit.cloud/) and assign the necessary permissions to it, e.g. `project.owner`. There are multiple ways to authenticate:
 
 - Key flow (recommended)
 - Token flow
 
 When setting up authentication, the provider will always try to use the key flow first and search for credentials in several locations, following a specific order:
 
-1. Explicit configuration, e.g. by seting the field `stackit_service_account_key_path` in the provider block (see example below)
+1. Explicit configuration, e.g. by setting the field `stackit_service_account_key_path` in the provider block (see example below)
 2. Environment variable, e.g. by setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH`
 3. Credentials file
 
    The provider will check the credentials file located in the path defined by the `STACKIT_CREDENTIALS_PATH` env var, if specified,
    or in `$HOME/.stackit/credentials.json` as a fallback.
-   The credentials file should be a json and each credential should be set using the name of the respective environment variable, as stated below in each flow. Example:
+   The credentials file should be a JSON and each credential should be set using the name of the respective environment variable, as stated below in each flow. Example:
 
    ```json
    {
@@ -49,25 +51,25 @@ When setting up authentication, the provider will always try to use the key flow
    }
    ```
 
-## Key flow
+### Key flow
 
-    The following instructions assume that you have created a service account and assigned it the necessary permissions, e.g. `project.owner`.
+    The following instructions assume that you have created a service account and assigned the necessary permissions to it, e.g. `project.owner`.
 
 To use the key flow, you need to have a service account key, which must have an RSA key-pair attached to it.
 
-When creating the service account key, a new pair can be created automatically, which will be included in the service account key. This will make it much easier to configure the key flow authentication in the CLI, by just providing the service account key.
+When creating the service account key, a new pair can be created automatically, which will be included in the service account key. This will make it much easier to configure the key flow authentication in the [STACKIT Terraform Provider](https://github.com/stackitcloud/terraform-provider-stackit), by just providing the service account key.
 
-**Optionally**, you can provide your own private key when creating the service account key, which will then require you to also provide it explicitly to the CLI, additionaly to the service account key. Check the STACKIT Knowledge Base for an [example of how to create your own key-pair](https://docs.stackit.cloud/stackit/en/usage-of-the-service-account-keys-in-stackit-175112464.html#UsageoftheserviceaccountkeysinSTACKIT-CreatinganRSAkey-pair).
+**Optionally**, you can provide your own private key when creating the service account key, which will then require you to also provide it explicitly to the [STACKIT Terraform Provider](https://github.com/stackitcloud/terraform-provider-stackit), additionally to the service account key. Check the STACKIT Knowledge Base for an [example of how to create your own key-pair](https://docs.stackit.cloud/stackit/en/usage-of-the-service-account-keys-in-stackit-175112464.html#UsageoftheserviceaccountkeysinSTACKIT-CreatinganRSAkey-pair).
 
 To configure the key flow, follow this steps:
 
 1.  Create a service account key:
 
-- Use the STACKIT Portal: go to the `Service Accounts` tab, choose a `Service Account` and go to `Service Account Keys` to create a key. For more details, see [Create a service account key](https://docs.stackit.cloud/stackit/en/create-a-service-account-key-175112456.html)
+- Use the [STACKIT Portal](https://portal.stackit.cloud/): go to the `Service Accounts` tab, choose a `Service Account` and go to `Service Account Keys` to create a key. For more details, see [Create a service account key](https://docs.stackit.cloud/stackit/en/create-a-service-account-key-175112456.html)
 
 2.  Save the content of the service account key by copying it and saving it in a JSON file.
 
-    The expected format of the service account key is a **json** with the following structure:
+    The expected format of the service account key is a **JSON** with the following structure:
 
 ```json
 {
@@ -91,7 +93,7 @@ To configure the key flow, follow this steps:
 
 3. Configure the service account key for authentication in the provider by following one of the alternatives below:
 
-   - setting the fiels in the provider block: `service_account_key` or `service_account_key_path`
+   - setting the fields in the provider block: `service_account_key` or `service_account_key_path`
    - setting the environment variable: `STACKIT_SERVICE_ACCOUNT_KEY_PATH`
    - setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH` in the credentials file (see above)
 
@@ -101,7 +103,7 @@ To configure the key flow, follow this steps:
 > - setting the environment variable: `STACKIT_PRIVATE_KEY_PATH`
 > - setting `STACKIT_PRIVATE_KEY_PATH` in the credentials file (see above)
 
-## Token flow
+### Token flow
 
 Using this flow is less secure since the token is long-lived. You can provide the token in several ways:
 
@@ -109,13 +111,13 @@ Using this flow is less secure since the token is long-lived. You can provide th
 2. Setting the environment variable `STACKIT_SERVICE_ACCOUNT_TOKEN`
 3. Setting it in the credentials file (see above)
 
-# Backend configuration
+## Backend configuration
 
-To keep track of your terraform state, you can configure an [S3 backend](https://developer.hashicorp.com/terraform/language/settings/backends/s3) using [STACKIT Object Storage](https://docs.stackit.cloud/stackit/en/object-storage-s3-compatible-71009778.html).
+To keep track of your Terraform state, you can configure an [S3 backend](https://developer.hashicorp.com/terraform/language/settings/backends/s3) using [STACKIT Object Storage](https://docs.stackit.cloud/stackit/en/object-storage-s3-compatible-71009778.html).
 
 To do so, you need an Object Storage [S3 bucket](https://docs.stackit.cloud/stackit/en/basic-concept-objectstorage-71009785.html#BasicConceptObjectStorage-Buckets) and [credentials](https://docs.stackit.cloud/stackit/en/basic-concept-objectstorage-71009785.html#BasicConceptObjectStorage-Credentials) to access it. If you need to create them, check [Getting Started - Object Storage](https://docs.stackit.cloud/stackit/en/getting-started-objectstorage-71009792.html).
 
-Once you have everything setup, you can configure the backend by adding the following block to your terraform configuration:
+Once you have everything setup, you can configure the backend by adding the following block to your Terraform configuration:
 
 ```
 terraform {
@@ -138,7 +140,7 @@ terraform {
 
 Note: AWS specific checks must be skipped as they do not work on STACKIT. For details on what those validations do, see [here](https://developer.hashicorp.com/terraform/language/settings/backends/s3#configuration).
 
-# Acceptance Tests
+## Acceptance Tests
 
 Terraform acceptance tests are run using the command `make test-acceptance-tf`. For all services,
 
@@ -154,7 +156,7 @@ Additionally:
   - The env var `TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN` must be set as a valid token of the service account. Can also be set in the credentials file used by authentication (see [Authentication](#authentication) for more details)
   - The env var `TF_ACC_PROJECT_ID` is ignored
 - For the Load Balancer service:
-  - OpenStack credentials are required, as the acceptance tests use the OpenStack provider to setup the supporting infrastructure
+  - OpenStack credentials are required, as the acceptance tests use the OpenStack provider to set up the supporting infrastructure
     - These can be obtained after creating a user token through the [STACKIT Portal](https://portal.stackit.cloud/), in your project's Infrastructure API page
   - The env var `TF_ACC_OS_USER_DOMAIN_NAME` must be set as the OpenStack user domain name
   - The env var `TF_ACC_OS_USER_NAME` must be set as the OpenStack username
@@ -162,18 +164,30 @@ Additionally:
 
 **WARNING:** Acceptance tests will create real resources, which may incur in costs.
 
-# Migration
+## Migration
 
 For guidance on how to migrate to using this provider, please see our [Migration Guide](./MIGRATION.md).
 
-# Reporting Issues
+## Reporting Issues
 
-If you encounter any issues or have suggestions for improvements, please open an issue in the repository.
+If you encounter any issues or have suggestions for improvements, please open an issue in the [repository](https://github.com/stackitcloud/terraform-provider-stackit/issues).
 
-# Contribute
+## Contribute
 
 Your contribution is welcome! For more details on how to contribute, refer to our [Contribution Guide](./CONTRIBUTION.md).
 
-# License
+## License
 
 Apache 2.0
+
+## Useful Links
+
+- [STACKIT Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs)
+
+- [STACKIT Portal](https://portal.stackit.cloud/)
+
+- [STACKIT](https://www.stackit.de/en/)
+
+- [STACKIT Knowledge Base](https://docs.stackit.cloud/stackit/en/knowledge-base-85301704.html)
+
+- [STACKIT CLI](https://github.com/stackitcloud/stackit-cli/tree/main)
