@@ -53,12 +53,12 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 // Read refreshes the Terraform state with the latest data.
 func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	r.credentialRead(ctx, req, resp)
+	r.credentialRead(ctx, &req, resp)
 }
 
 func (r *credentialResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
-	r.credentialUpdate(ctx, &resource.UpdateRequest{}, resp)
+	r.credentialUpdate(ctx, resp)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.

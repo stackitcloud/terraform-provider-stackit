@@ -16,7 +16,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
-func (r *credentialResource) credentialRead(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *credentialResource) credentialRead(ctx context.Context, req *resource.ReadRequest, resp *resource.ReadResponse) {
 	diags := req.State.Get(ctx, &r.model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -77,7 +77,7 @@ func (r *credentialResource) credentialDelete(ctx context.Context, req *resource
 	tflog.Info(ctx, "Argus credential deleted", map[string]interface{}{"id": r.model.Id.ValueString()})
 }
 
-func (r *credentialResource) credentialUpdate(ctx context.Context, req *resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *credentialResource) credentialUpdate(ctx context.Context, resp *resource.UpdateResponse) {
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credential", "Credential can't be updated")
 }
 
