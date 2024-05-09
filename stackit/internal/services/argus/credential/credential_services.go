@@ -41,7 +41,7 @@ func (r *credentialResource) credentialRead(ctx context.Context, req resource.Re
 	tflog.Info(ctx, "Argus credential read")
 }
 
-func (r *credentialResource) credentialCreate(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *credentialResource) credentialCreate(ctx context.Context, req *resource.CreateRequest, resp *resource.CreateResponse) {
 	if diags := req.Plan.Get(ctx, &r.model); diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 	}
@@ -63,7 +63,7 @@ func (r *credentialResource) credentialCreate(ctx context.Context, req resource.
 	tflog.Info(ctx, "Argus credential created", map[string]interface{}{"id": r.model.Id.ValueString()})
 }
 
-func (r *credentialResource) credentialDelete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *credentialResource) credentialDelete(ctx context.Context, req *resource.DeleteRequest, resp *resource.DeleteResponse) {
 	if diags := req.State.Get(ctx, &r.model); diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", "Failed to get resource state")
@@ -77,7 +77,7 @@ func (r *credentialResource) credentialDelete(ctx context.Context, req resource.
 	tflog.Info(ctx, "Argus credential deleted", map[string]interface{}{"id": r.model.Id.ValueString()})
 }
 
-func (r *credentialResource) credentialUpdate(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *credentialResource) credentialUpdate(ctx context.Context, req *resource.UpdateRequest, resp *resource.UpdateResponse) {
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credential", "Credential can't be updated")
 }
 
