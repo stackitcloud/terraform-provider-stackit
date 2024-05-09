@@ -48,7 +48,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	r.credentialCreate(ctx, req, resp)
+	r.credentialCreate(ctx, &req, resp)
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -58,11 +58,11 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 func (r *credentialResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
-	r.credentialUpdate(ctx, resource.UpdateRequest{}, resp)
+	r.credentialUpdate(ctx, &resource.UpdateRequest{}, resp)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
-	r.credentialDelete(ctx, req, resp)
+	r.credentialDelete(ctx, &req, resp)
 }
