@@ -3,13 +3,14 @@ package argus
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/argus"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"net/http"
-	"strings"
 )
 
 func mapFields(credentials *argus.Credentials, model *Model) error {
