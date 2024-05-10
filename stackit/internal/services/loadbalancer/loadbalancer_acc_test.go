@@ -94,7 +94,7 @@ func configResources(targetPort string) string {
 			}
 		}
 
-		resource "stackit_loadbalancer_credential" "credential" {
+		resource "stackit_loadbalancer_observability_credential" "credential" {
 			project_id   = "%s"
 			display_name = "%s"
 			username     = "%s"
@@ -245,13 +245,13 @@ func TestAccLoadBalancerResource(t *testing.T) {
 
 					// Credential
 					resource.TestCheckResourceAttrPair(
-						"stackit_loadbalancer_credential.credential", "project_id",
+						"stackit_loadbalancer_observability_credential.credential", "project_id",
 						"stackit_loadbalancer.loadbalancer", "project_id",
 					),
-					resource.TestCheckResourceAttrSet("stackit_loadbalancer_credential.credential", "credentials_ref"),
-					resource.TestCheckResourceAttr("stackit_loadbalancer_credential.credential", "display_name", loadBalancerResource["credential_display_name"]),
-					resource.TestCheckResourceAttr("stackit_loadbalancer_credential.credential", "username", loadBalancerResource["credential_username"]),
-					resource.TestCheckResourceAttr("stackit_loadbalancer_credential.credential", "password", loadBalancerResource["credential_password"]),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer_observability_credential.credential", "credentials_ref"),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.credential", "display_name", loadBalancerResource["credential_display_name"]),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.credential", "username", loadBalancerResource["credential_username"]),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.credential", "password", loadBalancerResource["credential_password"]),
 				),
 			},
 			// Data source
@@ -318,11 +318,11 @@ func TestAccLoadBalancerResource(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				ResourceName: "stackit_loadbalancer_credential.credential",
+				ResourceName: "stackit_loadbalancer_observability_credential.credential",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_loadbalancer_credential.credential"]
+					r, ok := s.RootModule().Resources["stackit_loadbalancer_observability_credential.credential"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_loadbalancer_credential.credential")
+						return "", fmt.Errorf("couldn't find resource stackit_loadbalancer_observability_credential.credential")
 					}
 					credentialsRef, ok := r.Primary.Attributes["credentials_ref"]
 					if !ok {
