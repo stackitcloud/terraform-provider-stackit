@@ -26,9 +26,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &credentialResource{}
-	_ resource.ResourceWithConfigure   = &credentialResource{}
-	_ resource.ResourceWithImportState = &credentialResource{}
+	_ resource.Resource                = &observabilityCredentialResource{}
+	_ resource.ResourceWithConfigure   = &observabilityCredentialResource{}
+	_ resource.ResourceWithImportState = &observabilityCredentialResource{}
 )
 
 type Model struct {
@@ -40,23 +40,23 @@ type Model struct {
 	CredentialsRef types.String `tfsdk:"credentials_ref"`
 }
 
-// NewCredentialResource is a helper function to simplify the provider implementation.
-func NewCredentialResource() resource.Resource {
-	return &credentialResource{}
+// NewObservabilityCredentialResource is a helper function to simplify the provider implementation.
+func NewObservabilityCredentialResource() resource.Resource {
+	return &observabilityCredentialResource{}
 }
 
-// credentialResource is the resource implementation.
-type credentialResource struct {
+// observabilityCredentialResource is the resource implementation.
+type observabilityCredentialResource struct {
 	client *loadbalancer.APIClient
 }
 
 // Metadata returns the resource type name.
-func (r *credentialResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_loadbalancer_credential"
+func (r *observabilityCredentialResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_loadbalancer_observability_credential"
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *credentialResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *observabilityCredentialResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -93,15 +93,15 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 }
 
 // Schema defines the schema for the resource.
-func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *observabilityCredentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":            "Load balancer credential resource schema. Must have a `region` specified in the provider configuration.",
+		"main":            "Load balancer observability credential resource schema. Must have a `region` specified in the provider configuration. These contain the username and password for the observability service (e.g. Argus) where the load balancer logs/metrics will be pushed into",
 		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`credentials_ref`\".",
-		"credentials_ref": "The credentials reference can be used for observability of the Load Balancer.",
-		"project_id":      "STACKIT project ID to which the load balancer credential is associated.",
-		"display_name":    "Credential name.",
-		"username":        "The username used for the ARGUS instance.",
-		"password":        "The password used for the ARGUS instance.",
+		"credentials_ref": "The credentials reference is used by the Load Balancer to define which credentials it will use.",
+		"project_id":      "STACKIT project ID to which the load balancer observability credential is associated.",
+		"display_name":    "Observability credential name.",
+		"username":        "The password for the observability service (e.g. Argus) where the logs/metrics will be pushed into.",
+		"password":        "The username for the observability service (e.g. Argus) where the logs/metrics will be pushed into.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -157,7 +157,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *observabilityCredentialResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -193,14 +193,14 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating observability credential", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
-	// Create new credentials
+	// Create new observability credentials
 	createResp, err := r.client.CreateCredentials(ctx, projectId).CreateCredentialsPayload(*payload).XRequestID(uuid.NewString()).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating observability credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	ctx = tflog.SetField(ctx, "credentials_ref", createResp.Credential.CredentialsRef)
@@ -208,7 +208,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	// Map response body to schema
 	err = mapFields(createResp.Credential, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating observability credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -219,11 +219,11 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	tflog.Info(ctx, "Load balancer credential created")
+	tflog.Info(ctx, "Load balancer observability credential created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *observabilityCredentialResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -243,14 +243,14 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading observability credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	// Map response body to schema
 	err = mapFields(credResp.Credential, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading observability credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -260,16 +260,16 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Load balancer credential read")
+	tflog.Info(ctx, "Load balancer observability credential read")
 }
 
-func (r *credentialResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *observabilityCredentialResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credential", "Credential can't be updated")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating observability credential", "Observability credential can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *observabilityCredentialResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -284,21 +284,21 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	// Delete credentials
 	_, err := r.client.DeleteCredentials(ctx, projectId, credentialsRef).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting load balancer", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting observability credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "Load balancer credential deleted")
+	tflog.Info(ctx, "Load balancer observability credential deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: project_id,name
-func (r *credentialResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *observabilityCredentialResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			"Error importing credential",
+			"Error importing observability credential",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[credentials_ref]  Got: %q", req.ID),
 		)
 		return
@@ -306,7 +306,7 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials_ref"), idParts[1])...)
-	tflog.Info(ctx, "Load balancer credential state imported")
+	tflog.Info(ctx, "Load balancer observability credential state imported")
 }
 
 func toCreatePayload(model *Model) (*loadbalancer.CreateCredentialsPayload, error) {
