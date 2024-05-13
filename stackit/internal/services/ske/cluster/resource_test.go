@@ -121,7 +121,7 @@ func TestMapFields(t *testing.T) {
 				Id:                        types.StringValue("pid,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
-				KubernetesVersion:         types.StringValue("1.2"),
+				KubernetesVersion:         types.StringNull(),
 				KubernetesVersionUsed:     types.StringValue("1.2.3"),
 				AllowPrivilegedContainers: types.BoolValue(true),
 
@@ -969,7 +969,6 @@ func TestGetLatestSupportedVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			version, err := getLatestSupportedKubernetesVersion(tt.listKubernetesVersion)
 
 			if tt.isValid && err != nil {

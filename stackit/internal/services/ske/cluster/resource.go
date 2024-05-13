@@ -276,7 +276,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				If unset, the latest supported Kubernetes version will be used.
 				`,
 				Optional: true,
-				Computed: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(ctx context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
 						if sr.StateValue.IsNull() || sr.PlanValue.IsNull() {
@@ -547,7 +546,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 }
 
 // ConfigValidators validate the resource configuration
-func (r *clusterResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
+func (r *clusterResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		// will raise an error if both fields are set simultaneously
 		resourcevalidator.Conflicting(
@@ -1383,17 +1382,18 @@ func latestMatchingVersion(availableVersions []ske.KubernetesVersion, providedVe
 	}
 
 	if providedVersionMin == nil {
-		if providedVersion != nil {
-			// kubernetes_version field deprecation
-			// this first clause should be removed once kubernetes_version field is completely removed
-			providedVersionMin = providedVersion
-		} else {
+		// kubernetes_version field deprecation
+		// this if clause should be removed once kubernetes_version field is completely removed
+		if providedVersion == nil {
 			latestVersion, err := getLatestSupportedKubernetesVersion(availableVersions)
 			if err != nil {
 				return nil, false, fmt.Errorf("get latest supporter kubernetes version: %w", err)
 			}
 			return latestVersion, false, nil
 		}
+		// kubernetes_version field deprecation
+		// kubernetes_version field value is assigned to kubernets_version_min for backwards compatibility
+		providedVersionMin = providedVersion
 	}
 
 	var fullVersion bool
