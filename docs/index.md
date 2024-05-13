@@ -1,6 +1,6 @@
-# STACKIT Provider
+# STACKIT Terraform Provider
 
-The STACKIT provider is the official Terraform provider to integrate all the resources developed by STACKIT.
+The STACKIT Terraform provider is the official Terraform provider to integrate all the resources developed by [STACKIT](https://www.stackit.de/en/).
 
 ## Example Usage
 
@@ -34,14 +34,14 @@ provider "stackit" {
 
 ## Authentication
 
-To authenticate, you will need a [service account](https://docs.stackit.cloud/stackit/en/service-accounts-134415819.html). Create it in the STACKIT Portal an assign it the necessary permissions, e.g. `project.owner`. There are multiple ways to authenticate:
+To authenticate, you will need a [service account](https://docs.stackit.cloud/stackit/en/service-accounts-134415819.html). Create it in the [STACKIT Portal](https://portal.stackit.cloud/) and assign it the necessary permissions, e.g. `project.owner`. There are multiple ways to authenticate:
 
 - Key flow (recommended)
 - Token flow
 
 When setting up authentication, the provider will always try to use the key flow first and search for credentials in several locations, following a specific order:
 
-1. Explicit configuration, e.g. by seting the field `stackit_service_account_key_path` in the provider block (see example below)
+1. Explicit configuration, e.g. by setting the field `stackit_service_account_key_path` in the provider block (see example below)
 2. Environment variable, e.g. by setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH`
 3. Credentials file
 
