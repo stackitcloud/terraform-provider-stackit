@@ -107,7 +107,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 	}
 
 	resp.Schema = schema.Schema{
-		Description: descriptions["main"],
+		Description: fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["deprecation_message"]),
 		// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
 		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
 		DeprecationMessage:  descriptions["deprecation_message"],
