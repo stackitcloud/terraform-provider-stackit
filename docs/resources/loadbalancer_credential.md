@@ -4,11 +4,14 @@ page_title: "stackit_loadbalancer_credential Resource - stackit"
 subcategory: ""
 description: |-
   Load balancer credential resource schema. Must have a region specified in the provider configuration.
+  !> The stackit_loadbalancer_credential resource has been deprecated and will be removed after November 13th 2024. Please use stackit_loadbalancer_observability_credential instead, which offers the exact same functionality.
 ---
 
 # stackit_loadbalancer_credential (Resource)
 
 Load balancer credential resource schema. Must have a `region` specified in the provider configuration.
+
+!> The `stackit_loadbalancer_credential` resource has been deprecated and will be removed after November 13th 2024. Please use `stackit_loadbalancer_observability_credential` instead, which offers the exact same functionality.
 
 ## Example Usage
 

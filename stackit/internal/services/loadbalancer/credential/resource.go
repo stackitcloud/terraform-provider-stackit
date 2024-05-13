@@ -102,10 +102,20 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		"display_name":    "Credential name.",
 		"username":        "The username used for the ARGUS instance.",
 		"password":        "The password used for the ARGUS instance.",
+		"deprecation_message": strings.Join(
+			[]string{
+				"The `stackit_loadbalancer_credential` resource has been deprecated and will be removed after November 13th 2024.",
+				"Please use `stackit_loadbalancer_observability_credential` instead, which offers the exact same functionality.",
+			},
+			" ",
+		),
 	}
 
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
+		// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
+		DeprecationMessage:  descriptions["deprecation_message"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
