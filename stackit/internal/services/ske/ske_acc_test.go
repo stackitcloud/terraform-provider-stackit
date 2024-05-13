@@ -78,7 +78,7 @@ func getConfig(version string, maintenanceEnd *string) string {
 		resource "stackit_ske_cluster" "cluster" {
 			project_id = stackit_ske_project.project.project_id
 			name = "%s"
-			kubernetes_version = "%s"
+			kubernetes_version_min = "%s"
 			node_pools = [{
 				name = "%s"
 				machine_type = "%s"
@@ -208,7 +208,7 @@ func TestAccSKE(t *testing.T) {
 
 			// 1) Creation
 			{
-				Config: getConfig(clusterResource["kubernetes_version"], nil),
+				Config: getConfig(clusterResource["kubernetes_version_min"], nil),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// project data
 					resource.TestCheckResourceAttr("stackit_ske_project.project", "project_id", projectResource["project_id"]),
@@ -218,7 +218,7 @@ func TestAccSKE(t *testing.T) {
 						"stackit_ske_cluster.cluster", "project_id",
 					),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", clusterResource["name"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version", clusterResource["kubernetes_version"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_min", clusterResource["kubernetes_version_min"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_used", clusterResource["kubernetes_version_used"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.name", clusterResource["nodepool_name"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
@@ -340,7 +340,7 @@ func TestAccSKE(t *testing.T) {
 					)),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "name", clusterResource["name"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "kubernetes_version", clusterResource["kubernetes_version"]),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "kubernetes_version_min", clusterResource["kubernetes_version_min"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "kubernetes_version_used", clusterResource["kubernetes_version_used"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.name", clusterResource["nodepool_name"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
@@ -377,7 +377,7 @@ func TestAccSKE(t *testing.T) {
 
 					// Minimal cluster
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "name", clusterResource["name_min"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "kubernetes_version_used", clusterResource["kubernetes_version_used_new"]),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "kubernetes_version_used"),
 					resource.TestCheckNoResourceAttr("data.stackit_ske_cluster.cluster_min", "allow_privileged_containers"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.name", clusterResource["nodepool_name_min"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.availability_zones.#", "1"),
