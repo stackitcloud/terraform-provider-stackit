@@ -363,6 +363,80 @@ func TestMinorVersionNumber(t *testing.T) {
 	}
 }
 
+func TestVersionNumber(t *testing.T) {
+	tests := []struct {
+		description string
+		input       string
+		isValid     bool
+	}{
+		{
+			"ok",
+			"1.20",
+			true,
+		},
+		{
+			"ok-2",
+			"1.3",
+			true,
+		},
+		{
+			"ok-3",
+			"10.1",
+			true,
+		},
+		{
+			"ok-patch-version",
+			"1.20.1",
+			true,
+		},
+		{
+			"ok-patch-version-2",
+			"1.20.10",
+			true,
+		},
+		{
+			"ok-patch-version-3",
+			"10.20.10",
+			true,
+		},
+		{
+			"Empty",
+			"",
+			false,
+		},
+		{
+			"not ok",
+			"afssfdfs",
+			false,
+		},
+		{
+			"not ok-major-version",
+			"1",
+			false,
+		},
+		{
+			"not ok-version",
+			"v1.20.1",
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			r := validator.StringResponse{}
+			VersionNumber().ValidateString(context.Background(), validator.StringRequest{
+				ConfigValue: types.StringValue(tt.input),
+			}, &r)
+
+			if !tt.isValid && !r.Diagnostics.HasError() {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && r.Diagnostics.HasError() {
+				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
+			}
+		})
+	}
+}
+
 func TestRFC3339SecondsOnly(t *testing.T) {
 	tests := []struct {
 		description string

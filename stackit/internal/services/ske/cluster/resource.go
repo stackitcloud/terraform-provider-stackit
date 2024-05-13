@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -59,6 +60,7 @@ type Model struct {
 	Id                        types.String `tfsdk:"id"` // needed by TF
 	ProjectId                 types.String `tfsdk:"project_id"`
 	Name                      types.String `tfsdk:"name"`
+	KubernetesVersionMin      types.String `tfsdk:"kubernetes_version_min"`
 	KubernetesVersion         types.String `tfsdk:"kubernetes_version"`
 	KubernetesVersionUsed     types.String `tfsdk:"kubernetes_version_used"`
 	AllowPrivilegedContainers types.Bool   `tfsdk:"allow_privileged_containers"`
@@ -266,9 +268,34 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					validate.NoSeparator(),
 				},
 			},
+			"kubernetes_version_min": schema.StringAttribute{
+				Description: `The minimum Kubernetes version. 
+				This field will be used to set the kubernetes version on creation/update of the cluster.
+				SKE automatically updates the cluster Kubernetes version if you have set "maintenance.enable_kubernetes_version_updates" to true or if there is a mandatory update, as described in "Updates for Kubernetes versions and Operating System versions in SKE"(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html),
+				so to get the current kubernetes version being used for your cluster, use the read-only "kubernetes_version_used" field.
+				If unset, the latest supported Kubernetes version will be used.
+				`,
+				Optional: true,
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(ctx context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+						if sr.StateValue.IsNull() || sr.PlanValue.IsNull() {
+							return
+						}
+						planVersion := fmt.Sprintf("v%s", sr.PlanValue.ValueString())
+						stateVersion := fmt.Sprintf("v%s", sr.StateValue.ValueString())
+
+						rrifr.RequiresReplace = semver.Compare(planVersion, stateVersion) < 0
+					}), "Kubernetes minimum version", "If the Kubernetes version is a downgrade, the cluster will be replaced"),
+				},
+				Validators: []validator.String{
+					validate.VersionNumber(),
+				},
+			},
 			"kubernetes_version": schema.StringAttribute{
-				Description: "Kubernetes version. Must only contain major and minor version (e.g. 1.22)",
-				Required:    true,
+				Description:        "Kubernetes version. Must only contain major and minor version (e.g. 1.22)",
+				Optional:           true,
+				DeprecationMessage: "Using this field will lead to errors when the cluster gets a kubernetes version minor upgrade, either cause by automatic or forceful updates. Use kubernetes_version_min instead",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(ctx context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
 						if sr.StateValue.IsNull() || sr.PlanValue.IsNull() {
@@ -516,6 +543,17 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				DeprecationMessage: "This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see How to rotate SKE credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).",
 			},
 		},
+	}
+}
+
+// ConfigValidators validate the resource configuration
+func (r *clusterResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		// will raise an error if both fields are set simultaneously
+		resourcevalidator.Conflicting(
+			path.MatchRoot("kubernetes_version"),
+			path.MatchRoot("kubernetes_version_min"),
+		),
 	}
 }
 
@@ -939,12 +977,6 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	)
 
 	if cl.Kubernetes != nil {
-		// The k8s version returned by the API includes the patch version, while we only support major and minor in the kubernetes_version field
-		// This prevents inconsistent state by automatic updates to the patch version in the API
-		versionPreffixed := "v" + *cl.Kubernetes.Version
-		majorMinorVersionPreffixed := semver.MajorMinor(versionPreffixed)
-		majorMinorVersion, _ := strings.CutPrefix(majorMinorVersionPreffixed, "v")
-		m.KubernetesVersion = types.StringPointerValue(utils.Ptr(majorMinorVersion))
 		m.KubernetesVersionUsed = types.StringPointerValue(cl.Kubernetes.Version)
 		m.AllowPrivilegedContainers = types.BoolPointerValue(cl.Kubernetes.AllowPrivilegedContainers)
 	}
@@ -1331,7 +1363,7 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 }
 
 func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion) (kubernetesPayload *ske.Kubernetes, hasDeprecatedVersion bool, err error) {
-	versionUsed, hasDeprecatedVersion, err := latestMatchingVersion(availableVersions, conversion.StringValueToPointer(m.KubernetesVersion))
+	versionUsed, hasDeprecatedVersion, err := latestMatchingVersion(availableVersions, conversion.StringValueToPointer(m.KubernetesVersion), conversion.StringValueToPointer(m.KubernetesVersionMin))
 	if err != nil {
 		return nil, false, fmt.Errorf("getting latest matching kubernetes version: %w", err)
 	}
@@ -1343,41 +1375,73 @@ func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion) (k
 	return k, hasDeprecatedVersion, nil
 }
 
-func latestMatchingVersion(availableVersions []ske.KubernetesVersion, providedVersion *string) (version *string, deprecated bool, err error) {
+func latestMatchingVersion(availableVersions []ske.KubernetesVersion, providedVersion, providedVersionMin *string) (version *string, deprecated bool, err error) {
 	deprecated = false
 
 	if availableVersions == nil {
 		return nil, false, fmt.Errorf("nil available kubernetes versions")
 	}
 
-	if providedVersion == nil {
-		return nil, false, fmt.Errorf("provided version is nil")
+	if providedVersionMin == nil {
+		if providedVersion != nil {
+			// kubernetes_version field deprecation
+			// this first clause should be removed once kubernetes_version field is completely removed
+			providedVersionMin = providedVersion
+		} else {
+			latestVersion, err := getLatestSupportedKubernetesVersion(availableVersions)
+			if err != nil {
+				return nil, false, fmt.Errorf("get latest supporter kubernetes version: %w", err)
+			}
+			return latestVersion, false, nil
+		}
 	}
 
-	providedVersionPrefixed := "v" + *providedVersion
+	var fullVersion bool
+	versionExp := validate.FullVersionRegex
+	versionRegex := regexp.MustCompile(versionExp)
+	if versionRegex.MatchString(*providedVersionMin) {
+		fullVersion = true
+	}
+
+	providedVersionPrefixed := "v" + *providedVersionMin
 
 	if !semver.IsValid(providedVersionPrefixed) {
 		return nil, false, fmt.Errorf("provided version is invalid")
 	}
 
 	var versionUsed *string
+	var state *string
 	var availableVersionsArray []string
-	// Get the higher available version that matches the major and minor version provided by the user
+	// Get the higher available version that matches the major, minor and patch version provided by the user
 	for _, v := range availableVersions {
 		if v.State == nil || v.Version == nil {
 			continue
 		}
 		availableVersionsArray = append(availableVersionsArray, *v.Version)
 		vPreffixed := "v" + *v.Version
-		if semver.MajorMinor(vPreffixed) == semver.MajorMinor(providedVersionPrefixed) &&
-			(semver.Compare(vPreffixed, providedVersionPrefixed) == 1 || semver.Compare(vPreffixed, providedVersionPrefixed) == 0) {
-			versionUsed = v.Version
 
-			if strings.EqualFold(*v.State, VersionStateDeprecated) {
-				deprecated = true
-			} else {
-				deprecated = false
+		if fullVersion {
+			// [MAJOR].[MINOR].[PATCH] version provided, match available version
+			if semver.Compare(vPreffixed, providedVersionPrefixed) == 0 {
+				versionUsed = v.Version
+				state = v.State
+				break
 			}
+		} else {
+			// [MAJOR].[MINOR] version provided, get the latest patch version
+			if semver.MajorMinor(vPreffixed) == semver.MajorMinor(providedVersionPrefixed) &&
+				(semver.Compare(vPreffixed, providedVersionPrefixed) == 1) || (semver.Compare(vPreffixed, providedVersionPrefixed) == 0) {
+				versionUsed = v.Version
+				state = v.State
+			}
+		}
+	}
+
+	if versionUsed != nil {
+		if strings.EqualFold(*state, VersionStateDeprecated) {
+			deprecated = true
+		} else {
+			deprecated = false
 		}
 	}
 
@@ -1387,6 +1451,31 @@ func latestMatchingVersion(availableVersions []ske.KubernetesVersion, providedVe
 	}
 
 	return versionUsed, deprecated, nil
+}
+
+func getLatestSupportedKubernetesVersion(versions []ske.KubernetesVersion) (*string, error) {
+	foundKubernetesVersion := false
+	var latestVersion *string
+	for i := range versions {
+		version := versions[i]
+		if *version.State != VersionStateSupported {
+			continue
+		}
+		if latestVersion != nil {
+			oldSemVer := fmt.Sprintf("v%s", *latestVersion)
+			newSemVer := fmt.Sprintf("v%s", *version.Version)
+			if semver.Compare(newSemVer, oldSemVer) != 1 {
+				continue
+			}
+		}
+
+		foundKubernetesVersion = true
+		latestVersion = version.Version
+	}
+	if !foundKubernetesVersion {
+		return nil, fmt.Errorf("no supported Kubernetes version found")
+	}
+	return latestVersion, nil
 }
 
 func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
