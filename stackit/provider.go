@@ -16,6 +16,7 @@ import (
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
 	loadBalancerCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/credential"
 	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
+	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
 	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
 	logMeInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/instance"
 	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
@@ -380,6 +381,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		dnsRecordSet.NewRecordSetResource,
 		loadBalancer.NewLoadBalancerResource,
 		loadBalancerCredential.NewCredentialResource,
+		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
 		logMeInstance.NewInstanceResource,
 		logMeCredential.NewCredentialResource,
 		mariaDBInstance.NewInstanceResource,
