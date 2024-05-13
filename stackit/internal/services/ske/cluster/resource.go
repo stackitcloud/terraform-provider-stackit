@@ -311,7 +311,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"kubernetes_version_used": schema.StringAttribute{
-				Description: "Full Kubernetes version used. For example, if 1.22 was selected, this value may result to 1.22.15",
+				Description: "Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in `Updates for Kubernetes versions and Operating System versions in SKE`(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html)",
 				Computed:    true,
 			},
 			"allow_privileged_containers": schema.BoolAttribute{
@@ -448,7 +448,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 				Attributes: map[string]schema.Attribute{
 					"enable_kubernetes_version_updates": schema.BoolAttribute{
-						Description: "Flag to enable/disable auto-updates of the Kubernetes version.",
+						Description: "Flag to enable/disable auto-updates of the Kubernetes version. SKE automatically updates the cluster Kubernetes version if you have set this field to true, as described in `Updates for Kubernetes versions and Operating System versions in SKE`(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html)",
 						Required:    true,
 					},
 					"enable_machine_image_version_updates": schema.BoolAttribute{

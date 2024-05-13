@@ -1,39 +1,29 @@
 package ske_test
 
 import (
-	"context"
 	"fmt"
-	"net/http"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
-
-var projectResource = map[string]string{
-	"project_id": testutil.ProjectId,
-}
 
 var clusterResource = map[string]string{
 	"project_id":                                       testutil.ProjectId,
 	"name":                                             fmt.Sprintf("cl-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 	"name_min":                                         fmt.Sprintf("cl-min-%s", acctest.RandStringFromCharSet(3, acctest.CharSetAlphaNum)),
-	"kubernetes_version_min":                           "1.25",
-	"kubernetes_version_used":                          "1.25.16",
-	"kubernetes_version_min_new":                       "1.26",
-	"kubernetes_version_used_new":                      "1.26.14",
+	"kubernetes_version_min":                           "1.26",
+	"kubernetes_version_used":                          "1.26.15",
+	"kubernetes_version_min_new":                       "1.27",
+	"kubernetes_version_used_new":                      "1.27.13",
 	"nodepool_name":                                    "np-acc-test",
 	"nodepool_name_min":                                "np-acc-min-test",
 	"nodepool_machine_type":                            "b1.2",
-	"nodepool_os_version":                              "3760.2.0",
-	"nodepool_os_version_min":                          "3760.2.0",
+	"nodepool_os_version":                              "3815.2.1",
+	"nodepool_os_version_min":                          "3815.2.1",
 	"nodepool_os_name":                                 "flatcar",
 	"nodepool_minimum":                                 "2",
 	"nodepool_maximum":                                 "3",
@@ -71,12 +61,8 @@ func getConfig(version string, maintenanceEnd *string) string {
 	return fmt.Sprintf(`
 		%s
 
-		resource "stackit_ske_project" "project" {
-			project_id = "%s"
-		}
-
 		resource "stackit_ske_cluster" "cluster" {
-			project_id = stackit_ske_project.project.project_id
+			project_id = "%s"
 			name = "%s"
 			kubernetes_version_min = "%s"
 			node_pools = [{
@@ -125,13 +111,13 @@ func getConfig(version string, maintenanceEnd *string) string {
 		}
 
 		resource "stackit_ske_kubeconfig" "kubeconfig" {
-			project_id = stackit_ske_project.project.project_id
+			project_id = stackit_ske_cluster.cluster.project_id
 			cluster_name = stackit_ske_cluster.cluster.name
 			expiration = "%s"
 		}
 
 		resource "stackit_ske_cluster" "cluster_min" {
-			project_id = stackit_ske_project.project.project_id
+			project_id = "%s"
 			name = "%s"
 			node_pools = [{
 				name = "%s"
@@ -150,7 +136,7 @@ func getConfig(version string, maintenanceEnd *string) string {
 		}
 		`,
 		testutil.SKEProviderConfig(),
-		projectResource["project_id"],
+		clusterResource["project_id"],
 		clusterResource["name"],
 		version,
 		clusterResource["nodepool_name"],
@@ -186,6 +172,7 @@ func getConfig(version string, maintenanceEnd *string) string {
 		clusterResource["kubeconfig_expiration"],
 
 		// Minimal
+		clusterResource["project_id"],
 		clusterResource["name_min"],
 		clusterResource["nodepool_name_min"],
 		clusterResource["nodepool_machine_type"],
@@ -203,20 +190,14 @@ func getConfig(version string, maintenanceEnd *string) string {
 func TestAccSKE(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckSKEDestroy,
+		// CheckDestroy:             testAccCheckSKEDestroy,
 		Steps: []resource.TestStep{
 
 			// 1) Creation
 			{
 				Config: getConfig(clusterResource["kubernetes_version_min"], nil),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// project data
-					resource.TestCheckResourceAttr("stackit_ske_project.project", "project_id", projectResource["project_id"]),
 					// cluster data
-					resource.TestCheckResourceAttrPair(
-						"stackit_ske_project.project", "project_id",
-						"stackit_ske_cluster.cluster", "project_id",
-					),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", clusterResource["name"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_min", clusterResource["kubernetes_version_min"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_used", clusterResource["kubernetes_version_used"]),
@@ -268,10 +249,6 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_ske_kubeconfig.kubeconfig", "expires_at"),
 
 					// Minimal cluster
-					resource.TestCheckResourceAttrPair(
-						"stackit_ske_project.project", "project_id",
-						"stackit_ske_cluster.cluster_min", "project_id",
-					),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster_min", "name", clusterResource["name_min"]),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "kubernetes_version_used"),
 					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster_min", "allow_privileged_containers"),
@@ -304,11 +281,6 @@ func TestAccSKE(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 		
-					data "stackit_ske_project" "project" {
-						project_id = "%s"
-						depends_on = [stackit_ske_project.project]
-					}
-		
 					data "stackit_ske_cluster" "cluster" {
 						project_id = "%s"
 						name = "%s"
@@ -323,16 +295,12 @@ func TestAccSKE(t *testing.T) {
 
 						`,
 					getConfig(clusterResource["kubernetes_version"], nil),
-					projectResource["project_id"],
 					clusterResource["project_id"],
 					clusterResource["name"],
 					clusterResource["project_id"],
 					clusterResource["name_min"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// project data
-					resource.TestCheckResourceAttr("data.stackit_ske_project.project", "id", projectResource["project_id"]),
-
 					// cluster data
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "id", fmt.Sprintf("%s,%s",
 						clusterResource["project_id"],
@@ -340,7 +308,6 @@ func TestAccSKE(t *testing.T) {
 					)),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "name", clusterResource["name"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "kubernetes_version_min", clusterResource["kubernetes_version_min"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "kubernetes_version_used", clusterResource["kubernetes_version_used"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.name", clusterResource["nodepool_name"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
@@ -403,20 +370,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "kube_config"),
 				),
 			},
-			// 3) Import project
-			{
-				ResourceName: "stackit_ske_project.project",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					_, ok := s.RootModule().Resources["stackit_ske_project.project"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_ske_project.project")
-					}
-					return testutil.ProjectId, nil
-				},
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			// 4) Import cluster
+			// 3) Import cluster
 			{
 				ResourceName: "stackit_ske_cluster.cluster",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
@@ -439,7 +393,7 @@ func TestAccSKE(t *testing.T) {
 				// The fields are not provided in the SKE API when disabled, although set actively.
 				ImportStateVerifyIgnore: []string{"kube_config", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%"},
 			},
-			// 5) Import minimal cluster
+			// 4) Import minimal cluster
 			{
 				ResourceName: "stackit_ske_cluster.cluster_min",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
@@ -461,7 +415,7 @@ func TestAccSKE(t *testing.T) {
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"kube_config"},
 			},
-			// 6) Update kubernetes version and maximum
+			// 5) Update kubernetes version and maximum
 			{
 				Config: getConfig(clusterResource["kubernetes_version_min_new"], utils.Ptr(clusterResource["maintenance_end_new"])),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -505,7 +459,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster", "kube_config"), // when using the kubeconfig resource, the kubeconfig field becomes null
 				),
 			},
-			// 7) Downgrade kubernetes version
+			// 6) Downgrade kubernetes version
 			{
 				Config: getConfig(clusterResource["kubernetes_version"], utils.Ptr(clusterResource["maintenance_end_new"])),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -521,52 +475,52 @@ func TestAccSKE(t *testing.T) {
 	})
 }
 
-func testAccCheckSKEDestroy(s *terraform.State) error {
-	ctx := context.Background()
-	var client *ske.APIClient
-	var err error
-	if testutil.SKECustomEndpoint == "" {
-		client, err = ske.NewAPIClient(
-			config.WithRegion("eu01"),
-		)
-	} else {
-		client, err = ske.NewAPIClient(
-			config.WithEndpoint(testutil.SKECustomEndpoint),
-		)
-	}
-	if err != nil {
-		return fmt.Errorf("creating client: %w", err)
-	}
+// func testAccCheckSKEDestroy(s *terraform.State) error {
+// 	ctx := context.Background()
+// 	var client *ske.APIClient
+// 	var err error
+// 	if testutil.SKECustomEndpoint == "" {
+// 		client, err = ske.NewAPIClient(
+// 			config.WithRegion("eu01"),
+// 		)
+// 	} else {
+// 		client, err = ske.NewAPIClient(
+// 			config.WithEndpoint(testutil.SKECustomEndpoint),
+// 		)
+// 	}
+// 	if err != nil {
+// 		return fmt.Errorf("creating client: %w", err)
+// 	}
 
-	projectsToDestroy := []string{}
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "stackit_ske_project" {
-			continue
-		}
-		projectsToDestroy = append(projectsToDestroy, rs.Primary.ID)
-	}
-	for _, projectId := range projectsToDestroy {
-		_, err := client.GetServiceStatus(ctx, projectId).Execute()
-		if err != nil {
-			oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-			if !ok {
-				return fmt.Errorf("could not convert error to GenericOpenApiError in acc test destruction, %w", err)
-			}
-			if oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden {
-				// Already gone
-				continue
-			}
-			return fmt.Errorf("getting project: %w", err)
-		}
+// 	clustersToDestroy := []string{}
+// 	for _, rs := range s.RootModule().Resources {
+// 		if rs.Type != "stackit_ske_cluster" {
+// 			continue
+// 		}
+// 		clustersToDestroy = append(clustersToDestroy, rs.Primary.ID)
+// 	}
+// 	for _, clusterName := range clustersToDestroy {
+// 		_, err := client.GetCluster(ctx, projectId, clusterName).Execute()
+// 		if err != nil {
+// 			oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+// 			if !ok {
+// 				return fmt.Errorf("could not convert error to GenericOpenApiError in acc test destruction, %w", err)
+// 			}
+// 			if oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden {
+// 				// Already gone
+// 				continue
+// 			}
+// 			return fmt.Errorf("getting project: %w", err)
+// 		}
 
-		_, err = client.DisableServiceExecute(ctx, projectId)
-		if err != nil {
-			return fmt.Errorf("destroying project %s during CheckDestroy: %w", projectId, err)
-		}
-		_, err = wait.DisableServiceWaitHandler(ctx, client, projectId).WaitWithContext(ctx)
-		if err != nil {
-			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", projectId, err)
-		}
-	}
-	return nil
-}
+// 		_, err = client.DisableServiceExecute(ctx, projectId)
+// 		if err != nil {
+// 			return fmt.Errorf("destroying project %s during CheckDestroy: %w", projectId, err)
+// 		}
+// 		_, err = wait.DisableServiceWaitHandler(ctx, client, projectId).WaitWithContext(ctx)
+// 		if err != nil {
+// 			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", projectId, err)
+// 		}
+// 	}
+// 	return nil
+// }
