@@ -841,13 +841,13 @@ func TestCheckAllowPrivilegedContainers(t *testing.T) {
 		isValid                  bool
 	}{
 		{
-			description:              "null_version_1",
+			description:              "null_version_1_flag_deprecated",
 			kubernetesVersion:        nil,
 			allowPrivilegeContainers: nil,
-			isValid:                  false,
+			isValid:                  true,
 		},
 		{
-			description:              "null_version_2",
+			description:              "null_version_2_flag_deprecated",
 			kubernetesVersion:        nil,
 			allowPrivilegeContainers: utils.Ptr(false),
 			isValid:                  false,

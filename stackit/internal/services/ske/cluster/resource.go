@@ -562,10 +562,14 @@ func (r *clusterResource) ConfigValidators(_ context.Context) []resource.ConfigV
 func checkAllowPrivilegedContainers(allowPrivilegeContainers types.Bool, kubernetesVersion types.String) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	// if kubernetesVersion is null, the latest one will be used and allowPriviledgeContainers will not be supported
 	if kubernetesVersion.IsNull() {
-		diags.AddError("'Kubernetes version' missing", "This field is required")
+		if !allowPrivilegeContainers.IsNull() {
+			diags.AddError("'Allow privilege containers' deprecated", "This field is deprecated as of Kubernetes 1.25 and later. Please remove this field")
+		}
 		return diags
 	}
+
 	comparison := semver.Compare(fmt.Sprintf("v%s", kubernetesVersion.ValueString()), "v1.25")
 	if comparison < 0 {
 		if allowPrivilegeContainers.IsNull() {
@@ -589,7 +593,12 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	diags = checkAllowPrivilegedContainers(model.AllowPrivilegedContainers, model.KubernetesVersion)
+	kubernetesVersion := model.KubernetesVersionMin
+	// needed for backwards compatibility following kubernetes_version field deprecation
+	if kubernetesVersion.IsNull() {
+		kubernetesVersion = model.KubernetesVersion
+	}
+	diags = checkAllowPrivilegedContainers(model.AllowPrivilegedContainers, kubernetesVersion)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -1530,7 +1539,13 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	diags = checkAllowPrivilegedContainers(model.AllowPrivilegedContainers, model.KubernetesVersion)
+	kubernetesVersion := model.KubernetesVersionMin
+	// needed for backwards compatibility following kubernetes_version field deprecation
+	if kubernetesVersion.IsNull() {
+		kubernetesVersion = model.KubernetesVersion
+	}
+
+	diags = checkAllowPrivilegedContainers(model.AllowPrivilegedContainers, kubernetesVersion)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

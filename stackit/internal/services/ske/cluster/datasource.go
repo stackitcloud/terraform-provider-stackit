@@ -95,8 +95,8 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Required:    true,
 			},
 			"kubernetes_version": schema.StringAttribute{
-				Description: "Kubernetes version.",
-				Computed:    true,
+				Description:        "Kubernetes version.",
+				DeprecationMessage: "Using this field lead to errors when the cluster gets a kubernetes version minor upgrade, either cause by automatic or forceful updates. This field is always nil, use kubernetes_version_used to get the cluster kubernetes version",
 			},
 			"kubernetes_version_used": schema.StringAttribute{
 				Description: "Full Kubernetes version used. For example, if `1.22` was selected, this value may result to `1.22.15`",
