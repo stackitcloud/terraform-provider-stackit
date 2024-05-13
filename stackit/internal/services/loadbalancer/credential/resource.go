@@ -18,7 +18,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
-	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -172,28 +171,6 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-
-	// Get status of load balancer functionality
-	statusResp, err := r.client.GetServiceStatus(ctx, projectId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error getting status of load balancer functionality", fmt.Sprintf("Calling API: %v", err))
-		return
-	}
-
-	// If load balancer functionality is not enabled, enable it
-	if *statusResp.Status != wait.FunctionalityStatusReady {
-		_, err = r.client.EnableService(ctx, projectId).XRequestID(uuid.NewString()).Execute()
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling load balancer functionality", fmt.Sprintf("Calling API: %v", err))
-			return
-		}
-
-		_, err := wait.EnableServiceWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling load balancer functionality", fmt.Sprintf("Waiting for enablement: %v", err))
-			return
-		}
-	}
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
