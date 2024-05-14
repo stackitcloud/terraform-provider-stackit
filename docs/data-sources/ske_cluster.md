@@ -36,7 +36,10 @@ This should be used with care since it also disables a couple of other features 
 - `hibernations` (Attributes List) One or more hibernation block as defined below. (see [below for nested schema](#nestedatt--hibernations))
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`name`".
 - `kube_config` (String, Sensitive, Deprecated) Kube config file used for connecting to the cluster. This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see How to rotate SKE credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).
-- `kubernetes_version` (String) Kubernetes version.
+- `kubernetes_version` (String, Deprecated) Kubernetes version.
+- `kubernetes_version_min` (String) The minimum Kubernetes version, this field is always nil.
+				SKE automatically updates the cluster Kubernetes version if you have set "maintenance.enable_kubernetes_version_updates" to true or if there is a mandatory update, as described in "Updates for Kubernetes versions and Operating System versions in SKE"(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html),
+				so to get the current kubernetes version being used for your cluster, use the "kubernetes_version_used" field.
 - `kubernetes_version_used` (String) Full Kubernetes version used. For example, if `1.22` was selected, this value may result to `1.22.15`
 - `maintenance` (Attributes) A single maintenance block as defined below (see [below for nested schema](#nestedatt--maintenance))
 - `node_pools` (Attributes List) One or more `node_pool` block as defined below. (see [below for nested schema](#nestedatt--node_pools))

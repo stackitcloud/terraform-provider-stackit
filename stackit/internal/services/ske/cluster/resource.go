@@ -264,6 +264,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"name": schema.StringAttribute{
 				Description: "The cluster name.",
 				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 				Validators: []validator.String{
 					validate.NoSeparator(),
 				},
@@ -294,7 +297,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"kubernetes_version": schema.StringAttribute{
 				Description:        "Kubernetes version. Must only contain major and minor version (e.g. 1.22)",
 				Optional:           true,
-				DeprecationMessage: "Using this field will lead to errors when the cluster gets a kubernetes version minor upgrade, either cause by automatic or forceful updates. Use kubernetes_version_min instead",
+				DeprecationMessage: "Use kubernetes_version_min instead. Setting a specific kubernetes version would cause errors when the cluster got a kubernetes version minor upgrade, either triggered by automatic or forceful updates. In those cases, this field will not represent the actual kubernetes version used in the cluster.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(ctx context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
 						if sr.StateValue.IsNull() || sr.PlanValue.IsNull() {

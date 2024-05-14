@@ -41,7 +41,6 @@ resource "stackit_ske_cluster" "example" {
 
 ### Required
 
-- `kubernetes_version` (String) Kubernetes version. Must only contain major and minor version (e.g. 1.22)
 - `name` (String) The cluster name.
 - `node_pools` (Attributes List) One or more `node_pool` block as defined below. (see [below for nested schema](#nestedatt--node_pools))
 - `project_id` (String) STACKIT project ID to which the cluster is associated.
@@ -53,13 +52,19 @@ This should be used with care since it also disables a couple of other features 
 Deprecated as of Kubernetes 1.25 and later
 - `extensions` (Attributes) A single extensions block as defined below. (see [below for nested schema](#nestedatt--extensions))
 - `hibernations` (Attributes List) One or more hibernation block as defined below. (see [below for nested schema](#nestedatt--hibernations))
+- `kubernetes_version` (String, Deprecated) Kubernetes version. Must only contain major and minor version (e.g. 1.22)
+- `kubernetes_version_min` (String) The minimum Kubernetes version. 
+				This field will be used to set the kubernetes version on creation/update of the cluster.
+				SKE automatically updates the cluster Kubernetes version if you have set "maintenance.enable_kubernetes_version_updates" to true or if there is a mandatory update, as described in "Updates for Kubernetes versions and Operating System versions in SKE"(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html),
+				so to get the current kubernetes version being used for your cluster, use the read-only "kubernetes_version_used" field.
+				If unset, the latest supported Kubernetes version will be used.
 - `maintenance` (Attributes) A single maintenance block as defined below. (see [below for nested schema](#nestedatt--maintenance))
 
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`name`".
 - `kube_config` (String, Sensitive, Deprecated) Static token kubeconfig used for connecting to the cluster. This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see How to rotate SKE credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).
-- `kubernetes_version_used` (String) Full Kubernetes version used. For example, if 1.22 was selected, this value may result to 1.22.15
+- `kubernetes_version_used` (String) Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in `Updates for Kubernetes versions and Operating System versions in SKE`(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html)
 
 <a id="nestedatt--node_pools"></a>
 ### Nested Schema for `node_pools`
@@ -149,7 +154,7 @@ Optional:
 
 Required:
 
-- `enable_kubernetes_version_updates` (Boolean) Flag to enable/disable auto-updates of the Kubernetes version.
+- `enable_kubernetes_version_updates` (Boolean) Flag to enable/disable auto-updates of the Kubernetes version. SKE automatically updates the cluster Kubernetes version if you have set this field to true, as described in `Updates for Kubernetes versions and Operating System versions in SKE`(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html)
 - `enable_machine_image_version_updates` (Boolean) Flag to enable/disable auto-updates of the OS image version.
 - `end` (String) Time for maintenance window end. E.g. `01:23:45Z`, `05:00:00+02:00`.
 - `start` (String) Time for maintenance window start. E.g. `01:23:45Z`, `05:00:00+02:00`.

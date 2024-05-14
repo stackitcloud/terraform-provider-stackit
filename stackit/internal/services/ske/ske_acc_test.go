@@ -273,7 +273,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "maintenance.enable_machine_image_version_updates"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "maintenance.start"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "maintenance.end"),
-					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "kube_config"),
+					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster_min", "kube_config"),
 				),
 			},
 			// 2) Data source
