@@ -95,13 +95,13 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Required:    true,
 			},
 			"kubernetes_version_min": schema.StringAttribute{
-				Description: `The minimum Kubernetes version, this field is always nil.` + SKEUpdateDoc,
+				Description: `The minimum Kubernetes version, this field is always nil. ` + SKEUpdateDoc,
 				Computed:    true,
 			},
 			"kubernetes_version": schema.StringAttribute{
-				Description:        "Kubernetes version.",
+				Description:        "Kubernetes version. This field is deprecated, use `kubernetes_version_used` instead",
 				Computed:           true,
-				DeprecationMessage: "This field is always nil, use kubernetes_version_used to get the cluster kubernetes version. This field would cause errors when the cluster got a kubernetes version minor upgrade, either triggered by automatic or forceful updates.",
+				DeprecationMessage: "This field is always nil, use `kubernetes_version_used` to get the cluster kubernetes version. This field would cause errors when the cluster got a kubernetes version minor upgrade, either triggered by automatic or forceful updates.",
 			},
 			"kubernetes_version_used": schema.StringAttribute{
 				Description: "Full Kubernetes version used. For example, if `1.22` was selected, this value may result to `1.22.15`",

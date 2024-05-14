@@ -274,7 +274,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"kubernetes_version_min": schema.StringAttribute{
-				Description: "The minimum Kubernetes version. This field will be used to set the kubernetes version on creation/update of the cluster." + SKEUpdateDoc + "If unset, the latest supported Kubernetes version will be used.",
+				Description: "The minimum Kubernetes version. This field will be used to set the kubernetes version on creation/update of the cluster. " + SKEUpdateDoc + " If unset, the latest supported Kubernetes version will be used.",
 				Optional:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(ctx context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
