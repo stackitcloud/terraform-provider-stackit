@@ -1,13 +1,19 @@
 package ske_test
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+	"github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -190,7 +196,7 @@ func getConfig(version string, maintenanceEnd *string) string {
 func TestAccSKE(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		// CheckDestroy:             testAccCheckSKEDestroy,
+		CheckDestroy:             testAccCheckSKEDestroy,
 		Steps: []resource.TestStep{
 
 			// 1) Creation
@@ -294,7 +300,7 @@ func TestAccSKE(t *testing.T) {
 					}
 
 						`,
-					getConfig(clusterResource["kubernetes_version"], nil),
+					getConfig(clusterResource["kubernetes_version_min"], nil),
 					clusterResource["project_id"],
 					clusterResource["name"],
 					clusterResource["project_id"],
@@ -461,12 +467,12 @@ func TestAccSKE(t *testing.T) {
 			},
 			// 6) Downgrade kubernetes version
 			{
-				Config: getConfig(clusterResource["kubernetes_version"], utils.Ptr(clusterResource["maintenance_end_new"])),
+				Config: getConfig(clusterResource["kubernetes_version_min"], utils.Ptr(clusterResource["maintenance_end_new"])),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", clusterResource["name"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version", clusterResource["kubernetes_version"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_min", clusterResource["kubernetes_version_min"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_used", clusterResource["kubernetes_version_used"]),
 				),
 			},
@@ -475,52 +481,51 @@ func TestAccSKE(t *testing.T) {
 	})
 }
 
-// func testAccCheckSKEDestroy(s *terraform.State) error {
-// 	ctx := context.Background()
-// 	var client *ske.APIClient
-// 	var err error
-// 	if testutil.SKECustomEndpoint == "" {
-// 		client, err = ske.NewAPIClient(
-// 			config.WithRegion("eu01"),
-// 		)
-// 	} else {
-// 		client, err = ske.NewAPIClient(
-// 			config.WithEndpoint(testutil.SKECustomEndpoint),
-// 		)
-// 	}
-// 	if err != nil {
-// 		return fmt.Errorf("creating client: %w", err)
-// 	}
+func testAccCheckSKEDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var client *ske.APIClient
+	var err error
+	if testutil.SKECustomEndpoint == "" {
+		client, err = ske.NewAPIClient()
+	} else {
+		client, err = ske.NewAPIClient(
+			config.WithEndpoint(testutil.SKECustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
 
-// 	clustersToDestroy := []string{}
-// 	for _, rs := range s.RootModule().Resources {
-// 		if rs.Type != "stackit_ske_cluster" {
-// 			continue
-// 		}
-// 		clustersToDestroy = append(clustersToDestroy, rs.Primary.ID)
-// 	}
-// 	for _, clusterName := range clustersToDestroy {
-// 		_, err := client.GetCluster(ctx, projectId, clusterName).Execute()
-// 		if err != nil {
-// 			oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-// 			if !ok {
-// 				return fmt.Errorf("could not convert error to GenericOpenApiError in acc test destruction, %w", err)
-// 			}
-// 			if oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden {
-// 				// Already gone
-// 				continue
-// 			}
-// 			return fmt.Errorf("getting project: %w", err)
-// 		}
+	clustersToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_ske_cluster" {
+			continue
+		}
+		// cluster terraform ID: = "[project_id],[cluster_name]"
+		clusterName := strings.Split(rs.Primary.ID, core.Separator)[1]
+		clustersToDestroy = append(clustersToDestroy, clusterName)
+	}
 
-// 		_, err = client.DisableServiceExecute(ctx, projectId)
-// 		if err != nil {
-// 			return fmt.Errorf("destroying project %s during CheckDestroy: %w", projectId, err)
-// 		}
-// 		_, err = wait.DisableServiceWaitHandler(ctx, client, projectId).WaitWithContext(ctx)
-// 		if err != nil {
-// 			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", projectId, err)
-// 		}
-// 	}
-// 	return nil
-// }
+	clustersResp, err := client.ListClusters(ctx, testutil.ProjectId).Execute()
+	if err != nil {
+		return fmt.Errorf("getting clustersResp: %w", err)
+	}
+
+	items := *clustersResp.Items
+	for i := range items {
+		if items[i].Name == nil {
+			continue
+		}
+		if utils.Contains(clustersToDestroy, *items[i].Name) {
+			_, err := client.DeleteClusterExecute(ctx, testutil.ProjectId, *items[i].Name)
+			if err != nil {
+				return fmt.Errorf("destroying cluster %s during CheckDestroy: %w", *items[i].Name, err)
+			}
+			_, err = wait.DeleteClusterWaitHandler(ctx, client, testutil.ProjectId, *items[i].Name).WaitWithContext(ctx)
+			if err != nil {
+				return fmt.Errorf("destroying cluster %s during CheckDestroy: waiting for deletion %w", *items[i].Name, err)
+			}
+		}
+	}
+	return nil
+}

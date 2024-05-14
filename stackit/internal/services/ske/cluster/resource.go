@@ -47,6 +47,8 @@ const (
 	VersionStateSupported        = "supported"
 	VersionStatePreview          = "preview"
 	VersionStateDeprecated       = "deprecated"
+
+	SKEUpdateDoc = "SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in `Updates for Kubernetes versions and Operating System versions in SKE`(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html), so to get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field."
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -272,13 +274,8 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"kubernetes_version_min": schema.StringAttribute{
-				Description: `The minimum Kubernetes version. 
-				This field will be used to set the kubernetes version on creation/update of the cluster.
-				SKE automatically updates the cluster Kubernetes version if you have set "maintenance.enable_kubernetes_version_updates" to true or if there is a mandatory update, as described in "Updates for Kubernetes versions and Operating System versions in SKE"(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html),
-				so to get the current kubernetes version being used for your cluster, use the read-only "kubernetes_version_used" field.
-				If unset, the latest supported Kubernetes version will be used.
-				`,
-				Optional: true,
+				Description: "The minimum Kubernetes version. This field will be used to set the kubernetes version on creation/update of the cluster." + SKEUpdateDoc + "If unset, the latest supported Kubernetes version will be used.",
+				Optional:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(ctx context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
 						if sr.StateValue.IsNull() || sr.PlanValue.IsNull() {
@@ -295,9 +292,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"kubernetes_version": schema.StringAttribute{
-				Description:        "Kubernetes version. Must only contain major and minor version (e.g. 1.22)",
+				Description:        "Kubernetes version. Must only contain major and minor version (e.g. 1.22). This field is deprecated, use `kubernetes_version_min instead`",
 				Optional:           true,
-				DeprecationMessage: "Use kubernetes_version_min instead. Setting a specific kubernetes version would cause errors when the cluster got a kubernetes version minor upgrade, either triggered by automatic or forceful updates. In those cases, this field will not represent the actual kubernetes version used in the cluster.",
+				DeprecationMessage: "Use `kubernetes_version_min instead`. Setting a specific kubernetes version would cause errors when the cluster got a kubernetes version minor upgrade, either triggered by automatic or forceful updates. In those cases, this field might not represent the actual kubernetes version used in the cluster.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(ctx context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
 						if sr.StateValue.IsNull() || sr.PlanValue.IsNull() {

@@ -52,12 +52,8 @@ This should be used with care since it also disables a couple of other features 
 Deprecated as of Kubernetes 1.25 and later
 - `extensions` (Attributes) A single extensions block as defined below. (see [below for nested schema](#nestedatt--extensions))
 - `hibernations` (Attributes List) One or more hibernation block as defined below. (see [below for nested schema](#nestedatt--hibernations))
-- `kubernetes_version` (String, Deprecated) Kubernetes version. Must only contain major and minor version (e.g. 1.22)
-- `kubernetes_version_min` (String) The minimum Kubernetes version. 
-				This field will be used to set the kubernetes version on creation/update of the cluster.
-				SKE automatically updates the cluster Kubernetes version if you have set "maintenance.enable_kubernetes_version_updates" to true or if there is a mandatory update, as described in "Updates for Kubernetes versions and Operating System versions in SKE"(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html),
-				so to get the current kubernetes version being used for your cluster, use the read-only "kubernetes_version_used" field.
-				If unset, the latest supported Kubernetes version will be used.
+- `kubernetes_version` (String, Deprecated) Kubernetes version. Must only contain major and minor version (e.g. 1.22). This field is deprecated, use `kubernetes_version_min instead`
+- `kubernetes_version_min` (String) The minimum Kubernetes version. This field will be used to set the kubernetes version on creation/update of the cluster.SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in `Updates for Kubernetes versions and Operating System versions in SKE`(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html), so to get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field.If unset, the latest supported Kubernetes version will be used.
 - `maintenance` (Attributes) A single maintenance block as defined below. (see [below for nested schema](#nestedatt--maintenance))
 
 ### Read-Only
