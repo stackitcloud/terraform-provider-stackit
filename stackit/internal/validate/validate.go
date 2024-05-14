@@ -16,6 +16,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
+const (
+	MajorMinorVersionRegex = `^\d+\.\d+?$`
+	FullVersionRegex       = `^\d+\.\d+.\d+?$`
+)
+
 type Validator struct {
 	description         string
 	markdownDescription string
@@ -137,10 +142,34 @@ func MinorVersionNumber() *Validator {
 	return &Validator{
 		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-			exp := `^\d+\.\d+?$`
+			exp := MajorMinorVersionRegex
 			r := regexp.MustCompile(exp)
 			version := req.ConfigValue.ValueString()
 			if !r.MatchString(version) {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
+
+func VersionNumber() *Validator {
+	description := "value must be a version number, without a leading 'v': '[MAJOR].[MINOR]' or '[MAJOR].[MINOR].[PATCH]'"
+
+	return &Validator{
+		description: description,
+		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			minorVersionExp := MajorMinorVersionRegex
+			minorVersionRegex := regexp.MustCompile(minorVersionExp)
+
+			versionExp := FullVersionRegex
+			versionRegex := regexp.MustCompile(versionExp)
+
+			version := req.ConfigValue.ValueString()
+			if !minorVersionRegex.MatchString(version) && !versionRegex.MatchString(version) {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
 					description,
