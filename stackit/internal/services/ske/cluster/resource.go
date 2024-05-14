@@ -1396,7 +1396,7 @@ func latestMatchingVersion(availableVersions []ske.KubernetesVersion, providedVe
 			// this if clause should be removed once kubernetes_version field is completely removed
 			latestVersion, err := getLatestSupportedKubernetesVersion(availableVersions)
 			if err != nil {
-				return nil, false, fmt.Errorf("get latest supporter kubernetes version: %w", err)
+				return nil, false, fmt.Errorf("get latest supported kubernetes version: %w", err)
 			}
 			return latestVersion, false, nil
 		}
