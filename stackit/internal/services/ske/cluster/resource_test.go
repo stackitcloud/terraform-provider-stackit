@@ -629,6 +629,28 @@ func TestLatestMatchingVersion(t *testing.T) {
 			false,
 		},
 		{
+			"no_matching_available_versions_patch_2",
+			[]ske.KubernetesVersion{
+				{
+					Version: utils.Ptr("1.21.2"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.20.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.19.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+			},
+			nil,
+			utils.Ptr("1.21.1"),
+			nil,
+			false,
+			false,
+		},
+		{
 			"no_available_version",
 			[]ske.KubernetesVersion{},
 			nil,

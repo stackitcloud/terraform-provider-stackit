@@ -48,7 +48,7 @@ const (
 	VersionStatePreview          = "preview"
 	VersionStateDeprecated       = "deprecated"
 
-	SKEUpdateDoc = "SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in `Updates for Kubernetes versions and Operating System versions in SKE`(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html), so to get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field."
+	SKEUpdateDoc = "SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in `Updates for Kubernetes versions and Operating System versions in SKE`(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html)."
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -274,7 +274,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"kubernetes_version_min": schema.StringAttribute{
-				Description: "The minimum Kubernetes version. This field will be used to set the kubernetes version on creation/update of the cluster. " + SKEUpdateDoc + " If unset, the latest supported Kubernetes version will be used.",
+				Description: "The minimum Kubernetes version. This field will be used to set the kubernetes version on creation/update of the cluster. " + SKEUpdateDoc + " To get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field. If unset, the latest supported Kubernetes version will be used.",
 				Optional:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(ctx context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
@@ -311,7 +311,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"kubernetes_version_used": schema.StringAttribute{
-				Description: "Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in `Updates for Kubernetes versions and Operating System versions in SKE`(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html)",
+				Description: "Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. " + SKEUpdateDoc,
 				Computed:    true,
 			},
 			"allow_privileged_containers": schema.BoolAttribute{
@@ -448,7 +448,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 				Attributes: map[string]schema.Attribute{
 					"enable_kubernetes_version_updates": schema.BoolAttribute{
-						Description: "Flag to enable/disable auto-updates of the Kubernetes version. SKE automatically updates the cluster Kubernetes version if you have set this field to true, as described in `Updates for Kubernetes versions and Operating System versions in SKE`(https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html)",
+						Description: "Flag to enable/disable auto-updates of the Kubernetes version. " + SKEUpdateDoc,
 						Required:    true,
 					},
 					"enable_machine_image_version_updates": schema.BoolAttribute{
@@ -1391,9 +1391,9 @@ func latestMatchingVersion(availableVersions []ske.KubernetesVersion, providedVe
 	}
 
 	if providedVersionMin == nil {
-		// kubernetes_version field deprecation
-		// this if clause should be removed once kubernetes_version field is completely removed
 		if providedVersion == nil {
+			// kubernetes_version field deprecation
+			// this if clause should be removed once kubernetes_version field is completely removed
 			latestVersion, err := getLatestSupportedKubernetesVersion(availableVersions)
 			if err != nil {
 				return nil, false, fmt.Errorf("get latest supporter kubernetes version: %w", err)

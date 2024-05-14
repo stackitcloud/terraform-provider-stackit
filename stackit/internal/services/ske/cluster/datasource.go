@@ -95,7 +95,7 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Required:    true,
 			},
 			"kubernetes_version_min": schema.StringAttribute{
-				Description: `The minimum Kubernetes version, this field is always nil. ` + SKEUpdateDoc,
+				Description: `The minimum Kubernetes version, this field is always nil. ` + SKEUpdateDoc + " To get the current kubernetes version being used for your cluster, use the `kubernetes_version_used` field.",
 				Computed:    true,
 			},
 			"kubernetes_version": schema.StringAttribute{

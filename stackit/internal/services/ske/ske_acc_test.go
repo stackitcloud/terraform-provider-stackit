@@ -397,7 +397,7 @@ func TestAccSKE(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				// The fields are not provided in the SKE API when disabled, although set actively.
-				ImportStateVerifyIgnore: []string{"kube_config", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%"},
+				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%"},
 			},
 			// 4) Import minimal cluster
 			{
@@ -419,7 +419,7 @@ func TestAccSKE(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"kube_config"},
+				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config"},
 			},
 			// 5) Update kubernetes version and maximum
 			{
