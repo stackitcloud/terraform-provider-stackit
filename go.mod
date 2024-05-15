@@ -17,7 +17,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.14.0
-	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.12.0
+	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.13.0
@@ -26,7 +26,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.7.0
-	github.com/stackitcloud/stackit-sdk-go/services/ske v0.14.0
+	github.com/stackitcloud/stackit-sdk-go/services/ske v0.15.0
 	golang.org/x/mod v0.17.0
 )
 
