@@ -130,6 +130,10 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							Description: "The name of the OS image.",
 							Computed:    true,
 						},
+						"os_version_min": schema.StringAttribute{
+							Description: "The minimum OS image version, this field is always nil. " + SKEUpdateDoc + " To get the current OS image version being used for the node pool, use the read-only `os_version_used` field.",
+							Computed:    true,
+						},
 						"os_version": schema.StringAttribute{
 							Description: "The OS image version.",
 							Computed:    true,

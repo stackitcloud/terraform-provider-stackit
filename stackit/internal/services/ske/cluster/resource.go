@@ -83,6 +83,7 @@ type nodePool struct {
 	Name              types.String `tfsdk:"name"`
 	MachineType       types.String `tfsdk:"machine_type"`
 	OSName            types.String `tfsdk:"os_name"`
+	OSVersionMin      types.String `tfsdk:"os_version_min"`
 	OSVersion         types.String `tfsdk:"os_version"`
 	OSVersionUsed     types.String `tfsdk:"os_version_used"`
 	Minimum           types.Int64  `tfsdk:"minimum"`
@@ -102,6 +103,7 @@ var nodePoolTypes = map[string]attr.Type{
 	"name":               basetypes.StringType{},
 	"machine_type":       basetypes.StringType{},
 	"os_name":            basetypes.StringType{},
+	"os_version_min":     basetypes.StringType{},
 	"os_version":         basetypes.StringType{},
 	"os_version_used":    basetypes.StringType{},
 	"minimum":            basetypes.Int64Type{},
@@ -281,7 +283,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"kubernetes_version_min": schema.StringAttribute{
-				Description: "The minimum Kubernetes version. This field will be used to set the minimum kubernetes version on creation/update of the cluster and can only by incremented. If unset, the latest supported Kubernetes version will be used. " + SKEUpdateDoc + " To get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field.",
+				Description: "The minimum Kubernetes version. This field will be used to set the minimum kubernetes version on creation/update of the cluster. If unset, the latest supported Kubernetes version will be used. " + SKEUpdateDoc + " To get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field.",
 				Optional:    true,
 				Validators: []validator.String{
 					validate.VersionNumber(),
@@ -378,9 +380,16 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Computed:    true,
 							Default:     stringdefault.StaticString(DefaultOSName),
 						},
+						"os_version_min": schema.StringAttribute{
+							Description: "The minimum OS image version. This field will be used to set the minimum OS image version on creation/update of the cluster. If unset, the latest supported OS image version will be used. " + SKEUpdateDoc + " To get the current OS image version being used for the node pool, use the read-only `os_version_used` field.",
+							Optional:    true,
+							Validators: []validator.String{
+								validate.VersionNumber(),
+							},
+						},
 						"os_version": schema.StringAttribute{
-							Description:        "The OS image version. This field is deprecated, use `os_version_min instead`",
-							DeprecationMessage: "Use `os_version_min instead`. Setting a specific OS image version will cause errors when the cluster gets an OS version minor upgrade, by forceful updates.",
+							Description:        "This field is deprecated, use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead",
+							DeprecationMessage: "Use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead. Setting a specific OS image version will cause errors when the cluster gets an OS version minor upgrade, by forceful updates.",
 							Optional:           true,
 						},
 						"os_version_used": schema.StringAttribute{
@@ -449,14 +458,16 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 				Attributes: map[string]schema.Attribute{
 					"enable_kubernetes_version_updates": schema.BoolAttribute{
-						Description: "Flag to enable/disable auto-updates of the Kubernetes version. Defaults to `true. " + SKEUpdateDoc,
+						Description: "Flag to enable/disable auto-updates of the Kubernetes version. Defaults to `true`. " + SKEUpdateDoc,
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(true),
 					},
 					"enable_machine_image_version_updates": schema.BoolAttribute{
-						Description: "Flag to enable/disable auto-updates of the OS image version.",
-						Required:    true,
+						Description: "Flag to enable/disable auto-updates of the OS image version. Defaults to `true`. " + SKEUpdateDoc,
+						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(true),
 					},
 					"start": schema.StringAttribute{
 						Description: "Time for maintenance window start. E.g. `01:23:45Z`, `05:00:00+02:00`.",
