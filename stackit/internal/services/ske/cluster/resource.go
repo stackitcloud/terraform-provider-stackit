@@ -59,6 +59,10 @@ var (
 	_ resource.ResourceWithImportState = &clusterResource{}
 )
 
+type skeClient interface {
+	GetClusterExecute(ctx context.Context, projectId, clusterName string) (*ske.Cluster, error)
+}
+
 type Model struct {
 	Id                        types.String `tfsdk:"id"` // needed by TF
 	ProjectId                 types.String `tfsdk:"project_id"`
@@ -648,11 +652,10 @@ func (r *clusterResource) loadAvailableVersions(ctx context.Context) ([]ske.Kube
 	return *res.KubernetesVersions, nil
 }
 
-// getCurrentVersion makes a call to get the details of a cluster and returns the current kubernetes version
+// getCurrentKubernetesVersion makes a call to get the details of a cluster and returns the current kubernetes version
 // if the cluster doesn't exist or some error occurs, returns nil
-func (r *clusterResource) getCurrentVersion(ctx context.Context, m *Model) *string {
-	c := r.client
-	res, err := c.GetCluster(ctx, m.ProjectId.ValueString(), m.Name.ValueString()).Execute()
+func getCurrentKubernetesVersion(ctx context.Context, c skeClient, m *Model) *string {
+	res, err := c.GetClusterExecute(ctx, m.ProjectId.ValueString(), m.Name.ValueString())
 	if err != nil {
 		return nil
 	}
@@ -1588,7 +1591,7 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	currentKubernetesVersion := r.getCurrentVersion(ctx, &model)
+	currentKubernetesVersion := getCurrentKubernetesVersion(ctx, r.client, &model)
 
 	r.createOrUpdateCluster(ctx, &resp.Diagnostics, &model, availableVersions, currentKubernetesVersion)
 	if resp.Diagnostics.HasError() {

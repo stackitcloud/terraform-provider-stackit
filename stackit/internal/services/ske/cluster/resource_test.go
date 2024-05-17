@@ -2,6 +2,7 @@ package ske
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -11,6 +12,19 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
+
+type skeClientMocked struct {
+	returnError    bool
+	getClusterResp *ske.Cluster
+}
+
+func (c *skeClientMocked) GetClusterExecute(_ context.Context, _, _ string) (*ske.Cluster, error) {
+	if c.returnError {
+		return nil, fmt.Errorf("get cluster failed")
+	}
+
+	return c.getClusterResp, nil
+}
 
 func TestMapFields(t *testing.T) {
 	cs := ske.ClusterStatusState("OK")
@@ -1092,6 +1106,73 @@ func TestCheckAllowPrivilegedContainers(t *testing.T) {
 			}
 			if !tt.isValid && !diags.HasError() {
 				t.Errorf("checkAllowPrivilegedContainers didn't fail on valid input")
+			}
+		})
+	}
+}
+
+func TestGetCurrentKubernetesVersion(t *testing.T) {
+	tests := []struct {
+		description     string
+		mockedResp      *ske.Cluster
+		expected        *string
+		getClusterFails bool
+	}{
+		{
+			"ok",
+			&ske.Cluster{
+				Kubernetes: &ske.Kubernetes{
+					Version: utils.Ptr("v1.0.0"),
+				},
+			},
+			utils.Ptr("v1.0.0"),
+			false,
+		},
+		{
+			"get fails",
+			nil,
+			nil,
+			true,
+		},
+		{
+			"nil version",
+			&ske.Cluster{
+				Kubernetes: &ske.Kubernetes{
+					Version: nil,
+				},
+			},
+			nil,
+			false,
+		},
+		{
+			"nil kubernetes",
+			&ske.Cluster{
+				Kubernetes: nil,
+			},
+			nil,
+			false,
+		},
+		{
+			"nil response",
+			nil,
+			nil,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			client := &skeClientMocked{
+				returnError:    tt.getClusterFails,
+				getClusterResp: tt.mockedResp,
+			}
+			model := &Model{
+				ProjectId: types.StringValue("pid"),
+				Name:      types.StringValue("name"),
+			}
+			version := getCurrentKubernetesVersion(context.Background(), client, model)
+			diff := cmp.Diff(version, tt.expected)
+			if diff != "" {
+				t.Fatalf("Version does not match: %s", diff)
 			}
 		})
 	}
