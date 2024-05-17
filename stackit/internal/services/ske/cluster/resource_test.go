@@ -860,7 +860,7 @@ func TestLatestMatchingVersion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			versionUsed, hasDeprecatedVersion, err := latestMatchingVersion(tt.availableVersions, tt.kubernetesVersionMin, tt.currentKubernetesVersion)
+			versionUsed, hasDeprecatedVersion, err := latestMatchingKubernetesVersion(tt.availableVersions, tt.kubernetesVersionMin, tt.currentKubernetesVersion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -1170,7 +1170,7 @@ func TestGetCurrentKubernetesVersion(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				Name:      types.StringValue("name"),
 			}
-			version := getCurrentKubernetesVersion(context.Background(), client, model)
+			version := getCurrentVersions(context.Background(), client, model)
 			diff := cmp.Diff(version, tt.expected)
 			if diff != "" {
 				t.Fatalf("Version does not match: %s", diff)
