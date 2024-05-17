@@ -665,6 +665,42 @@ func TestLatestMatchingVersion(t *testing.T) {
 			true,
 		},
 		{
+			"deprecated_kubernetes_version_field",
+			[]ske.KubernetesVersion{
+				{
+					Version: utils.Ptr("1.20.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.19.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+			},
+			utils.Ptr("1.20"),
+			nil,
+			utils.Ptr("1.20.0"),
+			false,
+			true,
+		},
+		{
+			"nil_provided_version_get_latest",
+			[]ske.KubernetesVersion{
+				{
+					Version: utils.Ptr("1.20.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.19.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+			},
+			nil,
+			nil,
+			utils.Ptr("1.20.0"),
+			false,
+			true,
+		},
+		{
 			"no_matching_available_versions",
 			[]ske.KubernetesVersion{
 				{
@@ -722,6 +758,50 @@ func TestLatestMatchingVersion(t *testing.T) {
 			},
 			utils.Ptr("1.21.1"),
 			nil,
+			nil,
+			false,
+			false,
+		},
+		{
+			"no_matching_available_versions_patch",
+			[]ske.KubernetesVersion{
+				{
+					Version: utils.Ptr("1.21.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.20.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.19.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+			},
+			nil,
+			utils.Ptr("1.21.1"),
+			nil,
+			false,
+			false,
+		},
+		{
+			"no_matching_available_versions_patch_2",
+			[]ske.KubernetesVersion{
+				{
+					Version: utils.Ptr("1.21.2"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.20.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.19.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+			},
+			nil,
+			utils.Ptr("1.21.1"),
 			nil,
 			false,
 			false,
