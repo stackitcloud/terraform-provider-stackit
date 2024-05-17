@@ -134,6 +134,10 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							Description: "The OS image version.",
 							Computed:    true,
 						},
+						"os_version_used": schema.StringAttribute{
+							Description: "Full OS image version used. For example, if 3815.2 was set in `os_version_min`, this value may result to 3815.2.2. " + SKEUpdateDoc,
+							Computed:    true,
+						},
 						"minimum": schema.Int64Attribute{
 							Description: "Minimum number of nodes in the pool.",
 							Computed:    true,

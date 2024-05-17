@@ -80,6 +80,7 @@ type nodePool struct {
 	MachineType       types.String `tfsdk:"machine_type"`
 	OSName            types.String `tfsdk:"os_name"`
 	OSVersion         types.String `tfsdk:"os_version"`
+	OSVersionUsed     types.String `tfsdk:"os_version_used"`
 	Minimum           types.Int64  `tfsdk:"minimum"`
 	Maximum           types.Int64  `tfsdk:"maximum"`
 	MaxSurge          types.Int64  `tfsdk:"max_surge"`
@@ -98,6 +99,7 @@ var nodePoolTypes = map[string]attr.Type{
 	"machine_type":       basetypes.StringType{},
 	"os_name":            basetypes.StringType{},
 	"os_version":         basetypes.StringType{},
+	"os_version_used":    basetypes.StringType{},
 	"minimum":            basetypes.Int64Type{},
 	"maximum":            basetypes.Int64Type{},
 	"max_surge":          basetypes.Int64Type{},
@@ -384,8 +386,13 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Default:     stringdefault.StaticString(DefaultOSName),
 						},
 						"os_version": schema.StringAttribute{
-							Description: "The OS image version.",
-							Required:    true,
+							Description:        "The OS image version. This field is deprecated, use `os_version_min instead`",
+							DeprecationMessage: "Use `os_version_min instead`. Setting a specific OS image version will cause errors when the cluster gets an OS version minor upgrade, by forceful updates.",
+							Optional:           true,
+						},
+						"os_version_used": schema.StringAttribute{
+							Description: "Full OS image version used. For example, if 3815.2 was set in `os_version_min`, this value may result to 3815.2.2. " + SKEUpdateDoc,
+							Computed:    true,
 						},
 						"volume_type": schema.StringAttribute{
 							Description: "Specifies the volume type. E.g. `storage_premium_perf1`.",
@@ -1037,6 +1044,9 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 
 		if nodePoolResp.Machine != nil && nodePoolResp.Machine.Image != nil {
 			nodePool["os_name"] = types.StringPointerValue(nodePoolResp.Machine.Image.Name)
+			nodePool["os_version_used"] = types.StringPointerValue(nodePoolResp.Machine.Image.Version)
+
+			// updating deprecated field for backwards compatibility, it will lead to errors when the version is upgraded in the backgroung
 			nodePool["os_version"] = types.StringPointerValue(nodePoolResp.Machine.Image.Version)
 		}
 
