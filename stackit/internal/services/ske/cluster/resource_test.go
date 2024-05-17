@@ -396,8 +396,8 @@ func TestLatestMatchingVersion(t *testing.T) {
 	tests := []struct {
 		description                  string
 		availableVersions            []ske.KubernetesVersion
-		providedVersion              *string
-		providedVersionMin           *string
+		kubernetesVersionMin         *string
+		currentKubernetesVersion     *string
 		expectedVersionUsed          *string
 		expectedHasDeprecatedVersion bool
 		isValid                      bool
@@ -422,8 +422,8 @@ func TestLatestMatchingVersion(t *testing.T) {
 					State:   utils.Ptr(VersionStateSupported),
 				},
 			},
-			nil,
 			utils.Ptr("1.20.1"),
+			nil,
 			utils.Ptr("1.20.1"),
 			false,
 			true,
@@ -448,8 +448,8 @@ func TestLatestMatchingVersion(t *testing.T) {
 					State:   utils.Ptr(VersionStateSupported),
 				},
 			},
-			nil,
 			utils.Ptr("1.20.0"),
+			nil,
 			utils.Ptr("1.20.0"),
 			false,
 			true,
@@ -474,8 +474,8 @@ func TestLatestMatchingVersion(t *testing.T) {
 					State:   utils.Ptr(VersionStateSupported),
 				},
 			},
-			nil,
 			utils.Ptr("1.20"),
+			nil,
 			utils.Ptr("1.20.2"),
 			false,
 			true,
@@ -492,8 +492,8 @@ func TestLatestMatchingVersion(t *testing.T) {
 					State:   utils.Ptr(VersionStateSupported),
 				},
 			},
-			nil,
 			utils.Ptr("1.20"),
+			nil,
 			utils.Ptr("1.20.0"),
 			false,
 			true,
@@ -510,8 +510,8 @@ func TestLatestMatchingVersion(t *testing.T) {
 					State:   utils.Ptr(VersionStateDeprecated),
 				},
 			},
-			nil,
 			utils.Ptr("1.19"),
+			nil,
 			utils.Ptr("1.19.0"),
 			true,
 			true,
@@ -528,8 +528,8 @@ func TestLatestMatchingVersion(t *testing.T) {
 					State:   utils.Ptr(VersionStateDeprecated),
 				},
 			},
-			nil,
 			utils.Ptr("1.20"),
+			nil,
 			utils.Ptr("1.20.0"),
 			false,
 			true,
@@ -540,24 +540,6 @@ func TestLatestMatchingVersion(t *testing.T) {
 				{
 					Version: utils.Ptr("1.20.0"),
 					State:   utils.Ptr(VersionStatePreview),
-				},
-				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
-				},
-			},
-			nil,
-			utils.Ptr("1.20"),
-			utils.Ptr("1.20.0"),
-			false,
-			true,
-		},
-		{
-			"deprecated_kubernetes_version_field",
-			[]ske.KubernetesVersion{
-				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
 				},
 				{
 					Version: utils.Ptr("1.19.0"),
@@ -589,7 +571,7 @@ func TestLatestMatchingVersion(t *testing.T) {
 			true,
 		},
 		{
-			"no_matching_available_versions",
+			"nil_provided_version_use_current",
 			[]ske.KubernetesVersion{
 				{
 					Version: utils.Ptr("1.20.0"),
@@ -601,7 +583,101 @@ func TestLatestMatchingVersion(t *testing.T) {
 				},
 			},
 			nil,
+			utils.Ptr("1.19.0"),
+			utils.Ptr("1.19.0"),
+			false,
+			true,
+		},
+		{
+			"update_lower_min_provided",
+			[]ske.KubernetesVersion{
+				{
+					Version: utils.Ptr("1.20.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.19.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+			},
+			utils.Ptr("1.19"),
+			utils.Ptr("1.20.0"),
+			utils.Ptr("1.20.0"),
+			false,
+			true,
+		},
+		{
+			"update_lower_min_provided_deprecated_version",
+			[]ske.KubernetesVersion{
+				{
+					Version: utils.Ptr("1.21.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.20.0"),
+					State:   utils.Ptr(VersionStateDeprecated),
+				},
+				{
+					Version: utils.Ptr("1.19.0"),
+					State:   utils.Ptr(VersionStateDeprecated),
+				},
+			},
+			utils.Ptr("1.19"),
+			utils.Ptr("1.20.0"),
+			utils.Ptr("1.20.0"),
+			true,
+			true,
+		},
+		{
+			"update_matching_min_provided",
+			[]ske.KubernetesVersion{
+				{
+					Version: utils.Ptr("1.20.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.19.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+			},
+			utils.Ptr("1.20"),
+			utils.Ptr("1.20.0"),
+			utils.Ptr("1.20.0"),
+			false,
+			true,
+		},
+		{
+			"update_higher_min_provided",
+			[]ske.KubernetesVersion{
+				{
+					Version: utils.Ptr("1.20.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.19.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+			},
+			utils.Ptr("1.20"),
+			utils.Ptr("1.19.0"),
+			utils.Ptr("1.20.0"),
+			false,
+			true,
+		},
+		{
+			"no_matching_available_versions",
+			[]ske.KubernetesVersion{
+				{
+					Version: utils.Ptr("1.20.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.19.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+			},
 			utils.Ptr("1.21"),
+			nil,
 			nil,
 			false,
 			false,
@@ -622,8 +698,8 @@ func TestLatestMatchingVersion(t *testing.T) {
 					State:   utils.Ptr(VersionStateSupported),
 				},
 			},
-			nil,
 			utils.Ptr("1.21.1"),
+			nil,
 			nil,
 			false,
 			false,
@@ -644,8 +720,8 @@ func TestLatestMatchingVersion(t *testing.T) {
 					State:   utils.Ptr(VersionStateSupported),
 				},
 			},
-			nil,
 			utils.Ptr("1.21.1"),
+			nil,
 			nil,
 			false,
 			false,
@@ -653,8 +729,8 @@ func TestLatestMatchingVersion(t *testing.T) {
 		{
 			"no_available_version",
 			[]ske.KubernetesVersion{},
-			nil,
 			utils.Ptr("1.20"),
+			nil,
 			nil,
 			false,
 			false,
@@ -662,8 +738,8 @@ func TestLatestMatchingVersion(t *testing.T) {
 		{
 			"nil_available_version",
 			nil,
-			nil,
 			utils.Ptr("1.20"),
+			nil,
 			nil,
 			false,
 			false,
@@ -680,8 +756,8 @@ func TestLatestMatchingVersion(t *testing.T) {
 					State:   utils.Ptr(VersionStateSupported),
 				},
 			},
-			nil,
 			utils.Ptr(""),
+			nil,
 			nil,
 			false,
 			false,
@@ -689,7 +765,7 @@ func TestLatestMatchingVersion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			versionUsed, hasDeprecatedVersion, err := latestMatchingVersion(tt.availableVersions, tt.providedVersion, tt.providedVersionMin)
+			versionUsed, hasDeprecatedVersion, err := latestMatchingVersion(tt.availableVersions, tt.kubernetesVersionMin, tt.currentKubernetesVersion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
