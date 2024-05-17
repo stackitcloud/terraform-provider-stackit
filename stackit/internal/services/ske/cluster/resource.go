@@ -59,6 +59,10 @@ var (
 	_ resource.ResourceWithImportState = &clusterResource{}
 )
 
+type skeClient interface {
+	GetClusterExecute(ctx context.Context, projectId, clusterName string) (*ske.Cluster, error)
+}
+
 type Model struct {
 	Id                        types.String `tfsdk:"id"` // needed by TF
 	ProjectId                 types.String `tfsdk:"project_id"`
@@ -275,19 +279,8 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"kubernetes_version_min": schema.StringAttribute{
-				Description: "The minimum Kubernetes version. This field will be used to set the kubernetes version on creation/update of the cluster and can only by incremented. A downgrade of the version requires a replace of the cluster.  If unset, the latest supported Kubernetes version will be used. " + SKEUpdateDoc + " To get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field.",
+				Description: "The minimum Kubernetes version. This field will be used to set the minimum kubernetes version on creation/update of the cluster and can only by incremented. If unset, the latest supported Kubernetes version will be used. " + SKEUpdateDoc + " To get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field.",
 				Optional:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(ctx context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
-						if sr.StateValue.IsNull() || sr.PlanValue.IsNull() {
-							return
-						}
-						planVersion := fmt.Sprintf("v%s", sr.PlanValue.ValueString())
-						stateVersion := fmt.Sprintf("v%s", sr.StateValue.ValueString())
-
-						rrifr.RequiresReplace = semver.Compare(planVersion, stateVersion) < 0
-					}), "Kubernetes minimum version", "If the Kubernetes version is a downgrade, the cluster will be replaced"),
-				},
 				Validators: []validator.String{
 					validate.VersionNumber(),
 				},
@@ -631,7 +624,7 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	r.createOrUpdateCluster(ctx, &resp.Diagnostics, &model, availableVersions)
+	r.createOrUpdateCluster(ctx, &resp.Diagnostics, &model, availableVersions, nil)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -659,11 +652,26 @@ func (r *clusterResource) loadAvailableVersions(ctx context.Context) ([]ske.Kube
 	return *res.KubernetesVersions, nil
 }
 
-func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag.Diagnostics, model *Model, availableVersions []ske.KubernetesVersion) {
+// getCurrentKubernetesVersion makes a call to get the details of a cluster and returns the current kubernetes version
+// if the cluster doesn't exist or some error occurs, returns nil
+func getCurrentKubernetesVersion(ctx context.Context, c skeClient, m *Model) *string {
+	res, err := c.GetClusterExecute(ctx, m.ProjectId.ValueString(), m.Name.ValueString())
+	if err != nil {
+		return nil
+	}
+
+	if res != nil && res.Kubernetes != nil {
+		return res.Kubernetes.Version
+	}
+
+	return nil
+}
+
+func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag.Diagnostics, model *Model, availableVersions []ske.KubernetesVersion, currentKubernetesVersion *string) {
 	// cluster vars
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
-	kubernetes, hasDeprecatedVersion, err := toKubernetesPayload(model, availableVersions)
+	kubernetes, hasDeprecatedVersion, err := toKubernetesPayload(model, availableVersions, currentKubernetesVersion)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating cluster config API payload: %v", err))
 		return
@@ -1373,8 +1381,18 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	return nil
 }
 
-func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion) (kubernetesPayload *ske.Kubernetes, hasDeprecatedVersion bool, err error) {
-	versionUsed, hasDeprecatedVersion, err := latestMatchingVersion(availableVersions, conversion.StringValueToPointer(m.KubernetesVersion), conversion.StringValueToPointer(m.KubernetesVersionMin))
+func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion, currentKubernetesVersion *string) (kubernetesPayload *ske.Kubernetes, hasDeprecatedVersion bool, err error) {
+	providedVersionMin := m.KubernetesVersionMin.ValueStringPointer()
+
+	if !m.KubernetesVersion.IsNull() {
+		// kubernetes_version field deprecation
+		// this if clause should be removed once kubernetes_version field is completely removed
+		// kubernetes_version field value is used as minimum kubernetes version
+		// and currenteKubernetesVersion is ignored
+		providedVersionMin = conversion.StringValueToPointer(m.KubernetesVersion)
+	}
+
+	versionUsed, hasDeprecatedVersion, err := latestMatchingVersion(availableVersions, providedVersionMin, currentKubernetesVersion)
 	if err != nil {
 		return nil, false, fmt.Errorf("getting latest matching kubernetes version: %w", err)
 	}
@@ -1386,36 +1404,44 @@ func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion) (k
 	return k, hasDeprecatedVersion, nil
 }
 
-func latestMatchingVersion(availableVersions []ske.KubernetesVersion, providedVersion, providedVersionMin *string) (version *string, deprecated bool, err error) {
+func latestMatchingVersion(availableVersions []ske.KubernetesVersion, kubernetesVersionMin, currentKubernetesVersion *string) (version *string, deprecated bool, err error) {
 	deprecated = false
 
 	if availableVersions == nil {
 		return nil, false, fmt.Errorf("nil available kubernetes versions")
 	}
 
-	if providedVersionMin == nil {
-		if providedVersion == nil {
-			// kubernetes_version field deprecation
-			// this if clause should be removed once kubernetes_version field is completely removed
+	if kubernetesVersionMin == nil {
+		if currentKubernetesVersion == nil {
 			latestVersion, err := getLatestSupportedKubernetesVersion(availableVersions)
 			if err != nil {
 				return nil, false, fmt.Errorf("get latest supported kubernetes version: %w", err)
 			}
 			return latestVersion, false, nil
 		}
-		// kubernetes_version field deprecation
-		// kubernetes_version field value is assigned to kubernets_version_min for backwards compatibility
-		providedVersionMin = providedVersion
+		kubernetesVersionMin = currentKubernetesVersion
+	} else if currentKubernetesVersion != nil {
+		// For an already existing cluster, if kubernetes_version_min is set to a lower version than what is being used in the cluster
+		// return the currently used version
+		kubernetesVersionUsed := *currentKubernetesVersion
+		kubernetesVersionMinString := *kubernetesVersionMin
+
+		minVersionPrefixed := "v" + kubernetesVersionMinString
+		usedVersionPrefixed := "v" + kubernetesVersionUsed
+
+		if semver.Compare(minVersionPrefixed, usedVersionPrefixed) == -1 {
+			kubernetesVersionMin = currentKubernetesVersion
+		}
 	}
 
 	var fullVersion bool
 	versionExp := validate.FullVersionRegex
 	versionRegex := regexp.MustCompile(versionExp)
-	if versionRegex.MatchString(*providedVersionMin) {
+	if versionRegex.MatchString(*kubernetesVersionMin) {
 		fullVersion = true
 	}
 
-	providedVersionPrefixed := "v" + *providedVersionMin
+	providedVersionPrefixed := "v" + *kubernetesVersionMin
 
 	if !semver.IsValid(providedVersionPrefixed) {
 		return nil, false, fmt.Errorf("provided version is invalid")
@@ -1565,7 +1591,9 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	r.createOrUpdateCluster(ctx, &resp.Diagnostics, &model, availableVersions)
+	currentKubernetesVersion := getCurrentKubernetesVersion(ctx, r.client, &model)
+
+	r.createOrUpdateCluster(ctx, &resp.Diagnostics, &model, availableVersions, currentKubernetesVersion)
 	if resp.Diagnostics.HasError() {
 		return
 	}
