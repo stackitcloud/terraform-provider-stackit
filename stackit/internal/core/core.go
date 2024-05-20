@@ -19,6 +19,7 @@ type ProviderData struct {
 	Region                        string
 	ArgusCustomEndpoint           string
 	DnsCustomEndpoint             string
+	IaaSCustomEndpoint            string
 	LoadBalancerCustomEndpoint    string
 	LogMeCustomEndpoint           string
 	MariaDBCustomEndpoint         string

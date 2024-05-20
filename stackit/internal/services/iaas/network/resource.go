@@ -1,28 +1,25 @@
-package iaas
+package network
 
 import (
 	"context"
 	"fmt"
-	"math"
+	"net/http"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/dns"
-	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"github.com/stackitcloud/stackit-sdk-go/core/runtime"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -31,53 +28,39 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &zoneResource{}
-	_ resource.ResourceWithConfigure   = &zoneResource{}
-	_ resource.ResourceWithImportState = &zoneResource{}
+	_ resource.Resource                = &networkResource{}
+	_ resource.ResourceWithConfigure   = &networkResource{}
+	_ resource.ResourceWithImportState = &networkResource{}
 )
 
 type Model struct {
-	Id                types.String `tfsdk:"id"` // needed by TF
-	ZoneId            types.String `tfsdk:"zone_id"`
-	ProjectId         types.String `tfsdk:"project_id"`
-	Name              types.String `tfsdk:"name"`
-	DnsName           types.String `tfsdk:"dns_name"`
-	Description       types.String `tfsdk:"description"`
-	Acl               types.String `tfsdk:"acl"`
-	Active            types.Bool   `tfsdk:"active"`
-	ContactEmail      types.String `tfsdk:"contact_email"`
-	DefaultTTL        types.Int64  `tfsdk:"default_ttl"`
-	ExpireTime        types.Int64  `tfsdk:"expire_time"`
-	IsReverseZone     types.Bool   `tfsdk:"is_reverse_zone"`
-	NegativeCache     types.Int64  `tfsdk:"negative_cache"`
-	PrimaryNameServer types.String `tfsdk:"primary_name_server"`
-	Primaries         types.List   `tfsdk:"primaries"`
-	RecordCount       types.Int64  `tfsdk:"record_count"`
-	RefreshTime       types.Int64  `tfsdk:"refresh_time"`
-	RetryTime         types.Int64  `tfsdk:"retry_time"`
-	SerialNumber      types.Int64  `tfsdk:"serial_number"`
-	Type              types.String `tfsdk:"type"`
-	Visibility        types.String `tfsdk:"visibility"`
-	State             types.String `tfsdk:"state"`
+	Id               types.String `tfsdk:"id"` // needed by TF
+	ProjectId        types.String `tfsdk:"project_id"`
+	NetworkId        types.String `tfsdk:"network_id"`
+	Name             types.String `tfsdk:"name"`
+	Nameservers      types.List   `tfsdk:"nameservers"`
+	IPv4PrefixLength types.Int64  `tfsdk:"ipv4_prefix_length"`
+	Prefixes         types.List   `tfsdk:"prefixes"`
+	PublicIP         types.String `tfsdk:"public_ip"`
 }
 
-// NewZoneResource is a helper function to simplify the provider implementation.
-func NewZoneResource() resource.Resource {
-	return &zoneResource{}
+// NewNetworkResource is a helper function to simplify the provider implementation.
+func NewNetworkResource() resource.Resource {
+	return &networkResource{}
 }
 
-// zoneResource is the resource implementation.
-type zoneResource struct {
-	client *dns.APIClient
+// networkResource is the resource implementation.
+type networkResource struct {
+	client *iaas.APIClient
 }
 
 // Metadata returns the resource type name.
-func (r *zoneResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_dns_zone"
+func (r *networkResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_network"
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *zoneResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -89,17 +72,18 @@ func (r *zoneResource) Configure(ctx context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	var apiClient *dns.APIClient
+	var apiClient *iaas.APIClient
 	var err error
-	if providerData.DnsCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "dns_custom_endpoint", providerData.DnsCustomEndpoint)
-		apiClient, err = dns.NewAPIClient(
+	if providerData.IaaSCustomEndpoint != "" {
+		ctx = tflog.SetField(ctx, "iaas_custom_endpoint", providerData.DnsCustomEndpoint)
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.DnsCustomEndpoint),
 		)
 	} else {
-		apiClient, err = dns.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithRegion(providerData.Region),
 		)
 	}
 
@@ -109,23 +93,23 @@ func (r *zoneResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "DNS zone client configured")
+	tflog.Info(ctx, "IaaS client configured")
 }
 
 // Schema defines the schema for the resource.
-func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "DNS Zone resource schema.",
+		Description: "Network resource schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`zone_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`network_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Description: "STACKIT project ID to which the dns zone is associated.",
+				Description: "STACKIT project ID to which the network is associated.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -135,8 +119,8 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 					validate.NoSeparator(),
 				},
 			},
-			"zone_id": schema.StringAttribute{
-				Description: "The zone ID.",
+			"network_id": schema.StringAttribute{
+				Description: "The network ID.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -147,147 +131,29 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"name": schema.StringAttribute{
-				Description: "The user given name of the zone.",
+				Description: "The name of the network.",
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 					stringvalidator.LengthAtMost(63),
 				},
 			},
-			"dns_name": schema.StringAttribute{
-				Description: "The zone name. E.g. `example.com`",
+			"nameservers": schema.ListAttribute{
+				Description: "The nameservers of the network.",
 				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-					stringvalidator.LengthAtMost(253),
-				},
+				ElementType: types.StringType,
 			},
-			"description": schema.StringAttribute{
-				Description: "Description of the zone.",
+			"ipv4_prefix_length": schema.Int64Attribute{
+				Description: "The IPv4 prefix length of the network.",
 				Optional:    true,
-				Computed:    true,
-				Validators: []validator.String{
-					stringvalidator.LengthAtMost(1024),
-				},
 			},
-			"acl": schema.StringAttribute{
-				Description: "The access control list. E.g. `0.0.0.0/0,::/0`",
-				Optional:    true,
-				Computed:    true,
-				Validators: []validator.String{
-					stringvalidator.LengthAtMost(2000),
-				},
-			},
-			"active": schema.BoolAttribute{
-				Description: "",
-				Optional:    true,
-				Computed:    true,
-			},
-			"contact_email": schema.StringAttribute{
-				Description: "A contact e-mail for the zone.",
-				Optional:    true,
-				Computed:    true,
-				Validators: []validator.String{
-					stringvalidator.LengthAtMost(255),
-				},
-			},
-			"default_ttl": schema.Int64Attribute{
-				Description: "Default time to live. E.g. 3600.",
-				Optional:    true,
-				Computed:    true,
-				Validators: []validator.Int64{
-					int64validator.Between(60, 99999999),
-				},
-			},
-			"expire_time": schema.Int64Attribute{
-				Description: "Expire time. E.g. 1209600.",
-				Optional:    true,
-				Computed:    true,
-				Validators: []validator.Int64{
-					int64validator.Between(60, 99999999),
-				},
-			},
-			"is_reverse_zone": schema.BoolAttribute{
-				Description: "Specifies, if the zone is a reverse zone or not.",
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-			},
-			"negative_cache": schema.Int64Attribute{
-				Description: "Negative caching. E.g. 60",
-				Optional:    true,
-				Computed:    true,
-				Validators: []validator.Int64{
-					int64validator.Between(60, 99999999),
-				},
-			},
-			"primaries": schema.ListAttribute{
-				Description: `Primary name server for secondary zone. E.g. ["1.2.3.4"]`,
-				Optional:    true,
+			"prefixes": schema.ListAttribute{
+				Description: "The prefixes of the network.",
 				Computed:    true,
 				ElementType: types.StringType,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
-					listplanmodifier.UseStateForUnknown(),
-				},
-				Validators: []validator.List{
-					listvalidator.SizeAtMost(10),
-				},
 			},
-			"refresh_time": schema.Int64Attribute{
-				Description: "Refresh time. E.g. 3600",
-				Optional:    true,
-				Computed:    true,
-				Validators: []validator.Int64{
-					int64validator.Between(60, 99999999),
-				},
-			},
-			"retry_time": schema.Int64Attribute{
-				Description: "Retry time. E.g. 600",
-				Optional:    true,
-				Computed:    true,
-				Validators: []validator.Int64{
-					int64validator.Between(60, 99999999),
-				},
-			},
-			"type": schema.StringAttribute{
-				Description: "Zone type. E.g. `primary`",
-				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString("primary"),
-				Validators: []validator.String{
-					stringvalidator.OneOf("primary", "secondary"),
-				},
-			},
-			"primary_name_server": schema.StringAttribute{
-				Description: "Primary name server. FQDN.",
-				Computed:    true,
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-					stringvalidator.LengthAtMost(253),
-				},
-			},
-			"serial_number": schema.Int64Attribute{
-				Description: "Serial number. E.g. `2022111400`.",
-				Computed:    true,
-				Validators: []validator.Int64{
-					int64validator.AtLeast(0),
-					int64validator.AtMost(math.MaxInt32 - 1),
-				},
-			},
-			"visibility": schema.StringAttribute{
-				Description: "Visibility of the zone. E.g. `public`.",
-				Computed:    true,
-			},
-			"record_count": schema.Int64Attribute{
-				Description: "Record count how many records are in the zone.",
-				Computed:    true,
-			},
-			"state": schema.StringAttribute{
-				Description: "Zone state. E.g. `CREATE_SUCCEEDED`.",
+			"public_ip": schema.StringAttribute{
+				Description: "The public IP of the network.",
 				Computed:    true,
 			},
 		},
@@ -295,7 +161,7 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -310,28 +176,30 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	// Create new zone
-	createResp, err := r.client.CreateZone(ctx, projectId).CreateZonePayload(*payload).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Calling API: %v", err))
-		return
-	}
-	zoneId := *createResp.Zone.Id
 
-	ctx = tflog.SetField(ctx, "zone_id", zoneId)
-	waitResp, err := wait.CreateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
+	// Create new network
+	var httpResp *http.Response
+	ctxWithHTTPResp := runtime.WithCaptureHTTPResponse(ctx, &httpResp)
+	err = r.client.CreateNetwork(ctxWithHTTPResp, projectId).CreateNetworkPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Zone creation waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	network, err := wait.CreateNetworkWaitHandler(ctx, r.client, projectId, httpResp.Header.Get("x-request-id")).WaitWithContext(context.Background())
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Network creation waiting: %v", err))
+		return
+	}
+	networkId := *network.NetworkId
+	ctx = tflog.SetField(ctx, "network_id", networkId)
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model)
+	err = mapFields(ctx, network, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	// Set state to fully populated data
@@ -340,11 +208,11 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "DNS zone created")
+	tflog.Info(ctx, "Network created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -352,24 +220,25 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	zoneId := model.ZoneId.ValueString()
+	networkId := model.NetworkId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "zone_id", zoneId)
+	ctx = tflog.SetField(ctx, "network_id", networkId)
 
-	zoneResp, err := r.client.GetZone(ctx, projectId, zoneId).Execute()
+	networkResp, err := r.client.GetNetwork(ctx, projectId, networkId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Calling API: %v", err))
-		return
-	}
-	if zoneResp != nil && zoneResp.Zone.State != nil && *zoneResp.Zone.State == wait.DeleteSuccess {
-		resp.State.RemoveResource(ctx)
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, zoneResp, &model)
+	err = mapFields(ctx, networkResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	// Set refreshed state
@@ -378,11 +247,11 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "DNS zone read")
+	tflog.Info(ctx, "Network read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -391,31 +260,31 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	zoneId := model.ZoneId.ValueString()
+	networkId := model.NetworkId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "zone_id", zoneId)
+	ctx = tflog.SetField(ctx, "network_id", networkId)
 
 	// Generate API request body from model
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	// Update existing zone
-	_, err = r.client.PartialUpdateZone(ctx, projectId, zoneId).PartialUpdateZonePayload(*payload).Execute()
+	// Update existing network
+	err = r.client.PartialUpdateNetwork(ctx, projectId, networkId).PartialUpdateNetworkPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	waitResp, err := wait.PartialUpdateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateNetworkWaitHandler(ctx, r.client, projectId, networkId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Zone update waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Network update waiting: %v", err))
 		return
 	}
 
 	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
@@ -423,11 +292,11 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "DNS zone updated")
+	tflog.Info(ctx, "Network updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
@@ -437,167 +306,156 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 
 	projectId := model.ProjectId.ValueString()
-	zoneId := model.ZoneId.ValueString()
+	networkId := model.NetworkId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "zone_id", zoneId)
+	ctx = tflog.SetField(ctx, "network_id", networkId)
 
-	// Delete existing zone
-	_, err := r.client.DeleteZone(ctx, projectId, zoneId).Execute()
+	// Delete existing network
+	err := r.client.DeleteNetwork(ctx, projectId, networkId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = wait.DeleteZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
+	_, err = wait.DeleteNetworkWaitHandler(ctx, r.client, projectId, networkId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Zone deletion waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network", fmt.Sprintf("Network deletion waiting: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "DNS zone deleted")
+	tflog.Info(ctx, "Network deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,zone_id
-func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+// The expected format of the resource import identifier is: project_id,network_id
+func (r *networkResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			"Error importing zone",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[zone_id]  Got: %q", req.ID),
+			"Error importing network",
+			fmt.Sprintf("Expected import identifier with format: [project_id],[network_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
 	projectId := idParts[0]
-	zoneId := idParts[1]
+	networkId := idParts[1]
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "zone_id", zoneId)
+	ctx = tflog.SetField(ctx, "network_id", networkId)
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("zone_id"), zoneId)...)
-	tflog.Info(ctx, "DNS zone state imported")
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_id"), networkId)...)
+	tflog.Info(ctx, "Network state imported")
 }
 
-func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) error {
-	if zoneResp == nil || zoneResp.Zone == nil {
+func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model) error {
+	if networkResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	z := zoneResp.Zone
 
-	var rc *int64
-	if z.RecordCount != nil {
-		recordCount64 := int64(*z.RecordCount)
-		rc = &recordCount64
+	var networkId string
+	if model.NetworkId.ValueString() != "" {
+		networkId = model.NetworkId.ValueString()
+	} else if networkResp.NetworkId != nil {
+		networkId = *networkResp.NetworkId
 	} else {
-		rc = nil
-	}
-
-	var zoneId string
-	if model.ZoneId.ValueString() != "" {
-		zoneId = model.ZoneId.ValueString()
-	} else if z.Id != nil {
-		zoneId = *z.Id
-	} else {
-		return fmt.Errorf("zone id not present")
+		return fmt.Errorf("network id not present")
 	}
 
 	idParts := []string{
 		model.ProjectId.ValueString(),
-		zoneId,
+		networkId,
 	}
 	model.Id = types.StringValue(
 		strings.Join(idParts, core.Separator),
 	)
 
-	if z.Primaries == nil {
-		model.Primaries = types.ListNull(types.StringType)
+	if networkResp.Nameservers == nil {
+		model.Nameservers = types.ListNull(types.StringType)
 	} else {
-		respPrimaries := *z.Primaries
-		modelPrimaries, err := utils.ListValuetoStringSlice(model.Primaries)
+		respNameservers := *networkResp.Nameservers
+		modelNameservers, err := utils.ListValuetoStringSlice(model.Nameservers)
 		if err != nil {
 			return err
 		}
 
-		reconciledPrimaries := utils.ReconcileStringSlices(modelPrimaries, respPrimaries)
+		reconciledNameservers := utils.ReconcileStringSlices(modelNameservers, respNameservers)
 
-		primariesTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledPrimaries)
+		nameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledNameservers)
 		if diags.HasError() {
-			return fmt.Errorf("failed to map zone primaries: %w", core.DiagsToError(diags))
+			return fmt.Errorf("failed to map network nameservers: %w", core.DiagsToError(diags))
 		}
 
-		model.Primaries = primariesTF
+		model.Nameservers = nameserversTF
 	}
-	model.ZoneId = types.StringValue(zoneId)
-	model.Description = types.StringPointerValue(z.Description)
-	model.Acl = types.StringPointerValue(z.Acl)
-	model.Active = types.BoolPointerValue(z.Active)
-	model.ContactEmail = types.StringPointerValue(z.ContactEmail)
-	model.DefaultTTL = types.Int64PointerValue(z.DefaultTTL)
-	model.DnsName = types.StringPointerValue(z.DnsName)
-	model.ExpireTime = types.Int64PointerValue(z.ExpireTime)
-	model.IsReverseZone = types.BoolPointerValue(z.IsReverseZone)
-	model.Name = types.StringPointerValue(z.Name)
-	model.NegativeCache = types.Int64PointerValue(z.NegativeCache)
-	model.PrimaryNameServer = types.StringPointerValue(z.PrimaryNameServer)
-	model.RecordCount = types.Int64PointerValue(rc)
-	model.RefreshTime = types.Int64PointerValue(z.RefreshTime)
-	model.RetryTime = types.Int64PointerValue(z.RetryTime)
-	model.SerialNumber = types.Int64PointerValue(z.SerialNumber)
-	model.State = types.StringPointerValue(z.State)
-	model.Type = types.StringPointerValue(z.Type)
-	model.Visibility = types.StringPointerValue(z.Visibility)
+
+	if networkResp.Prefixes == nil {
+		model.Prefixes = types.ListNull(types.StringType)
+	} else {
+		respPrefixes := *networkResp.Prefixes
+		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map network prefixes: %w", core.DiagsToError(diags))
+		}
+
+		model.Prefixes = prefixesTF
+	}
+
+	model.NetworkId = types.StringValue(networkId)
+	model.Name = types.StringPointerValue(networkResp.Name)
+	model.PublicIP = types.StringPointerValue(networkResp.PublicIp)
+
 	return nil
 }
 
-func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
+func toCreatePayload(model *Model) (*iaas.CreateNetworkPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	modelPrimaries := []string{}
-	for _, primary := range model.Primaries.Elements() {
-		primaryString, ok := primary.(types.String)
+	modelNameservers := []string{}
+	for _, ns := range model.Nameservers.Elements() {
+		nameserverString, ok := ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
-		modelPrimaries = append(modelPrimaries, primaryString.ValueString())
+		modelNameservers = append(modelNameservers, nameserverString.ValueString())
 	}
-	return &dns.CreateZonePayload{
-		Name:          conversion.StringValueToPointer(model.Name),
-		DnsName:       conversion.StringValueToPointer(model.DnsName),
-		ContactEmail:  conversion.StringValueToPointer(model.ContactEmail),
-		Description:   conversion.StringValueToPointer(model.Description),
-		Acl:           conversion.StringValueToPointer(model.Acl),
-		Type:          conversion.StringValueToPointer(model.Type),
-		DefaultTTL:    conversion.Int64ValueToPointer(model.DefaultTTL),
-		ExpireTime:    conversion.Int64ValueToPointer(model.ExpireTime),
-		RefreshTime:   conversion.Int64ValueToPointer(model.RefreshTime),
-		RetryTime:     conversion.Int64ValueToPointer(model.RetryTime),
-		NegativeCache: conversion.Int64ValueToPointer(model.NegativeCache),
-		IsReverseZone: conversion.BoolValueToPointer(model.IsReverseZone),
-		Primaries:     &modelPrimaries,
+
+	return &iaas.CreateNetworkPayload{
+		Name: conversion.StringValueToPointer(model.Name),
+		AddressFamily: &iaas.CreateNetworkAddressFamily{
+			Ipv4: &iaas.CreateNetworkIPv4{
+				PrefixLength: conversion.Int64ValueToPointer(model.IPv4PrefixLength),
+				Nameservers:  &modelNameservers,
+			},
+		},
 	}, nil
 }
 
-func toUpdatePayload(model *Model) (*dns.PartialUpdateZonePayload, error) {
+func toUpdatePayload(model *Model) (*iaas.PartialUpdateNetworkPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	return &dns.PartialUpdateZonePayload{
-		Name:          conversion.StringValueToPointer(model.Name),
-		ContactEmail:  conversion.StringValueToPointer(model.ContactEmail),
-		Description:   conversion.StringValueToPointer(model.Description),
-		Acl:           conversion.StringValueToPointer(model.Acl),
-		DefaultTTL:    conversion.Int64ValueToPointer(model.DefaultTTL),
-		ExpireTime:    conversion.Int64ValueToPointer(model.ExpireTime),
-		RefreshTime:   conversion.Int64ValueToPointer(model.RefreshTime),
-		RetryTime:     conversion.Int64ValueToPointer(model.RetryTime),
-		NegativeCache: conversion.Int64ValueToPointer(model.NegativeCache),
-		Primaries:     nil, // API returns error if this field is set, even if nothing changes
+	modelNameservers := []string{}
+	for _, ns := range model.Nameservers.Elements() {
+		nameserverString, ok := ns.(types.String)
+		if !ok {
+			return nil, fmt.Errorf("type assertion failed")
+		}
+		modelNameservers = append(modelNameservers, nameserverString.ValueString())
+	}
+
+	return &iaas.PartialUpdateNetworkPayload{
+		Name: conversion.StringValueToPointer(model.Name),
+		AddressFamily: &iaas.UpdateNetworkAddressFamily{
+			Ipv4: &iaas.UpdateNetworkIPv4{
+				Nameservers: &modelNameservers,
+			},
+		},
 	}, nil
 }
