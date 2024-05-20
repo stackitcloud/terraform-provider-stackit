@@ -947,9 +947,9 @@ func latestMatchingMachineVersion(availableMachineImages []ske.MachineImage, mac
 	}
 
 	if machineVersionMin == nil {
-		// different machine OS have different versions
-		// so if the current machine is nil or the machina name was updated,  get the latest one
-		// otherwise, the current machine version should be used
+		// different machine OSes have different versions
+		// so if the current machine image is nil or the current machine image name was updated, get the latest one
+		// otherwise, the current machine image version should be used
 		if currentMachineImage == nil || currentMachineImage.Name == nil || *currentMachineImage.Name != machineName {
 			latestVersion, err := getLatestSupportedMachineVersion(availableMachineVersions)
 			if err != nil {
