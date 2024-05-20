@@ -148,7 +148,9 @@ func TestMapFields(t *testing.T) {
 								"name":            types.StringValue("node"),
 								"machine_type":    types.StringValue("B"),
 								"os_name":         types.StringValue("os"),
-								"os_version":      types.StringValue("os-ver"),
+								"os_version":      types.StringNull(),
+								"os_version_min":  types.StringNull(),
+								"os_version_used": types.StringValue("os-ver"),
 								"minimum":         types.Int64Value(1),
 								"maximum":         types.Int64Value(5),
 								"max_surge":       types.Int64Value(3),
@@ -406,7 +408,7 @@ func TestMapFields(t *testing.T) {
 	}
 }
 
-func TestLatestMatchingVersion(t *testing.T) {
+func TestLatestMatchingKubernetesVersion(t *testing.T) {
 	tests := []struct {
 		description                  string
 		availableVersions            []ske.KubernetesVersion
@@ -495,6 +497,32 @@ func TestLatestMatchingVersion(t *testing.T) {
 			true,
 		},
 		{
+			"available_version_with_higher_preview_patch_not_selected",
+			[]ske.KubernetesVersion{
+				{
+					Version: utils.Ptr("1.20.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.20.1"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.20.2"),
+					State:   utils.Ptr(VersionStatePreview),
+				},
+				{
+					Version: utils.Ptr("1.19.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+			},
+			utils.Ptr("1.20"),
+			nil,
+			utils.Ptr("1.20.1"),
+			false,
+			true,
+		},
+		{
 			"available_version_no_provided_patch_2",
 			[]ske.KubernetesVersion{
 				{
@@ -531,24 +559,6 @@ func TestLatestMatchingVersion(t *testing.T) {
 			true,
 		},
 		{
-			"deprecated_version_not_selected",
-			[]ske.KubernetesVersion{
-				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
-				},
-				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateDeprecated),
-				},
-			},
-			utils.Ptr("1.20"),
-			nil,
-			utils.Ptr("1.20.0"),
-			false,
-			true,
-		},
-		{
 			"preview_version",
 			[]ske.KubernetesVersion{
 				{
@@ -560,7 +570,7 @@ func TestLatestMatchingVersion(t *testing.T) {
 					State:   utils.Ptr(VersionStateSupported),
 				},
 			},
-			utils.Ptr("1.20"),
+			utils.Ptr("1.20.0"),
 			nil,
 			utils.Ptr("1.20.0"),
 			false,
@@ -679,42 +689,6 @@ func TestLatestMatchingVersion(t *testing.T) {
 			true,
 		},
 		{
-			"deprecated_kubernetes_version_field",
-			[]ske.KubernetesVersion{
-				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
-				},
-				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
-				},
-			},
-			utils.Ptr("1.20"),
-			nil,
-			utils.Ptr("1.20.0"),
-			false,
-			true,
-		},
-		{
-			"nil_provided_version_get_latest",
-			[]ske.KubernetesVersion{
-				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
-				},
-				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
-				},
-			},
-			nil,
-			nil,
-			utils.Ptr("1.20.0"),
-			false,
-			true,
-		},
-		{
 			"no_matching_available_versions",
 			[]ske.KubernetesVersion{
 				{
@@ -777,7 +751,7 @@ func TestLatestMatchingVersion(t *testing.T) {
 			false,
 		},
 		{
-			"no_matching_available_versions_patch",
+			"no_matching_available_versions_patch_current",
 			[]ske.KubernetesVersion{
 				{
 					Version: utils.Ptr("1.21.0"),
@@ -799,7 +773,7 @@ func TestLatestMatchingVersion(t *testing.T) {
 			false,
 		},
 		{
-			"no_matching_available_versions_patch_2",
+			"no_matching_available_versions_patch_2_current",
 			[]ske.KubernetesVersion{
 				{
 					Version: utils.Ptr("1.21.2"),
@@ -859,7 +833,7 @@ func TestLatestMatchingVersion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			versionUsed, hasDeprecatedVersion, err := latestMatchingVersion(tt.availableVersions, tt.kubernetesVersionMin, tt.currentKubernetesVersion)
+			versionUsed, hasDeprecatedVersion, err := latestMatchingKubernetesVersion(tt.availableVersions, tt.kubernetesVersionMin, tt.currentKubernetesVersion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -877,6 +851,517 @@ func TestLatestMatchingVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestLatestMatchingMachineVersion(t *testing.T) {
+	tests := []struct {
+		description                  string
+		availableVersions            []ske.MachineImage
+		machineVersionMin            *string
+		machineName                  string
+		currentMachineImage          *ske.Image
+		expectedVersionUsed          *string
+		expectedHasDeprecatedVersion bool
+		isValid                      bool
+	}{
+		{
+			"available_version",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.20.1"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.20.2"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			utils.Ptr("1.20.1"),
+			"foo",
+			nil,
+			utils.Ptr("1.20.1"),
+			false,
+			true,
+		},
+		{
+			"available_version_zero_patch",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.20.1"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.20.2"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			utils.Ptr("1.20.0"),
+			"foo",
+			nil,
+			utils.Ptr("1.20.0"),
+			false,
+			true,
+		},
+		{
+			"available_version_with_no_provided_patch",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.20.1"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.20.2"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			utils.Ptr("1.20"),
+			"foo",
+			nil,
+			utils.Ptr("1.20.2"),
+			false,
+			true,
+		},
+		{
+			"available_version_with_higher_preview_patch_not_selected",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.20.1"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.20.2"),
+							State:   utils.Ptr(VersionStatePreview),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			utils.Ptr("1.20"),
+			"foo",
+			nil,
+			utils.Ptr("1.20.1"),
+			false,
+			true,
+		},
+		{
+			"available_version_with_no_provided_patch_2",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			utils.Ptr("1.20"),
+			"foo",
+			nil,
+			utils.Ptr("1.20.0"),
+			false,
+			true,
+		},
+		{
+			"deprecated_version",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateDeprecated),
+						},
+					},
+				},
+			},
+			utils.Ptr("1.19"),
+			"foo",
+			nil,
+			utils.Ptr("1.19.0"),
+			true,
+			true,
+		},
+		{
+			"preview_version_selected",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStatePreview),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateDeprecated),
+						},
+					},
+				},
+			},
+			utils.Ptr("1.20.0"),
+			"foo",
+			nil,
+			utils.Ptr("1.20.0"),
+			false,
+			true,
+		},
+		{
+			"nil_provided_version_get_latest",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			nil,
+			"foo",
+			nil,
+			utils.Ptr("1.20.0"),
+			false,
+			true,
+		},
+		{
+			"nil_provided_version_use_current",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			nil,
+			"foo",
+			&ske.Image{
+				Name:    utils.Ptr("foo"),
+				Version: utils.Ptr("1.19.0"),
+			},
+			utils.Ptr("1.19.0"),
+			false,
+			true,
+		},
+		{
+			"nil_provided_version_os_image_update_get_latest",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			nil,
+			"foo",
+			&ske.Image{
+				Name:    utils.Ptr("bar"),
+				Version: utils.Ptr("1.19.0"),
+			},
+			utils.Ptr("1.20.0"),
+			false,
+			true,
+		},
+		{
+			"update_lower_min_provided",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			utils.Ptr("1.19"),
+			"foo",
+			&ske.Image{
+				Name:    utils.Ptr("foo"),
+				Version: utils.Ptr("1.20.0"),
+			},
+			utils.Ptr("1.20.0"),
+			false,
+			true,
+		},
+		{
+			"update_lower_min_provided_deprecated_version",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.21.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateDeprecated),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			utils.Ptr("1.19"),
+			"foo",
+			&ske.Image{
+				Name:    utils.Ptr("foo"),
+				Version: utils.Ptr("1.20.0"),
+			},
+			utils.Ptr("1.20.0"),
+			true,
+			true,
+		},
+		{
+			"update_higher_min_provided",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			utils.Ptr("1.20"),
+			"foo",
+			&ske.Image{
+				Name:    utils.Ptr("foo"),
+				Version: utils.Ptr("1.19.0"),
+			},
+			utils.Ptr("1.20.0"),
+			false,
+			true,
+		},
+		{
+			"no_matching_available_versions",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			utils.Ptr("1.21"),
+			"foo",
+			nil,
+			nil,
+			false,
+			false,
+		},
+		{
+			"no_available_versions",
+			[]ske.MachineImage{
+				{
+					Name:     utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{},
+				},
+			},
+			utils.Ptr("1.20"),
+			"foo",
+			nil,
+			nil,
+			false,
+			false,
+		},
+		{
+			"nil_available_versions",
+			[]ske.MachineImage{
+				{
+					Name:     utils.Ptr("foo"),
+					Versions: nil,
+				},
+			},
+			utils.Ptr("1.20"),
+			"foo",
+			nil,
+			nil,
+			false,
+			false,
+		},
+		{
+			"nil_name",
+			[]ske.MachineImage{
+				{
+					Name: nil,
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			utils.Ptr("1.20"),
+			"foo",
+			nil,
+			nil,
+			false,
+			false,
+		},
+		{
+			"name_not_available",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("bar"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			utils.Ptr("1.20"),
+			"foo",
+			nil,
+			nil,
+			false,
+			false,
+		},
+		{
+			"empty_provided_version",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			utils.Ptr(""),
+			"foo",
+			nil,
+			nil,
+			false,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			versionUsed, hasDeprecatedVersion, err := latestMatchingMachineVersion(tt.availableVersions, tt.machineVersionMin, tt.machineName, tt.currentMachineImage)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				if *versionUsed != *tt.expectedVersionUsed {
+					t.Fatalf("Used version does not match: expecting %s, got %s", *tt.expectedVersionUsed, *versionUsed)
+				}
+				if tt.expectedHasDeprecatedVersion != hasDeprecatedVersion {
+					t.Fatalf("hasDeprecatedVersion flag is wrong: expecting %t, got %t", tt.expectedHasDeprecatedVersion, hasDeprecatedVersion)
+				}
+			}
+		})
+	}
+}
+
 func TestGetMaintenanceTimes(t *testing.T) {
 	tests := []struct {
 		description   string
@@ -1111,12 +1596,13 @@ func TestCheckAllowPrivilegedContainers(t *testing.T) {
 	}
 }
 
-func TestGetCurrentKubernetesVersion(t *testing.T) {
+func TestGetCurrentVersion(t *testing.T) {
 	tests := []struct {
-		description     string
-		mockedResp      *ske.Cluster
-		expected        *string
-		getClusterFails bool
+		description               string
+		mockedResp                *ske.Cluster
+		expectedKubernetesVersion *string
+		expectedMachineImages     map[string]*ske.Image
+		getClusterFails           bool
 	}{
 		{
 			"ok",
@@ -1124,25 +1610,46 @@ func TestGetCurrentKubernetesVersion(t *testing.T) {
 				Kubernetes: &ske.Kubernetes{
 					Version: utils.Ptr("v1.0.0"),
 				},
+				Nodepools: &[]ske.Nodepool{
+					{
+						Name: utils.Ptr("foo"),
+						Machine: &ske.Machine{
+							Image: &ske.Image{
+								Name:    utils.Ptr("foo"),
+								Version: utils.Ptr("v1.0.0"),
+							},
+						},
+					},
+					{
+						Name: utils.Ptr("bar"),
+						Machine: &ske.Machine{
+							Image: &ske.Image{
+								Name:    utils.Ptr("bar"),
+								Version: utils.Ptr("v2.0.0"),
+							},
+						},
+					},
+				},
 			},
 			utils.Ptr("v1.0.0"),
+			map[string]*ske.Image{
+				"foo": {
+					Name:    utils.Ptr("foo"),
+					Version: utils.Ptr("v1.0.0"),
+				},
+				"bar": {
+					Name:    utils.Ptr("bar"),
+					Version: utils.Ptr("v2.0.0"),
+				},
+			},
 			false,
 		},
 		{
 			"get fails",
 			nil,
 			nil,
-			true,
-		},
-		{
-			"nil version",
-			&ske.Cluster{
-				Kubernetes: &ske.Kubernetes{
-					Version: nil,
-				},
-			},
 			nil,
-			false,
+			true,
 		},
 		{
 			"nil kubernetes",
@@ -1150,10 +1657,119 @@ func TestGetCurrentKubernetesVersion(t *testing.T) {
 				Kubernetes: nil,
 			},
 			nil,
+			nil,
+			false,
+		},
+		{
+			"nil kubernetes version",
+			&ske.Cluster{
+				Kubernetes: &ske.Kubernetes{
+					Version: nil,
+				},
+			},
+			nil,
+			nil,
+			false,
+		},
+		{
+			"nil nodepools",
+			&ske.Cluster{
+				Kubernetes: &ske.Kubernetes{
+					Version: utils.Ptr("v1.0.0"),
+				},
+				Nodepools: nil,
+			},
+			utils.Ptr("v1.0.0"),
+			nil,
+			false,
+		},
+		{
+			"nil nodepools machine",
+			&ske.Cluster{
+				Kubernetes: &ske.Kubernetes{
+					Version: utils.Ptr("v1.0.0"),
+				},
+				Nodepools: &[]ske.Nodepool{
+					{
+						Name:    utils.Ptr("foo"),
+						Machine: nil,
+					},
+				},
+			},
+			utils.Ptr("v1.0.0"),
+			map[string]*ske.Image{},
+			false,
+		},
+		{
+			"nil nodepools machine image",
+			&ske.Cluster{
+				Kubernetes: &ske.Kubernetes{
+					Version: utils.Ptr("v1.0.0"),
+				},
+				Nodepools: &[]ske.Nodepool{
+					{
+						Name: utils.Ptr("foo"),
+						Machine: &ske.Machine{
+							Image: nil,
+						},
+					},
+				},
+			},
+			utils.Ptr("v1.0.0"),
+			map[string]*ske.Image{},
+			false,
+		},
+		{
+			"nil nodepools machine image name",
+			&ske.Cluster{
+				Kubernetes: &ske.Kubernetes{
+					Version: utils.Ptr("v1.0.0"),
+				},
+				Nodepools: &[]ske.Nodepool{
+					{
+						Name: utils.Ptr("foo"),
+						Machine: &ske.Machine{
+							Image: &ske.Image{
+								Name: nil,
+							},
+						},
+					},
+				},
+			},
+			utils.Ptr("v1.0.0"),
+			map[string]*ske.Image{},
+			false,
+		},
+		{
+			"nil nodepools machine image version",
+			&ske.Cluster{
+				Kubernetes: &ske.Kubernetes{
+					Version: utils.Ptr("v1.0.0"),
+				},
+				Nodepools: &[]ske.Nodepool{
+					{
+						Name: utils.Ptr("foo"),
+						Machine: &ske.Machine{
+							Image: &ske.Image{
+								Name:    utils.Ptr("foo"),
+								Version: nil,
+							},
+						},
+					},
+				},
+			},
+			utils.Ptr("v1.0.0"),
+			map[string]*ske.Image{
+				"foo": {
+					Name:    utils.Ptr("foo"),
+					Version: nil,
+				},
+			},
 			false,
 		},
 		{
 			"nil response",
+			nil,
 			nil,
 			nil,
 			false,
@@ -1169,16 +1785,21 @@ func TestGetCurrentKubernetesVersion(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				Name:      types.StringValue("name"),
 			}
-			version := getCurrentKubernetesVersion(context.Background(), client, model)
-			diff := cmp.Diff(version, tt.expected)
+			kubernetesVersion, machineImageVersions := getCurrentVersions(context.Background(), client, model)
+			diff := cmp.Diff(kubernetesVersion, tt.expectedKubernetesVersion)
 			if diff != "" {
-				t.Fatalf("Version does not match: %s", diff)
+				t.Errorf("Kubernetes version does not match: %s", diff)
+			}
+
+			diff = cmp.Diff(machineImageVersions, tt.expectedMachineImages)
+			if diff != "" {
+				t.Errorf("Machine images do not match: %s", diff)
 			}
 		})
 	}
 }
 
-func TestGetLatestSupportedVersion(t *testing.T) {
+func TestGetLatestSupportedKubernetesVersion(t *testing.T) {
 	tests := []struct {
 		description           string
 		listKubernetesVersion []ske.KubernetesVersion
@@ -1229,6 +1850,75 @@ func TestGetLatestSupportedVersion(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			version, err := getLatestSupportedKubernetesVersion(tt.listKubernetesVersion)
+
+			if tt.isValid && err != nil {
+				t.Errorf("failed on valid input")
+			}
+			if !tt.isValid && err == nil {
+				t.Errorf("did not fail on invalid input")
+			}
+			if !tt.isValid {
+				return
+			}
+			diff := cmp.Diff(version, tt.expectedVersion)
+			if diff != "" {
+				t.Fatalf("Output is not as expected: %s", diff)
+			}
+		})
+	}
+}
+
+func TestGetLatestSupportedMachineVersion(t *testing.T) {
+	tests := []struct {
+		description        string
+		listMachineVersion []ske.MachineImageVersion
+		isValid            bool
+		expectedVersion    *string
+	}{
+		{
+			description: "base",
+			listMachineVersion: []ske.MachineImageVersion{
+				{
+					State:   utils.Ptr("supported"),
+					Version: utils.Ptr("1.2.3"),
+				},
+				{
+					State:   utils.Ptr("supported"),
+					Version: utils.Ptr("3.2.1"),
+				},
+				{
+					State:   utils.Ptr("not-supported"),
+					Version: utils.Ptr("4.4.4"),
+				},
+			},
+			isValid:         true,
+			expectedVersion: utils.Ptr("3.2.1"),
+		},
+		{
+			description:        "no mchine versions 1",
+			listMachineVersion: nil,
+			isValid:            false,
+		},
+		{
+			description:        "no machine versions 2",
+			listMachineVersion: []ske.MachineImageVersion{},
+			isValid:            false,
+		},
+		{
+			description: "no supported machine versions",
+			listMachineVersion: []ske.MachineImageVersion{
+				{
+					State:   utils.Ptr("not-supported"),
+					Version: utils.Ptr("1.2.3"),
+				},
+			},
+			isValid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			version, err := getLatestSupportedMachineVersion(tt.listMachineVersion)
 
 			if tt.isValid && err != nil {
 				t.Errorf("failed on valid input")

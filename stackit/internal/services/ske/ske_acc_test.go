@@ -28,8 +28,10 @@ var clusterResource = map[string]string{
 	"nodepool_name":                                    "np-acc-test",
 	"nodepool_name_min":                                "np-acc-min-test",
 	"nodepool_machine_type":                            "b1.2",
-	"nodepool_os_version":                              "3815.2.1",
-	"nodepool_os_version_min":                          "3815.2.1",
+	"nodepool_os_version_min":                          "3815.2",
+	"nodepool_os_version_used":                         "3815.2.1",
+	"nodepool_os_version_min_new":                      "3815.2.1",
+	"nodepool_os_version_used_new":                     "3815.2.1",
 	"nodepool_os_name":                                 "flatcar",
 	"nodepool_minimum":                                 "2",
 	"nodepool_maximum":                                 "3",
@@ -59,7 +61,7 @@ var clusterResource = map[string]string{
 	"kubeconfig_expiration":                            "3600",
 }
 
-func getConfig(version string, maintenanceEnd *string) string {
+func getConfig(kubernetesVersion, nodePoolMachineOSVersion string, maintenanceEnd *string) string {
 	maintenanceEndTF := clusterResource["maintenance_end"]
 	if maintenanceEnd != nil {
 		maintenanceEndTF = *maintenanceEnd
@@ -79,7 +81,7 @@ func getConfig(version string, maintenanceEnd *string) string {
 				max_surge = "%s"
 				max_unavailable = "%s"
 				os_name = "%s"
-				os_version = "%s"
+				os_version_min = "%s"
 				volume_size = "%s"
 				volume_type = "%s"
 				cri = "%s"
@@ -128,7 +130,6 @@ func getConfig(version string, maintenanceEnd *string) string {
 			node_pools = [{
 				name = "%s"
 				machine_type = "%s"
-				os_version = "%s"
 				minimum = "%s"
 				maximum = "%s"
 				availability_zones = ["%s"]
@@ -144,7 +145,7 @@ func getConfig(version string, maintenanceEnd *string) string {
 		testutil.SKEProviderConfig(),
 		clusterResource["project_id"],
 		clusterResource["name"],
-		version,
+		kubernetesVersion,
 		clusterResource["nodepool_name"],
 		clusterResource["nodepool_machine_type"],
 		clusterResource["nodepool_minimum"],
@@ -152,7 +153,7 @@ func getConfig(version string, maintenanceEnd *string) string {
 		clusterResource["nodepool_max_surge"],
 		clusterResource["nodepool_max_unavailable"],
 		clusterResource["nodepool_os_name"],
-		clusterResource["nodepool_os_version"],
+		nodePoolMachineOSVersion,
 		clusterResource["nodepool_volume_size"],
 		clusterResource["nodepool_volume_type"],
 		clusterResource["nodepool_cri"],
@@ -182,7 +183,6 @@ func getConfig(version string, maintenanceEnd *string) string {
 		clusterResource["name_min"],
 		clusterResource["nodepool_name_min"],
 		clusterResource["nodepool_machine_type"],
-		clusterResource["nodepool_os_version_min"],
 		clusterResource["nodepool_minimum"],
 		clusterResource["nodepool_maximum"],
 		clusterResource["nodepool_zone"],
@@ -201,7 +201,7 @@ func TestAccSKE(t *testing.T) {
 
 			// 1) Creation
 			{
-				Config: getConfig(clusterResource["kubernetes_version_min"], nil),
+				Config: getConfig(clusterResource["kubernetes_version_min"], clusterResource["nodepool_os_version_min"], nil),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", clusterResource["name"]),
@@ -211,7 +211,8 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.0", clusterResource["nodepool_zone"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.os_name", clusterResource["nodepool_os_name"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.os_version", clusterResource["nodepool_os_version"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.os_version_min", clusterResource["nodepool_os_version_min"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.os_version_used", clusterResource["nodepool_os_version_used"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.machine_type", clusterResource["nodepool_machine_type"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.minimum", clusterResource["nodepool_minimum"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.maximum", clusterResource["nodepool_maximum"]),
@@ -262,7 +263,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster_min", "node_pools.0.availability_zones.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster_min", "node_pools.0.availability_zones.0", clusterResource["nodepool_zone"]),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "node_pools.0.os_name"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster_min", "node_pools.0.os_version", clusterResource["nodepool_os_version_min"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster_min", "node_pools.0.os_version_used", clusterResource["nodepool_os_version_used"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster_min", "node_pools.0.machine_type", clusterResource["nodepool_machine_type"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster_min", "node_pools.0.minimum", clusterResource["nodepool_minimum"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster_min", "node_pools.0.maximum", clusterResource["nodepool_maximum"]),
@@ -300,7 +301,7 @@ func TestAccSKE(t *testing.T) {
 					}
 
 						`,
-					getConfig(clusterResource["kubernetes_version_min"], nil),
+					getConfig(clusterResource["kubernetes_version_min"], clusterResource["nodepool_os_version_min"], nil),
 					clusterResource["project_id"],
 					clusterResource["name"],
 					clusterResource["project_id"],
@@ -319,7 +320,6 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.availability_zones.0", clusterResource["nodepool_zone"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.os_name", clusterResource["nodepool_os_name"]),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.os_version", clusterResource["nodepool_os_version"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.machine_type", clusterResource["nodepool_machine_type"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.minimum", clusterResource["nodepool_minimum"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.maximum", clusterResource["nodepool_maximum"]),
@@ -356,7 +356,6 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.availability_zones.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.availability_zones.0", clusterResource["nodepool_zone"]),
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "node_pools.0.os_name"),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.os_version", clusterResource["nodepool_os_version_min"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.machine_type", clusterResource["nodepool_machine_type"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.minimum", clusterResource["nodepool_minimum"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "node_pools.0.maximum", clusterResource["nodepool_maximum"]),
@@ -397,7 +396,7 @@ func TestAccSKE(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				// The fields are not provided in the SKE API when disabled, although set actively.
-				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%"},
+				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config", "node_pools.0.os_version_min", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%"},
 			},
 			// 4) Import minimal cluster
 			{
@@ -419,11 +418,11 @@ func TestAccSKE(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config"},
+				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config", "node_pools.0.os_version_min"},
 			},
-			// 5) Update kubernetes version and maximum
+			// 5) Update kubernetes version, OS version and maintenance end
 			{
-				Config: getConfig(clusterResource["kubernetes_version_min_new"], utils.Ptr(clusterResource["maintenance_end_new"])),
+				Config: getConfig(clusterResource["kubernetes_version_min_new"], clusterResource["os_version_min_new"], utils.Ptr(clusterResource["maintenance_end_new"])),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
@@ -434,7 +433,8 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.0", clusterResource["nodepool_zone"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.os_name", clusterResource["nodepool_os_name"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.os_version", clusterResource["nodepool_os_version"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.os_version_min", clusterResource["nodepool_os_version_min_new"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.os_version_used", clusterResource["nodepool_os_version_used_new"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.machine_type", clusterResource["nodepool_machine_type"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.minimum", clusterResource["nodepool_minimum"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.maximum", clusterResource["nodepool_maximum"]),
@@ -465,15 +465,17 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster", "kube_config"), // when using the kubeconfig resource, the kubeconfig field becomes null
 				),
 			},
-			// 6) Downgrade kubernetes version
+			// 6) Downgrade kubernetes and nodepool machine OS version
 			{
-				Config: getConfig(clusterResource["kubernetes_version_min"], utils.Ptr(clusterResource["maintenance_end_new"])),
+				Config: getConfig(clusterResource["kubernetes_version_min"], clusterResource["nodepool_os_version_min"], utils.Ptr(clusterResource["maintenance_end_new"])),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", clusterResource["name"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_min", clusterResource["kubernetes_version_min"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_used", clusterResource["kubernetes_version_used"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_used", clusterResource["kubernetes_version_used_new"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.os_version_min", clusterResource["nodepool_os_version_min"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.os_version_used", clusterResource["nodepool_os_version_used_new"]),
 				),
 			},
 			// Deletion is done by the framework implicitly

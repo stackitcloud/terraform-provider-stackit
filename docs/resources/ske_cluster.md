@@ -53,7 +53,7 @@ Deprecated as of Kubernetes 1.25 and later
 - `extensions` (Attributes) A single extensions block as defined below. (see [below for nested schema](#nestedatt--extensions))
 - `hibernations` (Attributes List) One or more hibernation block as defined below. (see [below for nested schema](#nestedatt--hibernations))
 - `kubernetes_version` (String, Deprecated) Kubernetes version. Must only contain major and minor version (e.g. 1.22). This field is deprecated, use `kubernetes_version_min instead`
-- `kubernetes_version_min` (String) The minimum Kubernetes version. This field will be used to set the minimum kubernetes version on creation/update of the cluster and can only by incremented. If unset, the latest supported Kubernetes version will be used. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html). To get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field.
+- `kubernetes_version_min` (String) The minimum Kubernetes version. This field will be used to set the minimum kubernetes version on creation/update of the cluster. If unset, the latest supported Kubernetes version will be used. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html). To get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field.
 - `maintenance` (Attributes) A single maintenance block as defined below. (see [below for nested schema](#nestedatt--maintenance))
 
 ### Read-Only
@@ -72,7 +72,6 @@ Required:
 - `maximum` (Number) Maximum number of nodes in the pool.
 - `minimum` (Number) Minimum number of nodes in the pool.
 - `name` (String) Specifies the name of the node pool.
-- `os_version` (String) The OS image version.
 
 Optional:
 
@@ -81,9 +80,15 @@ Optional:
 - `max_surge` (Number) Maximum number of additional VMs that are created during an update.
 - `max_unavailable` (Number) Maximum number of VMs that that can be unavailable during an update.
 - `os_name` (String) The name of the OS image. E.g. `flatcar`.
+- `os_version` (String, Deprecated) This field is deprecated, use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead
+- `os_version_min` (String) The minimum OS image version. This field will be used to set the minimum OS image version on creation/update of the cluster. If unset, the latest supported OS image version will be used. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html). To get the current OS image version being used for the node pool, use the read-only `os_version_used` field.
 - `taints` (Attributes List) Specifies a taint list as defined below. (see [below for nested schema](#nestedatt--node_pools--taints))
 - `volume_size` (Number) The volume size in GB. E.g. `20`
 - `volume_type` (String) Specifies the volume type. E.g. `storage_premium_perf1`.
+
+Read-Only:
+
+- `os_version_used` (String) Full OS image version used. For example, if 3815.2 was set in `os_version_min`, this value may result to 3815.2.2. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html).
 
 <a id="nestedatt--node_pools--taints"></a>
 ### Nested Schema for `node_pools.taints`
@@ -150,10 +155,10 @@ Optional:
 
 Required:
 
-- `enable_machine_image_version_updates` (Boolean) Flag to enable/disable auto-updates of the OS image version.
 - `end` (String) Time for maintenance window end. E.g. `01:23:45Z`, `05:00:00+02:00`.
 - `start` (String) Time for maintenance window start. E.g. `01:23:45Z`, `05:00:00+02:00`.
 
 Optional:
 
-- `enable_kubernetes_version_updates` (Boolean) Flag to enable/disable auto-updates of the Kubernetes version. Defaults to `true. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html).
+- `enable_kubernetes_version_updates` (Boolean) Flag to enable/disable auto-updates of the Kubernetes version. Defaults to `true`. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html).
+- `enable_machine_image_version_updates` (Boolean) Flag to enable/disable auto-updates of the OS image version. Defaults to `true`. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html).

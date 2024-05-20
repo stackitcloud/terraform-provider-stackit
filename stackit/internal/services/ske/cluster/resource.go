@@ -83,7 +83,9 @@ type nodePool struct {
 	Name              types.String `tfsdk:"name"`
 	MachineType       types.String `tfsdk:"machine_type"`
 	OSName            types.String `tfsdk:"os_name"`
+	OSVersionMin      types.String `tfsdk:"os_version_min"`
 	OSVersion         types.String `tfsdk:"os_version"`
+	OSVersionUsed     types.String `tfsdk:"os_version_used"`
 	Minimum           types.Int64  `tfsdk:"minimum"`
 	Maximum           types.Int64  `tfsdk:"maximum"`
 	MaxSurge          types.Int64  `tfsdk:"max_surge"`
@@ -101,7 +103,9 @@ var nodePoolTypes = map[string]attr.Type{
 	"name":               basetypes.StringType{},
 	"machine_type":       basetypes.StringType{},
 	"os_name":            basetypes.StringType{},
+	"os_version_min":     basetypes.StringType{},
 	"os_version":         basetypes.StringType{},
+	"os_version_used":    basetypes.StringType{},
 	"minimum":            basetypes.Int64Type{},
 	"maximum":            basetypes.Int64Type{},
 	"max_surge":          basetypes.Int64Type{},
@@ -279,7 +283,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"kubernetes_version_min": schema.StringAttribute{
-				Description: "The minimum Kubernetes version. This field will be used to set the minimum kubernetes version on creation/update of the cluster and can only by incremented. If unset, the latest supported Kubernetes version will be used. " + SKEUpdateDoc + " To get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field.",
+				Description: "The minimum Kubernetes version. This field will be used to set the minimum kubernetes version on creation/update of the cluster. If unset, the latest supported Kubernetes version will be used. " + SKEUpdateDoc + " To get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field.",
 				Optional:    true,
 				Validators: []validator.String{
 					validate.VersionNumber(),
@@ -288,7 +292,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"kubernetes_version": schema.StringAttribute{
 				Description:        "Kubernetes version. Must only contain major and minor version (e.g. 1.22). This field is deprecated, use `kubernetes_version_min instead`",
 				Optional:           true,
-				DeprecationMessage: "Use `kubernetes_version_min instead`. Setting a specific kubernetes version would cause errors when the cluster got a kubernetes version minor upgrade, either triggered by automatic or forceful updates. In those cases, this field might not represent the actual kubernetes version used in the cluster.",
+				DeprecationMessage: "Use `kubernetes_version_min instead`. Setting a specific kubernetes version would cause errors during minor version upgrades due to forced updates. In those cases, this field might not represent the actual kubernetes version used in the cluster.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(ctx context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
 						if sr.StateValue.IsNull() || sr.PlanValue.IsNull() {
@@ -376,9 +380,21 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Computed:    true,
 							Default:     stringdefault.StaticString(DefaultOSName),
 						},
+						"os_version_min": schema.StringAttribute{
+							Description: "The minimum OS image version. This field will be used to set the minimum OS image version on creation/update of the cluster. If unset, the latest supported OS image version will be used. " + SKEUpdateDoc + " To get the current OS image version being used for the node pool, use the read-only `os_version_used` field.",
+							Optional:    true,
+							Validators: []validator.String{
+								validate.VersionNumber(),
+							},
+						},
 						"os_version": schema.StringAttribute{
-							Description: "The OS image version.",
-							Required:    true,
+							Description:        "This field is deprecated, use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead",
+							DeprecationMessage: "Use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead. Setting a specific OS image version will cause errors during minor OS upgrades due to forced updates.",
+							Optional:           true,
+						},
+						"os_version_used": schema.StringAttribute{
+							Description: "Full OS image version used. For example, if 3815.2 was set in `os_version_min`, this value may result to 3815.2.2. " + SKEUpdateDoc,
+							Computed:    true,
 						},
 						"volume_type": schema.StringAttribute{
 							Description: "Specifies the volume type. E.g. `storage_premium_perf1`.",
@@ -442,14 +458,16 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 				Attributes: map[string]schema.Attribute{
 					"enable_kubernetes_version_updates": schema.BoolAttribute{
-						Description: "Flag to enable/disable auto-updates of the Kubernetes version. Defaults to `true. " + SKEUpdateDoc,
+						Description: "Flag to enable/disable auto-updates of the Kubernetes version. Defaults to `true`. " + SKEUpdateDoc,
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(true),
 					},
 					"enable_machine_image_version_updates": schema.BoolAttribute{
-						Description: "Flag to enable/disable auto-updates of the OS image version.",
-						Required:    true,
+						Description: "Flag to enable/disable auto-updates of the OS image version. Defaults to `true`. " + SKEUpdateDoc,
+						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(true),
 					},
 					"start": schema.StringAttribute{
 						Description: "Time for maintenance window start. E.g. `01:23:45Z`, `05:00:00+02:00`.",
@@ -549,6 +567,10 @@ func (r *clusterResource) ConfigValidators(_ context.Context) []resource.ConfigV
 			path.MatchRoot("kubernetes_version"),
 			path.MatchRoot("kubernetes_version_min"),
 		),
+		resourcevalidator.Conflicting(
+			path.MatchRoot("node_pools").AtAnyListIndex().AtName("os_version_min"),
+			path.MatchRoot("node_pools").AtAnyListIndex().AtName("os_version"),
+		),
 	}
 }
 
@@ -618,13 +640,13 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	availableVersions, err := r.loadAvailableVersions(ctx)
+	availableKubernetesVersions, availableMachines, err := r.loadAvailableVersions(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Loading available Kubernetes versions: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Loading available Kubernetes and machine image versions: %v", err))
 		return
 	}
 
-	r.createOrUpdateCluster(ctx, &resp.Diagnostics, &model, availableVersions, nil)
+	r.createOrUpdateCluster(ctx, &resp.Diagnostics, &model, availableKubernetesVersions, availableMachines, nil, nil)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -638,40 +660,57 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	tflog.Info(ctx, "SKE cluster created")
 }
 
-func (r *clusterResource) loadAvailableVersions(ctx context.Context) ([]ske.KubernetesVersion, error) {
+func (r *clusterResource) loadAvailableVersions(ctx context.Context) ([]ske.KubernetesVersion, []ske.MachineImage, error) {
 	c := r.client
 	res, err := c.ListProviderOptions(ctx).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("calling API: %w", err)
+		return nil, nil, fmt.Errorf("calling API: %w", err)
 	}
 
 	if res.KubernetesVersions == nil {
-		return nil, fmt.Errorf("API response has nil kubernetesVersions")
+		return nil, nil, fmt.Errorf("API response has nil kubernetesVersions")
 	}
 
-	return *res.KubernetesVersions, nil
+	if res.MachineImages == nil {
+		return nil, nil, fmt.Errorf("API response has nil machine images")
+	}
+
+	return *res.KubernetesVersions, *res.MachineImages, nil
 }
 
-// getCurrentKubernetesVersion makes a call to get the details of a cluster and returns the current kubernetes version
-// if the cluster doesn't exist or some error occurs, returns nil
-func getCurrentKubernetesVersion(ctx context.Context, c skeClient, m *Model) *string {
+// getCurrentVersions makes a call to get the details of a cluster and returns the current kubernetes version and a
+// a map with the machine image for each nodepool, which can be used to check the current machine image versions.
+// if the cluster doesn't exist or some error occurs, returns nil for both
+func getCurrentVersions(ctx context.Context, c skeClient, m *Model) (kubernetesVersion *string, nodePoolMachineImages map[string]*ske.Image) {
 	res, err := c.GetClusterExecute(ctx, m.ProjectId.ValueString(), m.Name.ValueString())
-	if err != nil {
-		return nil
+	if err != nil || res == nil {
+		return nil, nil
 	}
 
-	if res != nil && res.Kubernetes != nil {
-		return res.Kubernetes.Version
+	if res.Kubernetes != nil {
+		kubernetesVersion = res.Kubernetes.Version
 	}
 
-	return nil
+	if res.Nodepools == nil {
+		return kubernetesVersion, nil
+	}
+
+	nodePoolMachineImages = map[string]*ske.Image{}
+	for _, nodePool := range *res.Nodepools {
+		if nodePool.Name == nil || nodePool.Machine == nil || nodePool.Machine.Image == nil || nodePool.Machine.Image.Name == nil {
+			continue
+		}
+		nodePoolMachineImages[*nodePool.Name] = nodePool.Machine.Image
+	}
+
+	return kubernetesVersion, nodePoolMachineImages
 }
 
-func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag.Diagnostics, model *Model, availableVersions []ske.KubernetesVersion, currentKubernetesVersion *string) {
+func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag.Diagnostics, model *Model, availableKubernetesVersions []ske.KubernetesVersion, availableMachineVersions []ske.MachineImage, currentKubernetesVersion *string, currentMachineImages map[string]*ske.Image) {
 	// cluster vars
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
-	kubernetes, hasDeprecatedVersion, err := toKubernetesPayload(model, availableVersions, currentKubernetesVersion)
+	kubernetes, hasDeprecatedVersion, err := toKubernetesPayload(model, availableKubernetesVersions, currentKubernetesVersion)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating cluster config API payload: %v", err))
 		return
@@ -679,10 +718,13 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	if hasDeprecatedVersion {
 		diags.AddWarning("Deprecated Kubernetes version", fmt.Sprintf("Version %s of Kubernetes is deprecated, please update it", *kubernetes.Version))
 	}
-	nodePools, err := toNodepoolsPayload(ctx, model)
+	nodePools, deprecatedVersionsUsed, err := toNodepoolsPayload(ctx, model, availableMachineVersions, currentMachineImages)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating node pools API payload: %v", err))
 		return
+	}
+	if len(deprecatedVersionsUsed) != 0 {
+		diags.AddWarning("Deprecated node pools OS versions used", fmt.Sprintf("The following versions of machines are deprecated, please update them: [%s]", strings.Join(deprecatedVersionsUsed, ",")))
 	}
 	maintenance, err := toMaintenancePayload(ctx, model)
 	if err != nil {
@@ -763,14 +805,15 @@ func (r *clusterResource) getCredential(ctx context.Context, diags *diag.Diagnos
 	return nil
 }
 
-func toNodepoolsPayload(ctx context.Context, m *Model) ([]ske.Nodepool, error) {
+func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions []ske.MachineImage, currentMachineImages map[string]*ske.Image) ([]ske.Nodepool, []string, error) {
 	nodePools := []nodePool{}
 	diags := m.NodePools.ElementsAs(ctx, &nodePools, false)
 	if diags.HasError() {
-		return nil, core.DiagsToError(diags)
+		return nil, nil, core.DiagsToError(diags)
 	}
 
 	cnps := []ske.Nodepool{}
+	deprecatedVersionsUsed := []string{}
 	for i := range nodePools {
 		nodePool := nodePools[i]
 
@@ -778,7 +821,7 @@ func toNodepoolsPayload(ctx context.Context, m *Model) ([]ske.Nodepool, error) {
 		taintsModel := []taint{}
 		diags := nodePool.Taints.ElementsAs(ctx, &taintsModel, false)
 		if diags.HasError() {
-			return nil, core.DiagsToError(diags)
+			return nil, nil, core.DiagsToError(diags)
 		}
 
 		ts := []ske.Taint{}
@@ -824,8 +867,36 @@ func toNodepoolsPayload(ctx context.Context, m *Model) ([]ske.Nodepool, error) {
 		cn := ske.CRI{
 			Name: conversion.StringValueToPointer(nodePool.CRI),
 		}
+
+		providedVersionMin := conversion.StringValueToPointer(nodePool.OSVersionMin)
+		if !nodePool.OSVersion.IsNull() {
+			// os_version field deprecation
+			// this if clause should be removed once os_version field is completely removed
+			// os_version field value is used as minimum os version
+			providedVersionMin = conversion.StringValueToPointer(nodePool.OSVersion)
+		}
+
+		name := conversion.StringValueToPointer(nodePool.Name)
+		machineOSName := conversion.StringValueToPointer(nodePool.OSName)
+		if name == nil {
+			return nil, nil, fmt.Errorf("found nil node pool name for node_pool[%d]", i)
+		}
+		if machineOSName == nil {
+			return nil, nil, fmt.Errorf("found nil machine name for node_pool %q", *name)
+		}
+
+		currentMachineImage := currentMachineImages[*name]
+
+		machineVersion, hasDeprecatedVersion, err := latestMatchingMachineVersion(availableMachineVersions, providedVersionMin, *machineOSName, currentMachineImage)
+		if err != nil {
+			return nil, nil, fmt.Errorf("getting latest matching machine image version: %w", err)
+		}
+		if hasDeprecatedVersion && machineVersion != nil {
+			deprecatedVersionsUsed = append(deprecatedVersionsUsed, *machineVersion)
+		}
+
 		cnp := ske.Nodepool{
-			Name:           conversion.StringValueToPointer(nodePool.Name),
+			Name:           name,
 			Minimum:        conversion.Int64ValueToPointer(nodePool.Minimum),
 			Maximum:        conversion.Int64ValueToPointer(nodePool.Maximum),
 			MaxSurge:       conversion.Int64ValueToPointer(nodePool.MaxSurge),
@@ -833,8 +904,8 @@ func toNodepoolsPayload(ctx context.Context, m *Model) ([]ske.Nodepool, error) {
 			Machine: &ske.Machine{
 				Type: conversion.StringValueToPointer(nodePool.MachineType),
 				Image: &ske.Image{
-					Name:    conversion.StringValueToPointer(nodePool.OSName),
-					Version: conversion.StringValueToPointer(nodePool.OSVersion),
+					Name:    machineOSName,
+					Version: machineVersion,
 				},
 			},
 			Volume: &ske.Volume{
@@ -848,7 +919,140 @@ func toNodepoolsPayload(ctx context.Context, m *Model) ([]ske.Nodepool, error) {
 		}
 		cnps = append(cnps, cnp)
 	}
-	return cnps, nil
+	return cnps, deprecatedVersionsUsed, nil
+}
+
+// latestMatchingMachineVersion determines the latest machine image version for the create/update payload.
+// It considers the available versions for the specified OS (OSName), the minimum version configured by the user,
+// and the current version in the cluster. The function's behavior is as follows:
+//
+// 1. If the minimum version is not set:
+//   - Return the current version if it exists.
+//   - Otherwise, return the latest available version for the specified OS.
+//
+// 2. If the minimum version is set:
+//   - If the minimum version is a downgrade, use the current version instead.
+//   - If a patch is not specified for the minimum version, return the latest patch for that minor version.
+//
+// 3. For the selected version, check its state and return it, indicating if it is deprecated or not.
+func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin *string, osName string, currentImage *ske.Image) (version *string, deprecated bool, err error) {
+	deprecated = false
+
+	if availableImages == nil {
+		return nil, false, fmt.Errorf("nil available machine versions")
+	}
+
+	var availableMachineVersions []ske.MachineImageVersion
+	for _, machine := range availableImages {
+		if machine.Name != nil && *machine.Name == osName && machine.Versions != nil {
+			availableMachineVersions = *machine.Versions
+		}
+	}
+
+	if len(availableImages) == 0 {
+		return nil, false, fmt.Errorf("there are no available machine versions for the provided machine image name %s", osName)
+	}
+
+	if versionMin == nil {
+		// Different machine OSes have different versions.
+		// If the current machine image is nil or the machine image name has been updated,
+		// retrieve the latest supported version. Otherwise, use the current machine version.
+		if currentImage == nil || currentImage.Name == nil || *currentImage.Name != osName {
+			latestVersion, err := getLatestSupportedMachineVersion(availableMachineVersions)
+			if err != nil {
+				return nil, false, fmt.Errorf("get latest supported machine image version: %w", err)
+			}
+			return latestVersion, false, nil
+		}
+		versionMin = currentImage.Version
+	} else if currentImage != nil && currentImage.Name != nil && *currentImage.Name == osName {
+		// If the os_version_min is set but is lower than the current version used in the cluster,
+		// retain the current version to avoid downgrading.
+		minimumVersion := "v" + *versionMin
+		currentVersion := "v" + *currentImage.Version
+
+		if semver.Compare(minimumVersion, currentVersion) == -1 {
+			versionMin = currentImage.Version
+		}
+	}
+
+	var fullVersion bool
+	versionExp := validate.FullVersionRegex
+	versionRegex := regexp.MustCompile(versionExp)
+	if versionRegex.MatchString(*versionMin) {
+		fullVersion = true
+	}
+
+	providedVersionPrefixed := "v" + *versionMin
+
+	if !semver.IsValid(providedVersionPrefixed) {
+		return nil, false, fmt.Errorf("provided version is invalid")
+	}
+
+	var versionUsed *string
+	var state *string
+	var availableVersionsArray []string
+	// Get the higher available version that matches the major, minor and patch version provided by the user
+	for _, v := range availableMachineVersions {
+		if v.State == nil || v.Version == nil {
+			continue
+		}
+		availableVersionsArray = append(availableVersionsArray, *v.Version)
+		vPreffixed := "v" + *v.Version
+
+		if fullVersion {
+			// [MAJOR].[MINOR].[PATCH] version provided, match available version
+			if semver.Compare(vPreffixed, providedVersionPrefixed) == 0 {
+				versionUsed = v.Version
+				state = v.State
+				break
+			}
+		} else {
+			// [MAJOR].[MINOR] version provided, get the latest patch version
+			if semver.MajorMinor(vPreffixed) == semver.MajorMinor(providedVersionPrefixed) &&
+				(semver.Compare(vPreffixed, providedVersionPrefixed) == 1 || semver.Compare(vPreffixed, providedVersionPrefixed) == 0) &&
+				(v.State != nil && *v.State != VersionStatePreview) {
+				versionUsed = v.Version
+				state = v.State
+			}
+		}
+	}
+
+	if versionUsed != nil {
+		deprecated = strings.EqualFold(*state, VersionStateDeprecated)
+	}
+
+	// Throwing error if we could not match the version with the available versions
+	if versionUsed == nil {
+		return nil, false, fmt.Errorf("provided version is not one of the available machine image versions, available versions are: %s", strings.Join(availableVersionsArray, ","))
+	}
+
+	return versionUsed, deprecated, nil
+}
+
+func getLatestSupportedMachineVersion(versions []ske.MachineImageVersion) (*string, error) {
+	foundMachineVersion := false
+	var latestVersion *string
+	for i := range versions {
+		version := versions[i]
+		if *version.State != VersionStateSupported {
+			continue
+		}
+		if latestVersion != nil {
+			oldSemVer := fmt.Sprintf("v%s", *latestVersion)
+			newSemVer := fmt.Sprintf("v%s", *version.Version)
+			if semver.Compare(newSemVer, oldSemVer) != 1 {
+				continue
+			}
+		}
+
+		foundMachineVersion = true
+		latestVersion = version.Version
+	}
+	if !foundMachineVersion {
+		return nil, fmt.Errorf("no supported machine version found")
+	}
+	return latestVersion, nil
 }
 
 func toHibernationsPayload(ctx context.Context, m *Model) (*ske.Hibernation, error) {
@@ -1020,6 +1224,25 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model) error {
 }
 
 func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
+	modelNodePoolOSVersion := map[string]basetypes.StringValue{}
+	modelNodePoolOSVersionMin := map[string]basetypes.StringValue{}
+
+	modelNodePools := []nodePool{}
+	if !m.NodePools.IsNull() && !m.NodePools.IsUnknown() {
+		diags := m.NodePools.ElementsAs(ctx, &modelNodePools, false)
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+	}
+
+	for i := range modelNodePools {
+		name := conversion.StringValueToPointer(modelNodePools[i].Name)
+		if name != nil {
+			modelNodePoolOSVersion[*name] = modelNodePools[i].OSVersion
+			modelNodePoolOSVersionMin[*name] = modelNodePools[i].OSVersionMin
+		}
+	}
+
 	if cl.Nodepools == nil {
 		m.NodePools = types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes})
 		return nil
@@ -1031,7 +1254,8 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 			"name":               types.StringPointerValue(nodePoolResp.Name),
 			"machine_type":       types.StringPointerValue(nodePoolResp.Machine.Type),
 			"os_name":            types.StringNull(),
-			"os_version":         types.StringNull(),
+			"os_version_min":     modelNodePoolOSVersionMin[*nodePoolResp.Name],
+			"os_version":         modelNodePoolOSVersion[*nodePoolResp.Name],
 			"minimum":            types.Int64PointerValue(nodePoolResp.Minimum),
 			"maximum":            types.Int64PointerValue(nodePoolResp.Maximum),
 			"max_surge":          types.Int64PointerValue(nodePoolResp.MaxSurge),
@@ -1045,7 +1269,7 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 
 		if nodePoolResp.Machine != nil && nodePoolResp.Machine.Image != nil {
 			nodePool["os_name"] = types.StringPointerValue(nodePoolResp.Machine.Image.Name)
-			nodePool["os_version"] = types.StringPointerValue(nodePoolResp.Machine.Image.Version)
+			nodePool["os_version_used"] = types.StringPointerValue(nodePoolResp.Machine.Image.Version)
 		}
 
 		if nodePoolResp.Volume != nil {
@@ -1388,11 +1612,10 @@ func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion, cu
 		// kubernetes_version field deprecation
 		// this if clause should be removed once kubernetes_version field is completely removed
 		// kubernetes_version field value is used as minimum kubernetes version
-		// and currenteKubernetesVersion is ignored
 		providedVersionMin = conversion.StringValueToPointer(m.KubernetesVersion)
 	}
 
-	versionUsed, hasDeprecatedVersion, err := latestMatchingVersion(availableVersions, providedVersionMin, currentKubernetesVersion)
+	versionUsed, hasDeprecatedVersion, err := latestMatchingKubernetesVersion(availableVersions, providedVersionMin, currentKubernetesVersion)
 	if err != nil {
 		return nil, false, fmt.Errorf("getting latest matching kubernetes version: %w", err)
 	}
@@ -1404,7 +1627,7 @@ func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion, cu
 	return k, hasDeprecatedVersion, nil
 }
 
-func latestMatchingVersion(availableVersions []ske.KubernetesVersion, kubernetesVersionMin, currentKubernetesVersion *string) (version *string, deprecated bool, err error) {
+func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, kubernetesVersionMin, currentKubernetesVersion *string) (version *string, deprecated bool, err error) {
 	deprecated = false
 
 	if availableVersions == nil {
@@ -1466,9 +1689,10 @@ func latestMatchingVersion(availableVersions []ske.KubernetesVersion, kubernetes
 				break
 			}
 		} else {
-			// [MAJOR].[MINOR] version provided, get the latest patch version
+			// [MAJOR].[MINOR] version provided, get the latest non-preview patch version
 			if semver.MajorMinor(vPreffixed) == semver.MajorMinor(providedVersionPrefixed) &&
-				(semver.Compare(vPreffixed, providedVersionPrefixed) == 1) || (semver.Compare(vPreffixed, providedVersionPrefixed) == 0) {
+				(semver.Compare(vPreffixed, providedVersionPrefixed) == 1 || semver.Compare(vPreffixed, providedVersionPrefixed) == 0) &&
+				(v.State != nil && *v.State != VersionStatePreview) {
 				versionUsed = v.Version
 				state = v.State
 			}
@@ -1476,11 +1700,7 @@ func latestMatchingVersion(availableVersions []ske.KubernetesVersion, kubernetes
 	}
 
 	if versionUsed != nil {
-		if strings.EqualFold(*state, VersionStateDeprecated) {
-			deprecated = true
-		} else {
-			deprecated = false
-		}
+		deprecated = strings.EqualFold(*state, VersionStateDeprecated)
 	}
 
 	// Throwing error if we could not match the version with the available versions
@@ -1585,15 +1805,15 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", clName)
 
-	availableVersions, err := r.loadAvailableVersions(ctx)
+	availableKubernetesVersions, availableMachines, err := r.loadAvailableVersions(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating cluster", fmt.Sprintf("Loading available Kubernetes versions: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating cluster", fmt.Sprintf("Loading available Kubernetes and machine image versions: %v", err))
 		return
 	}
 
-	currentKubernetesVersion := getCurrentKubernetesVersion(ctx, r.client, &model)
+	currentKubernetesVersion, currentMachineImages := getCurrentVersions(ctx, r.client, &model)
 
-	r.createOrUpdateCluster(ctx, &resp.Diagnostics, &model, availableVersions, currentKubernetesVersion)
+	r.createOrUpdateCluster(ctx, &resp.Diagnostics, &model, availableKubernetesVersions, availableMachines, currentKubernetesVersion, currentMachineImages)
 	if resp.Diagnostics.HasError() {
 		return
 	}

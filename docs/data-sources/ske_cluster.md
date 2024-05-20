@@ -106,6 +106,8 @@ Read-Only:
 - `name` (String) Specifies the name of the node pool.
 - `os_name` (String) The name of the OS image.
 - `os_version` (String) The OS image version.
+- `os_version_min` (String) The minimum OS image version, this field is always nil. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html). To get the current OS image version being used for the node pool, use the read-only `os_version_used` field.
+- `os_version_used` (String) Full OS image version used. For example, if 3815.2 was set in `os_version_min`, this value may result to 3815.2.2. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html).
 - `taints` (Attributes List) Specifies a taint list as defined below. (see [below for nested schema](#nestedatt--node_pools--taints))
 - `volume_size` (Number) The volume size in GB.
 - `volume_type` (String) Specifies the volume type.
