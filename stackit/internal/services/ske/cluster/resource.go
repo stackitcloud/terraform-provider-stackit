@@ -1223,6 +1223,25 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model) error {
 }
 
 func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
+	modelNodePoolOSVersion := map[string]basetypes.StringValue{}
+	modelNodePoolOSVersionMin := map[string]basetypes.StringValue{}
+
+	modelNodePools := []nodePool{}
+	if !m.NodePools.IsNull() && !m.NodePools.IsUnknown() {
+		diags := m.NodePools.ElementsAs(ctx, &modelNodePools, false)
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+	}
+
+	for i := range modelNodePools {
+		name := conversion.StringValueToPointer(modelNodePools[i].Name)
+		if name != nil {
+			modelNodePoolOSVersion[*name] = modelNodePools[i].OSVersion
+			modelNodePoolOSVersionMin[*name] = modelNodePools[i].OSVersionMin
+		}
+	}
+
 	if cl.Nodepools == nil {
 		m.NodePools = types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes})
 		return nil
@@ -1234,8 +1253,8 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 			"name":               types.StringPointerValue(nodePoolResp.Name),
 			"machine_type":       types.StringPointerValue(nodePoolResp.Machine.Type),
 			"os_name":            types.StringNull(),
-			"os_version_min":     types.StringNull(),
-			"os_version":         types.StringNull(),
+			"os_version_min":     modelNodePoolOSVersionMin[*nodePoolResp.Name],
+			"os_version":         modelNodePoolOSVersion[*nodePoolResp.Name],
 			"minimum":            types.Int64PointerValue(nodePoolResp.Minimum),
 			"maximum":            types.Int64PointerValue(nodePoolResp.Maximum),
 			"max_surge":          types.Int64PointerValue(nodePoolResp.MaxSurge),
@@ -1250,9 +1269,6 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		if nodePoolResp.Machine != nil && nodePoolResp.Machine.Image != nil {
 			nodePool["os_name"] = types.StringPointerValue(nodePoolResp.Machine.Image.Name)
 			nodePool["os_version_used"] = types.StringPointerValue(nodePoolResp.Machine.Image.Version)
-
-			// updating deprecated field for backwards compatibility, it will lead to errors when the version is upgraded in the backgroung
-			nodePool["os_version"] = types.StringPointerValue(nodePoolResp.Machine.Image.Version)
 		}
 
 		if nodePoolResp.Volume != nil {

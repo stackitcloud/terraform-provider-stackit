@@ -148,7 +148,7 @@ func TestMapFields(t *testing.T) {
 								"name":            types.StringValue("node"),
 								"machine_type":    types.StringValue("B"),
 								"os_name":         types.StringValue("os"),
-								"os_version":      types.StringValue("os-ver"),
+								"os_version":      types.StringNull(),
 								"os_version_min":  types.StringNull(),
 								"os_version_used": types.StringValue("os-ver"),
 								"minimum":         types.Int64Value(1),
