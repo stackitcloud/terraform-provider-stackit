@@ -1019,11 +1019,7 @@ func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin
 	}
 
 	if versionUsed != nil {
-		if strings.EqualFold(*state, VersionStateDeprecated) {
-			deprecated = true
-		} else {
-			deprecated = false
-		}
+		deprecated = strings.EqualFold(*state, VersionStateDeprecated)
 	}
 
 	// Throwing error if we could not match the version with the available versions
@@ -1704,11 +1700,7 @@ func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, 
 	}
 
 	if versionUsed != nil {
-		if strings.EqualFold(*state, VersionStateDeprecated) {
-			deprecated = true
-		} else {
-			deprecated = false
-		}
+		deprecated = strings.EqualFold(*state, VersionStateDeprecated)
 	}
 
 	// Throwing error if we could not match the version with the available versions
