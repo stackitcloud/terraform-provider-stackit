@@ -75,10 +75,10 @@ func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureR
 	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "iaas_custom_endpoint", providerData.DnsCustomEndpoint)
+		ctx = tflog.SetField(ctx, "iaas_custom_endpoint", providerData.IaaSCustomEndpoint)
 		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.DnsCustomEndpoint),
+			config.WithEndpoint(providerData.IaaSCustomEndpoint),
 		)
 	} else {
 		apiClient, err = iaas.NewAPIClient(
@@ -379,14 +379,14 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model) err
 		respNameservers := *networkResp.Nameservers
 		modelNameservers, err := utils.ListValuetoStringSlice(model.Nameservers)
 		if err != nil {
-			return err
+			return fmt.Errorf("get current network nameservers from model: %w", err)
 		}
 
 		reconciledNameservers := utils.ReconcileStringSlices(modelNameservers, respNameservers)
 
 		nameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledNameservers)
 		if diags.HasError() {
-			return fmt.Errorf("failed to map network nameservers: %w", core.DiagsToError(diags))
+			return fmt.Errorf("map network nameservers: %w", core.DiagsToError(diags))
 		}
 
 		model.Nameservers = nameserversTF
@@ -398,7 +398,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model) err
 		respPrefixes := *networkResp.Prefixes
 		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
 		if diags.HasError() {
-			return fmt.Errorf("failed to map network prefixes: %w", core.DiagsToError(diags))
+			return fmt.Errorf("map network prefixes: %w", core.DiagsToError(diags))
 		}
 
 		model.Prefixes = prefixesTF
