@@ -286,8 +286,8 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.DNSCustomEndpoint.IsUnknown() || providerConfig.DNSCustomEndpoint.IsNull()) {
 		providerData.DnsCustomEndpoint = providerConfig.DNSCustomEndpoint.ValueString()
 	}
-	if !(providerConfig.DNSCustomEndpoint.IsUnknown() || providerConfig.DNSCustomEndpoint.IsNull()) {
-		providerData.DnsCustomEndpoint = providerConfig.DNSCustomEndpoint.ValueString()
+	if !(providerConfig.IaaSCustomEndpoint.IsUnknown() || providerConfig.IaaSCustomEndpoint.IsNull()) {
+		providerData.IaaSCustomEndpoint = providerConfig.IaaSCustomEndpoint.ValueString()
 	}
 	if !(providerConfig.PostgreSQLCustomEndpoint.IsUnknown() || providerConfig.PostgreSQLCustomEndpoint.IsNull()) {
 		providerData.PostgreSQLCustomEndpoint = providerConfig.PostgreSQLCustomEndpoint.ValueString()
