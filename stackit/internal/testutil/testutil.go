@@ -103,7 +103,6 @@ func IaaSProviderConfig() string {
 		}`,
 		IaaSCustomEndpoint,
 	)
-
 }
 
 func LoadBalancerProviderConfig() string {
