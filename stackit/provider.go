@@ -14,6 +14,7 @@ import (
 	argusScrapeConfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/scrapeconfig"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
+	iaasNetwork "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network"
 	loadBalancerCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/credential"
 	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
@@ -83,6 +84,7 @@ type providerModel struct {
 	Token                         types.String `tfsdk:"service_account_token"`
 	Region                        types.String `tfsdk:"region"`
 	DNSCustomEndpoint             types.String `tfsdk:"dns_custom_endpoint"`
+	IaaSCustomEndpoint            types.String `tfsdk:"iaas_custom_endpoint"`
 	PostgreSQLCustomEndpoint      types.String `tfsdk:"postgresql_custom_endpoint"`
 	PostgresFlexCustomEndpoint    types.String `tfsdk:"postgresflex_custom_endpoint"`
 	MongoDBFlexCustomEndpoint     types.String `tfsdk:"mongodbflex_custom_endpoint"`
@@ -112,9 +114,9 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"private_key":                     "Private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.",
 		"service_account_email":           "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.",
 		"region":                          "Region will be used as the default location for regional services. Not all services require a region, some are global",
+		"argus_custom_endpoint":           "Custom endpoint for the Argus service",
 		"dns_custom_endpoint":             "Custom endpoint for the DNS service",
-		"postgresql_custom_endpoint":      "Custom endpoint for the PostgreSQL service",
-		"postgresflex_custom_endpoint":    "Custom endpoint for the PostgresFlex service",
+		"iaas_custom_endpoint":            "Custom endpoint for the IaaS service",
 		"mongodbflex_custom_endpoint":     "Custom endpoint for the MongoDB Flex service",
 		"loadbalancer_custom_endpoint":    "Custom endpoint for the Load Balancer service",
 		"logme_custom_endpoint":           "Custom endpoint for the LogMe service",
@@ -122,7 +124,9 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"mariadb_custom_endpoint":         "Custom endpoint for the MariaDB service",
 		"objectstorage_custom_endpoint":   "Custom endpoint for the Object Storage service",
 		"opensearch_custom_endpoint":      "Custom endpoint for the OpenSearch service",
-		"argus_custom_endpoint":           "Custom endpoint for the Argus service",
+		"postgresql_custom_endpoint":      "Custom endpoint for the PostgreSQL service",
+		"postgresflex_custom_endpoint":    "Custom endpoint for the PostgresFlex service",
+		"redis_custom_endpoint":           "Custom endpoint for the Redis service",
 		"ske_custom_endpoint":             "Custom endpoint for the Kubernetes Engine (SKE) service",
 		"resourcemanager_custom_endpoint": "Custom endpoint for the Resource Manager service",
 		"secretsmanager_custom_endpoint":  "Custom endpoint for the Secrets Manager service",
@@ -167,6 +171,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"dns_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["dns_custom_endpoint"],
+			},
+			"iaas_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["iaas_custom_endpoint"],
 			},
 			"postgresql_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -278,6 +286,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.DNSCustomEndpoint.IsUnknown() || providerConfig.DNSCustomEndpoint.IsNull()) {
 		providerData.DnsCustomEndpoint = providerConfig.DNSCustomEndpoint.ValueString()
 	}
+	if !(providerConfig.IaaSCustomEndpoint.IsUnknown() || providerConfig.IaaSCustomEndpoint.IsNull()) {
+		providerData.IaaSCustomEndpoint = providerConfig.IaaSCustomEndpoint.ValueString()
+	}
 	if !(providerConfig.PostgreSQLCustomEndpoint.IsUnknown() || providerConfig.PostgreSQLCustomEndpoint.IsNull()) {
 		providerData.PostgreSQLCustomEndpoint = providerConfig.PostgreSQLCustomEndpoint.ValueString()
 	}
@@ -343,6 +354,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		argusScrapeConfig.NewScrapeConfigDataSource,
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
+		iaasNetwork.NewNetworkDataSource,
 		loadBalancer.NewLoadBalancerDataSource,
 		logMeInstance.NewInstanceDataSource,
 		logMeCredential.NewCredentialDataSource,
@@ -379,6 +391,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		argusScrapeConfig.NewScrapeConfigResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
+		iaasNetwork.NewNetworkResource,
 		loadBalancer.NewLoadBalancerResource,
 		loadBalancerCredential.NewCredentialResource,
 		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
