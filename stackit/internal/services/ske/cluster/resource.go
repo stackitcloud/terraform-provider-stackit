@@ -877,17 +877,17 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 		}
 
 		name := conversion.StringValueToPointer(nodePool.Name)
-		machineName := conversion.StringValueToPointer(nodePool.OSName)
+		machineOSName := conversion.StringValueToPointer(nodePool.OSName)
 		if name == nil {
 			return nil, nil, fmt.Errorf("found nil node pool name for node_pool[%d]", i)
 		}
-		if machineName == nil {
+		if machineOSName == nil {
 			return nil, nil, fmt.Errorf("found nil machine name for node_pool %q", *name)
 		}
 
 		currentMachineImage := currentMachineImages[*name]
 
-		machineVersion, hasDeprecatedVersion, err := latestMatchingMachineVersion(availableMachineVersions, providedVersionMin, *machineName, currentMachineImage)
+		machineVersion, hasDeprecatedVersion, err := latestMatchingMachineVersion(availableMachineVersions, providedVersionMin, *machineOSName, currentMachineImage)
 		if err != nil {
 			return nil, nil, fmt.Errorf("getting latest matching machine image version: %w", err)
 		}
@@ -904,7 +904,7 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 			Machine: &ske.Machine{
 				Type: conversion.StringValueToPointer(nodePool.MachineType),
 				Image: &ske.Image{
-					Name:    machineName,
+					Name:    machineOSName,
 					Version: machineVersion,
 				},
 			},
@@ -955,7 +955,7 @@ func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin
 
 	if versionMin == nil {
 		// Different machine OSes have different versions.
-		// so if the current machine image is nil or the machine image name has been updated,
+		// If the current machine image is nil or the machine image name has been updated,
 		// retrieve the latest supported version. Otherwise, use the current machine version.
 		if currentImage == nil || currentImage.Name == nil || *currentImage.Name != OSName {
 			latestVersion, err := getLatestSupportedMachineVersion(availableMachineVersions)
