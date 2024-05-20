@@ -935,7 +935,7 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 //   - If a patch is not specified for the minimum version, return the latest patch for that minor version.
 //
 // 3. For the selected version, check its state and return it, indicating if it is deprecated or not.
-func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin *string, OSName string, currentImage *ske.Image) (version *string, deprecated bool, err error) {
+func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin *string, osName string, currentImage *ske.Image) (version *string, deprecated bool, err error) {
 	deprecated = false
 
 	if availableImages == nil {
@@ -944,20 +944,20 @@ func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin
 
 	var availableMachineVersions []ske.MachineImageVersion
 	for _, machine := range availableImages {
-		if machine.Name != nil && *machine.Name == OSName && machine.Versions != nil {
+		if machine.Name != nil && *machine.Name == osName && machine.Versions != nil {
 			availableMachineVersions = *machine.Versions
 		}
 	}
 
 	if len(availableImages) == 0 {
-		return nil, false, fmt.Errorf("there are no available machine versions for the provided machine image name %s", OSName)
+		return nil, false, fmt.Errorf("there are no available machine versions for the provided machine image name %s", osName)
 	}
 
 	if versionMin == nil {
 		// Different machine OSes have different versions.
 		// If the current machine image is nil or the machine image name has been updated,
 		// retrieve the latest supported version. Otherwise, use the current machine version.
-		if currentImage == nil || currentImage.Name == nil || *currentImage.Name != OSName {
+		if currentImage == nil || currentImage.Name == nil || *currentImage.Name != osName {
 			latestVersion, err := getLatestSupportedMachineVersion(availableMachineVersions)
 			if err != nil {
 				return nil, false, fmt.Errorf("get latest supported machine image version: %w", err)
@@ -965,7 +965,7 @@ func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin
 			return latestVersion, false, nil
 		}
 		versionMin = currentImage.Version
-	} else if currentImage != nil && currentImage.Name != nil && *currentImage.Name == OSName {
+	} else if currentImage != nil && currentImage.Name != nil && *currentImage.Name == osName {
 		// If the os_version_min is set but is lower than the current version used in the cluster,
 		// retain the current version to avoid downgrading.
 		minimumVersion := "v" + *versionMin
