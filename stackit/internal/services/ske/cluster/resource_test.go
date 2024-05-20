@@ -497,6 +497,32 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			true,
 		},
 		{
+			"available_version_with_higher_preview_patch_not_selected",
+			[]ske.KubernetesVersion{
+				{
+					Version: utils.Ptr("1.20.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.20.1"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+				{
+					Version: utils.Ptr("1.20.2"),
+					State:   utils.Ptr(VersionStatePreview),
+				},
+				{
+					Version: utils.Ptr("1.19.0"),
+					State:   utils.Ptr(VersionStateSupported),
+				},
+			},
+			utils.Ptr("1.20"),
+			nil,
+			utils.Ptr("1.20.1"),
+			false,
+			true,
+		},
+		{
 			"available_version_no_provided_patch_2",
 			[]ske.KubernetesVersion{
 				{
@@ -544,7 +570,7 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 					State:   utils.Ptr(VersionStateSupported),
 				},
 			},
-			utils.Ptr("1.20"),
+			utils.Ptr("1.20.0"),
 			nil,
 			utils.Ptr("1.20.0"),
 			false,
@@ -934,6 +960,38 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			true,
 		},
 		{
+			"available_version_with_higher_preview_patch_not_selected",
+			[]ske.MachineImage{
+				{
+					Name: utils.Ptr("foo"),
+					Versions: &[]ske.MachineImageVersion{
+						{
+							Version: utils.Ptr("1.20.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.20.1"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+						{
+							Version: utils.Ptr("1.20.2"),
+							State:   utils.Ptr(VersionStatePreview),
+						},
+						{
+							Version: utils.Ptr("1.19.0"),
+							State:   utils.Ptr(VersionStateSupported),
+						},
+					},
+				},
+			},
+			utils.Ptr("1.20"),
+			"foo",
+			nil,
+			utils.Ptr("1.20.1"),
+			false,
+			true,
+		},
+		{
 			"available_version_with_no_provided_patch_2",
 			[]ske.MachineImage{
 				{
@@ -982,7 +1040,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			true,
 		},
 		{
-			"deprecated_version",
+			"preview_version_selected",
 			[]ske.MachineImage{
 				{
 					Name: utils.Ptr("foo"),
@@ -998,7 +1056,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 					},
 				},
 			},
-			utils.Ptr("1.20"),
+			utils.Ptr("1.20.0"),
 			"foo",
 			nil,
 			utils.Ptr("1.20.0"),

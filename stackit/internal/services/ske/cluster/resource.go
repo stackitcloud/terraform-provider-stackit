@@ -1010,7 +1010,8 @@ func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin
 		} else {
 			// [MAJOR].[MINOR] version provided, get the latest patch version
 			if semver.MajorMinor(vPreffixed) == semver.MajorMinor(providedVersionPrefixed) &&
-				(semver.Compare(vPreffixed, providedVersionPrefixed) == 1) || (semver.Compare(vPreffixed, providedVersionPrefixed) == 0) {
+				(semver.Compare(vPreffixed, providedVersionPrefixed) == 1 || semver.Compare(vPreffixed, providedVersionPrefixed) == 0) &&
+				(v.State != nil && *v.State != VersionStatePreview) {
 				versionUsed = v.Version
 				state = v.State
 			}
@@ -1692,9 +1693,10 @@ func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, 
 				break
 			}
 		} else {
-			// [MAJOR].[MINOR] version provided, get the latest patch version
+			// [MAJOR].[MINOR] version provided, get the latest non-preview patch version
 			if semver.MajorMinor(vPreffixed) == semver.MajorMinor(providedVersionPrefixed) &&
-				(semver.Compare(vPreffixed, providedVersionPrefixed) == 1) || (semver.Compare(vPreffixed, providedVersionPrefixed) == 0) {
+				(semver.Compare(vPreffixed, providedVersionPrefixed) == 1 || semver.Compare(vPreffixed, providedVersionPrefixed) == 0) &&
+				(v.State != nil && *v.State != VersionStatePreview) {
 				versionUsed = v.Version
 				state = v.State
 			}
