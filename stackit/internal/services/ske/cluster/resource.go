@@ -389,7 +389,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						},
 						"os_version": schema.StringAttribute{
 							Description:        "This field is deprecated, use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead",
-							DeprecationMessage: "Use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead. Setting a specific OS image version will cause errors when the cluster gets an OS version minor upgrade, by forceful updates.",
+							DeprecationMessage: "Use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead. Setting a specific OS image version will cause errors during minor OS upgrades due to forced updates.",
 							Optional:           true,
 						},
 						"os_version_used": schema.StringAttribute{
@@ -922,12 +922,19 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 	return cnps, deprecatedVersionsUsed, nil
 }
 
-// latestMatchingMachineVersion gets the latest machine image version to be used in the create/update payload
-// it's determined based on the available versions for the input OS (machineName), the minimum version configured by the user and the current version in the cluster
-// if the minimum version is not set, get the current one (if exists) or the latest for the input OS
-// if the minimum version is set but it is a downgrade, use the current version
-// for the minimum version selected, if a patch is not specified, get the latest patch for that minor version
-// for the version returned, check the state and return if it is deprecated or not
+// latestMatchingMachineVersion determines the latest machine image version for the create/update payload.
+// It considers the available versions for the specified OS (OSName), the minimum version configured by the user,
+// and the current version in the cluster. The function's behavior is as follows:
+//
+// 1. If the minimum version is not set:
+//   - Return the current version if it exists.
+//   - Otherwise, return the latest available version for the specified OS.
+//
+// 2. If the minimum version is set:
+//   - If the minimum version is a downgrade, use the current version instead.
+//   - If a patch is not specified for the minimum version, return the latest patch for that minor version.
+//
+// 3. For the selected version, check its state and return it, indicating if it is deprecated or not.
 func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin *string, OSName string, currentImage *ske.Image) (version *string, deprecated bool, err error) {
 	deprecated = false
 
@@ -947,8 +954,8 @@ func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin
 	}
 
 	if versionMin == nil {
-		// Different machine OS have different versions.
-		// If there is no current machine version or the machine name has been updated,
+		// Different machine OSes have different versions.
+		// so if the current machine image is nil or the machine image name has been updated,
 		// retrieve the latest supported version. Otherwise, use the current machine version.
 		if currentImage == nil || currentImage.Name == nil || *currentImage.Name != OSName {
 			latestVersion, err := getLatestSupportedMachineVersion(availableMachineVersions)
@@ -959,15 +966,12 @@ func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin
 		}
 		versionMin = currentImage.Version
 	} else if currentImage != nil && currentImage.Name != nil && *currentImage.Name == OSName {
-		// For an already existing cluster, if os_version_min is set to a lower version than what is being used in the cluster
-		// return the currently used version
-		machineVersionUsed := *currentImage.Version
-		machineVersionMinString := *versionMin
+		// If the os_version_min is set but is lower than the current version used in the cluster,
+		// retain the current version to avoid downgrading.
+		minimumVersion := "v" + *versionMin
+		currentVersion := "v" + *currentImage.Version
 
-		minVersionPrefixed := "v" + machineVersionMinString
-		usedVersionPrefixed := "v" + machineVersionUsed
-
-		if semver.Compare(minVersionPrefixed, usedVersionPrefixed) == -1 {
+		if semver.Compare(minimumVersion, currentVersion) == -1 {
 			versionMin = currentImage.Version
 		}
 	}
