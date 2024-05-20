@@ -389,7 +389,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						},
 						"os_version": schema.StringAttribute{
 							Description:        "This field is deprecated, use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead",
-							DeprecationMessage: "Use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead. Setting a specific OS image version will cause errors when the cluster gets an OS version minor upgrade, by forceful updates.",
+							DeprecationMessage: "Use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead. Setting a specific OS image version will cause errors during minor OS upgrades due to forced updates.",
 							Optional:           true,
 						},
 						"os_version_used": schema.StringAttribute{
