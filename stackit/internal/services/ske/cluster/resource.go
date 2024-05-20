@@ -922,12 +922,20 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 	return cnps, deprecatedVersionsUsed, nil
 }
 
-// latestMatchingMachineVersion gets the latest machine image version to be used in the create/update payload
-// it's determined based on the available versions for the input OS (machineName), the minimum version configured by the user and the current version in the cluster
-// if the minimum version is not set, get the current one (if exists) or the latest for the input OS
-// if the minimum version is set but it is a downgrade, use the current version
-// for the minimum version selected, if a patch is not specified, get the latest patch for that minor version
-// for the version returned, check the state and return if it is deprecated or not
+// latestMatchingMachineVersion determines the latest machine image version for the create/update payload.
+// It considers the available versions for the specified OS (OSName), the minimum version configured by the user,
+// and the current version in the cluster. The function's behavior is as follows:
+//
+// 1. If the minimum version is not set:
+//    - Return the current version if it exists.
+//    - Otherwise, return the latest available version for the specified OS.
+//
+// 2. If the minimum version is set:
+//    - If the minimum version is a downgrade, use the current version instead.
+//    - If a patch is not specified for the minimum version, return the latest patch for that minor version.
+//
+// 3. For the selected version, check its state and return it, indicating if it is deprecated or not.
+
 func latestMatchingMachineVersion(availableMachineImages []ske.MachineImage, machineVersionMin *string, machineName string, currentMachineImage *ske.Image) (version *string, deprecated bool, err error) {
 	deprecated = false
 
