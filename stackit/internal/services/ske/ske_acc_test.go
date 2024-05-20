@@ -29,9 +29,9 @@ var clusterResource = map[string]string{
 	"nodepool_name_min":                                "np-acc-min-test",
 	"nodepool_machine_type":                            "b1.2",
 	"nodepool_os_version_min":                          "3815.2",
-	"nodepool_os_version_used":                         "3815.2.2",
+	"nodepool_os_version_used":                         "3815.2.1",
 	"nodepool_os_version_min_new":                      "3815.2.1",
-	"nodepool_os_version_used_new":                     "3815.2.2",
+	"nodepool_os_version_used_new":                     "3815.2.1",
 	"nodepool_os_name":                                 "flatcar",
 	"nodepool_minimum":                                 "2",
 	"nodepool_maximum":                                 "3",
@@ -396,7 +396,7 @@ func TestAccSKE(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				// The fields are not provided in the SKE API when disabled, although set actively.
-				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config", "node_pools.#.os_version_min", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%"},
+				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config", "node_pools.0.os_version_min", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%"},
 			},
 			// 4) Import minimal cluster
 			{
@@ -418,7 +418,7 @@ func TestAccSKE(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config", "node_pools.#.os_version_min"},
+				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config", "node_pools.0.os_version_min"},
 			},
 			// 5) Update kubernetes version, OS version and maintenance end
 			{
