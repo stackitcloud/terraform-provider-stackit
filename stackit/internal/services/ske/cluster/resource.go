@@ -292,7 +292,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"kubernetes_version": schema.StringAttribute{
 				Description:        "Kubernetes version. Must only contain major and minor version (e.g. 1.22). This field is deprecated, use `kubernetes_version_min instead`",
 				Optional:           true,
-				DeprecationMessage: "Use `kubernetes_version_min instead`. Setting a specific kubernetes version would cause errors when the cluster got a kubernetes version minor upgrade, either triggered by automatic or forceful updates. In those cases, this field might not represent the actual kubernetes version used in the cluster.",
+				DeprecationMessage: "Use `kubernetes_version_min instead`. Setting a specific kubernetes version would cause errors during minor version upgrades due to forced updates. In those cases, this field might not represent the actual kubernetes version used in the cluster.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(ctx context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
 						if sr.StateValue.IsNull() || sr.PlanValue.IsNull() {
@@ -928,58 +928,58 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 // if the minimum version is set but it is a downgrade, use the current version
 // for the minimum version selected, if a patch is not specified, get the latest patch for that minor version
 // for the version returned, check the state and return if it is deprecated or not
-func latestMatchingMachineVersion(availableMachineImages []ske.MachineImage, machineVersionMin *string, machineName string, currentMachineImage *ske.Image) (version *string, deprecated bool, err error) {
+func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin *string, OSName string, currentImage *ske.Image) (version *string, deprecated bool, err error) {
 	deprecated = false
 
-	if availableMachineImages == nil {
+	if availableImages == nil {
 		return nil, false, fmt.Errorf("nil available machine versions")
 	}
 
 	var availableMachineVersions []ske.MachineImageVersion
-	for _, machine := range availableMachineImages {
-		if machine.Name != nil && *machine.Name == machineName && machine.Versions != nil {
+	for _, machine := range availableImages {
+		if machine.Name != nil && *machine.Name == OSName && machine.Versions != nil {
 			availableMachineVersions = *machine.Versions
 		}
 	}
 
-	if len(availableMachineImages) == 0 {
-		return nil, false, fmt.Errorf("there are no available machine versions for the provided machine image name %s", machineName)
+	if len(availableImages) == 0 {
+		return nil, false, fmt.Errorf("there are no available machine versions for the provided machine image name %s", OSName)
 	}
 
-	if machineVersionMin == nil {
-		// different machine OS have different versions
-		// so if the current machine is nil or the machina name was updated,  get the latest one
-		// otherwise, the current machine version should be used
-		if currentMachineImage == nil || currentMachineImage.Name == nil || *currentMachineImage.Name != machineName {
+	if versionMin == nil {
+		// Different machine OS have different versions.
+		// If there is no current machine version or the machine name has been updated,
+		// retrieve the latest supported version. Otherwise, use the current machine version.
+		if currentImage == nil || currentImage.Name == nil || *currentImage.Name != OSName {
 			latestVersion, err := getLatestSupportedMachineVersion(availableMachineVersions)
 			if err != nil {
 				return nil, false, fmt.Errorf("get latest supported machine image version: %w", err)
 			}
 			return latestVersion, false, nil
 		}
-		machineVersionMin = currentMachineImage.Version
-	} else if currentMachineImage != nil && currentMachineImage.Name != nil && *currentMachineImage.Name == machineName {
+		versionMin = currentImage.Version
+	} else if currentImage != nil && currentImage.Name != nil && *currentImage.Name == OSName {
 		// For an already existing cluster, if os_version_min is set to a lower version than what is being used in the cluster
 		// return the currently used version
-		machineVersionUsed := *currentMachineImage.Version
-		machineVersionMinString := *machineVersionMin
+		machineVersionUsed := *currentImage.Version
+		machineVersionMinString := *versionMin
 
 		minVersionPrefixed := "v" + machineVersionMinString
 		usedVersionPrefixed := "v" + machineVersionUsed
 
 		if semver.Compare(minVersionPrefixed, usedVersionPrefixed) == -1 {
-			machineVersionMin = currentMachineImage.Version
+			versionMin = currentImage.Version
 		}
 	}
 
 	var fullVersion bool
 	versionExp := validate.FullVersionRegex
 	versionRegex := regexp.MustCompile(versionExp)
-	if versionRegex.MatchString(*machineVersionMin) {
+	if versionRegex.MatchString(*versionMin) {
 		fullVersion = true
 	}
 
-	providedVersionPrefixed := "v" + *machineVersionMin
+	providedVersionPrefixed := "v" + *versionMin
 
 	if !semver.IsValid(providedVersionPrefixed) {
 		return nil, false, fmt.Errorf("provided version is invalid")
