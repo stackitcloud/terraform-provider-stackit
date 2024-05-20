@@ -959,15 +959,12 @@ func latestMatchingMachineVersion(availableMachineImages []ske.MachineImage, mac
 		}
 		machineVersionMin = currentMachineImage.Version
 	} else if currentMachineImage != nil && currentMachineImage.Name != nil && *currentMachineImage.Name == machineName {
-		// For an already existing cluster, if os_version_min is set to a lower version than what is being used in the cluster
-		// return the currently used version
-		machineVersionUsed := *currentMachineImage.Version
-		machineVersionMinString := *machineVersionMin
+        // If the os_version_min is set but is lower than the current version used in the cluster,
+        // retain the current version to avoid downgrading.
+		minimumVersion := "v" + *machineVersionMin
+		currentVersion := "v" + *currentMachineImage.Version
 
-		minVersionPrefixed := "v" + machineVersionMinString
-		usedVersionPrefixed := "v" + machineVersionUsed
-
-		if semver.Compare(minVersionPrefixed, usedVersionPrefixed) == -1 {
+		if semver.Compare(minimumVersion, currentVersion) == -1 {
 			machineVersionMin = currentMachineImage.Version
 		}
 	}
