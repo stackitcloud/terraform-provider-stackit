@@ -228,6 +228,20 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				},
 			},
 
+			"network": schema.SingleNestedAttribute{
+				Description: "Network block as defined below.",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"id": schema.StringAttribute{
+						Description: "ID of the STACKIT Network Area (SNA) network into which the cluster will be deployed.",
+						Computed:    true,
+						Validators: []validator.String{
+							validate.UUID(),
+						},
+					},
+				},
+			},
+
 			"hibernations": schema.ListNestedAttribute{
 				Description: "One or more hibernation block as defined below.",
 				Computed:    true,

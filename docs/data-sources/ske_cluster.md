@@ -40,6 +40,7 @@ This should be used with care since it also disables a couple of other features 
 - `kubernetes_version_min` (String) The minimum Kubernetes version, this field is always nil. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html). To get the current kubernetes version being used for your cluster, use the `kubernetes_version_used` field.
 - `kubernetes_version_used` (String) Full Kubernetes version used. For example, if `1.22` was selected, this value may result to `1.22.15`
 - `maintenance` (Attributes) A single maintenance block as defined below (see [below for nested schema](#nestedatt--maintenance))
+- `network` (Attributes) Network block as defined below. (see [below for nested schema](#nestedatt--network))
 - `node_pools` (Attributes List) One or more `node_pool` block as defined below. (see [below for nested schema](#nestedatt--node_pools))
 
 <a id="nestedatt--extensions"></a>
@@ -88,6 +89,14 @@ Read-Only:
 - `enable_machine_image_version_updates` (Boolean) Flag to enable/disable auto-updates of the OS image version.
 - `end` (String) Date time for maintenance window end.
 - `start` (String) Date time for maintenance window start.
+
+
+<a id="nestedatt--network"></a>
+### Nested Schema for `network`
+
+Read-Only:
+
+- `id` (String) ID of the STACKIT Network Area (SNA) network into which the cluster will be deployed.
 
 
 <a id="nestedatt--node_pools"></a>

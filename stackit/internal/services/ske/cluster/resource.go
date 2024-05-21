@@ -73,6 +73,7 @@ type Model struct {
 	AllowPrivilegedContainers types.Bool   `tfsdk:"allow_privileged_containers"`
 	NodePools                 types.List   `tfsdk:"node_pools"`
 	Maintenance               types.Object `tfsdk:"maintenance"`
+	Network                   types.Object `tfsdk:"network"`
 	Hibernations              types.List   `tfsdk:"hibernations"`
 	Extensions                types.Object `tfsdk:"extensions"`
 	KubeConfig                types.String `tfsdk:"kube_config"`
@@ -146,6 +147,16 @@ var maintenanceTypes = map[string]attr.Type{
 	"enable_machine_image_version_updates": basetypes.BoolType{},
 	"start":                                basetypes.StringType{},
 	"end":                                  basetypes.StringType{},
+}
+
+// Struct corresponding to Model.Network
+type network struct {
+	ID types.String `tfsdk:"id"`
+}
+
+// Types corresponding to network
+var networkTypes = map[string]attr.Type{
+	"id": basetypes.StringType{},
 }
 
 // Struct corresponding to Model.Hibernations[i]
@@ -491,6 +502,22 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					},
 				},
 			},
+			"network": schema.SingleNestedAttribute{
+				Description: "Network block as defined below.",
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"id": schema.StringAttribute{
+						Description: "ID of the STACKIT Network Area (SNA) network into which the cluster will be deployed.",
+						Optional:    true,
+						Validators: []validator.String{
+							validate.UUID(),
+						},
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+				},
+			},
 			"hibernations": schema.ListNestedAttribute{
 				Description: "One or more hibernation block as defined below.",
 				Optional:    true,
@@ -731,6 +758,11 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating maintenance API payload: %v", err))
 		return
 	}
+	network, err := toNetworkPayload(ctx, model)
+	if err != nil {
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating network API payload: %v", err))
+		return
+	}
 	hibernations, err := toHibernationsPayload(ctx, model)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating hibernations API payload: %v", err))
@@ -747,6 +779,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		Hibernation: hibernations,
 		Kubernetes:  kubernetes,
 		Maintenance: maintenance,
+		Network:     network,
 		Nodepools:   &nodePools,
 	}
 	_, err = r.client.CreateOrUpdateCluster(ctx, projectId, name).CreateOrUpdateClusterPayload(payload).Execute()
@@ -1174,6 +1207,22 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 	}, nil
 }
 
+func toNetworkPayload(ctx context.Context, m *Model) (*ske.V1Network, error) {
+	if m.Network.IsNull() || m.Network.IsUnknown() {
+		return nil, nil
+	}
+
+	network := network{}
+	diags := m.Network.As(ctx, &network, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting network object: %v", diags.Errors())
+	}
+
+	return &ske.V1Network{
+		Id: conversion.StringValueToPointer(network.ID),
+	}, nil
+}
+
 func mapFields(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	if cl == nil {
 		return fmt.Errorf("response input is nil")
@@ -1206,19 +1255,23 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model) error {
 
 	err := mapNodePools(ctx, cl, m)
 	if err != nil {
-		return fmt.Errorf("mapping node_pools: %w", err)
+		return fmt.Errorf("map node_pools: %w", err)
 	}
 	err = mapMaintenance(ctx, cl, m)
 	if err != nil {
-		return fmt.Errorf("mapping maintenance: %w", err)
+		return fmt.Errorf("map maintenance: %w", err)
+	}
+	err = mapNetwork(cl, m)
+	if err != nil {
+		return fmt.Errorf("map network: %w", err)
 	}
 	err = mapHibernations(cl, m)
 	if err != nil {
-		return fmt.Errorf("mapping hibernations: %w", err)
+		return fmt.Errorf("map hibernations: %w", err)
 	}
 	err = mapExtensions(ctx, cl, m)
 	if err != nil {
-		return fmt.Errorf("mapping extensions: %w", err)
+		return fmt.Errorf("map extensions: %w", err)
 	}
 	return nil
 }
@@ -1421,9 +1474,30 @@ func mapMaintenance(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	}
 	maintenanceObject, diags := types.ObjectValue(maintenanceTypes, maintenanceValues)
 	if diags.HasError() {
-		return fmt.Errorf("creating flavor: %w", core.DiagsToError(diags))
+		return fmt.Errorf("create maintenance object: %w", core.DiagsToError(diags))
 	}
 	m.Maintenance = maintenanceObject
+	return nil
+}
+
+func mapNetwork(cl *ske.Cluster, m *Model) error {
+	if cl.Network == nil {
+		m.Network = types.ObjectNull(networkTypes)
+		return nil
+	}
+
+	id := types.StringNull()
+	if cl.Network.Id != nil {
+		id = types.StringValue(*cl.Network.Id)
+	}
+	networkValues := map[string]attr.Value{
+		"id": id,
+	}
+	networkObject, diags := types.ObjectValue(networkTypes, networkValues)
+	if diags.HasError() {
+		return fmt.Errorf("create network object: %w", core.DiagsToError(diags))
+	}
+	m.Network = networkObject
 	return nil
 }
 

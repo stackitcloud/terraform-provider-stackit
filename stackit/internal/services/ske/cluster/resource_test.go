@@ -49,6 +49,7 @@ func TestMapFields(t *testing.T) {
 				AllowPrivilegedContainers: types.BoolNull(),
 				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 				Maintenance:               types.ObjectNull(maintenanceTypes),
+				Network:                   types.ObjectNull(networkTypes),
 				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
 				Extensions:                types.ObjectNull(extensionsTypes),
 				KubeConfig:                types.StringNull(),
@@ -91,6 +92,9 @@ func TestMapFields(t *testing.T) {
 						Start: utils.Ptr("0000-01-02T03:04:05+06:00"),
 						End:   utils.Ptr("0010-11-12T13:14:15Z"),
 					},
+				},
+				Network: &ske.V1Network{
+					Id: utils.Ptr("nid"),
 				},
 				Name: utils.Ptr("name"),
 				Nodepools: &[]ske.Nodepool{
@@ -194,6 +198,9 @@ func TestMapFields(t *testing.T) {
 					"start":                                types.StringValue("03:04:05+06:00"),
 					"end":                                  types.StringValue("13:14:15Z"),
 				}),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"id": types.StringValue("nid"),
+				}),
 				Hibernations: types.ListValueMust(
 					types.ObjectType{AttrTypes: hibernationTypes},
 					[]attr.Value{
@@ -220,6 +227,30 @@ func TestMapFields(t *testing.T) {
 					}),
 				}),
 				KubeConfig: types.StringNull(),
+			},
+			true,
+		},
+		{
+			"nil_network_id",
+			types.ObjectNull(extensionsTypes),
+			&ske.Cluster{
+				Name:    utils.Ptr("name"),
+				Network: &ske.V1Network{},
+			},
+			Model{
+				Id:                        types.StringValue("pid,name"),
+				ProjectId:                 types.StringValue("pid"),
+				Name:                      types.StringValue("name"),
+				KubernetesVersion:         types.StringNull(),
+				AllowPrivilegedContainers: types.BoolNull(),
+				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:               types.ObjectNull(maintenanceTypes),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"id": types.StringNull(),
+				}),
+				Hibernations: types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions:   types.ObjectNull(extensionsTypes),
+				KubeConfig:   types.StringNull(),
 			},
 			true,
 		},
@@ -1932,6 +1963,66 @@ func TestGetLatestSupportedMachineVersion(t *testing.T) {
 			diff := cmp.Diff(version, tt.expectedVersion)
 			if diff != "" {
 				t.Fatalf("Output is not as expected: %s", diff)
+			}
+		})
+	}
+}
+
+func TestToNetworkPayload(t *testing.T) {
+	tests := []struct {
+		description string
+		model       *Model
+		expected    *ske.V1Network
+		isValid     bool
+	}{
+		{
+			"base",
+			&Model{
+				ProjectId: types.StringValue("pid"),
+				Name:      types.StringValue("name"),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"id": types.StringValue("nid"),
+				}),
+			},
+			&ske.V1Network{
+				Id: utils.Ptr("nid"),
+			},
+			true,
+		},
+		{
+			"no_id",
+			&Model{
+				ProjectId: types.StringValue("pid"),
+				Name:      types.StringValue("name"),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"id": types.StringNull(),
+				}),
+			},
+			&ske.V1Network{},
+			true,
+		},
+		{
+			"no_network",
+			&Model{
+				ProjectId: types.StringValue("pid"),
+				Name:      types.StringValue("name"),
+				Network:   types.ObjectNull(networkTypes),
+			},
+			nil,
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			payload, err := toNetworkPayload(context.Background(), tt.model)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid {
+				diff := cmp.Diff(payload, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
 			}
 		})
 	}
