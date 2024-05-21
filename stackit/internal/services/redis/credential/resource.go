@@ -104,7 +104,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		"credential_id": "The credential's ID.",
 		"instance_id":   "ID of the Redis instance.",
 		"project_id":    "STACKIT Project ID to which the instance is associated.",
-		"uri":           "Connection URI. Currently the returned uri doesn't support SSL, but you can enable it by using `rediss://` instead of `redis://`. We will provide the SSL connection in a future release",
+		"uri":           "Connection URI.",
 	}
 
 	resp.Schema = schema.Schema{

@@ -37,5 +37,5 @@ data "stackit_redis_credential" "example" {
 - `load_balanced_host` (String)
 - `password` (String, Sensitive)
 - `port` (Number)
-- `uri` (String) Connection URI. Currently the returned uri doesn't support SSL, but you can enable it by using `rediss://` instead of `redis://`. We will provide the SSL connection in a future release
+- `uri` (String) Connection URI.
 - `username` (String)
