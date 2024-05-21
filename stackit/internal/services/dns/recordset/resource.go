@@ -184,7 +184,7 @@ func (r *recordSetResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				},
 			},
 			"active": schema.BoolAttribute{
-				Description: "Specifies if the record set is active or not.",
+				Description: "Specifies if the record set is active or not. Defaults to `true`",
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),

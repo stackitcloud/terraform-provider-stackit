@@ -42,12 +42,12 @@ resource "stackit_dns_zone" "example" {
 - `default_ttl` (Number) Default time to live. E.g. 3600.
 - `description` (String) Description of the zone.
 - `expire_time` (Number) Expire time. E.g. 1209600.
-- `is_reverse_zone` (Boolean) Specifies, if the zone is a reverse zone or not.
+- `is_reverse_zone` (Boolean) Specifies, if the zone is a reverse zone or not. Defaults to `false`
 - `negative_cache` (Number) Negative caching. E.g. 60
 - `primaries` (List of String) Primary name server for secondary zone. E.g. ["1.2.3.4"]
 - `refresh_time` (Number) Refresh time. E.g. 3600
 - `retry_time` (Number) Retry time. E.g. 600
-- `type` (String) Zone type. E.g. `primary`
+- `type` (String) Zone type. Defaults to `primary`
 
 ### Read-Only
 

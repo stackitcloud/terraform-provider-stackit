@@ -105,7 +105,7 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		"cluster_name":   "Name of the SKE cluster.",
 		"project_id":     "STACKIT project ID to which the cluster is associated.",
 		"kube_config":    "Raw short-lived admin kubeconfig.",
-		"expiration":     "Expiration time of the kubeconfig, in seconds.",
+		"expiration":     "Expiration time of the kubeconfig, in seconds. Defaults to `3600`",
 		"expires_at":     "Timestamp when the kubeconfig expires",
 		"refresh":        "If set to true, the provider will check if the kubeconfig has expired and will generated a new valid one in-place",
 	}

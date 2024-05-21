@@ -375,7 +375,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							},
 						},
 						"os_name": schema.StringAttribute{
-							Description: "The name of the OS image. E.g. `flatcar`.",
+							Description: "The name of the OS image. Defaults to `flatcar`.",
 							Optional:    true,
 							Computed:    true,
 							Default:     stringdefault.StaticString(DefaultOSName),
@@ -397,13 +397,13 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Computed:    true,
 						},
 						"volume_type": schema.StringAttribute{
-							Description: "Specifies the volume type. E.g. `storage_premium_perf1`.",
+							Description: "Specifies the volume type. Defaults to `storage_premium_perf1`.",
 							Optional:    true,
 							Computed:    true,
 							Default:     stringdefault.StaticString(DefaultVolumeType),
 						},
 						"volume_size": schema.Int64Attribute{
-							Description: "The volume size in GB. E.g. `20`",
+							Description: "The volume size in GB. Defaults to `20`",
 							Optional:    true,
 							Computed:    true,
 							Default:     int64default.StaticInt64(DefaultVolumeSizeGB),
@@ -441,7 +441,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							},
 						},
 						"cri": schema.StringAttribute{
-							Description: "Specifies the container runtime. E.g. `containerd`",
+							Description: "Specifies the container runtime. Defaults to `containerd`",
 							Optional:    true,
 							Computed:    true,
 							Default:     stringdefault.StaticString(DefaultCRI),

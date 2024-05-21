@@ -203,13 +203,13 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 			},
 
 			"scheme": schema.StringAttribute{
-				Description: "Specifies the http scheme. E.g. `https`.",
+				Description: "Specifies the http scheme. Defaults to `https`.",
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString(DefaultScheme),
 			},
 			"scrape_interval": schema.StringAttribute{
-				Description: "Specifies the scrape interval as duration string. E.g. `5m`.",
+				Description: "Specifies the scrape interval as duration string. Defaults to `5m`.",
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{
@@ -218,7 +218,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 				Default: stringdefault.StaticString(DefaultScrapeInterval),
 			},
 			"scrape_timeout": schema.StringAttribute{
-				Description: "Specifies the scrape timeout as duration string. E.g.`2m`.",
+				Description: "Specifies the scrape timeout as duration string. Defaults to `2m`.",
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{
@@ -227,7 +227,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 				Default: stringdefault.StaticString(DefaultScrapeTimeout),
 			},
 			"sample_limit": schema.Int64Attribute{
-				Description: "Specifies the scrape sample limit. Upper limit depends on the service plan. Default is `5000`.",
+				Description: "Specifies the scrape sample limit. Upper limit depends on the service plan. Defaults to `5000`.",
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.Int64{
@@ -251,7 +251,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 				),
 				Attributes: map[string]schema.Attribute{
 					"enable_url_parameters": schema.BoolAttribute{
-						Description: "Specifies if URL parameters are enabled.",
+						Description: "Specifies if URL parameters are enabled. Defaults to `true`",
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(DefaultSAML2EnableURLParameters),

@@ -211,7 +211,7 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"is_reverse_zone": schema.BoolAttribute{
-				Description: "Specifies, if the zone is a reverse zone or not.",
+				Description: "Specifies, if the zone is a reverse zone or not. Defaults to `false`",
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
@@ -254,7 +254,7 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"type": schema.StringAttribute{
-				Description: "Zone type. E.g. `primary`",
+				Description: "Zone type. Defaults to `primary`",
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("primary"),

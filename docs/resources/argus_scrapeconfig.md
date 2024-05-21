@@ -47,10 +47,10 @@ resource "stackit_argus_scrapeconfig" "example" {
 
 - `basic_auth` (Attributes) A basic authentication block. (see [below for nested schema](#nestedatt--basic_auth))
 - `saml2` (Attributes) A SAML2 configuration block. (see [below for nested schema](#nestedatt--saml2))
-- `sample_limit` (Number) Specifies the scrape sample limit. Upper limit depends on the service plan. Default is `5000`.
-- `scheme` (String) Specifies the http scheme. E.g. `https`.
-- `scrape_interval` (String) Specifies the scrape interval as duration string. E.g. `5m`.
-- `scrape_timeout` (String) Specifies the scrape timeout as duration string. E.g.`2m`.
+- `sample_limit` (Number) Specifies the scrape sample limit. Upper limit depends on the service plan. Defaults to `5000`.
+- `scheme` (String) Specifies the http scheme. Defaults to `https`.
+- `scrape_interval` (String) Specifies the scrape interval as duration string. Defaults to `5m`.
+- `scrape_timeout` (String) Specifies the scrape timeout as duration string. Defaults to `2m`.
 
 ### Read-Only
 
@@ -82,4 +82,4 @@ Required:
 
 Optional:
 
-- `enable_url_parameters` (Boolean) Specifies if URL parameters are enabled.
+- `enable_url_parameters` (Boolean) Specifies if URL parameters are enabled. Defaults to `true`

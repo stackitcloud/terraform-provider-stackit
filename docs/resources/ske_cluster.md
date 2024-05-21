@@ -75,16 +75,16 @@ Required:
 
 Optional:
 
-- `cri` (String) Specifies the container runtime. E.g. `containerd`
+- `cri` (String) Specifies the container runtime. Defaults to `containerd`
 - `labels` (Map of String) Labels to add to each node.
 - `max_surge` (Number) Maximum number of additional VMs that are created during an update.
 - `max_unavailable` (Number) Maximum number of VMs that that can be unavailable during an update.
-- `os_name` (String) The name of the OS image. E.g. `flatcar`.
+- `os_name` (String) The name of the OS image. Defaults to `flatcar`.
 - `os_version` (String, Deprecated) This field is deprecated, use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead
 - `os_version_min` (String) The minimum OS image version. This field will be used to set the minimum OS image version on creation/update of the cluster. If unset, the latest supported OS image version will be used. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html). To get the current OS image version being used for the node pool, use the read-only `os_version_used` field.
 - `taints` (Attributes List) Specifies a taint list as defined below. (see [below for nested schema](#nestedatt--node_pools--taints))
-- `volume_size` (Number) The volume size in GB. E.g. `20`
-- `volume_type` (String) Specifies the volume type. E.g. `storage_premium_perf1`.
+- `volume_size` (Number) The volume size in GB. Defaults to `20`
+- `volume_type` (String) Specifies the volume type. Defaults to `storage_premium_perf1`.
 
 Read-Only:
 
