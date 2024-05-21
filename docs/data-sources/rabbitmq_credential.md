@@ -39,6 +39,6 @@ data "stackit_rabbitmq_credential" "example" {
 - `management` (String)
 - `password` (String, Sensitive)
 - `port` (Number)
-- `uri` (String)
+- `uri` (String, Sensitive)
 - `uris` (List of String)
 - `username` (String)

@@ -37,5 +37,5 @@ data "stackit_redis_credential" "example" {
 - `load_balanced_host` (String)
 - `password` (String, Sensitive)
 - `port` (Number)
-- `uri` (String) Connection URI.
+- `uri` (String, Sensitive) Connection URI.
 - `username` (String)

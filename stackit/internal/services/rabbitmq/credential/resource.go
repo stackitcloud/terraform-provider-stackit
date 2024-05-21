@@ -179,7 +179,8 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Computed: true,
 			},
 			"uri": schema.StringAttribute{
-				Computed: true,
+				Computed:  true,
+				Sensitive: true,
 			},
 			"uris": schema.ListAttribute{
 				ElementType: types.StringType,

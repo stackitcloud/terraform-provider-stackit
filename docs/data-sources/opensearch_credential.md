@@ -37,5 +37,5 @@ data "stackit_opensearch_credential" "example" {
 - `password` (String, Sensitive)
 - `port` (Number)
 - `scheme` (String)
-- `uri` (String)
+- `uri` (String, Sensitive)
 - `username` (String)

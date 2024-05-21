@@ -136,6 +136,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			"uri": schema.StringAttribute{
 				Description: descriptions["uri"],
 				Computed:    true,
+				Sensitive:   true,
 			},
 			"username": schema.StringAttribute{
 				Computed: true,

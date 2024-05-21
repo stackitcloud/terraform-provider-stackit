@@ -140,7 +140,8 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Computed: true,
 			},
 			"uri": schema.StringAttribute{
-				Computed: true,
+				Computed:  true,
+				Sensitive: true,
 			},
 			"uris": schema.ListAttribute{
 				ElementType: types.StringType,

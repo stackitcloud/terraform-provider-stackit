@@ -35,5 +35,5 @@ data "stackit_logme_credential" "example" {
 - `id` (String) Terraform's internal data source. identifier. It is structured as "`project_id`,`instance_id`,`credential_id`".
 - `password` (String, Sensitive)
 - `port` (Number)
-- `uri` (String)
+- `uri` (String, Sensitive)
 - `username` (String)
