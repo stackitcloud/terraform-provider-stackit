@@ -30,7 +30,7 @@ resource "stackit_ske_kubeconfig" "example" {
 
 ### Optional
 
-- `expiration` (Number) Expiration time of the kubeconfig, in seconds.
+- `expiration` (Number) Expiration time of the kubeconfig, in seconds. Defaults to `3600`
 - `refresh` (Boolean) If set to true, the provider will check if the kubeconfig has expired and will generated a new valid one in-place
 
 ### Read-Only

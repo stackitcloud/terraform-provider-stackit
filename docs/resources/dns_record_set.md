@@ -35,7 +35,7 @@ resource "stackit_dns_record_set" "example" {
 
 ### Optional
 
-- `active` (Boolean) Specifies if the record set is active or not.
+- `active` (Boolean) Specifies if the record set is active or not. Defaults to `true`
 - `comment` (String) Comment.
 - `ttl` (Number) Time to live. E.g. 3600
 - `type` (String) The record set type. E.g. `A` or `CNAME`
