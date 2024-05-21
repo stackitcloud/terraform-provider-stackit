@@ -40,5 +40,5 @@ resource "stackit_postgresql_credential" "example" {
 - `name` (String)
 - `password` (String, Sensitive)
 - `port` (Number)
-- `uri` (String)
+- `uri` (String, Sensitive)
 - `username` (String)

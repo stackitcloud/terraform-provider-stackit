@@ -82,7 +82,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 		"credential_id": "The credential's ID.",
 		"instance_id":   "ID of the Redis instance.",
 		"project_id":    "STACKIT project ID to which the instance is associated.",
-		"uri":           "Connection URI. Currently the returned uri doesn't support SSL, but you can enable it by using `rediss://` instead of `redis://`. We will provide the SSL connection in a future release",
+		"uri":           "Connection URI.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -136,6 +136,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			"uri": schema.StringAttribute{
 				Description: descriptions["uri"],
 				Computed:    true,
+				Sensitive:   true,
 			},
 			"username": schema.StringAttribute{
 				Computed: true,
