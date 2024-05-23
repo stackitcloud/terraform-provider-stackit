@@ -18,10 +18,10 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.14.0
-	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.13.0
+	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.14.0
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.13.0
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.12.1
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.14.0
