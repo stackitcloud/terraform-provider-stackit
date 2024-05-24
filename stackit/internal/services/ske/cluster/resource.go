@@ -505,10 +505,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"network": schema.SingleNestedAttribute{
 				Description: "Network block as defined below.",
 				Optional:    true,
-				Computed:    true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Description: "ID of the STACKIT Network Area (SNA) network into which the cluster will be deployed.",
@@ -1487,6 +1483,18 @@ func mapMaintenance(ctx context.Context, cl *ske.Cluster, m *Model) error {
 func mapNetwork(cl *ske.Cluster, m *Model) error {
 	if cl.Network == nil {
 		m.Network = types.ObjectNull(networkTypes)
+		return nil
+	}
+
+	// If the network field is not provided, the SKE API returns an empty object.
+	// If we parse that object into the terraform model, it will produce an inconsistent result after apply
+	// error
+
+	emptyNetwork := &ske.V1Network{}
+	if *cl.Network == *emptyNetwork && m.Network.IsNull() {
+		if m.Network.Attributes() == nil {
+			m.Network = types.ObjectNull(networkTypes)
+		}
 		return nil
 	}
 
