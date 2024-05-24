@@ -146,10 +146,10 @@ github.com/skeema/knownhosts v1.2.2 h1:Iug2P4fLmDw9f41PB6thxUkNUkJzB5i+1/exaj40L
 github.com/skeema/knownhosts v1.2.2/go.mod h1:xYbVRSPxqBZFrdmDyMmsOs+uX1UZC3nTN3ThzgDxUwo=
 github.com/stackitcloud/stackit-sdk-go/core v0.12.0 h1:auIzUUNRuydKOScvpICP4MifGgvOajiDQd+ncGmBL0U=
 github.com/stackitcloud/stackit-sdk-go/core v0.12.0/go.mod h1:mDX1mSTsB3mP+tNBGcFNx6gH1mGBN4T+dVt+lcw7nlw=
-github.com/stackitcloud/stackit-sdk-go/services/argus v0.10.0 h1:FAYOt6UBy/F2jPH2C/NnZnbjLZryJBjtM3afLVgGc4w=
-github.com/stackitcloud/stackit-sdk-go/services/argus v0.10.0/go.mod h1:nVllQfYODhX1q3bgwVTLO7wHOp+8NMLiKbn3u/Dg5nU=
-github.com/stackitcloud/stackit-sdk-go/services/dns v0.9.1 h1:pj2nAJvgzFSckA56rCPdi7StXGrr06go8qejI1weNJ8=
-github.com/stackitcloud/stackit-sdk-go/services/dns v0.9.1/go.mod h1:MdZcRbs19s2NLeJmSLSoqTzm9IPIQhE1ZEMpo9gePq0=
+github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0 h1:JVEx/ouHB6PlwGzQa3ywyDym1HTWo3WgrxAyXprCnuM=
+github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0/go.mod h1:nVllQfYODhX1q3bgwVTLO7wHOp+8NMLiKbn3u/Dg5nU=
+github.com/stackitcloud/stackit-sdk-go/services/dns v0.10.0 h1:QIZfs6nJ/l2pOweH1E+wazXnlAUtqisVbYUxWAokTbc=
+github.com/stackitcloud/stackit-sdk-go/services/dns v0.10.0/go.mod h1:MdZcRbs19s2NLeJmSLSoqTzm9IPIQhE1ZEMpo9gePq0=
 github.com/stackitcloud/stackit-sdk-go/services/iaas v0.3.0 h1:0Nb7CruTyM/HxhZQjntQUHJqwCoKjFUC9KZcBBj+c5c=
 github.com/stackitcloud/stackit-sdk-go/services/iaas v0.3.0/go.mod h1:XtJA9FMK/yJ0dj4HtRAogmZPRUsZiFcuwUSfHYNASjo=
 github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.12.0 h1:LAteZO46XmqTsmPw0QV8n8WiGM205pxrcqHqWznNmyY=
@@ -174,8 +174,8 @@ github.com/stackitcloud/stackit-sdk-go/services/redis v0.14.0 h1:wcfA/3mTI7UmTFm
 github.com/stackitcloud/stackit-sdk-go/services/redis v0.14.0/go.mod h1:3LhiTR/DMbKR2HuleTzlFHltR1MT1KD0DeW46X6K2GE=
 github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.8.0 h1:7AIvLkB7JZ5lYKtYLwI0rgJ0185hwQC1PFiUrjcinDM=
 github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.8.0/go.mod h1:p16qz/pAW8b1gEhqMpIgJfutRPeDPqQLlbVGyCo3f8o=
-github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.7.0 h1:1Ho+M4DyZHrwbDe1peW//x+/hegIuaUdZqbQEbPlr4k=
-github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.7.0/go.mod h1:LX0Mcyr7/QP77zf7e05fHCJO38RMuTxr7nEDUDZ3oPQ=
+github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.8.0 h1:pJBG455kmtbQFpCxcBfBK8wOuEnmsMv3h90LFcdj3q0=
+github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.8.0/go.mod h1:LX0Mcyr7/QP77zf7e05fHCJO38RMuTxr7nEDUDZ3oPQ=
 github.com/stackitcloud/stackit-sdk-go/services/ske v0.15.0 h1:7iTzdiglvJmKMaHlr4JUPvNOmA730rAniry74cnZ8zI=
 github.com/stackitcloud/stackit-sdk-go/services/ske v0.15.0/go.mod h1:0fFs4R7kg+gU7FNAIzzFvlCZJz6gyZ8CFhbK3eSrAwQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
