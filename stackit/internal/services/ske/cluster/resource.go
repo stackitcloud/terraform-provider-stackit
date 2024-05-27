@@ -399,7 +399,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							},
 						},
 						"os_version": schema.StringAttribute{
-							Description:        "This field is deprecated, use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead",
+							Description:        "This field is deprecated, use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead.",
 							DeprecationMessage: "Use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead. Setting a specific OS image version will cause errors during minor OS upgrades due to forced updates.",
 							Optional:           true,
 						},
@@ -593,10 +593,6 @@ func (r *clusterResource) ConfigValidators(_ context.Context) []resource.ConfigV
 		resourcevalidator.Conflicting(
 			path.MatchRoot("kubernetes_version"),
 			path.MatchRoot("kubernetes_version_min"),
-		),
-		resourcevalidator.Conflicting(
-			path.MatchRoot("node_pools").AtAnyListIndex().AtName("os_version_min"),
-			path.MatchRoot("node_pools").AtAnyListIndex().AtName("os_version"),
 		),
 	}
 }
@@ -850,6 +846,11 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 	for i := range nodePools {
 		nodePool := nodePools[i]
 
+		name := conversion.StringValueToPointer(nodePool.Name)
+		if name == nil {
+			return nil, nil, fmt.Errorf("found nil node pool name for node_pool[%d]", i)
+		}
+
 		// taints
 		taintsModel := []taint{}
 		diags := nodePool.Taints.ElementsAs(ctx, &taintsModel, false)
@@ -903,17 +904,16 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 
 		providedVersionMin := conversion.StringValueToPointer(nodePool.OSVersionMin)
 		if !nodePool.OSVersion.IsNull() {
+			if providedVersionMin != nil {
+				return nil, nil, fmt.Errorf("both `os_version` and `os_version_min` are set for for node_pool %q. Please use `os_version_min` only, `os_version` is deprecated", *name)
+			}
 			// os_version field deprecation
 			// this if clause should be removed once os_version field is completely removed
 			// os_version field value is used as minimum os version
 			providedVersionMin = conversion.StringValueToPointer(nodePool.OSVersion)
 		}
 
-		name := conversion.StringValueToPointer(nodePool.Name)
 		machineOSName := conversion.StringValueToPointer(nodePool.OSName)
-		if name == nil {
-			return nil, nil, fmt.Errorf("found nil node pool name for node_pool[%d]", i)
-		}
 		if machineOSName == nil {
 			return nil, nil, fmt.Errorf("found nil machine name for node_pool %q", *name)
 		}
