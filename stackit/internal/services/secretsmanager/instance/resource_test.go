@@ -20,16 +20,16 @@ import (
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
-		description string
-		input       *secretsmanager.Instance
-		aclList     *secretsmanager.AclList
-		expected    Model
-		isValid     bool
+		description      string
+		input            *secretsmanager.Instance
+		ListACLsResponse *secretsmanager.ListACLsResponse
+		expected         Model
+		isValid          bool
 	}{
 		{
 			"default_values",
 			&secretsmanager.Instance{},
-			&secretsmanager.AclList{},
+			&secretsmanager.ListACLsResponse{},
 			Model{
 				Id:         types.StringValue("pid,iid"),
 				InstanceId: types.StringValue("iid"),
@@ -44,8 +44,8 @@ func TestMapFields(t *testing.T) {
 			&secretsmanager.Instance{
 				Name: utils.Ptr("name"),
 			},
-			&secretsmanager.AclList{
-				Acls: &[]secretsmanager.Acl{
+			&secretsmanager.ListACLsResponse{
+				Acls: &[]secretsmanager.ACL{
 					{
 						Cidr: utils.Ptr("cidr-1"),
 						Id:   utils.Ptr("id-cidr-1"),
@@ -76,7 +76,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"nil_response",
 			nil,
-			&secretsmanager.AclList{},
+			&secretsmanager.ListACLsResponse{},
 			Model{},
 			false,
 		},
@@ -90,7 +90,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_resource_id",
 			&secretsmanager.Instance{},
-			&secretsmanager.AclList{},
+			&secretsmanager.ListACLsResponse{},
 			Model{},
 			false,
 		},
@@ -101,7 +101,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapFields(tt.input, tt.aclList, state)
+			err := mapFields(tt.input, tt.ListACLsResponse, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -179,8 +179,8 @@ func TestToCreatePayload(t *testing.T) {
 
 func TestUpdateACLs(t *testing.T) {
 	// This is the response used when getting all ACLs currently, across all tests
-	getAllACLsResp := secretsmanager.AclList{
-		Acls: &[]secretsmanager.Acl{
+	getAllACLsResp := secretsmanager.ListACLsResponse{
+		Acls: &[]secretsmanager.ACL{
 			{
 				Cidr: utils.Ptr("acl-1"),
 				Id:   utils.Ptr("id-acl-1"),
@@ -391,7 +391,7 @@ func TestUpdateACLs(t *testing.T) {
 					return
 				}
 
-				resp := secretsmanager.Acl{
+				resp := secretsmanager.ACL{
 					Cidr: utils.Ptr(cidr),
 					Id:   utils.Ptr(fmt.Sprintf("id-%s", cidr)),
 				}
