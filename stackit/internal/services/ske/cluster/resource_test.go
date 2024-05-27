@@ -231,7 +231,7 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
-			"nil_network_id",
+			"empty_network",
 			types.ObjectNull(extensionsTypes),
 			&ske.Cluster{
 				Name:    utils.Ptr("name"),
@@ -245,12 +245,10 @@ func TestMapFields(t *testing.T) {
 				AllowPrivilegedContainers: types.BoolNull(),
 				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 				Maintenance:               types.ObjectNull(maintenanceTypes),
-				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"id": types.StringNull(),
-				}),
-				Hibernations: types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
-				Extensions:   types.ObjectNull(extensionsTypes),
-				KubeConfig:   types.StringNull(),
+				Network:                   types.ObjectNull(networkTypes),
+				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions:                types.ObjectNull(extensionsTypes),
+				KubeConfig:                types.StringNull(),
 			},
 			true,
 		},

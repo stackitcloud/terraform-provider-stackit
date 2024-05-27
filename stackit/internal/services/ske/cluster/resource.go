@@ -1486,6 +1486,17 @@ func mapNetwork(cl *ske.Cluster, m *Model) error {
 		return nil
 	}
 
+	// If the network field is not provided, the SKE API returns an empty object.
+	// If we parse that object into the terraform model, it will produce an inconsistent result after apply error
+
+	emptyNetwork := &ske.V1Network{}
+	if *cl.Network == *emptyNetwork && m.Network.IsNull() {
+		if m.Network.Attributes() == nil {
+			m.Network = types.ObjectNull(networkTypes)
+		}
+		return nil
+	}
+
 	id := types.StringNull()
 	if cl.Network.Id != nil {
 		id = types.StringValue(*cl.Network.Id)
