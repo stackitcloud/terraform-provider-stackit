@@ -364,7 +364,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Secrets Manager instance state imported")
 }
 
-func mapFields(instance *secretsmanager.Instance, aclList *secretsmanager.AclList, model *Model) error {
+func mapFields(instance *secretsmanager.Instance, aclList *secretsmanager.ListACLsResponse, model *Model) error {
 	if instance == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -399,7 +399,7 @@ func mapFields(instance *secretsmanager.Instance, aclList *secretsmanager.AclLis
 	return nil
 }
 
-func mapACLs(aclList *secretsmanager.AclList, model *Model) error {
+func mapACLs(aclList *secretsmanager.ListACLsResponse, model *Model) error {
 	if aclList == nil {
 		return fmt.Errorf("nil ACL list")
 	}
