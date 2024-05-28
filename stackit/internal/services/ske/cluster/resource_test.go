@@ -93,7 +93,7 @@ func TestMapFields(t *testing.T) {
 						End:   utils.Ptr("0010-11-12T13:14:15Z"),
 					},
 				},
-				Network: &ske.V1Network{
+				Network: &ske.Network{
 					Id: utils.Ptr("nid"),
 				},
 				Name: utils.Ptr("name"),
@@ -235,7 +235,7 @@ func TestMapFields(t *testing.T) {
 			types.ObjectNull(extensionsTypes),
 			&ske.Cluster{
 				Name:    utils.Ptr("name"),
-				Network: &ske.V1Network{},
+				Network: &ske.Network{},
 			},
 			Model{
 				Id:                        types.StringValue("pid,name"),
@@ -1970,7 +1970,7 @@ func TestToNetworkPayload(t *testing.T) {
 	tests := []struct {
 		description string
 		model       *Model
-		expected    *ske.V1Network
+		expected    *ske.Network
 		isValid     bool
 	}{
 		{
@@ -1982,7 +1982,7 @@ func TestToNetworkPayload(t *testing.T) {
 					"id": types.StringValue("nid"),
 				}),
 			},
-			&ske.V1Network{
+			&ske.Network{
 				Id: utils.Ptr("nid"),
 			},
 			true,
@@ -1996,7 +1996,7 @@ func TestToNetworkPayload(t *testing.T) {
 					"id": types.StringNull(),
 				}),
 			},
-			&ske.V1Network{},
+			&ske.Network{},
 			true,
 		},
 		{
