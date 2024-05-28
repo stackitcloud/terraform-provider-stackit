@@ -1207,7 +1207,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 	}, nil
 }
 
-func toNetworkPayload(ctx context.Context, m *Model) (*ske.V1Network, error) {
+func toNetworkPayload(ctx context.Context, m *Model) (*ske.Network, error) {
 	if m.Network.IsNull() || m.Network.IsUnknown() {
 		return nil, nil
 	}
@@ -1218,7 +1218,7 @@ func toNetworkPayload(ctx context.Context, m *Model) (*ske.V1Network, error) {
 		return nil, fmt.Errorf("converting network object: %v", diags.Errors())
 	}
 
-	return &ske.V1Network{
+	return &ske.Network{
 		Id: conversion.StringValueToPointer(network.ID),
 	}, nil
 }
@@ -1489,7 +1489,7 @@ func mapNetwork(cl *ske.Cluster, m *Model) error {
 	// If the network field is not provided, the SKE API returns an empty object.
 	// If we parse that object into the terraform model, it will produce an inconsistent result after apply error
 
-	emptyNetwork := &ske.V1Network{}
+	emptyNetwork := &ske.Network{}
 	if *cl.Network == *emptyNetwork && m.Network.IsNull() {
 		if m.Network.Attributes() == nil {
 			m.Network = types.ObjectNull(networkTypes)
