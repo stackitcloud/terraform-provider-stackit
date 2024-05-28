@@ -83,6 +83,7 @@ type providerModel struct {
 	PrivateKeyPath                types.String `tfsdk:"private_key_path"`
 	Token                         types.String `tfsdk:"service_account_token"`
 	Region                        types.String `tfsdk:"region"`
+	ArgusCustomEndpoint           types.String `tfsdk:"argus_custom_endpoint"`
 	DNSCustomEndpoint             types.String `tfsdk:"dns_custom_endpoint"`
 	IaaSCustomEndpoint            types.String `tfsdk:"iaas_custom_endpoint"`
 	PostgreSQLCustomEndpoint      types.String `tfsdk:"postgresql_custom_endpoint"`
@@ -96,7 +97,7 @@ type providerModel struct {
 	OpenSearchCustomEndpoint      types.String `tfsdk:"opensearch_custom_endpoint"`
 	RedisCustomEndpoint           types.String `tfsdk:"redis_custom_endpoint"`
 	SecretsManagerCustomEndpoint  types.String `tfsdk:"secretsmanager_custom_endpoint"`
-	ArgusCustomEndpoint           types.String `tfsdk:"argus_custom_endpoint"`
+	SQLServerFlexCustomEndpoint   types.String `tfsdk:"sqlserverflex_custom_endpoint"`
 	SKECustomEndpoint             types.String `tfsdk:"ske_custom_endpoint"`
 	ResourceManagerCustomEndpoint types.String `tfsdk:"resourcemanager_custom_endpoint"`
 	TokenCustomEndpoint           types.String `tfsdk:"token_custom_endpoint"`
@@ -127,9 +128,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"postgresql_custom_endpoint":      "Custom endpoint for the PostgreSQL service",
 		"postgresflex_custom_endpoint":    "Custom endpoint for the PostgresFlex service",
 		"redis_custom_endpoint":           "Custom endpoint for the Redis service",
-		"ske_custom_endpoint":             "Custom endpoint for the Kubernetes Engine (SKE) service",
 		"resourcemanager_custom_endpoint": "Custom endpoint for the Resource Manager service",
 		"secretsmanager_custom_endpoint":  "Custom endpoint for the Secrets Manager service",
+		"sqlserverflex_custom_endpoint":   "Custom endpoint for the SQL Server Flex service",
+		"ske_custom_endpoint":             "Custom endpoint for the Kubernetes Engine (SKE) service",
 		"token_custom_endpoint":           "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
 		"jwks_custom_endpoint":            "Custom endpoint for the jwks API, which is used to get the json web key sets (jwks) to validate tokens when using the key flow",
 	}
@@ -167,6 +169,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"region": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["region"],
+			},
+			"argus_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["argus_custom_endpoint"],
 			},
 			"dns_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -216,21 +222,21 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["redis_custom_endpoint"],
 			},
+			"resourcemanager_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["resourcemanager_custom_endpoint"],
+			},
 			"secretsmanager_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["secretsmanager_custom_endpoint"],
 			},
-			"argus_custom_endpoint": schema.StringAttribute{
+			"sqlserverflex_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
-				Description: descriptions["argus_custom_endpoint"],
+				Description: descriptions["sqlserverflex_custom_endpoint"],
 			},
 			"ske_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["ske_custom_endpoint"],
-			},
-			"resourcemanager_custom_endpoint": schema.StringAttribute{
-				Optional:    true,
-				Description: descriptions["resourcemanager_custom_endpoint"],
 			},
 			"token_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -283,6 +289,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.Region.IsUnknown() || providerConfig.Region.IsNull()) {
 		providerData.Region = providerConfig.Region.ValueString()
 	}
+	if !(providerConfig.ArgusCustomEndpoint.IsUnknown() || providerConfig.ArgusCustomEndpoint.IsNull()) {
+		providerData.ArgusCustomEndpoint = providerConfig.ArgusCustomEndpoint.ValueString()
+	}
 	if !(providerConfig.DNSCustomEndpoint.IsUnknown() || providerConfig.DNSCustomEndpoint.IsNull()) {
 		providerData.DnsCustomEndpoint = providerConfig.DNSCustomEndpoint.ValueString()
 	}
@@ -319,17 +328,17 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.RedisCustomEndpoint.IsUnknown() || providerConfig.RedisCustomEndpoint.IsNull()) {
 		providerData.RedisCustomEndpoint = providerConfig.RedisCustomEndpoint.ValueString()
 	}
-	if !(providerConfig.ArgusCustomEndpoint.IsUnknown() || providerConfig.ArgusCustomEndpoint.IsNull()) {
-		providerData.ArgusCustomEndpoint = providerConfig.ArgusCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.SKECustomEndpoint.IsUnknown() || providerConfig.SKECustomEndpoint.IsNull()) {
-		providerData.SKECustomEndpoint = providerConfig.SKECustomEndpoint.ValueString()
-	}
 	if !(providerConfig.ResourceManagerCustomEndpoint.IsUnknown() || providerConfig.ResourceManagerCustomEndpoint.IsNull()) {
 		providerData.ResourceManagerCustomEndpoint = providerConfig.ResourceManagerCustomEndpoint.ValueString()
 	}
 	if !(providerConfig.SecretsManagerCustomEndpoint.IsUnknown() || providerConfig.SecretsManagerCustomEndpoint.IsNull()) {
 		providerData.SecretsManagerCustomEndpoint = providerConfig.SecretsManagerCustomEndpoint.ValueString()
+	}
+	if !(providerConfig.SQLServerFlexCustomEndpoint.IsUnknown() || providerConfig.SQLServerFlexCustomEndpoint.IsNull()) {
+		providerData.SQLServerFlexCustomEndpoint = providerConfig.SQLServerFlexCustomEndpoint.ValueString()
+	}
+	if !(providerConfig.SKECustomEndpoint.IsUnknown() || providerConfig.SKECustomEndpoint.IsNull()) {
+		providerData.SKECustomEndpoint = providerConfig.SKECustomEndpoint.ValueString()
 	}
 	if !(providerConfig.TokenCustomEndpoint.IsUnknown() || providerConfig.TokenCustomEndpoint.IsNull()) {
 		sdkConfig.TokenCustomUrl = providerConfig.TokenCustomEndpoint.ValueString()

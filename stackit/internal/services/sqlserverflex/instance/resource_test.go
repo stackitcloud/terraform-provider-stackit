@@ -1,4 +1,4 @@
-package mongodbflex
+package sqlserverflex
 
 import (
 	"context"
@@ -9,15 +9,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
+	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
 )
 
-type mongoDBFlexClientMocked struct {
+type sqlserverflexClientMocked struct {
 	returnError     bool
-	listFlavorsResp *mongodbflex.ListFlavorsResponse
+	listFlavorsResp *sqlserverflex.ListFlavorsResponse
 }
 
-func (c *mongoDBFlexClientMocked) ListFlavorsExecute(_ context.Context, _ string) (*mongodbflex.ListFlavorsResponse, error) {
+func (c *sqlserverflexClientMocked) ListFlavorsExecute(_ context.Context, _ string) (*sqlserverflex.ListFlavorsResponse, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("get flavors failed")
 	}
@@ -29,7 +29,7 @@ func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		input       *mongodbflex.GetInstanceResponse
+		input       *sqlserverflex.GetInstanceResponse
 		flavor      *flavorModel
 		storage     *storageModel
 		options     *optionsModel
@@ -42,8 +42,8 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 			},
-			&mongodbflex.GetInstanceResponse{
-				Item: &mongodbflex.Instance{},
+			&sqlserverflex.GetInstanceResponse{
+				Item: &sqlserverflex.Instance{},
 			},
 			&flavorModel{},
 			&storageModel{},
@@ -67,7 +67,8 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Null(),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-					"type": types.StringNull(),
+					"edition":       types.StringNull(),
+					"retentionDays": types.StringNull(),
 				}),
 				Version: types.StringNull(),
 			},
@@ -79,9 +80,9 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 			},
-			&mongodbflex.GetInstanceResponse{
-				Item: &mongodbflex.Instance{
-					Acl: &mongodbflex.ACL{
+			&sqlserverflex.GetInstanceResponse{
+				Item: &sqlserverflex.Instance{
+					Acl: &sqlserverflex.ACL{
 						Items: &[]string{
 							"ip1",
 							"ip2",
@@ -89,7 +90,7 @@ func TestMapFields(t *testing.T) {
 						},
 					},
 					BackupSchedule: utils.Ptr("schedule"),
-					Flavor: &mongodbflex.Flavor{
+					Flavor: &sqlserverflex.Flavor{
 						Cpu:         utils.Ptr(int64(12)),
 						Description: utils.Ptr("description"),
 						Id:          utils.Ptr("flavor_id"),
@@ -99,12 +100,13 @@ func TestMapFields(t *testing.T) {
 					Name:     utils.Ptr("name"),
 					Replicas: utils.Ptr(int64(56)),
 					Status:   utils.Ptr("status"),
-					Storage: &mongodbflex.Storage{
+					Storage: &sqlserverflex.Storage{
 						Class: utils.Ptr("class"),
 						Size:  utils.Ptr(int64(78)),
 					},
 					Options: &map[string]string{
-						"type": "type",
+						"edition":       "edition",
+						"retentionDays": "retentionDays",
 					},
 					Version: utils.Ptr("version"),
 				},
@@ -135,7 +137,8 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Value(78),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-					"type": types.StringValue("type"),
+					"edition":       types.StringValue("edition"),
+					"retentionDays": types.StringValue("retentionDays"),
 				}),
 				Version: types.StringValue("version"),
 			},
@@ -147,9 +150,9 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 			},
-			&mongodbflex.GetInstanceResponse{
-				Item: &mongodbflex.Instance{
-					Acl: &mongodbflex.ACL{
+			&sqlserverflex.GetInstanceResponse{
+				Item: &sqlserverflex.Instance{
+					Acl: &sqlserverflex.ACL{
 						Items: &[]string{
 							"ip1",
 							"ip2",
@@ -164,7 +167,8 @@ func TestMapFields(t *testing.T) {
 					Status:         utils.Ptr("status"),
 					Storage:        nil,
 					Options: &map[string]string{
-						"type": "type",
+						"edition":       "edition",
+						"retentionDays": "retentionDays",
 					},
 					Version: utils.Ptr("version"),
 				},
@@ -178,7 +182,8 @@ func TestMapFields(t *testing.T) {
 				Size:  types.Int64Value(78),
 			},
 			&optionsModel{
-				Type: types.StringValue("type"),
+				Edition:       types.StringValue("edition"),
+				RetentionDays: types.StringValue("retentionDays"),
 			},
 			Model{
 				Id:         types.StringValue("pid,iid"),
@@ -203,7 +208,8 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Value(78),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-					"type": types.StringValue("type"),
+					"edition":       types.StringValue("edition"),
+					"retentionDays": types.StringValue("retentionDays"),
 				}),
 				Version: types.StringValue("version"),
 			},
@@ -220,9 +226,9 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("ip1"),
 				}),
 			},
-			&mongodbflex.GetInstanceResponse{
-				Item: &mongodbflex.Instance{
-					Acl: &mongodbflex.ACL{
+			&sqlserverflex.GetInstanceResponse{
+				Item: &sqlserverflex.Instance{
+					Acl: &sqlserverflex.ACL{
 						Items: &[]string{
 							"",
 							"ip1",
@@ -237,7 +243,8 @@ func TestMapFields(t *testing.T) {
 					Status:         utils.Ptr("status"),
 					Storage:        nil,
 					Options: &map[string]string{
-						"type": "type",
+						"edition":       "edition",
+						"retentionDays": "retentionDays",
 					},
 					Version: utils.Ptr("version"),
 				},
@@ -250,9 +257,7 @@ func TestMapFields(t *testing.T) {
 				Class: types.StringValue("class"),
 				Size:  types.Int64Value(78),
 			},
-			&optionsModel{
-				Type: types.StringValue("type"),
-			},
+			&optionsModel{},
 			Model{
 				Id:         types.StringValue("pid,iid"),
 				InstanceId: types.StringValue("iid"),
@@ -276,7 +281,8 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Value(78),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-					"type": types.StringValue("type"),
+					"edition":       types.StringValue("edition"),
+					"retentionDays": types.StringValue("retentionDays"),
 				}),
 				Version: types.StringValue("version"),
 			},
@@ -301,7 +307,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 			},
-			&mongodbflex.GetInstanceResponse{},
+			&sqlserverflex.GetInstanceResponse{},
 			&flavorModel{},
 			&storageModel{},
 			&optionsModel{},
@@ -336,7 +342,7 @@ func TestToCreatePayload(t *testing.T) {
 		inputFlavor  *flavorModel
 		inputStorage *storageModel
 		inputOptions *optionsModel
-		expected     *mongodbflex.CreateInstancePayload
+		expected     *sqlserverflex.CreateInstancePayload
 		isValid      bool
 	}{
 		{
@@ -346,12 +352,12 @@ func TestToCreatePayload(t *testing.T) {
 			&flavorModel{},
 			&storageModel{},
 			&optionsModel{},
-			&mongodbflex.CreateInstancePayload{
-				Acl: &mongodbflex.ACL{
+			&sqlserverflex.CreateInstancePayload{
+				Acl: &sqlserverflex.CreateInstancePayloadAcl{
 					Items: &[]string{},
 				},
-				Storage: &mongodbflex.Storage{},
-				Options: &map[string]string{},
+				Storage: &sqlserverflex.CreateInstancePayloadStorage{},
+				Options: &sqlserverflex.CreateInstancePayloadOptions{},
 			},
 			true,
 		},
@@ -375,10 +381,11 @@ func TestToCreatePayload(t *testing.T) {
 				Size:  types.Int64Value(34),
 			},
 			&optionsModel{
-				Type: types.StringValue("type"),
+				Edition:       types.StringValue("edition"),
+				RetentionDays: types.StringValue("retentionDays"),
 			},
-			&mongodbflex.CreateInstancePayload{
-				Acl: &mongodbflex.ACL{
+			&sqlserverflex.CreateInstancePayload{
+				Acl: &sqlserverflex.CreateInstancePayloadAcl{
 					Items: &[]string{
 						"ip_1",
 						"ip_2",
@@ -387,12 +394,14 @@ func TestToCreatePayload(t *testing.T) {
 				BackupSchedule: utils.Ptr("schedule"),
 				FlavorId:       utils.Ptr("flavor_id"),
 				Name:           utils.Ptr("name"),
-				Replicas:       utils.Ptr(int64(12)),
-				Storage: &mongodbflex.Storage{
+				Storage: &sqlserverflex.CreateInstancePayloadStorage{
 					Class: utils.Ptr("class"),
 					Size:  utils.Ptr(int64(34)),
 				},
-				Options: &map[string]string{"type": "type"},
+				Options: &sqlserverflex.CreateInstancePayloadOptions{
+					Edition:       utils.Ptr("edition"),
+					RetentionDays: utils.Ptr("retentionDays"),
+				},
 				Version: utils.Ptr("version"),
 			},
 			true,
@@ -416,10 +425,11 @@ func TestToCreatePayload(t *testing.T) {
 				Size:  types.Int64Null(),
 			},
 			&optionsModel{
-				Type: types.StringNull(),
+				Edition:       types.StringNull(),
+				RetentionDays: types.StringNull(),
 			},
-			&mongodbflex.CreateInstancePayload{
-				Acl: &mongodbflex.ACL{
+			&sqlserverflex.CreateInstancePayload{
+				Acl: &sqlserverflex.CreateInstancePayloadAcl{
 					Items: &[]string{
 						"",
 					},
@@ -427,12 +437,11 @@ func TestToCreatePayload(t *testing.T) {
 				BackupSchedule: nil,
 				FlavorId:       nil,
 				Name:           nil,
-				Replicas:       utils.Ptr(int64(2123456789)),
-				Storage: &mongodbflex.Storage{
+				Storage: &sqlserverflex.CreateInstancePayloadStorage{
 					Class: nil,
 					Size:  nil,
 				},
-				Options: &map[string]string{},
+				Options: &sqlserverflex.CreateInstancePayloadOptions{},
 				Version: nil,
 			},
 			true,
@@ -509,28 +518,22 @@ func TestToCreatePayload(t *testing.T) {
 
 func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
-		description  string
-		input        *Model
-		inputAcl     []string
-		inputFlavor  *flavorModel
-		inputStorage *storageModel
-		inputOptions *optionsModel
-		expected     *mongodbflex.PartialUpdateInstancePayload
-		isValid      bool
+		description string
+		input       *Model
+		inputAcl    []string
+		inputFlavor *flavorModel
+		expected    *sqlserverflex.PartialUpdateInstancePayload
+		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
 			[]string{},
 			&flavorModel{},
-			&storageModel{},
-			&optionsModel{},
-			&mongodbflex.PartialUpdateInstancePayload{
-				Acl: &mongodbflex.ACL{
+			&sqlserverflex.PartialUpdateInstancePayload{
+				Acl: &sqlserverflex.CreateInstancePayloadAcl{
 					Items: &[]string{},
 				},
-				Storage: &mongodbflex.Storage{},
-				Options: &map[string]string{},
 			},
 			true,
 		},
@@ -549,15 +552,8 @@ func TestToUpdatePayload(t *testing.T) {
 			&flavorModel{
 				Id: types.StringValue("flavor_id"),
 			},
-			&storageModel{
-				Class: types.StringValue("class"),
-				Size:  types.Int64Value(34),
-			},
-			&optionsModel{
-				Type: types.StringValue("type"),
-			},
-			&mongodbflex.PartialUpdateInstancePayload{
-				Acl: &mongodbflex.ACL{
+			&sqlserverflex.PartialUpdateInstancePayload{
+				Acl: &sqlserverflex.CreateInstancePayloadAcl{
 					Items: &[]string{
 						"ip_1",
 						"ip_2",
@@ -566,13 +562,7 @@ func TestToUpdatePayload(t *testing.T) {
 				BackupSchedule: utils.Ptr("schedule"),
 				FlavorId:       utils.Ptr("flavor_id"),
 				Name:           utils.Ptr("name"),
-				Replicas:       utils.Ptr(int64(12)),
-				Storage: &mongodbflex.Storage{
-					Class: utils.Ptr("class"),
-					Size:  utils.Ptr(int64(34)),
-				},
-				Options: &map[string]string{"type": "type"},
-				Version: utils.Ptr("version"),
+				Version:        utils.Ptr("version"),
 			},
 			true,
 		},
@@ -590,15 +580,8 @@ func TestToUpdatePayload(t *testing.T) {
 			&flavorModel{
 				Id: types.StringNull(),
 			},
-			&storageModel{
-				Class: types.StringNull(),
-				Size:  types.Int64Null(),
-			},
-			&optionsModel{
-				Type: types.StringNull(),
-			},
-			&mongodbflex.PartialUpdateInstancePayload{
-				Acl: &mongodbflex.ACL{
+			&sqlserverflex.PartialUpdateInstancePayload{
+				Acl: &sqlserverflex.CreateInstancePayloadAcl{
 					Items: &[]string{
 						"",
 					},
@@ -606,13 +589,7 @@ func TestToUpdatePayload(t *testing.T) {
 				BackupSchedule: nil,
 				FlavorId:       nil,
 				Name:           nil,
-				Replicas:       utils.Ptr(int64(2123456789)),
-				Storage: &mongodbflex.Storage{
-					Class: nil,
-					Size:  nil,
-				},
-				Options: &map[string]string{},
-				Version: nil,
+				Version:        nil,
 			},
 			true,
 		},
@@ -621,8 +598,6 @@ func TestToUpdatePayload(t *testing.T) {
 			nil,
 			[]string{},
 			&flavorModel{},
-			&storageModel{},
-			&optionsModel{},
 			nil,
 			false,
 		},
@@ -631,8 +606,6 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{},
 			nil,
 			&flavorModel{},
-			&storageModel{},
-			&optionsModel{},
 			nil,
 			false,
 		},
@@ -641,35 +614,13 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{},
 			[]string{},
 			nil,
-			&storageModel{},
-			&optionsModel{},
-			nil,
-			false,
-		},
-		{
-			"nil_storage",
-			&Model{},
-			[]string{},
-			&flavorModel{},
-			nil,
-			&optionsModel{},
-			nil,
-			false,
-		},
-		{
-			"nil_options",
-			&Model{},
-			[]string{},
-			&flavorModel{},
-			&storageModel{},
-			nil,
 			nil,
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(tt.input, tt.inputAcl, tt.inputFlavor, tt.inputStorage, tt.inputOptions)
+			output, err := toUpdatePayload(tt.input, tt.inputAcl, tt.inputFlavor)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -690,7 +641,7 @@ func TestLoadFlavorId(t *testing.T) {
 	tests := []struct {
 		description     string
 		inputFlavor     *flavorModel
-		mockedResp      *mongodbflex.ListFlavorsResponse
+		mockedResp      *sqlserverflex.ListFlavorsResponse
 		expected        *flavorModel
 		getFlavorsFails bool
 		isValid         bool
@@ -701,8 +652,8 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&mongodbflex.ListFlavorsResponse{
-				Flavors: &[]mongodbflex.HandlersInfraFlavor{
+			&sqlserverflex.ListFlavorsResponse{
+				Flavors: &[]sqlserverflex.InstanceFlavorEntry{
 					{
 						Id:          utils.Ptr("fid-1"),
 						Cpu:         utils.Ptr(int64(2)),
@@ -726,8 +677,8 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&mongodbflex.ListFlavorsResponse{
-				Flavors: &[]mongodbflex.HandlersInfraFlavor{
+			&sqlserverflex.ListFlavorsResponse{
+				Flavors: &[]sqlserverflex.InstanceFlavorEntry{
 					{
 						Id:          utils.Ptr("fid-1"),
 						Cpu:         utils.Ptr(int64(2)),
@@ -757,8 +708,8 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&mongodbflex.ListFlavorsResponse{
-				Flavors: &[]mongodbflex.HandlersInfraFlavor{
+			&sqlserverflex.ListFlavorsResponse{
+				Flavors: &[]sqlserverflex.InstanceFlavorEntry{
 					{
 						Id:          utils.Ptr("fid-1"),
 						Cpu:         utils.Ptr(int64(1)),
@@ -786,7 +737,7 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&mongodbflex.ListFlavorsResponse{},
+			&sqlserverflex.ListFlavorsResponse{},
 			&flavorModel{
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
@@ -800,7 +751,7 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&mongodbflex.ListFlavorsResponse{},
+			&sqlserverflex.ListFlavorsResponse{},
 			&flavorModel{
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
@@ -811,7 +762,7 @@ func TestLoadFlavorId(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			client := &mongoDBFlexClientMocked{
+			client := &sqlserverflexClientMocked{
 				returnError:     tt.getFlavorsFails,
 				listFlavorsResp: tt.mockedResp,
 			}

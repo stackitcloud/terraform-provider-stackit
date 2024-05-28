@@ -1,4 +1,4 @@
-package mongodbflex
+package sqlserverflex
 
 import (
 	"context"
@@ -22,13 +22,15 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
-	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
+	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/wait"
 )
 
 const (
@@ -50,9 +52,9 @@ type Model struct {
 	ACL            types.List   `tfsdk:"acl"`
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
 	Flavor         types.Object `tfsdk:"flavor"`
-	Replicas       types.Int64  `tfsdk:"replicas"`
 	Storage        types.Object `tfsdk:"storage"`
 	Version        types.String `tfsdk:"version"`
+	Replicas       types.Int64  `tfsdk:"replicas"`
 	Options        types.Object `tfsdk:"options"`
 }
 
@@ -86,12 +88,14 @@ var storageTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.Options
 type optionsModel struct {
-	Type types.String `tfsdk:"type"`
+	Edition       types.String `tfsdk:"edition"`
+	RetentionDays types.String `tfsdk:"retention_days"`
 }
 
 // Types corresponding to optionsModel
 var optionsTypes = map[string]attr.Type{
-	"type": basetypes.StringType{},
+	"edition":        basetypes.StringType{},
+	"retention_days": basetypes.StringType{},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -101,12 +105,12 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client *mongodbflex.APIClient
+	client *sqlserverflex.APIClient
 }
 
 // Metadata returns the resource type name.
 func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_mongodbflex_instance"
+	resp.TypeName = req.ProviderTypeName + "_sqlserverflex_instance"
 }
 
 // Configure adds the provider configured client to the resource.
@@ -122,15 +126,15 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	var apiClient *mongodbflex.APIClient
+	var apiClient *sqlserverflex.APIClient
 	var err error
-	if providerData.MongoDBFlexCustomEndpoint != "" {
-		apiClient, err = mongodbflex.NewAPIClient(
+	if providerData.SQLServerFlexCustomEndpoint != "" {
+		apiClient, err = sqlserverflex.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.MongoDBFlexCustomEndpoint),
+			config.WithEndpoint(providerData.SQLServerFlexCustomEndpoint),
 		)
 	} else {
-		apiClient, err = mongodbflex.NewAPIClient(
+		apiClient, err = sqlserverflex.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -142,20 +146,20 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "MongoDB Flex instance client configured")
+	tflog.Info(ctx, "SQL Server Flex instance client configured")
 }
 
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":            "MongoDB Flex instance resource schema. Must have a `region` specified in the provider configuration.",
+		"main":            "SQL Server Flex instance resource schema. Must have a `region` specified in the provider configuration.",
 		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
-		"instance_id":     "ID of the MongoDB Flex instance.",
+		"instance_id":     "ID of the SQL Server Flex instance.",
 		"project_id":      "STACKIT project ID to which the instance is associated.",
 		"name":            "Instance name.",
-		"acl":             "The Access Control List (ACL) for the MongoDB Flex instance.",
-		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
-		"options":         "Custom parameters for the MongoDB Flex instance.",
+		"acl":             "The Access Control List (ACL) for the SQL Server Flex instance.",
+		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *")`,
+		"options":         "Custom parameters for the SQL Server Flex instance.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -184,7 +188,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.String{
 					validate.UUID(),
@@ -205,11 +208,19 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"acl": schema.ListAttribute{
 				Description: descriptions["acl"],
 				ElementType: types.StringType,
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"backup_schedule": schema.StringAttribute{
 				Description: descriptions["backup_schedule"],
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"flavor": schema.SingleNestedAttribute{
 				Required: true,
@@ -229,32 +240,53 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"replicas": schema.Int64Attribute{
-				Required: true,
+				Computed: true,
 			},
 			"storage": schema.SingleNestedAttribute{
-				Required: true,
+				Optional: true,
+				Computed: true,
 				Attributes: map[string]schema.Attribute{
 					"class": schema.StringAttribute{
-						Required: true,
+						Optional: true,
+						Computed: true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
+							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
 					"size": schema.Int64Attribute{
-						Required: true,
+						Optional: true,
+						Computed: true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.RequiresReplace(),
+							int64planmodifier.UseStateForUnknown(),
+						},
 					},
 				},
 			},
 			"version": schema.StringAttribute{
-				Required: true,
+				Optional: true,
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"options": schema.SingleNestedAttribute{
-				Required: true,
+				Optional: true,
+				Computed: true,
 				Attributes: map[string]schema.Attribute{
-					"type": schema.StringAttribute{
-						Required: true,
+					"edition": schema.StringAttribute{
+						Optional: true,
+						Computed: true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"retention_days": schema.Int64Attribute{
+						Optional: true,
+						Computed: true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.RequiresReplace(),
 						},
 					},
 				},
@@ -346,7 +378,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "MongoDB Flex instance created")
+	tflog.Info(ctx, "SQL Server Flex instance created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -411,7 +443,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "MongoDB Flex instance read")
+	tflog.Info(ctx, "SQL Server Flex instance read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -468,7 +500,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Generate API request body from model
-	payload, err := toUpdatePayload(&model, acl, flavor, storage, options)
+	payload, err := toUpdatePayload(&model, acl, flavor)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -496,7 +528,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "MongoDB Flex instance updated")
+	tflog.Info(ctx, "SQL Server Flex instance updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -529,7 +561,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	// After the get request returns 404 (instance is deleted), creating a new instance with the same name still fails for a short period of time
 	time.Sleep(30 * time.Second)
 
-	tflog.Info(ctx, "MongoDB Flex instance deleted")
+	tflog.Info(ctx, "SQL Server Flex instance deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -547,10 +579,10 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
-	tflog.Info(ctx, "MongoDB Flex instance state imported")
+	tflog.Info(ctx, "SQL Server Flex instance state imported")
 }
 
-func mapFields(ctx context.Context, resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flavorModel, storage *storageModel, options *optionsModel) error {
+func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, model *Model, flavor *flavorModel, storage *storageModel, options *optionsModel) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -631,11 +663,13 @@ func mapFields(ctx context.Context, resp *mongodbflex.GetInstanceResponse, model
 	var optionsValues map[string]attr.Value
 	if instance.Options == nil {
 		optionsValues = map[string]attr.Value{
-			"type": options.Type,
+			"edition":       options.Edition,
+			"retentionDays": options.RetentionDays,
 		}
 	} else {
 		optionsValues = map[string]attr.Value{
-			"type": types.StringValue((*instance.Options)["type"]),
+			"edition":       types.StringValue((*instance.Options)["edition"]),
+			"retentionDays": types.StringValue((*instance.Options)["retentionDays"]),
 		}
 	}
 	optionsObject, diags := types.ObjectValue(optionsTypes, optionsValues)
@@ -668,7 +702,7 @@ func mapFields(ctx context.Context, resp *mongodbflex.GetInstanceResponse, model
 	return nil
 }
 
-func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel, options *optionsModel) (*mongodbflex.CreateInstancePayload, error) {
+func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel, options *optionsModel) (*sqlserverflex.CreateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -685,29 +719,26 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		return nil, fmt.Errorf("nil options")
 	}
 
-	payloadOptions := make(map[string]string)
-	if options.Type.ValueString() != "" {
-		payloadOptions["type"] = options.Type.ValueString()
-	}
-
-	return &mongodbflex.CreateInstancePayload{
-		Acl: &mongodbflex.ACL{
+	return &sqlserverflex.CreateInstancePayload{
+		Acl: &sqlserverflex.CreateInstancePayloadAcl{
 			Items: &acl,
 		},
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
-		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
-		Storage: &mongodbflex.Storage{
+		Storage: &sqlserverflex.CreateInstancePayloadStorage{
 			Class: conversion.StringValueToPointer(storage.Class),
 			Size:  conversion.Int64ValueToPointer(storage.Size),
 		},
 		Version: conversion.StringValueToPointer(model.Version),
-		Options: &payloadOptions,
+		Options: &sqlserverflex.CreateInstancePayloadOptions{
+			Edition:       conversion.StringValueToPointer(options.Edition),
+			RetentionDays: conversion.StringValueToPointer(options.RetentionDays),
+		},
 	}, nil
 }
 
-func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel, options *optionsModel) (*mongodbflex.PartialUpdateInstancePayload, error) {
+func toUpdatePayload(model *Model, acl []string, flavor *flavorModel) (*sqlserverflex.PartialUpdateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -717,40 +748,23 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	if flavor == nil {
 		return nil, fmt.Errorf("nil flavor")
 	}
-	if storage == nil {
-		return nil, fmt.Errorf("nil storage")
-	}
-	if options == nil {
-		return nil, fmt.Errorf("nil options")
-	}
 
-	payloadOptions := make(map[string]string)
-	if options.Type.ValueString() != "" {
-		payloadOptions["type"] = options.Type.ValueString()
-	}
-
-	return &mongodbflex.PartialUpdateInstancePayload{
-		Acl: &mongodbflex.ACL{
+	return &sqlserverflex.PartialUpdateInstancePayload{
+		Acl: &sqlserverflex.CreateInstancePayloadAcl{
 			Items: &acl,
 		},
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
-		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
-		Storage: &mongodbflex.Storage{
-			Class: conversion.StringValueToPointer(storage.Class),
-			Size:  conversion.Int64ValueToPointer(storage.Size),
-		},
-		Version: conversion.StringValueToPointer(model.Version),
-		Options: &payloadOptions,
+		Version:        conversion.StringValueToPointer(model.Version),
 	}, nil
 }
 
-type mongoDBFlexClient interface {
-	ListFlavorsExecute(ctx context.Context, projectId string) (*mongodbflex.ListFlavorsResponse, error)
+type sqlserverflexClient interface {
+	ListFlavorsExecute(ctx context.Context, projectId string) (*sqlserverflex.ListFlavorsResponse, error)
 }
 
-func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, flavor *flavorModel) error {
+func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model, flavor *flavorModel) error {
 	if model == nil {
 		return fmt.Errorf("nil model")
 	}
@@ -769,7 +783,7 @@ func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, f
 	projectId := model.ProjectId.ValueString()
 	res, err := client.ListFlavorsExecute(ctx, projectId)
 	if err != nil {
-		return fmt.Errorf("listing mongodbflex flavors: %w", err)
+		return fmt.Errorf("listing sqlserverflex flavors: %w", err)
 	}
 
 	avl := ""

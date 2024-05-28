@@ -2,6 +2,8 @@ package utils
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
@@ -59,4 +61,18 @@ func ListValuetoStringSlice(list basetypes.ListValue) ([]string, error) {
 	}
 
 	return result, nil
+}
+
+// Remove leading 0s from backup schedule numbers (e.g. "00 00 * * *" becomes "0 0 * * *")
+// Needed as the API does it internally and would otherwise cause inconsistent result in Terraform
+func SimplifyBackupSchedule(schedule string) string {
+	regex := regexp.MustCompile(`0+\d+`) // Matches series of one or more zeros followed by a series of one or more digits
+	simplifiedSchedule := regex.ReplaceAllStringFunc(schedule, func(match string) string {
+		simplified := strings.TrimLeft(match, "0")
+		if simplified == "" {
+			simplified = "0"
+		}
+		return simplified
+	})
+	return simplifiedSchedule
 }

@@ -32,6 +32,7 @@ type ProviderData struct {
 	RedisCustomEndpoint           string
 	ResourceManagerCustomEndpoint string
 	SecretsManagerCustomEndpoint  string
+	SQLServerFlexCustomEndpoint   string
 	SKECustomEndpoint             string
 }
 

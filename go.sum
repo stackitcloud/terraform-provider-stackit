@@ -178,6 +178,8 @@ github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.8.0 h1:pJBG455
 github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.8.0/go.mod h1:LX0Mcyr7/QP77zf7e05fHCJO38RMuTxr7nEDUDZ3oPQ=
 github.com/stackitcloud/stackit-sdk-go/services/ske v0.16.0 h1:trrJuRMzgXu6fiiMZiUx6+A1FNKEFhA1vGq5cr5Qn3U=
 github.com/stackitcloud/stackit-sdk-go/services/ske v0.16.0/go.mod h1:0fFs4R7kg+gU7FNAIzzFvlCZJz6gyZ8CFhbK3eSrAwQ=
+github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.2.0 h1:aIXxXx6u4+6C02MPb+hdItigeKeen7m+hEEG+Ej9sNs=
+github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.2.0/go.mod h1:fQJOQMfasStZ8J9iGX0vTjyJoQtLqMXJ5Npb03QJk84=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
