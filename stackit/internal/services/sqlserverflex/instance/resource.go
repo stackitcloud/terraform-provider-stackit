@@ -36,10 +36,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/wait"
 )
 
-const (
-	DefaultBackupSchedule = "0 0/6 * * *"
-)
-
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &instanceResource{}
@@ -149,20 +145,20 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "SQL Server Flex instance client configured")
+	tflog.Info(ctx, "SQLServer Flex instance client configured")
 }
 
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":            "SQL Server Flex instance resource schema. Must have a `region` specified in the provider configuration.",
+		"main":            "SQLServer Flex instance resource schema. Must have a `region` specified in the provider configuration.",
 		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
-		"instance_id":     "ID of the SQL Server Flex instance.",
+		"instance_id":     "ID of the SQLServer Flex instance.",
 		"project_id":      "STACKIT project ID to which the instance is associated.",
 		"name":            "Instance name.",
-		"acl":             "The Access Control List (ACL) for the SQL Server Flex instance.",
+		"acl":             "The Access Control List (ACL) for the SQLServer Flex instance.",
 		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *")`,
-		"options":         "Custom parameters for the SQL Server Flex instance.",
+		"options":         "Custom parameters for the SQLServer Flex instance.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -382,7 +378,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	instanceId := *createResp.Id
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	// The creation waiter sometimes returns an error from the API: "instance with id xxx has unexpected status Failure"
+	// which can be avoided by sleeping before wait
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetSleepBeforeWait(30 * time.Second).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -400,7 +398,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "SQL Server Flex instance created")
+	tflog.Info(ctx, "SQLServer Flex instance created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -465,7 +463,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "SQL Server Flex instance read")
+	tflog.Info(ctx, "SQLServer Flex instance read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -550,7 +548,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "SQL Server Flex instance updated")
+	tflog.Info(ctx, "SQLServer Flex instance updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -578,12 +576,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
-
-	// This is needed because the waiter is currently not working properly
-	// After the get request returns 404 (instance is deleted), creating a new instance with the same name still fails for a short period of time
-	time.Sleep(30 * time.Second)
-
-	tflog.Info(ctx, "SQL Server Flex instance deleted")
+	tflog.Info(ctx, "SQLServer Flex instance deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -601,7 +594,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
-	tflog.Info(ctx, "SQL Server Flex instance state imported")
+	tflog.Info(ctx, "SQLServer Flex instance state imported")
 }
 
 func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, model *Model, flavor *flavorModel, storage *storageModel, options *optionsModel) error {
@@ -689,15 +682,25 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 			"retention_days": options.RetentionDays,
 		}
 	} else {
-		retentionDaysString := (*instance.Options)["retentionDays"]
-		retentionDays, err := strconv.ParseInt(retentionDaysString, 10, 64)
-		if err != nil {
-			return fmt.Errorf("parse retentionDays to int64: %w", err)
+		retentionDays := options.RetentionDays
+		retentionDaysString, ok := (*instance.Options)["retentionDays"]
+		if ok {
+			retentionDaysValue, err := strconv.ParseInt(retentionDaysString, 10, 64)
+			if err != nil {
+				return fmt.Errorf("parse retentionDays to int64: %w", err)
+			}
+			retentionDays = types.Int64Value(retentionDaysValue)
+		}
+
+		edition := options.Edition
+		editionValue, ok := (*instance.Options)["edition"]
+		if ok {
+			edition = types.StringValue(editionValue)
 		}
 
 		optionsValues = map[string]attr.Value{
-			"edition":        types.StringValue((*instance.Options)["edition"]),
-			"retention_days": types.Int64Value(retentionDays),
+			"edition":        edition,
+			"retention_days": retentionDays,
 		}
 	}
 	optionsObject, diags := types.ObjectValue(optionsTypes, optionsValues)
