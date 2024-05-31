@@ -165,4 +165,5 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `service_account_key_path` (String) Path for the service account key used for authentication. If set, the key flow will be used to authenticate all operations.
 - `service_account_token` (String) Token used for authentication. If set, the token flow will be used to authenticate all operations.
 - `ske_custom_endpoint` (String) Custom endpoint for the Kubernetes Engine (SKE) service
+- `sqlserverflex_custom_endpoint` (String) Custom endpoint for the SQL Server Flex service
 - `token_custom_endpoint` (String) Custom endpoint for the token API, which is used to request access tokens when using the key flow

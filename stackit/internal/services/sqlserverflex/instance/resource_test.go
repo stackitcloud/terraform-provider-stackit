@@ -67,8 +67,8 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Null(),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-					"edition":       types.StringNull(),
-					"retentionDays": types.StringNull(),
+					"edition":        types.StringNull(),
+					"retention_days": types.Int64Null(),
 				}),
 				Version: types.StringNull(),
 			},
@@ -106,7 +106,7 @@ func TestMapFields(t *testing.T) {
 					},
 					Options: &map[string]string{
 						"edition":       "edition",
-						"retentionDays": "retentionDays",
+						"retentionDays": "1",
 					},
 					Version: utils.Ptr("version"),
 				},
@@ -137,8 +137,8 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Value(78),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-					"edition":       types.StringValue("edition"),
-					"retentionDays": types.StringValue("retentionDays"),
+					"edition":        types.StringValue("edition"),
+					"retention_days": types.Int64Value(1),
 				}),
 				Version: types.StringValue("version"),
 			},
@@ -168,7 +168,7 @@ func TestMapFields(t *testing.T) {
 					Storage:        nil,
 					Options: &map[string]string{
 						"edition":       "edition",
-						"retentionDays": "retentionDays",
+						"retentionDays": "1",
 					},
 					Version: utils.Ptr("version"),
 				},
@@ -183,7 +183,7 @@ func TestMapFields(t *testing.T) {
 			},
 			&optionsModel{
 				Edition:       types.StringValue("edition"),
-				RetentionDays: types.StringValue("retentionDays"),
+				RetentionDays: types.Int64Value(1),
 			},
 			Model{
 				Id:         types.StringValue("pid,iid"),
@@ -208,8 +208,8 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Value(78),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-					"edition":       types.StringValue("edition"),
-					"retentionDays": types.StringValue("retentionDays"),
+					"edition":        types.StringValue("edition"),
+					"retention_days": types.Int64Value(1),
 				}),
 				Version: types.StringValue("version"),
 			},
@@ -244,7 +244,7 @@ func TestMapFields(t *testing.T) {
 					Storage:        nil,
 					Options: &map[string]string{
 						"edition":       "edition",
-						"retentionDays": "retentionDays",
+						"retentionDays": "1",
 					},
 					Version: utils.Ptr("version"),
 				},
@@ -281,8 +281,8 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Value(78),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-					"edition":       types.StringValue("edition"),
-					"retentionDays": types.StringValue("retentionDays"),
+					"edition":        types.StringValue("edition"),
+					"retention_days": types.Int64Value(1),
 				}),
 				Version: types.StringValue("version"),
 			},
@@ -382,7 +382,7 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&optionsModel{
 				Edition:       types.StringValue("edition"),
-				RetentionDays: types.StringValue("retentionDays"),
+				RetentionDays: types.Int64Value(1),
 			},
 			&sqlserverflex.CreateInstancePayload{
 				Acl: &sqlserverflex.CreateInstancePayloadAcl{
@@ -400,7 +400,7 @@ func TestToCreatePayload(t *testing.T) {
 				},
 				Options: &sqlserverflex.CreateInstancePayloadOptions{
 					Edition:       utils.Ptr("edition"),
-					RetentionDays: utils.Ptr("retentionDays"),
+					RetentionDays: utils.Ptr("1"),
 				},
 				Version: utils.Ptr("version"),
 			},
@@ -426,7 +426,7 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&optionsModel{
 				Edition:       types.StringNull(),
-				RetentionDays: types.StringNull(),
+				RetentionDays: types.Int64Null(),
 			},
 			&sqlserverflex.CreateInstancePayload{
 				Acl: &sqlserverflex.CreateInstancePayloadAcl{
@@ -463,8 +463,12 @@ func TestToCreatePayload(t *testing.T) {
 			&flavorModel{},
 			&storageModel{},
 			&optionsModel{},
-			nil,
-			false,
+			&sqlserverflex.CreateInstancePayload{
+				Acl:     &sqlserverflex.CreateInstancePayloadAcl{},
+				Storage: &sqlserverflex.CreateInstancePayloadStorage{},
+				Options: &sqlserverflex.CreateInstancePayloadOptions{},
+			},
+			true,
 		},
 		{
 			"nil_flavor",
@@ -483,8 +487,14 @@ func TestToCreatePayload(t *testing.T) {
 			&flavorModel{},
 			nil,
 			&optionsModel{},
-			nil,
-			false,
+			&sqlserverflex.CreateInstancePayload{
+				Acl: &sqlserverflex.CreateInstancePayloadAcl{
+					Items: &[]string{},
+				},
+				Storage: &sqlserverflex.CreateInstancePayloadStorage{},
+				Options: &sqlserverflex.CreateInstancePayloadOptions{},
+			},
+			true,
 		},
 		{
 			"nil_options",
@@ -493,8 +503,14 @@ func TestToCreatePayload(t *testing.T) {
 			&flavorModel{},
 			&storageModel{},
 			nil,
-			nil,
-			false,
+			&sqlserverflex.CreateInstancePayload{
+				Acl: &sqlserverflex.CreateInstancePayloadAcl{
+					Items: &[]string{},
+				},
+				Storage: &sqlserverflex.CreateInstancePayloadStorage{},
+				Options: &sqlserverflex.CreateInstancePayloadOptions{},
+			},
+			true,
 		},
 	}
 	for _, tt := range tests {
@@ -606,8 +622,10 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{},
 			nil,
 			&flavorModel{},
-			nil,
-			false,
+			&sqlserverflex.PartialUpdateInstancePayload{
+				Acl: &sqlserverflex.CreateInstancePayloadAcl{},
+			},
+			true,
 		},
 		{
 			"nil_flavor",

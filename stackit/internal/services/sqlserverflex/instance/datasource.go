@@ -165,7 +165,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					"edition": schema.StringAttribute{
 						Computed: true,
 					},
-					"retentionDays": schema.StringAttribute{
+					"retention_days": schema.Int64Attribute{
 						Computed: true,
 					},
 				},

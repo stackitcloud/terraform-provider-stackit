@@ -304,7 +304,7 @@ func SQLServerFlexProviderConfig() string {
 	}
 	return fmt.Sprintf(`
 		provider "stackit" {
-			sqlserverlex_custom_endpoint = "%s"
+			sqlserverflex_custom_endpoint = "%s"
 		}`,
 		SQLServerFlexCustomEndpoint,
 	)

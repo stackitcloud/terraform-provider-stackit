@@ -785,7 +785,7 @@ func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, f
 			flavor.Description = types.StringValue(*f.Description)
 			break
 		}
-		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, *f.Cpu, *f.Cpu)
+		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, *f.Cpu, *f.Memory)
 	}
 	if flavor.Id.ValueString() == "" {
 		return fmt.Errorf("couldn't find flavor, available specs are:%s", avl)

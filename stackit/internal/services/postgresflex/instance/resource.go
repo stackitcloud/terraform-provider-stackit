@@ -694,7 +694,7 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 			flavor.Description = types.StringValue(*f.Description)
 			break
 		}
-		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, *f.Cpu, *f.Cpu)
+		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, *f.Cpu, *f.Memory)
 	}
 	if flavor.Id.ValueString() == "" {
 		return fmt.Errorf("couldn't find flavor, available specs are:%s", avl)

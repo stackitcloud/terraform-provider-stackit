@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,11 +25,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	coreUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/wait"
 )
@@ -89,13 +92,13 @@ var storageTypes = map[string]attr.Type{
 // Struct corresponding to Model.Options
 type optionsModel struct {
 	Edition       types.String `tfsdk:"edition"`
-	RetentionDays types.String `tfsdk:"retention_days"`
+	RetentionDays types.Int64  `tfsdk:"retention_days"`
 }
 
 // Types corresponding to optionsModel
 var optionsTypes = map[string]attr.Type{
 	"edition":        basetypes.StringType{},
-	"retention_days": basetypes.StringType{},
+	"retention_days": basetypes.Int64Type{},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -227,9 +230,15 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"description": schema.StringAttribute{
 						Computed: true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"cpu": schema.Int64Attribute{
 						Required: true,
@@ -241,10 +250,17 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"replicas": schema.Int64Attribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"storage": schema.SingleNestedAttribute{
 				Optional: true,
 				Computed: true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"class": schema.StringAttribute{
 						Optional: true,
@@ -274,12 +290,17 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"options": schema.SingleNestedAttribute{
 				Optional: true,
 				Computed: true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"edition": schema.StringAttribute{
 						Optional: true,
 						Computed: true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
+							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
 					"retention_days": schema.Int64Attribute{
@@ -287,6 +308,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Computed: true,
 						PlanModifiers: []planmodifier.Int64{
 							int64planmodifier.RequiresReplace(),
+							int64planmodifier.UseStateForUnknown(),
 						},
 					},
 				},
@@ -663,13 +685,19 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 	var optionsValues map[string]attr.Value
 	if instance.Options == nil {
 		optionsValues = map[string]attr.Value{
-			"edition":       options.Edition,
-			"retentionDays": options.RetentionDays,
+			"edition":        options.Edition,
+			"retention_days": options.RetentionDays,
 		}
 	} else {
+		retentionDaysString := (*instance.Options)["retentionDays"]
+		retentionDays, err := strconv.ParseInt(retentionDaysString, 10, 64)
+		if err != nil {
+			return fmt.Errorf("parse retentionDays to int64: %w", err)
+		}
+
 		optionsValues = map[string]attr.Value{
-			"edition":       types.StringValue((*instance.Options)["edition"]),
-			"retentionDays": types.StringValue((*instance.Options)["retentionDays"]),
+			"edition":        types.StringValue((*instance.Options)["edition"]),
+			"retention_days": types.Int64Value(retentionDays),
 		}
 	}
 	optionsObject, diags := types.ObjectValue(optionsTypes, optionsValues)
@@ -706,35 +734,37 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	if acl == nil {
-		return nil, fmt.Errorf("nil acl")
+	aclPayload := &sqlserverflex.CreateInstancePayloadAcl{}
+	if acl != nil {
+		aclPayload.Items = &acl
 	}
 	if flavor == nil {
 		return nil, fmt.Errorf("nil flavor")
 	}
-	if storage == nil {
-		return nil, fmt.Errorf("nil storage")
+	storagePayload := &sqlserverflex.CreateInstancePayloadStorage{}
+	if storage != nil {
+		storagePayload.Class = conversion.StringValueToPointer(storage.Class)
+		storagePayload.Size = conversion.Int64ValueToPointer(storage.Size)
 	}
-	if options == nil {
-		return nil, fmt.Errorf("nil options")
+	optionsPayload := &sqlserverflex.CreateInstancePayloadOptions{}
+	if options != nil {
+		optionsPayload.Edition = conversion.StringValueToPointer(options.Edition)
+		retentionDaysInt := conversion.Int64ValueToPointer(options.RetentionDays)
+		var retentionDays *string
+		if retentionDaysInt != nil {
+			retentionDays = coreUtils.Ptr(strconv.FormatInt(*retentionDaysInt, 10))
+		}
+		optionsPayload.RetentionDays = retentionDays
 	}
 
 	return &sqlserverflex.CreateInstancePayload{
-		Acl: &sqlserverflex.CreateInstancePayloadAcl{
-			Items: &acl,
-		},
+		Acl:            aclPayload,
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
-		Storage: &sqlserverflex.CreateInstancePayloadStorage{
-			Class: conversion.StringValueToPointer(storage.Class),
-			Size:  conversion.Int64ValueToPointer(storage.Size),
-		},
-		Version: conversion.StringValueToPointer(model.Version),
-		Options: &sqlserverflex.CreateInstancePayloadOptions{
-			Edition:       conversion.StringValueToPointer(options.Edition),
-			RetentionDays: conversion.StringValueToPointer(options.RetentionDays),
-		},
+		Storage:        storagePayload,
+		Version:        conversion.StringValueToPointer(model.Version),
+		Options:        optionsPayload,
 	}, nil
 }
 
@@ -742,17 +772,16 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel) (*sqlserve
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	if acl == nil {
-		return nil, fmt.Errorf("nil acl")
+	aclPayload := &sqlserverflex.CreateInstancePayloadAcl{}
+	if acl != nil {
+		aclPayload.Items = &acl
 	}
 	if flavor == nil {
 		return nil, fmt.Errorf("nil flavor")
 	}
 
 	return &sqlserverflex.PartialUpdateInstancePayload{
-		Acl: &sqlserverflex.CreateInstancePayloadAcl{
-			Items: &acl,
-		},
+		Acl:            aclPayload,
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
@@ -799,7 +828,7 @@ func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model,
 			flavor.Description = types.StringValue(*f.Description)
 			break
 		}
-		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, *f.Cpu, *f.Cpu)
+		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, *f.Cpu, *f.Memory)
 	}
 	if flavor.Id.ValueString() == "" {
 		return fmt.Errorf("couldn't find flavor, available specs are:%s", avl)
