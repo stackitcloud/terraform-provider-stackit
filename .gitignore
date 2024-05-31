@@ -1,5 +1,10 @@
 # Binaries
 bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 
 ## IDE
 *.idea/
@@ -8,3 +13,20 @@ bin/
 # Terraform
 **/.terraform
 **/terraform.tfstate**
+.terraform.lock.hcl
+.terraform.tfstate.lock.info
+main.tf
+example.tf
+index.tf
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
