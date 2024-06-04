@@ -1,14 +1,18 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/stackitcloud/terraform-provider-stackit)](https://goreportcard.com/report/github.com/stackitcloud/terraform-provider-stackit) [![GitHub Release](https://img.shields.io/github/v/release/stackitcloud/terraform-provider-stackit)](https://registry.terraform.io/providers/stackitcloud/stackit/latest) ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/stackitcloud/terraform-provider-stackit) [![GitHub License](https://img.shields.io/github/license/stackitcloud/terraform-provider-stackit)](https://www.apache.org/licenses/LICENSE-2.0)
 
+<br>
+<p align="center">
+  <img src=".github/images/stackit-logo.png" alt="STACKIT logo" width="50%"/>
+</p>
+<br>
+
 # STACKIT Terraform Provider
 
 This project is the official [Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs) for [STACKIT](https://www.stackit.de/en/), which allows you to manage STACKIT resources through Terraform.
 
-        
 ## Getting Started
 
 To install the [STACKIT Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs), copy and paste this code into your Terraform configuration. Then, run `terraform init`.
-
 
 ```
 terraform {
