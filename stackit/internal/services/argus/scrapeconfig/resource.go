@@ -36,11 +36,19 @@ import (
 )
 
 const (
-	DefaultScheme                   = "https" // API default is "http"
-	DefaultScrapeInterval           = "5m"
-	DefaultScrapeTimeout            = "2m"
-	DefaultSampleLimit              = int64(5000)
-	DefaultSAML2EnableURLParameters = true
+	DefaultScheme                          = "https" // API default is "http"
+	DefaultScrapeInterval                  = "5m"
+	DefaultScrapeTimeout                   = "2m"
+	DefaultSampleLimit                     = int64(5000)
+	DefaultSAML2EnableURLParameters        = true
+	DefaultOauth2InsecureSkipVerify        = false
+	DefaultHttpSdConfigRefreshInterval     = "60s"
+	DefaultMetricsRelabelConfigAction      = "replace"
+	DefaultMetricsRelabelConfigRegex       = ".*"
+	DefaultMetricsRelabelConfigReplacement = "$1"
+	DefaultMetricsRelabelConfigSeparator   = ";"
+	DefaultHonorLabels                     = false
+	DefaultHonorTimeStamps                 = false
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -51,18 +59,25 @@ var (
 )
 
 type Model struct {
-	Id             types.String `tfsdk:"id"` // needed by TF
-	ProjectId      types.String `tfsdk:"project_id"`
-	InstanceId     types.String `tfsdk:"instance_id"`
-	Name           types.String `tfsdk:"name"`
-	MetricsPath    types.String `tfsdk:"metrics_path"`
-	Scheme         types.String `tfsdk:"scheme"`
-	ScrapeInterval types.String `tfsdk:"scrape_interval"`
-	ScrapeTimeout  types.String `tfsdk:"scrape_timeout"`
-	SampleLimit    types.Int64  `tfsdk:"sample_limit"`
-	SAML2          types.Object `tfsdk:"saml2"`
-	BasicAuth      types.Object `tfsdk:"basic_auth"`
-	Targets        types.List   `tfsdk:"targets"`
+	Id                    types.String `tfsdk:"id"` // needed by TF
+	ProjectId             types.String `tfsdk:"project_id"`
+	InstanceId            types.String `tfsdk:"instance_id"`
+	Name                  types.String `tfsdk:"name"`
+	MetricsPath           types.String `tfsdk:"metrics_path"`
+	Scheme                types.String `tfsdk:"scheme"`
+	ScrapeInterval        types.String `tfsdk:"scrape_interval"`
+	ScrapeTimeout         types.String `tfsdk:"scrape_timeout"`
+	SampleLimit           types.Int64  `tfsdk:"sample_limit"`
+	SAML2                 types.Object `tfsdk:"saml2"`
+	BasicAuth             types.Object `tfsdk:"basic_auth"`
+	Targets               types.List   `tfsdk:"targets"`
+	BearerToken           types.String `tfsdk:"bearer_token"`
+	HonorLabels           types.Bool   `tfsdk:"honor_labels"`
+	HonorTimeStamps       types.Bool   `tfsdk:"honor_timestamps"`
+	HttpSdConfigs         types.List   `tfsdk:"http_sd_configs"`
+	MetricsRelabelConfigs types.List   `tfsdk:"metrics_relabel_configs"`
+	Oauth2                types.List   `tfsdk:"oauth2"`
+	TlsConfig             types.Object `tfsdk:"tls_config"`
 }
 
 // Struct corresponding to Model.SAML2
@@ -97,6 +112,74 @@ type targetModel struct {
 var targetTypes = map[string]attr.Type{
 	"urls":   types.ListType{ElemType: types.StringType},
 	"labels": types.MapType{ElemType: types.StringType},
+}
+
+// Struct corresponding to Model.HttpSdConfigs
+type httpSdConfigsModel struct {
+	BasicAuth       types.Object `tfsdk:"basic_auth"`
+	Oauth2          types.List   `tfsdk:"oauth2"`
+	RefreshInterval types.String `tfsdk:"refresh_interval"`
+	TlsConfig       types.Object `tfsdk:"tls_config"`
+	Url             types.String `tfsdk:"url"`
+}
+
+// Types corresponding to httpSdConfigsModel
+var httpSdConfigsTypes = map[string]attr.Type{
+	"basic_auth":       types.ObjectType{AttrTypes: basicAuthTypes},
+	"oauth2":           types.ObjectType{AttrTypes: oauth2Types},
+	"refresh_interval": types.StringType,
+	"tls_config":       types.ObjectType{AttrTypes: tlsConfigTypes},
+	"url":              types.StringType,
+}
+
+// Struct corresponding to Model.MetricsRelabelConfigs
+type metricsRelabelConfigsModel struct {
+	Action       types.String  `tfsdk:"action"`
+	Modulus      types.Float64 `tfsdk:"modulus"`
+	Regex        types.String  `tfsdk:"regex"`
+	Replacement  types.String  `tfsdk:"replacement"`
+	Separator    types.String  `tfsdk:"separator"`
+	SourceLabels types.List    `tfsdk:"source_labels"`
+	TargetLabel  types.String  `tfsdk:"target_label"`
+}
+
+// Types corresponding to metricsRelabelConfigsModel
+var metricsRelabelConfigsTypes = map[string]attr.Type{
+	"action":        types.StringType,
+	"modulus":       types.Float64Type,
+	"regex":         types.StringType,
+	"replacement":   types.StringType,
+	"separator":     types.StringType,
+	"source_labels": types.ListType{ElemType: types.StringType},
+	"target_label":  types.StringType,
+}
+
+// Struct corresponding to Model.Oauth2
+type oauth2Model struct {
+	ClientId     types.String `tfsdk:"client_id"`
+	ClientSecret types.String `tfsdk:"client_secret"`
+	Scopes       types.List   `tfsdk:"scopes"`
+	TlsConfig    types.Object `tfsdk:"tls_config"`
+	TokenUrl     types.String `tfsdk:"token_url"`
+}
+
+// Types corresponding to oauth2Model
+var oauth2Types = map[string]attr.Type{
+	"client_id":     types.StringType,
+	"client_secret": types.StringType,
+	"scopes":        types.ListType{ElemType: types.StringType},
+	"tls_config":    types.ObjectType{AttrTypes: tlsConfigTypes},
+	"token_url":     types.StringType,
+}
+
+// Struct corresponding to Model.TlsConfig
+type tlsConfigModel struct {
+	InsecureSkipVerify types.Bool `tfsdk:"insecure_skip_verify"`
+}
+
+// Types corresponding to tlsConfigModel
+var tlsConfigTypes = map[string]attr.Type{
+	"insecure_skip_verify": types.BoolType,
 }
 
 // NewScrapeConfigResource is a helper function to simplify the provider implementation.
@@ -201,7 +284,6 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 					stringvalidator.LengthBetween(1, 200),
 				},
 			},
-
 			"scheme": schema.StringAttribute{
 				Description: "Specifies the http scheme. Defaults to `https`.",
 				Optional:    true,
@@ -236,7 +318,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 				Default: int64default.StaticInt64(DefaultSampleLimit),
 			},
 			"saml2": schema.SingleNestedAttribute{
-				Description: "A SAML2 configuration block.",
+				Description: "A SAML2 configuration block. Defaults to `true`",
 				Optional:    true,
 				Computed:    true,
 				Default: objectdefault.StaticValue(
@@ -305,6 +387,239 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 								mapvalidator.KeysAre(stringvalidator.LengthBetween(0, 200)),
 							},
 						},
+					},
+				},
+			},
+			"bearer_token": schema.StringAttribute{
+				Description: "Sets the 'Authorization' header on every scrape request with the configured bearer token.",
+				Optional:    true,
+				Computed:    true,
+				Sensitive:   true,
+			},
+			"honor_labels": schema.BoolAttribute{
+				Description: "Note that any globally configured 'external_labels' are unaffected by this setting. Defaults to `false`",
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(DefaultHonorLabels),
+			},
+			"honor_timestamps": schema.BoolAttribute{
+				Description: "It controls whether Prometheus respects the timestamps present in scraped data. Defaults to `false`",
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(DefaultHonorTimeStamps),
+			},
+			"http_sd_configs": schema.ListNestedAttribute{
+				Description: "HTTP-based service discovery provides a more generic way to configure static targets and serves as an interface to plug in custom service discovery mechanisms.",
+				Optional:    true,
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"basic_auth": schema.SingleNestedAttribute{
+							Description: "A basic authentication block.",
+							Optional:    true,
+							Computed:    true,
+							Attributes: map[string]schema.Attribute{
+								"username": schema.StringAttribute{
+									Description: "Specifies basic auth username.",
+									Required:    true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 200),
+									},
+								},
+								"password": schema.StringAttribute{
+									Description: "Specifies basic auth password.",
+									Required:    true,
+									Sensitive:   true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 200),
+									},
+								},
+							},
+						},
+						"oauth2": schema.SingleNestedAttribute{
+							Description: "OAuth 2.0 authentication using the client credentials grant type.",
+							Optional:    true,
+							Computed:    true,
+							Attributes: map[string]schema.Attribute{
+								"client_id": schema.StringAttribute{
+									Description: "",
+									Required:    true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 200),
+									},
+								},
+								"client_secret": schema.StringAttribute{
+									Description: "",
+									Required:    true,
+									Sensitive:   true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 200),
+									},
+								},
+								"token_url": schema.StringAttribute{
+									Description: "The URL to fetch the token from.",
+									Required:    true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 200),
+									},
+								},
+								"scopes": schema.ListAttribute{
+									Description: `The URL to fetch the token from.`,
+									Optional:    true,
+									ElementType: types.StringType,
+								},
+								"tls_config": schema.SingleNestedAttribute{
+									Description: "Configures the scrape request's TLS settings.",
+									Optional:    true,
+									Attributes: map[string]schema.Attribute{
+										"insecure_skip_verify": schema.BoolAttribute{
+											Description: "Disable validation of the server certificate. Defaults to `false`",
+											Optional:    true,
+											Default:     booldefault.StaticBool(DefaultOauth2InsecureSkipVerify),
+										},
+									},
+								},
+							},
+						},
+						"refresh_interval": schema.StringAttribute{
+							Description: "Refresh interval to re-query the endpoint. Defaults to `60s`",
+							Optional:    true,
+							Computed:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(2, 8),
+							},
+							Default: stringdefault.StaticString(DefaultHttpSdConfigRefreshInterval),
+						},
+						"tls_config": schema.SingleNestedAttribute{
+							Description: "Configures the scrape request's TLS settings.",
+							Optional:    true,
+							Attributes: map[string]schema.Attribute{
+								"insecure_skip_verify": schema.BoolAttribute{
+									Description: "Disable validation of the server certificate. Defaults to `false`",
+									Optional:    true,
+									Default:     booldefault.StaticBool(DefaultOauth2InsecureSkipVerify),
+								},
+							},
+						},
+						"url": schema.StringAttribute{
+							Description: "URL from which the targets are fetched.",
+							Required:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthAtMost(400),
+							},
+						},
+					},
+				},
+			},
+			"metrics_relabel_configs": schema.ListNestedAttribute{
+				Description: "List of metric relabel configurations.",
+				Optional:    true,
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"action": schema.StringAttribute{
+							Description: "Action to perform based on regex matching. Defaults to `replace`",
+							Optional:    true,
+							Default:     stringdefault.StaticString(DefaultMetricsRelabelConfigAction),
+						},
+						"modulus": schema.Float64Attribute{
+							Description: "Modulus to take of the hash of the source label values.",
+							Optional:    true,
+						},
+						"regex": schema.StringAttribute{
+							Description: "Regular expression against which the extracted value is matched. Defaults to `.*`",
+							Optional:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(1, 400),
+							},
+							Default: stringdefault.StaticString(DefaultMetricsRelabelConfigRegex),
+						},
+						"replacement": schema.StringAttribute{
+							Description: "Replacement value against which a regex replace is performed if the regular expression matches.",
+							Optional:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(1, 200),
+							},
+							Default: stringdefault.StaticString(DefaultMetricsRelabelConfigReplacement),
+						},
+						"separator": schema.StringAttribute{
+							Description: "Separator placed between concatenated source label values.",
+							Optional:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(1, 20),
+							},
+							Default: stringdefault.StaticString(DefaultMetricsRelabelConfigSeparator),
+						},
+						"target_label": schema.StringAttribute{
+							Description: "Label to which the resulting value is written in a replace action.",
+							Optional:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(1, 200),
+							},
+						},
+						"source_labels": schema.ListAttribute{
+							Description: `The source labels select values from existing labels.`,
+							Optional:    true,
+							ElementType: types.StringType,
+						},
+					},
+				},
+			},
+			"oauth2": schema.ListNestedAttribute{
+				Description: "",
+				Optional:    true,
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"client_id": schema.StringAttribute{
+							Description: "",
+							Required:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(1, 200),
+							},
+						},
+						"client_secret": schema.StringAttribute{
+							Description: "",
+							Required:    true,
+							Sensitive:   true,
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(1, 200),
+							},
+						},
+						"token_url": schema.StringAttribute{
+							Description: "The URL to fetch the token from.",
+							Required:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(1, 200),
+							},
+						},
+						"scopes": schema.ListAttribute{
+							Description: `The URL to fetch the token from.`,
+							Optional:    true,
+							ElementType: types.StringType,
+						},
+						"tls_config": schema.SingleNestedAttribute{
+							Description: "Configures the scrape request's TLS settings.",
+							Optional:    true,
+							Attributes: map[string]schema.Attribute{
+								"insecure_skip_verify": schema.BoolAttribute{
+									Description: "Disable validation of the server certificate. Defaults to `false`",
+									Optional:    true,
+									Default:     booldefault.StaticBool(DefaultOauth2InsecureSkipVerify),
+								},
+							},
+						},
+					},
+				},
+			},
+			"tls_config": schema.SingleNestedAttribute{
+				Description: "",
+				Optional:    true,
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"insecure_skip_verify": schema.BoolAttribute{
+						Description: "Disable validation of the server certificate.",
+						Optional:    true,
 					},
 				},
 			},
