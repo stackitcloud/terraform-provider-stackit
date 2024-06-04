@@ -695,7 +695,9 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		edition := options.Edition
 		editionValue, ok := (*instance.Options)["edition"]
 		if ok {
-			edition = types.StringValue(editionValue)
+			// API returns edition in uppercase but validates if it is lowercase
+			// This is a workaround that should be removed when the API is fixed
+			edition = types.StringValue(strings.ToLower(editionValue))
 		}
 
 		optionsValues = map[string]attr.Value{

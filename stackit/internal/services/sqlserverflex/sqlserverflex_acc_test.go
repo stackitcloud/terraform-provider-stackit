@@ -30,7 +30,7 @@ var instanceResource = map[string]string{
 	"storage_size":            "40",
 	"version":                 "2022",
 	"replicas":                "1",
-	"options_edition":         "developer",
+	"options_edition":         "standard",
 	"options_retention_days":  "64",
 	"flavor_id":               "4.16-Single",
 	"backup_schedule":         "00 6 * * *",
@@ -201,7 +201,9 @@ func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 	var client *sqlserverflex.APIClient
 	var err error
 	if testutil.SQLServerFlexCustomEndpoint == "" {
-		client, err = sqlserverflex.NewAPIClient()
+		client, err = sqlserverflex.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
 	} else {
 		client, err = sqlserverflex.NewAPIClient(
 			config.WithEndpoint(testutil.SQLServerFlexCustomEndpoint),
