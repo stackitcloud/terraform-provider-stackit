@@ -292,7 +292,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 				Attributes: map[string]schema.Attribute{
 					"edition": schema.StringAttribute{
-						Optional: true,
 						Computed: true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
@@ -695,9 +694,7 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		edition := options.Edition
 		editionValue, ok := (*instance.Options)["edition"]
 		if ok {
-			// API returns edition in uppercase but validates if it is lowercase
-			// This is a workaround that should be removed when the API is fixed
-			edition = types.StringValue(strings.ToLower(editionValue))
+			edition = types.StringValue(editionValue)
 		}
 
 		optionsValues = map[string]attr.Value{
