@@ -73,8 +73,11 @@ Read-Only:
 
 Optional:
 
-- `edition` (String)
 - `retention_days` (Number)
+
+Read-Only:
+
+- `edition` (String)
 
 
 <a id="nestedatt--storage"></a>
