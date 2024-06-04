@@ -30,7 +30,6 @@ var instanceResource = map[string]string{
 	"storage_size":            "40",
 	"version":                 "2022",
 	"replicas":                "1",
-	"options_edition":         "standard",
 	"options_retention_days":  "64",
 	"flavor_id":               "4.16-Single",
 	"backup_schedule":         "00 6 * * *",
@@ -55,7 +54,6 @@ func configResources(backupSchedule string) string {
 					}
 					version = "%s"
 					options = {
-						edition = "%s"
 						retention_days = %s
 					}
 					backup_schedule = "%s"
@@ -70,7 +68,6 @@ func configResources(backupSchedule string) string {
 		instanceResource["storage_class"],
 		instanceResource["storage_size"],
 		instanceResource["version"],
-		instanceResource["options_edition"],
 		instanceResource["options_retention_days"],
 		backupSchedule,
 	)
@@ -99,7 +96,6 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "storage.class", instanceResource["storage_class"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "storage.size", instanceResource["storage_size"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "version", instanceResource["version"]),
-					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "options.edition", instanceResource["options_edition"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "options.retention_days", instanceResource["options_retention_days"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
 				),
@@ -135,7 +131,6 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "flavor.cpu", instanceResource["flavor_cpu"]),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "flavor.ram", instanceResource["flavor_ram"]),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "replicas", instanceResource["replicas"]),
-					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "options.edition", instanceResource["options_edition"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "options.retention_days", instanceResource["options_retention_days"]),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
 				),
@@ -186,7 +181,6 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "storage.class", instanceResource["storage_class"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "storage.size", instanceResource["storage_size"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "version", instanceResource["version"]),
-					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "options.edition", instanceResource["options_edition"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "options.retention_days", instanceResource["options_retention_days"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "backup_schedule", instanceResource["backup_schedule_updated"]),
 				),
