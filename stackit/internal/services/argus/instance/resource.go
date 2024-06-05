@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -27,6 +26,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/argus/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	tfpUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -293,9 +293,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
-	metricsRetentionDays := getInt64Pointer(model.MetricsRetentionDays)
-	metricsRetentionDays5mDownsampling := getInt64Pointer(model.MetricsRetentionDays5mDownsampling)
-	metricsRetentionDays1hDownsampling := getInt64Pointer(model.MetricsRetentionDays1hDownsampling)
+	metricsRetentionDays := tfpUtils.GetInt64Pointer(model.MetricsRetentionDays)
+	metricsRetentionDays5mDownsampling := tfpUtils.GetInt64Pointer(model.MetricsRetentionDays5mDownsampling)
+	metricsRetentionDays1hDownsampling := tfpUtils.GetInt64Pointer(model.MetricsRetentionDays1hDownsampling)
 
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -501,9 +501,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
-	metricsRetentionDays := getInt64Pointer(model.MetricsRetentionDays)
-	metricsRetentionDays5mDownsampling := getInt64Pointer(model.MetricsRetentionDays5mDownsampling)
-	metricsRetentionDays1hDownsampling := getInt64Pointer(model.MetricsRetentionDays1hDownsampling)
+	metricsRetentionDays := tfpUtils.GetInt64Pointer(model.MetricsRetentionDays)
+	metricsRetentionDays5mDownsampling := tfpUtils.GetInt64Pointer(model.MetricsRetentionDays5mDownsampling)
+	metricsRetentionDays1hDownsampling := tfpUtils.GetInt64Pointer(model.MetricsRetentionDays1hDownsampling)
 
 	err := r.loadPlanId(ctx, &model)
 	if err != nil {
@@ -783,14 +783,6 @@ func mapMetricsRetentionField(r *argus.GetMetricsStorageRetentionResponse, model
 	model.MetricsRetentionDays1hDownsampling = types.Int64Value(metricsRetentionDays1h)
 
 	return nil
-}
-
-// getInt64Pointer returns a pointer to an int64 value if the input is known, otherwise it returns nil.
-func getInt64Pointer(i basetypes.Int64Value) *int64 {
-	if i.IsUnknown() {
-		return nil
-	}
-	return utils.Ptr(i.ValueInt64())
 }
 
 func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {

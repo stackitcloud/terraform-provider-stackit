@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -75,4 +76,15 @@ func SimplifyBackupSchedule(schedule string) string {
 		return simplified
 	})
 	return simplifiedSchedule
+}
+
+// GetInt64Pointer converts an Int64Value into an int64 pointer.
+// If the value is known, it returns a pointer to the value.
+// If the value is unknown, it returns nil.
+func GetInt64Pointer(i basetypes.Int64Value) *int64 {
+	if i.IsUnknown() {
+		return nil
+	}
+	i.IsNull()
+	return utils.Ptr(i.ValueInt64())
 }

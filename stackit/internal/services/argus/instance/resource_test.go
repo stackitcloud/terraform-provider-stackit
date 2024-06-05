@@ -271,46 +271,6 @@ func TestMapFields(t *testing.T) {
 	}
 }
 
-// func TestMapMetricsRetentionField(t *testing.T) {
-// 	tests := []struct {
-// 		description string
-// 		input       *argus.GetMetricsStorageRetentionResponse
-// 		expected    *Model
-// 		isValid     bool
-// 	}{
-// 		{
-// 			"ok",
-// 			&argus.GetMetricsStorageRetentionResponse{
-// 				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-// 				MetricsRetentionTime1h:  utils.Ptr("30d"),
-// 				MetricsRetentionTime5m:  utils.Ptr("7d"),
-// 			},
-// 			&Model{
-// 				MetricsRetentionDays:               types.Int64Value(60),
-// 				MetricsRetentionDays1hDownsampling: types.Int64Value(30),
-// 				MetricsRetentionDays5mDownsampling: types.Int64Value(7),
-// 			},
-// 			true,
-// 		},
-// 		{
-// 			"nil fields in response",
-// 			&argus.GetMetricsStorageRetentionResponse{
-// 				MetricsRetentionTimeRaw: nil,
-// 				MetricsRetentionTime1h:  nil,
-// 				MetricsRetentionTime5m:  nil,
-// 			},
-// 			nil,
-// 			false,
-// 		},
-// 		{
-// 			"nil response",
-// 			nil,
-// 			nil,
-// 			false,
-// 		},
-// 	}
-// }
-
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
