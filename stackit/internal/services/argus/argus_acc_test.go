@@ -18,13 +18,16 @@ import (
 )
 
 var instanceResource = map[string]string{
-	"project_id":    testutil.ProjectId,
-	"name":          testutil.ResourceNameWithDateTime("argus"),
-	"plan_name":     "Monitoring-Basic-EU01",
-	"new_plan_name": "Monitoring-Medium-EU01",
-	"acl-0":         "1.2.3.4/32",
-	"acl-1":         "111.222.111.222/32",
-	"acl-1-updated": "111.222.111.125/32",
+	"project_id":                             testutil.ProjectId,
+	"name":                                   testutil.ResourceNameWithDateTime("argus"),
+	"plan_name":                              "Monitoring-Basic-EU01",
+	"new_plan_name":                          "Monitoring-Medium-EU01",
+	"acl-0":                                  "1.2.3.4/32",
+	"acl-1":                                  "111.222.111.222/32",
+	"acl-1-updated":                          "111.222.111.125/32",
+	"metrics_retention_days":                 "60",
+	"metrics_retention_days_5m_downsampling": "30",
+	"metrics_retention_days_1h_downsampling": "15",
 }
 
 var scrapeConfigResource = map[string]string{
@@ -42,59 +45,48 @@ var credentialResource = map[string]string{
 	"project_id": testutil.ProjectId,
 }
 
-func resourceConfig(acl *string, instanceName, planName, target, saml2EnableUrlParameters string) string {
-	if acl == nil {
-		return fmt.Sprintf(`
-				%s
+func instanceResourceConfig(acl, metricsRetentionDays, metricsRetentionDays1hDownsampling, metricsRetentionDays5mDownsampling *string, instanceName, planName string) string {
+	var aclStr string
+	var metricsRetentionDaysStr string
+	var metricsRetentionDays1hDownsamplingStr string
+	var metricsRetentionDays5mDownsamplingStr string
 
-				resource "stackit_argus_instance" "instance" {
-					project_id = "%s"
-					name      = "%s"
-					plan_name = "%s"
-				}
-				
-				resource "stackit_argus_scrapeconfig" "scrapeconfig" {
-					project_id = stackit_argus_instance.instance.project_id
-					instance_id = stackit_argus_instance.instance.instance_id
-				    name = "%s"
-					metrics_path = "%s"
-				    targets = [%s]
-					scrape_interval = "%s"
-					sample_limit = %s
-					saml2 = { 
-						enable_url_parameters = %s
-					}
-				}
-
-				resource "stackit_argus_credential" "credential" {
-					project_id = stackit_argus_instance.instance.project_id
-					instance_id = stackit_argus_instance.instance.instance_id
-				}
-
-				`,
-			testutil.ArgusProviderConfig(),
-			instanceResource["project_id"],
-			instanceName,
-			planName,
-			scrapeConfigResource["name"],
-			scrapeConfigResource["metrics_path"],
-			target,
-			scrapeConfigResource["scrape_interval"],
-			scrapeConfigResource["sample_limit"],
-			saml2EnableUrlParameters,
-		)
+	if acl != nil {
+		aclStr = fmt.Sprintf("acl = %s", *acl)
 	}
+
+	if metricsRetentionDays != nil {
+		metricsRetentionDaysStr = fmt.Sprintf("metrics_retention_days = %s", *metricsRetentionDays)
+	}
+
+	if metricsRetentionDays1hDownsampling != nil {
+		metricsRetentionDays1hDownsamplingStr = fmt.Sprintf("metrics_retention_days_1h_downsampling = %s", *metricsRetentionDays1hDownsampling)
+	}
+
+	if metricsRetentionDays5mDownsampling != nil {
+		metricsRetentionDays5mDownsamplingStr = fmt.Sprintf("metrics_retention_days_5m_downsampling = %s", *metricsRetentionDays5mDownsampling)
+	}
+
+	optionalsStr := strings.Join([]string{aclStr, metricsRetentionDaysStr, metricsRetentionDays1hDownsamplingStr, metricsRetentionDays5mDownsamplingStr}, "\n")
+
 	return fmt.Sprintf(`
-	%s
+		resource "stackit_argus_instance" "instance" {
+			project_id = "%s"
+			name      = "%s"
+			plan_name = "%s"
+			%s
+		}
+	`,
+		instanceResource["project_id"],
+		instanceName,
+		planName,
+		optionalsStr,
+	)
+}
 
-	resource "stackit_argus_instance" "instance" {
-		project_id = "%s"
-		name      = "%s"
-		plan_name = "%s"
-		acl       = %s
-	}
-	
-	resource "stackit_argus_scrapeconfig" "scrapeconfig" {
+func scrapeConfigResourceConfig(target, saml2EnableUrlParameters string) string {
+	return fmt.Sprintf(
+		`resource "stackit_argus_scrapeconfig" "scrapeconfig" {
 		project_id = stackit_argus_instance.instance.project_id
 		instance_id = stackit_argus_instance.instance.instance_id
 		name = "%s"
@@ -105,25 +97,29 @@ func resourceConfig(acl *string, instanceName, planName, target, saml2EnableUrlP
 		saml2 = { 
 			enable_url_parameters = %s
 		}
-	}
-
-	resource "stackit_argus_credential" "credential" {
-		project_id = stackit_argus_instance.instance.project_id
-		instance_id = stackit_argus_instance.instance.instance_id
-	}
-
-	`,
-		testutil.ArgusProviderConfig(),
-		instanceResource["project_id"],
-		instanceName,
-		planName,
-		*acl,
+	}`,
 		scrapeConfigResource["name"],
 		scrapeConfigResource["metrics_path"],
 		target,
 		scrapeConfigResource["scrape_interval"],
 		scrapeConfigResource["sample_limit"],
 		saml2EnableUrlParameters,
+	)
+}
+
+func credentialResourceConfig() string {
+	return `resource "stackit_argus_credential" "credential" {
+		project_id = stackit_argus_instance.instance.project_id
+		instance_id = stackit_argus_instance.instance.instance_id
+	}`
+}
+
+func resourceConfig(acl, metricsRetentionDays, metricsRetentionDays1hDownsampling, metricsRetentionDays5mDownsampling *string, instanceName, planName, target, saml2EnableUrlParameters string) string {
+	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
+		testutil.ArgusProviderConfig(),
+		instanceResourceConfig(acl, metricsRetentionDays, metricsRetentionDays1hDownsampling, metricsRetentionDays5mDownsampling, instanceName, planName),
+		scrapeConfigResourceConfig(target, saml2EnableUrlParameters),
+		credentialResourceConfig(),
 	)
 }
 
@@ -141,6 +137,9 @@ func TestAccResource(t *testing.T) {
 						instanceResource["acl-1"],
 						instanceResource["acl-1"],
 					)),
+					utils.Ptr(instanceResource["metrics_retention_days"]),
+					utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
+					utils.Ptr(instanceResource["metrics_retention_days_5m_downsampling"]),
 					instanceResource["name"],
 					instanceResource["plan_name"],
 					scrapeConfigResource["urls"],
@@ -158,9 +157,9 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "grafana_url"),
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "grafana_initial_admin_user"),
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "grafana_initial_admin_password"),
-					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_retention_days"),
-					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_retention_days_5m_downsampling"),
-					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_retention_days_1h_downsampling"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "metrics_retention_days", instanceResource["metrics_retention_days"]),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "metrics_retention_days_5m_downsampling", instanceResource["metrics_retention_days_5m_downsampling"]),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "metrics_retention_days_1h_downsampling", instanceResource["metrics_retention_days_1h_downsampling"]),
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_url"),
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_push_url"),
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "targets_url"),
@@ -204,9 +203,12 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "password"),
 				),
 			},
-			// Creation without ACL
+			// Creation without ACL and partial metrics retention days
 			{
 				Config: resourceConfig(
+					nil,
+					nil,
+					utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
 					nil,
 					instanceResource["name"],
 					instanceResource["plan_name"],
@@ -227,7 +229,7 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "grafana_initial_admin_password"),
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_retention_days"),
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_retention_days_5m_downsampling"),
-					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_retention_days_1h_downsampling"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "metrics_retention_days_1h_downsampling", instanceResource["metrics_retention_days_1h_downsampling"]),
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_url"),
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_push_url"),
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "targets_url"),
@@ -273,6 +275,9 @@ func TestAccResource(t *testing.T) {
 			{
 				Config: resourceConfig(
 					utils.Ptr("[]"),
+					nil,
+					nil,
+					nil,
 					instanceResource["name"],
 					instanceResource["plan_name"],
 					scrapeConfigResource["urls"],
@@ -350,11 +355,15 @@ func TestAccResource(t *testing.T) {
 					  	name        = stackit_argus_scrapeconfig.scrapeconfig.name
 					}
 					`,
-					resourceConfig(utils.Ptr(fmt.Sprintf(
-						"[%q, %q]",
-						instanceResource["acl-0"],
-						instanceResource["acl-1"],
-					)),
+					resourceConfig(
+						utils.Ptr(fmt.Sprintf(
+							"[%q, %q]",
+							instanceResource["acl-0"],
+							instanceResource["acl-1"],
+						)),
+						utils.Ptr(instanceResource["metrics_retention_days"]),
+						utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
+						utils.Ptr(instanceResource["metrics_retention_days_5m_downsampling"]),
 						instanceResource["name"],
 						instanceResource["plan_name"],
 						scrapeConfigResource["urls"],
@@ -441,11 +450,15 @@ func TestAccResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfig(utils.Ptr(fmt.Sprintf(
-					"[%q, %q]",
-					instanceResource["acl-0"],
-					instanceResource["acl-1-updated"],
-				)),
+				Config: resourceConfig(
+					utils.Ptr(fmt.Sprintf(
+						"[%q, %q]",
+						instanceResource["acl-0"],
+						instanceResource["acl-1-updated"],
+					)),
+					utils.Ptr(instanceResource["metrics_retention_days"]),
+					utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
+					utils.Ptr(instanceResource["metrics_retention_days_5m_downsampling"]),
 					fmt.Sprintf("%s-new", instanceResource["name"]),
 					instanceResource["new_plan_name"],
 					"",
