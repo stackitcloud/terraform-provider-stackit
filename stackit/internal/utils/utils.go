@@ -85,6 +85,5 @@ func GetInt64Pointer(i basetypes.Int64Value) *int64 {
 	if i.IsUnknown() {
 		return nil
 	}
-	i.IsNull()
 	return utils.Ptr(i.ValueInt64())
 }
