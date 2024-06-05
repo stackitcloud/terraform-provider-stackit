@@ -389,7 +389,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 				Sensitive:   true,
 			},
 			"honor_labels": schema.BoolAttribute{
-				Description: "Note that any globally configured 'external_labels' are unaffected by this setting. Defaults to `false`",
+				Description: "It controls whether Prometheus respects the labels in scraped data. Note that any globally configured 'external_labels' are unaffected by this setting. Defaults to `false`",
 				Optional:    true,
 				Computed:    true,
 			},
@@ -405,7 +405,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"basic_auth": schema.SingleNestedAttribute{
-							Description: "A basic authentication block.",
+							Description: "Sets the 'Authorization' header on every scrape request with the configured username and password.",
 							Optional:    true,
 							Computed:    true,
 							Attributes: map[string]schema.Attribute{
