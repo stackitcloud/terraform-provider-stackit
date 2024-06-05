@@ -415,7 +415,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"basic_auth": schema.SingleNestedAttribute{
-							Description: "A basic authentication block.",
+							Description: "Sets the 'Authorization' header on every scrape request with the configured username and password.",
 							Optional:    true,
 							Computed:    true,
 							Attributes: map[string]schema.Attribute{
