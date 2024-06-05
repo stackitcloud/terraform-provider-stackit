@@ -36,19 +36,11 @@ import (
 )
 
 const (
-	DefaultScheme                          = "https" // API default is "http"
-	DefaultScrapeInterval                  = "5m"
-	DefaultScrapeTimeout                   = "2m"
-	DefaultSampleLimit                     = int64(5000)
-	DefaultSAML2EnableURLParameters        = true
-	DefaultOauth2InsecureSkipVerify        = false
-	DefaultHttpSdConfigRefreshInterval     = "60s"
-	DefaultMetricsRelabelConfigAction      = "replace"
-	DefaultMetricsRelabelConfigRegex       = ".*"
-	DefaultMetricsRelabelConfigReplacement = "$1"
-	DefaultMetricsRelabelConfigSeparator   = ";"
-	DefaultHonorLabels                     = false
-	DefaultHonorTimeStamps                 = false
+	DefaultScheme                   = "https" // API default is "http"
+	DefaultScrapeInterval           = "5m"
+	DefaultScrapeTimeout            = "2m"
+	DefaultSampleLimit              = int64(5000)
+	DefaultSAML2EnableURLParameters = true
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -400,13 +392,11 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 				Description: "Note that any globally configured 'external_labels' are unaffected by this setting. Defaults to `false`",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(DefaultHonorLabels),
 			},
 			"honor_timestamps": schema.BoolAttribute{
 				Description: "It controls whether Prometheus respects the timestamps present in scraped data. Defaults to `false`",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(DefaultHonorTimeStamps),
 			},
 			"http_sd_configs": schema.ListNestedAttribute{
 				Description: "HTTP-based service discovery provides a more generic way to configure static targets and serves as an interface to plug in custom service discovery mechanisms.",
@@ -466,16 +456,18 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 								"scopes": schema.ListAttribute{
 									Description: `The URL to fetch the token from.`,
 									Optional:    true,
+									Computed:    true,
 									ElementType: types.StringType,
 								},
 								"tls_config": schema.SingleNestedAttribute{
 									Description: "Configures the scrape request's TLS settings.",
 									Optional:    true,
+									Computed:    true,
 									Attributes: map[string]schema.Attribute{
 										"insecure_skip_verify": schema.BoolAttribute{
 											Description: "Disable validation of the server certificate. Defaults to `false`",
 											Optional:    true,
-											Default:     booldefault.StaticBool(DefaultOauth2InsecureSkipVerify),
+											Computed:    true,
 										},
 									},
 								},
@@ -488,16 +480,16 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(2, 8),
 							},
-							Default: stringdefault.StaticString(DefaultHttpSdConfigRefreshInterval),
 						},
 						"tls_config": schema.SingleNestedAttribute{
 							Description: "Configures the scrape request's TLS settings.",
 							Optional:    true,
+							Computed:    true,
 							Attributes: map[string]schema.Attribute{
 								"insecure_skip_verify": schema.BoolAttribute{
 									Description: "Disable validation of the server certificate. Defaults to `false`",
 									Optional:    true,
-									Default:     booldefault.StaticBool(DefaultOauth2InsecureSkipVerify),
+									Computed:    true,
 								},
 							},
 						},
@@ -520,39 +512,41 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 						"action": schema.StringAttribute{
 							Description: "Action to perform based on regex matching. Defaults to `replace`",
 							Optional:    true,
-							Default:     stringdefault.StaticString(DefaultMetricsRelabelConfigAction),
+							Computed:    true,
 						},
 						"modulus": schema.Float64Attribute{
 							Description: "Modulus to take of the hash of the source label values.",
 							Optional:    true,
+							Computed:    true,
 						},
 						"regex": schema.StringAttribute{
 							Description: "Regular expression against which the extracted value is matched. Defaults to `.*`",
 							Optional:    true,
+							Computed:    true,
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(1, 400),
 							},
-							Default: stringdefault.StaticString(DefaultMetricsRelabelConfigRegex),
 						},
 						"replacement": schema.StringAttribute{
 							Description: "Replacement value against which a regex replace is performed if the regular expression matches.",
 							Optional:    true,
+							Computed:    true,
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(1, 200),
 							},
-							Default: stringdefault.StaticString(DefaultMetricsRelabelConfigReplacement),
 						},
 						"separator": schema.StringAttribute{
 							Description: "Separator placed between concatenated source label values.",
 							Optional:    true,
+							Computed:    true,
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(1, 20),
 							},
-							Default: stringdefault.StaticString(DefaultMetricsRelabelConfigSeparator),
 						},
 						"target_label": schema.StringAttribute{
 							Description: "Label to which the resulting value is written in a replace action.",
 							Optional:    true,
+							Computed:    true,
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(1, 200),
 							},
@@ -560,6 +554,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 						"source_labels": schema.ListAttribute{
 							Description: `The source labels select values from existing labels.`,
 							Optional:    true,
+							Computed:    true,
 							ElementType: types.StringType,
 						},
 					},
@@ -596,16 +591,18 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 						"scopes": schema.ListAttribute{
 							Description: `The URL to fetch the token from.`,
 							Optional:    true,
+							Computed:    true,
 							ElementType: types.StringType,
 						},
 						"tls_config": schema.SingleNestedAttribute{
 							Description: "Configures the scrape request's TLS settings.",
 							Optional:    true,
+							Computed:    true,
 							Attributes: map[string]schema.Attribute{
 								"insecure_skip_verify": schema.BoolAttribute{
 									Description: "Disable validation of the server certificate. Defaults to `false`",
 									Optional:    true,
-									Default:     booldefault.StaticBool(DefaultOauth2InsecureSkipVerify),
+									Computed:    true,
 								},
 							},
 						},
@@ -620,6 +617,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 					"insecure_skip_verify": schema.BoolAttribute{
 						Description: "Disable validation of the server certificate.",
 						Optional:    true,
+						Computed:    true,
 					},
 				},
 			},
