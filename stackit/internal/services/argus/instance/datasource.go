@@ -233,9 +233,15 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	aclList, err := d.client.ListACL(ctx, instanceId, projectId).Execute()
+	aclListResp, err := d.client.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to list ACL data: %v", err))
+		return
+	}
+
+	metricsRetentionResp, err := d.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get metrics retention: %v", err))
 		return
 	}
 
@@ -245,9 +251,14 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-	err = mapACLField(aclList, &model)
+	err = mapACLField(aclListResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API response for the ACL: %v", err))
+		return
+	}
+	err = mapMetricsRetentionField(metricsRetentionResp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)

@@ -33,6 +33,9 @@ resource "stackit_argus_instance" "example" {
 ### Optional
 
 - `acl` (Set of String) The access control list for this instance. Each entry is an IP address range that is permitted to access, in CIDR notation.
+- `metrics_retention_days` (Number) Specifies for how many days the raw metrics are kept.
+- `metrics_retention_days_1h_downsampling` (Number) Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `0` (disabled).
+- `metrics_retention_days_5m_downsampling` (Number) Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `0` (disabled).
 - `parameters` (Map of String) Additional parameters.
 
 ### Read-Only
@@ -51,9 +54,6 @@ resource "stackit_argus_instance" "example" {
 - `logs_push_url` (String) Specifies URL for pushing logs.
 - `logs_url` (String) Specifies Logs URL.
 - `metrics_push_url` (String) Specifies URL for pushing metrics.
-- `metrics_retention_days` (Number) Specifies for how many days the raw metrics are kept.
-- `metrics_retention_days_1h_downsampling` (Number) Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `0` (disabled).
-- `metrics_retention_days_5m_downsampling` (Number) Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `0` (disabled).
 - `metrics_url` (String) Specifies metrics URL.
 - `otlp_traces_url` (String)
 - `plan_id` (String) The Argus plan ID.
