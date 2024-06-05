@@ -389,6 +389,139 @@ func TestToPayloadUpdate(t *testing.T) {
 	}
 }
 
+func TestToUpdateMetricsStorageRetentionPayload(t *testing.T) {
+	tests := []struct {
+		description      string
+		retentionDaysRaw *int64
+		retentionDays1h  *int64
+		retentionDays5m  *int64
+		getMetricsResp   *argus.GetMetricsStorageRetentionResponse
+		expected         *argus.UpdateMetricsStorageRetentionPayload
+		isValid          bool
+	}{
+		{
+			"basic_ok",
+			utils.Ptr(int64(120)),
+			utils.Ptr(int64(60)),
+			utils.Ptr(int64(14)),
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			&argus.UpdateMetricsStorageRetentionPayload{
+				MetricsRetentionTimeRaw: utils.Ptr("120d"),
+				MetricsRetentionTime1h:  utils.Ptr("60d"),
+				MetricsRetentionTime5m:  utils.Ptr("14d"),
+			},
+			true,
+		},
+		{
+			"only_raw_given",
+			utils.Ptr(int64(120)),
+			nil,
+			nil,
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			&argus.UpdateMetricsStorageRetentionPayload{
+				MetricsRetentionTimeRaw: utils.Ptr("120d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			true,
+		},
+		{
+			"only_1h_given",
+			nil,
+			utils.Ptr(int64(60)),
+			nil,
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			&argus.UpdateMetricsStorageRetentionPayload{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("60d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			true,
+		},
+		{
+			"only_5m_given",
+			nil,
+			nil,
+			utils.Ptr(int64(14)),
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			&argus.UpdateMetricsStorageRetentionPayload{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("14d"),
+			},
+			true,
+		},
+		{
+			"none_given",
+			nil,
+			nil,
+			nil,
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			&argus.UpdateMetricsStorageRetentionPayload{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			true,
+		},
+		{
+			"nil_response",
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			false,
+		},
+		{
+			"empty_response",
+			nil,
+			nil,
+			nil,
+			&argus.GetMetricsStorageRetentionResponse{},
+			nil,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output, err := toUpdateMetricsStorageRetentionPayload(tt.retentionDaysRaw, tt.retentionDays5m, tt.retentionDays1h, tt.getMetricsResp)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(output, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
 func makeTestMap(t *testing.T) basetypes.MapValue {
 	p := make(map[string]attr.Value, 1)
 	p["key"] = types.StringValue("value")

@@ -26,7 +26,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/argus/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	tfpUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -293,9 +292,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
-	metricsRetentionDays := tfpUtils.GetInt64Pointer(model.MetricsRetentionDays)
-	metricsRetentionDays5mDownsampling := tfpUtils.GetInt64Pointer(model.MetricsRetentionDays5mDownsampling)
-	metricsRetentionDays1hDownsampling := tfpUtils.GetInt64Pointer(model.MetricsRetentionDays1hDownsampling)
+	metricsRetentionDays := conversion.Int64ValueToPointer(model.MetricsRetentionDays)
+	metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays5mDownsampling)
+	metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays1hDownsampling)
 
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -501,9 +500,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
-	metricsRetentionDays := tfpUtils.GetInt64Pointer(model.MetricsRetentionDays)
-	metricsRetentionDays5mDownsampling := tfpUtils.GetInt64Pointer(model.MetricsRetentionDays5mDownsampling)
-	metricsRetentionDays1hDownsampling := tfpUtils.GetInt64Pointer(model.MetricsRetentionDays1hDownsampling)
+	metricsRetentionDays := conversion.Int64ValueToPointer(model.MetricsRetentionDays)
+	metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays5mDownsampling)
+	metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays1hDownsampling)
 
 	err := r.loadPlanId(ctx, &model)
 	if err != nil {
@@ -805,6 +804,10 @@ func toUpdateMetricsStorageRetentionPayload(retentionDaysRaw, retentionDays5m, r
 	var retentionTimeRaw string
 	var retentionTime5m string
 	var retentionTime1h string
+
+	if resp == nil || resp.MetricsRetentionTimeRaw == nil || resp.MetricsRetentionTime5m == nil || resp.MetricsRetentionTime1h == nil {
+		return nil, fmt.Errorf("nil response")
+	}
 
 	if retentionDaysRaw == nil {
 		retentionTimeRaw = *resp.MetricsRetentionTimeRaw
