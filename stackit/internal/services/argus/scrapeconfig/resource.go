@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -68,7 +69,7 @@ type Model struct {
 	HonorTimeStamps       types.Bool   `tfsdk:"honor_timestamps"`
 	HttpSdConfigs         types.List   `tfsdk:"http_sd_configs"`
 	MetricsRelabelConfigs types.List   `tfsdk:"metrics_relabel_configs"`
-	Oauth2                types.List   `tfsdk:"oauth2"`
+	Oauth2                types.Object `tfsdk:"oauth2"`
 	TlsConfig             types.Object `tfsdk:"tls_config"`
 }
 
@@ -107,15 +108,15 @@ var targetTypes = map[string]attr.Type{
 }
 
 // Struct corresponding to Model.HttpSdConfigs
-type httpSdConfigsModel struct {
+type httpSdConfigModel struct {
 	BasicAuth       types.Object `tfsdk:"basic_auth"`
-	Oauth2          types.List   `tfsdk:"oauth2"`
+	Oauth2          types.Object `tfsdk:"oauth2"`
 	RefreshInterval types.String `tfsdk:"refresh_interval"`
 	TlsConfig       types.Object `tfsdk:"tls_config"`
 	Url             types.String `tfsdk:"url"`
 }
 
-// Types corresponding to httpSdConfigsModel
+// Types corresponding to httpSdConfigModel
 var httpSdConfigsTypes = map[string]attr.Type{
 	"basic_auth":       types.ObjectType{AttrTypes: basicAuthTypes},
 	"oauth2":           types.ObjectType{AttrTypes: oauth2Types},
@@ -125,7 +126,7 @@ var httpSdConfigsTypes = map[string]attr.Type{
 }
 
 // Struct corresponding to Model.MetricsRelabelConfigs
-type metricsRelabelConfigsModel struct {
+type metricsRelabelConfigModel struct {
 	Action       types.String  `tfsdk:"action"`
 	Modulus      types.Float64 `tfsdk:"modulus"`
 	Regex        types.String  `tfsdk:"regex"`
@@ -135,7 +136,7 @@ type metricsRelabelConfigsModel struct {
 	TargetLabel  types.String  `tfsdk:"target_label"`
 }
 
-// Types corresponding to metricsRelabelConfigsModel
+// Types corresponding to metricsRelabelConfigModel
 var metricsRelabelConfigsTypes = map[string]attr.Type{
 	"action":        types.StringType,
 	"modulus":       types.Float64Type,
@@ -560,50 +561,48 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 					},
 				},
 			},
-			"oauth2": schema.ListNestedAttribute{
-				Description: "",
+			"oauth2": schema.SingleNestedAttribute{
+				Description: "OAuth 2.0 authentication using the client credentials grant type.",
 				Optional:    true,
 				Computed:    true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"client_id": schema.StringAttribute{
-							Description: "",
-							Required:    true,
-							Validators: []validator.String{
-								stringvalidator.LengthBetween(1, 200),
-							},
+				Attributes: map[string]schema.Attribute{
+					"client_id": schema.StringAttribute{
+						Description: "",
+						Required:    true,
+						Validators: []validator.String{
+							stringvalidator.LengthBetween(1, 200),
 						},
-						"client_secret": schema.StringAttribute{
-							Description: "",
-							Required:    true,
-							Sensitive:   true,
-							Validators: []validator.String{
-								stringvalidator.LengthBetween(1, 200),
-							},
+					},
+					"client_secret": schema.StringAttribute{
+						Description: "",
+						Required:    true,
+						Sensitive:   true,
+						Validators: []validator.String{
+							stringvalidator.LengthBetween(1, 200),
 						},
-						"token_url": schema.StringAttribute{
-							Description: "The URL to fetch the token from.",
-							Required:    true,
-							Validators: []validator.String{
-								stringvalidator.LengthBetween(1, 200),
-							},
+					},
+					"token_url": schema.StringAttribute{
+						Description: "The URL to fetch the token from.",
+						Required:    true,
+						Validators: []validator.String{
+							stringvalidator.LengthBetween(1, 200),
 						},
-						"scopes": schema.ListAttribute{
-							Description: `The URL to fetch the token from.`,
-							Optional:    true,
-							Computed:    true,
-							ElementType: types.StringType,
-						},
-						"tls_config": schema.SingleNestedAttribute{
-							Description: "Configures the scrape request's TLS settings.",
-							Optional:    true,
-							Computed:    true,
-							Attributes: map[string]schema.Attribute{
-								"insecure_skip_verify": schema.BoolAttribute{
-									Description: "Disable validation of the server certificate. Defaults to `false`",
-									Optional:    true,
-									Computed:    true,
-								},
+					},
+					"scopes": schema.ListAttribute{
+						Description: `The URL to fetch the token from.`,
+						Optional:    true,
+						Computed:    true,
+						ElementType: types.StringType,
+					},
+					"tls_config": schema.SingleNestedAttribute{
+						Description: "Configures the scrape request's TLS settings.",
+						Optional:    true,
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"insecure_skip_verify": schema.BoolAttribute{
+								Description: "Disable validation of the server certificate. Defaults to `false`",
+								Optional:    true,
+								Computed:    true,
 							},
 						},
 					},
@@ -666,8 +665,44 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 		}
 	}
 
+	httpSdConfigsModel := []httpSdConfigModel{}
+	if !model.HttpSdConfigs.IsNull() && !model.HttpSdConfigs.IsUnknown() {
+		diags = model.HttpSdConfigs.ElementsAs(ctx, &httpSdConfigsModel, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	metricsRelabelConfigsModel := []metricsRelabelConfigModel{}
+	if !model.MetricsRelabelConfigs.IsNull() && !model.MetricsRelabelConfigs.IsUnknown() {
+		diags = model.MetricsRelabelConfigs.ElementsAs(ctx, &metricsRelabelConfigsModel, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	oauth2Model := oauth2Model{}
+	if !model.Oauth2.IsNull() && !model.Oauth2.IsUnknown() {
+		diags = model.Oauth2.As(ctx, &oauth2Model, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	tlsConfigModel := tlsConfigModel{}
+	if !model.TlsConfig.IsNull() && !model.TlsConfig.IsUnknown() {
+		diags = model.TlsConfig.As(ctx, &tlsConfigModel, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	// Generate API request body from model
-	payload, err := toCreatePayload(ctx, &model, &saml2Model, &basicAuthModel, targetsModel)
+	payload, err := toCreatePayload(ctx, &model, &saml2Model, &basicAuthModel, targetsModel, httpSdConfigsModel, metricsRelabelConfigsModel, &oauth2Model, &tlsConfigModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -779,8 +814,43 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 	}
 
+	httpSdConfigsModel := []httpSdConfigModel{}
+	if !model.HttpSdConfigs.IsNull() && !model.HttpSdConfigs.IsUnknown() {
+		diags = model.HttpSdConfigs.ElementsAs(ctx, &httpSdConfigsModel, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	metricsRelabelConfigsModel := []metricsRelabelConfigModel{}
+	if !model.MetricsRelabelConfigs.IsNull() && !model.MetricsRelabelConfigs.IsUnknown() {
+		diags = model.MetricsRelabelConfigs.ElementsAs(ctx, &metricsRelabelConfigsModel, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	oauth2Model := oauth2Model{}
+	if !model.Oauth2.IsNull() && !model.Oauth2.IsUnknown() {
+		diags = model.Oauth2.As(ctx, &oauth2Model, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	tlsConfigModel := tlsConfigModel{}
+	if !model.TlsConfig.IsNull() && !model.TlsConfig.IsUnknown() {
+		diags = model.TlsConfig.As(ctx, &tlsConfigModel, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 	// Generate API request body from model
-	payload, err := toUpdatePayload(ctx, &model, &saml2Model, &basicAuthModel, targetsModel)
+	payload, err := toUpdatePayload(ctx, &model, &saml2Model, &basicAuthModel, targetsModel, httpSdConfigsModel, metricsRelabelConfigsModel, &oauth2Model, &tlsConfigModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -892,6 +962,9 @@ func mapFields(ctx context.Context, sc *argus.Job, model *Model) error {
 	model.ScrapeInterval = types.StringPointerValue(sc.ScrapeInterval)
 	model.ScrapeTimeout = types.StringPointerValue(sc.ScrapeTimeout)
 	model.SampleLimit = types.Int64PointerValue(sc.SampleLimit)
+	model.BearerToken = types.StringPointerValue(sc.BearerToken)
+	model.HonorLabels = types.BoolPointerValue(sc.HonorLabels)
+	model.HonorTimeStamps = types.BoolPointerValue(sc.HonorTimeStamps)
 	err := mapSAML2(sc, model)
 	if err != nil {
 		return fmt.Errorf("map saml2: %w", err)
@@ -903,6 +976,22 @@ func mapFields(ctx context.Context, sc *argus.Job, model *Model) error {
 	err = mapTargets(ctx, sc, model)
 	if err != nil {
 		return fmt.Errorf("map targets: %w", err)
+	}
+	err = mapHttpSdConfigs(ctx, sc, model)
+	if err != nil {
+		return fmt.Errorf("map http sd configs: %w", err)
+	}
+	err = mapMetricsRelabelConfigs(ctx, sc, model)
+	if err != nil {
+		return fmt.Errorf("map metrics relabel configs: %w", err)
+	}
+	err = mapOauth2(ctx, sc, model)
+	if err != nil {
+		return fmt.Errorf("map oauth2: %w", err)
+	}
+	err = mapTlsConfig(sc, model)
+	if err != nil {
+		return fmt.Errorf("map tls config: %w", err)
 	}
 	return nil
 }
@@ -1015,7 +1104,250 @@ func mapTargets(ctx context.Context, sc *argus.Job, model *Model) error {
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel []targetModel) (*argus.CreateScrapeConfigPayload, error) {
+func mapTlsConfig(sc *argus.Job, model *Model) error {
+	if sc.TlsConfig == nil {
+		model.TlsConfig = types.ObjectNull(tlsConfigTypes)
+		return nil
+	}
+	tlsConfigMap := map[string]attr.Value{
+		"insecure_skip_verify": types.BoolValue(*sc.TlsConfig.InsecureSkipVerify),
+	}
+	tlsConfigTF, diags := types.ObjectValue(tlsConfigTypes, tlsConfigMap)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+	model.TlsConfig = tlsConfigTF
+	return nil
+}
+
+func mapOauth2(ctx context.Context, sc *argus.Job, model *Model) error {
+	if sc.Oauth2 == nil {
+		model.Oauth2 = types.ObjectNull(oauth2Types)
+		return nil
+	}
+
+	var diags diag.Diagnostics
+	oauth2Model := oauth2Model{}
+	if !model.Oauth2.IsNull() && !model.Oauth2.IsUnknown() {
+		diags := model.Oauth2.As(ctx, &oauth2Model, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return fmt.Errorf("converting oauth2 object: %v", diags.Errors())
+		}
+	}
+
+	tlsConfigTF := types.ObjectNull(tlsConfigTypes)
+	if sc.Oauth2.TlsConfig != nil {
+		insecureSkipVerify := types.BoolNull()
+		if sc.Oauth2.TlsConfig.InsecureSkipVerify != nil {
+			insecureSkipVerify = types.BoolValue(*sc.Oauth2.TlsConfig.InsecureSkipVerify)
+		}
+
+		tlsConfigMap := map[string]attr.Value{
+			"insecure_skip_verify": insecureSkipVerify,
+		}
+
+		tlsConfigTF, diags = types.ObjectValue(tlsConfigTypes, tlsConfigMap)
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+	}
+
+	scopesTF := types.ListNull(types.StringType)
+	scopes := []attr.Value{}
+	if sc.Oauth2.Scopes != nil {
+		for _, scope := range *sc.Oauth2.Scopes {
+			scopes = append(scopes, types.StringValue(scope))
+		}
+	}
+	scopesTF, diags = types.ListValue(types.StringType, scopes)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	oauth2Map := map[string]attr.Value{
+		"client_id":     types.StringValue(*sc.Oauth2.ClientId),
+		"client_secret": types.StringValue(*sc.Oauth2.ClientSecret),
+		"token_url":     types.StringValue(*sc.Oauth2.TokenUrl),
+		"tls_config":    tlsConfigTF,
+		"scopes":        scopesTF,
+	}
+
+	oauth2TF, diags := types.ObjectValue(oauth2Types, oauth2Map)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+	model.Oauth2 = oauth2TF
+	return nil
+}
+
+func mapHttpSdConfigs(ctx context.Context, sc *argus.Job, model *Model) error {
+	if sc == nil || sc.HttpSdConfigs == nil {
+		model.HttpSdConfigs = types.ListNull(types.ObjectType{AttrTypes: httpSdConfigsTypes})
+		return nil
+	}
+
+	var diags diag.Diagnostics
+	httpSdConfigsModel := []httpSdConfigModel{}
+	if !model.HttpSdConfigs.IsNull() && !model.HttpSdConfigs.IsUnknown() {
+		diags := model.HttpSdConfigs.ElementsAs(ctx, &httpSdConfigsModel, false)
+		if diags.HasError() {
+			return fmt.Errorf("converting http sd configs object: %v", diags.Errors())
+		}
+	}
+
+	tlsConfigTF := types.ObjectNull(tlsConfigTypes)
+
+	newHttpSdConfigs := []attr.Value{}
+	for _, httpSdConfig := range *sc.HttpSdConfigs {
+
+		if httpSdConfig.TlsConfig != nil {
+			insecureSkipVerify := types.BoolNull()
+			if httpSdConfig.TlsConfig.InsecureSkipVerify != nil {
+				insecureSkipVerify = types.BoolValue(*httpSdConfig.TlsConfig.InsecureSkipVerify)
+			}
+
+			tlsConfigMap := map[string]attr.Value{
+				"insecure_skip_verify": insecureSkipVerify,
+			}
+
+			tlsConfigTF, diags = types.ObjectValue(tlsConfigTypes, tlsConfigMap)
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
+		}
+
+		basicAuthTF := types.ObjectNull(basicAuthTypes)
+
+		if httpSdConfig.BasicAuth != nil {
+			basicAuthMap := map[string]attr.Value{
+				"username": types.StringValue(*httpSdConfig.BasicAuth.Username),
+				"password": types.StringValue(*httpSdConfig.BasicAuth.Password),
+			}
+			basicAuthTF, diags = types.ObjectValue(basicAuthTypes, basicAuthMap)
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
+		}
+
+		oauth2TF := types.ObjectNull(oauth2Types)
+		if httpSdConfig.Oauth2 != nil {
+			oauth2TlsConfigTF := types.ObjectNull(tlsConfigTypes)
+			if httpSdConfig.Oauth2.TlsConfig != nil {
+				oauth2InsecureSkipVerify := types.BoolNull()
+				if httpSdConfig.Oauth2.TlsConfig.InsecureSkipVerify != nil {
+					oauth2InsecureSkipVerify = types.BoolValue(*httpSdConfig.Oauth2.TlsConfig.InsecureSkipVerify)
+				}
+
+				oauth2TlsConfigMap := map[string]attr.Value{
+					"insecure_skip_verify": oauth2InsecureSkipVerify,
+				}
+
+				oauth2TlsConfigTF, diags = types.ObjectValue(tlsConfigTypes, oauth2TlsConfigMap)
+				if diags.HasError() {
+					return core.DiagsToError(diags)
+				}
+			}
+
+			oauth2ScopesTF := types.ListNull(types.StringType)
+			scopes := []attr.Value{}
+			if httpSdConfig.Oauth2.Scopes != nil {
+				for _, scope := range *httpSdConfig.Oauth2.Scopes {
+					scopes = append(scopes, types.StringValue(scope))
+				}
+			}
+			oauth2ScopesTF, diags = types.ListValue(types.StringType, scopes)
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
+
+			oauth2Map := map[string]attr.Value{
+				"client_id":     types.StringValue(*sc.Oauth2.ClientId),
+				"client_secret": types.StringValue(*sc.Oauth2.ClientSecret),
+				"token_url":     types.StringValue(*sc.Oauth2.TokenUrl),
+				"tls_config":    oauth2TlsConfigTF,
+				"scopes":        oauth2ScopesTF,
+			}
+
+			oauth2TF, diags = types.ObjectValue(oauth2Types, oauth2Map)
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
+		}
+
+		// Build target
+		httpSdConfigMap := map[string]attr.Value{
+			"refresh_interval": types.StringValue(*httpSdConfig.RefreshInterval),
+			"url":              types.StringValue(*httpSdConfig.Url),
+			"tls_config":       tlsConfigTF,
+			"oauth2":           oauth2TF,
+			"basic_auth":       basicAuthTF,
+		}
+
+		httpSdConfigTF, diags := types.ObjectValue(httpSdConfigsTypes, httpSdConfigMap)
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+
+		newHttpSdConfigs = append(newHttpSdConfigs, httpSdConfigTF)
+	}
+
+	httpSdConfigsTF, diags := types.ListValue(types.ObjectType{AttrTypes: httpSdConfigsTypes}, newHttpSdConfigs)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+	model.HttpSdConfigs = httpSdConfigsTF
+	return nil
+}
+
+func mapMetricsRelabelConfigs(ctx context.Context, sc *argus.Job, model *Model) error {
+	if sc == nil || sc.MetricsRelabelConfigs == nil {
+		model.MetricsRelabelConfigs = types.ListNull(types.ObjectType{AttrTypes: metricsRelabelConfigsTypes})
+		return nil
+	}
+	var diags diag.Diagnostics
+	metricsRelabelConfigsModel := []metricsRelabelConfigModel{}
+	if !model.MetricsRelabelConfigs.IsNull() && !model.MetricsRelabelConfigs.IsUnknown() {
+		diags := model.MetricsRelabelConfigs.ElementsAs(ctx, &metricsRelabelConfigsModel, false)
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+	}
+
+	metricsRelabelConfigs := []attr.Value{}
+	for _, metricsRelabelConfigsResp := range *sc.MetricsRelabelConfigs {
+		sourceLabelsTF := types.ListNull(types.StringType)
+		if metricsRelabelConfigsResp.SourceLabels != nil {
+			sourceLabelsTF, diags = types.ListValueFrom(ctx, types.StringType, *metricsRelabelConfigsResp.SourceLabels)
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
+		}
+
+		metricsRelabelConfig := map[string]attr.Value{
+			"action":       types.StringPointerValue(metricsRelabelConfigsResp.Action),
+			"modulus":      types.Int64PointerValue(metricsRelabelConfigsResp.Modulus),
+			"regex":        types.StringPointerValue(metricsRelabelConfigsResp.Regex),
+			"replacement":  types.StringPointerValue(metricsRelabelConfigsResp.Replacement),
+			"separator":    types.StringPointerValue(metricsRelabelConfigsResp.Separator),
+			"targetLabel":  types.StringPointerValue(metricsRelabelConfigsResp.TargetLabel),
+			"sourceLabels": sourceLabelsTF,
+		}
+
+		metricsRelabelConfigTF, diags := basetypes.NewObjectValue(metricsRelabelConfigsTypes, metricsRelabelConfig)
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+		metricsRelabelConfigs = append(metricsRelabelConfigs, metricsRelabelConfigTF)
+	}
+	metricsRelabelConfigsTF, diags := basetypes.NewListValue(types.ObjectType{AttrTypes: metricsRelabelConfigsTypes}, metricsRelabelConfigs)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+	model.MetricsRelabelConfigs = metricsRelabelConfigsTF
+	return nil
+}
+
+func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel []targetModel, httpSdConfigsModel []httpSdConfigModel, metricsRelabelConfigsModel []metricsRelabelConfigModel, oauth2Model *oauth2Model, tlsConfigModel *tlsConfigModel) (*argus.CreateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -1026,10 +1358,15 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ScrapeInterval: conversion.StringValueToPointer(model.ScrapeInterval),
 		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
 		// potentially lossy conversion, depending on the allowed range for sample_limit
-		SampleLimit: utils.Ptr(float64(model.SampleLimit.ValueInt64())),
-		Scheme:      conversion.StringValueToPointer(model.Scheme),
+		SampleLimit:     utils.Ptr(float64(model.SampleLimit.ValueInt64())),
+		Scheme:          conversion.StringValueToPointer(model.Scheme),
+		BearerToken:     conversion.StringValueToPointer(model.BearerToken),
+		HonorLabels:     conversion.BoolValueToPointer(model.HonorLabels),
+		HonorTimeStamps: conversion.BoolValueToPointer(model.HonorTimeStamps),
 	}
 	setDefaultsCreateScrapeConfig(&sc, model, saml2Model)
+
+	var diags diag.Diagnostics
 
 	if !saml2Model.EnableURLParameters.IsNull() && !saml2Model.EnableURLParameters.IsUnknown() {
 		m := make(map[string]interface{})
@@ -1071,6 +1408,99 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	}
 	sc.StaticConfigs = &t
 
+	if sc.TlsConfig == nil && !tlsConfigModel.InsecureSkipVerify.IsNull() && !tlsConfigModel.InsecureSkipVerify.IsNull() {
+		sc.TlsConfig = &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{
+			InsecureSkipVerify: conversion.BoolValueToPointer(tlsConfigModel.InsecureSkipVerify),
+		}
+	}
+
+	mrcs := make([]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner, len(metricsRelabelConfigsModel))
+
+	for i, metricsRelabelConfig := range metricsRelabelConfigsModel {
+		mrcsi := argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{}
+
+		mrcsi.Action = conversion.StringValueToPointer(metricsRelabelConfig.Action)
+		mrcsi.Modulus = utils.Ptr(metricsRelabelConfig.Modulus.ValueFloat64())
+		mrcsi.Regex = conversion.StringValueToPointer(metricsRelabelConfig.Regex)
+		mrcsi.Replacement = conversion.StringValueToPointer(metricsRelabelConfig.Replacement)
+		mrcsi.Separator = conversion.StringValueToPointer(metricsRelabelConfig.Separator)
+		mrcsi.TargetLabel = conversion.StringValueToPointer(metricsRelabelConfig.TargetLabel)
+
+		sourceLabels := []string{}
+		diags = metricsRelabelConfig.SourceLabels.ElementsAs(ctx, &sourceLabels, true)
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+		mrcsi.SourceLabels = &sourceLabels
+		mrcs[i] = mrcsi
+	}
+
+	sc.MetricsRelabelConfigs = &mrcs
+
+	if sc.Oauth2 == nil && !oauth2Model.ClientId.IsNull() && !oauth2Model.ClientSecret.IsNull() {
+
+		scopes := []string{}
+		diags = oauth2Model.Scopes.ElementsAs(ctx, &scopes, true)
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		oauthTlsConfig := argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{}
+		diags = oauth2Model.TlsConfig.As(ctx, &oauthTlsConfig, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		oauth2TlsConfig := &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{
+			InsecureSkipVerify: conversion.BoolValueToPointer(tlsConfigModel.InsecureSkipVerify),
+		}
+
+		sc.Oauth2 = &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2{
+			ClientId:     conversion.StringValueToPointer(oauth2Model.ClientId),
+			ClientSecret: conversion.StringValueToPointer(oauth2Model.ClientSecret),
+			TokenUrl:     conversion.StringValueToPointer(oauth2Model.TokenUrl),
+			Scopes:       &scopes,
+			TlsConfig:    oauth2TlsConfig,
+		}
+	}
+
+	httpSdConfigs := make([]argus.CreateScrapeConfigPayloadHttpSdConfigsInner, len(httpSdConfigsModel))
+
+	for i, httpSdConfig := range httpSdConfigsModel {
+		hsci := argus.CreateScrapeConfigPayloadHttpSdConfigsInner{}
+
+		hsci.Url = conversion.StringValueToPointer(httpSdConfig.Url)
+		hsci.RefreshInterval = conversion.StringValueToPointer(httpSdConfig.RefreshInterval)
+
+		basicAuth := argus.CreateScrapeConfigPayloadBasicAuth{}
+		diags = httpSdConfig.BasicAuth.As(ctx, &basicAuth, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+		hsci.BasicAuth.Username = basicAuth.Username
+		hsci.BasicAuth.Password = basicAuth.Password
+
+		httpSdConfigTls := &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{}
+		diags = httpSdConfig.TlsConfig.As(ctx, &httpSdConfigTls, basetypes.ObjectAsOptions{})
+		hsci.TlsConfig.InsecureSkipVerify = httpSdConfigTls.InsecureSkipVerify
+
+		hsciOauth2 := &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2{}
+		diags = httpSdConfig.Oauth2.As(ctx, hsciOauth2, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		hsci.Oauth2.ClientId = hsciOauth2.ClientId
+		hsci.Oauth2.ClientSecret = hsciOauth2.ClientSecret
+		hsci.Oauth2.TokenUrl = hsciOauth2.TokenUrl
+		hsci.Oauth2.Scopes = hsciOauth2.Scopes
+		hsci.Oauth2.TlsConfig = hsciOauth2.TlsConfig
+
+		httpSdConfigs[i] = hsci
+	}
+
+	sc.HttpSdConfigs = &httpSdConfigs
+
 	return &sc, nil
 }
 
@@ -1105,7 +1535,7 @@ func setDefaultsCreateScrapeConfig(sc *argus.CreateScrapeConfigPayload, model *M
 	}
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel []targetModel) (*argus.UpdateScrapeConfigPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel []targetModel, httpSdConfigsModel []httpSdConfigModel, metricsRelabelConfigsModel []metricsRelabelConfigModel, oauth2Model *oauth2Model, tlsConfigModel *tlsConfigModel) (*argus.UpdateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -1115,10 +1545,15 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ScrapeInterval: conversion.StringValueToPointer(model.ScrapeInterval),
 		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
 		// potentially lossy conversion, depending on the allowed range for sample_limit
-		SampleLimit: utils.Ptr(float64(model.SampleLimit.ValueInt64())),
-		Scheme:      conversion.StringValueToPointer(model.Scheme),
+		SampleLimit:     utils.Ptr(float64(model.SampleLimit.ValueInt64())),
+		Scheme:          conversion.StringValueToPointer(model.Scheme),
+		BearerToken:     conversion.StringValueToPointer(model.BearerToken),
+		HonorLabels:     conversion.BoolValueToPointer(model.HonorLabels),
+		HonorTimeStamps: conversion.BoolValueToPointer(model.HonorTimeStamps),
 	}
 	setDefaultsUpdateScrapeConfig(&sc, model)
+
+	var diags diag.Diagnostics
 
 	if !saml2Model.EnableURLParameters.IsNull() && !saml2Model.EnableURLParameters.IsUnknown() {
 		m := make(map[string]interface{})
@@ -1159,6 +1594,35 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		t[i] = ti
 	}
 	sc.StaticConfigs = &t
+
+	if sc.TlsConfig == nil && !tlsConfigModel.InsecureSkipVerify.IsNull() && !tlsConfigModel.InsecureSkipVerify.IsNull() {
+		sc.TlsConfig = &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{
+			InsecureSkipVerify: conversion.BoolValueToPointer(tlsConfigModel.InsecureSkipVerify),
+		}
+	}
+
+	mrcs := make([]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner, len(metricsRelabelConfigsModel))
+
+	for i, metricsRelabelConfig := range metricsRelabelConfigsModel {
+		mrcsi := argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{}
+
+		mrcsi.Action = conversion.StringValueToPointer(metricsRelabelConfig.Action)
+		mrcsi.Modulus = utils.Ptr(metricsRelabelConfig.Modulus.ValueFloat64())
+		mrcsi.Regex = conversion.StringValueToPointer(metricsRelabelConfig.Regex)
+		mrcsi.Replacement = conversion.StringValueToPointer(metricsRelabelConfig.Replacement)
+		mrcsi.Separator = conversion.StringValueToPointer(metricsRelabelConfig.Separator)
+		mrcsi.TargetLabel = conversion.StringValueToPointer(metricsRelabelConfig.TargetLabel)
+
+		sourceLabels := []string{}
+		diags = metricsRelabelConfig.SourceLabels.ElementsAs(ctx, &sourceLabels, true)
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+		mrcsi.SourceLabels = &sourceLabels
+		mrcs[i] = mrcsi
+	}
+
+	sc.MetricsRelabelConfigs = &mrcs
 
 	return &sc, nil
 }
