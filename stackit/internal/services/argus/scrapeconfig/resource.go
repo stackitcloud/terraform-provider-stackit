@@ -397,7 +397,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 				Sensitive:   true,
 			},
 			"honor_labels": schema.BoolAttribute{
-				Description: "Note that any globally configured 'external_labels' are unaffected by this setting. Defaults to `false`",
+				Description: "It controls whether Prometheus respects the labels in scraped data. Note that any globally configured 'external_labels' are unaffected by this setting. Defaults to `false`",
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(DefaultHonorLabels),
