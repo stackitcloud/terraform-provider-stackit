@@ -1366,8 +1366,6 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	}
 	setDefaultsCreateScrapeConfig(&sc, model, saml2Model)
 
-	var diags diag.Diagnostics
-
 	if !saml2Model.EnableURLParameters.IsNull() && !saml2Model.EnableURLParameters.IsUnknown() {
 		m := make(map[string]interface{})
 		if sc.Params != nil {
@@ -1414,33 +1412,33 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		}
 	}
 
-	mrcs := make([]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner, len(metricsRelabelConfigsModel))
+	metricsRelabelConfigs := make([]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner, len(metricsRelabelConfigsModel))
 
 	for i, metricsRelabelConfig := range metricsRelabelConfigsModel {
-		mrcsi := argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{}
+		metricsRelabelConfigsInner := argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{}
 
-		mrcsi.Action = conversion.StringValueToPointer(metricsRelabelConfig.Action)
-		mrcsi.Modulus = utils.Ptr(metricsRelabelConfig.Modulus.ValueFloat64())
-		mrcsi.Regex = conversion.StringValueToPointer(metricsRelabelConfig.Regex)
-		mrcsi.Replacement = conversion.StringValueToPointer(metricsRelabelConfig.Replacement)
-		mrcsi.Separator = conversion.StringValueToPointer(metricsRelabelConfig.Separator)
-		mrcsi.TargetLabel = conversion.StringValueToPointer(metricsRelabelConfig.TargetLabel)
+		metricsRelabelConfigsInner.Action = conversion.StringValueToPointer(metricsRelabelConfig.Action)
+		metricsRelabelConfigsInner.Modulus = utils.Ptr(metricsRelabelConfig.Modulus.ValueFloat64())
+		metricsRelabelConfigsInner.Regex = conversion.StringValueToPointer(metricsRelabelConfig.Regex)
+		metricsRelabelConfigsInner.Replacement = conversion.StringValueToPointer(metricsRelabelConfig.Replacement)
+		metricsRelabelConfigsInner.Separator = conversion.StringValueToPointer(metricsRelabelConfig.Separator)
+		metricsRelabelConfigsInner.TargetLabel = conversion.StringValueToPointer(metricsRelabelConfig.TargetLabel)
 
 		sourceLabels := []string{}
-		diags = metricsRelabelConfig.SourceLabels.ElementsAs(ctx, &sourceLabels, true)
+		diags := metricsRelabelConfig.SourceLabels.ElementsAs(ctx, &sourceLabels, true)
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
-		mrcsi.SourceLabels = &sourceLabels
-		mrcs[i] = mrcsi
+		metricsRelabelConfigsInner.SourceLabels = &sourceLabels
+		metricsRelabelConfigs[i] = metricsRelabelConfigsInner
 	}
 
-	sc.MetricsRelabelConfigs = &mrcs
+	sc.MetricsRelabelConfigs = &metricsRelabelConfigs
 
 	if sc.Oauth2 == nil && !oauth2Model.ClientId.IsNull() && !oauth2Model.ClientSecret.IsNull() {
 
 		scopes := []string{}
-		diags = oauth2Model.Scopes.ElementsAs(ctx, &scopes, true)
+		diags := oauth2Model.Scopes.ElementsAs(ctx, &scopes, true)
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
@@ -1473,7 +1471,7 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		hsci.RefreshInterval = conversion.StringValueToPointer(httpSdConfig.RefreshInterval)
 
 		basicAuth := argus.CreateScrapeConfigPayloadBasicAuth{}
-		diags = httpSdConfig.BasicAuth.As(ctx, &basicAuth, basetypes.ObjectAsOptions{})
+		diags := httpSdConfig.BasicAuth.As(ctx, &basicAuth, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
