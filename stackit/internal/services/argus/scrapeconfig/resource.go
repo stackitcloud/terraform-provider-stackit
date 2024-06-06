@@ -1152,16 +1152,20 @@ func mapOauth2(ctx context.Context, sc *argus.Job, model *Model) error {
 		}
 	}
 
-	scopesTF := types.ListNull(types.StringType)
+	var scopesTF basetypes.ListValue
+
 	scopes := []attr.Value{}
 	if sc.Oauth2.Scopes != nil {
 		for _, scope := range *sc.Oauth2.Scopes {
 			scopes = append(scopes, types.StringValue(scope))
 		}
-	}
-	scopesTF, diags = types.ListValue(types.StringType, scopes)
-	if diags.HasError() {
-		return core.DiagsToError(diags)
+
+		scopesTF, diags = types.ListValue(types.StringType, scopes)
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+	} else {
+		scopesTF = types.ListNull(types.StringType)
 	}
 
 	oauth2Map := map[string]attr.Value{
@@ -1248,16 +1252,18 @@ func mapHttpSdConfigs(ctx context.Context, sc *argus.Job, model *Model) error {
 				}
 			}
 
-			oauth2ScopesTF := types.ListNull(types.StringType)
+			var oauth2ScopesTF basetypes.ListValue
 			scopes := []attr.Value{}
 			if httpSdConfig.Oauth2.Scopes != nil {
 				for _, scope := range *httpSdConfig.Oauth2.Scopes {
 					scopes = append(scopes, types.StringValue(scope))
 				}
-			}
-			oauth2ScopesTF, diags = types.ListValue(types.StringType, scopes)
-			if diags.HasError() {
-				return core.DiagsToError(diags)
+				oauth2ScopesTF, diags = types.ListValue(types.StringType, scopes)
+				if diags.HasError() {
+					return core.DiagsToError(diags)
+				}
+			} else {
+				oauth2ScopesTF = types.ListNull(types.StringType)
 			}
 
 			oauth2Map := map[string]attr.Value{
@@ -1315,12 +1321,15 @@ func mapMetricsRelabelConfigs(ctx context.Context, sc *argus.Job, model *Model) 
 
 	metricsRelabelConfigs := []attr.Value{}
 	for _, metricsRelabelConfigsResp := range *sc.MetricsRelabelConfigs {
-		sourceLabelsTF := types.ListNull(types.StringType)
+		var sourceLabelsTF basetypes.ListValue
+
 		if metricsRelabelConfigsResp.SourceLabels != nil {
 			sourceLabelsTF, diags = types.ListValueFrom(ctx, types.StringType, *metricsRelabelConfigsResp.SourceLabels)
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
+		} else {
+			sourceLabelsTF = types.ListNull(types.StringType)
 		}
 
 		metricsRelabelConfig := map[string]attr.Value{
