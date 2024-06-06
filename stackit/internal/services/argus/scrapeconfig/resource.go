@@ -127,19 +127,19 @@ var httpSdConfigsTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.MetricsRelabelConfigs
 type metricsRelabelConfigModel struct {
-	Action       types.String  `tfsdk:"action"`
-	Modulus      types.Float64 `tfsdk:"modulus"`
-	Regex        types.String  `tfsdk:"regex"`
-	Replacement  types.String  `tfsdk:"replacement"`
-	Separator    types.String  `tfsdk:"separator"`
-	SourceLabels types.List    `tfsdk:"source_labels"`
-	TargetLabel  types.String  `tfsdk:"target_label"`
+	Action       types.String `tfsdk:"action"`
+	Modulus      types.Int64  `tfsdk:"modulus"`
+	Regex        types.String `tfsdk:"regex"`
+	Replacement  types.String `tfsdk:"replacement"`
+	Separator    types.String `tfsdk:"separator"`
+	SourceLabels types.List   `tfsdk:"source_labels"`
+	TargetLabel  types.String `tfsdk:"target_label"`
 }
 
 // Types corresponding to metricsRelabelConfigModel
 var metricsRelabelConfigsTypes = map[string]attr.Type{
 	"action":        types.StringType,
-	"modulus":       types.Float64Type,
+	"modulus":       types.Int64Type,
 	"regex":         types.StringType,
 	"replacement":   types.StringType,
 	"separator":     types.StringType,
@@ -515,7 +515,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 							Optional:    true,
 							Computed:    true,
 						},
-						"modulus": schema.Float64Attribute{
+						"modulus": schema.Int64Attribute{
 							Description: "Modulus to take of the hash of the source label values.",
 							Optional:    true,
 							Computed:    true,
@@ -1267,9 +1267,9 @@ func mapHttpSdConfigs(ctx context.Context, sc *argus.Job, model *Model) error {
 			}
 
 			oauth2Map := map[string]attr.Value{
-				"client_id":     types.StringValue(*sc.Oauth2.ClientId),
-				"client_secret": types.StringValue(*sc.Oauth2.ClientSecret),
-				"token_url":     types.StringValue(*sc.Oauth2.TokenUrl),
+				"client_id":     types.StringValue(*httpSdConfig.Oauth2.ClientId),
+				"client_secret": types.StringValue(*httpSdConfig.Oauth2.ClientSecret),
+				"token_url":     types.StringValue(*httpSdConfig.Oauth2.TokenUrl),
 				"tls_config":    oauth2TlsConfigTF,
 				"scopes":        oauth2ScopesTF,
 			}
@@ -1333,13 +1333,13 @@ func mapMetricsRelabelConfigs(ctx context.Context, sc *argus.Job, model *Model) 
 		}
 
 		metricsRelabelConfig := map[string]attr.Value{
-			"action":       types.StringPointerValue(metricsRelabelConfigsResp.Action),
-			"modulus":      types.Int64PointerValue(metricsRelabelConfigsResp.Modulus),
-			"regex":        types.StringPointerValue(metricsRelabelConfigsResp.Regex),
-			"replacement":  types.StringPointerValue(metricsRelabelConfigsResp.Replacement),
-			"separator":    types.StringPointerValue(metricsRelabelConfigsResp.Separator),
-			"targetLabel":  types.StringPointerValue(metricsRelabelConfigsResp.TargetLabel),
-			"sourceLabels": sourceLabelsTF,
+			"action":        types.StringPointerValue(metricsRelabelConfigsResp.Action),
+			"modulus":       types.Int64PointerValue(metricsRelabelConfigsResp.Modulus),
+			"regex":         types.StringPointerValue(metricsRelabelConfigsResp.Regex),
+			"replacement":   types.StringPointerValue(metricsRelabelConfigsResp.Replacement),
+			"separator":     types.StringPointerValue(metricsRelabelConfigsResp.Separator),
+			"target_label":  types.StringPointerValue(metricsRelabelConfigsResp.TargetLabel),
+			"source_labels": sourceLabelsTF,
 		}
 
 		metricsRelabelConfigTF, diags := basetypes.NewObjectValue(metricsRelabelConfigsTypes, metricsRelabelConfig)
@@ -1427,7 +1427,7 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		metricsRelabelConfigsInner := argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{}
 
 		metricsRelabelConfigsInner.Action = conversion.StringValueToPointer(metricsRelabelConfig.Action)
-		metricsRelabelConfigsInner.Modulus = utils.Ptr(metricsRelabelConfig.Modulus.ValueFloat64())
+		metricsRelabelConfigsInner.Modulus = utils.Ptr(float64(metricsRelabelConfig.Modulus.ValueInt64()))
 		metricsRelabelConfigsInner.Regex = conversion.StringValueToPointer(metricsRelabelConfig.Regex)
 		metricsRelabelConfigsInner.Replacement = conversion.StringValueToPointer(metricsRelabelConfig.Replacement)
 		metricsRelabelConfigsInner.Separator = conversion.StringValueToPointer(metricsRelabelConfig.Separator)
@@ -1614,7 +1614,7 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		mrcsi := argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{}
 
 		mrcsi.Action = conversion.StringValueToPointer(metricsRelabelConfig.Action)
-		mrcsi.Modulus = utils.Ptr(metricsRelabelConfig.Modulus.ValueFloat64())
+		mrcsi.Modulus = utils.Ptr(float64(metricsRelabelConfig.Modulus.ValueInt64()))
 		mrcsi.Regex = conversion.StringValueToPointer(metricsRelabelConfig.Regex)
 		mrcsi.Replacement = conversion.StringValueToPointer(metricsRelabelConfig.Replacement)
 		mrcsi.Separator = conversion.StringValueToPointer(metricsRelabelConfig.Separator)
