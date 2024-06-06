@@ -233,7 +233,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	aclList, err := d.client.ListACL(ctx, instanceId, projectId).Execute()
+	aclListResp, err := d.client.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to list ACL data: %v", err))
 		return
@@ -245,11 +245,12 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-	err = mapACLField(aclList, &model)
+	err = mapACLField(aclListResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API response for the ACL: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the ACL: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

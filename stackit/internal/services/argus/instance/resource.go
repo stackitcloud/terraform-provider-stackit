@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -209,14 +210,17 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"metrics_retention_days": schema.Int64Attribute{
 				Description: "Specifies for how many days the raw metrics are kept.",
+				Optional:    true,
 				Computed:    true,
 			},
 			"metrics_retention_days_5m_downsampling": schema.Int64Attribute{
 				Description: "Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `0` (disabled).",
+				Optional:    true,
 				Computed:    true,
 			},
 			"metrics_retention_days_1h_downsampling": schema.Int64Attribute{
 				Description: "Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `0` (disabled).",
+				Optional:    true,
 				Computed:    true,
 			},
 			"metrics_url": schema.StringAttribute{
@@ -288,6 +292,10 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
+	metricsRetentionDays := conversion.Int64ValueToPointer(model.MetricsRetentionDays)
+	metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays5mDownsampling)
+	metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays1hDownsampling)
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
@@ -354,6 +362,49 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// If any of the metrics retention days are set, set the metrics retention policy
+	if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
+		// Need to get the metrics retention policy because update endpoint is a PUT and we need to send all fields
+		metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, *instanceId, projectId)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Getting metrics retention policy: %v", err))
+			return
+		}
+
+		metricsRetentionPayload, err := toUpdateMetricsStorageRetentionPayload(metricsRetentionDays, metricsRetentionDays5mDownsampling, metricsRetentionDays1hDownsampling, metricsResp)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building metrics retention policy payload: %v", err))
+			return
+		}
+
+		_, err = r.client.UpdateMetricsStorageRetention(ctx, *instanceId, projectId).UpdateMetricsStorageRetentionPayload(*metricsRetentionPayload).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting metrics retention policy: %v", err))
+			return
+		}
+	}
+
+	// Get metrics retention policy after update
+	metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, *instanceId, projectId)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Getting metrics retention policy: %v", err))
+		return
+	}
+	// Map response body to schema
+	err = mapMetricsRetentionField(metricsResp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
+		return
+	}
+
+	// Set state to fully populated data
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	tflog.Info(ctx, "Argus instance created")
 }
 
@@ -385,9 +436,15 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	aclList, err := r.client.ListACL(ctx, instanceId, projectId).Execute()
+	aclListResp, err := r.client.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACL data: %v", err))
+		return
+	}
+
+	metricsRetentionResp, err := r.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get metrics retention: %v", err))
 		return
 	}
 
@@ -399,9 +456,16 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapACLField(aclList, &model)
+	err = mapACLField(aclListResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the ACL: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the ACL: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapMetricsRetentionField(metricsRetentionResp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
 		return
 	}
 
@@ -435,6 +499,10 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 			return
 		}
 	}
+
+	metricsRetentionDays := conversion.Int64ValueToPointer(model.MetricsRetentionDays)
+	metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays5mDownsampling)
+	metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays1hDownsampling)
 
 	err := r.loadPlanId(ctx, &model)
 	if err != nil {
@@ -491,6 +559,47 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Set state to ACL populated data
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// If any of the metrics retention days are set, set the metrics retention policy
+	if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
+		// Need to get the metrics retention policy because update endpoint is a PUT and we need to send all fields
+		metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, instanceId, projectId)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Getting metrics retention policy: %v", err))
+			return
+		}
+
+		metricsRetentionPayload, err := toUpdateMetricsStorageRetentionPayload(metricsRetentionDays, metricsRetentionDays5mDownsampling, metricsRetentionDays1hDownsampling, metricsResp)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Building metrics retention policy payload: %v", err))
+			return
+		}
+		_, err = r.client.UpdateMetricsStorageRetention(ctx, instanceId, projectId).UpdateMetricsStorageRetentionPayload(*metricsRetentionPayload).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Setting metrics retention policy: %v", err))
+			return
+		}
+	}
+
+	// Get metrics retention policy after update
+	metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, instanceId, projectId)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Getting metrics retention policy: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapMetricsRetentionField(metricsResp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API response for the metrics retention %v", err))
+		return
+	}
+	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -639,6 +748,42 @@ func mapACLField(aclList *argus.ListACLResponse, model *Model) error {
 	return nil
 }
 
+func mapMetricsRetentionField(r *argus.GetMetricsStorageRetentionResponse, model *Model) error {
+	if r == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	if r.MetricsRetentionTimeRaw == nil || r.MetricsRetentionTime5m == nil || r.MetricsRetentionTime1h == nil {
+		return fmt.Errorf("metrics retention time is nil")
+	}
+
+	stripedMetricsRetentionDays := strings.TrimSuffix(*r.MetricsRetentionTimeRaw, "d")
+	metricsRetentionDays, err := strconv.ParseInt(stripedMetricsRetentionDays, 10, 64)
+	if err != nil {
+		return fmt.Errorf("parsing metrics retention days: %w", err)
+	}
+	model.MetricsRetentionDays = types.Int64Value(metricsRetentionDays)
+
+	stripedMetricsRetentionDays5m := strings.TrimSuffix(*r.MetricsRetentionTime5m, "d")
+	metricsRetentionDays5m, err := strconv.ParseInt(stripedMetricsRetentionDays5m, 10, 64)
+	if err != nil {
+		return fmt.Errorf("parsing metrics retention days 5m: %w", err)
+	}
+	model.MetricsRetentionDays5mDownsampling = types.Int64Value(metricsRetentionDays5m)
+
+	stripedMetricsRetentionDays1h := strings.TrimSuffix(*r.MetricsRetentionTime1h, "d")
+	metricsRetentionDays1h, err := strconv.ParseInt(stripedMetricsRetentionDays1h, 10, 64)
+	if err != nil {
+		return fmt.Errorf("parsing metrics retention days 1h: %w", err)
+	}
+	model.MetricsRetentionDays1hDownsampling = types.Int64Value(metricsRetentionDays1h)
+
+	return nil
+}
+
 func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
@@ -652,6 +797,40 @@ func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {
 		Name:      conversion.StringValueToPointer(model.Name),
 		PlanId:    conversion.StringValueToPointer(model.PlanId),
 		Parameter: &pa,
+	}, nil
+}
+
+func toUpdateMetricsStorageRetentionPayload(retentionDaysRaw, retentionDays5m, retentionDays1h *int64, resp *argus.GetMetricsStorageRetentionResponse) (*argus.UpdateMetricsStorageRetentionPayload, error) {
+	var retentionTimeRaw string
+	var retentionTime5m string
+	var retentionTime1h string
+
+	if resp == nil || resp.MetricsRetentionTimeRaw == nil || resp.MetricsRetentionTime5m == nil || resp.MetricsRetentionTime1h == nil {
+		return nil, fmt.Errorf("nil response")
+	}
+
+	if retentionDaysRaw == nil {
+		retentionTimeRaw = *resp.MetricsRetentionTimeRaw
+	} else {
+		retentionTimeRaw = fmt.Sprintf("%dd", *retentionDaysRaw)
+	}
+
+	if retentionDays5m == nil {
+		retentionTime5m = *resp.MetricsRetentionTime5m
+	} else {
+		retentionTime5m = fmt.Sprintf("%dd", *retentionDays5m)
+	}
+
+	if retentionDays1h == nil {
+		retentionTime1h = *resp.MetricsRetentionTime1h
+	} else {
+		retentionTime1h = fmt.Sprintf("%dd", *retentionDays1h)
+	}
+
+	return &argus.UpdateMetricsStorageRetentionPayload{
+		MetricsRetentionTimeRaw: &retentionTimeRaw,
+		MetricsRetentionTime5m:  &retentionTime5m,
+		MetricsRetentionTime1h:  &retentionTime1h,
 	}, nil
 }
 

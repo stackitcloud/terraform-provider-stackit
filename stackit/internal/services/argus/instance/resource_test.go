@@ -14,11 +14,12 @@ import (
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
-		description  string
-		instanceResp *argus.GetInstanceResponse
-		listACLResp  *argus.ListACLResponse
-		expected     Model
-		isValid      bool
+		description             string
+		instanceResp            *argus.GetInstanceResponse
+		listACLResp             *argus.ListACLResponse
+		getMetricsRetentionResp *argus.GetMetricsStorageRetentionResponse
+		expected                Model
+		isValid                 bool
 	}{
 		{
 			"default_ok",
@@ -26,15 +27,23 @@ func TestMapFields(t *testing.T) {
 				Id: utils.Ptr("iid"),
 			},
 			&argus.ListACLResponse{},
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
 			Model{
-				Id:         types.StringValue("pid,iid"),
-				ProjectId:  types.StringValue("pid"),
-				InstanceId: types.StringValue("iid"),
-				PlanId:     types.StringNull(),
-				PlanName:   types.StringNull(),
-				Name:       types.StringNull(),
-				Parameters: types.MapNull(types.StringType),
-				ACL:        types.SetNull(types.StringType),
+				Id:                                 types.StringValue("pid,iid"),
+				ProjectId:                          types.StringValue("pid"),
+				InstanceId:                         types.StringValue("iid"),
+				PlanId:                             types.StringNull(),
+				PlanName:                           types.StringNull(),
+				Name:                               types.StringNull(),
+				Parameters:                         types.MapNull(types.StringType),
+				ACL:                                types.SetNull(types.StringType),
+				MetricsRetentionDays:               types.Int64Value(60),
+				MetricsRetentionDays1hDownsampling: types.Int64Value(30),
+				MetricsRetentionDays5mDownsampling: types.Int64Value(7),
 			},
 			true,
 		},
@@ -46,12 +55,22 @@ func TestMapFields(t *testing.T) {
 				PlanName:   utils.Ptr("plan1"),
 				PlanId:     utils.Ptr("planId"),
 				Parameters: &map[string]string{"key": "value"},
+				Instance: &argus.InstanceSensitiveData{
+					MetricsRetentionTimeRaw: utils.Ptr(int64(60)),
+					MetricsRetentionTime1h:  utils.Ptr(int64(30)),
+					MetricsRetentionTime5m:  utils.Ptr(int64(7)),
+				},
 			},
 			&argus.ListACLResponse{
 				Acl: &[]string{
 					"1.1.1.1/32",
 				},
 				Message: utils.Ptr("message"),
+			},
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
 			},
 			Model{
 				Id:         types.StringValue("pid,iid"),
@@ -64,6 +83,9 @@ func TestMapFields(t *testing.T) {
 				ACL: types.SetValueMust(types.StringType, []attr.Value{
 					types.StringValue("1.1.1.1/32"),
 				}),
+				MetricsRetentionDays:               types.Int64Value(60),
+				MetricsRetentionDays1hDownsampling: types.Int64Value(30),
+				MetricsRetentionDays5mDownsampling: types.Int64Value(7),
 			},
 			true,
 		},
@@ -83,6 +105,11 @@ func TestMapFields(t *testing.T) {
 				},
 				Message: utils.Ptr("message"),
 			},
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
 			Model{
 				Id:         types.StringValue("pid,iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -95,6 +122,9 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("1.1.1.1/32"),
 					types.StringValue("8.8.8.8/32"),
 				}),
+				MetricsRetentionDays:               types.Int64Value(60),
+				MetricsRetentionDays1hDownsampling: types.Int64Value(30),
+				MetricsRetentionDays5mDownsampling: types.Int64Value(7),
 			},
 			true,
 		},
@@ -108,20 +138,29 @@ func TestMapFields(t *testing.T) {
 				Acl:     &[]string{},
 				Message: nil,
 			},
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
 			Model{
-				Id:         types.StringValue("pid,iid"),
-				ProjectId:  types.StringValue("pid"),
-				InstanceId: types.StringValue("iid"),
-				PlanId:     types.StringNull(),
-				PlanName:   types.StringNull(),
-				Name:       types.StringNull(),
-				Parameters: types.MapNull(types.StringType),
-				ACL:        types.SetNull(types.StringType),
+				Id:                                 types.StringValue("pid,iid"),
+				ProjectId:                          types.StringValue("pid"),
+				InstanceId:                         types.StringValue("iid"),
+				PlanId:                             types.StringNull(),
+				PlanName:                           types.StringNull(),
+				Name:                               types.StringNull(),
+				Parameters:                         types.MapNull(types.StringType),
+				ACL:                                types.SetNull(types.StringType),
+				MetricsRetentionDays:               types.Int64Value(60),
+				MetricsRetentionDays1hDownsampling: types.Int64Value(30),
+				MetricsRetentionDays5mDownsampling: types.Int64Value(7),
 			},
 			true,
 		},
 		{
 			"response_nil_fail",
+			nil,
 			nil,
 			nil,
 			Model{},
@@ -131,8 +170,79 @@ func TestMapFields(t *testing.T) {
 			"no_resource_id",
 			&argus.GetInstanceResponse{},
 			nil,
+			nil,
 			Model{},
 			false,
+		},
+		{
+			"empty metrics retention",
+			&argus.GetInstanceResponse{
+				Id:   utils.Ptr("iid"),
+				Name: nil,
+			},
+			&argus.ListACLResponse{
+				Acl:     &[]string{},
+				Message: nil,
+			},
+			&argus.GetMetricsStorageRetentionResponse{},
+			Model{},
+			false,
+		},
+		{
+			"nil metrics retention",
+			&argus.GetInstanceResponse{
+				Id:   utils.Ptr("iid"),
+				Name: nil,
+			},
+			&argus.ListACLResponse{
+				Acl:     &[]string{},
+				Message: nil,
+			},
+			nil,
+			Model{},
+			false,
+		},
+		{
+			"update metrics retention",
+			&argus.GetInstanceResponse{
+				Id:         utils.Ptr("iid"),
+				Name:       utils.Ptr("name"),
+				PlanName:   utils.Ptr("plan1"),
+				PlanId:     utils.Ptr("planId"),
+				Parameters: &map[string]string{"key": "value"},
+				Instance: &argus.InstanceSensitiveData{
+					MetricsRetentionTimeRaw: utils.Ptr(int64(30)),
+					MetricsRetentionTime1h:  utils.Ptr(int64(15)),
+					MetricsRetentionTime5m:  utils.Ptr(int64(10)),
+				},
+			},
+			&argus.ListACLResponse{
+				Acl: &[]string{
+					"1.1.1.1/32",
+				},
+				Message: utils.Ptr("message"),
+			},
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			Model{
+				Id:         types.StringValue("pid,iid"),
+				ProjectId:  types.StringValue("pid"),
+				Name:       types.StringValue("name"),
+				InstanceId: types.StringValue("iid"),
+				PlanId:     types.StringValue("planId"),
+				PlanName:   types.StringValue("plan1"),
+				Parameters: toTerraformStringMapMust(context.Background(), map[string]string{"key": "value"}),
+				ACL: types.SetValueMust(types.StringType, []attr.Value{
+					types.StringValue("1.1.1.1/32"),
+				}),
+				MetricsRetentionDays:               types.Int64Value(60),
+				MetricsRetentionDays1hDownsampling: types.Int64Value(30),
+				MetricsRetentionDays5mDownsampling: types.Int64Value(7),
+			},
+			true,
 		},
 	}
 	for _, tt := range tests {
@@ -143,10 +253,11 @@ func TestMapFields(t *testing.T) {
 			}
 			err := mapFields(context.Background(), tt.instanceResp, state)
 			aclErr := mapACLField(tt.listACLResp, state)
-			if !tt.isValid && err == nil && aclErr == nil {
+			metricsErr := mapMetricsRetentionField(tt.getMetricsRetentionResp, state)
+			if !tt.isValid && err == nil && aclErr == nil && metricsErr == nil {
 				t.Fatalf("Should have failed")
 			}
-			if tt.isValid && (err != nil || aclErr != nil) {
+			if tt.isValid && (err != nil || aclErr != nil || metricsErr != nil) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 
@@ -262,6 +373,139 @@ func TestToPayloadUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			output, err := toUpdatePayload(tt.input)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(output, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestToUpdateMetricsStorageRetentionPayload(t *testing.T) {
+	tests := []struct {
+		description      string
+		retentionDaysRaw *int64
+		retentionDays1h  *int64
+		retentionDays5m  *int64
+		getMetricsResp   *argus.GetMetricsStorageRetentionResponse
+		expected         *argus.UpdateMetricsStorageRetentionPayload
+		isValid          bool
+	}{
+		{
+			"basic_ok",
+			utils.Ptr(int64(120)),
+			utils.Ptr(int64(60)),
+			utils.Ptr(int64(14)),
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			&argus.UpdateMetricsStorageRetentionPayload{
+				MetricsRetentionTimeRaw: utils.Ptr("120d"),
+				MetricsRetentionTime1h:  utils.Ptr("60d"),
+				MetricsRetentionTime5m:  utils.Ptr("14d"),
+			},
+			true,
+		},
+		{
+			"only_raw_given",
+			utils.Ptr(int64(120)),
+			nil,
+			nil,
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			&argus.UpdateMetricsStorageRetentionPayload{
+				MetricsRetentionTimeRaw: utils.Ptr("120d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			true,
+		},
+		{
+			"only_1h_given",
+			nil,
+			utils.Ptr(int64(60)),
+			nil,
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			&argus.UpdateMetricsStorageRetentionPayload{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("60d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			true,
+		},
+		{
+			"only_5m_given",
+			nil,
+			nil,
+			utils.Ptr(int64(14)),
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			&argus.UpdateMetricsStorageRetentionPayload{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("14d"),
+			},
+			true,
+		},
+		{
+			"none_given",
+			nil,
+			nil,
+			nil,
+			&argus.GetMetricsStorageRetentionResponse{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			&argus.UpdateMetricsStorageRetentionPayload{
+				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTime5m:  utils.Ptr("7d"),
+			},
+			true,
+		},
+		{
+			"nil_response",
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			false,
+		},
+		{
+			"empty_response",
+			nil,
+			nil,
+			nil,
+			&argus.GetMetricsStorageRetentionResponse{},
+			nil,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output, err := toUpdateMetricsStorageRetentionPayload(tt.retentionDaysRaw, tt.retentionDays5m, tt.retentionDays1h, tt.getMetricsResp)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
