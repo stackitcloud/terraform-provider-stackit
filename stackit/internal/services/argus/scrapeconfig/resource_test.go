@@ -420,6 +420,56 @@ func TestToCreatePayload(t *testing.T) {
 			true,
 		},
 		{
+			"ok - with metrics relabel configs",
+			&Model{
+				MetricsPath: types.StringValue("/metrics"),
+				Name:        types.StringValue("Name"),
+			},
+			&saml2Model{},
+			&basicAuthModel{},
+			&[]targetModel{},
+			&[]httpSdConfigModel{},
+			&[]metricsRelabelConfigModel{
+				{
+					Action:      types.StringValue("replace"),
+					Modulus:     types.Int64Value(1),
+					Regex:       types.StringValue("reg"),
+					Replacement: types.StringValue("rep"),
+					Separator:   types.StringValue(";"),
+					TargetLabel: types.StringValue("target"),
+					SourceLabels: types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("source"),
+					}),
+				},
+			},
+			&oauth2Model{},
+			&tlsConfigModel{},
+			&argus.CreateScrapeConfigPayload{
+				MetricsPath:   utils.Ptr("/metrics"),
+				JobName:       utils.Ptr("Name"),
+				StaticConfigs: &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
+				// Defaults
+				Scheme:         utils.Ptr("https"),
+				ScrapeInterval: utils.Ptr("5m"),
+				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
+				Params:         &map[string]any{"saml2": []string{"enabled"}},
+				HttpSdConfigs:  &[]argus.CreateScrapeConfigPayloadHttpSdConfigsInner{},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{
+					{
+						Action:       utils.Ptr("replace"),
+						Modulus:      utils.Ptr(float64(1)),
+						Regex:        utils.Ptr("reg"),
+						Replacement:  utils.Ptr("rep"),
+						Separator:    utils.Ptr(";"),
+						TargetLabel:  utils.Ptr("target"),
+						SourceLabels: &[]string{"source"},
+					},
+				},
+			},
+			true,
+		},
+		{
 			"nil_model",
 			nil,
 			nil,
@@ -614,6 +664,51 @@ func TestToUpdatePayload(t *testing.T) {
 				ScrapeTimeout:         utils.Ptr("2m"),
 				SampleLimit:           utils.Ptr(float64(5000)),
 				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
+			},
+			true,
+		},
+		{
+			"ok - with metrics relabel configs",
+			&Model{
+				MetricsPath: types.StringValue("/metrics"),
+				Name:        types.StringValue("Name"),
+			},
+			&saml2Model{},
+			&basicAuthModel{},
+			&[]targetModel{},
+			&[]metricsRelabelConfigModel{
+				{
+					Action:      types.StringValue("replace"),
+					Modulus:     types.Int64Value(1),
+					Regex:       types.StringValue("reg"),
+					Replacement: types.StringValue("rep"),
+					Separator:   types.StringValue(";"),
+					TargetLabel: types.StringValue("target"),
+					SourceLabels: types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("source"),
+					}),
+				},
+			},
+			&tlsConfigModel{},
+			&argus.UpdateScrapeConfigPayload{
+				MetricsPath:   utils.Ptr("/metrics"),
+				StaticConfigs: &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
+				// Defaults
+				Scheme:         utils.Ptr("https"),
+				ScrapeInterval: utils.Ptr("5m"),
+				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{
+					{
+						Action:       utils.Ptr("replace"),
+						Modulus:      utils.Ptr(float64(1)),
+						Regex:        utils.Ptr("reg"),
+						Replacement:  utils.Ptr("rep"),
+						Separator:    utils.Ptr(";"),
+						TargetLabel:  utils.Ptr("target"),
+						SourceLabels: &[]string{"source"},
+					},
+				},
 			},
 			true,
 		},
