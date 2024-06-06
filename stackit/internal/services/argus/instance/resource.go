@@ -394,7 +394,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	// Map response body to schema
 	err = mapMetricsRetentionField(metricsResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
 		return
 	}
 
@@ -596,7 +596,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	// Map response body to schema
 	err = mapMetricsRetentionField(metricsResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API response for the metrics retention %v", err))
 		return
 	}
 	// Set state to fully populated data
