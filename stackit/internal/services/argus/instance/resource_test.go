@@ -56,9 +56,9 @@ func TestMapFields(t *testing.T) {
 				PlanId:     utils.Ptr("planId"),
 				Parameters: &map[string]string{"key": "value"},
 				Instance: &argus.InstanceSensitiveData{
-					MetricsRetentionTimeRaw: utils.Ptr(int64(30)),
-					MetricsRetentionTime1h:  utils.Ptr(int64(15)),
-					MetricsRetentionTime5m:  utils.Ptr(int64(10)),
+					MetricsRetentionTimeRaw: utils.Ptr(int64(60)),
+					MetricsRetentionTime1h:  utils.Ptr(int64(30)),
+					MetricsRetentionTime5m:  utils.Ptr(int64(7)),
 				},
 			},
 			&argus.ListACLResponse{
