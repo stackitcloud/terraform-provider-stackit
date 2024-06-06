@@ -702,7 +702,7 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Generate API request body from model
-	payload, err := toCreatePayload(ctx, &model, &saml2Model, &basicAuthModel, targetsModel, httpSdConfigsModel, metricsRelabelConfigsModel, &oauth2Model, &tlsConfigModel)
+	payload, err := toCreatePayload(ctx, &model, &saml2Model, &basicAuthModel, &targetsModel, &httpSdConfigsModel, &metricsRelabelConfigsModel, &oauth2Model, &tlsConfigModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -850,7 +850,7 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 	}
 	// Generate API request body from model
-	payload, err := toUpdatePayload(ctx, &model, &saml2Model, &basicAuthModel, targetsModel, httpSdConfigsModel, metricsRelabelConfigsModel, &oauth2Model, &tlsConfigModel)
+	payload, err := toUpdatePayload(ctx, &model, &saml2Model, &basicAuthModel, &targetsModel, &metricsRelabelConfigsModel, &tlsConfigModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -1347,7 +1347,7 @@ func mapMetricsRelabelConfigs(ctx context.Context, sc *argus.Job, model *Model) 
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel []targetModel, httpSdConfigsModel []httpSdConfigModel, metricsRelabelConfigsModel []metricsRelabelConfigModel, oauth2Model *oauth2Model, tlsConfigModel *tlsConfigModel) (*argus.CreateScrapeConfigPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel *[]targetModel, httpSdConfigsModel *[]httpSdConfigModel, metricsRelabelConfigsModel *[]metricsRelabelConfigModel, oauth2Model *oauth2Model, tlsConfigModel *tlsConfigModel) (*argus.CreateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -1386,8 +1386,8 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		}
 	}
 
-	t := make([]argus.CreateScrapeConfigPayloadStaticConfigsInner, len(targetsModel))
-	for i, target := range targetsModel {
+	t := make([]argus.CreateScrapeConfigPayloadStaticConfigsInner, len(*targetsModel))
+	for i, target := range *targetsModel {
 		ti := argus.CreateScrapeConfigPayloadStaticConfigsInner{}
 
 		urls := []string{}
@@ -1412,9 +1412,9 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		}
 	}
 
-	metricsRelabelConfigs := make([]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner, len(metricsRelabelConfigsModel))
+	metricsRelabelConfigs := make([]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner, len(*metricsRelabelConfigsModel))
 
-	for i, metricsRelabelConfig := range metricsRelabelConfigsModel {
+	for i, metricsRelabelConfig := range *metricsRelabelConfigsModel {
 		metricsRelabelConfigsInner := argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{}
 
 		metricsRelabelConfigsInner.Action = conversion.StringValueToPointer(metricsRelabelConfig.Action)
@@ -1462,9 +1462,9 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		}
 	}
 
-	httpSdConfigs := make([]argus.CreateScrapeConfigPayloadHttpSdConfigsInner, len(httpSdConfigsModel))
+	httpSdConfigs := make([]argus.CreateScrapeConfigPayloadHttpSdConfigsInner, len(*httpSdConfigsModel))
 
-	for i, httpSdConfig := range httpSdConfigsModel {
+	for i, httpSdConfig := range *httpSdConfigsModel {
 		hsci := argus.CreateScrapeConfigPayloadHttpSdConfigsInner{}
 
 		hsci.Url = conversion.StringValueToPointer(httpSdConfig.Url)
@@ -1533,7 +1533,7 @@ func setDefaultsCreateScrapeConfig(sc *argus.CreateScrapeConfigPayload, model *M
 	}
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel []targetModel, httpSdConfigsModel []httpSdConfigModel, metricsRelabelConfigsModel []metricsRelabelConfigModel, oauth2Model *oauth2Model, tlsConfigModel *tlsConfigModel) (*argus.UpdateScrapeConfigPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel *[]targetModel, metricsRelabelConfigsModel *[]metricsRelabelConfigModel, tlsConfigModel *tlsConfigModel) (*argus.UpdateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -1573,8 +1573,8 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		}
 	}
 
-	t := make([]argus.UpdateScrapeConfigPayloadStaticConfigsInner, len(targetsModel))
-	for i, target := range targetsModel {
+	t := make([]argus.UpdateScrapeConfigPayloadStaticConfigsInner, len(*targetsModel))
+	for i, target := range *targetsModel {
 		ti := argus.UpdateScrapeConfigPayloadStaticConfigsInner{}
 
 		urls := []string{}
@@ -1599,9 +1599,9 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		}
 	}
 
-	mrcs := make([]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner, len(metricsRelabelConfigsModel))
+	mrcs := make([]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner, len(*metricsRelabelConfigsModel))
 
-	for i, metricsRelabelConfig := range metricsRelabelConfigsModel {
+	for i, metricsRelabelConfig := range *metricsRelabelConfigsModel {
 		mrcsi := argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{}
 
 		mrcsi.Action = conversion.StringValueToPointer(metricsRelabelConfig.Action)
