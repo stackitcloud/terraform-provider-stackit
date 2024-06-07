@@ -1203,7 +1203,6 @@ func mapHttpSdConfigs(ctx context.Context, sc *argus.Job, model *Model) error {
 
 	newHttpSdConfigs := []attr.Value{}
 	for _, httpSdConfig := range *sc.HttpSdConfigs {
-
 		if httpSdConfig.TlsConfig != nil {
 			insecureSkipVerify := types.BoolNull()
 			if httpSdConfig.TlsConfig.InsecureSkipVerify != nil {
@@ -1423,7 +1422,7 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 
 	metricsRelabelConfigs := make([]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner, len(*metricsRelabelConfigsModel))
 
-	for i, metricsRelabelConfig := range *metricsRelabelConfigsModel {
+	for i, metricsRelabelConfig := range *metricsRelabelConfigsModel { //nolint:gocritic // disable linter temporarily
 		metricsRelabelConfigsInner := argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{}
 
 		metricsRelabelConfigsInner.Action = conversion.StringValueToPointer(metricsRelabelConfig.Action)
@@ -1445,7 +1444,6 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	sc.MetricsRelabelConfigs = &metricsRelabelConfigs
 
 	if sc.Oauth2 == nil && !oauth2Obj.ClientId.IsNull() && !oauth2Obj.ClientSecret.IsNull() {
-
 		scopes := []string{}
 		diags := oauth2Obj.Scopes.ElementsAs(ctx, &scopes, true)
 		if diags.HasError() {
@@ -1646,7 +1644,7 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 
 	mrcs := make([]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner, len(*metricsRelabelConfigsModel))
 
-	for i, metricsRelabelConfig := range *metricsRelabelConfigsModel {
+	for i, metricsRelabelConfig := range *metricsRelabelConfigsModel { //nolint:gocritic // disable linter temporarily
 		mrcsi := argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{}
 
 		mrcsi.Action = conversion.StringValueToPointer(metricsRelabelConfig.Action)
