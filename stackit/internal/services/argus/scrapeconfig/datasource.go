@@ -196,6 +196,217 @@ func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 					},
 				},
 			},
+			"bearer_token": schema.StringAttribute{
+				Description: "Sets the 'Authorization' header on every scrape request with the configured bearer token.",
+				Computed:    true,
+				Sensitive:   true,
+			},
+			"honor_labels": schema.BoolAttribute{
+				Description: "It controls whether Prometheus respects the labels in scraped data. Note that any globally configured 'external_labels' are unaffected by this setting. Defaults to `false`",
+				Computed:    true,
+			},
+			"honor_timestamps": schema.BoolAttribute{
+				Description: "It controls whether Prometheus respects the timestamps present in scraped data. Defaults to `false`",
+				Computed:    true,
+			},
+			"http_sd_configs": schema.ListNestedAttribute{
+				Description: "HTTP-based service discovery provides a more generic way to configure static targets and serves as an interface to plug in custom service discovery mechanisms.",
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"basic_auth": schema.SingleNestedAttribute{
+							Description: "Sets the 'Authorization' header on every scrape request with the configured username and password.",
+							Computed:    true,
+							Attributes: map[string]schema.Attribute{
+								"username": schema.StringAttribute{
+									Description: "Specifies basic auth username.",
+									Required:    true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 200),
+									},
+								},
+								"password": schema.StringAttribute{
+									Description: "Specifies basic auth password.",
+									Required:    true,
+									Sensitive:   true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 200),
+									},
+								},
+							},
+						},
+						"oauth2": schema.SingleNestedAttribute{
+							Description: "OAuth 2.0 authentication using the client credentials grant type.",
+							Computed:    true,
+							Attributes: map[string]schema.Attribute{
+								"client_id": schema.StringAttribute{
+									Description: "",
+									Required:    true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 200),
+									},
+								},
+								"client_secret": schema.StringAttribute{
+									Description: "",
+									Required:    true,
+									Sensitive:   true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 200),
+									},
+								},
+								"token_url": schema.StringAttribute{
+									Description: "The URL to fetch the token from.",
+									Required:    true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 200),
+									},
+								},
+								"scopes": schema.ListAttribute{
+									Description: `The URL to fetch the token from.`,
+									Computed:    true,
+									ElementType: types.StringType,
+								},
+								"tls_config": schema.SingleNestedAttribute{
+									Description: "Configures the scrape request's TLS settings.",
+									Computed:    true,
+									Attributes: map[string]schema.Attribute{
+										"insecure_skip_verify": schema.BoolAttribute{
+											Description: "Disable validation of the server certificate. Defaults to `false`",
+											Computed:    true,
+										},
+									},
+								},
+							},
+						},
+						"refresh_interval": schema.StringAttribute{
+							Description: "Refresh interval to re-query the endpoint. Defaults to `60s`",
+							Computed:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(2, 8),
+							},
+						},
+						"tls_config": schema.SingleNestedAttribute{
+							Description: "Configures the scrape request's TLS settings.",
+							Computed:    true,
+							Attributes: map[string]schema.Attribute{
+								"insecure_skip_verify": schema.BoolAttribute{
+									Description: "Disable validation of the server certificate. Defaults to `false`",
+									Computed:    true,
+								},
+							},
+						},
+						"url": schema.StringAttribute{
+							Description: "URL from which the targets are fetched.",
+							Required:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthAtMost(400),
+							},
+						},
+					},
+				},
+			},
+			"metrics_relabel_configs": schema.ListNestedAttribute{
+				Description: "List of metric relabel configurations.",
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"action": schema.StringAttribute{
+							Description: "Action to perform based on regex matching. Defaults to `replace`",
+							Computed:    true,
+						},
+						"modulus": schema.Float64Attribute{
+							Description: "Modulus to take of the hash of the source label values.",
+							Computed:    true,
+						},
+						"regex": schema.StringAttribute{
+							Description: "Regular expression against which the extracted value is matched. Defaults to `.*`",
+							Computed:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(1, 400),
+							},
+						},
+						"replacement": schema.StringAttribute{
+							Description: "Replacement value against which a regex replace is performed if the regular expression matches.",
+							Computed:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(1, 200),
+							},
+						},
+						"separator": schema.StringAttribute{
+							Description: "Separator placed between concatenated source label values.",
+							Computed:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(1, 20),
+							},
+						},
+						"target_label": schema.StringAttribute{
+							Description: "Label to which the resulting value is written in a replace action.",
+							Computed:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(1, 200),
+							},
+						},
+						"source_labels": schema.ListAttribute{
+							Description: `The source labels select values from existing labels.`,
+							Computed:    true,
+							ElementType: types.StringType,
+						},
+					},
+				},
+			},
+			"oauth2": schema.SingleNestedAttribute{
+				Description: "OAuth 2.0 authentication using the client credentials grant type.",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"client_id": schema.StringAttribute{
+						Description: "",
+						Required:    true,
+						Validators: []validator.String{
+							stringvalidator.LengthBetween(1, 200),
+						},
+					},
+					"client_secret": schema.StringAttribute{
+						Description: "",
+						Required:    true,
+						Sensitive:   true,
+						Validators: []validator.String{
+							stringvalidator.LengthBetween(1, 200),
+						},
+					},
+					"token_url": schema.StringAttribute{
+						Description: "The URL to fetch the token from.",
+						Required:    true,
+						Validators: []validator.String{
+							stringvalidator.LengthBetween(1, 200),
+						},
+					},
+					"scopes": schema.ListAttribute{
+						Description: `The URL to fetch the token from.`,
+						Computed:    true,
+						ElementType: types.StringType,
+					},
+					"tls_config": schema.SingleNestedAttribute{
+						Description: "Configures the scrape request's TLS settings.",
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"insecure_skip_verify": schema.BoolAttribute{
+								Description: "Disable validation of the server certificate. Defaults to `false`",
+								Computed:    true,
+							},
+						},
+					},
+				},
+			},
+			"tls_config": schema.SingleNestedAttribute{
+				Description: "",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"insecure_skip_verify": schema.BoolAttribute{
+						Description: "Disable validation of the server certificate.",
+						Computed:    true,
+					},
+				},
+			},
 		},
 	}
 }

@@ -24,17 +24,24 @@ func TestMapFields(t *testing.T) {
 				JobName: utils.Ptr("name"),
 			},
 			Model{
-				Id:             types.StringValue("pid,iid,name"),
-				ProjectId:      types.StringValue("pid"),
-				InstanceId:     types.StringValue("iid"),
-				Name:           types.StringValue("name"),
-				MetricsPath:    types.StringNull(),
-				Scheme:         types.StringNull(),
-				ScrapeInterval: types.StringNull(),
-				ScrapeTimeout:  types.StringNull(),
-				SAML2:          types.ObjectNull(saml2Types),
-				BasicAuth:      types.ObjectNull(basicAuthTypes),
-				Targets:        types.ListNull(types.ObjectType{AttrTypes: targetTypes}),
+				Id:                    types.StringValue("pid,iid,name"),
+				ProjectId:             types.StringValue("pid"),
+				InstanceId:            types.StringValue("iid"),
+				Name:                  types.StringValue("name"),
+				MetricsPath:           types.StringNull(),
+				Scheme:                types.StringNull(),
+				ScrapeInterval:        types.StringNull(),
+				ScrapeTimeout:         types.StringNull(),
+				SAML2:                 types.ObjectNull(saml2Types),
+				BasicAuth:             types.ObjectNull(basicAuthTypes),
+				Targets:               types.ListNull(types.ObjectType{AttrTypes: targetTypes}),
+				BearerToken:           types.StringNull(),
+				HonorLabels:           types.BoolNull(),
+				HonorTimeStamps:       types.BoolNull(),
+				HttpSdConfigs:         types.ListNull(types.ObjectType{AttrTypes: httpSdConfigsTypes}),
+				MetricsRelabelConfigs: types.ListNull(types.ObjectType{AttrTypes: metricsRelabelConfigsTypes}),
+				Oauth2:                types.ObjectNull(oauth2Types),
+				TlsConfig:             types.ObjectNull(tlsConfigTypes),
 			},
 			true,
 		},
@@ -48,10 +55,10 @@ func TestMapFields(t *testing.T) {
 					Username: utils.Ptr("u"),
 				},
 				Params:         &map[string][]string{"saml2": {"disabled"}, "x": {"y", "z"}},
+				SampleLimit:    utils.Ptr(int64(17)),
 				Scheme:         utils.Ptr("scheme"),
 				ScrapeInterval: utils.Ptr("1"),
 				ScrapeTimeout:  utils.Ptr("2"),
-				SampleLimit:    utils.Ptr(int64(17)),
 				StaticConfigs: &[]argus.StaticConfigs{
 					{
 						Labels:  &map[string]string{"k1": "v1"},
@@ -65,6 +72,44 @@ func TestMapFields(t *testing.T) {
 						Labels:  nil,
 						Targets: &[]string{},
 					},
+				},
+				HonorLabels:     utils.Ptr(false),
+				HonorTimeStamps: utils.Ptr(false),
+				HttpSdConfigs: &[]argus.HTTPServiceSD{
+					{
+						BasicAuth: &argus.BasicAuth{
+							Password: utils.Ptr("p"),
+							Username: utils.Ptr("u"),
+						},
+						RefreshInterval: utils.Ptr("60s"),
+						TlsConfig: &argus.TLSConfig{
+							InsecureSkipVerify: utils.Ptr(false),
+						},
+						Oauth2: &argus.OAuth2{
+							ClientId:     utils.Ptr(""),
+							ClientSecret: utils.Ptr(""),
+							TokenUrl:     utils.Ptr(""),
+							Scopes:       &[]string{""},
+							TlsConfig: &argus.TLSConfig{
+								InsecureSkipVerify: utils.Ptr(false),
+							},
+						},
+						Url: utils.Ptr("url"),
+					},
+				},
+				MetricsRelabelConfigs: &[]argus.MetricsRelabelConfig{
+					{
+						Action:       utils.Ptr("replace"),
+						Modulus:      utils.Ptr(int64(1)),
+						Regex:        utils.Ptr("reg"),
+						Replacement:  utils.Ptr("rep"),
+						Separator:    utils.Ptr(";"),
+						TargetLabel:  utils.Ptr("target"),
+						SourceLabels: &[]string{"source"},
+					},
+				},
+				TlsConfig: &argus.TLSConfig{
+					InsecureSkipVerify: utils.Ptr(false),
 				},
 			},
 			expected: Model{
@@ -102,6 +147,49 @@ func TestMapFields(t *testing.T) {
 						"urls":   types.ListValueMust(types.StringType, []attr.Value{}),
 						"labels": types.MapNull(types.StringType),
 					}),
+				}),
+				HonorLabels:     types.BoolValue(false),
+				HonorTimeStamps: types.BoolValue(false),
+				HttpSdConfigs: types.ListValueMust(types.ObjectType{AttrTypes: httpSdConfigsTypes}, []attr.Value{
+					types.ObjectValueMust(httpSdConfigsTypes, map[string]attr.Value{
+						"basic_auth": types.ObjectValueMust(basicAuthTypes, map[string]attr.Value{
+							"username": types.StringValue("u"),
+							"password": types.StringValue("p"),
+						}),
+
+						"refresh_interval": types.StringValue("60s"),
+						"tls_config": types.ObjectValueMust(tlsConfigTypes, map[string]attr.Value{
+							"insecure_skip_verify": types.BoolValue(false),
+						}),
+						"url": types.StringValue("url"),
+						"oauth2": types.ObjectValueMust(oauth2Types, map[string]attr.Value{
+							"client_id":     types.StringValue(""),
+							"client_secret": types.StringValue(""),
+							"token_url":     types.StringValue(""),
+							"scopes": types.ListValueMust(types.StringType, []attr.Value{
+								types.StringValue(""),
+							}),
+							"tls_config": types.ObjectValueMust(tlsConfigTypes, map[string]attr.Value{
+								"insecure_skip_verify": types.BoolValue(false),
+							}),
+						}),
+					}),
+				}),
+				MetricsRelabelConfigs: types.ListValueMust(types.ObjectType{AttrTypes: metricsRelabelConfigsTypes}, []attr.Value{
+					types.ObjectValueMust(metricsRelabelConfigsTypes, map[string]attr.Value{
+						"action":       types.StringValue("replace"),
+						"modulus":      types.Int64Value(1),
+						"regex":        types.StringValue("reg"),
+						"replacement":  types.StringValue("rep"),
+						"separator":    types.StringValue(";"),
+						"target_label": types.StringValue("target"),
+						"source_labels": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("source"),
+						}),
+					}),
+				}),
+				TlsConfig: types.ObjectValueMust(tlsConfigTypes, map[string]attr.Value{
+					"insecure_skip_verify": types.BoolValue(false),
 				}),
 			},
 			isValid: true,
@@ -144,13 +232,17 @@ func TestMapFields(t *testing.T) {
 
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
-		description    string
-		input          *Model
-		inputSAML2     *saml2Model
-		inputBasicAuth *basicAuthModel
-		inputTargets   []targetModel
-		expected       *argus.CreateScrapeConfigPayload
-		isValid        bool
+		description                     string
+		input                           *Model
+		inputSAML2                      *saml2Model
+		inputBasicAuth                  *basicAuthModel
+		inputTargets                    *[]targetModel
+		inputHttpSdConfigsModel         *[]httpSdConfigModel
+		inputMetricsRelabelConfigsModel *[]metricsRelabelConfigModel
+		inputOauth2Model                *oauth2Model
+		inputTlsConfigModel             *tlsConfigModel
+		expected                        *argus.CreateScrapeConfigPayload
+		isValid                         bool
 	}{
 		{
 			"basic_ok",
@@ -159,16 +251,22 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&saml2Model{},
 			&basicAuthModel{},
-			[]targetModel{},
+			&[]targetModel{},
+			&[]httpSdConfigModel{},
+			&[]metricsRelabelConfigModel{},
+			&oauth2Model{},
+			&tlsConfigModel{},
 			&argus.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
-				Scheme:         utils.Ptr("https"),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
-				StaticConfigs:  &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
-				Params:         &map[string]any{"saml2": []string{"enabled"}},
+				Scheme:                utils.Ptr("https"),
+				ScrapeInterval:        utils.Ptr("5m"),
+				ScrapeTimeout:         utils.Ptr("2m"),
+				SampleLimit:           utils.Ptr(float64(5000)),
+				StaticConfigs:         &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
+				Params:                &map[string]any{"saml2": []string{"enabled"}},
+				HttpSdConfigs:         &[]argus.CreateScrapeConfigPayloadHttpSdConfigsInner{},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
 			},
 			true,
 		},
@@ -182,17 +280,23 @@ func TestToCreatePayload(t *testing.T) {
 				EnableURLParameters: types.BoolValue(false),
 			},
 			&basicAuthModel{},
-			[]targetModel{},
+			&[]targetModel{},
+			&[]httpSdConfigModel{},
+			&[]metricsRelabelConfigModel{},
+			&oauth2Model{},
+			&tlsConfigModel{},
 			&argus.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				JobName:     utils.Ptr("Name"),
 				Params:      &map[string]any{"saml2": []string{"disabled"}},
 				// Defaults
-				Scheme:         utils.Ptr("https"),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
-				StaticConfigs:  &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
+				Scheme:                utils.Ptr("https"),
+				ScrapeInterval:        utils.Ptr("5m"),
+				ScrapeTimeout:         utils.Ptr("2m"),
+				SampleLimit:           utils.Ptr(float64(5000)),
+				StaticConfigs:         &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
+				HttpSdConfigs:         &[]argus.CreateScrapeConfigPayloadHttpSdConfigsInner{},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
 			},
 			true,
 		},
@@ -206,17 +310,23 @@ func TestToCreatePayload(t *testing.T) {
 				EnableURLParameters: types.BoolValue(true),
 			},
 			&basicAuthModel{},
-			[]targetModel{},
+			&[]targetModel{},
+			&[]httpSdConfigModel{},
+			&[]metricsRelabelConfigModel{},
+			&oauth2Model{},
+			&tlsConfigModel{},
 			&argus.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				JobName:     utils.Ptr("Name"),
 				Params:      &map[string]any{"saml2": []string{"enabled"}},
 				// Defaults
-				Scheme:         utils.Ptr("https"),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
-				StaticConfigs:  &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
+				Scheme:                utils.Ptr("https"),
+				ScrapeInterval:        utils.Ptr("5m"),
+				ScrapeTimeout:         utils.Ptr("2m"),
+				SampleLimit:           utils.Ptr(float64(5000)),
+				StaticConfigs:         &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
+				HttpSdConfigs:         &[]argus.CreateScrapeConfigPayloadHttpSdConfigsInner{},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
 			},
 			true,
 		},
@@ -231,7 +341,11 @@ func TestToCreatePayload(t *testing.T) {
 				Username: types.StringValue("u"),
 				Password: types.StringValue("p"),
 			},
-			[]targetModel{},
+			&[]targetModel{},
+			&[]httpSdConfigModel{},
+			&[]metricsRelabelConfigModel{},
+			&oauth2Model{},
+			&tlsConfigModel{},
 			&argus.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				JobName:     utils.Ptr("Name"),
@@ -240,12 +354,14 @@ func TestToCreatePayload(t *testing.T) {
 					Password: utils.Ptr("p"),
 				},
 				// Defaults
-				Scheme:         utils.Ptr("https"),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
-				StaticConfigs:  &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
-				Params:         &map[string]any{"saml2": []string{"enabled"}},
+				Scheme:                utils.Ptr("https"),
+				ScrapeInterval:        utils.Ptr("5m"),
+				ScrapeTimeout:         utils.Ptr("2m"),
+				SampleLimit:           utils.Ptr(float64(5000)),
+				StaticConfigs:         &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
+				Params:                &map[string]any{"saml2": []string{"enabled"}},
+				HttpSdConfigs:         &[]argus.CreateScrapeConfigPayloadHttpSdConfigsInner{},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
 			},
 			true,
 		},
@@ -257,7 +373,7 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&saml2Model{},
 			&basicAuthModel{},
-			[]targetModel{
+			&[]targetModel{
 				{
 					URLs:   types.ListValueMust(types.StringType, []attr.Value{types.StringValue("url1")}),
 					Labels: types.MapValueMust(types.StringType, map[string]attr.Value{"k1": types.StringValue("v1")}),
@@ -271,6 +387,10 @@ func TestToCreatePayload(t *testing.T) {
 					Labels: types.MapNull(types.StringType),
 				},
 			},
+			&[]httpSdConfigModel{},
+			&[]metricsRelabelConfigModel{},
+			&oauth2Model{},
+			&tlsConfigModel{},
 			&argus.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				JobName:     utils.Ptr("Name"),
@@ -289,11 +409,216 @@ func TestToCreatePayload(t *testing.T) {
 					},
 				},
 				// Defaults
+				Scheme:                utils.Ptr("https"),
+				ScrapeInterval:        utils.Ptr("5m"),
+				ScrapeTimeout:         utils.Ptr("2m"),
+				SampleLimit:           utils.Ptr(float64(5000)),
+				Params:                &map[string]any{"saml2": []string{"enabled"}},
+				HttpSdConfigs:         &[]argus.CreateScrapeConfigPayloadHttpSdConfigsInner{},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
+			},
+			true,
+		},
+		{
+			"ok - with metrics relabel configs",
+			&Model{
+				MetricsPath: types.StringValue("/metrics"),
+				Name:        types.StringValue("Name"),
+			},
+			&saml2Model{},
+			&basicAuthModel{},
+			&[]targetModel{},
+			&[]httpSdConfigModel{},
+			&[]metricsRelabelConfigModel{
+				{
+					Action:      types.StringValue("replace"),
+					Modulus:     types.Int64Value(1),
+					Regex:       types.StringValue("reg"),
+					Replacement: types.StringValue("rep"),
+					Separator:   types.StringValue(";"),
+					TargetLabel: types.StringValue("target"),
+					SourceLabels: types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("source"),
+					}),
+				},
+			},
+			&oauth2Model{},
+			&tlsConfigModel{},
+			&argus.CreateScrapeConfigPayload{
+				MetricsPath:   utils.Ptr("/metrics"),
+				JobName:       utils.Ptr("Name"),
+				StaticConfigs: &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
+				// Defaults
 				Scheme:         utils.Ptr("https"),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
 				Params:         &map[string]any{"saml2": []string{"enabled"}},
+				HttpSdConfigs:  &[]argus.CreateScrapeConfigPayloadHttpSdConfigsInner{},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{
+					{
+						Action:       utils.Ptr("replace"),
+						Modulus:      utils.Ptr(float64(1)),
+						Regex:        utils.Ptr("reg"),
+						Replacement:  utils.Ptr("rep"),
+						Separator:    utils.Ptr(";"),
+						TargetLabel:  utils.Ptr("target"),
+						SourceLabels: &[]string{"source"},
+					},
+				},
+			},
+			true,
+		},
+		{
+			"ok - with tls configs",
+			&Model{
+				MetricsPath: types.StringValue("/metrics"),
+				Name:        types.StringValue("Name"),
+			},
+			&saml2Model{},
+			&basicAuthModel{},
+			&[]targetModel{},
+			&[]httpSdConfigModel{},
+			&[]metricsRelabelConfigModel{},
+			&oauth2Model{},
+			&tlsConfigModel{
+				InsecureSkipVerify: types.BoolValue(false),
+			},
+			&argus.CreateScrapeConfigPayload{
+				MetricsPath:   utils.Ptr("/metrics"),
+				JobName:       utils.Ptr("Name"),
+				StaticConfigs: &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
+				// Defaults
+				Scheme:         utils.Ptr("https"),
+				ScrapeInterval: utils.Ptr("5m"),
+				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
+				Params:         &map[string]any{"saml2": []string{"enabled"}},
+				TlsConfig: &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{
+					InsecureSkipVerify: utils.Ptr(false),
+				},
+				HttpSdConfigs:         &[]argus.CreateScrapeConfigPayloadHttpSdConfigsInner{},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
+			},
+			true,
+		},
+		{
+			"ok - with oauth2",
+			&Model{
+				MetricsPath: types.StringValue("/metrics"),
+				Name:        types.StringValue("Name"),
+			},
+			&saml2Model{},
+			&basicAuthModel{},
+			&[]targetModel{},
+			&[]httpSdConfigModel{},
+			&[]metricsRelabelConfigModel{},
+			&oauth2Model{
+				ClientId:     types.StringValue("client"),
+				ClientSecret: types.StringValue("secret"),
+				TokenUrl:     types.StringValue("tokenurl"),
+				Scopes: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue(""),
+				}),
+				TlsConfig: types.ObjectValueMust(tlsConfigTypes, map[string]attr.Value{
+					"insecure_skip_verify": types.BoolValue(false),
+				}),
+			},
+			&tlsConfigModel{},
+			&argus.CreateScrapeConfigPayload{
+				MetricsPath:   utils.Ptr("/metrics"),
+				JobName:       utils.Ptr("Name"),
+				StaticConfigs: &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
+				// Defaults
+				Scheme:                utils.Ptr("https"),
+				ScrapeInterval:        utils.Ptr("5m"),
+				ScrapeTimeout:         utils.Ptr("2m"),
+				SampleLimit:           utils.Ptr(float64(5000)),
+				Params:                &map[string]any{"saml2": []string{"enabled"}},
+				HttpSdConfigs:         &[]argus.CreateScrapeConfigPayloadHttpSdConfigsInner{},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
+				Oauth2: &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2{
+					ClientId:     utils.Ptr("client"),
+					ClientSecret: utils.Ptr("secret"),
+					TokenUrl:     utils.Ptr("tokenurl"),
+					Scopes:       &[]string{""},
+					TlsConfig: &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{
+						InsecureSkipVerify: utils.Ptr(false),
+					},
+				},
+			},
+			true,
+		},
+		{
+			"ok - with http sd configs",
+			&Model{
+				MetricsPath:   types.StringValue("/metrics"),
+				Name:          types.StringValue("Name"),
+				HttpSdConfigs: types.ListNull(types.ListType{}),
+			},
+			&saml2Model{},
+			&basicAuthModel{},
+			&[]targetModel{},
+			&[]httpSdConfigModel{
+				{
+					BasicAuth: types.ObjectValueMust(basicAuthTypes, map[string]attr.Value{
+						"username": types.StringValue("u"),
+						"password": types.StringValue("p"),
+					}),
+					RefreshInterval: types.StringValue("60s"),
+					TlsConfig: types.ObjectValueMust(tlsConfigTypes, map[string]attr.Value{
+						"insecure_skip_verify": types.BoolValue(false),
+					}),
+					Url: types.StringValue("url"),
+					Oauth2: types.ObjectValueMust(oauth2Types, map[string]attr.Value{
+						"client_id":     types.StringValue(""),
+						"client_secret": types.StringValue(""),
+						"token_url":     types.StringValue(""),
+						"scopes": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue(""),
+						}),
+						"tls_config": types.ObjectValueMust(tlsConfigTypes, map[string]attr.Value{
+							"insecure_skip_verify": types.BoolValue(false),
+						}),
+					}),
+				},
+			},
+			&[]metricsRelabelConfigModel{},
+			&oauth2Model{},
+			&tlsConfigModel{},
+			&argus.CreateScrapeConfigPayload{
+				MetricsPath:   utils.Ptr("/metrics"),
+				JobName:       utils.Ptr("Name"),
+				StaticConfigs: &[]argus.CreateScrapeConfigPayloadStaticConfigsInner{},
+				// Defaults
+				Scheme:         utils.Ptr("https"),
+				ScrapeInterval: utils.Ptr("5m"),
+				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
+				Params:         &map[string]any{"saml2": []string{"enabled"}},
+				HttpSdConfigs: &[]argus.CreateScrapeConfigPayloadHttpSdConfigsInner{
+					{
+						BasicAuth: &argus.CreateScrapeConfigPayloadBasicAuth{
+							Password: utils.Ptr("p"),
+							Username: utils.Ptr("u"),
+						},
+						RefreshInterval: utils.Ptr("60s"),
+						TlsConfig: &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{
+							InsecureSkipVerify: utils.Ptr(false),
+						},
+						Oauth2: &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2{
+							ClientId:     utils.Ptr(""),
+							ClientSecret: utils.Ptr(""),
+							TokenUrl:     utils.Ptr(""),
+							Scopes:       &[]string{""},
+							TlsConfig: &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{
+								InsecureSkipVerify: utils.Ptr(false),
+							},
+						},
+						Url: utils.Ptr("url"),
+					},
+				},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
 			},
 			true,
 		},
@@ -304,12 +629,16 @@ func TestToCreatePayload(t *testing.T) {
 			nil,
 			nil,
 			nil,
+			nil,
+			nil,
+			nil,
+			nil,
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(context.Background(), tt.input, tt.inputSAML2, tt.inputBasicAuth, tt.inputTargets)
+			output, err := toCreatePayload(context.Background(), tt.input, tt.inputSAML2, tt.inputBasicAuth, tt.inputTargets, tt.inputHttpSdConfigsModel, tt.inputMetricsRelabelConfigsModel, tt.inputOauth2Model, tt.inputTlsConfigModel)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -328,13 +657,15 @@ func TestToCreatePayload(t *testing.T) {
 
 func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
-		description    string
-		input          *Model
-		inputSAML2     *saml2Model
-		basicAuthModel *basicAuthModel
-		inputTargets   []targetModel
-		expected       *argus.UpdateScrapeConfigPayload
-		isValid        bool
+		description                     string
+		input                           *Model
+		inputSAML2                      *saml2Model
+		basicAuthModel                  *basicAuthModel
+		inputTargets                    *[]targetModel
+		inputMetricsRelabelConfigsModel *[]metricsRelabelConfigModel
+		inputTlsConfigModel             *tlsConfigModel
+		expected                        *argus.UpdateScrapeConfigPayload
+		isValid                         bool
 	}{
 		{
 			"basic_ok",
@@ -343,15 +674,18 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&saml2Model{},
 			&basicAuthModel{},
-			[]targetModel{},
+			&[]targetModel{},
+			&[]metricsRelabelConfigModel{},
+			&tlsConfigModel{},
 			&argus.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
-				Scheme:         utils.Ptr("https"),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
-				StaticConfigs:  &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
+				Scheme:                utils.Ptr("https"),
+				ScrapeInterval:        utils.Ptr("5m"),
+				ScrapeTimeout:         utils.Ptr("2m"),
+				SampleLimit:           utils.Ptr(float64(5000)),
+				StaticConfigs:         &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
 			},
 			true,
 		},
@@ -365,16 +699,19 @@ func TestToUpdatePayload(t *testing.T) {
 				EnableURLParameters: types.BoolValue(true),
 			},
 			&basicAuthModel{},
-			[]targetModel{},
+			&[]targetModel{},
+			&[]metricsRelabelConfigModel{},
+			&tlsConfigModel{},
 			&argus.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
-				Scheme:         utils.Ptr("http"),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
-				StaticConfigs:  &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
-				Params:         &map[string]any{"saml2": []string{"enabled"}},
+				Scheme:                utils.Ptr("http"),
+				ScrapeInterval:        utils.Ptr("5m"),
+				ScrapeTimeout:         utils.Ptr("2m"),
+				SampleLimit:           utils.Ptr(float64(5000)),
+				StaticConfigs:         &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
+				Params:                &map[string]any{"saml2": []string{"enabled"}},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
 			},
 			true,
 		},
@@ -388,16 +725,19 @@ func TestToUpdatePayload(t *testing.T) {
 				EnableURLParameters: types.BoolValue(false),
 			},
 			&basicAuthModel{},
-			[]targetModel{},
+			&[]targetModel{},
+			&[]metricsRelabelConfigModel{},
+			&tlsConfigModel{},
 			&argus.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
-				Scheme:         utils.Ptr("http"),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
-				StaticConfigs:  &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
-				Params:         &map[string]any{"saml2": []string{"disabled"}},
+				Scheme:                utils.Ptr("http"),
+				ScrapeInterval:        utils.Ptr("5m"),
+				ScrapeTimeout:         utils.Ptr("2m"),
+				SampleLimit:           utils.Ptr(float64(5000)),
+				StaticConfigs:         &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
+				Params:                &map[string]any{"saml2": []string{"disabled"}},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
 			},
 			true,
 		},
@@ -412,7 +752,9 @@ func TestToUpdatePayload(t *testing.T) {
 				Username: types.StringValue("u"),
 				Password: types.StringValue("p"),
 			},
-			[]targetModel{},
+			&[]targetModel{},
+			&[]metricsRelabelConfigModel{},
+			&tlsConfigModel{},
 			&argus.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				BasicAuth: &argus.CreateScrapeConfigPayloadBasicAuth{
@@ -420,11 +762,12 @@ func TestToUpdatePayload(t *testing.T) {
 					Password: utils.Ptr("p"),
 				},
 				// Defaults
-				Scheme:         utils.Ptr("https"),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
-				StaticConfigs:  &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
+				Scheme:                utils.Ptr("https"),
+				ScrapeInterval:        utils.Ptr("5m"),
+				ScrapeTimeout:         utils.Ptr("2m"),
+				SampleLimit:           utils.Ptr(float64(5000)),
+				StaticConfigs:         &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
 			},
 			true,
 		},
@@ -436,7 +779,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&saml2Model{},
 			&basicAuthModel{},
-			[]targetModel{
+			&[]targetModel{
 				{
 					URLs:   types.ListValueMust(types.StringType, []attr.Value{types.StringValue("url1")}),
 					Labels: types.MapValueMust(types.StringType, map[string]attr.Value{"k1": types.StringValue("v1")}),
@@ -450,6 +793,8 @@ func TestToUpdatePayload(t *testing.T) {
 					Labels: types.MapNull(types.StringType),
 				},
 			},
+			&[]metricsRelabelConfigModel{},
+			&tlsConfigModel{},
 			&argus.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				StaticConfigs: &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{
@@ -467,10 +812,84 @@ func TestToUpdatePayload(t *testing.T) {
 					},
 				},
 				// Defaults
+				Scheme:                utils.Ptr("https"),
+				ScrapeInterval:        utils.Ptr("5m"),
+				ScrapeTimeout:         utils.Ptr("2m"),
+				SampleLimit:           utils.Ptr(float64(5000)),
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
+			},
+			true,
+		},
+		{
+			"ok - with metrics relabel configs",
+			&Model{
+				MetricsPath: types.StringValue("/metrics"),
+				Name:        types.StringValue("Name"),
+			},
+			&saml2Model{},
+			&basicAuthModel{},
+			&[]targetModel{},
+			&[]metricsRelabelConfigModel{
+				{
+					Action:      types.StringValue("replace"),
+					Modulus:     types.Int64Value(1),
+					Regex:       types.StringValue("reg"),
+					Replacement: types.StringValue("rep"),
+					Separator:   types.StringValue(";"),
+					TargetLabel: types.StringValue("target"),
+					SourceLabels: types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("source"),
+					}),
+				},
+			},
+			&tlsConfigModel{},
+			&argus.UpdateScrapeConfigPayload{
+				MetricsPath:   utils.Ptr("/metrics"),
+				StaticConfigs: &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
+				// Defaults
 				Scheme:         utils.Ptr("https"),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{
+					{
+						Action:       utils.Ptr("replace"),
+						Modulus:      utils.Ptr(float64(1)),
+						Regex:        utils.Ptr("reg"),
+						Replacement:  utils.Ptr("rep"),
+						Separator:    utils.Ptr(";"),
+						TargetLabel:  utils.Ptr("target"),
+						SourceLabels: &[]string{"source"},
+					},
+				},
+			},
+			true,
+		},
+		{
+			"ok - with tls configs",
+			&Model{
+				MetricsPath: types.StringValue("/metrics"),
+				Name:        types.StringValue("Name"),
+			},
+			&saml2Model{},
+			&basicAuthModel{},
+			&[]targetModel{},
+			&[]metricsRelabelConfigModel{},
+			&tlsConfigModel{
+				InsecureSkipVerify: types.BoolValue(false),
+			},
+			&argus.UpdateScrapeConfigPayload{
+				MetricsPath:   utils.Ptr("/metrics"),
+				StaticConfigs: &[]argus.UpdateScrapeConfigPayloadStaticConfigsInner{},
+				// Defaults
+				Scheme:         utils.Ptr("https"),
+				ScrapeInterval: utils.Ptr("5m"),
+				ScrapeTimeout:  utils.Ptr("2m"),
+				SampleLimit:    utils.Ptr(float64(5000)),
+				TlsConfig: &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{
+					InsecureSkipVerify: utils.Ptr(false),
+				},
+				MetricsRelabelConfigs: &[]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{},
 			},
 			true,
 		},
@@ -480,13 +899,15 @@ func TestToUpdatePayload(t *testing.T) {
 			nil,
 			nil,
 			nil,
+			&[]metricsRelabelConfigModel{},
+			&tlsConfigModel{},
 			nil,
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(context.Background(), tt.input, tt.inputSAML2, tt.basicAuthModel, tt.inputTargets)
+			output, err := toUpdatePayload(context.Background(), tt.input, tt.inputSAML2, tt.basicAuthModel, tt.inputTargets, tt.inputMetricsRelabelConfigsModel, tt.inputTlsConfigModel)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
