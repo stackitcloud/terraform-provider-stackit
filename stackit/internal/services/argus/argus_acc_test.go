@@ -38,8 +38,6 @@ var scrapeConfigResource = map[string]string{
 	"saml2_enable_url_parameters":          "false",
 	"honor_labels":                         "false",
 	"honor_timestamps":                     "false",
-	"httpsdconfigs_basicauth_username":     "user",
-	"httpsdconfigs_basicauth_password":     "pass",
 	"httpsdconfigs_refresh_interval":       "60s",
 	"httpsdconfigs_tls_insecureskipverify": "false",
 	"httpsdconfigs_url":                    fmt.Sprintf(`"http://%s.de"`, acctest.RandStringFromCharSet(15, acctest.CharSetAlphaNum)),
@@ -87,10 +85,6 @@ func resourceConfig(acl *string, instanceName, planName, target, saml2EnableUrlP
 					honor_labels = %s
 					honor_timestamps = %s
 					http_sd_configs = [{
-						basic_auth = {
-							username = "%s"			
-							password = "%s"
-						}
 						refresh_interval = "%s"
 						tls_config = {
 							insecure_skip_verify = %s
@@ -138,8 +132,6 @@ func resourceConfig(acl *string, instanceName, planName, target, saml2EnableUrlP
 			saml2EnableUrlParameters,
 			scrapeConfigResource["honor_labels"],
 			scrapeConfigResource["honor_timestamps"],
-			scrapeConfigResource["httpsdconfigs_basicauth_username"],
-			scrapeConfigResource["httpsdconfigs_basicauth_password"],
 			scrapeConfigResource["httpsdconfigs_refresh_interval"],
 			scrapeConfigResource["httpsdconfigs_tls_insecureskipverify"],
 			scrapeConfigResource["httpsdconfigs_url"],
@@ -182,10 +174,6 @@ func resourceConfig(acl *string, instanceName, planName, target, saml2EnableUrlP
 		honor_labels = %s
 		honor_timestamps = %s
 		http_sd_configs = [{
-			basic_auth = {
-				username = "%s"			
-				password = "%s"
-			}
 			refresh_interval = "%s"
 			tls_config = {
 				insecure_skip_verify = %s
@@ -234,8 +222,6 @@ func resourceConfig(acl *string, instanceName, planName, target, saml2EnableUrlP
 		saml2EnableUrlParameters,
 		scrapeConfigResource["honor_labels"],
 		scrapeConfigResource["honor_timestamps"],
-		scrapeConfigResource["httpsdconfigs_basicauth_username"],
-		scrapeConfigResource["httpsdconfigs_basicauth_password"],
 		scrapeConfigResource["httpsdconfigs_refresh_interval"],
 		scrapeConfigResource["httpsdconfigs_tls_insecureskipverify"],
 		scrapeConfigResource["httpsdconfigs_url"],
@@ -324,8 +310,6 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "honor_labels", scrapeConfigResource["honor_labels"]),
 					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "honor_timestamps", scrapeConfigResource["honor_timestamps"]),
 					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.url", scrapeConfigResource["httpsdconfigs_url"]),
-					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.basic_auth.username", scrapeConfigResource["httpsdconfigs_basicauth_username"]),
-					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.basic_auth.password", scrapeConfigResource["httpsdconfigs_basicauth_password"]),
 					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.refresh_interval", scrapeConfigResource["httpsdconfigs_refresh_interval"]),
 					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.tls.insecure_skip_verify", scrapeConfigResource["httpsdconfigs_tls_insecureskipverify"]),
 					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.oauth2.url", scrapeConfigResource["httpsdconfigs_url"]),
