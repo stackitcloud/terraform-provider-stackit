@@ -1356,7 +1356,7 @@ func mapMetricsRelabelConfigs(ctx context.Context, sc *argus.Job, model *Model) 
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel *[]targetModel, httpSdConfigsModel *[]httpSdConfigModel, metricsRelabelConfigsModel *[]metricsRelabelConfigModel, oauth2Model *oauth2Model, tlsConfigModel *tlsConfigModel) (*argus.CreateScrapeConfigPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthObj *basicAuthModel, targetsModel *[]targetModel, httpSdConfigsModel *[]httpSdConfigModel, metricsRelabelConfigsModel *[]metricsRelabelConfigModel, oauth2Model *oauth2Model, tlsConfigModel *tlsConfigModel) (*argus.CreateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -1388,10 +1388,10 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		sc.Params = &m
 	}
 
-	if sc.BasicAuth == nil && !basicAuthModel.Username.IsNull() && !basicAuthModel.Password.IsNull() {
+	if sc.BasicAuth == nil && !basicAuthObj.Username.IsNull() && !basicAuthObj.Password.IsNull() {
 		sc.BasicAuth = &argus.CreateScrapeConfigPayloadBasicAuth{
-			Username: conversion.StringValueToPointer(basicAuthModel.Username),
-			Password: conversion.StringValueToPointer(basicAuthModel.Password),
+			Username: conversion.StringValueToPointer(basicAuthObj.Username),
+			Password: conversion.StringValueToPointer(basicAuthObj.Password),
 		}
 	}
 
@@ -1474,22 +1474,27 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	httpSdConfigs := make([]argus.CreateScrapeConfigPayloadHttpSdConfigsInner, len(*httpSdConfigsModel))
 
 	for i, httpSdConfig := range *httpSdConfigsModel {
-		hsci := argus.CreateScrapeConfigPayloadHttpSdConfigsInner{}
+		httpSdConfigsInner := argus.CreateScrapeConfigPayloadHttpSdConfigsInner{}
 
-		hsci.Url = conversion.StringValueToPointer(httpSdConfig.Url)
-		hsci.RefreshInterval = conversion.StringValueToPointer(httpSdConfig.RefreshInterval)
+		httpSdConfigsInner.Url = conversion.StringValueToPointer(httpSdConfig.Url)
+		httpSdConfigsInner.RefreshInterval = conversion.StringValueToPointer(httpSdConfig.RefreshInterval)
 
-		basicAuth := argus.CreateScrapeConfigPayloadBasicAuth{}
+		basicAuth := basicAuthModel{}
 		diags := httpSdConfig.BasicAuth.As(ctx, &basicAuth, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
-		hsci.BasicAuth.Username = basicAuth.Username
-		hsci.BasicAuth.Password = basicAuth.Password
+
+		if httpSdConfigsInner.BasicAuth == nil && !basicAuth.Username.IsNull() && !basicAuth.Password.IsNull() {
+			httpSdConfigsInner.BasicAuth = &argus.CreateScrapeConfigPayloadBasicAuth{
+				Username: conversion.StringValueToPointer(basicAuth.Username),
+				Password: conversion.StringValueToPointer(basicAuth.Password),
+			}
+		}
 
 		httpSdConfigTls := &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{}
 		diags = httpSdConfig.TlsConfig.As(ctx, &httpSdConfigTls, basetypes.ObjectAsOptions{})
-		hsci.TlsConfig.InsecureSkipVerify = httpSdConfigTls.InsecureSkipVerify
+		httpSdConfigsInner.TlsConfig.InsecureSkipVerify = httpSdConfigTls.InsecureSkipVerify
 
 		hsciOauth2 := &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2{}
 		diags = httpSdConfig.Oauth2.As(ctx, hsciOauth2, basetypes.ObjectAsOptions{})
@@ -1497,13 +1502,13 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 			return nil, core.DiagsToError(diags)
 		}
 
-		hsci.Oauth2.ClientId = hsciOauth2.ClientId
-		hsci.Oauth2.ClientSecret = hsciOauth2.ClientSecret
-		hsci.Oauth2.TokenUrl = hsciOauth2.TokenUrl
-		hsci.Oauth2.Scopes = hsciOauth2.Scopes
-		hsci.Oauth2.TlsConfig = hsciOauth2.TlsConfig
+		httpSdConfigsInner.Oauth2.ClientId = hsciOauth2.ClientId
+		httpSdConfigsInner.Oauth2.ClientSecret = hsciOauth2.ClientSecret
+		httpSdConfigsInner.Oauth2.TokenUrl = hsciOauth2.TokenUrl
+		httpSdConfigsInner.Oauth2.Scopes = hsciOauth2.Scopes
+		httpSdConfigsInner.Oauth2.TlsConfig = hsciOauth2.TlsConfig
 
-		httpSdConfigs[i] = hsci
+		httpSdConfigs[i] = httpSdConfigsInner
 	}
 
 	sc.HttpSdConfigs = &httpSdConfigs
