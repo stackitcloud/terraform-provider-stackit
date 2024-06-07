@@ -1356,7 +1356,7 @@ func mapMetricsRelabelConfigs(ctx context.Context, sc *argus.Job, model *Model) 
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthObj *basicAuthModel, targetsModel *[]targetModel, httpSdConfigsModel *[]httpSdConfigModel, metricsRelabelConfigsModel *[]metricsRelabelConfigModel, oauth2Model *oauth2Model, tlsConfigModel *tlsConfigModel) (*argus.CreateScrapeConfigPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthObj *basicAuthModel, targetsModel *[]targetModel, httpSdConfigsModel *[]httpSdConfigModel, metricsRelabelConfigsModel *[]metricsRelabelConfigModel, oauth2Obj *oauth2Model, tlsConfigObj *tlsConfigModel) (*argus.CreateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -1415,9 +1415,9 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	}
 	sc.StaticConfigs = &t
 
-	if sc.TlsConfig == nil && !tlsConfigModel.InsecureSkipVerify.IsNull() && !tlsConfigModel.InsecureSkipVerify.IsNull() {
+	if sc.TlsConfig == nil && !tlsConfigObj.InsecureSkipVerify.IsNull() && !tlsConfigObj.InsecureSkipVerify.IsNull() {
 		sc.TlsConfig = &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{
-			InsecureSkipVerify: conversion.BoolValueToPointer(tlsConfigModel.InsecureSkipVerify),
+			InsecureSkipVerify: conversion.BoolValueToPointer(tlsConfigObj.InsecureSkipVerify),
 		}
 	}
 
@@ -1444,30 +1444,31 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 
 	sc.MetricsRelabelConfigs = &metricsRelabelConfigs
 
-	if sc.Oauth2 == nil && !oauth2Model.ClientId.IsNull() && !oauth2Model.ClientSecret.IsNull() {
+	if sc.Oauth2 == nil && !oauth2Obj.ClientId.IsNull() && !oauth2Obj.ClientSecret.IsNull() {
 
 		scopes := []string{}
-		diags := oauth2Model.Scopes.ElementsAs(ctx, &scopes, true)
+		diags := oauth2Obj.Scopes.ElementsAs(ctx, &scopes, true)
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
-		}
-
-		oauthTlsConfig := argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{}
-		diags = oauth2Model.TlsConfig.As(ctx, &oauthTlsConfig, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return nil, core.DiagsToError(diags)
-		}
-
-		oauth2TlsConfig := &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{
-			InsecureSkipVerify: conversion.BoolValueToPointer(tlsConfigModel.InsecureSkipVerify),
 		}
 
 		sc.Oauth2 = &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2{
-			ClientId:     conversion.StringValueToPointer(oauth2Model.ClientId),
-			ClientSecret: conversion.StringValueToPointer(oauth2Model.ClientSecret),
-			TokenUrl:     conversion.StringValueToPointer(oauth2Model.TokenUrl),
+			ClientId:     conversion.StringValueToPointer(oauth2Obj.ClientId),
+			ClientSecret: conversion.StringValueToPointer(oauth2Obj.ClientSecret),
+			TokenUrl:     conversion.StringValueToPointer(oauth2Obj.TokenUrl),
 			Scopes:       &scopes,
-			TlsConfig:    oauth2TlsConfig,
+		}
+
+		oauth2TlsConfig := tlsConfigModel{}
+		diags = oauth2Obj.TlsConfig.As(ctx, &oauth2TlsConfig, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		if !oauth2Obj.TlsConfig.IsNull() {
+			sc.Oauth2.TlsConfig = &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{
+				InsecureSkipVerify: conversion.BoolValueToPointer(oauth2TlsConfig.InsecureSkipVerify),
+			}
 		}
 	}
 
@@ -1492,22 +1493,52 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 			}
 		}
 
-		httpSdConfigTls := &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{}
+		httpSdConfigTls := tlsConfigModel{}
 		diags = httpSdConfig.TlsConfig.As(ctx, &httpSdConfigTls, basetypes.ObjectAsOptions{})
-		httpSdConfigsInner.TlsConfig.InsecureSkipVerify = httpSdConfigTls.InsecureSkipVerify
-
-		hsciOauth2 := &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2{}
-		diags = httpSdConfig.Oauth2.As(ctx, hsciOauth2, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
 
-		httpSdConfigsInner.Oauth2.ClientId = hsciOauth2.ClientId
-		httpSdConfigsInner.Oauth2.ClientSecret = hsciOauth2.ClientSecret
-		httpSdConfigsInner.Oauth2.TokenUrl = hsciOauth2.TokenUrl
-		httpSdConfigsInner.Oauth2.Scopes = hsciOauth2.Scopes
-		httpSdConfigsInner.Oauth2.TlsConfig = hsciOauth2.TlsConfig
+		if httpSdConfigsInner.TlsConfig == nil && !httpSdConfigTls.InsecureSkipVerify.IsNull() {
+			httpSdConfigsInner.TlsConfig = &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{
+				InsecureSkipVerify: conversion.BoolValueToPointer(httpSdConfigTls.InsecureSkipVerify),
+			}
+		}
 
+		hsciOauth2 := oauth2Model{}
+		if !httpSdConfig.Oauth2.IsNull() {
+			diags = httpSdConfig.Oauth2.As(ctx, &hsciOauth2, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return nil, core.DiagsToError(diags)
+			}
+
+			if httpSdConfigsInner.Oauth2 == nil && !hsciOauth2.ClientId.IsNull() && !hsciOauth2.ClientSecret.IsNull() && !hsciOauth2.TokenUrl.IsNull() && !hsciOauth2.Scopes.IsNull() && !hsciOauth2.TlsConfig.IsNull() {
+				scopes := []string{}
+				diags = hsciOauth2.Scopes.ElementsAs(ctx, &scopes, true)
+				if diags.HasError() {
+					return nil, core.DiagsToError(diags)
+				}
+
+				httpSdConfigsInner.Oauth2 = &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2{
+					ClientId:     conversion.StringValueToPointer(hsciOauth2.ClientId),
+					ClientSecret: conversion.StringValueToPointer(hsciOauth2.ClientSecret),
+					Scopes:       &scopes,
+					TokenUrl:     conversion.StringValueToPointer(hsciOauth2.TokenUrl),
+				}
+
+				oauth2HttpSdConfigTls := tlsConfigModel{}
+				diags = hsciOauth2.TlsConfig.As(ctx, &oauth2HttpSdConfigTls, basetypes.ObjectAsOptions{})
+				if diags.HasError() {
+					return nil, core.DiagsToError(diags)
+				}
+
+				if !hsciOauth2.TlsConfig.IsNull() {
+					httpSdConfigsInner.Oauth2.TlsConfig = &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{
+						InsecureSkipVerify: conversion.BoolValueToPointer(oauth2HttpSdConfigTls.InsecureSkipVerify),
+					}
+				}
+			}
+		}
 		httpSdConfigs[i] = httpSdConfigsInner
 	}
 
