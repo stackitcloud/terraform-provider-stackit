@@ -1576,7 +1576,7 @@ func setDefaultsCreateScrapeConfig(sc *argus.CreateScrapeConfigPayload, model *M
 	}
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel *[]targetModel, metricsRelabelConfigsModel *[]metricsRelabelConfigModel, tlsConfigModel *tlsConfigModel) (*argus.UpdateScrapeConfigPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel *[]targetModel, metricsRelabelConfigsModel *[]metricsRelabelConfigModel, tlsConfigObj *tlsConfigModel) (*argus.UpdateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -1593,8 +1593,6 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		HonorTimeStamps: conversion.BoolValueToPointer(model.HonorTimeStamps),
 	}
 	setDefaultsUpdateScrapeConfig(&sc, model)
-
-	var diags diag.Diagnostics
 
 	if !saml2Model.EnableURLParameters.IsNull() && !saml2Model.EnableURLParameters.IsUnknown() {
 		m := make(map[string]interface{})
@@ -1636,34 +1634,34 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	}
 	sc.StaticConfigs = &t
 
-	if sc.TlsConfig == nil && !tlsConfigModel.InsecureSkipVerify.IsNull() && !tlsConfigModel.InsecureSkipVerify.IsNull() {
+	if sc.TlsConfig == nil && !tlsConfigObj.InsecureSkipVerify.IsNull() && !tlsConfigObj.InsecureSkipVerify.IsNull() {
 		sc.TlsConfig = &argus.CreateScrapeConfigPayloadHttpSdConfigsInnerOauth2TlsConfig{
-			InsecureSkipVerify: conversion.BoolValueToPointer(tlsConfigModel.InsecureSkipVerify),
+			InsecureSkipVerify: conversion.BoolValueToPointer(tlsConfigObj.InsecureSkipVerify),
 		}
 	}
 
-	mrcs := make([]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner, len(*metricsRelabelConfigsModel))
+	metricsRelabelConfigs := make([]argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner, len(*metricsRelabelConfigsModel))
 
 	for i, metricsRelabelConfig := range *metricsRelabelConfigsModel { //nolint:gocritic // disable linter temporarily
-		mrcsi := argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{}
+		metricsRelabelConfigsInner := argus.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{}
 
-		mrcsi.Action = conversion.StringValueToPointer(metricsRelabelConfig.Action)
-		mrcsi.Modulus = utils.Ptr(float64(metricsRelabelConfig.Modulus.ValueInt64()))
-		mrcsi.Regex = conversion.StringValueToPointer(metricsRelabelConfig.Regex)
-		mrcsi.Replacement = conversion.StringValueToPointer(metricsRelabelConfig.Replacement)
-		mrcsi.Separator = conversion.StringValueToPointer(metricsRelabelConfig.Separator)
-		mrcsi.TargetLabel = conversion.StringValueToPointer(metricsRelabelConfig.TargetLabel)
+		metricsRelabelConfigsInner.Action = conversion.StringValueToPointer(metricsRelabelConfig.Action)
+		metricsRelabelConfigsInner.Modulus = utils.Ptr(float64(metricsRelabelConfig.Modulus.ValueInt64()))
+		metricsRelabelConfigsInner.Regex = conversion.StringValueToPointer(metricsRelabelConfig.Regex)
+		metricsRelabelConfigsInner.Replacement = conversion.StringValueToPointer(metricsRelabelConfig.Replacement)
+		metricsRelabelConfigsInner.Separator = conversion.StringValueToPointer(metricsRelabelConfig.Separator)
+		metricsRelabelConfigsInner.TargetLabel = conversion.StringValueToPointer(metricsRelabelConfig.TargetLabel)
 
 		sourceLabels := []string{}
-		diags = metricsRelabelConfig.SourceLabels.ElementsAs(ctx, &sourceLabels, true)
+		diags := metricsRelabelConfig.SourceLabels.ElementsAs(ctx, &sourceLabels, true)
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
-		mrcsi.SourceLabels = &sourceLabels
-		mrcs[i] = mrcsi
+		metricsRelabelConfigsInner.SourceLabels = &sourceLabels
+		metricsRelabelConfigs[i] = metricsRelabelConfigsInner
 	}
 
-	sc.MetricsRelabelConfigs = &mrcs
+	sc.MetricsRelabelConfigs = &metricsRelabelConfigs
 
 	return &sc, nil
 }
