@@ -28,14 +28,34 @@ var instanceResource = map[string]string{
 }
 
 var scrapeConfigResource = map[string]string{
-	"project_id":                  testutil.ProjectId,
-	"name":                        fmt.Sprintf("scrapeconfig-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
-	"urls":                        fmt.Sprintf(`{urls = ["www.%s.de","%s.de"]}`, acctest.RandStringFromCharSet(15, acctest.CharSetAlphaNum), acctest.RandStringFromCharSet(15, acctest.CharSetAlphaNum)),
-	"metrics_path":                "/metrics",
-	"scheme":                      "https",
-	"scrape_interval":             "4m", // non-default
-	"sample_limit":                "7",  // non-default
-	"saml2_enable_url_parameters": "false",
+	"project_id":                           testutil.ProjectId,
+	"name":                                 fmt.Sprintf("scrapeconfig-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
+	"urls":                                 fmt.Sprintf(`{urls = ["www.%s.de","%s.de"]}`, acctest.RandStringFromCharSet(15, acctest.CharSetAlphaNum), acctest.RandStringFromCharSet(15, acctest.CharSetAlphaNum)),
+	"metrics_path":                         "/metrics",
+	"scheme":                               "https",
+	"scrape_interval":                      "4m", // non-default
+	"sample_limit":                         "7",  // non-default
+	"saml2_enable_url_parameters":          "false",
+	"honor_labels":                         "false",
+	"honor_timestamps":                     "false",
+	"httpsdconfigs_basicauth_username":     "user",
+	"httpsdconfigs_basicauth_password":     "pass",
+	"httpsdconfigs_refresh_interval":       "60s",
+	"httpsdconfigs_tls_insecureskipverify": "false",
+	"httpsdconfigs_url":                    fmt.Sprintf(`"http://%s.de"`, acctest.RandStringFromCharSet(15, acctest.CharSetAlphaNum)),
+	"httpsdconfigs_oauth2_clientid":        "client",
+	"httpsdconfigs_oauth2_secret":          "secret",
+	"httpsdconfigs_oauth2_tokenurl":        fmt.Sprintf(`"http://%s.de"`, acctest.RandStringFromCharSet(15, acctest.CharSetAlphaNum)),
+	"httpsdconfigs_oauth2_scopes":          "scope",
+	"httpsdconfigs_oauth2_tls_isv":         "false",
+	"metricsRC_action":                     "replace",
+	"metricsRC_modulus":                    "2",
+	"metricsRC_regex":                      ".*",
+	"metricsRC_replacement":                "$1",
+	"metricsRC_separator":                  ";",
+	"metricsRC_targetLabel":                "target",
+	"metricsRC_sourcelabels":               "source",
+	"tlsconfig_insecureskipverify":         "false",
 }
 
 var credentialResource = map[string]string{
@@ -64,6 +84,40 @@ func resourceConfig(acl *string, instanceName, planName, target, saml2EnableUrlP
 					saml2 = { 
 						enable_url_parameters = %s
 					}
+					honor_labels = %s
+					honor_timestamps = %s
+					http_sd_configs = [{
+						basic_auth = {
+							username = "%s"			
+							password = "%s"
+						}
+						refresh_interval = "%s"
+						tls_config = {
+							insecure_skip_verify = %s
+						}
+						url = %s
+						oauth2 = {
+							client_id = "%s"
+							client_secret = "%s"
+							token_url = %s
+							scopes = ["%s"]
+							tls_config = {
+								insecure_skip_verify = %s
+							}							
+						}
+					}]
+					metrics_relabel_configs = [{
+						action = "%s"
+						modulus = "%s"
+						regex = "%s"
+						replacement = "%s"
+						separator = "%s"
+						target_label = "%s"
+						source_labels = ["%s"]
+					}]
+					tls_config = {
+						insecure_skip_verify = %s		
+					}
 				}
 
 				resource "stackit_argus_credential" "credential" {
@@ -82,6 +136,26 @@ func resourceConfig(acl *string, instanceName, planName, target, saml2EnableUrlP
 			scrapeConfigResource["scrape_interval"],
 			scrapeConfigResource["sample_limit"],
 			saml2EnableUrlParameters,
+			scrapeConfigResource["honor_labels"],
+			scrapeConfigResource["honor_timestamps"],
+			scrapeConfigResource["httpsdconfigs_basicauth_username"],
+			scrapeConfigResource["httpsdconfigs_basicauth_password"],
+			scrapeConfigResource["httpsdconfigs_refresh_interval"],
+			scrapeConfigResource["httpsdconfigs_tls_insecureskipverify"],
+			scrapeConfigResource["httpsdconfigs_url"],
+			scrapeConfigResource["httpsdconfigs_oauth2_clientid"],
+			scrapeConfigResource["httpsdconfigs_oauth2_secret"],
+			scrapeConfigResource["httpsdconfigs_oauth2_tokenurl"],
+			scrapeConfigResource["httpsdconfigs_oauth2_scopes"],
+			scrapeConfigResource["httpsdconfigs_oauth2_tls_isv"],
+			scrapeConfigResource["metricsRC_action"],
+			scrapeConfigResource["metricsRC_modulus"],
+			scrapeConfigResource["metricsRC_regex"],
+			scrapeConfigResource["metricsRC_replacement"],
+			scrapeConfigResource["metricsRC_separator"],
+			scrapeConfigResource["metricsRC_targetLabel"],
+			scrapeConfigResource["metricsRC_sourcelabels"],
+			scrapeConfigResource["tlsconfig_insecureskipverify"],
 		)
 	}
 	return fmt.Sprintf(`
@@ -105,6 +179,40 @@ func resourceConfig(acl *string, instanceName, planName, target, saml2EnableUrlP
 		saml2 = { 
 			enable_url_parameters = %s
 		}
+		honor_labels = %s
+		honor_timestamps = %s
+		http_sd_configs = [{
+			basic_auth = {
+				username = "%s"			
+				password = "%s"
+			}
+			refresh_interval = "%s"
+			tls_config = {
+				insecure_skip_verify = %s
+			}
+			url = %s
+			oauth2 = {
+				client_id = "%s"
+				client_secret = "%s"
+				token_url = %s
+				scopes = ["%s"]
+				tls_config = {
+					insecure_skip_verify = %s
+				}							
+			}
+		}]
+		metrics_relabel_configs = [{
+			action = "%s"
+			modulus = "%s"
+			regex = "%s"
+			replacement = "%s"
+			separator = "%s"
+			target_label = "%s"
+			source_labels = ["%s"]
+		}]
+		tls_config = {
+			insecure_skip_verify = %s		
+		}
 	}
 
 	resource "stackit_argus_credential" "credential" {
@@ -124,6 +232,26 @@ func resourceConfig(acl *string, instanceName, planName, target, saml2EnableUrlP
 		scrapeConfigResource["scrape_interval"],
 		scrapeConfigResource["sample_limit"],
 		saml2EnableUrlParameters,
+		scrapeConfigResource["honor_labels"],
+		scrapeConfigResource["honor_timestamps"],
+		scrapeConfigResource["httpsdconfigs_basicauth_username"],
+		scrapeConfigResource["httpsdconfigs_basicauth_password"],
+		scrapeConfigResource["httpsdconfigs_refresh_interval"],
+		scrapeConfigResource["httpsdconfigs_tls_insecureskipverify"],
+		scrapeConfigResource["httpsdconfigs_url"],
+		scrapeConfigResource["httpsdconfigs_oauth2_clientid"],
+		scrapeConfigResource["httpsdconfigs_oauth2_secret"],
+		scrapeConfigResource["httpsdconfigs_oauth2_tokenurl"],
+		scrapeConfigResource["httpsdconfigs_oauth2_scopes"],
+		scrapeConfigResource["httpsdconfigs_oauth2_tls_isv"],
+		scrapeConfigResource["metricsRC_action"],
+		scrapeConfigResource["metricsRC_modulus"],
+		scrapeConfigResource["metricsRC_regex"],
+		scrapeConfigResource["metricsRC_replacement"],
+		scrapeConfigResource["metricsRC_separator"],
+		scrapeConfigResource["metricsRC_targetLabel"],
+		scrapeConfigResource["metricsRC_sourcelabels"],
+		scrapeConfigResource["tlsconfig_insecureskipverify"],
 	)
 }
 
@@ -193,6 +321,27 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "scrape_interval", scrapeConfigResource["scrape_interval"]),
 					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "sample_limit", scrapeConfigResource["sample_limit"]),
 					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "saml2.enable_url_parameters", scrapeConfigResource["saml2_enable_url_parameters"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "honor_labels", scrapeConfigResource["honor_labels"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "honor_timestamps", scrapeConfigResource["honor_timestamps"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.url", scrapeConfigResource["httpsdconfigs_url"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.basic_auth.username", scrapeConfigResource["httpsdconfigs_basicauth_username"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.basic_auth.password", scrapeConfigResource["httpsdconfigs_basicauth_password"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.refresh_interval", scrapeConfigResource["httpsdconfigs_refresh_interval"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.tls.insecure_skip_verify", scrapeConfigResource["httpsdconfigs_tls_insecureskipverify"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.oauth2.url", scrapeConfigResource["httpsdconfigs_url"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.oauth2.client_id", scrapeConfigResource["httpsdconfigs_oauth2_clientid"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.oauth2.client_secret", scrapeConfigResource["httpsdconfigs_oauth2_secret"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.oauth2.token_url", scrapeConfigResource["httpsdconfigs_oauth2_tokenurl"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.oauth2.scopes", scrapeConfigResource["httpsdconfigs_oauth2_scopes"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "http_sd_configs.tls_config.insecure_skip_verify", scrapeConfigResource["httpsdconfigs_oauth2_tls_isv"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "metrics_relabel_configs.action", scrapeConfigResource["metricsRC_action"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "metrics_relabel_configs.modulus", scrapeConfigResource["metricsRC_modulus"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "metrics_relabel_configs.regex", scrapeConfigResource["metricsRC_regex"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "metrics_relabel_configs.replacement", scrapeConfigResource["metricsRC_replacement"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "metrics_relabel_configs.separator", scrapeConfigResource["metricsRC_separator"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "metrics_relabel_configs.target_label", scrapeConfigResource["metricsRC_targetLabel"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "metrics_relabel_configs.source_labels", scrapeConfigResource["metricsRC_sourcelabels"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "tls_config.insecure_skip_verify", scrapeConfigResource["tlsconfig_insecureskipverify"]),
 
 					// credentials
 					resource.TestCheckResourceAttr("stackit_argus_credential.credential", "project_id", credentialResource["project_id"]),
