@@ -188,6 +188,13 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	tflog.Info(ctx, "[IaaS API] Triggered creation of network.\n", map[string]interface{}{
+		"Network ID":    *network.NetworkId,
+		"Network State": *network.State,
+	})
+	tflog.Info(ctx, "Waiting for network to be created...")
+
 	network, err = wait.CreateNetworkWaitHandler(ctx, r.client, projectId, httpResp.Header.Get("x-request-id")).WaitWithContext(context.Background())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Network creation waiting: %v", err))
