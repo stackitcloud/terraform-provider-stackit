@@ -183,12 +183,12 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 	// Create new network
 	var httpResp *http.Response
 	ctxWithHTTPResp := runtime.WithCaptureHTTPResponse(ctx, &httpResp)
-	err = r.client.CreateNetwork(ctxWithHTTPResp, projectId).CreateNetworkPayload(*payload).Execute()
+	network, err := r.client.CreateNetwork(ctxWithHTTPResp, projectId).CreateNetworkPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	network, err := wait.CreateNetworkWaitHandler(ctx, r.client, projectId, httpResp.Header.Get("x-request-id")).WaitWithContext(context.Background())
+	network, err = wait.CreateNetworkWaitHandler(ctx, r.client, projectId, httpResp.Header.Get("x-request-id")).WaitWithContext(context.Background())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Network creation waiting: %v", err))
 		return
