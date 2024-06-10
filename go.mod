@@ -29,7 +29,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v0.16.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.2.0
-	golang.org/x/mod v0.17.0
+	golang.org/x/mod v0.18.0
 )
 
 require (
