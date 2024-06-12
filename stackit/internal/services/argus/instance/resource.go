@@ -221,12 +221,12 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Computed:    true,
 			},
 			"metrics_retention_days_5m_downsampling": schema.Int64Attribute{
-				Description: "Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `0`.",
+				Description: "Specifies for how many days the 5m downsampled metrics are kept. It must be less than the value of the general retention. Default is set to `0` (disabled).",
 				Optional:    true,
 				Computed:    true,
 			},
 			"metrics_retention_days_1h_downsampling": schema.Int64Attribute{
-				Description: "Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `0`.",
+				Description: "Specifies for how many days the 1h downsampled metrics are kept. It must be less than the value of the 5m downsampling retention. Default is set to `0` (disabled).",
 				Optional:    true,
 				Computed:    true,
 			},
