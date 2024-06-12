@@ -2,6 +2,7 @@ package argus
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -395,7 +396,6 @@ func TestToUpdateMetricsStorageRetentionPayload(t *testing.T) {
 		retentionDaysRaw *int64
 		retentionDays1h  *int64
 		retentionDays5m  *int64
-		getMetricsResp   *argus.GetMetricsStorageRetentionResponse
 		expected         *argus.UpdateMetricsStorageRetentionPayload
 		isValid          bool
 	}{
@@ -404,11 +404,6 @@ func TestToUpdateMetricsStorageRetentionPayload(t *testing.T) {
 			utils.Ptr(int64(120)),
 			utils.Ptr(int64(60)),
 			utils.Ptr(int64(14)),
-			&argus.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
-			},
 			&argus.UpdateMetricsStorageRetentionPayload{
 				MetricsRetentionTimeRaw: utils.Ptr("120d"),
 				MetricsRetentionTime1h:  utils.Ptr("60d"),
@@ -421,15 +416,10 @@ func TestToUpdateMetricsStorageRetentionPayload(t *testing.T) {
 			utils.Ptr(int64(120)),
 			nil,
 			nil,
-			&argus.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
-			},
 			&argus.UpdateMetricsStorageRetentionPayload{
 				MetricsRetentionTimeRaw: utils.Ptr("120d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTime1h:  utils.Ptr(fmt.Sprintf("%dd", DefaultMetricsRetentionDays1hDownsampling)),
+				MetricsRetentionTime5m:  utils.Ptr(fmt.Sprintf("%dd", DefaultMetricsRetentionDays5mDownsampling)),
 			},
 			true,
 		},
@@ -438,15 +428,10 @@ func TestToUpdateMetricsStorageRetentionPayload(t *testing.T) {
 			nil,
 			utils.Ptr(int64(60)),
 			nil,
-			&argus.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
-			},
 			&argus.UpdateMetricsStorageRetentionPayload{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
+				MetricsRetentionTimeRaw: utils.Ptr(fmt.Sprintf("%dd", DefaultMetricsRetentionDays)),
 				MetricsRetentionTime1h:  utils.Ptr("60d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTime5m:  utils.Ptr(fmt.Sprintf("%dd", DefaultMetricsRetentionDays5mDownsampling)),
 			},
 			true,
 		},
@@ -455,14 +440,9 @@ func TestToUpdateMetricsStorageRetentionPayload(t *testing.T) {
 			nil,
 			nil,
 			utils.Ptr(int64(14)),
-			&argus.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
-			},
 			&argus.UpdateMetricsStorageRetentionPayload{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
+				MetricsRetentionTimeRaw: utils.Ptr(fmt.Sprintf("%dd", DefaultMetricsRetentionDays)),
+				MetricsRetentionTime1h:  utils.Ptr(fmt.Sprintf("%dd", DefaultMetricsRetentionDays1hDownsampling)),
 				MetricsRetentionTime5m:  utils.Ptr("14d"),
 			},
 			true,
@@ -472,40 +452,17 @@ func TestToUpdateMetricsStorageRetentionPayload(t *testing.T) {
 			nil,
 			nil,
 			nil,
-			&argus.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
-			},
 			&argus.UpdateMetricsStorageRetentionPayload{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTimeRaw: utils.Ptr(fmt.Sprintf("%dd", DefaultMetricsRetentionDays)),
+				MetricsRetentionTime1h:  utils.Ptr(fmt.Sprintf("%dd", DefaultMetricsRetentionDays1hDownsampling)),
+				MetricsRetentionTime5m:  utils.Ptr(fmt.Sprintf("%dd", DefaultMetricsRetentionDays5mDownsampling)),
 			},
 			true,
-		},
-		{
-			"nil_response",
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
-			false,
-		},
-		{
-			"empty_response",
-			nil,
-			nil,
-			nil,
-			&argus.GetMetricsStorageRetentionResponse{},
-			nil,
-			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdateMetricsStorageRetentionPayload(tt.retentionDaysRaw, tt.retentionDays5m, tt.retentionDays1h, tt.getMetricsResp)
+			output, err := toUpdateMetricsStorageRetentionPayload(tt.retentionDaysRaw, tt.retentionDays5m, tt.retentionDays1h)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
