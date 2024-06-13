@@ -72,7 +72,7 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "MongoDB Flex instance client configured")
+	tflog.Info(ctx, "SQLServer Flex instance client configured")
 }
 
 // Schema defines the schema for the data source.
