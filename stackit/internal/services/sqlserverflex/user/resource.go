@@ -167,7 +167,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 				Validators: []validator.Set{
 					setvalidator.ValueStringsAre(
-						stringvalidator.OneOf("STACKIT_LoginManager", "STACKIT_DatabaseManager"),
+						stringvalidator.OneOf("##STACKIT_LoginManager##", "##STACKIT_DatabaseManager##"),
 					),
 				},
 			},
@@ -385,7 +385,6 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model) e
 		}
 		model.Roles = rolesSet
 	}
-	model.Database = types.StringPointerValue(user.Database)
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
 	return nil
@@ -432,7 +431,6 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model) error {
 		}
 		model.Roles = rolesSet
 	}
-	model.Database = types.StringPointerValue(user.Database)
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
 	return nil

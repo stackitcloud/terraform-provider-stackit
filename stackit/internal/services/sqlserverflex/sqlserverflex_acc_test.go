@@ -39,7 +39,7 @@ var instanceResource = map[string]string{
 // User resource data
 var userResource = map[string]string{
 	"username":   fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha)),
-	"role":       "STACKIT_LoginManager",
+	"role":       "##STACKIT_LoginManager##",
 	"project_id": instanceResource["project_id"],
 	"database":   "default",
 }
@@ -129,7 +129,7 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_user.user", "user_id"),
 					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_user.user", "password"),
-					resource.TestCheckResourceAttr("stackit_sqlserverflex_user.user", "database", instanceResource["database"]),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_user.user", "database", userResource["database"]),
 				),
 			},
 			// data source
