@@ -36,13 +36,6 @@ var (
 	_ resource.ResourceWithImportState = &instanceResource{}
 )
 
-const (
-	// We need to set these defaults because we need to revert to them if the user stops setting them
-	DefaultMetricsRetentionDays               int64 = 90
-	DefaultMetricsRetentionDays5mDownsampling int64 = 0
-	DefaultMetricsRetentionDays1hDownsampling int64 = 0
-)
-
 type Model struct {
 	Id                                 types.String `tfsdk:"id"` // needed by TF
 	ProjectId                          types.String `tfsdk:"project_id"`
@@ -216,17 +209,17 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Sensitive:   true,
 			},
 			"metrics_retention_days": schema.Int64Attribute{
-				Description: "Specifies for how many days the raw metrics are kept. Default is set to `90`.",
+				Description: "Specifies for how many days the raw metrics are kept.",
 				Optional:    true,
 				Computed:    true,
 			},
 			"metrics_retention_days_5m_downsampling": schema.Int64Attribute{
-				Description: "Specifies for how many days the 5m downsampled metrics are kept. It must be less than the value of the general retention. Default is set to `0` (disabled).",
+				Description: "Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `0` (disabled).",
 				Optional:    true,
 				Computed:    true,
 			},
 			"metrics_retention_days_1h_downsampling": schema.Int64Attribute{
-				Description: "Specifies for how many days the 1h downsampled metrics are kept. It must be less than the value of the 5m downsampling retention. Default is set to `0` (disabled).",
+				Description: "Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `0` (disabled).",
 				Optional:    true,
 				Computed:    true,
 			},
@@ -370,17 +363,26 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	// Update metrics retention policy
-	metricsRetentionPayload, err := toUpdateMetricsStorageRetentionPayload(metricsRetentionDays, metricsRetentionDays5mDownsampling, metricsRetentionDays1hDownsampling)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building metrics retention policy payload: %v", err))
-		return
-	}
+	// If any of the metrics retention days are set, set the metrics retention policy
+	if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
+		// Need to get the metrics retention policy because update endpoint is a PUT and we need to send all fields
+		metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, *instanceId, projectId)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Getting metrics retention policy: %v", err))
+			return
+		}
 
-	_, err = r.client.UpdateMetricsStorageRetention(ctx, *instanceId, projectId).UpdateMetricsStorageRetentionPayload(*metricsRetentionPayload).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting metrics retention policy: %v", err))
-		return
+		metricsRetentionPayload, err := toUpdateMetricsStorageRetentionPayload(metricsRetentionDays, metricsRetentionDays5mDownsampling, metricsRetentionDays1hDownsampling, metricsResp)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building metrics retention policy payload: %v", err))
+			return
+		}
+
+		_, err = r.client.UpdateMetricsStorageRetention(ctx, *instanceId, projectId).UpdateMetricsStorageRetentionPayload(*metricsRetentionPayload).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting metrics retention policy: %v", err))
+			return
+		}
 	}
 
 	// Get metrics retention policy after update
@@ -563,16 +565,25 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	// Update metrics retention policy
-	metricsRetentionPayload, err := toUpdateMetricsStorageRetentionPayload(metricsRetentionDays, metricsRetentionDays5mDownsampling, metricsRetentionDays1hDownsampling)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Building metrics retention policy payload: %v", err))
-		return
-	}
-	_, err = r.client.UpdateMetricsStorageRetention(ctx, instanceId, projectId).UpdateMetricsStorageRetentionPayload(*metricsRetentionPayload).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Setting metrics retention policy: %v", err))
-		return
+	// If any of the metrics retention days are set, set the metrics retention policy
+	if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
+		// Need to get the metrics retention policy because update endpoint is a PUT and we need to send all fields
+		metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, instanceId, projectId)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Getting metrics retention policy: %v", err))
+			return
+		}
+
+		metricsRetentionPayload, err := toUpdateMetricsStorageRetentionPayload(metricsRetentionDays, metricsRetentionDays5mDownsampling, metricsRetentionDays1hDownsampling, metricsResp)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Building metrics retention policy payload: %v", err))
+			return
+		}
+		_, err = r.client.UpdateMetricsStorageRetention(ctx, instanceId, projectId).UpdateMetricsStorageRetentionPayload(*metricsRetentionPayload).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Setting metrics retention policy: %v", err))
+			return
+		}
 	}
 
 	// Get metrics retention policy after update
@@ -789,35 +800,37 @@ func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {
 	}, nil
 }
 
-// toUpdateMetricsStorageRetentionPayload creates a payload for updating the metrics storage retention policy.
-// If the retentionDaysRaw, retentionDays5m, or retentionDays1h are nil, the default values are used.
-func toUpdateMetricsStorageRetentionPayload(retentionDaysRaw, retentionDays5m, retentionDays1h *int64) (*argus.UpdateMetricsStorageRetentionPayload, error) {
-	var retentionTimeRaw int64
-	var retentionTime5m int64
-	var retentionTime1h int64
+func toUpdateMetricsStorageRetentionPayload(retentionDaysRaw, retentionDays5m, retentionDays1h *int64, resp *argus.GetMetricsStorageRetentionResponse) (*argus.UpdateMetricsStorageRetentionPayload, error) {
+	var retentionTimeRaw string
+	var retentionTime5m string
+	var retentionTime1h string
+
+	if resp == nil || resp.MetricsRetentionTimeRaw == nil || resp.MetricsRetentionTime5m == nil || resp.MetricsRetentionTime1h == nil {
+		return nil, fmt.Errorf("nil response")
+	}
 
 	if retentionDaysRaw == nil {
-		retentionTimeRaw = DefaultMetricsRetentionDays
+		retentionTimeRaw = *resp.MetricsRetentionTimeRaw
 	} else {
-		retentionTimeRaw = *retentionDaysRaw
+		retentionTimeRaw = fmt.Sprintf("%dd", *retentionDaysRaw)
 	}
 
 	if retentionDays5m == nil {
-		retentionTime5m = DefaultMetricsRetentionDays5mDownsampling
+		retentionTime5m = *resp.MetricsRetentionTime5m
 	} else {
-		retentionTime5m = *retentionDays5m
+		retentionTime5m = fmt.Sprintf("%dd", *retentionDays5m)
 	}
 
 	if retentionDays1h == nil {
-		retentionTime1h = DefaultMetricsRetentionDays1hDownsampling
+		retentionTime1h = *resp.MetricsRetentionTime1h
 	} else {
-		retentionTime1h = *retentionDays1h
+		retentionTime1h = fmt.Sprintf("%dd", *retentionDays1h)
 	}
 
 	return &argus.UpdateMetricsStorageRetentionPayload{
-		MetricsRetentionTimeRaw: utils.Ptr(fmt.Sprintf("%dd", retentionTimeRaw)),
-		MetricsRetentionTime5m:  utils.Ptr(fmt.Sprintf("%dd", retentionTime5m)),
-		MetricsRetentionTime1h:  utils.Ptr(fmt.Sprintf("%dd", retentionTime1h)),
+		MetricsRetentionTimeRaw: &retentionTimeRaw,
+		MetricsRetentionTime5m:  &retentionTime5m,
+		MetricsRetentionTime1h:  &retentionTime1h,
 	}, nil
 }
 
