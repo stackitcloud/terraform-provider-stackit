@@ -397,6 +397,11 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// After the instance creation, database might not be ready to accept connections immediately.
+	// That is why we add a sleep
+	time.Sleep(120 * time.Second)
+
 	tflog.Info(ctx, "SQLServer Flex instance created")
 }
 

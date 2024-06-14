@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"time"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -195,10 +193,6 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
-	// If instance is created right before user, database might not be ready to accept connections.
-	// That is why we add a sleep
-	time.Sleep(30 * time.Second)
-
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
