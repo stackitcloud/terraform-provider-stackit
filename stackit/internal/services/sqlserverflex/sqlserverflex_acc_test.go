@@ -9,9 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -41,7 +40,6 @@ var userResource = map[string]string{
 	"username":   fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha)),
 	"role":       "##STACKIT_LoginManager##",
 	"project_id": instanceResource["project_id"],
-	"database":   "default",
 }
 
 func configResources(backupSchedule string) string {
@@ -72,7 +70,6 @@ func configResources(backupSchedule string) string {
 					instance_id = stackit_sqlserverflex_instance.instance.instance_id
 					username = "%s"
 					roles = ["%s"]
-   					database = "%s"
 				}
 				`,
 		testutil.SQLServerFlexProviderConfig(),
@@ -88,7 +85,6 @@ func configResources(backupSchedule string) string {
 		backupSchedule,
 		userResource["username"],
 		userResource["role"],
-		userResource["database"],
 	)
 }
 
@@ -117,7 +113,6 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "options.retention_days", instanceResource["options_retention_days"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
-
 					// User
 					resource.TestCheckResourceAttrPair(
 						"stackit_sqlserverflex_user.user", "project_id",
@@ -129,7 +124,6 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_user.user", "user_id"),
 					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_user.user", "password"),
-					resource.TestCheckResourceAttr("stackit_sqlserverflex_user.user", "database", userResource["database"]),
 				),
 			},
 			// data source
@@ -146,7 +140,6 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 						project_id     = stackit_sqlserverflex_instance.instance.project_id
 						instance_id    = stackit_sqlserverflex_instance.instance.instance_id
 						user_id        = stackit_sqlserverflex_user.user.user_id
-						database	   = stackit_sqlserverflex_user.user.database
 					}
 					`,
 					configResources(instanceResource["backup_schedule"]),
@@ -182,7 +175,6 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "project_id", userResource["project_id"]),
 					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_user.user", "user_id"),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "username", userResource["username"]),
-					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "database", userResource["database"]),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "roles.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "roles.0", userResource["role"]),
 					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_user.user", "host"),

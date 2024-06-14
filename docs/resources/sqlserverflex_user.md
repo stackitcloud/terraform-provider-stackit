@@ -27,11 +27,14 @@ resource "stackit_sqlserverflex_user" "example" {
 
 ### Required
 
-- `database` (String)
 - `instance_id` (String) ID of the SQLServer Flex instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 - `roles` (Set of String)
 - `username` (String)
+
+### Optional
+
+- `database` (String)
 
 ### Read-Only
 
