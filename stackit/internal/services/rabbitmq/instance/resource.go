@@ -52,12 +52,36 @@ type Model struct {
 
 // Struct corresponding to DataSourceModel.Parameters
 type parametersModel struct {
-	SgwAcl types.String `tfsdk:"sgw_acl"`
+	SgwAcl               types.String `tfsdk:"sgw_acl"`
+	ConsumerTimeout      types.Int64  `tfsdk:"consumer_timeout"`
+	EnableMonitoring     types.Bool   `tfsdk:"enable_monitoring"`
+	Graphite             types.String `tfsdk:"graphite"`
+	MaxDiskThreshold     types.Int64  `tfsdk:"max_disk_threshold"`
+	MetricsFrequency     types.Int64  `tfsdk:"metrics_frequency"`
+	MetricsPrefix        types.String `tfsdk:"metrics_prefix"`
+	MonitoringInstanceId types.String `tfsdk:"monitoring_instance_id"`
+	Plugins              types.List   `tfsdk:"plugins"`
+	Roles                types.List   `tfsdk:"roles"`
+	Syslog               types.List   `tfsdk:"syslog"`
+	TlsCyphers           types.List   `tfsdk:"tls_cyphers"`
+	TlsProtocols         types.String `tfsdk:"tls_protocols"`
 }
 
 // Types corresponding to parametersModel
 var parametersTypes = map[string]attr.Type{
-	"sgw_acl": basetypes.StringType{},
+	"sgw_acl":                basetypes.StringType{},
+	"consumer_timeout":       basetypes.Int64Type{},
+	"enable_monitoring":      basetypes.BoolType{},
+	"graphite":               basetypes.StringType{},
+	"max_disk_threshold":     basetypes.Int64Type{},
+	"metrics_frequency":      basetypes.Int64Type{},
+	"metrics_prefix":         basetypes.StringType{},
+	"monitoring_instance_id": basetypes.StringType{},
+	"plugins":                basetypes.ListType{ElemType: types.StringType},
+	"roles":                  basetypes.ListType{ElemType: types.StringType},
+	"syslog":                 basetypes.ListType{ElemType: types.StringType},
+	"tls_cyphers":            basetypes.ListType{ElemType: types.StringType},
+	"tls_protocols":          basetypes.StringType{},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -124,6 +148,22 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"plan_id":     "The selected plan ID.",
 	}
 
+	parametersDescriptions := map[string]string{
+		"sgw_acl":                "Comma separated list of IP networks in CIDR notation which are allowed to access this instance.",
+		"consumer_timeout":       "The timeout in milliseconds for the consumer.",
+		"enable_monitoring":      "Enable monitoring.",
+		"graphite":               "Graphite server URL (host and port). If set, monitoring with Graphite will be enabled.",
+		"max_disk_threshold":     "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
+		"metrics_frequency":      "The frequency in seconds at which metrics are emitted.",
+		"metrics_prefix":         "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key",
+		"monitoring_instance_id": "The monitoring instance ID.",
+		"plugins":                "List of plugins to install. Must be a supported plugin name.",
+		"roles":                  "List of roles to assign to the instance.",
+		"syslog":                 "List of syslog servers to send logs to.",
+		"tls_cyphers":            "List of TLS cyphers to use.",
+		"tls_protocols":          "TLS protocol to use.",
+	}
+
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -183,8 +223,73 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"parameters": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"sgw_acl": schema.StringAttribute{
-						Optional: true,
-						Computed: true,
+						Description: parametersDescriptions["sgw_acl"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"consumer_timeout": schema.Int64Attribute{
+						Description: parametersDescriptions["consumer_timeout"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"enable_monitoring": schema.BoolAttribute{
+						Description: parametersDescriptions["enable_monitoring"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"graphite": schema.StringAttribute{
+						Description: parametersDescriptions["graphite"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"max_disk_threshold": schema.Int64Attribute{
+						Description: parametersDescriptions["max_disk_threshold"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"metrics_frequency": schema.Int64Attribute{
+						Description: parametersDescriptions["metrics_frequency"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"metrics_prefix": schema.StringAttribute{
+						Description: parametersDescriptions["metrics_prefix"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"monitoring_instance_id": schema.StringAttribute{
+						Description: parametersDescriptions["monitoring_instance_id"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"plugins": schema.ListAttribute{
+						Description: parametersDescriptions["plugins"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+					},
+					"roles": schema.ListAttribute{
+						Description: parametersDescriptions["roles"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+					},
+					"syslog": schema.ListAttribute{
+						Description: parametersDescriptions["syslog"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+					},
+					"tls_cyphers": schema.ListAttribute{
+						Description: parametersDescriptions["tls_cyphers"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+					},
+					"tls_protocols": schema.StringAttribute{
+						Description: parametersDescriptions["tls_protocols"],
+						Optional:    true,
+						Computed:    true,
 					},
 				},
 				Optional: true,
