@@ -63,7 +63,7 @@ type parametersModel struct {
 	Plugins              types.List   `tfsdk:"plugins"`
 	Roles                types.List   `tfsdk:"roles"`
 	Syslog               types.List   `tfsdk:"syslog"`
-	TlsCyphers           types.List   `tfsdk:"tls_cyphers"`
+	TlsCiphers           types.List   `tfsdk:"tls_ciphers"`
 	TlsProtocols         types.String `tfsdk:"tls_protocols"`
 }
 
@@ -80,7 +80,7 @@ var parametersTypes = map[string]attr.Type{
 	"plugins":                basetypes.ListType{ElemType: types.StringType},
 	"roles":                  basetypes.ListType{ElemType: types.StringType},
 	"syslog":                 basetypes.ListType{ElemType: types.StringType},
-	"tls_cyphers":            basetypes.ListType{ElemType: types.StringType},
+	"tls_ciphers":            basetypes.ListType{ElemType: types.StringType},
 	"tls_protocols":          basetypes.StringType{},
 }
 
@@ -160,7 +160,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"plugins":                "List of plugins to install. Must be a supported plugin name.",
 		"roles":                  "List of roles to assign to the instance.",
 		"syslog":                 "List of syslog servers to send logs to.",
-		"tls_cyphers":            "List of TLS cyphers to use.",
+		"tls_ciphers":            "List of TLS ciphers to use.",
 		"tls_protocols":          "TLS protocol to use.",
 	}
 
@@ -280,8 +280,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"tls_cyphers": schema.ListAttribute{
-						Description: parametersDescriptions["tls_cyphers"],
+					"tls_ciphers": schema.ListAttribute{
+						Description: parametersDescriptions["tls_ciphers"],
 						ElementType: types.StringType,
 						Optional:    true,
 						Computed:    true,
@@ -689,16 +689,12 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*rabbitmq.Creat
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	if parameters == nil {
-		return &rabbitmq.CreateInstancePayload{
-			InstanceName: conversion.StringValueToPointer(model.Name),
-			PlanId:       conversion.StringValueToPointer(model.PlanId),
-		}, nil
+
+	payloadParams, err := toInstanceParams(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("converting parameters: %w", err)
 	}
-	payloadParams := &rabbitmq.InstanceParameters{}
-	if parameters.SgwAcl.ValueString() != "" {
-		payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
-	}
+
 	return &rabbitmq.CreateInstancePayload{
 		InstanceName: conversion.StringValueToPointer(model.Name),
 		Parameters:   payloadParams,
@@ -711,17 +707,55 @@ func toUpdatePayload(model *Model, parameters *parametersModel) (*rabbitmq.Parti
 		return nil, fmt.Errorf("nil model")
 	}
 
-	if parameters == nil {
-		return &rabbitmq.PartialUpdateInstancePayload{
-			PlanId: conversion.StringValueToPointer(model.PlanId),
-		}, nil
+	payloadParams, err := toInstanceParams(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("converting parameters: %w", err)
 	}
+
 	return &rabbitmq.PartialUpdateInstancePayload{
-		Parameters: &rabbitmq.InstanceParameters{
-			SgwAcl: conversion.StringValueToPointer(parameters.SgwAcl),
-		},
-		PlanId: conversion.StringValueToPointer(model.PlanId),
+		Parameters: payloadParams,
+		PlanId:     conversion.StringValueToPointer(model.PlanId),
 	}, nil
+}
+
+func toInstanceParams(parameters *parametersModel) (*rabbitmq.InstanceParameters, error) {
+	if parameters == nil {
+		return nil, nil
+	}
+	payloadParams := &rabbitmq.InstanceParameters{}
+
+	payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
+	payloadParams.ConsumerTimeout = conversion.Int64ValueToPointer(parameters.ConsumerTimeout)
+	payloadParams.EnableMonitoring = conversion.BoolValueToPointer(parameters.EnableMonitoring)
+	payloadParams.Graphite = conversion.StringValueToPointer(parameters.Graphite)
+	payloadParams.MaxDiskThreshold = conversion.Int64ValueToPointer(parameters.MaxDiskThreshold)
+	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
+	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
+	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
+	payloadParams.TlsProtocols = conversion.StringValueToPointer(parameters.TlsProtocols)
+
+	var err error
+	payloadParams.Plugins, err = conversion.StringListToPointer(parameters.Plugins)
+	if err != nil {
+		return nil, fmt.Errorf("converting plugins: %w", err)
+	}
+
+	payloadParams.Roles, err = conversion.StringListToPointer(parameters.Roles)
+	if err != nil {
+		return nil, fmt.Errorf("converting roles: %w", err)
+	}
+
+	payloadParams.Syslog, err = conversion.StringListToPointer(parameters.Syslog)
+	if err != nil {
+		return nil, fmt.Errorf("converting syslog: %w", err)
+	}
+
+	payloadParams.TlsCiphers, err = conversion.StringListToPointer(parameters.TlsCiphers)
+	if err != nil {
+		return nil, fmt.Errorf("converting tls_ciphers: %w", err)
+	}
+
+	return payloadParams, nil
 }
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {

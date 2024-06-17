@@ -87,3 +87,22 @@ func BoolValueToPointer(s basetypes.BoolValue) *bool {
 	value := s.ValueBool()
 	return &value
 }
+
+// StringListToPointer converts basetypes.ListValue to a pointer to a list of strings.
+// It returns nil if the value is null or unknown.
+func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
+	if list.IsNull() || list.IsUnknown() {
+		return nil, nil
+	}
+
+	listStr := []string{}
+	for i, el := range list.Elements() {
+		elStr, ok := el.(types.String)
+		if !ok {
+			return nil, fmt.Errorf("element %d is not a string", i)
+		}
+		listStr = append(listStr, elStr.ValueString())
+	}
+
+	return &listStr, nil
+}
