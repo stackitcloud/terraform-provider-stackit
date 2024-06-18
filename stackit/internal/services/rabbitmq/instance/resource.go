@@ -593,7 +593,17 @@ func mapFields(instance *rabbitmq.Instance, model *Model) error {
 func mapParameters(params map[string]interface{}) (types.Object, error) {
 	attributes := map[string]attr.Value{}
 	for attribute := range parametersTypes {
-		valueInterface, ok := params[attribute]
+		var valueInterface interface{}
+		var ok bool
+
+		// This replacement is necessary because Terraform does not allow hyphens in attribute names
+		// And the API uses hyphens in the attribute names (tls-ciphers, tls-protocols)
+		if attribute == "tls_ciphers" || attribute == "tls_protocols" {
+			alteredAttribute := strings.ReplaceAll(attribute, "_", "-")
+			valueInterface, ok = params[alteredAttribute]
+		} else {
+			valueInterface, ok = params[attribute]
+		}
 		if !ok {
 			// All fields are optional, so this is ok
 			// Set the value as nil, will be handled accordingly

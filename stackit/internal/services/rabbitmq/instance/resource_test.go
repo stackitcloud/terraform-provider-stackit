@@ -102,8 +102,8 @@ func TestMapFields(t *testing.T) {
 					"plugins":                []string{"plugin1", "plugin2"},
 					"roles":                  []string{"role1", "role2"},
 					"syslog":                 []string{"syslog", "syslog2"},
-					"tls_ciphers":            []string{"ciphers1", "ciphers2"},
-					"tls_protocols":          "protocol1",
+					"tls-ciphers":            []string{"ciphers1", "ciphers2"},
+					"tls-protocols":          "protocol1",
 				},
 			},
 			Model{
