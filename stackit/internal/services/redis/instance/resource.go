@@ -52,12 +52,54 @@ type Model struct {
 
 // Struct corresponding to DataSourceModel.Parameters
 type parametersModel struct {
-	SgwAcl types.String `tfsdk:"sgw_acl"`
+	SgwAcl                types.String `tfsdk:"sgw_acl"`
+	DownAfterMilliseconds types.Int64  `tfsdk:"down_after_milliseconds"`
+	EnableMonitoring      types.Bool   `tfsdk:"enable_monitoring"`
+	FailoverTimeout       types.Int64  `tfsdk:"failover_timeout"`
+	Graphite              types.String `tfsdk:"graphite"`
+	LazyfreeLazyEviction  types.String `tfsdk:"lazyfree_lazy_eviction"`
+	LazyfreeLazyExpire    types.String `tfsdk:"lazyfree_lazy_expire"`
+	LuaTimeLimit          types.Int64  `tfsdk:"lua_time_limit"`
+	MaxDiskThreshold      types.Int64  `tfsdk:"max_disk_threshold"`
+	Maxclients            types.Int64  `tfsdk:"maxclients"`
+	MaxmemoryPolicy       types.String `tfsdk:"maxmemory_policy"`
+	MaxmemorySamples      types.Int64  `tfsdk:"maxmemory_samples"`
+	MetricsFrequency      types.Int64  `tfsdk:"metrics_frequency"`
+	MetricsPrefix         types.String `tfsdk:"metrics_prefix"`
+	MinReplicasMaxLag     types.Int64  `tfsdk:"min_replicas_max_lag"`
+	MonitoringInstanceId  types.String `tfsdk:"monitoring_instance_id"`
+	NotifyKeyspaceEvents  types.String `tfsdk:"notify_keyspace_events"`
+	Snapshot              types.String `tfsdk:"snapshot"`
+	Syslog                types.List   `tfsdk:"syslog"`
+	TlsCiphers            types.List   `tfsdk:"tls_ciphers"`
+	TlsCiphersuites       types.String `tfsdk:"tls_ciphersuites"`
+	TlsProtocols          types.String `tfsdk:"tls_protocols"`
 }
 
 // Types corresponding to parametersModel
 var parametersTypes = map[string]attr.Type{
-	"sgw_acl": basetypes.StringType{},
+	"sgw_acl":                 basetypes.StringType{},
+	"down_after_milliseconds": basetypes.Int64Type{},
+	"enable_monitoring":       basetypes.BoolType{},
+	"failover_timeout":        basetypes.Int64Type{},
+	"graphite":                basetypes.StringType{},
+	"lazyfree_lazy_eviction":  basetypes.StringType{},
+	"lazyfree_lazy_expire":    basetypes.StringType{},
+	"lua_time_limit":          basetypes.Int64Type{},
+	"max_disk_threshold":      basetypes.Int64Type{},
+	"maxclients":              basetypes.Int64Type{},
+	"maxmemory_policy":        basetypes.StringType{},
+	"maxmemory_samples":       basetypes.Int64Type{},
+	"metrics_frequency":       basetypes.Int64Type{},
+	"metrics_prefix":          basetypes.StringType{},
+	"min_replicas_max_lag":    basetypes.Int64Type{},
+	"monitoring_instance_id":  basetypes.StringType{},
+	"notify_keyspace_events":  basetypes.StringType{},
+	"snapshot":                basetypes.StringType{},
+	"syslog":                  basetypes.ListType{ElemType: types.StringType},
+	"tls_ciphers":             basetypes.ListType{ElemType: types.StringType},
+	"tls_ciphersuites":        basetypes.StringType{},
+	"tls_protocols":           basetypes.StringType{},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -124,6 +166,31 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"plan_id":     "The selected plan ID.",
 	}
 
+	parametersDescriptions := map[string]string{
+		"sgw_acl":                 "Comma separated list of IP networks in CIDR notation which are allowed to access this instance.",
+		"down_after_milliseconds": "The number of milliseconds after which the instance is considered down.",
+		"enable_monitoring":       "Enable monitoring.",
+		"failover_timeout":        "The failover timeout in milliseconds.",
+		"graphite":                "Graphite server URL (host and port). If set, monitoring with Graphite will be enabled.",
+		"lazyfree_lazy_eviction":  "The lazy eviction enablement (yes or no).",
+		"lazyfree_lazy_expire":    "The lazy expire enablement (yes or no).",
+		"lua_time_limit":          "The Lua time limit.",
+		"max_disk_threshold":      "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
+		"maxclients":              "The maximum number of clients.",
+		"maxmemory_policy":        "The policy to handle the maximum memory (volatile-lru, noeviction, etc).",
+		"maxmemory_samples":       "The maximum memory samples.",
+		"metrics_frequency":       "The frequency in seconds at which metrics are emitted.",
+		"metrics_prefix":          "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key",
+		"min_replicas_max_lag":    "The minimum replicas maximum lag.",
+		"monitoring_instance_id":  "The monitoring instance ID.",
+		"notify_keyspace_events":  "The notify keyspace events.",
+		"snapshot":                "The snapshot configuration.",
+		"syslog":                  "List of syslog servers to send logs to.",
+		"tls_ciphers":             "List of TLS ciphers to use.",
+		"tls_ciphersuites":        "TLS cipher suites to use.",
+		"tls_protocols":           "TLS protocol to use.",
+	}
+
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -183,8 +250,116 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"parameters": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"sgw_acl": schema.StringAttribute{
-						Optional: true,
-						Computed: true,
+						Description: parametersDescriptions["sgw_acl"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"down_after_milliseconds": schema.Int64Attribute{
+						Description: parametersDescriptions["down_after_milliseconds"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"enable_monitoring": schema.BoolAttribute{
+						Description: parametersDescriptions["enable_monitoring"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"failover_timeout": schema.Int64Attribute{
+						Description: parametersDescriptions["failover_timeout"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"graphite": schema.StringAttribute{
+						Description: parametersDescriptions["graphite"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"lazyfree_lazy_eviction": schema.StringAttribute{
+						Description: parametersDescriptions["lazyfree_lazy_eviction"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"lazyfree_lazy_expire": schema.StringAttribute{
+						Description: parametersDescriptions["lazyfree_lazy_expire"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"lua_time_limit": schema.Int64Attribute{
+						Description: parametersDescriptions["lua_time_limit"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"max_disk_threshold": schema.Int64Attribute{
+						Description: parametersDescriptions["max_disk_threshold"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"maxclients": schema.Int64Attribute{
+						Description: parametersDescriptions["maxclients"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"maxmemory_policy": schema.StringAttribute{
+						Description: parametersDescriptions["maxmemory_policy"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"maxmemory_samples": schema.Int64Attribute{
+						Description: parametersDescriptions["maxmemory_samples"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"metrics_frequency": schema.Int64Attribute{
+						Description: parametersDescriptions["metrics_frequency"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"metrics_prefix": schema.StringAttribute{
+						Description: parametersDescriptions["metrics_prefix"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"min_replicas_max_lag": schema.Int64Attribute{
+						Description: parametersDescriptions["min_replicas_max_lag"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"monitoring_instance_id": schema.StringAttribute{
+						Description: parametersDescriptions["monitoring_instance_id"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"notify_keyspace_events": schema.StringAttribute{
+						Description: parametersDescriptions["notify_keyspace_events"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"snapshot": schema.StringAttribute{
+						Description: parametersDescriptions["snapshot"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"syslog": schema.ListAttribute{
+						Description: parametersDescriptions["syslog"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+					},
+					"tls_ciphers": schema.ListAttribute{
+						Description: parametersDescriptions["tls_ciphers"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+					},
+					"tls_ciphersuites": schema.StringAttribute{
+						Description: parametersDescriptions["tls_ciphersuites"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"tls_protocols": schema.StringAttribute{
+						Description: parametersDescriptions["tls_protocols"],
+						Optional:    true,
+						Computed:    true,
 					},
 				},
 				Optional: true,
