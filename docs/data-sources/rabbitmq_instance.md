@@ -46,4 +46,16 @@ data "stackit_rabbitmq_instance" "example" {
 
 Read-Only:
 
+- `consumer_timeout` (Number)
+- `enable_monitoring` (Boolean)
+- `graphite` (String)
+- `max_disk_threshold` (Number)
+- `metrics_frequency` (Number)
+- `metrics_prefix` (String)
+- `monitoring_instance_id` (String)
+- `plugins` (List of String)
+- `roles` (List of String)
 - `sgw_acl` (String)
+- `syslog` (List of String)
+- `tls_ciphers` (List of String)
+- `tls_protocols` (String)

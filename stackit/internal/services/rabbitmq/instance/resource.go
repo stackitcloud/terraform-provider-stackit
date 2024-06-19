@@ -52,12 +52,36 @@ type Model struct {
 
 // Struct corresponding to DataSourceModel.Parameters
 type parametersModel struct {
-	SgwAcl types.String `tfsdk:"sgw_acl"`
+	SgwAcl               types.String `tfsdk:"sgw_acl"`
+	ConsumerTimeout      types.Int64  `tfsdk:"consumer_timeout"`
+	EnableMonitoring     types.Bool   `tfsdk:"enable_monitoring"`
+	Graphite             types.String `tfsdk:"graphite"`
+	MaxDiskThreshold     types.Int64  `tfsdk:"max_disk_threshold"`
+	MetricsFrequency     types.Int64  `tfsdk:"metrics_frequency"`
+	MetricsPrefix        types.String `tfsdk:"metrics_prefix"`
+	MonitoringInstanceId types.String `tfsdk:"monitoring_instance_id"`
+	Plugins              types.List   `tfsdk:"plugins"`
+	Roles                types.List   `tfsdk:"roles"`
+	Syslog               types.List   `tfsdk:"syslog"`
+	TlsCiphers           types.List   `tfsdk:"tls_ciphers"`
+	TlsProtocols         types.String `tfsdk:"tls_protocols"`
 }
 
 // Types corresponding to parametersModel
 var parametersTypes = map[string]attr.Type{
-	"sgw_acl": basetypes.StringType{},
+	"sgw_acl":                basetypes.StringType{},
+	"consumer_timeout":       basetypes.Int64Type{},
+	"enable_monitoring":      basetypes.BoolType{},
+	"graphite":               basetypes.StringType{},
+	"max_disk_threshold":     basetypes.Int64Type{},
+	"metrics_frequency":      basetypes.Int64Type{},
+	"metrics_prefix":         basetypes.StringType{},
+	"monitoring_instance_id": basetypes.StringType{},
+	"plugins":                basetypes.ListType{ElemType: types.StringType},
+	"roles":                  basetypes.ListType{ElemType: types.StringType},
+	"syslog":                 basetypes.ListType{ElemType: types.StringType},
+	"tls_ciphers":            basetypes.ListType{ElemType: types.StringType},
+	"tls_protocols":          basetypes.StringType{},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -124,6 +148,22 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"plan_id":     "The selected plan ID.",
 	}
 
+	parametersDescriptions := map[string]string{
+		"sgw_acl":                "Comma separated list of IP networks in CIDR notation which are allowed to access this instance.",
+		"consumer_timeout":       "The timeout in milliseconds for the consumer.",
+		"enable_monitoring":      "Enable monitoring.",
+		"graphite":               "Graphite server URL (host and port). If set, monitoring with Graphite will be enabled.",
+		"max_disk_threshold":     "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
+		"metrics_frequency":      "The frequency in seconds at which metrics are emitted.",
+		"metrics_prefix":         "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key",
+		"monitoring_instance_id": "The monitoring instance ID.",
+		"plugins":                "List of plugins to install. Must be a supported plugin name.",
+		"roles":                  "List of roles to assign to the instance.",
+		"syslog":                 "List of syslog servers to send logs to.",
+		"tls_ciphers":            "List of TLS ciphers to use.",
+		"tls_protocols":          "TLS protocol to use.",
+	}
+
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -183,8 +223,73 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"parameters": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"sgw_acl": schema.StringAttribute{
-						Optional: true,
-						Computed: true,
+						Description: parametersDescriptions["sgw_acl"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"consumer_timeout": schema.Int64Attribute{
+						Description: parametersDescriptions["consumer_timeout"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"enable_monitoring": schema.BoolAttribute{
+						Description: parametersDescriptions["enable_monitoring"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"graphite": schema.StringAttribute{
+						Description: parametersDescriptions["graphite"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"max_disk_threshold": schema.Int64Attribute{
+						Description: parametersDescriptions["max_disk_threshold"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"metrics_frequency": schema.Int64Attribute{
+						Description: parametersDescriptions["metrics_frequency"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"metrics_prefix": schema.StringAttribute{
+						Description: parametersDescriptions["metrics_prefix"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"monitoring_instance_id": schema.StringAttribute{
+						Description: parametersDescriptions["monitoring_instance_id"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"plugins": schema.ListAttribute{
+						Description: parametersDescriptions["plugins"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+					},
+					"roles": schema.ListAttribute{
+						Description: parametersDescriptions["roles"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+					},
+					"syslog": schema.ListAttribute{
+						Description: parametersDescriptions["syslog"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+					},
+					"tls_ciphers": schema.ListAttribute{
+						Description: parametersDescriptions["tls_ciphers"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+					},
+					"tls_protocols": schema.StringAttribute{
+						Description: parametersDescriptions["tls_protocols"],
+						Optional:    true,
+						Computed:    true,
 					},
 				},
 				Optional: true,
@@ -488,7 +593,17 @@ func mapFields(instance *rabbitmq.Instance, model *Model) error {
 func mapParameters(params map[string]interface{}) (types.Object, error) {
 	attributes := map[string]attr.Value{}
 	for attribute := range parametersTypes {
-		valueInterface, ok := params[attribute]
+		var valueInterface interface{}
+		var ok bool
+
+		// This replacement is necessary because Terraform does not allow hyphens in attribute names
+		// And the API uses hyphens in the attribute names (tls-ciphers, tls-protocols)
+		if attribute == "tls_ciphers" || attribute == "tls_protocols" {
+			alteredAttribute := strings.ReplaceAll(attribute, "_", "-")
+			valueInterface, ok = params[alteredAttribute]
+		} else {
+			valueInterface, ok = params[attribute]
+		}
 		if !ok {
 			// All fields are optional, so this is ok
 			// Set the value as nil, will be handled accordingly
@@ -584,16 +699,12 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*rabbitmq.Creat
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	if parameters == nil {
-		return &rabbitmq.CreateInstancePayload{
-			InstanceName: conversion.StringValueToPointer(model.Name),
-			PlanId:       conversion.StringValueToPointer(model.PlanId),
-		}, nil
+
+	payloadParams, err := toInstanceParams(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("converting parameters: %w", err)
 	}
-	payloadParams := &rabbitmq.InstanceParameters{}
-	if parameters.SgwAcl.ValueString() != "" {
-		payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
-	}
+
 	return &rabbitmq.CreateInstancePayload{
 		InstanceName: conversion.StringValueToPointer(model.Name),
 		Parameters:   payloadParams,
@@ -606,17 +717,55 @@ func toUpdatePayload(model *Model, parameters *parametersModel) (*rabbitmq.Parti
 		return nil, fmt.Errorf("nil model")
 	}
 
-	if parameters == nil {
-		return &rabbitmq.PartialUpdateInstancePayload{
-			PlanId: conversion.StringValueToPointer(model.PlanId),
-		}, nil
+	payloadParams, err := toInstanceParams(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("converting parameters: %w", err)
 	}
+
 	return &rabbitmq.PartialUpdateInstancePayload{
-		Parameters: &rabbitmq.InstanceParameters{
-			SgwAcl: conversion.StringValueToPointer(parameters.SgwAcl),
-		},
-		PlanId: conversion.StringValueToPointer(model.PlanId),
+		Parameters: payloadParams,
+		PlanId:     conversion.StringValueToPointer(model.PlanId),
 	}, nil
+}
+
+func toInstanceParams(parameters *parametersModel) (*rabbitmq.InstanceParameters, error) {
+	if parameters == nil {
+		return nil, nil
+	}
+	payloadParams := &rabbitmq.InstanceParameters{}
+
+	payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
+	payloadParams.ConsumerTimeout = conversion.Int64ValueToPointer(parameters.ConsumerTimeout)
+	payloadParams.EnableMonitoring = conversion.BoolValueToPointer(parameters.EnableMonitoring)
+	payloadParams.Graphite = conversion.StringValueToPointer(parameters.Graphite)
+	payloadParams.MaxDiskThreshold = conversion.Int64ValueToPointer(parameters.MaxDiskThreshold)
+	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
+	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
+	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
+	payloadParams.TlsProtocols = conversion.StringValueToPointer(parameters.TlsProtocols)
+
+	var err error
+	payloadParams.Plugins, err = conversion.StringListToPointer(parameters.Plugins)
+	if err != nil {
+		return nil, fmt.Errorf("converting plugins: %w", err)
+	}
+
+	payloadParams.Roles, err = conversion.StringListToPointer(parameters.Roles)
+	if err != nil {
+		return nil, fmt.Errorf("converting roles: %w", err)
+	}
+
+	payloadParams.Syslog, err = conversion.StringListToPointer(parameters.Syslog)
+	if err != nil {
+		return nil, fmt.Errorf("converting syslog: %w", err)
+	}
+
+	payloadParams.TlsCiphers, err = conversion.StringListToPointer(parameters.TlsCiphers)
+	if err != nil {
+		return nil, fmt.Errorf("converting tls_ciphers: %w", err)
+	}
+
+	return payloadParams, nil
 }
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
