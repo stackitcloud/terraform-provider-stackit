@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -663,7 +664,29 @@ func mapFields(instance *redis.Instance, model *Model) error {
 func mapParameters(params map[string]interface{}) (types.Object, error) {
 	attributes := map[string]attr.Value{}
 	for attribute := range parametersTypes {
-		valueInterface, ok := params[attribute]
+		var valueInterface interface{}
+		var ok bool
+
+		// This replacement is necessary because Terraform does not allow hyphens in attribute names
+		// And the API uses hyphens in the attribute names, which would cause a mismatch
+		hyphenAttributes := []string{
+			"failover_timeout",
+			"lazyfree_lazy_eviction",
+			"lazyfree_lazy_expire",
+			"lua_time_limit",
+			"maxmemory_policy",
+			"maxmemory_samples",
+			"notify_keyspace_events",
+			"tls_ciphers",
+			"tls_ciphersuites",
+			"tls_protocols",
+		}
+		if slices.Contains(hyphenAttributes, attribute) {
+			alteredAttribute := strings.ReplaceAll(attribute, "_", "-")
+			valueInterface, ok = params[alteredAttribute]
+		} else {
+			valueInterface, ok = params[attribute]
+		}
 		if !ok {
 			// All fields are optional, so this is ok
 			// Set the value as nil, will be handled accordingly
@@ -759,16 +782,12 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*redis.CreateIn
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	if parameters == nil {
-		return &redis.CreateInstancePayload{
-			InstanceName: conversion.StringValueToPointer(model.Name),
-			PlanId:       conversion.StringValueToPointer(model.PlanId),
-		}, nil
+
+	payloadParams, err := toInstanceParams(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("converting parameters: %w", err)
 	}
-	payloadParams := &redis.InstanceParameters{}
-	if parameters.SgwAcl.ValueString() != "" {
-		payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
-	}
+
 	return &redis.CreateInstancePayload{
 		InstanceName: conversion.StringValueToPointer(model.Name),
 		Parameters:   payloadParams,
@@ -781,17 +800,56 @@ func toUpdatePayload(model *Model, parameters *parametersModel) (*redis.PartialU
 		return nil, fmt.Errorf("nil model")
 	}
 
-	if parameters == nil {
-		return &redis.PartialUpdateInstancePayload{
-			PlanId: conversion.StringValueToPointer(model.PlanId),
-		}, nil
+	payloadParams, err := toInstanceParams(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("converting parameters: %w", err)
 	}
+
 	return &redis.PartialUpdateInstancePayload{
-		Parameters: &redis.InstanceParameters{
-			SgwAcl: conversion.StringValueToPointer(parameters.SgwAcl),
-		},
-		PlanId: conversion.StringValueToPointer(model.PlanId),
+		Parameters: payloadParams,
+		PlanId:     conversion.StringValueToPointer(model.PlanId),
 	}, nil
+}
+
+func toInstanceParams(parameters *parametersModel) (*redis.InstanceParameters, error) {
+	if parameters == nil {
+		return nil, nil
+	}
+	payloadParams := &redis.InstanceParameters{}
+
+	payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
+	payloadParams.DownAfterMilliseconds = conversion.Int64ValueToPointer(parameters.DownAfterMilliseconds)
+	payloadParams.EnableMonitoring = conversion.BoolValueToPointer(parameters.EnableMonitoring)
+	payloadParams.FailoverTimeout = conversion.Int64ValueToPointer(parameters.FailoverTimeout)
+	payloadParams.Graphite = conversion.StringValueToPointer(parameters.Graphite)
+	payloadParams.LazyfreeLazyEviction = conversion.StringValueToPointer(parameters.LazyfreeLazyEviction)
+	payloadParams.LazyfreeLazyExpire = conversion.StringValueToPointer(parameters.LazyfreeLazyExpire)
+	payloadParams.LuaTimeLimit = conversion.Int64ValueToPointer(parameters.LuaTimeLimit)
+	payloadParams.MaxDiskThreshold = conversion.Int64ValueToPointer(parameters.MaxDiskThreshold)
+	payloadParams.Maxclients = conversion.Int64ValueToPointer(parameters.Maxclients)
+	payloadParams.MaxmemoryPolicy = conversion.StringValueToPointer(parameters.MaxmemoryPolicy)
+	payloadParams.MaxmemorySamples = conversion.Int64ValueToPointer(parameters.MaxmemorySamples)
+	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
+	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
+	payloadParams.MinReplicasMaxLag = conversion.Int64ValueToPointer(parameters.MinReplicasMaxLag)
+	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
+	payloadParams.NotifyKeyspaceEvents = conversion.StringValueToPointer(parameters.NotifyKeyspaceEvents)
+	payloadParams.Snapshot = conversion.StringValueToPointer(parameters.Snapshot)
+	payloadParams.TlsCiphersuites = conversion.StringValueToPointer(parameters.TlsCiphersuites)
+	payloadParams.TlsProtocols = conversion.StringValueToPointer(parameters.TlsProtocols)
+
+	var err error
+	payloadParams.Syslog, err = conversion.StringListToPointer(parameters.Syslog)
+	if err != nil {
+		return nil, fmt.Errorf("converting syslog: %w", err)
+	}
+
+	payloadParams.TlsCiphers, err = conversion.StringListToPointer(parameters.TlsCiphers)
+	if err != nil {
+		return nil, fmt.Errorf("converting tls_ciphers: %w", err)
+	}
+
+	return payloadParams, nil
 }
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
