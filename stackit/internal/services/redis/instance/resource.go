@@ -668,8 +668,10 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 		var ok bool
 
 		// This replacement is necessary because Terraform does not allow hyphens in attribute names
-		// And the API uses hyphens in the attribute names, which would cause a mismatch
+		// And the API uses hyphens in some of the attribute names, which would cause a mismatch
+		// The following attributes have hyphens in the API but underscores in the schema
 		hyphenAttributes := []string{
+			"down_after_milliseconds",
 			"failover_timeout",
 			"lazyfree_lazy_eviction",
 			"lazyfree_lazy_expire",
