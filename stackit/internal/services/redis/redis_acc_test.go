@@ -26,6 +26,7 @@ var instanceResource = map[string]string{
 	"version":         "6",
 	"sgw_acl_invalid": "1.2.3.4/4",
 	"sgw_acl_valid":   "192.168.0.0/16",
+	"sgw_acl_valid2":  "10.10.10.0/24",
 }
 
 func parametersConfig(params map[string]string) string {
@@ -240,7 +241,7 @@ func TestAccRedisResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfig(map[string]string{"sgw_acl": instanceResource["sgw_acl_valid"]}),
+				Config: resourceConfig(map[string]string{"sgw_acl": instanceResource["sgw_acl_valid2"]}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "project_id", instanceResource["project_id"]),
@@ -249,7 +250,7 @@ func TestAccRedisResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "plan_name", instanceResource["plan_name"]),
 					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "name", instanceResource["name"]),
-					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl_valid"]),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl_valid2"]),
 				),
 			},
 			// Deletion is done by the framework implicitly
