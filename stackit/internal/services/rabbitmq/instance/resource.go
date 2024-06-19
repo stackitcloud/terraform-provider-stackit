@@ -286,7 +286,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"tls_protocol": schema.StringAttribute{
+					"tls_protocols": schema.StringAttribute{
 						Description: parametersDescriptions["tls_protocols"],
 						Optional:    true,
 						Computed:    true,
