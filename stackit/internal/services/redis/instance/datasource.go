@@ -129,58 +129,58 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"parameters": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"sgw_acl": schema.StringAttribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"down_after_milliseconds": schema.Int64Attribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"enable_monitoring": schema.BoolAttribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"failover_timeout": schema.Int64Attribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"graphite": schema.StringAttribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"lazyfree_lazy_eviction": schema.StringAttribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"lazyfree_lazy_expire": schema.StringAttribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"lua_time_limit": schema.Int64Attribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"max_disk_threshold": schema.Int64Attribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"maxclients": schema.Int64Attribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"maxmemory_policy": schema.StringAttribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"maxmemory_samples": schema.Int64Attribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"metrics_frequency": schema.Int64Attribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"metrics_prefix": schema.StringAttribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"min_replicas_max_lag": schema.Int64Attribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"monitoring_instance_id": schema.StringAttribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"notify_keyspace_events": schema.StringAttribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"snapshot": schema.StringAttribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"syslog": schema.ListAttribute{
 						ElementType: types.StringType,
@@ -191,10 +191,10 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Computed:    true,
 					},
 					"tls_ciphersuites": schema.StringAttribute{
-						Computed:    true,
+						Computed: true,
 					},
 					"tls_protocols": schema.StringAttribute{
-						Computed:    true,
+						Computed: true,
 					},
 				},
 				Computed: true,

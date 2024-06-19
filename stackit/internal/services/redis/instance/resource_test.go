@@ -106,7 +106,7 @@ func TestMapFields(t *testing.T) {
 				CfOrganizationGuid: utils.Ptr("org"),
 				Parameters: &map[string]interface{}{
 					"sgw_acl":                 "acl",
-					"down_after_milliseconds": int64(10),
+					"down-after-milliseconds": int64(10),
 					"enable_monitoring":       true,
 					"failover-timeout":        int64(10),
 					"graphite":                "1.1.1.1:91",
