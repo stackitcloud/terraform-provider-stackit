@@ -206,7 +206,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	tflog.Info(ctx, "Resource Manager project read")
 }
 
-func mapDataFields(ctx context.Context, projectResp *resourcemanager.ProjectResponseWithParents, model *ModelData) (err error) {
+func mapDataFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, model *ModelData) (err error) {
 	if projectResp == nil {
 		return fmt.Errorf("response input is nil")
 	}

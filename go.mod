@@ -15,17 +15,17 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.4.0
-	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.12.0
+	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.15.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.15.0
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.14.0
-	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.9.0
+	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresql v0.12.1
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.15.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.15.0
-	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.8.0
+	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v0.16.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.2.0

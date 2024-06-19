@@ -17,7 +17,7 @@ func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description           string
 		uuidContainerParentId bool
-		input                 *resourcemanager.ProjectResponseWithParents
+		input                 *resourcemanager.GetProjectResponse
 		expected              Model
 		expectedLabels        *map[string]string
 		isValid               bool
@@ -25,7 +25,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_ok",
 			false,
-			&resourcemanager.ProjectResponseWithParents{
+			&resourcemanager.GetProjectResponse{
 				ContainerId: utils.Ptr("cid"),
 				ProjectId:   utils.Ptr("pid"),
 			},
@@ -42,7 +42,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"container_parent_id_ok",
 			false,
-			&resourcemanager.ProjectResponseWithParents{
+			&resourcemanager.GetProjectResponse{
 				ContainerId: utils.Ptr("cid"),
 				ProjectId:   utils.Ptr("pid"),
 				Labels: &map[string]string{
@@ -71,7 +71,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"uuid_parent_id_ok",
 			true,
-			&resourcemanager.ProjectResponseWithParents{
+			&resourcemanager.GetProjectResponse{
 				ContainerId: utils.Ptr("cid"),
 				ProjectId:   utils.Ptr("pid"),
 				Labels: &map[string]string{
@@ -108,7 +108,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_resource_id",
 			false,
-			&resourcemanager.ProjectResponseWithParents{},
+			&resourcemanager.GetProjectResponse{},
 			Model{},
 			nil,
 			false,
@@ -166,7 +166,7 @@ func TestToCreatePayload(t *testing.T) {
 			&resourcemanager.CreateProjectPayload{
 				ContainerParentId: nil,
 				Labels:            nil,
-				Members: &[]resourcemanager.ProjectMember{
+				Members: &[]resourcemanager.Member{
 					{
 						Role:    utils.Ptr(projectOwner),
 						Subject: utils.Ptr("service_account_email"),
@@ -193,7 +193,7 @@ func TestToCreatePayload(t *testing.T) {
 					"label1": "1",
 					"label2": "2",
 				},
-				Members: &[]resourcemanager.ProjectMember{
+				Members: &[]resourcemanager.Member{
 					{
 						Role:    utils.Ptr(projectOwner),
 						Subject: utils.Ptr("service_account_email"),
