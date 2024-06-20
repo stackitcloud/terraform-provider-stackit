@@ -34,6 +34,7 @@ type ProviderData struct {
 	SecretsManagerCustomEndpoint  string
 	SQLServerFlexCustomEndpoint   string
 	SKECustomEndpoint             string
+	EnableBetaResources           bool
 }
 
 // DiagsToError Converts TF diagnostics' errors into an error with a human-readable description.
@@ -65,4 +66,18 @@ func LogAndAddError(ctx context.Context, diags *diag.Diagnostics, summary, detai
 func LogAndAddWarning(ctx context.Context, diags *diag.Diagnostics, summary, detail string) {
 	tflog.Warn(ctx, fmt.Sprintf("%s | %s", summary, detail))
 	diags.AddWarning(summary, detail)
+}
+
+func LogAndAddWarningBeta(ctx context.Context, diags *diag.Diagnostics, name string) {
+	warnTitle := fmt.Sprintf("The resource %q is in BETA", name)
+	warnContent := fmt.Sprintf("The resource %q is in BETA and may be subject to breaking changes in the future. Use with caution.", name)
+	tflog.Warn(ctx, fmt.Sprintf("%s | %s", warnTitle, warnContent))
+	diags.AddWarning(warnTitle, warnContent)
+}
+
+func LogAndAddErrorBeta(ctx context.Context, diags *diag.Diagnostics, name string) {
+	errTitle := fmt.Sprintf("The resource %q is in BETA and BETA is not enabled", name)
+	errContent := fmt.Sprintf("The resource %q is in BETA and the BETA functionality is currently not enabled. Please refer to the documentation on how to enable the BETA functionality.", name)
+	tflog.Error(ctx, fmt.Sprintf("%s | %s", errTitle, errContent))
+	diags.AddError(errTitle, errContent)
 }
