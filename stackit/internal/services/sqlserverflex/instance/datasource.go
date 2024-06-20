@@ -72,20 +72,20 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "MongoDB Flex instance client configured")
+	tflog.Info(ctx, "SQLServer Flex instance client configured")
 }
 
 // Schema defines the schema for the data source.
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":            "MongoDB Flex instance data source schema. Must have a `region` specified in the provider configuration.",
+		"main":            "SQLServer Flex instance data source schema. Must have a `region` specified in the provider configuration.",
 		"id":              "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`\".",
-		"instance_id":     "ID of the MongoDB Flex instance.",
+		"instance_id":     "ID of the SQLServer Flex instance.",
 		"project_id":      "STACKIT project ID to which the instance is associated.",
 		"name":            "Instance name.",
-		"acl":             "The Access Control List (ACL) for the MongoDB Flex instance.",
+		"acl":             "The Access Control List (ACL) for the SQLServer Flex instance.",
 		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
-		"options":         "Custom parameters for the MongoDB Flex instance.",
+		"options":         "Custom parameters for the SQLServer Flex instance.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -233,5 +233,5 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "MongoDB Flex instance read")
+	tflog.Info(ctx, "SQLServer Flex instance read")
 }
