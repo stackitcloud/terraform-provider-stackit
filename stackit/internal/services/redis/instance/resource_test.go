@@ -1,14 +1,72 @@
 package redis
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/redis"
 )
+
+var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]attr.Value{
+	"sgw_acl":                 types.StringValue("acl"),
+	"down_after_milliseconds": types.Int64Value(10),
+	"enable_monitoring":       types.BoolValue(true),
+	"failover_timeout":        types.Int64Value(10),
+	"graphite":                types.StringValue("1.1.1.1:91"),
+	"lazyfree_lazy_eviction":  types.StringValue("lazy_eviction"),
+	"lazyfree_lazy_expire":    types.StringValue("lazy_expire"),
+	"lua_time_limit":          types.Int64Value(10),
+	"max_disk_threshold":      types.Int64Value(100),
+	"maxclients":              types.Int64Value(10),
+	"maxmemory_policy":        types.StringValue("policy"),
+	"maxmemory_samples":       types.Int64Value(10),
+	"metrics_frequency":       types.Int64Value(10),
+	"metrics_prefix":          types.StringValue("prefix"),
+	"min_replicas_max_lag":    types.Int64Value(10),
+	"monitoring_instance_id":  types.StringValue("mid"),
+	"notify_keyspace_events":  types.StringValue("events"),
+	"snapshot":                types.StringValue("snapshot"),
+	"syslog": types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("syslog"),
+		types.StringValue("syslog2"),
+	}),
+	"tls_ciphers": types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("ciphers1"),
+		types.StringValue("ciphers2"),
+	}),
+	"tls_ciphersuites": types.StringValue("ciphersuites"),
+	"tls_protocols":    types.StringValue("protocol1"),
+})
+
+var fixtureInstanceParameters = redis.InstanceParameters{
+	SgwAcl:                utils.Ptr("acl"),
+	DownAfterMilliseconds: utils.Ptr(int64(10)),
+	EnableMonitoring:      utils.Ptr(true),
+	FailoverTimeout:       utils.Ptr(int64(10)),
+	Graphite:              utils.Ptr("1.1.1.1:91"),
+	LazyfreeLazyEviction:  utils.Ptr("lazy_eviction"),
+	LazyfreeLazyExpire:    utils.Ptr("lazy_expire"),
+	LuaTimeLimit:          utils.Ptr(int64(10)),
+	MaxDiskThreshold:      utils.Ptr(int64(100)),
+	Maxclients:            utils.Ptr(int64(10)),
+	MaxmemoryPolicy:       utils.Ptr("policy"),
+	MaxmemorySamples:      utils.Ptr(int64(10)),
+	MetricsFrequency:      utils.Ptr(int64(10)),
+	MetricsPrefix:         utils.Ptr("prefix"),
+	MinReplicasMaxLag:     utils.Ptr(int64(10)),
+	MonitoringInstanceId:  utils.Ptr("mid"),
+	NotifyKeyspaceEvents:  utils.Ptr("events"),
+	Snapshot:              utils.Ptr("snapshot"),
+	Syslog:                &[]string{"syslog", "syslog2"},
+	TlsCiphers:            &[]string{"ciphers1", "ciphers2"},
+	TlsCiphersuites:       utils.Ptr("ciphersuites"),
+	TlsProtocols:          utils.Ptr("protocol1"),
+}
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
@@ -47,7 +105,28 @@ func TestMapFields(t *testing.T) {
 				Name:               utils.Ptr("name"),
 				CfOrganizationGuid: utils.Ptr("org"),
 				Parameters: &map[string]interface{}{
-					"sgw_acl": "acl",
+					"sgw_acl":                 "acl",
+					"down-after-milliseconds": int64(10),
+					"enable_monitoring":       true,
+					"failover-timeout":        int64(10),
+					"graphite":                "1.1.1.1:91",
+					"lazyfree-lazy-eviction":  "lazy_eviction",
+					"lazyfree-lazy-expire":    "lazy_expire",
+					"lua-time-limit":          int64(10),
+					"max_disk_threshold":      int64(100),
+					"maxclients":              int64(10),
+					"maxmemory-policy":        "policy",
+					"maxmemory-samples":       int64(10),
+					"metrics_frequency":       int64(10),
+					"metrics_prefix":          "prefix",
+					"min_replicas_max_lag":    int64(10),
+					"monitoring_instance_id":  "mid",
+					"notify-keyspace-events":  "events",
+					"snapshot":                "snapshot",
+					"syslog":                  []string{"syslog", "syslog2"},
+					"tls-ciphers":             []string{"ciphers1", "ciphers2"},
+					"tls-ciphersuites":        "ciphersuites",
+					"tls-protocols":           "protocol1",
 				},
 			},
 			Model{
@@ -61,9 +140,7 @@ func TestMapFields(t *testing.T) {
 				DashboardUrl:       types.StringValue("dashboard"),
 				ImageUrl:           types.StringValue("image"),
 				CfOrganizationGuid: types.StringValue("org"),
-				Parameters: types.ObjectValueMust(parametersTypes, map[string]attr.Value{
-					"sgw_acl": types.StringValue("acl"),
-				}),
+				Parameters:         fixtureModelParameters,
 			},
 			true,
 		},
@@ -125,16 +202,14 @@ func TestMapFields(t *testing.T) {
 
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
-		description     string
-		input           *Model
-		inputParameters *parametersModel
-		expected        *redis.CreateInstancePayload
-		isValid         bool
+		description string
+		input       *Model
+		expected    *redis.CreateInstancePayload
+		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
-			&parametersModel{},
 			&redis.CreateInstancePayload{
 				Parameters: &redis.InstanceParameters{},
 			},
@@ -143,43 +218,34 @@ func TestToCreatePayload(t *testing.T) {
 		{
 			"simple_values",
 			&Model{
-				Name:   types.StringValue("name"),
-				PlanId: types.StringValue("plan"),
-			},
-			&parametersModel{
-				SgwAcl: types.StringValue("sgw"),
+				Name:       types.StringValue("name"),
+				PlanId:     types.StringValue("plan"),
+				Parameters: fixtureModelParameters,
 			},
 			&redis.CreateInstancePayload{
 				InstanceName: utils.Ptr("name"),
-				Parameters: &redis.InstanceParameters{
-					SgwAcl: utils.Ptr("sgw"),
-				},
-				PlanId: utils.Ptr("plan"),
+				Parameters:   &fixtureInstanceParameters,
+				PlanId:       utils.Ptr("plan"),
 			},
 			true,
 		},
 		{
 			"null_fields_and_int_conversions",
 			&Model{
-				Name:   types.StringValue(""),
-				PlanId: types.StringValue(""),
-			},
-			&parametersModel{
-				SgwAcl: types.StringNull(),
+				Name:       types.StringValue(""),
+				PlanId:     types.StringValue(""),
+				Parameters: fixtureModelParameters,
 			},
 			&redis.CreateInstancePayload{
 				InstanceName: utils.Ptr(""),
-				Parameters: &redis.InstanceParameters{
-					SgwAcl: nil,
-				},
-				PlanId: utils.Ptr(""),
+				Parameters:   &fixtureInstanceParameters,
+				PlanId:       utils.Ptr(""),
 			},
 			true,
 		},
 		{
 			"nil_model",
 			nil,
-			&parametersModel{},
 			nil,
 			false,
 		},
@@ -189,17 +255,26 @@ func TestToCreatePayload(t *testing.T) {
 				Name:   types.StringValue("name"),
 				PlanId: types.StringValue("plan"),
 			},
-			nil,
 			&redis.CreateInstancePayload{
 				InstanceName: utils.Ptr("name"),
 				PlanId:       utils.Ptr("plan"),
+				Parameters:   &redis.InstanceParameters{},
 			},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(tt.input, tt.inputParameters)
+			var parameters = &parametersModel{}
+			if tt.input != nil {
+				if !(tt.input.Parameters.IsNull() || tt.input.Parameters.IsUnknown()) {
+					diags := tt.input.Parameters.As(context.Background(), parameters, basetypes.ObjectAsOptions{})
+					if diags.HasError() {
+						t.Fatalf("Error converting parameters: %v", diags.Errors())
+					}
+				}
+			}
+			output, err := toCreatePayload(tt.input, parameters)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -218,16 +293,14 @@ func TestToCreatePayload(t *testing.T) {
 
 func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
-		description     string
-		input           *Model
-		inputParameters *parametersModel
-		expected        *redis.PartialUpdateInstancePayload
-		isValid         bool
+		description string
+		input       *Model
+		expected    *redis.PartialUpdateInstancePayload
+		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
-			&parametersModel{},
 			&redis.PartialUpdateInstancePayload{
 				Parameters: &redis.InstanceParameters{},
 			},
@@ -236,39 +309,30 @@ func TestToUpdatePayload(t *testing.T) {
 		{
 			"simple_values",
 			&Model{
-				PlanId: types.StringValue("plan"),
-			},
-			&parametersModel{
-				SgwAcl: types.StringValue("sgw"),
+				PlanId:     types.StringValue("plan"),
+				Parameters: fixtureModelParameters,
 			},
 			&redis.PartialUpdateInstancePayload{
-				Parameters: &redis.InstanceParameters{
-					SgwAcl: utils.Ptr("sgw"),
-				},
-				PlanId: utils.Ptr("plan"),
+				Parameters: &fixtureInstanceParameters,
+				PlanId:     utils.Ptr("plan"),
 			},
 			true,
 		},
 		{
 			"null_fields_and_int_conversions",
 			&Model{
-				PlanId: types.StringValue(""),
-			},
-			&parametersModel{
-				SgwAcl: types.StringNull(),
+				PlanId:     types.StringValue(""),
+				Parameters: fixtureModelParameters,
 			},
 			&redis.PartialUpdateInstancePayload{
-				Parameters: &redis.InstanceParameters{
-					SgwAcl: nil,
-				},
-				PlanId: utils.Ptr(""),
+				Parameters: &fixtureInstanceParameters,
+				PlanId:     utils.Ptr(""),
 			},
 			true,
 		},
 		{
 			"nil_model",
 			nil,
-			&parametersModel{},
 			nil,
 			false,
 		},
@@ -277,16 +341,25 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{
 				PlanId: types.StringValue("plan"),
 			},
-			nil,
 			&redis.PartialUpdateInstancePayload{
-				PlanId: utils.Ptr("plan"),
+				PlanId:     utils.Ptr("plan"),
+				Parameters: &redis.InstanceParameters{},
 			},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(tt.input, tt.inputParameters)
+			var parameters = &parametersModel{}
+			if tt.input != nil {
+				if !(tt.input.Parameters.IsNull() || tt.input.Parameters.IsUnknown()) {
+					diags := tt.input.Parameters.As(context.Background(), parameters, basetypes.ObjectAsOptions{})
+					if diags.HasError() {
+						t.Fatalf("Error converting parameters: %v", diags.Errors())
+					}
+				}
+			}
+			output, err := toUpdatePayload(tt.input, parameters)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

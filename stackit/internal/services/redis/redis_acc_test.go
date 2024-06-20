@@ -26,41 +26,36 @@ var instanceResource = map[string]string{
 	"version":         "6",
 	"sgw_acl_invalid": "1.2.3.4/4",
 	"sgw_acl_valid":   "192.168.0.0/16",
+	"sgw_acl_valid2":  "10.10.10.0/24",
 }
 
-func resourceConfig(acls *string) string {
-	aclsLine := ""
-	if acls != nil {
-		aclsLine = fmt.Sprintf(`sgw_acl = %q`, *acls)
+func parametersConfig(params map[string]string) string {
+	nonStringParams := []string{
+		"down_after_milliseconds",
+		"enable_monitoring",
+		"failover_timeout",
+		"lua_time_limit",
+		"max_disk_threshold",
+		"maxclients",
+		"maxmemory_samples",
+		"metrics_frequency",
+		"min_replicas_max_lag",
+		"syslog",
+		"tls_ciphers",
 	}
-	return fmt.Sprintf(`
-				%s
-
-				resource "stackit_redis_instance" "instance" {
-					project_id = "%s"
-					name       = "%s"
-					plan_name  = "%s"
- 				 	version    = "%s"
-					parameters = {
-						%s
-						metrics_frequency = "%s"
-					}
-				}
-
-				%s
-				`,
-		testutil.RedisProviderConfig(),
-		instanceResource["project_id"],
-		instanceResource["name"],
-		instanceResource["plan_name"],
-		instanceResource["version"],
-		aclsLine,
-		instanceResource["metrics_frequency"],
-		resourceConfigCredential(),
-	)
+	parameters := "parameters = {"
+	for k, v := range params {
+		if utils.Contains(nonStringParams, k) {
+			parameters += fmt.Sprintf("%s = %s\n", k, v)
+		} else {
+			parameters += fmt.Sprintf("%s = %q\n", k, v)
+		}
+	}
+	parameters += "\n}"
+	return parameters
 }
 
-func resourceConfigWithUpdate() string {
+func resourceConfig(params map[string]string) string {
 	return fmt.Sprintf(`
 				%s
 
@@ -69,9 +64,7 @@ func resourceConfigWithUpdate() string {
 					name       = "%s"
 					plan_name  = "%s"
  				 	version    = "%s"
-					parameters = {
-						sgw_acl = "%s"
-					}
+					%s
 				}
 
 				%s
@@ -81,7 +74,7 @@ func resourceConfigWithUpdate() string {
 		instanceResource["name"],
 		instanceResource["plan_name"],
 		instanceResource["version"],
-		instanceResource["sgw_acl_valid"],
+		parametersConfig(params),
 		resourceConfigCredential(),
 	)
 }
@@ -96,19 +89,38 @@ func resourceConfigCredential() string {
 }
 
 func TestAccRedisResource(t *testing.T) {
-	acls := instanceResource["sgw_acl_invalid"]
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckRedisDestroy,
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
-				Config:      resourceConfig(&acls),
+				Config:      resourceConfig(map[string]string{"sgw_acl": instanceResource["sgw_acl_invalid"]}),
 				ExpectError: regexp.MustCompile(`.*sgw_acl is invalid.*`),
 			},
 			// Creation
 			{
-				Config: resourceConfig(nil),
+				Config: resourceConfig(map[string]string{
+					"sgw_acl":                 instanceResource["sgw_acl_valid"],
+					"down_after_milliseconds": "10000",
+					"enable_monitoring":       "false",
+					"failover_timeout":        "30000",
+					"graphite":                "graphite.example.com:2003",
+					"lazyfree_lazy_eviction":  "no",
+					"lazyfree_lazy_expire":    "no",
+					"lua_time_limit":          "5000",
+					"max_disk_threshold":      "80",
+					"maxclients":              "10000",
+					"maxmemory_policy":        "volatile-lru",
+					"maxmemory_samples":       "5",
+					"metrics_frequency":       "10",
+					"metrics_prefix":          "prefix",
+					"min_replicas_max_lag":    "15",
+					"monitoring_instance_id":  "mid",
+					"notify_keyspace_events":  "Ex",
+					"syslog":                  `["syslog.example.com:123"]`,
+					"tls_protocols":           "TLSv1.2",
+				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "project_id", instanceResource["project_id"]),
@@ -117,7 +129,28 @@ func TestAccRedisResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "plan_name", instanceResource["plan_name"]),
 					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "name", instanceResource["name"]),
-					resource.TestCheckResourceAttrSet("stackit_redis_instance.instance", "parameters.sgw_acl"),
+
+					// Instance Params data
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl_valid"]),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.down_after_milliseconds", "10000"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.enable_monitoring", "false"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.failover_timeout", "30000"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.graphite", "graphite.example.com:2003"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.lazyfree_lazy_eviction", "no"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.lazyfree_lazy_expire", "no"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.lua_time_limit", "5000"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.max_disk_threshold", "80"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.maxclients", "10000"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.maxmemory_policy", "volatile-lru"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.maxmemory_samples", "5"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.metrics_frequency", "10"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.metrics_prefix", "prefix"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.min_replicas_max_lag", "15"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.monitoring_instance_id", "mid"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.notify_keyspace_events", "Ex"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.syslog.#", "1"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.syslog.0", "syslog.example.com:123"),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.tls_protocols", "TLSv1.2"),
 
 					// Credential data
 					resource.TestCheckResourceAttrPair(
@@ -208,7 +241,7 @@ func TestAccRedisResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfigWithUpdate(),
+				Config: resourceConfig(map[string]string{"sgw_acl": instanceResource["sgw_acl_valid2"]}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "project_id", instanceResource["project_id"]),
@@ -217,7 +250,7 @@ func TestAccRedisResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "plan_name", instanceResource["plan_name"]),
 					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "name", instanceResource["name"]),
-					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl_valid"]),
+					resource.TestCheckResourceAttr("stackit_redis_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl_valid2"]),
 				),
 			},
 			// Deletion is done by the framework implicitly

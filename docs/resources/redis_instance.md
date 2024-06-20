@@ -19,7 +19,10 @@ resource "stackit_redis_instance" "example" {
   version    = "10"
   plan_name  = "example-plan-name"
   parameters = {
-    sgw_acl = "x.x.x.x/x,y.y.y.y/y"
+    sgw_acl                 = "x.x.x.x/x,y.y.y.y/y"
+    enable_monitoring       = false
+    down_after_milliseconds = 30000
+    syslog                  = ["syslog.example.com:514"]
   }
 }
 ```
@@ -54,4 +57,25 @@ resource "stackit_redis_instance" "example" {
 
 Optional:
 
-- `sgw_acl` (String)
+- `down_after_milliseconds` (Number) The number of milliseconds after which the instance is considered down.
+- `enable_monitoring` (Boolean) Enable monitoring.
+- `failover_timeout` (Number) The failover timeout in milliseconds.
+- `graphite` (String) Graphite server URL (host and port). If set, monitoring with Graphite will be enabled.
+- `lazyfree_lazy_eviction` (String) The lazy eviction enablement (yes or no).
+- `lazyfree_lazy_expire` (String) The lazy expire enablement (yes or no).
+- `lua_time_limit` (Number) The Lua time limit.
+- `max_disk_threshold` (Number) The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.
+- `maxclients` (Number) The maximum number of clients.
+- `maxmemory_policy` (String) The policy to handle the maximum memory (volatile-lru, noeviction, etc).
+- `maxmemory_samples` (Number) The maximum memory samples.
+- `metrics_frequency` (Number) The frequency in seconds at which metrics are emitted.
+- `metrics_prefix` (String) The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key
+- `min_replicas_max_lag` (Number) The minimum replicas maximum lag.
+- `monitoring_instance_id` (String) The monitoring instance ID.
+- `notify_keyspace_events` (String) The notify keyspace events.
+- `sgw_acl` (String) Comma separated list of IP networks in CIDR notation which are allowed to access this instance.
+- `snapshot` (String) The snapshot configuration.
+- `syslog` (List of String) List of syslog servers to send logs to.
+- `tls_ciphers` (List of String) List of TLS ciphers to use.
+- `tls_ciphersuites` (String) TLS cipher suites to use.
+- `tls_protocols` (String) TLS protocol to use.
