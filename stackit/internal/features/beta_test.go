@@ -2,55 +2,11 @@ package features
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
-
-func TestBetaFeatureFlagEnabled(t *testing.T) {
-	tests := []struct {
-		description string
-		data        *core.ProviderData
-		expected    bool
-	}{
-		{
-			description: "Feature flag is enabled",
-			data: &core.ProviderData{
-				EnableBetaResources: true,
-			},
-			expected: true,
-		},
-		{
-			description: "Feature flag is disabled",
-			data: &core.ProviderData{
-				EnableBetaResources: false,
-			},
-			expected: false,
-		},
-		{
-			description: "Feature flag is not set",
-			data:        &core.ProviderData{},
-			expected:    false,
-		},
-		{
-			description: "Provider data is nil",
-			data:        nil,
-			expected:    false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.description, func(t *testing.T) {
-			result := BetaFeatureFlagEnabled(tt.data)
-
-			if result != tt.expected {
-				t.Fatalf("Expected %t, got %t", tt.expected, result)
-			}
-		})
-	}
-}
 
 func TestBetaResourcesEnabled(t *testing.T) {
 	tests := []struct {
@@ -190,15 +146,8 @@ func TestBetaResourcesEnabled(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			var err error
-			var lastEnv string
-			var envWasSet bool
 			if tt.envSet {
-				lastEnv, envWasSet = os.LookupEnv("STACKIT_TF_ENABLE_BETA_RESOURCES")
-				err = os.Setenv("STACKIT_TF_ENABLE_BETA_RESOURCES", tt.envValue)
-				if err != nil {
-					t.Fatalf("Error setting environment variable: %s", err)
-				}
+				t.Setenv("STACKIT_TF_ENABLE_BETA_RESOURCES", tt.envValue)
 			}
 			diags := diag.Diagnostics{}
 
@@ -212,17 +161,6 @@ func TestBetaResourcesEnabled(t *testing.T) {
 			}
 			if !tt.expectWarn && diags.WarningsCount() > 0 {
 				t.Fatalf("Expected no warning, got %d", diags.WarningsCount())
-			}
-
-			if tt.envSet {
-				if envWasSet {
-					err = os.Setenv("STACKIT_TF_ENABLE_BETA_RESOURCES", lastEnv)
-				} else {
-					err = os.Unsetenv("STACKIT_TF_ENABLE_BETA_RESOURCES")
-				}
-				if err != nil {
-					t.Fatalf("Error setting environment variable to previous value: %s", err)
-				}
 			}
 		})
 	}
@@ -249,14 +187,16 @@ func TestCheckBetaResourcesEnabled(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			lastEnv, envWasSet := os.LookupEnv("STACKIT_TF_ENABLE_BETA_RESOURCES")
-			err := os.Unsetenv("STACKIT_TF_ENABLE_BETA_RESOURCES")
-			if err != nil {
-				t.Fatalf("Error setting environment variable: %s", err)
+			var envValue string
+			if tt.betaEnabled {
+				envValue = "true"
+			} else {
+				envValue = "false"
 			}
+			t.Setenv("STACKIT_TF_ENABLE_BETA_RESOURCES", envValue)
 
 			diags := diag.Diagnostics{}
-			CheckBetaResourcesEnabled(context.Background(), &core.ProviderData{EnableBetaResources: tt.betaEnabled}, &diags, "test")
+			CheckBetaResourcesEnabled(context.Background(), &core.ProviderData{}, &diags, "test")
 
 			if tt.expectError && diags.ErrorsCount() == 0 {
 				t.Fatalf("Expected error, got none")
@@ -270,15 +210,6 @@ func TestCheckBetaResourcesEnabled(t *testing.T) {
 			}
 			if !tt.expectWarn && diags.WarningsCount() > 0 {
 				t.Fatalf("Expected no warning, got %d", diags.WarningsCount())
-			}
-
-			if envWasSet {
-				err = os.Setenv("STACKIT_TF_ENABLE_BETA_RESOURCES", lastEnv)
-			} else {
-				err = os.Unsetenv("STACKIT_TF_ENABLE_BETA_RESOURCES")
-			}
-			if err != nil {
-				t.Fatalf("Error setting environment variable to previous value: %s", err)
 			}
 		})
 	}
