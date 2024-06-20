@@ -34,7 +34,7 @@ type ProviderData struct {
 	SecretsManagerCustomEndpoint  string
 	SQLServerFlexCustomEndpoint   string
 	SKECustomEndpoint             string
-	EnableBeta                    bool
+	EnableBetaResources           bool
 }
 
 // DiagsToError Converts TF diagnostics' errors into an error with a human-readable description.
