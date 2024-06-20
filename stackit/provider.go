@@ -103,6 +103,7 @@ type providerModel struct {
 	ResourceManagerCustomEndpoint types.String `tfsdk:"resourcemanager_custom_endpoint"`
 	TokenCustomEndpoint           types.String `tfsdk:"token_custom_endpoint"`
 	JWKSCustomEndpoint            types.String `tfsdk:"jwks_custom_endpoint"`
+	EnableBeta                    types.Bool   `tfsdk:"enable_beta"`
 }
 
 // Schema defines the provider-level schema for configuration data.
@@ -135,6 +136,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"ske_custom_endpoint":             "Custom endpoint for the Kubernetes Engine (SKE) service",
 		"token_custom_endpoint":           "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
 		"jwks_custom_endpoint":            "Custom endpoint for the jwks API, which is used to get the json web key sets (jwks) to validate tokens when using the key flow",
+		"enable_beta":                     "Enable beta resources. Default is false.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -248,6 +250,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Description:        descriptions["jwks_custom_endpoint"],
 				DeprecationMessage: "Validation using JWKS was removed, for being redundant with token validation done in the APIs. This field has no effect, and will be removed in a later update",
 			},
+			"enable_beta": schema.BoolAttribute{
+				Optional:    true,
+				Description: descriptions["enable_beta"],
+			},
 		},
 	}
 }
@@ -343,6 +349,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	}
 	if !(providerConfig.TokenCustomEndpoint.IsUnknown() || providerConfig.TokenCustomEndpoint.IsNull()) {
 		sdkConfig.TokenCustomUrl = providerConfig.TokenCustomEndpoint.ValueString()
+	}
+	if !(providerConfig.EnableBeta.IsUnknown() || providerConfig.EnableBeta.IsNull()) {
+		providerData.EnableBeta = providerConfig.EnableBeta.ValueBool()
 	}
 	roundTripper, err := sdkauth.SetupAuth(sdkConfig)
 	if err != nil {
