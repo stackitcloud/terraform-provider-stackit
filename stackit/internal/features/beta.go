@@ -10,7 +10,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
-// BetaResourcesEnabled returns whether this provider has BETA functionality enabled.
+// BetaResourcesEnabled returns whether this provider has beta functionality enabled.
 //
 // In order of precedence, beta functionality can be managed by:
 //   - Environment Variable `STACKIT_TF_ENABLE_BETA_RESOURCES` - `true` is enabled, `false` is disabled.
@@ -24,7 +24,7 @@ func BetaResourcesEnabled(ctx context.Context, data *core.ProviderData, diags *d
 		if strings.EqualFold(value, "false") {
 			return false
 		}
-		warnDetails := fmt.Sprintf(`The value of the environment variable that enables BETA functionality must be either "true" or "false", got %q.
+		warnDetails := fmt.Sprintf(`The value of the environment variable that enables beta functionality must be either "true" or "false", got %q.
 Defaulting to the provider feature flag.`, value)
 		core.LogAndAddWarning(ctx, diags, "Invalid value for STACKIT_TF_ENABLE_BETA_RESOURCES environment variable.", warnDetails)
 	}
@@ -35,9 +35,9 @@ Defaulting to the provider feature flag.`, value)
 	return data.EnableBetaResources
 }
 
-// CheckBetaResourcesEnabled is a helper function to log and add a warning or error if the BETA functionality is not enabled.
+// CheckBetaResourcesEnabled is a helper function to log and add a warning or error if the beta functionality is not enabled.
 //
-// Should be called in the Configure method of a BETA resource.
+// Should be called in the Configure method of a beta resource.
 // Then, check for Errors in the diags using the diags.HasError() method.
 func CheckBetaResourcesEnabled(ctx context.Context, data *core.ProviderData, diags *diag.Diagnostics, resourceName string) {
 	if !BetaResourcesEnabled(ctx, data, diags) {

@@ -69,15 +69,15 @@ func LogAndAddWarning(ctx context.Context, diags *diag.Diagnostics, summary, det
 }
 
 func LogAndAddWarningBeta(ctx context.Context, diags *diag.Diagnostics, name string) {
-	warnTitle := fmt.Sprintf("The resource %q is in BETA", name)
-	warnContent := fmt.Sprintf("The resource %q is in BETA and may be subject to breaking changes in the future. Use with caution.", name)
+	warnTitle := fmt.Sprintf("The resource %q is in beta", name)
+	warnContent := fmt.Sprintf("The resource %q is in beta and may be subject to breaking changes in the future. Use with caution.", name)
 	tflog.Warn(ctx, fmt.Sprintf("%s | %s", warnTitle, warnContent))
 	diags.AddWarning(warnTitle, warnContent)
 }
 
 func LogAndAddErrorBeta(ctx context.Context, diags *diag.Diagnostics, name string) {
-	errTitle := fmt.Sprintf("The resource %q is in BETA and BETA is not enabled", name)
-	errContent := fmt.Sprintf("The resource %q is in BETA and the BETA functionality is currently not enabled. Please refer to the documentation on how to enable the BETA functionality.", name)
+	errTitle := fmt.Sprintf("The resource %q is in beta and beta is not enabled", name)
+	errContent := fmt.Sprintf(`The resource %q is in beta and the beta functionality is currently not enabled. To enable it, set the environment variable STACKIT_TF_ENABLE_BETA_RESOURCES to "true" or set the "enable_beta_resources" provider field to true.`, name)
 	tflog.Error(ctx, fmt.Sprintf("%s | %s", errTitle, errContent))
 	diags.AddError(errTitle, errContent)
 }
