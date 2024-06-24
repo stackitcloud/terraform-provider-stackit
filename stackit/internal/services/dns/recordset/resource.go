@@ -116,7 +116,8 @@ func (r *recordSetResource) Configure(ctx context.Context, req resource.Configur
 // Schema defines the schema for the resource.
 func (r *recordSetResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "DNS Record Set Resource schema.",
+		Description:         "DNS Record Set Resource schema.",
+		MarkdownDescription: features.AddBetaDescription("DNS Record Set Resource schema."),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`zone_id`,`record_set_id`\".",
