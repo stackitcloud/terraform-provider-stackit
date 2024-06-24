@@ -3,12 +3,12 @@
 page_title: "stackit_sqlserverflex_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  MongoDB Flex instance data source schema. Must have a region specified in the provider configuration.
+  SQLServer Flex instance data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_sqlserverflex_instance (Data Source)
 
-MongoDB Flex instance data source schema. Must have a `region` specified in the provider configuration.
+SQLServer Flex instance data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
@@ -24,17 +24,17 @@ data "stackit_sqlserverflex_instance" "example" {
 
 ### Required
 
-- `instance_id` (String) ID of the MongoDB Flex instance.
+- `instance_id` (String) ID of the SQLServer Flex instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 
 ### Read-Only
 
-- `acl` (List of String) The Access Control List (ACL) for the MongoDB Flex instance.
+- `acl` (List of String) The Access Control List (ACL) for the SQLServer Flex instance.
 - `backup_schedule` (String) The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").
 - `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`instance_id`".
 - `name` (String) Instance name.
-- `options` (Attributes) Custom parameters for the MongoDB Flex instance. (see [below for nested schema](#nestedatt--options))
+- `options` (Attributes) Custom parameters for the SQLServer Flex instance. (see [below for nested schema](#nestedatt--options))
 - `replicas` (Number)
 - `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
 - `version` (String)
