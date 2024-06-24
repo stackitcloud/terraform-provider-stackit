@@ -46,3 +46,8 @@ func CheckBetaResourcesEnabled(ctx context.Context, data *core.ProviderData, dia
 	}
 	core.LogAndAddWarningBeta(ctx, diags, resourceName)
 }
+
+func AddBetaDescription(description string) string {
+	// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
+	return fmt.Sprintf("%s\n\n!> This resource is in beta and may be subject to breaking changes in the future. Use with caution.", description)
+}
