@@ -9,9 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -36,6 +35,13 @@ var instanceResource = map[string]string{
 	"backup_schedule_updated": "00 12 * * *",
 }
 
+// User resource data
+var userResource = map[string]string{
+	"username":   fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha)),
+	"role":       "##STACKIT_LoginManager##",
+	"project_id": instanceResource["project_id"],
+}
+
 func configResources(backupSchedule string) string {
 	return fmt.Sprintf(`
 				%s
@@ -58,6 +64,13 @@ func configResources(backupSchedule string) string {
 					}
 					backup_schedule = "%s"
 				}
+
+                resource "stackit_sqlserverflex_user" "user" {
+					project_id = stackit_sqlserverflex_instance.instance.project_id
+					instance_id = stackit_sqlserverflex_instance.instance.instance_id
+					username = "%s"
+					roles = ["%s"]
+				}
 				`,
 		testutil.SQLServerFlexProviderConfig(),
 		instanceResource["project_id"],
@@ -70,6 +83,8 @@ func configResources(backupSchedule string) string {
 		instanceResource["version"],
 		instanceResource["options_retention_days"],
 		backupSchedule,
+		userResource["username"],
+		userResource["role"],
 	)
 }
 
@@ -98,6 +113,17 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "options.retention_days", instanceResource["options_retention_days"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
+					// User
+					resource.TestCheckResourceAttrPair(
+						"stackit_sqlserverflex_user.user", "project_id",
+						"stackit_sqlserverflex_instance.instance", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_sqlserverflex_user.user", "instance_id",
+						"stackit_sqlserverflex_instance.instance", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_user.user", "user_id"),
+					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_user.user", "password"),
 				),
 			},
 			// data source
@@ -108,6 +134,12 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 					data "stackit_sqlserverflex_instance" "instance" {
 						project_id     = stackit_sqlserverflex_instance.instance.project_id
 						instance_id    = stackit_sqlserverflex_instance.instance.instance_id
+					}
+
+					data "stackit_sqlserverflex_user" "user" {
+						project_id     = stackit_sqlserverflex_instance.instance.project_id
+						instance_id    = stackit_sqlserverflex_instance.instance.instance_id
+						user_id        = stackit_sqlserverflex_user.user.user_id
 					}
 					`,
 					configResources(instanceResource["backup_schedule"]),
@@ -124,6 +156,11 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 						"data.stackit_sqlserverflex_instance.instance", "instance_id",
 						"stackit_sqlserverflex_instance.instance", "instance_id",
 					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_sqlserverflex_user.user", "instance_id",
+						"stackit_sqlserverflex_user.user", "instance_id",
+					),
+
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "acl.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "acl.0", instanceResource["acl"]),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "flavor.id", instanceResource["flavor_id"]),
@@ -133,6 +170,15 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "replicas", instanceResource["replicas"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "options.retention_days", instanceResource["options_retention_days"]),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
+
+					// User data
+					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "project_id", userResource["project_id"]),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_user.user", "user_id"),
+					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "username", userResource["username"]),
+					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "roles.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "roles.0", userResource["role"]),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_user.user", "host"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_user.user", "port"),
 				),
 			},
 			// Import
@@ -162,6 +208,28 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 					}
 					return nil
 				},
+			},
+			{
+				ResourceName: "stackit_sqlserverflex_user.user",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_sqlserverflex_user.user"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_sqlserverflex_user.user")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					userId, ok := r.Primary.Attributes["user_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute user_id")
+					}
+
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, userId), nil
+				},
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"password"},
 			},
 			// Update
 			{

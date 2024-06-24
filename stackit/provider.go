@@ -44,6 +44,7 @@ import (
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
 	skeProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/project"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
+	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
 
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
@@ -398,6 +399,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		secretsManagerInstance.NewInstanceDataSource,
 		secretsManagerUser.NewUserDataSource,
 		sqlServerFlexInstance.NewInstanceDataSource,
+		sqlServerFlexUser.NewUserDataSource,
 		skeProject.NewProjectDataSource,
 		skeCluster.NewClusterDataSource,
 	}
@@ -438,6 +440,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		secretsManagerInstance.NewInstanceResource,
 		secretsManagerUser.NewUserResource,
 		sqlServerFlexInstance.NewInstanceResource,
+		sqlServerFlexUser.NewUserResource,
 		skeProject.NewProjectResource,
 		skeCluster.NewClusterResource,
 		skeKubeconfig.NewKubeconfigResource,
