@@ -41,7 +41,6 @@ type Model struct {
 	ProjectId  types.String `tfsdk:"project_id"`
 	Username   types.String `tfsdk:"username"`
 	Roles      types.Set    `tfsdk:"roles"`
-	Database   types.String `tfsdk:"database"`
 	Password   types.String `tfsdk:"password"`
 	Host       types.String `tfsdk:"host"`
 	Port       types.Int64  `tfsdk:"port"`
@@ -106,7 +105,6 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 		"user_id":     "User ID.",
 		"instance_id": "ID of the SQLServer Flex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"database":    "Database name.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -162,7 +160,8 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			},
 			"roles": schema.SetAttribute{
 				ElementType: types.StringType,
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.Set{
 					setplanmodifier.RequiresReplace(),
 				},
@@ -170,12 +169,6 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 					setvalidator.ValueStringsAre(
 						stringvalidator.OneOf("##STACKIT_LoginManager##", "##STACKIT_DatabaseManager##"),
 					),
-				},
-			},
-			"database": schema.StringAttribute{
-				Optional: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"password": schema.StringAttribute{
@@ -441,13 +434,9 @@ func toCreatePayload(model *Model, roles []sqlserverflex.Role) (*sqlserverflex.C
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	if roles == nil {
-		return nil, fmt.Errorf("nil roles")
-	}
 
 	return &sqlserverflex.CreateUserPayload{
-		Roles:    &roles,
 		Username: conversion.StringValueToPointer(model.Username),
-		Database: conversion.StringValueToPointer(model.Database),
+		Roles:    &roles,
 	}, nil
 }

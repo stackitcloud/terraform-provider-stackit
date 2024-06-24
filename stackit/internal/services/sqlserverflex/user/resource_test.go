@@ -32,7 +32,6 @@ func TestMapFieldsCreate(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 				Username:   types.StringNull(),
 				Roles:      types.SetNull(types.StringType),
-				Database:   types.StringNull(),
 				Password:   types.StringValue(""),
 				Host:       types.StringNull(),
 				Port:       types.Int64Null(),
@@ -82,7 +81,6 @@ func TestMapFieldsCreate(t *testing.T) {
 					Password: utils.Ptr(""),
 					Host:     nil,
 					Port:     utils.Ptr(int64(2123456789)),
-					Database: nil,
 				},
 			},
 			Model{
@@ -95,7 +93,6 @@ func TestMapFieldsCreate(t *testing.T) {
 				Password:   types.StringValue(""),
 				Host:       types.StringNull(),
 				Port:       types.Int64Value(2123456789),
-				Database:   types.StringNull(),
 			},
 			true,
 		},
@@ -174,7 +171,6 @@ func TestMapFields(t *testing.T) {
 				Roles:      types.SetNull(types.StringType),
 				Host:       types.StringNull(),
 				Port:       types.Int64Null(),
-				Database:   types.StringNull(),
 			},
 			true,
 		},
@@ -217,7 +213,6 @@ func TestMapFields(t *testing.T) {
 					Username: nil,
 					Host:     nil,
 					Port:     utils.Ptr(int64(2123456789)),
-					Database: nil,
 				},
 			},
 			Model{
@@ -229,7 +224,6 @@ func TestMapFields(t *testing.T) {
 				Roles:      types.SetValueMust(types.StringType, []attr.Value{}),
 				Host:       types.StringNull(),
 				Port:       types.Int64Value(2123456789),
-				Database:   types.StringNull(),
 			},
 			true,
 		},
@@ -339,10 +333,15 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			"nil_roles",
-			&Model{},
-			nil,
-			nil,
-			false,
+			&Model{
+				Username: types.StringValue("username"),
+			},
+			[]sqlserverflex.Role{},
+			&sqlserverflex.CreateUserPayload{
+				Roles:    &[]sqlserverflex.Role{},
+				Username: utils.Ptr("username"),
+			},
+			true,
 		},
 	}
 	for _, tt := range tests {
