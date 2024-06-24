@@ -5,7 +5,7 @@ page_title: "Configuring Beta Resources in the STACKIT Terraform Provider"
 
 ### Overview
 
-This guide explains how to opt into beta resources within the STACKIT Terraform provider. Beta resources are new services and features from STACKIT that are still in development and do not yet have a stable API.
+This guide explains how to opt into beta resources within the STACKIT Terraform provider. Beta resources are new services and features from STACKIT that are still in development and might not yet have a stable API.
 
 Opting into beta functionality allows users to experiment with new features and services before their official release, without compromising the stability of other resources and the provider itself. However, it's important to remember that beta resources may not be as stable as fully released counterparts, so use them with caution and provide feedback to help improve these services.
 
