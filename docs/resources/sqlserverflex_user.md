@@ -18,7 +18,6 @@ resource "stackit_sqlserverflex_user" "example" {
   instance_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   username    = "username"
   roles       = ["role"]
-  database    = "database"
 }
 ```
 
