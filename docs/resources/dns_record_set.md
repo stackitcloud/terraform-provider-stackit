@@ -4,11 +4,14 @@ page_title: "stackit_dns_record_set Resource - stackit"
 subcategory: ""
 description: |-
   DNS Record Set Resource schema.
+  !> This resource is in beta and may be subject to breaking changes in the future. Use with caution.
 ---
 
 # stackit_dns_record_set (Resource)
 
 DNS Record Set Resource schema.
+
+!> This resource is in beta and may be subject to breaking changes in the future. Use with caution.
 
 ## Example Usage
 
