@@ -27,8 +27,10 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.15.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.8.0
+	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v0.16.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.2.0
+	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.18.0
 )
 

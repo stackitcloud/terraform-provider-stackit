@@ -176,6 +176,8 @@ github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.9.0 h1:qCbvGq
 github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.9.0/go.mod h1:p16qz/pAW8b1gEhqMpIgJfutRPeDPqQLlbVGyCo3f8o=
 github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.8.0 h1:pJBG455kmtbQFpCxcBfBK8wOuEnmsMv3h90LFcdj3q0=
 github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.8.0/go.mod h1:LX0Mcyr7/QP77zf7e05fHCJO38RMuTxr7nEDUDZ3oPQ=
+github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.1.0 h1:fYCBNvh4tqE+DXYDfbJEjC3n/I78zTZajdcPTPB/yig=
+github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.1.0/go.mod h1:ZYI3wj/NnhhWi25ugbdcniwnY/7mF6zN582c5HPe00o=
 github.com/stackitcloud/stackit-sdk-go/services/ske v0.16.0 h1:trrJuRMzgXu6fiiMZiUx6+A1FNKEFhA1vGq5cr5Qn3U=
 github.com/stackitcloud/stackit-sdk-go/services/ske v0.16.0/go.mod h1:0fFs4R7kg+gU7FNAIzzFvlCZJz6gyZ8CFhbK3eSrAwQ=
 github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.2.0 h1:aIXxXx6u4+6C02MPb+hdItigeKeen7m+hEEG+Ej9sNs=
@@ -184,6 +186,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
+github.com/teambition/rrule-go v1.8.2 h1:lIjpjvWTj9fFUZCmuoVDrKVOtdiyzbzc93qTmRVe/J8=
+github.com/teambition/rrule-go v1.8.2/go.mod h1:Ieq5AbrKGciP1V//Wq8ktsTXwSwJHDD5mD/wLBGl3p4=
 github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
 github.com/vmihailenco/msgpack v4.0.4+incompatible h1:dSLoQfGFAo3F6OoNhwUmLwVgaUXK79GlxNBwueZn0xI=
 github.com/vmihailenco/msgpack v4.0.4+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=

@@ -33,6 +33,7 @@ type ProviderData struct {
 	ResourceManagerCustomEndpoint string
 	SecretsManagerCustomEndpoint  string
 	SQLServerFlexCustomEndpoint   string
+	ServerBackupCustomEndpoint    string
 	SKECustomEndpoint             string
 	EnableBetaResources           bool
 }

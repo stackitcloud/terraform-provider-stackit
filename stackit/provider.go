@@ -40,6 +40,7 @@ import (
 	resourceManagerProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/project"
 	secretsManagerInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/instance"
 	secretsManagerUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/user"
+	serverBackupSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/schedule"
 	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
 	skeProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/project"
@@ -101,6 +102,7 @@ type providerModel struct {
 	SecretsManagerCustomEndpoint  types.String `tfsdk:"secretsmanager_custom_endpoint"`
 	SQLServerFlexCustomEndpoint   types.String `tfsdk:"sqlserverflex_custom_endpoint"`
 	SKECustomEndpoint             types.String `tfsdk:"ske_custom_endpoint"`
+	ServerBackupCustomEndpoint    types.String `tfsdk:"server_backup_custom_endpoint"`
 	ResourceManagerCustomEndpoint types.String `tfsdk:"resourcemanager_custom_endpoint"`
 	TokenCustomEndpoint           types.String `tfsdk:"token_custom_endpoint"`
 	JWKSCustomEndpoint            types.String `tfsdk:"jwks_custom_endpoint"`
@@ -131,6 +133,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"postgresql_custom_endpoint":      "Custom endpoint for the PostgreSQL service",
 		"postgresflex_custom_endpoint":    "Custom endpoint for the PostgresFlex service",
 		"redis_custom_endpoint":           "Custom endpoint for the Redis service",
+		"server_backup_custom_endpoint":   "Custom endpoint for the Server Backup service",
 		"resourcemanager_custom_endpoint": "Custom endpoint for the Resource Manager service",
 		"secretsmanager_custom_endpoint":  "Custom endpoint for the Secrets Manager service",
 		"sqlserverflex_custom_endpoint":   "Custom endpoint for the SQL Server Flex service",
@@ -241,6 +244,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"ske_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["ske_custom_endpoint"],
+			},
+			"server_backup_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["server_backup_custom_endpoint"],
 			},
 			"token_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -400,6 +407,8 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		secretsManagerUser.NewUserDataSource,
 		sqlServerFlexInstance.NewInstanceDataSource,
 		sqlServerFlexUser.NewUserDataSource,
+		serverBackupSchedule.NewScheduleDataSource,
+		serverBackupSchedule.NewSchedulesDataSource,
 		skeProject.NewProjectDataSource,
 		skeCluster.NewClusterDataSource,
 	}
@@ -441,6 +450,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		secretsManagerUser.NewUserResource,
 		sqlServerFlexInstance.NewInstanceResource,
 		sqlServerFlexUser.NewUserResource,
+		serverBackupSchedule.NewScheduleResource,
 		skeProject.NewProjectResource,
 		skeCluster.NewClusterResource,
 		skeKubeconfig.NewKubeconfigResource,

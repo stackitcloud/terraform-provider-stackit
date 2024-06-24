@@ -27,6 +27,9 @@ generate-docs:
 build:
 	@go build -o bin/terraform-provider-stackit
 
+fmt:
+	@gofmt -s -w .
+
 # TEST
 test:
 	@echo "Running tests for the terraform provider"
