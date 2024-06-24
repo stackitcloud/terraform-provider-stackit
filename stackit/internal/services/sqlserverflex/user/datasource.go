@@ -32,7 +32,6 @@ type DataSourceModel struct {
 	ProjectId  types.String `tfsdk:"project_id"`
 	Username   types.String `tfsdk:"username"`
 	Roles      types.Set    `tfsdk:"roles"`
-	Database   types.String `tfsdk:"database"`
 	Host       types.String `tfsdk:"host"`
 	Port       types.Int64  `tfsdk:"port"`
 }
@@ -135,9 +134,6 @@ func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				ElementType: types.StringType,
 				Computed:    true,
 			},
-			"database": schema.StringAttribute{
-				Computed: true,
-			},
 			"host": schema.StringAttribute{
 				Computed: true,
 			},
@@ -230,7 +226,6 @@ func mapDataSourceFields(userResp *sqlserverflex.GetUserResponse, model *DataSou
 		}
 		model.Roles = rolesSet
 	}
-	model.Database = types.StringPointerValue(user.Database)
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
 	return nil
