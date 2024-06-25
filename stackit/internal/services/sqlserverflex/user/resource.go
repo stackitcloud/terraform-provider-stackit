@@ -371,9 +371,7 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model) e
 	}
 	model.Password = types.StringValue(*user.Password)
 
-	if user.Roles == nil && model.Roles.IsUnknown() {
-		model.Roles = types.SetNull(types.StringType)
-	} else {
+	if user.Roles != nil {
 		roles := []attr.Value{}
 		for _, role := range *user.Roles {
 			roles = append(roles, types.StringValue(role))
@@ -384,6 +382,11 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model) e
 		}
 		model.Roles = rolesSet
 	}
+
+	if model.Roles.IsUnknown() {
+		model.Roles = types.SetNull(types.StringType)
+	}
+
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
 	return nil
@@ -417,9 +420,7 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model) error {
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)
 
-	if user.Roles == nil && model.Roles.IsUnknown() {
-		model.Roles = types.SetNull(types.StringType)
-	} else {
+	if user.Roles != nil {
 		roles := []attr.Value{}
 		for _, role := range *user.Roles {
 			roles = append(roles, types.StringValue(role))
@@ -430,6 +431,11 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model) error {
 		}
 		model.Roles = rolesSet
 	}
+
+	if model.Roles.IsUnknown() {
+		model.Roles = types.SetNull(types.StringType)
+	}
+
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
 	return nil
