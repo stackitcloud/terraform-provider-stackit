@@ -137,7 +137,7 @@ func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			"roles": schema.SetAttribute{
 				Description: descriptions["roles"],
 				ElementType: types.StringType,
-				Optional:    true,
+				Computed:    true,
 			},
 			"host": schema.StringAttribute{
 				Computed: true,
