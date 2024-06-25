@@ -365,7 +365,7 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model) e
 	}
 	model.Password = types.StringValue(*user.Password)
 
-	if user.Roles == nil {
+	if user.Roles == nil && model.Roles.IsUnknown() {
 		model.Roles = types.SetNull(types.StringType)
 	} else {
 		roles := []attr.Value{}
@@ -411,7 +411,7 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model) error {
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)
 
-	if user.Roles == nil {
+	if user.Roles == nil && model.Roles.IsUnknown() {
 		model.Roles = types.SetNull(types.StringType)
 	} else {
 		roles := []attr.Value{}
