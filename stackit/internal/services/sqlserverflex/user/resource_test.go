@@ -23,6 +23,9 @@ func TestMapFieldsCreate(t *testing.T) {
 				Item: &sqlserverflex.User{
 					Id:       utils.Ptr("uid"),
 					Password: utils.Ptr(""),
+					Roles: &[]string{
+						"role_1",
+					},
 				},
 			},
 			Model{
@@ -31,10 +34,12 @@ func TestMapFieldsCreate(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Username:   types.StringNull(),
-				Roles:      types.SetNull(types.StringType),
-				Password:   types.StringValue(""),
-				Host:       types.StringNull(),
-				Port:       types.Int64Null(),
+				Roles: types.SetValueMust(types.StringType, []attr.Value{
+					types.StringValue("role_1"),
+				}),
+				Password: types.StringValue(""),
+				Host:     types.StringNull(),
+				Port:     types.Int64Null(),
 			},
 			true,
 		},
@@ -160,7 +165,11 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values",
 			&sqlserverflex.GetUserResponse{
-				Item: &sqlserverflex.InstanceResponseUser{},
+				Item: &sqlserverflex.InstanceResponseUser{
+					Roles: &[]string{
+						"role_1",
+					},
+				},
 			},
 			Model{
 				Id:         types.StringValue("pid,iid,uid"),
@@ -168,9 +177,11 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Username:   types.StringNull(),
-				Roles:      types.SetNull(types.StringType),
-				Host:       types.StringNull(),
-				Port:       types.Int64Null(),
+				Roles: types.SetValueMust(types.StringType, []attr.Value{
+					types.StringValue("role_1"),
+				}),
+				Host: types.StringNull(),
+				Port: types.Int64Null(),
 			},
 			true,
 		},
