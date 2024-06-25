@@ -259,7 +259,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Deprecated, always error
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Resources of this type will stop working after that. Use stackit_postgresflex_instance instead.")
 }
 
