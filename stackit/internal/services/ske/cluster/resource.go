@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -260,16 +262,8 @@ func (r *clusterResource) Configure(ctx context.Context, req resource.ConfigureR
 
 // Schema defines the schema for the resource.
 func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
-		"main": "SKE Cluster Resource schema. Must have a `region` specified in the provider configuration.",
-		"node_pools_plan_note": "When updating `node_pools` of a `stackit_ske_cluster`, the Terraform plan might appear incorrect as it matches the node pools by index rather than by name. " +
-			"However, the SKE API correctly identifies node pools by name and applies the intended changes. Please review your changes carefully to ensure the correct configuration will be applied.",
-	}
-
 	resp.Schema = schema.Schema{
-		Description: fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["node_pools_plan_note"]),
-		// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
-		MarkdownDescription: fmt.Sprintf("%s\n\n-> %s", descriptions["main"], descriptions["node_pools_plan_note"]),
+		Description: "SKE Cluster Resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`name`\".",
@@ -336,6 +330,10 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"node_pools": schema.ListNestedAttribute{
 				Description: "One or more `node_pool` block as defined below.",
 				Required:    true,
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+					listvalidator.SizeAtMost(10),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
@@ -354,10 +352,18 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						"minimum": schema.Int64Attribute{
 							Description: "Minimum number of nodes in the pool.",
 							Required:    true,
+							Validators: []validator.Int64{
+								int64validator.AtLeast(1),
+								int64validator.AtMost(100),
+							},
 						},
 						"maximum": schema.Int64Attribute{
 							Description: "Maximum number of nodes in the pool.",
 							Required:    true,
+							Validators: []validator.Int64{
+								int64validator.AtLeast(1),
+								int64validator.AtMost(100),
+							},
 						},
 						"max_surge": schema.Int64Attribute{
 							Description: "Maximum number of additional VMs that are created during an update.",
@@ -365,6 +371,10 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Computed:    true,
 							PlanModifiers: []planmodifier.Int64{
 								int64planmodifier.UseStateForUnknown(),
+							},
+							Validators: []validator.Int64{
+								int64validator.AtLeast(1),
+								int64validator.AtMost(10),
 							},
 						},
 						"max_unavailable": schema.Int64Attribute{
