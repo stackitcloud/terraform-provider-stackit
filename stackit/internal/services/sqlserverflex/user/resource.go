@@ -161,7 +161,6 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"roles": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []planmodifier.Set{
 					setplanmodifier.RequiresReplace(),
 				},
