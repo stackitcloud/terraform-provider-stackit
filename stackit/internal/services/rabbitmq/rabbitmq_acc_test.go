@@ -28,11 +28,30 @@ var instanceResource = map[string]string{
 	"sgw_acl_valid":   "192.168.0.0/16",
 }
 
-func resourceConfig(acls *string) string {
-	aclsLine := ""
-	if acls != nil {
-		aclsLine = fmt.Sprintf(`sgw_acl = %q`, *acls)
+func parametersConfig(params map[string]string) string {
+	nonStringParams := []string{
+		"consumer_timeout",
+		"enable_monitoring",
+		"max_disk_threshold",
+		"metrics_frequency",
+		"plugins",
+		"roles",
+		"syslog",
+		"tls_ciphers",
 	}
+	parameters := "parameters = {"
+	for k, v := range params {
+		if utils.Contains(nonStringParams, k) {
+			parameters += fmt.Sprintf("%s = %s\n", k, v)
+		} else {
+			parameters += fmt.Sprintf("%s = %q\n", k, v)
+		}
+	}
+	parameters += "\n}"
+	return parameters
+}
+
+func resourceConfig(params map[string]string) string {
 	return fmt.Sprintf(`
 				%s
 
@@ -41,10 +60,7 @@ func resourceConfig(acls *string) string {
 					name       = "%s"
 					plan_name  = "%s"
  				 	version    = "%s"
-					parameters = {
-						%s
-						metrics_frequency = "%s"
-					}
+					%s
 				}
 
 				%s
@@ -54,34 +70,7 @@ func resourceConfig(acls *string) string {
 		instanceResource["name"],
 		instanceResource["plan_name"],
 		instanceResource["version"],
-		aclsLine,
-		instanceResource["metrics_frequency"],
-		resourceConfigCredential(),
-	)
-}
-
-func resourceConfigWithUpdate() string {
-	return fmt.Sprintf(`
-				%s
-
-				resource "stackit_rabbitmq_instance" "instance" {
-					project_id = "%s"
-					name    = "%s"
-					plan_name  = "%s"
- 				 	version    = "%s"
-					parameters = {
-						sgw_acl = "%s"
-					}
-				}
-
-				%s
-				`,
-		testutil.RabbitMQProviderConfig(),
-		instanceResource["project_id"],
-		instanceResource["name"],
-		instanceResource["plan_name"],
-		instanceResource["version"],
-		instanceResource["sgw_acl_valid"],
+		parametersConfig(params),
 		resourceConfigCredential(),
 	)
 }
@@ -103,12 +92,24 @@ func TestAccRabbitMQResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
-				Config:      resourceConfig(&acls),
+				Config:      resourceConfig(map[string]string{"sgw_acl": acls}),
 				ExpectError: regexp.MustCompile(`.*sgw_acl is invalid.*`),
 			},
 			// Creation
 			{
-				Config: resourceConfig(nil),
+				Config: resourceConfig(map[string]string{
+					"sgw_acl":            instanceResource["sgw_acl_valid"],
+					"consumer_timeout":   "1800000",
+					"enable_monitoring":  "true",
+					"graphite":           "graphite.example.com:2003",
+					"max_disk_threshold": "80",
+					"metrics_frequency":  "60",
+					"metrics_prefix":     "rabbitmq",
+					"plugins":            `["rabbitmq_federation"]`,
+					"roles":              `["administrator"]`,
+					"syslog":             `["syslog.example.com:514"]`,
+					"tls_ciphers":        `["TLS_AES_128_GCM_SHA256"]`,
+				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "project_id", instanceResource["project_id"]),
@@ -117,7 +118,23 @@ func TestAccRabbitMQResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "plan_name", instanceResource["plan_name"]),
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "name", instanceResource["name"]),
-					resource.TestCheckResourceAttrSet("stackit_rabbitmq_instance.instance", "parameters.sgw_acl"),
+
+					// Instance params data
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl_valid"]),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.consumer_timeout", "1800000"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.enable_monitoring", "true"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.graphite", "graphite.example.com:2003"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.max_disk_threshold", "80"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.metrics_frequency", "60"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.metrics_prefix", "rabbitmq"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.plugins.#", "1"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.plugins.0", "rabbitmq_federation"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.roles.#", "1"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.roles.0", "administrator"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.syslog.#", "1"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.syslog.0", "syslog.example.com:514"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.tls_ciphers.#", "1"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.tls_ciphers.0", "TLS_AES_128_GCM_SHA256"),
 
 					// Credential data
 					resource.TestCheckResourceAttrPair(
@@ -209,7 +226,7 @@ func TestAccRabbitMQResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfigWithUpdate(),
+				Config: resourceConfig(map[string]string{"sgw_acl": instanceResource["sgw_acl_valid"]}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "project_id", instanceResource["project_id"]),

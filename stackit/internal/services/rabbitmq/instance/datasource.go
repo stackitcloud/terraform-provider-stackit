@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -128,6 +129,46 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"parameters": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"sgw_acl": schema.StringAttribute{
+						Computed: true,
+					},
+					"consumer_timeout": schema.Int64Attribute{
+						Computed: true,
+					},
+					"enable_monitoring": schema.BoolAttribute{
+						Computed: true,
+					},
+					"graphite": schema.StringAttribute{
+						Computed: true,
+					},
+					"max_disk_threshold": schema.Int64Attribute{
+						Computed: true,
+					},
+					"metrics_frequency": schema.Int64Attribute{
+						Computed: true,
+					},
+					"metrics_prefix": schema.StringAttribute{
+						Computed: true,
+					},
+					"monitoring_instance_id": schema.StringAttribute{
+						Computed: true,
+					},
+					"plugins": schema.ListAttribute{
+						ElementType: types.StringType,
+						Computed:    true,
+					},
+					"roles": schema.ListAttribute{
+						ElementType: types.StringType,
+						Computed:    true,
+					},
+					"syslog": schema.ListAttribute{
+						ElementType: types.StringType,
+						Computed:    true,
+					},
+					"tls_ciphers": schema.ListAttribute{
+						ElementType: types.StringType,
+						Computed:    true,
+					},
+					"tls_protocols": schema.StringAttribute{
 						Computed: true,
 					},
 				},
