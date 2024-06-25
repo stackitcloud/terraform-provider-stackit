@@ -105,6 +105,9 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 		"user_id":     "User ID.",
 		"instance_id": "ID of the SQLServer Flex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
+		"username":    "Username of the SQLServer Flex instance.",
+		"roles":       "Database access levels for the user. It can have following values: [\"##STACKIT_LoginManager##\", \"##STACKIT_DatabaseManager##\"]",
+		"password":    "Password of the user account.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -152,13 +155,15 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"username": schema.StringAttribute{
-				Required: true,
+				Description: descriptions["username"],
+				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"roles": schema.SetAttribute{
+				Description: descriptions["roles"],
 				ElementType: types.StringType,
 				Optional:    true,
 				PlanModifiers: []planmodifier.Set{
@@ -171,8 +176,9 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"password": schema.StringAttribute{
-				Computed:  true,
-				Sensitive: true,
+				Description: descriptions["password"],
+				Computed:    true,
+				Sensitive:   true,
 			},
 			"host": schema.StringAttribute{
 				Computed: true,
