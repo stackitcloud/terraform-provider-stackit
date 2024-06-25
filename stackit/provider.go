@@ -137,7 +137,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"ske_custom_endpoint":             "Custom endpoint for the Kubernetes Engine (SKE) service",
 		"token_custom_endpoint":           "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
 		"jwks_custom_endpoint":            "Custom endpoint for the jwks API, which is used to get the json web key sets (jwks) to validate tokens when using the key flow",
-		"enable_beta_resources":           "Enable beta resources. Default is false.",
+		"enable_beta_resources":           "Enable beta resources. Default is false. Some test change that should not be merged.",
 	}
 
 	resp.Schema = schema.Schema{
