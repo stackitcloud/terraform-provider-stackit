@@ -170,7 +170,7 @@ To use beta resources in the STACKIT Terraform provider, follow these steps:
 
 > **Note**: The environment variable takes precedence over the provider configuration option. This means that if the `STACKIT_TF_ENABLE_BETA_RESOURCES` environment variable is set to a valid value (`"true"` or `"false"`), it will override the `enable_beta_resources` option specified in the provider configuration.
 
-For more details, please refer to the [beta resources configuration guide](TODO-LINK).
+For more details, please refer to the [beta resources configuration guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources).
 
 ## Acceptance Tests
 
