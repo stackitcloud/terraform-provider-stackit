@@ -32,9 +32,7 @@ Set the `STACKIT_TF_ENABLE_BETA_RESOURCES` environment variable to `"true"` or `
 export STACKIT_TF_ENABLE_BETA_RESOURCES=true
 ```
 
--> The environment variable takes precedence over the provider configuration option.
-
-This means that if the `STACKIT_TF_ENABLE_BETA_RESOURCES` environment variable is set to a valid value (`"true"` or `"false"`), it will override the `enable_beta_resources` option specified in the provider configuration.
+-> The environment variable takes precedence over the provider configuration option. This means that if the `STACKIT_TF_ENABLE_BETA_RESOURCES` environment variable is set to a valid value (`"true"` or `"false"`), it will override the `enable_beta_resources` option specified in the provider configuration.
 
 ## Listing Beta Resources
 
