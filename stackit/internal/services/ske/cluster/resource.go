@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -328,6 +330,10 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"node_pools": schema.ListNestedAttribute{
 				Description: "One or more `node_pool` block as defined below.",
 				Required:    true,
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+					listvalidator.SizeAtMost(10),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
@@ -346,10 +352,18 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						"minimum": schema.Int64Attribute{
 							Description: "Minimum number of nodes in the pool.",
 							Required:    true,
+							Validators: []validator.Int64{
+								int64validator.AtLeast(1),
+								int64validator.AtMost(100),
+							},
 						},
 						"maximum": schema.Int64Attribute{
 							Description: "Maximum number of nodes in the pool.",
 							Required:    true,
+							Validators: []validator.Int64{
+								int64validator.AtLeast(1),
+								int64validator.AtMost(100),
+							},
 						},
 						"max_surge": schema.Int64Attribute{
 							Description: "Maximum number of additional VMs that are created during an update.",
@@ -357,6 +371,10 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Computed:    true,
 							PlanModifiers: []planmodifier.Int64{
 								int64planmodifier.UseStateForUnknown(),
+							},
+							Validators: []validator.Int64{
+								int64validator.AtLeast(1),
+								int64validator.AtMost(10),
 							},
 						},
 						"max_unavailable": schema.Int64Attribute{
