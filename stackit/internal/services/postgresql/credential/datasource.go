@@ -158,6 +158,6 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialDataSource) Read(ctx context.Context, _ datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential data", "The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Resources of this type will stop working after that. Use stackit_postgresflex_instance instead.")
 }
