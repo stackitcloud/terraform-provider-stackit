@@ -143,6 +143,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `argus_custom_endpoint` (String) Custom endpoint for the Argus service
 - `credentials_path` (String) Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.
 - `dns_custom_endpoint` (String) Custom endpoint for the DNS service
+- `enable_beta_resources` (Boolean) Enable beta resources. Default is false.
 - `iaas_custom_endpoint` (String) Custom endpoint for the IaaS service
 - `jwks_custom_endpoint` (String, Deprecated) Custom endpoint for the jwks API, which is used to get the json web key sets (jwks) to validate tokens when using the key flow
 - `loadbalancer_custom_endpoint` (String) Custom endpoint for the Load Balancer service

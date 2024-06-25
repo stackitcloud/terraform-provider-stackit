@@ -145,6 +145,33 @@ terraform {
 
 Note: AWS specific checks must be skipped as they do not work on STACKIT. For details on what those validations do, see [here](https://developer.hashicorp.com/terraform/language/settings/backends/s3#configuration).
 
+## Opting into Beta Resources
+
+To use beta resources in the STACKIT Terraform provider, follow these steps:
+
+1. **Provider Configuration Option**
+
+   Set the `enable_beta_resources` option in the provider configuration. This is a boolean attribute that can be either `true` or `false`.
+
+   ```hcl
+   provider "stackit" {
+     region                = "eu01"
+     enable_beta_resources = true
+   }
+   ```
+
+2. **Environment Variable**
+
+   Set the `STACKIT_TF_ENABLE_BETA_RESOURCES` environment variable to `"true"` or `"false"`. Other values will be ignored and will produce a warning.
+
+   ```sh
+   export STACKIT_TF_ENABLE_BETA_RESOURCES=true
+   ```
+
+> **Note**: The environment variable takes precedence over the provider configuration option. This means that if the `STACKIT_TF_ENABLE_BETA_RESOURCES` environment variable is set to a valid value (`"true"` or `"false"`), it will override the `enable_beta_resources` option specified in the provider configuration.
+
+For more details, please refer to the [beta resources configuration guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources).
+
 ## Acceptance Tests
 
 Terraform acceptance tests are run using the command `make test-acceptance-tf`. For all services,

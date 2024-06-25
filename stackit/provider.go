@@ -44,6 +44,7 @@ import (
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
 	skeProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/project"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
+	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
 
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
@@ -103,6 +104,7 @@ type providerModel struct {
 	ResourceManagerCustomEndpoint types.String `tfsdk:"resourcemanager_custom_endpoint"`
 	TokenCustomEndpoint           types.String `tfsdk:"token_custom_endpoint"`
 	JWKSCustomEndpoint            types.String `tfsdk:"jwks_custom_endpoint"`
+	EnableBetaResources           types.Bool   `tfsdk:"enable_beta_resources"`
 }
 
 // Schema defines the provider-level schema for configuration data.
@@ -135,6 +137,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"ske_custom_endpoint":             "Custom endpoint for the Kubernetes Engine (SKE) service",
 		"token_custom_endpoint":           "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
 		"jwks_custom_endpoint":            "Custom endpoint for the jwks API, which is used to get the json web key sets (jwks) to validate tokens when using the key flow",
+		"enable_beta_resources":           "Enable beta resources. Default is false.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -248,6 +251,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Description:        descriptions["jwks_custom_endpoint"],
 				DeprecationMessage: "Validation using JWKS was removed, for being redundant with token validation done in the APIs. This field has no effect, and will be removed in a later update",
 			},
+			"enable_beta_resources": schema.BoolAttribute{
+				Optional:    true,
+				Description: descriptions["enable_beta_resources"],
+			},
 		},
 	}
 }
@@ -344,6 +351,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.TokenCustomEndpoint.IsUnknown() || providerConfig.TokenCustomEndpoint.IsNull()) {
 		sdkConfig.TokenCustomUrl = providerConfig.TokenCustomEndpoint.ValueString()
 	}
+	if !(providerConfig.EnableBetaResources.IsUnknown() || providerConfig.EnableBetaResources.IsNull()) {
+		providerData.EnableBetaResources = providerConfig.EnableBetaResources.ValueBool()
+	}
 	roundTripper, err := sdkauth.SetupAuth(sdkConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up authentication: %v", err))
@@ -389,6 +399,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		secretsManagerInstance.NewInstanceDataSource,
 		secretsManagerUser.NewUserDataSource,
 		sqlServerFlexInstance.NewInstanceDataSource,
+		sqlServerFlexUser.NewUserDataSource,
 		skeProject.NewProjectDataSource,
 		skeCluster.NewClusterDataSource,
 	}
@@ -429,6 +440,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		secretsManagerInstance.NewInstanceResource,
 		secretsManagerUser.NewUserResource,
 		sqlServerFlexInstance.NewInstanceResource,
+		sqlServerFlexUser.NewUserResource,
 		skeProject.NewProjectResource,
 		skeCluster.NewClusterResource,
 		skeKubeconfig.NewKubeconfigResource,

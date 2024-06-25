@@ -369,7 +369,7 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 	tflog.Info(ctx, "Resource Manager Project state imported")
 }
 
-func mapFields(ctx context.Context, projectResp *resourcemanager.ProjectResponseWithParents, model *Model) (err error) {
+func mapFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, model *Model) (err error) {
 	if projectResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -431,7 +431,7 @@ func toCreatePayload(model *Model, serviceAccountEmail string) (*resourcemanager
 
 	owner := projectOwner
 	serviceAccountSubject := serviceAccountEmail
-	members := []resourcemanager.ProjectMember{
+	members := []resourcemanager.Member{
 		{
 			Subject: &serviceAccountSubject,
 			Role:    &owner,
@@ -441,7 +441,7 @@ func toCreatePayload(model *Model, serviceAccountEmail string) (*resourcemanager
 	ownerSubject := model.OwnerEmail.ValueString()
 	if ownerSubject != "" && ownerSubject != serviceAccountSubject {
 		members = append(members,
-			resourcemanager.ProjectMember{
+			resourcemanager.Member{
 				Subject: &ownerSubject,
 				Role:    &owner,
 			})
