@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -64,6 +65,73 @@ type Model struct {
 	OtlpTracesURL                      types.String `tfsdk:"otlp_traces_url"`
 	ZipkinSpansURL                     types.String `tfsdk:"zipkin_spans_url"`
 	ACL                                types.Set    `tfsdk:"acl"`
+	AlertConfig                        types.Object `tfsdk:"alert_config"`
+}
+
+// Struct corresponding to DataSourceModel.AlertConfig
+type alertConfigModel struct {
+	globalConfiguration types.Object `tfsdk:"global_configuration"`
+	inhibition_rules    types.Object `tfsdk:"inhibition_rules"`
+	receivers           types.List   `tfsdk:"receivers"`
+	route               types.Object `tfsdk:"route"`
+}
+
+// Struct corresponding to DataSourceModel.AlertConfig.receivers
+type receiversModel struct {
+	name            types.String `tfsdk:"name"`
+	emailConfigs    types.List   `tfsdk:"email_configs"`
+	opsGenieConfigs types.List   `tfsdk:"opsgenie_configs"`
+	webHooksConfigs types.List   `tfsdk:"webhooks_configs"`
+}
+
+var receiversTypes = map[string]attr.Type{
+	"name":             types.StringType,
+	"email_configs":    types.ListType{ElemType: types.ObjectType{AttrTypes: emailConfigsTypes}},
+	"opsgenie_configs": types.ListType{ElemType: types.ObjectType{AttrTypes: opsgenieConfigsTypes}},
+	"webhooks_configs": types.ListType{ElemType: types.ObjectType{AttrTypes: webHooksConfigsTypes}},
+}
+
+// Struct corresponding to DataSourceModel.AlertConfig.receivers.emailConfigs
+type emailConfigsModel struct {
+	authIdentity types.String `tfsdk:"auth_identity"`
+	authPassword types.String `tfsdk:"auth_password"`
+	authUsername types.String `tfsdk:"auth_username"`
+	from         types.String `tfsdk:"from"`
+	smarthost    types.String `tfsdk:"smarthost"`
+	to           types.String `tfsdk:"to"`
+}
+
+var emailConfigsTypes = map[string]attr.Type{
+	"auth_identity": types.StringType,
+	"auth_password": types.StringType,
+	"auth_username": types.StringType,
+	"from":          types.StringType,
+	"smarthost":     types.StringType,
+	"to":            types.StringType,
+}
+
+// Struct corresponding to DataSourceModel.AlertConfig.receivers.opsGenieConfigs
+type opsgenieConfigsModel struct {
+	apiKey types.String `tfsdk:"api_key"`
+	apiUrl types.String `tfsdk:"api_url"`
+	tags   types.String `tfsdk:"tags"`
+}
+
+var opsgenieConfigsTypes = map[string]attr.Type{
+	"api_key": types.StringType,
+	"api_url": types.StringType,
+	"tags":    types.StringType,
+}
+
+// Struct corresponding to DataSourceModel.AlertConfig.receivers.webHooksConfigs
+type webHooksConfigsModel struct {
+	url     types.String `tfsdk:"url"`
+	msTeams types.Bool   `tfsdk:"ms_teams"`
+}
+
+var webHooksConfigsTypes = map[string]attr.Type{
+	"url":      types.StringType,
+	"ms_teams": types.BoolType,
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -269,6 +337,108 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					),
 				},
 			},
+			"alert_config": schema.SingleNestedAttribute{
+				Description: "Alert configuration for the instance.",
+				Optional:    true,
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"receivers": schema.ListNestedAttribute{
+						Description: "List of alert receivers.",
+						Computed:    true,
+						Optional:    true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"name": schema.StringAttribute{
+									Description: "Name of the receiver.",
+									Required:    true,
+								},
+								"email_configs": schema.ListNestedAttribute{
+									Description: "List of email configurations.",
+									Computed:    true,
+									Optional:    true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"auth_identity": schema.StringAttribute{
+												Description: "SMTP authentication information. Must be a valid email address",
+												Computed:    true,
+												Optional:    true,
+											},
+											"auth_password": schema.StringAttribute{
+												Description: "SMTP authentication password.",
+												Computed:    true,
+												Optional:    true,
+											},
+											"auth_username": schema.StringAttribute{
+												Description: "SMTP authentication username.",
+												Computed:    true,
+												Optional:    true,
+											},
+											"from": schema.StringAttribute{
+												Description: "The sender email address. Must be a valid email address",
+												Computed:    true,
+												Optional:    true,
+											},
+											"smart_host": schema.StringAttribute{
+												Description: "The SMTP host through which emails are sent.",
+												Computed:    true,
+												Optional:    true,
+											},
+											"to": schema.StringAttribute{
+												Description: "The email address to send notifications to. Must be a valid email address",
+												Computed:    true,
+												Optional:    true,
+											},
+										},
+									},
+								},
+								"opsgenie_configs": schema.ListNestedAttribute{
+									Description: "List of OpsGenie configurations.",
+									Computed:    true,
+									Optional:    true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"api_key": schema.StringAttribute{
+												Description: "The API key for OpsGenie.",
+												Computed:    true,
+												Optional:    true,
+											},
+											"api_url": schema.StringAttribute{
+												Description: "The host to send OpsGenie API requests to. Must be a valid URL",
+												Computed:    true,
+												Optional:    true,
+											},
+											"tags": schema.StringAttribute{
+												Description: "Comma separated list of tags attached to the notifications.",
+												Computed:    true,
+												Optional:    true,
+											},
+										},
+									},
+								},
+								"webhooks_configs": schema.ListNestedAttribute{
+									Description: "List of Webhooks configurations.",
+									Computed:    true,
+									Optional:    true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"url": schema.StringAttribute{
+												Description: "The endpoint to send HTTP POST requests to. Must be a valid URL",
+												Computed:    true,
+												Optional:    true,
+											},
+											"ms_teams": schema.BoolAttribute{
+												Description: "Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.",
+												Computed:    true,
+												Optional:    true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -295,6 +465,15 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	metricsRetentionDays := conversion.Int64ValueToPointer(model.MetricsRetentionDays)
 	metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays5mDownsampling)
 	metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays1hDownsampling)
+
+	alertConfig := alertConfigModel{}
+	if !(model.AlertConfig.IsNull() || model.AlertConfig.IsUnknown()) {
+		diags = model.AlertConfig.As(ctx, &alertConfig, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -395,6 +574,40 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err = mapMetricsRetentionField(metricsResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
+		return
+	}
+
+	// Set state to fully populated data
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Get current alert config
+	alertConfigResp, err := r.client.GetAlertConfigsExecute(ctx, *instanceId, projectId)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Getting alert config: %v", err))
+		return
+	}
+
+	// Set alert config
+	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, alertConfig, alertConfigResp)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building alert config payload: %v", err))
+		return
+	}
+
+	updatedAlertConfig, err := r.client.UpdateAlertConfigs(ctx, *instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting alert config: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapAlertConfigField(updatedAlertConfig, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
 		return
 	}
 
@@ -784,6 +997,10 @@ func mapMetricsRetentionField(r *argus.GetMetricsStorageRetentionResponse, model
 	return nil
 }
 
+func mapAlertConfigField(_ *argus.UpdateAlertConfigsResponse, _ *Model) error {
+	return nil
+}
+
 func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
@@ -861,6 +1078,58 @@ func toUpdatePayload(model *Model) (*argus.UpdateInstancePayload, error) {
 		PlanId:    conversion.StringValueToPointer(model.PlanId),
 		Parameter: &pa,
 	}, nil
+}
+
+func toUpdateAlertConfigPayload(ctx context.Context, model alertConfigModel, resp *argus.GetAlertConfigsResponse) (*argus.UpdateAlertConfigsPayload, error) {
+	if resp == nil {
+		return nil, fmt.Errorf("nil response")
+	}
+	if model.receivers.IsNull() || model.receivers.IsUnknown() {
+		return nil, nil
+	}
+
+	payload := argus.UpdateAlertConfigsPayload{}
+
+	receiversModel := []receiversModel{}
+	diags := model.receivers.ElementsAs(ctx, &receiversModel, false)
+	if diags.HasError() {
+		return nil, fmt.Errorf("mapping receivers: %w", core.DiagsToError(diags))
+	}
+
+	receivers := []argus.UpdateAlertConfigsPayloadReceiversInner{}
+
+	for i := range receiversModel {
+		receiver := receiversModel[i]
+		emailConfigs := []argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{}
+		diags := receiver.emailConfigs.ElementsAs(ctx, &emailConfigs, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("mapping email configs: %w", core.DiagsToError(diags))
+		}
+
+		opsgenieConfigs := []argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{}
+		diags = receiver.opsGenieConfigs.ElementsAs(ctx, &opsgenieConfigs, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("mapping opsgenie configs: %w", core.DiagsToError(diags))
+		}
+
+		webhooksConfigs := []argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{}
+		diags = receiver.webHooksConfigs.ElementsAs(ctx, &webhooksConfigs, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("mapping webhooks configs: %w", core.DiagsToError(diags))
+		}
+
+		receiverPayload := argus.UpdateAlertConfigsPayloadReceiversInner{
+			Name:            conversion.StringValueToPointer(receiver.name),
+			EmailConfigs:    &emailConfigs,
+			OpsgenieConfigs: &opsgenieConfigs,
+			WebHookConfigs:  &webhooksConfigs,
+		}
+		receivers = append(receivers, receiverPayload)
+	}
+
+	payload.Receivers = &receivers
+
+	return &payload, nil
 }
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
