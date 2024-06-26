@@ -28,16 +28,16 @@ resource "stackit_sqlserverflex_user" "example" {
 
 - `instance_id` (String) ID of the SQLServer Flex instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
-- `username` (String)
+- `username` (String) Username of the SQLServer Flex instance.
 
 ### Optional
 
-- `roles` (Set of String)
+- `roles` (Set of String) Database access levels for the user. Possible values: [`##STACKIT_LoginManager##`, `##STACKIT_DatabaseManager##`]
 
 ### Read-Only
 
 - `host` (String)
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`,`user_id`".
-- `password` (String, Sensitive)
+- `password` (String, Sensitive) Password of the user account.
 - `port` (Number)
 - `user_id` (String) User ID.

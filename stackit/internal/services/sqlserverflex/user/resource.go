@@ -105,6 +105,9 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 		"user_id":     "User ID.",
 		"instance_id": "ID of the SQLServer Flex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
+		"username":    "Username of the SQLServer Flex instance.",
+		"roles":       "Database access levels for the user. Possible values: [`##STACKIT_LoginManager##`, `##STACKIT_DatabaseManager##`]",
+		"password":    "Password of the user account.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -152,16 +155,17 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"username": schema.StringAttribute{
-				Required: true,
+				Description: descriptions["username"],
+				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"roles": schema.SetAttribute{
+				Description: descriptions["roles"],
 				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []planmodifier.Set{
 					setplanmodifier.RequiresReplace(),
 				},
@@ -172,8 +176,9 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"password": schema.StringAttribute{
-				Computed:  true,
-				Sensitive: true,
+				Description: descriptions["password"],
+				Computed:    true,
+				Sensitive:   true,
 			},
 			"host": schema.StringAttribute{
 				Computed: true,
@@ -366,9 +371,7 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model) e
 	}
 	model.Password = types.StringValue(*user.Password)
 
-	if user.Roles == nil {
-		model.Roles = types.SetNull(types.StringType)
-	} else {
+	if user.Roles != nil {
 		roles := []attr.Value{}
 		for _, role := range *user.Roles {
 			roles = append(roles, types.StringValue(role))
@@ -379,6 +382,11 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model) e
 		}
 		model.Roles = rolesSet
 	}
+
+	if model.Roles.IsNull() || model.Roles.IsUnknown() {
+		model.Roles = types.SetNull(types.StringType)
+	}
+
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
 	return nil
@@ -412,9 +420,7 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model) error {
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)
 
-	if user.Roles == nil {
-		model.Roles = types.SetNull(types.StringType)
-	} else {
+	if user.Roles != nil {
 		roles := []attr.Value{}
 		for _, role := range *user.Roles {
 			roles = append(roles, types.StringValue(role))
@@ -425,6 +431,11 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model) error {
 		}
 		model.Roles = rolesSet
 	}
+
+	if model.Roles.IsNull() || model.Roles.IsUnknown() {
+		model.Roles = types.SetNull(types.StringType)
+	}
+
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
 	return nil

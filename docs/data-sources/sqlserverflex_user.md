@@ -34,5 +34,5 @@ data "stackit_sqlserverflex_user" "example" {
 - `host` (String)
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`instance_id`,`user_id`".
 - `port` (Number)
-- `roles` (Set of String)
-- `username` (String)
+- `roles` (Set of String) Database access levels for the user. Possible values: [`##STACKIT_LoginManager##`, `##STACKIT_DatabaseManager##`]
+- `username` (String) Username of the SQLServer Flex instance.
