@@ -39,12 +39,12 @@ Defaulting to the provider feature flag.`, value)
 //
 // Should be called in the Configure method of a beta resource.
 // Then, check for Errors in the diags using the diags.HasError() method.
-func CheckBetaResourcesEnabled(ctx context.Context, data *core.ProviderData, diags *diag.Diagnostics, resourceName string) {
+func CheckBetaResourcesEnabled(ctx context.Context, data *core.ProviderData, diags *diag.Diagnostics, resourceName, resourceType string) {
 	if !BetaResourcesEnabled(ctx, data, diags) {
-		core.LogAndAddErrorBeta(ctx, diags, resourceName)
+		core.LogAndAddErrorBeta(ctx, diags, resourceName, resourceType)
 		return
 	}
-	core.LogAndAddWarningBeta(ctx, diags, resourceName)
+	core.LogAndAddWarningBeta(ctx, diags, resourceName, resourceType)
 }
 
 func AddBetaDescription(description string) string {
