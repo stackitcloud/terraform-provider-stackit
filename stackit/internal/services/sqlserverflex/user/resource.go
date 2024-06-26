@@ -383,7 +383,7 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model) e
 		model.Roles = rolesSet
 	}
 
-	if model.Roles.IsUnknown() {
+	if model.Roles.IsNull() || model.Roles.IsUnknown() {
 		model.Roles = types.SetNull(types.StringType)
 	}
 
@@ -432,7 +432,7 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model) error {
 		model.Roles = rolesSet
 	}
 
-	if model.Roles.IsUnknown() {
+	if model.Roles.IsNull() || model.Roles.IsUnknown() {
 		model.Roles = types.SetNull(types.StringType)
 	}
 
