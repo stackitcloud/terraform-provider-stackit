@@ -36,6 +36,9 @@ export STACKIT_TF_ENABLE_BETA_RESOURCES=true
 
 ## Listing Beta Resources
 
-- `stackit_server_backup_schedule` (resource)
-- `stackit_server_backup_schedule` (data source)
-- `stackit_server_backup_schedules` (data source)
+- `stackit_server_backup_schedule`
+
+## Listing Beta Data Sources
+
+- `stackit_server_backup_schedule`
+- `stackit_server_backup_schedules`
