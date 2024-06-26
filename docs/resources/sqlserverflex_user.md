@@ -32,7 +32,7 @@ resource "stackit_sqlserverflex_user" "example" {
 
 ### Optional
 
-- `roles` (Set of String) Database access levels for the user. Possible values: ["`##STACKIT_LoginManager##"`, "`##STACKIT_DatabaseManager##"`]
+- `roles` (Set of String) Database access levels for the user. Possible values: [`##STACKIT_LoginManager##`, `##STACKIT_DatabaseManager##`]
 
 ### Read-Only
 
