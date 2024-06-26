@@ -4,14 +4,14 @@ page_title: "stackit_server_backup_schedules Data Source - stackit"
 subcategory: ""
 description: |-
   Server backup schedules datasource schema. Must have a region specified in the provider configuration.
-  !> This resource is in beta and may be subject to breaking changes in the future. Use with caution.
+  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution.
 ---
 
 # stackit_server_backup_schedules (Data Source)
 
 Server backup schedules datasource schema. Must have a `region` specified in the provider configuration.
 
-!> This resource is in beta and may be subject to breaking changes in the future. Use with caution.
+~> This resource is in beta and may be subject to breaking changes in the future. Use with caution.
 
 ## Example Usage
 
