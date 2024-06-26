@@ -22,6 +22,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -32,6 +33,11 @@ var (
 	_ resource.ResourceWithConfigure   = &recordSetResource{}
 	_ resource.ResourceWithImportState = &recordSetResource{}
 )
+
+// betaCheckDone is used to prevent multiple checks for beta resources.
+// This is a workaround for the lack of a global state in the provider and
+// needs to exist because the Configure method is called twice.
+var betaCheckDone bool
 
 type Model struct {
 	Id          types.String `tfsdk:"id"` // needed by TF
@@ -77,6 +83,14 @@ func (r *recordSetResource) Configure(ctx context.Context, req resource.Configur
 		return
 	}
 
+	if !betaCheckDone {
+		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "DNS Record Set")
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		betaCheckDone = true
+	}
+
 	var apiClient *dns.APIClient
 	var err error
 	if providerData.DnsCustomEndpoint != "" {
@@ -102,7 +116,8 @@ func (r *recordSetResource) Configure(ctx context.Context, req resource.Configur
 // Schema defines the schema for the resource.
 func (r *recordSetResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "DNS Record Set Resource schema.",
+		Description:         "DNS Record Set Resource schema.",
+		MarkdownDescription: features.AddBetaDescription("DNS Record Set Resource schema."),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`zone_id`,`record_set_id`\".",
