@@ -21,6 +21,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -28,6 +29,11 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
 )
+
+// resourceBetaCheckDone is used to prevent multiple checks for beta resources.
+// This is a workaround for the lack of a global state in the provider and
+// needs to exist because the Configure method is called twice.
+var resourceBetaCheckDone bool
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -82,6 +88,14 @@ func (r *scheduleResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
+	if !resourceBetaCheckDone {
+		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_server_backup_schedule", "resource")
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		resourceBetaCheckDone = true
+	}
+
 	var apiClient *serverbackup.APIClient
 	var err error
 	if providerData.ServerBackupCustomEndpoint != "" {
@@ -109,7 +123,8 @@ func (r *scheduleResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Server backup schedule resource schema. Must have a `region` specified in the provider configuration.",
+		Description:         "Server backup schedule resource schema. Must have a `region` specified in the provider configuration.",
+		MarkdownDescription: features.AddBetaDescription("Server backup schedule resource schema. Must have a `region` specified in the provider configuration."),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`server_id`,`backup_schedule_id`\".",
@@ -442,7 +457,7 @@ func enableBackupsService(ctx context.Context, model *Model, client *serverbacku
 			tflog.Debug(ctx, "Service for server backup already enabled")
 			return nil
 		}
-		return fmt.Errorf("Failed to enable server backup service: %w", err)
+		return fmt.Errorf("enable server backup service: %w", err)
 	}
 	tflog.Info(ctx, "Enabled server backup service")
 	return nil
@@ -495,7 +510,7 @@ func toCreatePayload(model *Model) (*serverbackup.CreateBackupSchedulePayload, e
 		if !(model.BackupProperties.VolumeIds.IsNull() || model.BackupProperties.VolumeIds.IsUnknown()) {
 			ids, err = utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
 			if err != nil {
-				return nil, fmt.Errorf("Error by converting volume id: %w", err)
+				return nil, fmt.Errorf("convert volume id: %w", err)
 			}
 		}
 		// we should provide null to the API in case no volumeIds were chosen, else it errors
@@ -528,7 +543,7 @@ func toUpdatePayload(model *Model) (*serverbackup.UpdateBackupSchedulePayload, e
 		if !(model.BackupProperties.VolumeIds.IsNull() || model.BackupProperties.VolumeIds.IsUnknown()) {
 			ids, err = utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
 			if err != nil {
-				return nil, fmt.Errorf("Error by converting volume id: %w", err)
+				return nil, fmt.Errorf("convert volume id: %w", err)
 			}
 		}
 		// we should provide null to the API in case no volumeIds were chosen, else it errors

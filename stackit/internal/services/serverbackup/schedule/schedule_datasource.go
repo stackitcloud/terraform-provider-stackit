@@ -13,12 +13,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
 )
+
+// scheduleDataSourceBetaCheckDone is used to prevent multiple checks for beta resources.
+// This is a workaround for the lack of a global state in the provider and
+// needs to exist because the Configure method is called twice.
+var scheduleDataSourceBetaCheckDone bool
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -53,6 +59,14 @@ func (r *scheduleDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 
+	if !scheduleDataSourceBetaCheckDone {
+		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_server_backup_schedule", "data source")
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		scheduleDataSourceBetaCheckDone = true
+	}
+
 	var apiClient *serverbackup.APIClient
 	var err error
 	if providerData.ServerBackupCustomEndpoint != "" {
@@ -80,7 +94,8 @@ func (r *scheduleDataSource) Configure(ctx context.Context, req datasource.Confi
 // Schema defines the schema for the data source.
 func (r *scheduleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Server backup schedule resource schema. Must have a `region` specified in the provider configuration.",
+		Description:         "Server backup schedule datasource schema. Must have a `region` specified in the provider configuration.",
+		MarkdownDescription: features.AddBetaDescription("Server backup schedule datasource schema. Must have a `region` specified in the provider configuration."),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`server_id`,`backup_schedule_id`\".",

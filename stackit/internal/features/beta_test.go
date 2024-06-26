@@ -196,7 +196,7 @@ func TestCheckBetaResourcesEnabled(t *testing.T) {
 			t.Setenv("STACKIT_TF_ENABLE_BETA_RESOURCES", envValue)
 
 			diags := diag.Diagnostics{}
-			CheckBetaResourcesEnabled(context.Background(), &core.ProviderData{}, &diags, "test")
+			CheckBetaResourcesEnabled(context.Background(), &core.ProviderData{}, &diags, "stackit_test", "resource")
 
 			if tt.expectError && diags.ErrorsCount() == 0 {
 				t.Fatalf("Expected error, got none")

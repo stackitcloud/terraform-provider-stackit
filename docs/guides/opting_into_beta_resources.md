@@ -36,4 +36,6 @@ export STACKIT_TF_ENABLE_BETA_RESOURCES=true
 
 ## Listing Beta Resources
 
-Currently, there are no beta resources available. This section will be updated as new beta services are introduced.
+- `stackit_server_backup_schedule` (resource)
+- `stackit_server_backup_schedule` (data source)
+- `stackit_server_backup_schedules` (data source)
