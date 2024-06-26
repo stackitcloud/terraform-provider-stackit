@@ -1284,32 +1284,59 @@ func toUpdateAlertConfigPayload(ctx context.Context, model alertConfigModel) (*a
 		}
 
 		if !receiver.EmailConfigs.IsNull() && !receiver.EmailConfigs.IsUnknown() {
-			emailConfigs := []argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{}
+			emailConfigs := []emailConfigsModel{}
 			diags := receiver.EmailConfigs.ElementsAs(ctx, &emailConfigs, false)
 			if diags.HasError() {
 				return nil, fmt.Errorf("mapping email configs: %w", core.DiagsToError(diags))
 			}
-			receiverPayload.EmailConfigs = &emailConfigs
-		} else {
-
+			payloadEmailConfigs := []argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{}
+			for i := range emailConfigs {
+				emailConfig := emailConfigs[i]
+				payloadEmailConfigs = append(payloadEmailConfigs, argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{
+					AuthIdentity: conversion.StringValueToPointer(emailConfig.AuthIdentity),
+					AuthPassword: conversion.StringValueToPointer(emailConfig.AuthPassword),
+					AuthUsername: conversion.StringValueToPointer(emailConfig.AuthUsername),
+					From:         conversion.StringValueToPointer(emailConfig.From),
+					Smarthost:    conversion.StringValueToPointer(emailConfig.Smarthost),
+					To:           conversion.StringValueToPointer(emailConfig.To),
+				})
+			}
+			receiverPayload.EmailConfigs = &payloadEmailConfigs
 		}
 
 		if !receiver.OpsGenieConfigs.IsNull() && !receiver.OpsGenieConfigs.IsUnknown() {
-			opsgenieConfigs := []argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{}
+			opsgenieConfigs := []opsgenieConfigsModel{}
 			diags := receiver.OpsGenieConfigs.ElementsAs(ctx, &opsgenieConfigs, false)
 			if diags.HasError() {
 				return nil, fmt.Errorf("mapping opsgenie configs: %w", core.DiagsToError(diags))
 			}
-			receiverPayload.OpsgenieConfigs = &opsgenieConfigs
+			payloadOpsGenieConfigs := []argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{}
+			for i := range opsgenieConfigs {
+				opsgenieConfig := opsgenieConfigs[i]
+				payloadOpsGenieConfigs = append(payloadOpsGenieConfigs, argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{
+					ApiKey: conversion.StringValueToPointer(opsgenieConfig.ApiKey),
+					ApiUrl: conversion.StringValueToPointer(opsgenieConfig.ApiUrl),
+					Tags:   conversion.StringValueToPointer(opsgenieConfig.Tags),
+				})
+			}
+			receiverPayload.OpsgenieConfigs = &payloadOpsGenieConfigs
 		}
 
 		if !receiver.WebHooksConfigs.IsNull() && !receiver.WebHooksConfigs.IsUnknown() {
-			webhooksConfigs := []argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{}
-			diags := receiver.WebHooksConfigs.ElementsAs(ctx, &webhooksConfigs, false)
+			receiverWebHooksConfigs := []webHooksConfigsModel{}
+			diags := receiver.WebHooksConfigs.ElementsAs(ctx, &receiverWebHooksConfigs, false)
 			if diags.HasError() {
 				return nil, fmt.Errorf("mapping webhooks configs: %w", core.DiagsToError(diags))
 			}
-			receiverPayload.WebHookConfigs = &webhooksConfigs
+			payloadWebHooksConfigs := []argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{}
+			for i := range receiverWebHooksConfigs {
+				webHooksConfig := receiverWebHooksConfigs[i]
+				payloadWebHooksConfigs = append(payloadWebHooksConfigs, argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
+					Url:     conversion.StringValueToPointer(webHooksConfig.Url),
+					MsTeams: conversion.BoolValueToPointer(webHooksConfig.MsTeams),
+				})
+			}
+			receiverPayload.WebHookConfigs = &payloadWebHooksConfigs
 		}
 
 		receivers = append(receivers, receiverPayload)
