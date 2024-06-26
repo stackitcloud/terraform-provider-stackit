@@ -574,3 +574,57 @@ func TestCIDR(t *testing.T) {
 		})
 	}
 }
+
+func TestRrule(t *testing.T) {
+	tests := []struct {
+		description string
+		input       string
+		isValid     bool
+	}{
+		{
+			"ok",
+			"DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1",
+			true,
+		},
+		{
+			"ok-2",
+			"DTSTART;TZID=Europe/Sofia:20200803T023000\nRULE:FREQ=DAILY;INTERVAL=1",
+			true,
+		},
+		{
+			"Empty",
+			"",
+			false,
+		},
+		{
+			"not ok",
+			"afssfdfs",
+			false,
+		},
+		{
+			"not ok-missing-space-before-rrule",
+			"DTSTART;TZID=Europe/Sofia:20200803T023000RRULE:FREQ=DAILY;INTERVAL=1",
+			false,
+		},
+		{
+			"not ok-missing-interval",
+			"DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=",
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			r := validator.StringResponse{}
+			Rrule().ValidateString(context.Background(), validator.StringRequest{
+				ConfigValue: types.StringValue(tt.input),
+			}, &r)
+
+			if !tt.isValid && !r.Diagnostics.HasError() {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && r.Diagnostics.HasError() {
+				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
+			}
+		})
+	}
+}

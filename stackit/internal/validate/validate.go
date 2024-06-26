@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/teambition/rrule-go"
 )
 
 const (
@@ -219,6 +220,33 @@ func CIDR() *Validator {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
 					"parsing value in CIDR notation: invalid CIDR address",
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
+
+func Rrule() *Validator {
+	description := "value must be in a valid RRULE format"
+
+	return &Validator{
+		description: description,
+		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			// The go library rrule-go expects \n before RRULE (to be a newline and not a space)
+			// for example: "DTSTART;TZID=America/New_York:19970902T090000\nRRULE:FREQ=DAILY;COUNT=10"
+			// whereas a valid rrule according to the API docs is:
+			// for example: "DTSTART;TZID=America/New_York:19970902T090000 RRULE:FREQ=DAILY;COUNT=10"
+			//
+			// So we will accept a ' ' (which is valid per API docs),
+			// but replace it with a '\n' for the rrule-go validations
+			value := req.ConfigValue.ValueString()
+			value = strings.ReplaceAll(value, " ", "\n")
+
+			if _, err := rrule.StrToRRuleSet(value); err != nil {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
 					req.ConfigValue.ValueString(),
 				))
 			}

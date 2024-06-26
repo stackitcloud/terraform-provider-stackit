@@ -161,6 +161,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `region` (String) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `resourcemanager_custom_endpoint` (String) Custom endpoint for the Resource Manager service
 - `secretsmanager_custom_endpoint` (String) Custom endpoint for the Secrets Manager service
+- `server_backup_custom_endpoint` (String) Custom endpoint for the Server Backup service
 - `service_account_email` (String) Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.
 - `service_account_key` (String) Service account key used for authentication. If set, the key flow will be used to authenticate all operations.
 - `service_account_key_path` (String) Path for the service account key used for authentication. If set, the key flow will be used to authenticate all operations.

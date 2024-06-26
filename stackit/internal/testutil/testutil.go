@@ -30,6 +30,8 @@ var (
 
 	// ProjectId is the id of project used for tests
 	ProjectId = os.Getenv("TF_ACC_PROJECT_ID")
+	// ServerId is the id of a server used for some tests
+	ServerId = getenv("TF_ACC_SERVER_ID", "")
 	// TestProjectParentContainerID is the container id of the parent resource under which projects are created as part of the resource-manager acceptance tests
 	TestProjectParentContainerID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID")
 	// TestProjectParentContainerID is the uuid of the parent resource under which projects are created as part of the resource-manager acceptance tests
@@ -53,6 +55,7 @@ var (
 	ResourceManagerCustomEndpoint = os.Getenv("TF_ACC_RESOURCEMANAGER_CUSTOM_ENDPOINT")
 	SecretsManagerCustomEndpoint  = os.Getenv("TF_ACC_SECRETSMANAGER_CUSTOM_ENDPOINT")
 	SQLServerFlexCustomEndpoint   = os.Getenv("TF_ACC_SQLSERVERFLEX_CUSTOM_ENDPOINT")
+	ServerBackupCustomEndpoint    = os.Getenv("TF_ACC_SERVER_BACKUP_CUSTOM_ENDPOINT")
 	SKECustomEndpoint             = os.Getenv("TF_ACC_SKE_CUSTOM_ENDPOINT")
 
 	// OpenStack user domain name
@@ -310,6 +313,21 @@ func SQLServerFlexProviderConfig() string {
 	)
 }
 
+func ServerBackupProviderConfig() string {
+	if ServerBackupCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			server_backup_custom_endpoint = "%s"
+		}`,
+		ServerBackupCustomEndpoint,
+	)
+}
+
 func SKEProviderConfig() string {
 	if SKECustomEndpoint == "" {
 		return `
@@ -372,4 +390,12 @@ func readTestTokenFromCredentialsFile(path string) (string, error) {
 		return "", fmt.Errorf("unmarshalling credentials: %w", err)
 	}
 	return credentials.TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN, nil
+}
+
+func getenv(key, defaultValue string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		return defaultValue
+	}
+	return val
 }
