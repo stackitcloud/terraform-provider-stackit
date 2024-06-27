@@ -346,6 +346,116 @@ func TestMapFields(t *testing.T) {
 	}
 }
 
+func TestMapAlertConfigField(t *testing.T) {
+	tests := []struct {
+		description     string
+		alertConfigResp *argus.GetAlertConfigsResponse
+		expected        Model
+		isValid         bool
+	}{
+		{
+			description: "basic_ok",
+			alertConfigResp: &argus.GetAlertConfigsResponse{
+				Data: &argus.Alert{
+					Receivers: &[]argus.Receivers{
+						{
+							Name: utils.Ptr("name"),
+							EmailConfigs: &[]argus.EmailConfig{
+								{
+									AuthIdentity: utils.Ptr("identity"),
+									AuthPassword: utils.Ptr("password"),
+									AuthUsername: utils.Ptr("username"),
+									From:         utils.Ptr("notification@example.com"),
+									Smarthost:    utils.Ptr("smtp.example.com"),
+									To:           utils.Ptr("me@example.com"),
+								},
+							},
+							OpsgenieConfigs: &[]argus.OpsgenieConfig{
+								{
+									ApiKey: utils.Ptr("key"),
+									Tags:   utils.Ptr("tag"),
+									ApiUrl: utils.Ptr("ops.example.com"),
+								},
+							},
+							WebHookConfigs: &[]argus.WebHook{
+								{
+									Url:     utils.Ptr("http://example.com"),
+									MsTeams: utils.Ptr(true),
+								},
+							},
+						},
+					},
+					Route: &argus.Route{
+						Receiver: utils.Ptr("name"),
+					},
+				},
+			},
+			expected: Model{
+				ACL:        types.SetNull(types.StringType),
+				Parameters: types.MapNull(types.StringType),
+				AlertConfig: types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
+					"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+						types.ObjectValueMust(receiversTypes, map[string]attr.Value{
+							"name": types.StringValue("name"),
+							"email_configs": types.ListValueMust(types.ObjectType{AttrTypes: emailConfigsTypes}, []attr.Value{
+								types.ObjectValueMust(emailConfigsTypes, map[string]attr.Value{
+									"auth_identity": types.StringValue("identity"),
+									"auth_password": types.StringValue("password"),
+									"auth_username": types.StringValue("username"),
+									"from":          types.StringValue("notification@example.com"),
+									"smart_host":    types.StringValue("smtp.example.com"),
+									"to":            types.StringValue("me@example.com"),
+								}),
+							}),
+							"opsgenie_configs": types.ListValueMust(types.ObjectType{AttrTypes: opsgenieConfigsTypes}, []attr.Value{
+								types.ObjectValueMust(opsgenieConfigsTypes, map[string]attr.Value{
+									"api_key": types.StringValue("key"),
+									"tags":    types.StringValue("tag"),
+									"api_url": types.StringValue("ops.example.com"),
+								}),
+							}),
+							"webhooks_configs": types.ListValueMust(types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{
+								types.ObjectValueMust(webHooksConfigsTypes, map[string]attr.Value{
+									"url":      types.StringValue("http://example.com"),
+									"ms_teams": types.BoolValue(true),
+								}),
+							}),
+						}),
+					}),
+					"route": types.ObjectValueMust(routeTypes, map[string]attr.Value{
+						"receiver": types.StringValue("name"),
+					}),
+				}),
+			},
+			isValid: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			state := &Model{
+				ProjectId:  tt.expected.ProjectId,
+				ACL:        types.SetNull(types.StringType),
+				Parameters: types.MapNull(types.StringType),
+			}
+			err := mapAlertConfigField(context.Background(), tt.alertConfigResp, state)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+
+			if tt.isValid {
+				diff := cmp.Diff(state, &tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
