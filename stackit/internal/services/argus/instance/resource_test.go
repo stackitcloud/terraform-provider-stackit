@@ -614,6 +614,9 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 						fixtureWebHooksConfigsModel(),
 					),
 				}),
+				Route: types.ObjectValueMust(routeTypes, map[string]attr.Value{
+					"receiver": types.StringValue("example-receiver"),
+				}),
 			},
 			expected: &argus.UpdateAlertConfigsPayload{
 				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
@@ -623,10 +626,9 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 						&[]argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{fixtureWebHooksConfigsPayload()},
 					),
 				},
-				// Hardcoded before routes are implemented
-				// Route: &argus.UpdateAlertConfigsPayloadRoute{
-				// 	Receiver: utils.Ptr("example-receiver"),
-				// },
+				Route: &argus.UpdateAlertConfigsPayloadRoute{
+					Receiver: utils.Ptr("example-receiver"),
+				},
 			},
 			isValid: true,
 		},
@@ -640,6 +642,9 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 						types.ListNull(types.ObjectType{AttrTypes: webHooksConfigsTypes}),
 					),
 				}),
+				Route: types.ObjectValueMust(routeTypes, map[string]attr.Value{
+					"receiver": types.StringValue("example-receiver"),
+				}),
 			},
 			expected: &argus.UpdateAlertConfigsPayload{
 				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
@@ -649,7 +654,6 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 						nil,
 					),
 				},
-				// Hardcoded before routes are implemented
 				Route: &argus.UpdateAlertConfigsPayloadRoute{
 					Receiver: utils.Ptr("example-receiver"),
 				},
@@ -666,6 +670,9 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 						types.ListNull(types.ObjectType{AttrTypes: webHooksConfigsTypes}),
 					),
 				}),
+				Route: types.ObjectValueMust(routeTypes, map[string]attr.Value{
+					"receiver": types.StringValue("example-receiver"),
+				}),
 			},
 			expected: &argus.UpdateAlertConfigsPayload{
 				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
@@ -675,33 +682,6 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 						nil,
 					),
 				},
-				// Hardcoded before routes are implemented
-				Route: &argus.UpdateAlertConfigsPayloadRoute{
-					Receiver: utils.Ptr("example-receiver"),
-				},
-			},
-			isValid: true,
-		},
-		{
-			description: "receivers only webhooksconfigs",
-			input: alertConfigModel{
-				Receivers: types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
-					fixtureReceiverModel(
-						types.ListNull(types.ObjectType{AttrTypes: emailConfigsTypes}),
-						types.ListNull(types.ObjectType{AttrTypes: opsgenieConfigsTypes}),
-						fixtureWebHooksConfigsModel(),
-					),
-				}),
-			},
-			expected: &argus.UpdateAlertConfigsPayload{
-				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
-					fixtureReceiverPayload(
-						nil,
-						nil,
-						&[]argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{fixtureWebHooksConfigsPayload()},
-					),
-				},
-				// Hardcoded before routes are implemented
 				Route: &argus.UpdateAlertConfigsPayloadRoute{
 					Receiver: utils.Ptr("example-receiver"),
 				},
@@ -723,6 +703,9 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 						fixtureWebHooksConfigsModel(),
 					),
 				}),
+				Route: types.ObjectValueMust(routeTypes, map[string]attr.Value{
+					"receiver": types.StringValue("example-receiver"),
+				}),
 			},
 			expected: &argus.UpdateAlertConfigsPayload{
 				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
@@ -737,7 +720,6 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 						&[]argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{fixtureWebHooksConfigsPayload()},
 					),
 				},
-				// Hardcoded before routes are implemented
 				Route: &argus.UpdateAlertConfigsPayloadRoute{
 					Receiver: utils.Ptr("example-receiver"),
 				},

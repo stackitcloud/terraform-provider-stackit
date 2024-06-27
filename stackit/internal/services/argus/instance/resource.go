@@ -1435,11 +1435,6 @@ func toUpdateAlertConfigPayload(ctx context.Context, model alertConfigModel) (*a
 
 	payload.Receivers = &receivers
 
-	// // This is hardcoded until routes are implemented
-	// payload.Route = &argus.UpdateAlertConfigsPayloadRoute{
-	// 	Receiver: utils.Ptr("example-receiver"),
-	// }
-
 	routeModel := routeModel{}
 	diags = model.Route.As(ctx, &routeModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
