@@ -204,6 +204,102 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				ElementType: types.StringType,
 				Computed:    true,
 			},
+			"alert_config": schema.SingleNestedAttribute{
+				Description: "Alert configuration for the instance.",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"receivers": schema.ListNestedAttribute{
+						Description: "List of alert receivers.",
+						Computed:    true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"name": schema.StringAttribute{
+									Description: "Name of the receiver.",
+									Computed:    true,
+								},
+								"email_configs": schema.ListNestedAttribute{
+									Description: "List of email configurations.",
+									Computed:    true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"auth_identity": schema.StringAttribute{
+												Description: "SMTP authentication information. Must be a valid email address",
+												Computed:    true,
+											},
+											"auth_password": schema.StringAttribute{
+												Description: "SMTP authentication password.",
+												Computed:    true,
+											},
+											"auth_username": schema.StringAttribute{
+												Description: "SMTP authentication username.",
+												Computed:    true,
+											},
+											"from": schema.StringAttribute{
+												Description: "The sender email address. Must be a valid email address",
+												Computed:    true,
+											},
+											"smart_host": schema.StringAttribute{
+												Description: "The SMTP host through which emails are sent.",
+												Computed:    true,
+											},
+											"to": schema.StringAttribute{
+												Description: "The email address to send notifications to. Must be a valid email address",
+												Computed:    true,
+											},
+										},
+									},
+								},
+								"opsgenie_configs": schema.ListNestedAttribute{
+									Description: "List of OpsGenie configurations.",
+									Computed:    true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"api_key": schema.StringAttribute{
+												Description: "The API key for OpsGenie.",
+												Computed:    true,
+											},
+											"api_url": schema.StringAttribute{
+												Description: "The host to send OpsGenie API requests to. Must be a valid URL",
+												Computed:    true,
+											},
+											"tags": schema.StringAttribute{
+												Description: "Comma separated list of tags attached to the notifications.",
+												Computed:    true,
+											},
+										},
+									},
+								},
+								"webhooks_configs": schema.ListNestedAttribute{
+									Description: "List of Webhooks configurations.",
+									Computed:    true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"url": schema.StringAttribute{
+												Description: "The endpoint to send HTTP POST requests to. Must be a valid URL",
+												Computed:    true,
+											},
+											"ms_teams": schema.BoolAttribute{
+												Description: "Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.",
+												Computed:    true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					"route": schema.SingleNestedAttribute{
+						Description: "The route for the alert.",
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"receiver": schema.StringAttribute{
+								Description: "The name of the receiver to send the alert to.",
+								Computed:    true,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -239,6 +335,12 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
+	alertConfigResp, err := d.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get alert config: %v", err))
+		return
+	}
+
 	// Map response body to schema
 	err = mapFields(ctx, instanceResp, &model)
 	if err != nil {
@@ -248,6 +350,11 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	err = mapACLField(aclListResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the ACL: %v", err))
+		return
+	}
+	err = mapAlertConfigField(ctx, alertConfigResp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
 		return
 	}
 

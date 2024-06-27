@@ -28,6 +28,7 @@ var instanceResource = map[string]string{
 	"metrics_retention_days":                 "60",
 	"metrics_retention_days_5m_downsampling": "30",
 	"metrics_retention_days_1h_downsampling": "15",
+	"alert_config":                           alertConfigResource,
 }
 
 var scrapeConfigResource = map[string]string{
@@ -44,6 +45,28 @@ var scrapeConfigResource = map[string]string{
 var credentialResource = map[string]string{
 	"project_id": testutil.ProjectId,
 }
+
+const alertConfigResource = `{
+    "receivers" : [
+      {
+        "name" : "OpsGenieReceiverInfo",
+        "opsgenieConfigs" : [
+          {
+            "tags" : "iam,argus-alert",
+            "priority" : "P5"
+          }
+        ]
+      },
+      {
+        "name" : "example-receiver",
+        "emailConfigs" : [
+          {
+            "to" : "me@example.com"
+          }
+        ]
+      }
+    ],
+}`
 
 func instanceResourceConfig(acl, metricsRetentionDays, metricsRetentionDays1hDownsampling, metricsRetentionDays5mDownsampling *string, instanceName, planName string) string {
 	var aclStr string

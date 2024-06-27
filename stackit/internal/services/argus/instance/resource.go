@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -68,16 +69,39 @@ type Model struct {
 	AlertConfig                        types.Object `tfsdk:"alert_config"`
 }
 
+var mockAlertConfig = alertConfigModel{
+	Receivers: types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+		types.ObjectValueMust(receiversTypes, map[string]attr.Value{
+			"name":             types.StringValue("change-me"),
+			"email_configs":    types.ListValueMust(types.ObjectType{AttrTypes: emailConfigsTypes}, []attr.Value{}),
+			"opsgenie_configs": types.ListValueMust(types.ObjectType{AttrTypes: opsgenieConfigsTypes}, []attr.Value{}),
+			"webhooks_configs": types.ListValueMust(types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{}),
+		}),
+	}),
+	Route: types.ObjectValueMust(routeTypes, map[string]attr.Value{
+		"receiver": types.StringValue("change-me"),
+	}),
+}
+
 // Struct corresponding to DataSourceModel.AlertConfig
 type alertConfigModel struct {
-	// globalConfiguration types.Object `tfsdk:"global_configuration"`
-	// inhibition_rules    types.Object `tfsdk:"inhibition_rules"`
-	Receivers types.List `tfsdk:"receivers"`
-	// route               types.Object `tfsdk:"route"`
+	// GlobalConfiguration types.Object `tfsdk:"global_configuration"`
+	// Inhibition_rules    types.Object `tfsdk:"inhibition_rules"`
+	Receivers types.List   `tfsdk:"receivers"`
+	Route     types.Object `tfsdk:"route"`
 }
 
 var alertConfigTypes = map[string]attr.Type{
 	"receivers": types.ListType{ElemType: types.ObjectType{AttrTypes: receiversTypes}},
+	"route":     types.ObjectType{AttrTypes: routeTypes},
+}
+
+type routeModel struct {
+	Receiver types.String `tfsdk:"receiver"`
+}
+
+var routeTypes = map[string]attr.Type{
+	"receiver": types.StringType,
 }
 
 // Struct corresponding to DataSourceModel.AlertConfig.receivers
@@ -344,12 +368,13 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"alert_config": schema.SingleNestedAttribute{
 				Description: "Alert configuration for the instance.",
 				Optional:    true,
-				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"receivers": schema.ListNestedAttribute{
 						Description: "List of alert receivers.",
-						Computed:    true,
-						Optional:    true,
+						Required:    true,
+						Validators: []validator.List{
+							listvalidator.SizeAtLeast(1),
+						},
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"name": schema.StringAttribute{
@@ -441,6 +466,16 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							},
 						},
 					},
+					"route": schema.SingleNestedAttribute{
+						Description: "Route configuration for the alerts.",
+						Required:    true,
+						Attributes: map[string]schema.Attribute{
+							"receiver": schema.StringAttribute{
+								Description: "The name of the receiver to route the alerts to.",
+								Required:    true,
+							},
+						},
+					},
 				},
 			},
 		},
@@ -478,6 +513,8 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 			return
 		}
 	}
+
+	tflog.Info(ctx, "Got Alert config model")
 
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -588,21 +625,28 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	// Set alert config
+	// Alert Config
+
+	if model.AlertConfig.IsUnknown() || model.AlertConfig.IsNull() {
+		alertConfig = mockAlertConfig
+	}
+
 	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, alertConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building alert config payload: %v", err))
 		return
 	}
 
-	updatedAlertConfig, err := r.client.UpdateAlertConfigs(ctx, *instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting alert config: %v", err))
-		return
+	var updatedAlertConfig *argus.UpdateAlertConfigsResponse
+	if alertConfigPayload != nil {
+		updatedAlertConfig, err = r.client.UpdateAlertConfigs(ctx, *instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting alert config: %v", err))
+			return
+		}
 	}
-
 	// Map response body to schema
-	err = mapUpdateAlertConfigField(updatedAlertConfig, &model)
+	err = mapUpdateAlertConfigField(ctx, updatedAlertConfig, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
 		return
@@ -686,7 +730,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapAlertConfigField(alertConfigResp, &model)
+	err = mapAlertConfigField(ctx, alertConfigResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
 		return
@@ -838,21 +882,28 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	// Set alert config
+	// Alert Config
+
+	if model.AlertConfig.IsUnknown() || model.AlertConfig.IsNull() {
+		alertConfig = mockAlertConfig
+	}
+
 	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, alertConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building alert config payload: %v", err))
 		return
 	}
 
-	updatedAlertConfig, err := r.client.UpdateAlertConfigs(ctx, instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting alert config: %v", err))
-		return
+	var updatedAlertConfig *argus.UpdateAlertConfigsResponse
+	if alertConfigPayload != nil {
+		updatedAlertConfig, err = r.client.UpdateAlertConfigs(ctx, instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting alert config: %v", err))
+			return
+		}
 	}
-
 	// Map response body to schema
-	err = mapUpdateAlertConfigField(updatedAlertConfig, &model)
+	err = mapUpdateAlertConfigField(ctx, updatedAlertConfig, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
 		return
@@ -1043,9 +1094,10 @@ func mapMetricsRetentionField(r *argus.GetMetricsStorageRetentionResponse, model
 	return nil
 }
 
-func mapUpdateAlertConfigField(resp *argus.UpdateAlertConfigsResponse, model *Model) error {
+func mapUpdateAlertConfigField(ctx context.Context, resp *argus.UpdateAlertConfigsResponse, model *Model) error {
 	if resp == nil || resp.Data == nil || resp.Data.Receivers == nil {
-		return fmt.Errorf("nil response")
+		model.AlertConfig = types.ObjectNull(alertConfigTypes)
+		return nil
 	}
 
 	if model == nil {
@@ -1107,13 +1159,33 @@ func mapUpdateAlertConfigField(resp *argus.UpdateAlertConfigsResponse, model *Mo
 
 	alertConfig := types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
 		"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, receiversList),
+		"route": types.ObjectValueMust(routeTypes, map[string]attr.Value{
+			"receiver": types.StringPointerValue(resp.Data.Route.Receiver),
+		}),
 	})
 
+	modelMockAlertConfig, diags := types.ObjectValueFrom(ctx, alertConfigTypes, mockAlertConfig)
+	if diags.HasError() {
+		return fmt.Errorf("mapping mock alert config: %w", core.DiagsToError(diags))
+	}
+
+	tflog.Info(ctx, fmt.Sprintf("Alert config updated: %v", alertConfig))
+	tflog.Info(ctx, fmt.Sprintf("Mock alert config: %v", modelMockAlertConfig))
+
+	if alertConfig.Equal(modelMockAlertConfig) {
+		tflog.Info(ctx, "Alert config is equal to mock alert config")
+		model.AlertConfig = types.ObjectNull(alertConfigTypes)
+		return nil
+	}
+
+	tflog.Info(ctx, "Alert config is NOT equal to mock alert config")
+
 	model.AlertConfig = alertConfig
+
 	return nil
 }
 
-func mapAlertConfigField(resp *argus.GetAlertConfigsResponse, model *Model) error {
+func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsResponse, model *Model) error {
 	if resp == nil || resp.Data == nil || resp.Data.Receivers == nil {
 		return fmt.Errorf("nil response")
 	}
@@ -1177,7 +1249,26 @@ func mapAlertConfigField(resp *argus.GetAlertConfigsResponse, model *Model) erro
 
 	alertConfig := types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
 		"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, receiversList),
+		"route": types.ObjectValueMust(routeTypes, map[string]attr.Value{
+			"receiver": types.StringPointerValue(resp.Data.Route.Receiver),
+		}),
 	})
+
+	modelMockAlertConfig, diags := types.ObjectValueFrom(ctx, alertConfigTypes, mockAlertConfig)
+	if diags.HasError() {
+		return fmt.Errorf("mapping mock alert config: %w", core.DiagsToError(diags))
+	}
+
+	tflog.Info(ctx, fmt.Sprintf("Alert config updated: %v", alertConfig))
+	tflog.Info(ctx, fmt.Sprintf("Mock alert config: %v", modelMockAlertConfig))
+
+	if alertConfig.Equal(modelMockAlertConfig) {
+		tflog.Info(ctx, "Alert config is equal to mock alert config")
+		model.AlertConfig = types.ObjectNull(alertConfigTypes)
+		return nil
+	}
+
+	tflog.Info(ctx, "Alert config is NOT equal to mock alert config")
 
 	model.AlertConfig = alertConfig
 	return nil
@@ -1344,9 +1435,19 @@ func toUpdateAlertConfigPayload(ctx context.Context, model alertConfigModel) (*a
 
 	payload.Receivers = &receivers
 
-	// This is hardcoded until routes are implemented
+	// // This is hardcoded until routes are implemented
+	// payload.Route = &argus.UpdateAlertConfigsPayloadRoute{
+	// 	Receiver: utils.Ptr("example-receiver"),
+	// }
+
+	routeModel := routeModel{}
+	diags = model.Route.As(ctx, &routeModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
+	}
+
 	payload.Route = &argus.UpdateAlertConfigsPayloadRoute{
-		Receiver: utils.Ptr("example-receiver"),
+		Receiver: conversion.StringValueToPointer(routeModel.Receiver),
 	}
 
 	return &payload, nil

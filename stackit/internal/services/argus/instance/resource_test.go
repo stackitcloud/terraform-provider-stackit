@@ -12,6 +12,81 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/argus"
 )
 
+func fixtureEmailConfigsModel() basetypes.ListValue {
+	return types.ListValueMust(types.ObjectType{AttrTypes: emailConfigsTypes}, []attr.Value{
+		types.ObjectValueMust(emailConfigsTypes, map[string]attr.Value{
+			"auth_identity": types.StringValue("identity"),
+			"auth_password": types.StringValue("password"),
+			"auth_username": types.StringValue("username"),
+			"from":          types.StringValue("notification@example.com"),
+			"smart_host":    types.StringValue("smtp.example.com"),
+			"to":            types.StringValue("me@example.com"),
+		}),
+	})
+}
+
+func fixtureOpsGenieConfigsModel() basetypes.ListValue {
+	return types.ListValueMust(types.ObjectType{AttrTypes: opsgenieConfigsTypes}, []attr.Value{
+		types.ObjectValueMust(opsgenieConfigsTypes, map[string]attr.Value{
+			"api_key": types.StringValue("key"),
+			"tags":    types.StringValue("tag"),
+			"api_url": types.StringValue("ops.example.com"),
+		}),
+	})
+}
+
+func fixtureWebHooksConfigsModel() basetypes.ListValue {
+	return types.ListValueMust(types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{
+		types.ObjectValueMust(webHooksConfigsTypes, map[string]attr.Value{
+			"url":      types.StringValue("http://example.com"),
+			"ms_teams": types.BoolValue(true),
+		}),
+	})
+}
+
+func fixtureReceiverModel(emailConfigs, opsGenieConfigs, webHooksConfigs basetypes.ListValue) basetypes.ObjectValue {
+	return types.ObjectValueMust(receiversTypes, map[string]attr.Value{
+		"name":             types.StringValue("name"),
+		"email_configs":    emailConfigs,
+		"opsgenie_configs": opsGenieConfigs,
+		"webhooks_configs": webHooksConfigs,
+	})
+}
+
+func fixtureEmailConfigsPayload() argus.CreateAlertConfigReceiverPayloadEmailConfigsInner {
+	return argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{
+		AuthIdentity: utils.Ptr("identity"),
+		AuthPassword: utils.Ptr("password"),
+		AuthUsername: utils.Ptr("username"),
+		From:         utils.Ptr("notification@example.com"),
+		Smarthost:    utils.Ptr("smtp.example.com"),
+		To:           utils.Ptr("me@example.com"),
+	}
+}
+
+func fixtureOpsGenieConfigsPayload() argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner {
+	return argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{
+		ApiKey: utils.Ptr("key"),
+		Tags:   utils.Ptr("tag"),
+		ApiUrl: utils.Ptr("ops.example.com"),
+	}
+}
+
+func fixtureWebHooksConfigsPayload() argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner {
+	return argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
+		Url:     utils.Ptr("http://example.com"),
+		MsTeams: utils.Ptr(true),
+	}
+}
+
+func fixtureReceiverPayload(emailConfigs *[]argus.CreateAlertConfigReceiverPayloadEmailConfigsInner, opsGenieConfigs *[]argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner, webHooksConfigs *[]argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner) argus.UpdateAlertConfigsPayloadReceiversInner {
+	return argus.UpdateAlertConfigsPayloadReceiversInner{
+		EmailConfigs:    emailConfigs,
+		Name:            utils.Ptr("name"),
+		OpsgenieConfigs: opsGenieConfigs,
+		WebHookConfigs:  webHooksConfigs,
+	}
+}
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description             string
@@ -506,6 +581,179 @@ func TestToUpdateMetricsStorageRetentionPayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			output, err := toUpdateMetricsStorageRetentionPayload(tt.retentionDaysRaw, tt.retentionDays5m, tt.retentionDays1h, tt.getMetricsResp)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(output, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestToUpdateAlertConfigPayload(t *testing.T) {
+	tests := []struct {
+		description string
+		input       alertConfigModel
+		expected    *argus.UpdateAlertConfigsPayload
+		isValid     bool
+	}{
+		{
+			description: "base",
+			input: alertConfigModel{
+				Receivers: types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+					fixtureReceiverModel(
+						fixtureEmailConfigsModel(),
+						fixtureOpsGenieConfigsModel(),
+						fixtureWebHooksConfigsModel(),
+					),
+				}),
+			},
+			expected: &argus.UpdateAlertConfigsPayload{
+				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
+					fixtureReceiverPayload(
+						&[]argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{fixtureEmailConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{fixtureOpsGenieConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{fixtureWebHooksConfigsPayload()},
+					),
+				},
+				// Hardcoded before routes are implemented
+				// Route: &argus.UpdateAlertConfigsPayloadRoute{
+				// 	Receiver: utils.Ptr("example-receiver"),
+				// },
+			},
+			isValid: true,
+		},
+		{
+			description: "receivers only emailconfigs",
+			input: alertConfigModel{
+				Receivers: types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+					fixtureReceiverModel(
+						fixtureEmailConfigsModel(),
+						types.ListNull(types.ObjectType{AttrTypes: opsgenieConfigsTypes}),
+						types.ListNull(types.ObjectType{AttrTypes: webHooksConfigsTypes}),
+					),
+				}),
+			},
+			expected: &argus.UpdateAlertConfigsPayload{
+				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
+					fixtureReceiverPayload(
+						&[]argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{fixtureEmailConfigsPayload()},
+						nil,
+						nil,
+					),
+				},
+				// Hardcoded before routes are implemented
+				Route: &argus.UpdateAlertConfigsPayloadRoute{
+					Receiver: utils.Ptr("example-receiver"),
+				},
+			},
+			isValid: true,
+		},
+		{
+			description: "receivers only opsgenieconfigs",
+			input: alertConfigModel{
+				Receivers: types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+					fixtureReceiverModel(
+						types.ListNull(types.ObjectType{AttrTypes: emailConfigsTypes}),
+						fixtureOpsGenieConfigsModel(),
+						types.ListNull(types.ObjectType{AttrTypes: webHooksConfigsTypes}),
+					),
+				}),
+			},
+			expected: &argus.UpdateAlertConfigsPayload{
+				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
+					fixtureReceiverPayload(
+						nil,
+						&[]argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{fixtureOpsGenieConfigsPayload()},
+						nil,
+					),
+				},
+				// Hardcoded before routes are implemented
+				Route: &argus.UpdateAlertConfigsPayloadRoute{
+					Receiver: utils.Ptr("example-receiver"),
+				},
+			},
+			isValid: true,
+		},
+		{
+			description: "receivers only webhooksconfigs",
+			input: alertConfigModel{
+				Receivers: types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+					fixtureReceiverModel(
+						types.ListNull(types.ObjectType{AttrTypes: emailConfigsTypes}),
+						types.ListNull(types.ObjectType{AttrTypes: opsgenieConfigsTypes}),
+						fixtureWebHooksConfigsModel(),
+					),
+				}),
+			},
+			expected: &argus.UpdateAlertConfigsPayload{
+				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
+					fixtureReceiverPayload(
+						nil,
+						nil,
+						&[]argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{fixtureWebHooksConfigsPayload()},
+					),
+				},
+				// Hardcoded before routes are implemented
+				Route: &argus.UpdateAlertConfigsPayloadRoute{
+					Receiver: utils.Ptr("example-receiver"),
+				},
+			},
+			isValid: true,
+		},
+		{
+			description: "multiple receivers",
+			input: alertConfigModel{
+				Receivers: types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+					fixtureReceiverModel(
+						fixtureEmailConfigsModel(),
+						fixtureOpsGenieConfigsModel(),
+						fixtureWebHooksConfigsModel(),
+					),
+					fixtureReceiverModel(
+						fixtureEmailConfigsModel(),
+						fixtureOpsGenieConfigsModel(),
+						fixtureWebHooksConfigsModel(),
+					),
+				}),
+			},
+			expected: &argus.UpdateAlertConfigsPayload{
+				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
+					fixtureReceiverPayload(
+						&[]argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{fixtureEmailConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{fixtureOpsGenieConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{fixtureWebHooksConfigsPayload()},
+					),
+					fixtureReceiverPayload(
+						&[]argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{fixtureEmailConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{fixtureOpsGenieConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{fixtureWebHooksConfigsPayload()},
+					),
+				},
+				// Hardcoded before routes are implemented
+				Route: &argus.UpdateAlertConfigsPayloadRoute{
+					Receiver: utils.Ptr("example-receiver"),
+				},
+			},
+			isValid: true,
+		},
+		{
+			description: "empty alert config",
+			input:       alertConfigModel{},
+			expected:    nil,
+			isValid:     true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output, err := toUpdateAlertConfigPayload(context.Background(), tt.input)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
