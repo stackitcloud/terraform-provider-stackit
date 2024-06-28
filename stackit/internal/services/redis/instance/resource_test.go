@@ -210,9 +210,7 @@ func TestToCreatePayload(t *testing.T) {
 		{
 			"default_values",
 			&Model{},
-			&redis.CreateInstancePayload{
-				Parameters: &redis.InstanceParameters{},
-			},
+			&redis.CreateInstancePayload{},
 			true,
 		},
 		{
@@ -258,16 +256,16 @@ func TestToCreatePayload(t *testing.T) {
 			&redis.CreateInstancePayload{
 				InstanceName: utils.Ptr("name"),
 				PlanId:       utils.Ptr("plan"),
-				Parameters:   &redis.InstanceParameters{},
 			},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			var parameters = &parametersModel{}
+			var parameters *parametersModel
 			if tt.input != nil {
 				if !(tt.input.Parameters.IsNull() || tt.input.Parameters.IsUnknown()) {
+					parameters = &parametersModel{}
 					diags := tt.input.Parameters.As(context.Background(), parameters, basetypes.ObjectAsOptions{})
 					if diags.HasError() {
 						t.Fatalf("Error converting parameters: %v", diags.Errors())
@@ -301,9 +299,7 @@ func TestToUpdatePayload(t *testing.T) {
 		{
 			"default_values",
 			&Model{},
-			&redis.PartialUpdateInstancePayload{
-				Parameters: &redis.InstanceParameters{},
-			},
+			&redis.PartialUpdateInstancePayload{},
 			true,
 		},
 		{
@@ -342,17 +338,17 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			&redis.PartialUpdateInstancePayload{
-				PlanId:     utils.Ptr("plan"),
-				Parameters: &redis.InstanceParameters{},
+				PlanId: utils.Ptr("plan"),
 			},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			var parameters = &parametersModel{}
+			var parameters *parametersModel
 			if tt.input != nil {
 				if !(tt.input.Parameters.IsNull() || tt.input.Parameters.IsUnknown()) {
+					parameters = &parametersModel{}
 					diags := tt.input.Parameters.As(context.Background(), parameters, basetypes.ObjectAsOptions{})
 					if diags.HasError() {
 						t.Fatalf("Error converting parameters: %v", diags.Errors())

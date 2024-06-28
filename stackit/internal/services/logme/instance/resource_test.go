@@ -295,15 +295,14 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			var parameters = &parametersModel{}
+			var parameters *parametersModel
 			if tt.input != nil {
 				if !(tt.input.Parameters.IsNull() || tt.input.Parameters.IsUnknown()) {
+					parameters = &parametersModel{}
 					diags := tt.input.Parameters.As(context.Background(), parameters, basetypes.ObjectAsOptions{})
 					if diags.HasError() {
 						t.Fatalf("Error converting parameters: %v", diags.Errors())
 					}
-				} else {
-					parameters = nil
 				}
 			}
 			output, err := toCreatePayload(tt.input, parameters)
@@ -379,15 +378,14 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			var parameters = &parametersModel{}
+			var parameters *parametersModel
 			if tt.input != nil {
 				if !(tt.input.Parameters.IsNull() || tt.input.Parameters.IsUnknown()) {
+					parameters = &parametersModel{}
 					diags := tt.input.Parameters.As(context.Background(), parameters, basetypes.ObjectAsOptions{})
 					if diags.HasError() {
 						t.Fatalf("Error converting parameters: %v", diags.Errors())
 					}
-				} else {
-					parameters = nil
 				}
 			}
 			output, err := toUpdatePayload(tt.input, parameters)
