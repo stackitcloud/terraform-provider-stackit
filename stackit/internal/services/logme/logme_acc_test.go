@@ -18,16 +18,48 @@ import (
 
 // Instance resource data
 var instanceResource = map[string]string{
-	"project_id": testutil.ProjectId,
-	"name":       testutil.ResourceNameWithDateTime("logme"),
-	"plan_id":    "201d743c-0f06-4af2-8f20-649baf4819ae",
-	"plan_name":  "stackit-logme2-1.2.50-replica",
-	"version":    "2",
-	"sgw_acl-1":  "192.168.0.0/16",
-	"sgw_acl-2":  "192.168.0.0/24",
+	"project_id":         testutil.ProjectId,
+	"name":               testutil.ResourceNameWithDateTime("logme"),
+	"plan_id":            "201d743c-0f06-4af2-8f20-649baf4819ae",
+	"plan_name":          "stackit-logme2-1.2.50-replica",
+	"version":            "2",
+	"sgw_acl-1":          "192.168.0.0/16",
+	"sgw_acl-2":          "192.168.0.0/24",
+	"fluent_tcp":         "4",
+	"max_disk_threshold": "10",
+	"enable_monitoring":  "false",
+	"syslog":             `["syslog.example.com:514"]`,
 }
 
-func resourceConfig(acls string) string {
+func parametersConfig(params map[string]string) string {
+	nonStringParams := []string{
+		"enable_monitoring",
+		"fluentd_tcp",
+		"fluentd_tls",
+		"fluentd_udp",
+		"ism_jitter",
+		"ism_job_interval",
+		"java_heapspace",
+		"java_maxmetaspace",
+		"max_disk_threshold",
+		"metrics_frequency",
+		"opensearch_tls_ciphers",
+		"opensearch_tls_protocols",
+		"syslog",
+	}
+	parameters := "parameters = {"
+	for k, v := range params {
+		if utils.Contains(nonStringParams, k) {
+			parameters += fmt.Sprintf("%s = %s\n", k, v)
+		} else {
+			parameters += fmt.Sprintf("%s = %q\n", k, v)
+		}
+	}
+	parameters += "\n}"
+	return parameters
+}
+
+func resourceConfig(params map[string]string) string {
 	return fmt.Sprintf(`
 				%s
 
@@ -36,9 +68,7 @@ func resourceConfig(acls string) string {
 					name       = "%s"
 					plan_name  = "%s"
  				 	version    = "%s"
-					parameters = {
-						sgw_acl = "%s"
-					}
+					%s
 				}
 
 				resource "stackit_logme_credential" "credential" {
@@ -51,7 +81,7 @@ func resourceConfig(acls string) string {
 		instanceResource["name"],
 		instanceResource["plan_name"],
 		instanceResource["version"],
-		acls,
+		parametersConfig(params),
 	)
 }
 func TestAccLogMeResource(t *testing.T) {
@@ -62,7 +92,14 @@ func TestAccLogMeResource(t *testing.T) {
 
 			// Creation
 			{
-				Config: resourceConfig(instanceResource["sgw_acl-1"]),
+				Config: resourceConfig(
+					map[string]string{
+						"sgw_acl":            instanceResource["sgw_acl-1"],
+						"fluentd_tcp":        instanceResource["fluent_tcp"],
+						"max_disk_threshold": instanceResource["max_disk_threshold"],
+						"enable_monitoring":  instanceResource["enable_monitoring"],
+						"syslog":             instanceResource["syslog"],
+					}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "project_id", instanceResource["project_id"]),
@@ -101,7 +138,13 @@ func TestAccLogMeResource(t *testing.T) {
 						instance_id    = stackit_logme_credential.credential.instance_id
 					    credential_id = stackit_logme_credential.credential.credential_id
 					}`,
-					resourceConfig(instanceResource["sgw_acl-1"]),
+					resourceConfig(map[string]string{
+						"sgw_acl":            instanceResource["sgw_acl-1"],
+						"fluentd_tcp":        instanceResource["fluent_tcp"],
+						"max_disk_threshold": instanceResource["max_disk_threshold"],
+						"enable_monitoring":  instanceResource["enable_monitoring"],
+						"syslog":             instanceResource["syslog"],
+					}),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -162,7 +205,13 @@ func TestAccLogMeResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfig(instanceResource["sgw_acl-2"]),
+				Config: resourceConfig(map[string]string{
+					"sgw_acl":            instanceResource["sgw_acl-2"],
+					"fluentd_tcp":        instanceResource["fluent_tcp"],
+					"max_disk_threshold": instanceResource["max_disk_threshold"],
+					"enable_monitoring":  instanceResource["enable_monitoring"],
+					"syslog":             instanceResource["syslog"],
+				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "project_id", instanceResource["project_id"]),

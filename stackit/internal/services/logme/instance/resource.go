@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -52,12 +54,56 @@ type Model struct {
 
 // Struct corresponding to DataSourceModel.Parameters
 type parametersModel struct {
-	SgwAcl types.String `tfsdk:"sgw_acl"`
+	SgwAcl                 types.String  `tfsdk:"sgw_acl"`
+	EnableMonitoring       types.Bool    `tfsdk:"enable_monitoring"`
+	FluentdTcp             types.Int64   `tfsdk:"fluentd_tcp"`
+	FluentdTls             types.Int64   `tfsdk:"fluentd_tls"`
+	FluentdTlsCiphers      types.String  `tfsdk:"fluentd_tls_ciphers"`
+	FluentdTlsMaxVersion   types.String  `tfsdk:"fluentd_tls_max_version"`
+	FluentdTlsMinVersion   types.String  `tfsdk:"fluentd_tls_min_version"`
+	FluentdTlsVersion      types.String  `tfsdk:"fluentd_tls_version"`
+	FluentdUdp             types.Int64   `tfsdk:"fluentd_udp"`
+	Graphite               types.String  `tfsdk:"graphite"`
+	IsmDeletionAfter       types.String  `tfsdk:"ism_deletion_after"`
+	IsmJitter              types.Float64 `tfsdk:"ism_jitter"`
+	IsmJobInterval         types.Int64   `tfsdk:"ism_job_interval"`
+	JavaHeapspace          types.Int64   `tfsdk:"java_heapspace"`
+	JavaMaxmetaspace       types.Int64   `tfsdk:"java_maxmetaspace"`
+	MaxDiskThreshold       types.Int64   `tfsdk:"max_disk_threshold"`
+	MetricsFrequency       types.Int64   `tfsdk:"metrics_frequency"`
+	MetricsPrefix          types.String  `tfsdk:"metrics_prefix"`
+	MonitoringInstanceId   types.String  `tfsdk:"monitoring_instance_id"`
+	OpensearchTlsCiphers   types.List    `tfsdk:"opensearch_tls_ciphers"`
+	OpensearchTlsProtocols types.List    `tfsdk:"opensearch_tls_protocols"`
+	Syslog                 types.List    `tfsdk:"syslog"`
+	SyslogUseUdp           types.String  `tfsdk:"syslog_use_udp"`
 }
 
 // Types corresponding to parametersModel
 var parametersTypes = map[string]attr.Type{
-	"sgw_acl": basetypes.StringType{},
+	"sgw_acl":                  basetypes.StringType{},
+	"enable_monitoring":        basetypes.BoolType{},
+	"fluentd_tcp":              basetypes.Int64Type{},
+	"fluentd_tls":              basetypes.Int64Type{},
+	"fluentd_tls_ciphers":      basetypes.StringType{},
+	"fluentd_tls_max_version":  basetypes.StringType{},
+	"fluentd_tls_min_version":  basetypes.StringType{},
+	"fluentd_tls_version":      basetypes.StringType{},
+	"fluentd_udp":              basetypes.Int64Type{},
+	"graphite":                 basetypes.StringType{},
+	"ism_deletion_after":       basetypes.StringType{},
+	"ism_jitter":               basetypes.Float64Type{},
+	"ism_job_interval":         basetypes.Int64Type{},
+	"java_heapspace":           basetypes.Int64Type{},
+	"java_maxmetaspace":        basetypes.Int64Type{},
+	"max_disk_threshold":       basetypes.Int64Type{},
+	"metrics_frequency":        basetypes.Int64Type{},
+	"metrics_prefix":           basetypes.StringType{},
+	"monitoring_instance_id":   basetypes.StringType{},
+	"opensearch_tls_ciphers":   basetypes.ListType{ElemType: types.StringType},
+	"opensearch_tls_protocols": basetypes.ListType{ElemType: types.StringType},
+	"syslog":                   basetypes.ListType{ElemType: types.StringType},
+	"syslog_use_udp":           basetypes.StringType{},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -124,6 +170,17 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"plan_id":     "The selected plan ID.",
 	}
 
+	parametersDescriptions := map[string]string{
+		"sgw_acl":                "Comma separated list of IP networks in CIDR notation which are allowed to access this instance.",
+		"enable_monitoring":      "Enable monitoring.",
+		"graphite":               "If set, monitoring with Graphite will be enabled. Expects the host and port where the Graphite metrics should be sent to (host:port).",
+		"max_disk_threshold":     "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
+		"metrics_frequency":      "The frequency in seconds at which metrics are emitted.",
+		"metrics_prefix":         "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key",
+		"monitoring_instance_id": "The monitoring instance ID.",
+		"syslog":                 "List of syslog servers to send logs to.",
+	}
+
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -183,8 +240,122 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"parameters": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"sgw_acl": schema.StringAttribute{
-						Optional: true,
-						Computed: true,
+						Description: parametersDescriptions["sgw_acl"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"enable_monitoring": schema.BoolAttribute{
+						Description: parametersDescriptions["enable_monitoring"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"fluentd_tcp": schema.Int64Attribute{
+						Description: parametersDescriptions["fluentd_tcp"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"fluentd_tls": schema.Int64Attribute{
+						Description: parametersDescriptions["fluentd_tls"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"fluentd_tls_ciphers": schema.StringAttribute{
+						Description: parametersDescriptions["fluentd_tls_ciphers"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"fluentd_tls_max_version": schema.StringAttribute{
+						Description: parametersDescriptions["fluentd_tls_max_version"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"fluentd_tls_min_version": schema.StringAttribute{
+						Description: parametersDescriptions["fluentd_tls_min_version"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"fluentd_tls_version": schema.StringAttribute{
+						Description: parametersDescriptions["fluentd_tls_version"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"fluentd_udp": schema.Int64Attribute{
+						Description: parametersDescriptions["fluentd_udp"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"graphite": schema.StringAttribute{
+						Description: parametersDescriptions["graphite"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"ism_deletion_after": schema.StringAttribute{
+						Description: parametersDescriptions["ism_deletion_after"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"ism_jitter": schema.Float64Attribute{
+						Description: parametersDescriptions["ism_jitter"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"ism_job_interval": schema.Int64Attribute{
+						Description: parametersDescriptions["ism_job_interval"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"java_heapspace": schema.Int64Attribute{
+						Description: parametersDescriptions["java_heapspace"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"java_maxmetaspace": schema.Int64Attribute{
+						Description: parametersDescriptions["java_maxmetaspace"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"max_disk_threshold": schema.Int64Attribute{
+						Description: parametersDescriptions["max_disk_threshold"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"metrics_frequency": schema.Int64Attribute{
+						Description: parametersDescriptions["metrics_frequency"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"metrics_prefix": schema.StringAttribute{
+						Description: parametersDescriptions["metrics_prefix"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"monitoring_instance_id": schema.StringAttribute{
+						Description: parametersDescriptions["monitoring_instance_id"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"opensearch_tls_ciphers": schema.ListAttribute{
+						Description: parametersDescriptions["opensearch_tls_ciphers"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+					},
+					"opensearch_tls_protocols": schema.ListAttribute{
+						Description: parametersDescriptions["opensearch_tls_protocols"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+					},
+					"syslog": schema.ListAttribute{
+						Description: parametersDescriptions["syslog"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+					},
+					"syslog_use_udp": schema.StringAttribute{
+						Description: parametersDescriptions["syslog_use_udp"],
+						Optional:    true,
+						Computed:    true,
 					},
 				},
 				Optional: true,
@@ -242,6 +413,8 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
+	} else {
+		parameters = nil
 	}
 
 	err := r.loadPlanId(ctx, &model)
@@ -264,7 +437,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	instanceId := *createResp.InstanceId
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -488,7 +661,30 @@ func mapFields(instance *logme.Instance, model *Model) error {
 func mapParameters(params map[string]interface{}) (types.Object, error) {
 	attributes := map[string]attr.Value{}
 	for attribute := range parametersTypes {
-		valueInterface, ok := params[attribute]
+		var valueInterface interface{}
+		var ok bool
+
+		// This replacement is necessary because Terraform does not allow hyphens in attribute names
+		// And the API uses hyphens in some of the attribute names, which would cause a mismatch
+		// The following attributes have hyphens in the API but underscores in the schema
+		hyphenAttributes := []string{
+			"fluentd_tcp",
+			"fluentd_tls",
+			"fluentd_tls_ciphers",
+			"fluentd_tls_max_version",
+			"fluentd_tls_min_version",
+			"fluentd_tls_version",
+			"fluentd_udp",
+			"opensearch_tls_ciphers",
+			"opensearch_tls_protocols",
+			"syslog_use_udp",
+		}
+		if slices.Contains(hyphenAttributes, attribute) {
+			alteredAttribute := strings.ReplaceAll(attribute, "_", "-")
+			valueInterface, ok = params[alteredAttribute]
+		} else {
+			valueInterface, ok = params[attribute]
+		}
 		if !ok {
 			// All fields are optional, so this is ok
 			// Set the value as nil, will be handled accordingly
@@ -540,6 +736,19 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 				}
 				value = types.Int64Value(valueInt64)
 			}
+		case basetypes.Float64Type:
+			if valueInterface == nil {
+				value = types.Float64Null()
+			} else {
+				var valueFloat64 float64
+				switch temp := valueInterface.(type) {
+				default:
+					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as int", attribute, valueInterface)
+				case float64:
+					valueFloat64 = float64(temp)
+				}
+				value = types.Float64Value(valueFloat64)
+			}
 		case basetypes.ListType: // Assumed to be a list of strings
 			if valueInterface == nil {
 				value = types.ListNull(types.StringType)
@@ -584,16 +793,12 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*logme.CreateIn
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	if parameters == nil {
-		return &logme.CreateInstancePayload{
-			InstanceName: conversion.StringValueToPointer(model.Name),
-			PlanId:       conversion.StringValueToPointer(model.PlanId),
-		}, nil
+
+	payloadParams, err := toInstanceParams(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("convert parameters: %w", err)
 	}
-	payloadParams := &logme.InstanceParameters{}
-	if parameters.SgwAcl.ValueString() != "" {
-		payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
-	}
+
 	return &logme.CreateInstancePayload{
 		InstanceName: conversion.StringValueToPointer(model.Name),
 		Parameters:   payloadParams,
@@ -606,17 +811,61 @@ func toUpdatePayload(model *Model, parameters *parametersModel) (*logme.PartialU
 		return nil, fmt.Errorf("nil model")
 	}
 
-	if parameters == nil {
-		return &logme.PartialUpdateInstancePayload{
-			PlanId: conversion.StringValueToPointer(model.PlanId),
-		}, nil
+	payloadParams, err := toInstanceParams(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("convert parameters: %w", err)
 	}
+
 	return &logme.PartialUpdateInstancePayload{
-		Parameters: &logme.InstanceParameters{
-			SgwAcl: conversion.StringValueToPointer(parameters.SgwAcl),
-		},
-		PlanId: conversion.StringValueToPointer(model.PlanId),
+		Parameters: payloadParams,
+		PlanId:     conversion.StringValueToPointer(model.PlanId),
 	}, nil
+}
+
+func toInstanceParams(parameters *parametersModel) (*logme.InstanceParameters, error) {
+	if parameters == nil {
+		return nil, nil
+	}
+	payloadParams := &logme.InstanceParameters{}
+
+	payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
+	payloadParams.EnableMonitoring = conversion.BoolValueToPointer(parameters.EnableMonitoring)
+	payloadParams.FluentdTcp = conversion.Int64ValueToPointer(parameters.FluentdTcp)
+	payloadParams.FluentdTls = conversion.Int64ValueToPointer(parameters.FluentdTls)
+	payloadParams.FluentdTlsCiphers = conversion.StringValueToPointer(parameters.FluentdTlsCiphers)
+	payloadParams.FluentdTlsMaxVersion = conversion.StringValueToPointer(parameters.FluentdTlsMaxVersion)
+	payloadParams.FluentdTlsMinVersion = conversion.StringValueToPointer(parameters.FluentdTlsMinVersion)
+	payloadParams.FluentdTlsVersion = conversion.StringValueToPointer(parameters.FluentdTlsVersion)
+	payloadParams.FluentdUdp = conversion.Int64ValueToPointer(parameters.FluentdUdp)
+	payloadParams.Graphite = conversion.StringValueToPointer(parameters.Graphite)
+	payloadParams.IsmDeletionAfter = conversion.StringValueToPointer(parameters.IsmDeletionAfter)
+	payloadParams.IsmJitter = conversion.Float64ValueToPointer(parameters.IsmJitter)
+	payloadParams.IsmJobInterval = conversion.Int64ValueToPointer(parameters.IsmJobInterval)
+	payloadParams.JavaHeapspace = conversion.Int64ValueToPointer(parameters.JavaHeapspace)
+	payloadParams.JavaMaxmetaspace = conversion.Int64ValueToPointer(parameters.JavaMaxmetaspace)
+	payloadParams.MaxDiskThreshold = conversion.Int64ValueToPointer(parameters.MaxDiskThreshold)
+	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
+	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
+	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
+	payloadParams.SyslogUseUdp = conversion.StringValueToPointer(parameters.SyslogUseUdp)
+
+	var err error
+	payloadParams.OpensearchTlsCiphers, err = conversion.StringListToPointer(parameters.OpensearchTlsCiphers)
+	if err != nil {
+		return nil, fmt.Errorf("convert opensearch_tls_ciphers: %w", err)
+	}
+
+	payloadParams.OpensearchTlsProtocols, err = conversion.StringListToPointer(parameters.OpensearchTlsProtocols)
+	if err != nil {
+		return nil, fmt.Errorf("convert opensearch_tls_protocols: %w", err)
+	}
+
+	payloadParams.Syslog, err = conversion.StringListToPointer(parameters.Syslog)
+	if err != nil {
+		return nil, fmt.Errorf("convert syslog: %w", err)
+	}
+
+	return payloadParams, nil
 }
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
