@@ -175,10 +175,16 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"enable_monitoring":      "Enable monitoring.",
 		"graphite":               "If set, monitoring with Graphite will be enabled. Expects the host and port where the Graphite metrics should be sent to (host:port).",
 		"max_disk_threshold":     "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
-		"metrics_frequency":      "The frequency in seconds at which metrics are emitted.",
-		"metrics_prefix":         "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key",
+		"metrics_frequency":      "The frequency in seconds at which metrics are emitted (in seconds).",
+		"metrics_prefix":         "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key.",
 		"monitoring_instance_id": "The monitoring instance ID.",
+		"java_heapspace":         "The amount of memory (in MB) allocated as heap by the JVM for OpenSearch.",
+		"java_maxmetaspace":      "The amount of memory (in MB) used by the JVM to store metadata for OpenSearch.",
+		"ism_deletion_after":     "Combination of an integer and a timerange when an index will be considered \"old\" and can be deleted. Possible values for the timerange are `s`, `m`, `h` and `d`.",
+		"ism_job_interval":       "Jitter of the execution time.",
 		"syslog":                 "List of syslog servers to send logs to.",
+		"syslog-use-udp":         "Defines if syslog will use UDP. Possible values: `yes`, `no`.",
+		"opensearch-tls-ciphers": "List of ciphers to use for TLS.",
 	}
 
 	resp.Schema = schema.Schema{

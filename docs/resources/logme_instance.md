@@ -63,14 +63,14 @@ Optional:
 - `fluentd_tls_version` (String)
 - `fluentd_udp` (Number)
 - `graphite` (String) If set, monitoring with Graphite will be enabled. Expects the host and port where the Graphite metrics should be sent to (host:port).
-- `ism_deletion_after` (String)
+- `ism_deletion_after` (String) Combination of an integer and a timerange when an index will be considered "old" and can be deleted. Possible values for the timerange are `s`, `m`, `h` and `d`.
 - `ism_jitter` (Number)
-- `ism_job_interval` (Number)
-- `java_heapspace` (Number)
-- `java_maxmetaspace` (Number)
+- `ism_job_interval` (Number) Jitter of the execution time.
+- `java_heapspace` (Number) The amount of memory (in MB) allocated as heap by the JVM for OpenSearch.
+- `java_maxmetaspace` (Number) The amount of memory (in MB) used by the JVM to store metadata for OpenSearch.
 - `max_disk_threshold` (Number) The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.
-- `metrics_frequency` (Number) The frequency in seconds at which metrics are emitted.
-- `metrics_prefix` (String) The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key
+- `metrics_frequency` (Number) The frequency in seconds at which metrics are emitted (in seconds).
+- `metrics_prefix` (String) The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key.
 - `monitoring_instance_id` (String) The monitoring instance ID.
 - `opensearch_tls_ciphers` (List of String)
 - `opensearch_tls_protocols` (List of String)
