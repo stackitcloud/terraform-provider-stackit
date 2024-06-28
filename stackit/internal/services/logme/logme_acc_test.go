@@ -28,7 +28,6 @@ var instanceResource = map[string]string{
 	"fluent_tcp":         "4",
 	"max_disk_threshold": "10",
 	"enable_monitoring":  "false",
-	"syslog":             `["syslog.example.com:514"]`,
 }
 
 func parametersConfig(params map[string]string) string {
@@ -98,7 +97,6 @@ func TestAccLogMeResource(t *testing.T) {
 						"fluentd_tcp":        instanceResource["fluent_tcp"],
 						"max_disk_threshold": instanceResource["max_disk_threshold"],
 						"enable_monitoring":  instanceResource["enable_monitoring"],
-						"syslog":             instanceResource["syslog"],
 					}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -109,6 +107,9 @@ func TestAccLogMeResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-1"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.fluentd_tcp", instanceResource["fluent_tcp"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.max_disk_threshold", instanceResource["max_disk_threshold"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
 
 					// Credential data
 					resource.TestCheckResourceAttrPair(
@@ -143,7 +144,6 @@ func TestAccLogMeResource(t *testing.T) {
 						"fluentd_tcp":        instanceResource["fluent_tcp"],
 						"max_disk_threshold": instanceResource["max_disk_threshold"],
 						"enable_monitoring":  instanceResource["enable_monitoring"],
-						"syslog":             instanceResource["syslog"],
 					}),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -157,6 +157,9 @@ func TestAccLogMeResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "plan_id", instanceResource["plan_id"]),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-1"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.fluentd_tcp", instanceResource["fluent_tcp"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.max_disk_threshold", instanceResource["max_disk_threshold"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
 
 					// Credential data
 					resource.TestCheckResourceAttr("data.stackit_logme_credential.credential", "project_id", instanceResource["project_id"]),
@@ -210,7 +213,6 @@ func TestAccLogMeResource(t *testing.T) {
 					"fluentd_tcp":        instanceResource["fluent_tcp"],
 					"max_disk_threshold": instanceResource["max_disk_threshold"],
 					"enable_monitoring":  instanceResource["enable_monitoring"],
-					"syslog":             instanceResource["syslog"],
 				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -221,6 +223,9 @@ func TestAccLogMeResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-2"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.fluentd_tcp", instanceResource["fluent_tcp"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.max_disk_threshold", instanceResource["max_disk_threshold"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
 				),
 			},
 			// Deletion is done by the framework implicitly
