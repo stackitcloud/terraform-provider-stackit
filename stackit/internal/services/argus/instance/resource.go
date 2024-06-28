@@ -514,8 +514,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
-	tflog.Info(ctx, "Got Alert config model")
-
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
@@ -1169,16 +1167,10 @@ func mapUpdateAlertConfigField(ctx context.Context, resp *argus.UpdateAlertConfi
 		return fmt.Errorf("mapping mock alert config: %w", core.DiagsToError(diags))
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("Alert config updated: %v", alertConfig))
-	tflog.Info(ctx, fmt.Sprintf("Mock alert config: %v", modelMockAlertConfig))
-
 	if alertConfig.Equal(modelMockAlertConfig) {
-		tflog.Info(ctx, "Alert config is equal to mock alert config")
 		model.AlertConfig = types.ObjectNull(alertConfigTypes)
 		return nil
 	}
-
-	tflog.Info(ctx, "Alert config is NOT equal to mock alert config")
 
 	model.AlertConfig = alertConfig
 
@@ -1259,16 +1251,10 @@ func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsRespons
 		return fmt.Errorf("mapping mock alert config: %w", core.DiagsToError(diags))
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("Alert config updated: %v", alertConfig))
-	tflog.Info(ctx, fmt.Sprintf("Mock alert config: %v", modelMockAlertConfig))
-
 	if alertConfig.Equal(modelMockAlertConfig) {
-		tflog.Info(ctx, "Alert config is equal to mock alert config")
 		model.AlertConfig = types.ObjectNull(alertConfigTypes)
 		return nil
 	}
-
-	tflog.Info(ctx, "Alert config is NOT equal to mock alert config")
 
 	model.AlertConfig = alertConfig
 	return nil
