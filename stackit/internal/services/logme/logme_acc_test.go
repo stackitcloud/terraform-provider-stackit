@@ -29,6 +29,7 @@ var instanceResource = map[string]string{
 	"max_disk_threshold": "80",
 	"enable_monitoring":  "false",
 	"syslog-0":           "syslog.example.com:514",
+	"ism_jitter":         "0.6",
 }
 
 func parametersConfig(params map[string]string) string {
@@ -99,6 +100,7 @@ func TestAccLogMeResource(t *testing.T) {
 						"max_disk_threshold": instanceResource["max_disk_threshold"],
 						"enable_monitoring":  instanceResource["enable_monitoring"],
 						"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
+						"ism_jitter":         instanceResource["ism_jitter"],
 					}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -114,6 +116,7 @@ func TestAccLogMeResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.#", "1"),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.0", instanceResource["syslog-0"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.ism_jitter", instanceResource["ism_jitter"]),
 
 					// Credential data
 					resource.TestCheckResourceAttrPair(
@@ -149,6 +152,7 @@ func TestAccLogMeResource(t *testing.T) {
 						"max_disk_threshold": instanceResource["max_disk_threshold"],
 						"enable_monitoring":  instanceResource["enable_monitoring"],
 						"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
+						"ism_jitter":         instanceResource["ism_jitter"],
 					}),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -167,6 +171,7 @@ func TestAccLogMeResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.syslog.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.syslog.0", instanceResource["syslog-0"]),
+					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.ism_jitter", instanceResource["ism_jitter"]),
 
 					// Credential data
 					resource.TestCheckResourceAttr("data.stackit_logme_credential.credential", "project_id", instanceResource["project_id"]),
@@ -221,6 +226,7 @@ func TestAccLogMeResource(t *testing.T) {
 					"max_disk_threshold": instanceResource["max_disk_threshold"],
 					"enable_monitoring":  instanceResource["enable_monitoring"],
 					"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
+					"ism_jitter":         instanceResource["ism_jitter"],
 				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -236,6 +242,7 @@ func TestAccLogMeResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.#", "1"),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.0", instanceResource["syslog-0"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.ism_jitter", instanceResource["ism_jitter"]),
 				),
 			},
 			// Deletion is done by the framework implicitly
