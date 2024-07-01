@@ -329,6 +329,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: parametersDescriptions["monitoring_instance_id"],
 						Optional:    true,
 						Computed:    true,
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
 					},
 					"notify_keyspace_events": schema.StringAttribute{
 						Description: parametersDescriptions["notify_keyspace_events"],

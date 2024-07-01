@@ -261,6 +261,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: parametersDescriptions["monitoring_instance_id"],
 						Optional:    true,
 						Computed:    true,
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
 					},
 					"plugins": schema.ListAttribute{
 						Description: parametersDescriptions["plugins"],

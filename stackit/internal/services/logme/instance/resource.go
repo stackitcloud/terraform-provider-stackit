@@ -339,6 +339,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: parametersDescriptions["monitoring_instance_id"],
 						Optional:    true,
 						Computed:    true,
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
 					},
 					"opensearch_tls_ciphers": schema.ListAttribute{
 						Description: parametersDescriptions["opensearch_tls_ciphers"],
