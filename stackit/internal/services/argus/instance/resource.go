@@ -1093,7 +1093,7 @@ func mapMetricsRetentionField(r *argus.GetMetricsStorageRetentionResponse, model
 }
 
 func mapUpdateAlertConfigField(ctx context.Context, resp *argus.UpdateAlertConfigsResponse, model *Model) error {
-	if resp == nil || resp.Data == nil || resp.Data.Receivers == nil {
+	if resp == nil || resp.Data == nil || resp.Data.Receivers == nil || resp.Data.Route == nil {
 		model.AlertConfig = types.ObjectNull(alertConfigTypes)
 		return nil
 	}
@@ -1104,82 +1104,21 @@ func mapUpdateAlertConfigField(ctx context.Context, resp *argus.UpdateAlertConfi
 
 	// Receivers
 	respReceivers := *resp.Data.Receivers
-	receiversList := []attr.Value{}
+	respRoute := *resp.Data.Route
 
-	for i := range respReceivers {
-		receiver := respReceivers[i]
-
-		// emailConfigs
-		emailConfigList := []attr.Value{}
-		if receiver.EmailConfigs != nil {
-			for _, emailConfig := range *receiver.EmailConfigs {
-				emailConfigList = append(emailConfigList, types.ObjectValueMust(emailConfigsTypes, map[string]attr.Value{
-					"auth_identity": types.StringPointerValue(emailConfig.AuthIdentity),
-					"auth_password": types.StringPointerValue(emailConfig.AuthPassword),
-					"auth_username": types.StringPointerValue(emailConfig.AuthUsername),
-					"from":          types.StringPointerValue(emailConfig.From),
-					"smart_host":    types.StringPointerValue(emailConfig.Smarthost),
-					"to":            types.StringPointerValue(emailConfig.To),
-				}))
-			}
-		}
-
-		// opsgenieConfigs
-		opsgenieConfigList := []attr.Value{}
-		if receiver.OpsgenieConfigs != nil {
-			for _, opsgenieConfig := range *receiver.OpsgenieConfigs {
-				opsgenieConfigList = append(opsgenieConfigList, types.ObjectValueMust(opsgenieConfigsTypes, map[string]attr.Value{
-					"api_key": types.StringPointerValue(opsgenieConfig.ApiKey),
-					"api_url": types.StringPointerValue(opsgenieConfig.ApiUrl),
-					"tags":    types.StringPointerValue(opsgenieConfig.Tags),
-				}))
-			}
-		}
-
-		// webhooksConfigs
-		webhooksConfigList := []attr.Value{}
-		if receiver.WebHookConfigs != nil {
-			for _, webhookConfig := range *receiver.WebHookConfigs {
-				webhooksConfigList = append(webhooksConfigList, types.ObjectValueMust(webHooksConfigsTypes, map[string]attr.Value{
-					"url":      types.StringPointerValue(webhookConfig.Url),
-					"ms_teams": types.BoolPointerValue(webhookConfig.MsTeams),
-				}))
-			}
-		}
-
-		receiversList = append(receiversList, types.ObjectValueMust(receiversTypes, map[string]attr.Value{
-			"name":             types.StringPointerValue(receiver.Name),
-			"email_configs":    types.ListValueMust(types.ObjectType{AttrTypes: emailConfigsTypes}, emailConfigList),
-			"opsgenie_configs": types.ListValueMust(types.ObjectType{AttrTypes: opsgenieConfigsTypes}, opsgenieConfigList),
-			"webhooks_configs": types.ListValueMust(types.ObjectType{AttrTypes: webHooksConfigsTypes}, webhooksConfigList),
-		}))
-	}
-
-	alertConfig := types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
-		"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, receiversList),
-		"route": types.ObjectValueMust(routeTypes, map[string]attr.Value{
-			"receiver": types.StringPointerValue(resp.Data.Route.Receiver),
-		}),
-	})
-
-	modelMockAlertConfig, diags := types.ObjectValueFrom(ctx, alertConfigTypes, mockAlertConfig)
-	if diags.HasError() {
-		return fmt.Errorf("mapping mock alert config: %w", core.DiagsToError(diags))
-	}
-
-	if alertConfig.Equal(modelMockAlertConfig) {
-		model.AlertConfig = types.ObjectNull(alertConfigTypes)
-		return nil
+	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute)
+	if err != nil {
+		return fmt.Errorf("mapping alert config: %w", err)
 	}
 
 	model.AlertConfig = alertConfig
-
 	return nil
 }
 
 func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsResponse, model *Model) error {
-	if resp == nil || resp.Data == nil || resp.Data.Receivers == nil {
-		return fmt.Errorf("nil response")
+	if resp == nil || resp.Data == nil || resp.Data.Receivers == nil || resp.Data.Route == nil {
+		model.AlertConfig = types.ObjectNull(alertConfigTypes)
+		return nil
 	}
 
 	if model == nil {
@@ -1188,76 +1127,157 @@ func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsRespons
 
 	// Receivers
 	respReceivers := *resp.Data.Receivers
+	respRoute := *resp.Data.Route
+
+	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute)
+	if err != nil {
+		return fmt.Errorf("mapping alert config: %w", err)
+	}
+
+	model.AlertConfig = alertConfig
+	return nil
+}
+
+func mapAlertConfigAttribute(ctx context.Context, respReceivers []argus.Receivers, respRoute argus.Route) (basetypes.ObjectValue, error) {
+	receiversList, err := mapReceiversToAttributes(ctx, respReceivers)
+	if err != nil {
+		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping receivers: %w", err)
+	}
+
+	route, err := mapRouteToAttributes(respRoute)
+	if err != nil {
+		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping route: %w", err)
+	}
+
+	alertConfig := types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
+		"receivers": receiversList,
+		"route":     route,
+	})
+
+	modelMockAlertConfig, diags := types.ObjectValueFrom(ctx, alertConfigTypes, mockAlertConfig)
+	if diags.HasError() {
+		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping mock alert config: %w", core.DiagsToError(diags))
+	}
+
+	if alertConfig.Equal(modelMockAlertConfig) {
+		return types.ObjectNull(alertConfigTypes), nil
+	}
+	return alertConfig, nil
+}
+
+func mapReceiversToAttributes(ctx context.Context, respReceivers []argus.Receivers) (basetypes.ListValue, error) {
 	receiversList := []attr.Value{}
+	emptyList, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{})
+	if diags.HasError() {
+		// Should not happen
+		return emptyList, fmt.Errorf("mapping empty list: %w", core.DiagsToError(diags))
+	}
+
+	if len(respReceivers) == 0 {
+		return emptyList, nil
+	}
 
 	for i := range respReceivers {
 		receiver := respReceivers[i]
 
-		// emailConfigs
 		emailConfigList := []attr.Value{}
 		if receiver.EmailConfigs != nil {
 			for _, emailConfig := range *receiver.EmailConfigs {
-				emailConfigList = append(emailConfigList, types.ObjectValueMust(emailConfigsTypes, map[string]attr.Value{
+				emailConfigMap := map[string]attr.Value{
 					"auth_identity": types.StringPointerValue(emailConfig.AuthIdentity),
 					"auth_password": types.StringPointerValue(emailConfig.AuthPassword),
 					"auth_username": types.StringPointerValue(emailConfig.AuthUsername),
 					"from":          types.StringPointerValue(emailConfig.From),
 					"smart_host":    types.StringPointerValue(emailConfig.Smarthost),
 					"to":            types.StringPointerValue(emailConfig.To),
-				}))
+				}
+				emailConfigModel, diags := types.ObjectValue(emailConfigsTypes, emailConfigMap)
+				if diags.HasError() {
+					return emptyList, fmt.Errorf("mapping email config: %w", core.DiagsToError(diags))
+				}
+				emailConfigList = append(emailConfigList, emailConfigModel)
 			}
 		}
 
-		// opsgenieConfigs
 		opsgenieConfigList := []attr.Value{}
 		if receiver.OpsgenieConfigs != nil {
 			for _, opsgenieConfig := range *receiver.OpsgenieConfigs {
-				opsgenieConfigList = append(opsgenieConfigList, types.ObjectValueMust(opsgenieConfigsTypes, map[string]attr.Value{
+				opsGenieConfigMap := map[string]attr.Value{
 					"api_key": types.StringPointerValue(opsgenieConfig.ApiKey),
 					"api_url": types.StringPointerValue(opsgenieConfig.ApiUrl),
 					"tags":    types.StringPointerValue(opsgenieConfig.Tags),
-				}))
+				}
+				opsGenieConfigModel, diags := types.ObjectValue(opsgenieConfigsTypes, opsGenieConfigMap)
+				if diags.HasError() {
+					return emptyList, fmt.Errorf("mapping opsgenie config: %w", core.DiagsToError(diags))
+				}
+				opsgenieConfigList = append(opsgenieConfigList, opsGenieConfigModel)
 			}
 		}
 
-		// webhooksConfigs
 		webhooksConfigList := []attr.Value{}
 		if receiver.WebHookConfigs != nil {
 			for _, webhookConfig := range *receiver.WebHookConfigs {
-				webhooksConfigList = append(webhooksConfigList, types.ObjectValueMust(webHooksConfigsTypes, map[string]attr.Value{
+				webHookConfigsMap := map[string]attr.Value{
 					"url":      types.StringPointerValue(webhookConfig.Url),
 					"ms_teams": types.BoolPointerValue(webhookConfig.MsTeams),
-				}))
+				}
+				webHookConfigsModel, diags := types.ObjectValue(webHooksConfigsTypes, webHookConfigsMap)
+				if diags.HasError() {
+					return emptyList, fmt.Errorf("mapping webhooks config: %w", core.DiagsToError(diags))
+				}
+				webhooksConfigList = append(webhooksConfigList, webHookConfigsModel)
 			}
 		}
 
-		receiversList = append(receiversList, types.ObjectValueMust(receiversTypes, map[string]attr.Value{
+		emailConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: emailConfigsTypes}, emailConfigList)
+		if diags.HasError() {
+			return emptyList, fmt.Errorf("mapping email configs: %w", core.DiagsToError(diags))
+		}
+
+		opsGenieConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: opsgenieConfigsTypes}, opsgenieConfigList)
+		if diags.HasError() {
+			return emptyList, fmt.Errorf("mapping opsgenie configs: %w", core.DiagsToError(diags))
+		}
+
+		webHooksConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: webHooksConfigsTypes}, webhooksConfigList)
+		if diags.HasError() {
+			return emptyList, fmt.Errorf("mapping webhooks configs: %w", core.DiagsToError(diags))
+		}
+
+		receiverMap := map[string]attr.Value{
 			"name":             types.StringPointerValue(receiver.Name),
-			"email_configs":    types.ListValueMust(types.ObjectType{AttrTypes: emailConfigsTypes}, emailConfigList),
-			"opsgenie_configs": types.ListValueMust(types.ObjectType{AttrTypes: opsgenieConfigsTypes}, opsgenieConfigList),
-			"webhooks_configs": types.ListValueMust(types.ObjectType{AttrTypes: webHooksConfigsTypes}, webhooksConfigList),
-		}))
+			"email_configs":    emailConfigs,
+			"opsgenie_configs": opsGenieConfigs,
+			"webhooks_configs": webHooksConfigs,
+		}
+
+		receiversModel, diags := types.ObjectValue(receiversTypes, receiverMap)
+		if diags.HasError() {
+			return emptyList, fmt.Errorf("mapping receiver: %w", core.DiagsToError(diags))
+		}
+
+		receiversList = append(receiversList, receiversModel)
 	}
 
-	alertConfig := types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
-		"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, receiversList),
-		"route": types.ObjectValueMust(routeTypes, map[string]attr.Value{
-			"receiver": types.StringPointerValue(resp.Data.Route.Receiver),
-		}),
-	})
-
-	modelMockAlertConfig, diags := types.ObjectValueFrom(ctx, alertConfigTypes, mockAlertConfig)
+	returnReceiversList, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: receiversTypes}, receiversList)
 	if diags.HasError() {
-		return fmt.Errorf("mapping mock alert config: %w", core.DiagsToError(diags))
+		return emptyList, fmt.Errorf("mapping receivers list: %w", core.DiagsToError(diags))
+	}
+	return returnReceiversList, nil
+}
+
+func mapRouteToAttributes(route argus.Route) (attr.Value, error) {
+	routeMap := map[string]attr.Value{
+		"receiver": types.StringPointerValue(route.Receiver),
 	}
 
-	if alertConfig.Equal(modelMockAlertConfig) {
-		model.AlertConfig = types.ObjectNull(alertConfigTypes)
-		return nil
+	routeModel, diags := types.ObjectValue(routeTypes, routeMap)
+	if diags.HasError() {
+		return types.ObjectNull(routeTypes), fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
 	}
 
-	model.AlertConfig = alertConfig
-	return nil
+	return routeModel, nil
 }
 
 func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {
