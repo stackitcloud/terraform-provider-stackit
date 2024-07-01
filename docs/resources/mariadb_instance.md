@@ -55,7 +55,7 @@ resource "stackit_mariadb_instance" "example" {
 Optional:
 
 - `enable_monitoring` (Boolean) Enable monitoring.
-- `graphite` (String)
+- `graphite` (String) Graphite server URL (host and port). If set, monitoring with Graphite will be enabled.
 - `max_disk_threshold` (Number) The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.
 - `metrics_frequency` (Number) The frequency in seconds at which metrics are emitted.
 - `metrics_prefix` (String) The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key

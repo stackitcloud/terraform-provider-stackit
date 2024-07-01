@@ -140,6 +140,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 
 	parametersDescriptions := map[string]string{
 		"sgw_acl":                "Comma separated list of IP networks in CIDR notation which are allowed to access this instance.",
+		"graphite":               "Graphite server URL (host and port). If set, monitoring with Graphite will be enabled.",
 		"enable_monitoring":      "Enable monitoring.",
 		"max_disk_threshold":     "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
 		"metrics_frequency":      "The frequency in seconds at which metrics are emitted.",
