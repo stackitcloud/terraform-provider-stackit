@@ -101,7 +101,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"deprecation_message": strings.Join(
 			[]string{
 				"The STACKIT PostgreSQL service has reached its end of support on June 30th 2024.",
-				"Resources of this type have stopped working after that.",
+				"Resources of this type have stopped working since then.",
 				"Use stackit_postgresflex_instance instead.",
 				"Check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html on how to backup and restore an instance from PostgreSQL to PostgreSQL Flex, then import the resource to Terraform using an \"import\" block (https://developer.hashicorp.com/terraform/language/import)",
 			},
@@ -237,26 +237,26 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *instanceResource) Create(ctx context.Context, _ resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working after that. Use stackit_postgresflex_instance instead.")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working since then. Use stackit_postgresflex_instance instead.")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *instanceResource) Read(ctx context.Context, _ resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working after that. Use stackit_postgresflex_instance instead.")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working since then. Use stackit_postgresflex_instance instead.")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *instanceResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working after that. Use stackit_postgresflex_instance instead.")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working since then. Use stackit_postgresflex_instance instead.")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *instanceResource) Delete(ctx context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working after that. Use stackit_postgresflex_instance instead.")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working since then. Use stackit_postgresflex_instance instead.")
 }
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: project_id,instance_id
 func (r *instanceResource) ImportState(ctx context.Context, _ resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing instance", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working after that. Use stackit_postgresflex_instance instead.")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing instance", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working since then. Use stackit_postgresflex_instance instead.")
 }

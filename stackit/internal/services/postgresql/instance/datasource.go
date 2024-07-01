@@ -79,8 +79,8 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"main": "PostgreSQL instance data source schema. Must have a `region` specified in the provider configuration.",
 		"deprecation_message": strings.Join(
 			[]string{
-				"The STACKIT PostgreSQL service will reach its end of support on June 30th 2024.",
-				"Data sources of this type will stop working after that.",
+				"The STACKIT PostgreSQL service has reached its end of support on June 30th 2024.",
+				"Resources of this type have stopped working since then.",
 				"Use stackit_postgresflex_instance instead.",
 				"For more details, check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html",
 			},
@@ -182,5 +182,5 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 
 // Read refreshes the Terraform state with the latest data.
 func (r *instanceDataSource) Read(ctx context.Context, _ datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance data", "The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Resources of this type will stop working after that. Use stackit_postgresflex_instance instead.")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance data", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working since then. Use stackit_postgresflex_instance instead.")
 }
