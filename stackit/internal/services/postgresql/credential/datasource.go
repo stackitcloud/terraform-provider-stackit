@@ -159,5 +159,5 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 
 // Read refreshes the Terraform state with the latest data.
 func (r *credentialDataSource) Read(ctx context.Context, _ datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential data", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working since then. Use stackit_postgresflex_instance instead.")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential data", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working since then. Use stackit_postgresflex_instance instead. Check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html on how to backup and restore an instance from PostgreSQL to PostgreSQL Flex, then import the resource to Terraform using an \"import\" block (https://developer.hashicorp.com/terraform/language/import)")
 }
