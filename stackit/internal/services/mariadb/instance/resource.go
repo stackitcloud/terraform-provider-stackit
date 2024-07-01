@@ -52,12 +52,26 @@ type Model struct {
 
 // Struct corresponding to DataSourceModel.Parameters
 type parametersModel struct {
-	SgwAcl types.String `tfsdk:"sgw_acl"`
+	SgwAcl               types.String `tfsdk:"sgw_acl"`
+	EnableMonitoring     types.Bool   `tfsdk:"enable_monitoring"`
+	Graphite             types.String `tfsdk:"graphite"`
+	MaxDiskThreshold     types.Int64  `tfsdk:"max_disk_threshold"`
+	MetricsFrequency     types.Int64  `tfsdk:"metrics_frequency"`
+	MetricsPrefix        types.String `tfsdk:"metrics_prefix"`
+	MonitoringInstanceId types.String `tfsdk:"monitoring_instance_id"`
+	Syslog               types.List   `tfsdk:"syslog"`
 }
 
 // Types corresponding to parametersModel
 var parametersTypes = map[string]attr.Type{
-	"sgw_acl": basetypes.StringType{},
+	"sgw_acl":                basetypes.StringType{},
+	"enable_monitoring":      basetypes.BoolType{},
+	"graphite":               basetypes.StringType{},
+	"max_disk_threshold":     basetypes.Int64Type{},
+	"metrics_frequency":      basetypes.Int64Type{},
+	"metrics_prefix":         basetypes.StringType{},
+	"monitoring_instance_id": basetypes.StringType{},
+	"syslog":                 basetypes.ListType{ElemType: types.StringType},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -124,6 +138,17 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"plan_id":     "The selected plan ID.",
 	}
 
+	parametersDescriptions := map[string]string{
+		"sgw_acl":                "Comma separated list of IP networks in CIDR notation which are allowed to access this instance.",
+		"graphite":               "Graphite server URL (host and port). If set, monitoring with Graphite will be enabled.",
+		"enable_monitoring":      "Enable monitoring.",
+		"max_disk_threshold":     "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
+		"metrics_frequency":      "The frequency in seconds at which metrics are emitted.",
+		"metrics_prefix":         "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key",
+		"monitoring_instance_id": "The ID of the STACKIT monitoring instance.",
+		"syslog":                 "List of syslog servers to send logs to.",
+	}
+
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -183,8 +208,49 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"parameters": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"sgw_acl": schema.StringAttribute{
-						Optional: true,
-						Computed: true,
+						Description: parametersDescriptions["sgw_acl"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"enable_monitoring": schema.BoolAttribute{
+						Description: parametersDescriptions["enable_monitoring"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"graphite": schema.StringAttribute{
+						Description: parametersDescriptions["graphite"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"max_disk_threshold": schema.Int64Attribute{
+						Description: parametersDescriptions["max_disk_threshold"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"metrics_frequency": schema.Int64Attribute{
+						Description: parametersDescriptions["metrics_frequency"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"metrics_prefix": schema.StringAttribute{
+						Description: parametersDescriptions["metrics_prefix"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"monitoring_instance_id": schema.StringAttribute{
+						Description: parametersDescriptions["monitoring_instance_id"],
+						Optional:    true,
+						Computed:    true,
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
+					},
+					"syslog": schema.ListAttribute{
+						Description: parametersDescriptions["syslog"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
 					},
 				},
 				Optional: true,
@@ -235,8 +301,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	var parameters = &parametersModel{}
+	var parameters *parametersModel
 	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
+		parameters = &parametersModel{}
 		diags = model.Parameters.As(ctx, parameters, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -346,8 +413,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	var parameters = &parametersModel{}
+	var parameters *parametersModel
 	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
+		parameters = &parametersModel{}
 		diags = model.Parameters.As(ctx, parameters, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -584,20 +652,14 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*mariadb.Create
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	if parameters == nil {
-		return &mariadb.CreateInstancePayload{
-			InstanceName: conversion.StringValueToPointer(model.Name),
-			PlanId:       conversion.StringValueToPointer(model.PlanId),
-		}, nil
-	}
-	payloadParams := &mariadb.InstanceParameters{}
-	if parameters.SgwAcl.ValueString() != "" {
-		payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
+	payloadParams, err := toInstanceParams(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("convert parameters: %w", err)
 	}
 	return &mariadb.CreateInstancePayload{
 		InstanceName: conversion.StringValueToPointer(model.Name),
-		Parameters:   payloadParams,
 		PlanId:       conversion.StringValueToPointer(model.PlanId),
+		Parameters:   payloadParams,
 	}, nil
 }
 
@@ -605,18 +667,37 @@ func toUpdatePayload(model *Model, parameters *parametersModel) (*mariadb.Partia
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-
-	if parameters == nil {
-		return &mariadb.PartialUpdateInstancePayload{
-			PlanId: conversion.StringValueToPointer(model.PlanId),
-		}, nil
+	payloadParams, err := toInstanceParams(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("convert parameters: %w", err)
 	}
 	return &mariadb.PartialUpdateInstancePayload{
-		Parameters: &mariadb.InstanceParameters{
-			SgwAcl: conversion.StringValueToPointer(parameters.SgwAcl),
-		},
-		PlanId: conversion.StringValueToPointer(model.PlanId),
+		PlanId:     conversion.StringValueToPointer(model.PlanId),
+		Parameters: payloadParams,
 	}, nil
+}
+
+func toInstanceParams(parameters *parametersModel) (*mariadb.InstanceParameters, error) {
+	if parameters == nil {
+		return nil, nil
+	}
+	payloadParams := &mariadb.InstanceParameters{}
+
+	payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
+	payloadParams.EnableMonitoring = conversion.BoolValueToPointer(parameters.EnableMonitoring)
+	payloadParams.Graphite = conversion.StringValueToPointer(parameters.Graphite)
+	payloadParams.MaxDiskThreshold = conversion.Int64ValueToPointer(parameters.MaxDiskThreshold)
+	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
+	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
+	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
+
+	syslog, err := conversion.StringListToPointer(parameters.Syslog)
+	if err != nil {
+		return nil, fmt.Errorf("convert syslog: %w", err)
+	}
+	payloadParams.Syslog = syslog
+
+	return payloadParams, nil
 }
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {

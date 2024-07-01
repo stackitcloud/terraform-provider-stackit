@@ -183,7 +183,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"metrics_frequency":       "The frequency in seconds at which metrics are emitted.",
 		"metrics_prefix":          "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key",
 		"min_replicas_max_lag":    "The minimum replicas maximum lag.",
-		"monitoring_instance_id":  "The monitoring instance ID.",
+		"monitoring_instance_id":  "The ID of the STACKIT monitoring instance.",
 		"notify_keyspace_events":  "The notify keyspace events.",
 		"snapshot":                "The snapshot configuration.",
 		"syslog":                  "List of syslog servers to send logs to.",
@@ -329,6 +329,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: parametersDescriptions["monitoring_instance_id"],
 						Optional:    true,
 						Computed:    true,
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
 					},
 					"notify_keyspace_events": schema.StringAttribute{
 						Description: parametersDescriptions["notify_keyspace_events"],
