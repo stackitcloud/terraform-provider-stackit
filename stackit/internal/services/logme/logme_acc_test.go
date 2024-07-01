@@ -98,7 +98,7 @@ func TestAccLogMeResource(t *testing.T) {
 						"fluentd_tcp":        instanceResource["fluent_tcp"],
 						"max_disk_threshold": instanceResource["max_disk_threshold"],
 						"enable_monitoring":  instanceResource["enable_monitoring"],
-						"syslog":             fmt.Sprintf(`["%s"]`, instanceResource["syslog-0"]),
+						"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
 					}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -148,7 +148,7 @@ func TestAccLogMeResource(t *testing.T) {
 						"fluentd_tcp":        instanceResource["fluent_tcp"],
 						"max_disk_threshold": instanceResource["max_disk_threshold"],
 						"enable_monitoring":  instanceResource["enable_monitoring"],
-						"syslog":             fmt.Sprintf(`["%s"]`, instanceResource["syslog-0"]),
+						"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
 					}),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -220,7 +220,7 @@ func TestAccLogMeResource(t *testing.T) {
 					"fluentd_tcp":        instanceResource["fluent_tcp"],
 					"max_disk_threshold": instanceResource["max_disk_threshold"],
 					"enable_monitoring":  instanceResource["enable_monitoring"],
-					"syslog":             fmt.Sprintf(`["%s"]`, instanceResource["syslog-0"]),
+					"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
 				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
