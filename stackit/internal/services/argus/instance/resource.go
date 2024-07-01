@@ -1176,7 +1176,21 @@ func mapAlertConfigAttribute(ctx context.Context, respReceivers []argus.Receiver
 // So, we set the Alert Config in the instance to our mock configuration and
 // map the Alert Config to an empty object in the Terraform state if it matches the mock alert config
 func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
-	mockEmailConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: emailConfigsTypes}, []attr.Value{})
+	mockEmailConfig, diags := types.ObjectValue(emailConfigsTypes, map[string]attr.Value{
+		"to":            types.StringValue("123@gmail.com"),
+		"smart_host":    types.StringValue("smtp.gmail.com:587"),
+		"from":          types.StringValue("xxxx@gmail.com"),
+		"auth_username": types.StringValue("xxxx@gmail.com"),
+		"auth_password": types.StringValue("xxxxxxxxx"),
+		"auth_identity": types.StringValue("xxxx@gmail.com"),
+	})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping email config: %w", core.DiagsToError(diags))
+	}
+
+	mockEmailConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: emailConfigsTypes}, []attr.Value{
+		mockEmailConfig,
+	})
 	if diags.HasError() {
 		return alertConfigModel{}, fmt.Errorf("mapping email configs: %w", core.DiagsToError(diags))
 	}
@@ -1192,7 +1206,7 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 	}
 
 	mockReceiver, diags := types.ObjectValue(receiversTypes, map[string]attr.Value{
-		"name":             types.StringValue("change-me"),
+		"name":             types.StringValue("email-me"),
 		"email_configs":    mockEmailConfigs,
 		"opsgenie_configs": mockOpsGenieConfigs,
 		"webhooks_configs": mockWebHooksConfigs,
@@ -1209,7 +1223,7 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 	}
 
 	mockRoute, diags := types.ObjectValue(routeTypes, map[string]attr.Value{
-		"receiver": types.StringValue("change-me"),
+		"receiver": types.StringValue("email-me"),
 	})
 	if diags.HasError() {
 		return alertConfigModel{}, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
