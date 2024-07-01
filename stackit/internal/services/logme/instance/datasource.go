@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -86,6 +87,23 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"plan_id":     "The selected plan ID.",
 	}
 
+	parametersDescriptions := map[string]string{
+		"sgw_acl":                "Comma separated list of IP networks in CIDR notation which are allowed to access this instance.",
+		"enable_monitoring":      "Enable monitoring.",
+		"graphite":               "If set, monitoring with Graphite will be enabled. Expects the host and port where the Graphite metrics should be sent to (host:port).",
+		"max_disk_threshold":     "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
+		"metrics_frequency":      "The frequency in seconds at which metrics are emitted (in seconds).",
+		"metrics_prefix":         "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key.",
+		"monitoring_instance_id": "The monitoring instance ID.",
+		"java_heapspace":         "The amount of memory (in MB) allocated as heap by the JVM for OpenSearch.",
+		"java_maxmetaspace":      "The amount of memory (in MB) used by the JVM to store metadata for OpenSearch.",
+		"ism_deletion_after":     "Combination of an integer and a timerange when an index will be considered \"old\" and can be deleted. Possible values for the timerange are `s`, `m`, `h` and `d`.",
+		"ism_job_interval":       "Jitter of the execution time.",
+		"syslog":                 "List of syslog servers to send logs to.",
+		"syslog-use-udp":         "Defines if syslog will use UDP. Possible values: `yes`, `no`.",
+		"opensearch-tls-ciphers": "List of ciphers to use for TLS.",
+	}
+
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -128,7 +146,99 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"parameters": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"sgw_acl": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["sgw_acl"],
+						Computed:    true,
+					},
+					"enable_monitoring": schema.BoolAttribute{
+						Description: parametersDescriptions["enable_monitoring"],
+						Computed:    true,
+					},
+					"fluentd_tcp": schema.Int64Attribute{
+						Description: parametersDescriptions["fluentd_tcp"],
+						Computed:    true,
+					},
+					"fluentd_tls": schema.Int64Attribute{
+						Description: parametersDescriptions["fluentd_tls"],
+						Computed:    true,
+					},
+					"fluentd_tls_ciphers": schema.StringAttribute{
+						Description: parametersDescriptions["fluentd_tls_ciphers"],
+						Computed:    true,
+					},
+					"fluentd_tls_max_version": schema.StringAttribute{
+						Description: parametersDescriptions["fluentd_tls_max_version"],
+						Computed:    true,
+					},
+					"fluentd_tls_min_version": schema.StringAttribute{
+						Description: parametersDescriptions["fluentd_tls_min_version"],
+						Computed:    true,
+					},
+					"fluentd_tls_version": schema.StringAttribute{
+						Description: parametersDescriptions["fluentd_tls_version"],
+						Computed:    true,
+					},
+					"fluentd_udp": schema.Int64Attribute{
+						Description: parametersDescriptions["fluentd_udp"],
+						Computed:    true,
+					},
+					"graphite": schema.StringAttribute{
+						Description: parametersDescriptions["graphite"],
+						Computed:    true,
+					},
+					"ism_deletion_after": schema.StringAttribute{
+						Description: parametersDescriptions["ism_deletion_after"],
+						Computed:    true,
+					},
+					"ism_jitter": schema.Float64Attribute{
+						Description: parametersDescriptions["ism_jitter"],
+						Computed:    true,
+					},
+					"ism_job_interval": schema.Int64Attribute{
+						Description: parametersDescriptions["ism_job_interval"],
+						Computed:    true,
+					},
+					"java_heapspace": schema.Int64Attribute{
+						Description: parametersDescriptions["java_heapspace"],
+						Computed:    true,
+					},
+					"java_maxmetaspace": schema.Int64Attribute{
+						Description: parametersDescriptions["java_maxmetaspace"],
+						Computed:    true,
+					},
+					"max_disk_threshold": schema.Int64Attribute{
+						Description: parametersDescriptions["max_disk_threshold"],
+						Computed:    true,
+					},
+					"metrics_frequency": schema.Int64Attribute{
+						Description: parametersDescriptions["metrics_frequency"],
+						Computed:    true,
+					},
+					"metrics_prefix": schema.StringAttribute{
+						Description: parametersDescriptions["metrics_prefix"],
+						Computed:    true,
+					},
+					"monitoring_instance_id": schema.StringAttribute{
+						Description: parametersDescriptions["monitoring_instance_id"],
+						Computed:    true,
+					},
+					"opensearch_tls_ciphers": schema.ListAttribute{
+						Description: parametersDescriptions["opensearch_tls_ciphers"],
+						ElementType: types.StringType,
+						Computed:    true,
+					},
+					"opensearch_tls_protocols": schema.ListAttribute{
+						Description: parametersDescriptions["opensearch_tls_protocols"],
+						ElementType: types.StringType,
+						Computed:    true,
+					},
+					"syslog": schema.ListAttribute{
+						Description: parametersDescriptions["syslog"],
+						ElementType: types.StringType,
+						Computed:    true,
+					},
+					"syslog_use_udp": schema.StringAttribute{
+						Description: parametersDescriptions["syslog_use_udp"],
+						Computed:    true,
 					},
 				},
 				Computed: true,

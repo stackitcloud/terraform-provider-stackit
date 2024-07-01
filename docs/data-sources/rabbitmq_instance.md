@@ -46,16 +46,16 @@ data "stackit_rabbitmq_instance" "example" {
 
 Read-Only:
 
-- `consumer_timeout` (Number)
-- `enable_monitoring` (Boolean)
-- `graphite` (String)
-- `max_disk_threshold` (Number)
-- `metrics_frequency` (Number)
-- `metrics_prefix` (String)
-- `monitoring_instance_id` (String)
-- `plugins` (List of String)
-- `roles` (List of String)
-- `sgw_acl` (String)
-- `syslog` (List of String)
-- `tls_ciphers` (List of String)
-- `tls_protocols` (String)
+- `consumer_timeout` (Number) The timeout in milliseconds for the consumer.
+- `enable_monitoring` (Boolean) Enable monitoring.
+- `graphite` (String) Graphite server URL (host and port). If set, monitoring with Graphite will be enabled.
+- `max_disk_threshold` (Number) The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.
+- `metrics_frequency` (Number) The frequency in seconds at which metrics are emitted.
+- `metrics_prefix` (String) The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key
+- `monitoring_instance_id` (String) The monitoring instance ID.
+- `plugins` (List of String) List of plugins to install. Must be a supported plugin name.
+- `roles` (List of String) List of roles to assign to the instance.
+- `sgw_acl` (String) Comma separated list of IP networks in CIDR notation which are allowed to access this instance.
+- `syslog` (List of String) List of syslog servers to send logs to.
+- `tls_ciphers` (List of String) List of TLS ciphers to use.
+- `tls_protocols` (String) TLS protocol to use.
