@@ -26,8 +26,9 @@ var instanceResource = map[string]string{
 	"sgw_acl-1":          "192.168.0.0/16",
 	"sgw_acl-2":          "192.168.0.0/24",
 	"fluent_tcp":         "4",
-	"max_disk_threshold": "10",
+	"max_disk_threshold": "80",
 	"enable_monitoring":  "false",
+	"syslog-0":           "syslog.example.com:514",
 }
 
 func parametersConfig(params map[string]string) string {
@@ -97,6 +98,7 @@ func TestAccLogMeResource(t *testing.T) {
 						"fluentd_tcp":        instanceResource["fluent_tcp"],
 						"max_disk_threshold": instanceResource["max_disk_threshold"],
 						"enable_monitoring":  instanceResource["enable_monitoring"],
+						"syslog":             fmt.Sprintf(`["%s"]`, instanceResource["syslog-0"]),
 					}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -110,6 +112,8 @@ func TestAccLogMeResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.fluentd_tcp", instanceResource["fluent_tcp"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.max_disk_threshold", instanceResource["max_disk_threshold"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.#", "1"),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.0", instanceResource["syslog-0"]),
 
 					// Credential data
 					resource.TestCheckResourceAttrPair(
@@ -144,6 +148,7 @@ func TestAccLogMeResource(t *testing.T) {
 						"fluentd_tcp":        instanceResource["fluent_tcp"],
 						"max_disk_threshold": instanceResource["max_disk_threshold"],
 						"enable_monitoring":  instanceResource["enable_monitoring"],
+						"syslog":             fmt.Sprintf(`["%s"]`, instanceResource["syslog-0"]),
 					}),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -157,9 +162,11 @@ func TestAccLogMeResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "plan_id", instanceResource["plan_id"]),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "name", instanceResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-1"]),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.fluentd_tcp", instanceResource["fluent_tcp"]),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.max_disk_threshold", instanceResource["max_disk_threshold"]),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
+					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.fluentd_tcp", instanceResource["fluent_tcp"]),
+					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.max_disk_threshold", instanceResource["max_disk_threshold"]),
+					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
+					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.syslog.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.syslog.0", instanceResource["syslog-0"]),
 
 					// Credential data
 					resource.TestCheckResourceAttr("data.stackit_logme_credential.credential", "project_id", instanceResource["project_id"]),
@@ -213,6 +220,7 @@ func TestAccLogMeResource(t *testing.T) {
 					"fluentd_tcp":        instanceResource["fluent_tcp"],
 					"max_disk_threshold": instanceResource["max_disk_threshold"],
 					"enable_monitoring":  instanceResource["enable_monitoring"],
+					"syslog":             fmt.Sprintf(`["%s"]`, instanceResource["syslog-0"]),
 				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -226,6 +234,8 @@ func TestAccLogMeResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.fluentd_tcp", instanceResource["fluent_tcp"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.max_disk_threshold", instanceResource["max_disk_threshold"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.#", "1"),
+					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.0", instanceResource["syslog-0"]),
 				),
 			},
 			// Deletion is done by the framework implicitly
