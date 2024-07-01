@@ -46,4 +46,11 @@ data "stackit_mariadb_instance" "example" {
 
 Read-Only:
 
-- `sgw_acl` (String)
+- `enable_monitoring` (Boolean) Enable monitoring.
+- `graphite` (String)
+- `max_disk_threshold` (Number) The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.
+- `metrics_frequency` (Number) The frequency in seconds at which metrics are emitted.
+- `metrics_prefix` (String) The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key
+- `monitoring_instance_id` (String) The monitoring instance ID.
+- `sgw_acl` (String) Comma separated list of IP networks in CIDR notation which are allowed to access this instance.
+- `syslog` (List of String) List of syslog servers to send logs to.
