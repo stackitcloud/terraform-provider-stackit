@@ -158,7 +158,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"max_disk_threshold":     "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
 		"metrics_frequency":      "The frequency in seconds at which metrics are emitted (in seconds).",
 		"metrics_prefix":         "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key.",
-		"monitoring_instance_id": "The monitoring instance ID.",
+		"monitoring_instance_id": "The ID of the STACKIT monitoring instance.",
 		"java_garbage_collector": "The garbage collector to use for OpenSearch.",
 		"java_heapspace":         "The amount of memory (in MB) allocated as heap by the JVM for OpenSearch.",
 		"java_maxmetaspace":      "The amount of memory (in MB) used by the JVM to store metadata for OpenSearch.",
