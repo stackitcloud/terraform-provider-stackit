@@ -3,7 +3,6 @@ package postgresql
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -15,7 +14,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresql"
 )
 
@@ -81,8 +79,8 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"main": "PostgreSQL instance data source schema. Must have a `region` specified in the provider configuration.",
 		"deprecation_message": strings.Join(
 			[]string{
-				"The STACKIT PostgreSQL service will reach its end of support on June 30th 2024.",
-				"Data sources of this type will stop working after that.",
+				"The STACKIT PostgreSQL service has reached its end of support on June 30th 2024.",
+				"Resources of this type have stopped working since then.",
 				"Use stackit_postgresflex_instance instead.",
 				"For more details, check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html",
 			},
@@ -183,46 +181,6 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
-	diags := req.Config.Get(ctx, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	projectId := model.ProjectId.ValueString()
-	instanceId := model.InstanceId.ValueString()
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
-	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
-			resp.State.RemoveResource(ctx)
-		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
-		return
-	}
-
-	err = mapFields(instanceResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
-		return
-	}
-
-	// Compute and store values not present in the API response
-	err = loadPlanNameAndVersion(ctx, r.client, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan details: %v", err))
-		return
-	}
-
-	// Set refreshed state
-	diags = resp.State.Set(ctx, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	tflog.Info(ctx, "PostgreSQL instance read")
+func (r *instanceDataSource) Read(ctx context.Context, _ datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance data", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working since then. Use stackit_postgresflex_instance instead. Check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html on how to backup and restore an instance from PostgreSQL to PostgreSQL Flex, then import the resource to Terraform using an \"import\" block (https://developer.hashicorp.com/terraform/language/import)")
 }
