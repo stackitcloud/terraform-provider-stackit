@@ -62,7 +62,7 @@ Read-Only:
 - `metrics_frequency` (Number) The frequency in seconds at which metrics are emitted.
 - `metrics_prefix` (String) The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key
 - `min_replicas_max_lag` (Number) The minimum replicas maximum lag.
-- `monitoring_instance_id` (String) The ID of the monitoring instance (e.g. Argus instance). Required if `enable_monitoring` is set to `true`.
+- `monitoring_instance_id` (String) The ID of the STACKIT monitoring instance.
 - `notify_keyspace_events` (String) The notify keyspace events.
 - `sgw_acl` (String) Comma separated list of IP networks in CIDR notation which are allowed to access this instance.
 - `snapshot` (String) The snapshot configuration.
