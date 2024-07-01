@@ -90,7 +90,7 @@ func TestAccMariaDBResource(t *testing.T) {
 						"metrics_frequency":  "10",
 						"enable_monitoring":  instanceResource["enable_monitoring"],
 						"metrics_prefix":     instanceResource["metrics_prefix"],
-						"syslog":             fmt.Sprintf(`["%s"]`, instanceResource["syslog-0"]),
+						"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
 					}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -142,7 +142,7 @@ func TestAccMariaDBResource(t *testing.T) {
 						"metrics_frequency":  "10",
 						"enable_monitoring":  instanceResource["enable_monitoring"],
 						"metrics_prefix":     instanceResource["metrics_prefix"],
-						"syslog":             fmt.Sprintf(`["%s"]`, instanceResource["syslog-0"]),
+						"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
 					}),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -215,7 +215,7 @@ func TestAccMariaDBResource(t *testing.T) {
 					"metrics_frequency":  "10",
 					"enable_monitoring":  instanceResource["enable_monitoring"],
 					"metrics_prefix":     instanceResource["metrics_prefix"],
-					"syslog":             fmt.Sprintf(`["%s"]`, instanceResource["syslog-0"]),
+					"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
 				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
