@@ -87,6 +87,22 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"plan_id":     "The selected plan ID.",
 	}
 
+	parametersDescriptions := map[string]string{
+		"sgw_acl":                "Comma separated list of IP networks in CIDR notation which are allowed to access this instance.",
+		"consumer_timeout":       "The timeout in milliseconds for the consumer.",
+		"enable_monitoring":      "Enable monitoring.",
+		"graphite":               "Graphite server URL (host and port). If set, monitoring with Graphite will be enabled.",
+		"max_disk_threshold":     "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
+		"metrics_frequency":      "The frequency in seconds at which metrics are emitted.",
+		"metrics_prefix":         "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key",
+		"monitoring_instance_id": "The monitoring instance ID.",
+		"plugins":                "List of plugins to install. Must be a supported plugin name.",
+		"roles":                  "List of roles to assign to the instance.",
+		"syslog":                 "List of syslog servers to send logs to.",
+		"tls_ciphers":            "List of TLS ciphers to use.",
+		"tls_protocols":          "TLS protocol to use.",
+	}
+
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -129,47 +145,60 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"parameters": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"sgw_acl": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["sgw_acl"],
+						Computed:    true,
 					},
 					"consumer_timeout": schema.Int64Attribute{
-						Computed: true,
+						Description: parametersDescriptions["consumer_timeout"],
+						Computed:    true,
 					},
 					"enable_monitoring": schema.BoolAttribute{
-						Computed: true,
+						Description: parametersDescriptions["enable_monitoring"],
+						Computed:    true,
 					},
 					"graphite": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["graphite"],
+						Computed:    true,
 					},
 					"max_disk_threshold": schema.Int64Attribute{
-						Computed: true,
+						Description: parametersDescriptions["max_disk_threshold"],
+						Computed:    true,
 					},
 					"metrics_frequency": schema.Int64Attribute{
-						Computed: true,
+						Description: parametersDescriptions["metrics_frequency"],
+						Computed:    true,
 					},
 					"metrics_prefix": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["metrics_prefix"],
+						Computed:    true,
 					},
 					"monitoring_instance_id": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["monitoring_instance_id"],
+						Computed:    true,
 					},
 					"plugins": schema.ListAttribute{
+						Description: parametersDescriptions["plugins"],
 						ElementType: types.StringType,
 						Computed:    true,
 					},
 					"roles": schema.ListAttribute{
+						Description: parametersDescriptions["roles"],
 						ElementType: types.StringType,
 						Computed:    true,
 					},
 					"syslog": schema.ListAttribute{
+						Description: parametersDescriptions["syslog"],
 						ElementType: types.StringType,
 						Computed:    true,
 					},
 					"tls_ciphers": schema.ListAttribute{
+						Description: parametersDescriptions["tls_ciphers"],
 						ElementType: types.StringType,
 						Computed:    true,
 					},
 					"tls_protocols": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["tls_protocols"],
+						Computed:    true,
 					},
 				},
 				Computed: true,
