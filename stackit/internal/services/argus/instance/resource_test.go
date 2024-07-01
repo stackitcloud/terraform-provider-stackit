@@ -569,12 +569,22 @@ func TestMapAlertConfigField(t *testing.T) {
 					Route:     &argus.Route{},
 				},
 			},
-			isValid: false,
+			expected: Model{
+				ACL:         types.SetNull(types.StringType),
+				Parameters:  types.MapNull(types.StringType),
+				AlertConfig: types.ObjectNull(receiversTypes),
+			},
+			isValid: true,
 		},
 		{
 			description:     "nil resp",
 			alertConfigResp: nil,
-			isValid:         false,
+			expected: Model{
+				ACL:         types.SetNull(types.StringType),
+				Parameters:  types.MapNull(types.StringType),
+				AlertConfig: types.ObjectNull(receiversTypes),
+			},
+			isValid: true,
 		},
 	}
 

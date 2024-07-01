@@ -69,21 +69,7 @@ type Model struct {
 	AlertConfig                        types.Object `tfsdk:"alert_config"`
 }
 
-var mockAlertConfig = alertConfigModel{
-	Receivers: types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
-		types.ObjectValueMust(receiversTypes, map[string]attr.Value{
-			"name":             types.StringValue("change-me"),
-			"email_configs":    types.ListValueMust(types.ObjectType{AttrTypes: emailConfigsTypes}, []attr.Value{}),
-			"opsgenie_configs": types.ListValueMust(types.ObjectType{AttrTypes: opsgenieConfigsTypes}, []attr.Value{}),
-			"webhooks_configs": types.ListValueMust(types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{}),
-		}),
-	}),
-	Route: types.ObjectValueMust(routeTypes, map[string]attr.Value{
-		"receiver": types.StringValue("change-me"),
-	}),
-}
-
-// Struct corresponding to DataSourceModel.AlertConfig
+// Struct corresponding to Model.AlertConfig
 type alertConfigModel struct {
 	// GlobalConfiguration types.Object `tfsdk:"global_configuration"`
 	// Inhibition_rules    types.Object `tfsdk:"inhibition_rules"`
@@ -104,7 +90,7 @@ var routeTypes = map[string]attr.Type{
 	"receiver": types.StringType,
 }
 
-// Struct corresponding to DataSourceModel.AlertConfig.receivers
+// Struct corresponding to Model.AlertConfig.receivers
 type receiversModel struct {
 	Name            types.String `tfsdk:"name"`
 	EmailConfigs    types.List   `tfsdk:"email_configs"`
@@ -119,7 +105,7 @@ var receiversTypes = map[string]attr.Type{
 	"webhooks_configs": types.ListType{ElemType: types.ObjectType{AttrTypes: webHooksConfigsTypes}},
 }
 
-// Struct corresponding to DataSourceModel.AlertConfig.receivers.emailConfigs
+// Struct corresponding to Model.AlertConfig.receivers.emailConfigs
 type emailConfigsModel struct {
 	AuthIdentity types.String `tfsdk:"auth_identity"`
 	AuthPassword types.String `tfsdk:"auth_password"`
@@ -138,7 +124,7 @@ var emailConfigsTypes = map[string]attr.Type{
 	"to":            types.StringType,
 }
 
-// Struct corresponding to DataSourceModel.AlertConfig.receivers.opsGenieConfigs
+// Struct corresponding to Model.AlertConfig.receivers.opsGenieConfigs
 type opsgenieConfigsModel struct {
 	ApiKey types.String `tfsdk:"api_key"`
 	ApiUrl types.String `tfsdk:"api_url"`
@@ -151,7 +137,7 @@ var opsgenieConfigsTypes = map[string]attr.Type{
 	"tags":    types.StringType,
 }
 
-// Struct corresponding to DataSourceModel.AlertConfig.receivers.webHooksConfigs
+// Struct corresponding to Model.AlertConfig.receivers.webHooksConfigs
 type webHooksConfigsModel struct {
 	Url     types.String `tfsdk:"url"`
 	MsTeams types.Bool   `tfsdk:"ms_teams"`
@@ -626,7 +612,11 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	// Alert Config
 
 	if model.AlertConfig.IsUnknown() || model.AlertConfig.IsNull() {
-		alertConfig = mockAlertConfig
+		alertConfig, err = getMockAlertConfig(ctx)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Getting mock alert config: %v", err))
+			return
+		}
 	}
 
 	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, alertConfig)
@@ -883,7 +873,11 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	// Alert Config
 
 	if model.AlertConfig.IsUnknown() || model.AlertConfig.IsNull() {
-		alertConfig = mockAlertConfig
+		alertConfig, err = getMockAlertConfig(ctx)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Getting mock alert config: %v", err))
+			return
+		}
 	}
 
 	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, alertConfig)
@@ -1149,20 +1143,82 @@ func mapAlertConfigAttribute(ctx context.Context, respReceivers []argus.Receiver
 		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping route: %w", err)
 	}
 
-	alertConfig := types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
+	alertConfig, diags := types.ObjectValue(alertConfigTypes, map[string]attr.Value{
 		"receivers": receiversList,
 		"route":     route,
 	})
+	if diags.HasError() {
+		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping alert config: %w", core.DiagsToError(diags))
+	}
 
+	// Check if the alert config is equal to the mock alert config
+	// This is done because the Alert Config cannot be removed from the instance, but can be unset by the user in the Terraform configuration
+	// If the alert config is equal to the mock alert config, we will map the Alert Config to an empty object in the Terraform state
+	// This is done to avoid inconsistent applies or non-empty plans after applying
+	mockAlertConfig, err := getMockAlertConfig(ctx)
+	if err != nil {
+		return types.ObjectNull(alertConfigTypes), fmt.Errorf("getting mock alert config: %w", err)
+	}
 	modelMockAlertConfig, diags := types.ObjectValueFrom(ctx, alertConfigTypes, mockAlertConfig)
 	if diags.HasError() {
 		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping mock alert config: %w", core.DiagsToError(diags))
 	}
-
 	if alertConfig.Equal(modelMockAlertConfig) {
 		return types.ObjectNull(alertConfigTypes), nil
 	}
+
 	return alertConfig, nil
+}
+
+// getMockAlertConfig returns a default alert config to be set in the instance if the alert config is unset in the Terraform configuration
+//
+// This is done because the Alert Config cannot be removed from the instance, but can be unset by the user in the Terraform configuration.
+// So, we set the Alert Config in the instance to our mock configuration and
+// map the Alert Config to an empty object in the Terraform state if it matches the mock alert config
+func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
+	mockEmailConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: emailConfigsTypes}, []attr.Value{})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping email configs: %w", core.DiagsToError(diags))
+	}
+
+	mockOpsGenieConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: opsgenieConfigsTypes}, []attr.Value{})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping opsgenie configs: %w", core.DiagsToError(diags))
+	}
+
+	mockWebHooksConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping webhooks configs: %w", core.DiagsToError(diags))
+	}
+
+	mockReceiver, diags := types.ObjectValue(receiversTypes, map[string]attr.Value{
+		"name":             types.StringValue("change-me"),
+		"email_configs":    mockEmailConfigs,
+		"opsgenie_configs": mockOpsGenieConfigs,
+		"webhooks_configs": mockWebHooksConfigs,
+	})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping receiver: %w", core.DiagsToError(diags))
+	}
+
+	mockReceivers, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+		mockReceiver,
+	})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping receivers: %w", core.DiagsToError(diags))
+	}
+
+	mockRoute, diags := types.ObjectValue(routeTypes, map[string]attr.Value{
+		"receiver": types.StringValue("change-me"),
+	})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
+	}
+
+	return alertConfigModel{
+		Receivers: mockReceivers,
+		Route:     mockRoute,
+	}, nil
 }
 
 func mapReceiversToAttributes(ctx context.Context, respReceivers []argus.Receivers) (basetypes.ListValue, error) {
