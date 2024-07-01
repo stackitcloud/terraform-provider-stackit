@@ -1512,6 +1512,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startT
 		return "", "", fmt.Errorf("parsing end time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.End, err)
 	}
 
+	// return startTimeAPI.Format("15:04:05Z07:00"), endTimeAPI.Format("15:04:05Z07:00"), nil
 	if m.Maintenance.IsNull() || m.Maintenance.IsUnknown() {
 		return startTimeAPI.Format("15:04:05Z07:00"), endTimeAPI.Format("15:04:05Z07:00"), nil
 	}
@@ -1530,9 +1531,10 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startT
 			return "", "", fmt.Errorf("parsing start time '%s' from TF config as RFC time: %w", maintenance.Start.ValueString(), err)
 		}
 		if startTimeAPI.Format("15:04:05Z07:00") != startTimeTF.Format("15:04:05Z07:00") {
-			return "", "", fmt.Errorf("start time '%v' from API response doesn't match start time '%v' from TF config", *cl.Maintenance.TimeWindow.Start, maintenance.Start.ValueString())
+			startTime = startTimeAPI.Format("15:04:05Z07:00")
+		} else {
+			startTime = maintenance.Start.ValueString()
 		}
-		startTime = maintenance.Start.ValueString()
 	}
 
 	if maintenance.End.IsNull() || maintenance.End.IsUnknown() {
@@ -1543,9 +1545,10 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startT
 			return "", "", fmt.Errorf("parsing end time '%s' from TF config as RFC time: %w", maintenance.End.ValueString(), err)
 		}
 		if endTimeAPI.Format("15:04:05Z07:00") != endTimeTF.Format("15:04:05Z07:00") {
-			return "", "", fmt.Errorf("end time '%v' from API response doesn't match end time '%v' from TF config", *cl.Maintenance.TimeWindow.End, maintenance.End.ValueString())
+			endTime = endTimeAPI.Format("15:04:05Z07:00")
+		} else {
+			endTime = maintenance.End.ValueString()
 		}
-		endTime = maintenance.End.ValueString()
 	}
 
 	return startTime, endTime, nil
