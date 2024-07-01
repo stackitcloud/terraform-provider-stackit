@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -64,6 +66,86 @@ type Model struct {
 	OtlpTracesURL                      types.String `tfsdk:"otlp_traces_url"`
 	ZipkinSpansURL                     types.String `tfsdk:"zipkin_spans_url"`
 	ACL                                types.Set    `tfsdk:"acl"`
+	AlertConfig                        types.Object `tfsdk:"alert_config"`
+}
+
+// Struct corresponding to Model.AlertConfig
+type alertConfigModel struct {
+	// GlobalConfiguration types.Object `tfsdk:"global_configuration"`
+	// Inhibition_rules    types.Object `tfsdk:"inhibition_rules"`
+	Receivers types.List   `tfsdk:"receivers"`
+	Route     types.Object `tfsdk:"route"`
+}
+
+var alertConfigTypes = map[string]attr.Type{
+	"receivers": types.ListType{ElemType: types.ObjectType{AttrTypes: receiversTypes}},
+	"route":     types.ObjectType{AttrTypes: routeTypes},
+}
+
+type routeModel struct {
+	Receiver types.String `tfsdk:"receiver"`
+}
+
+var routeTypes = map[string]attr.Type{
+	"receiver": types.StringType,
+}
+
+// Struct corresponding to Model.AlertConfig.receivers
+type receiversModel struct {
+	Name            types.String `tfsdk:"name"`
+	EmailConfigs    types.List   `tfsdk:"email_configs"`
+	OpsGenieConfigs types.List   `tfsdk:"opsgenie_configs"`
+	WebHooksConfigs types.List   `tfsdk:"webhooks_configs"`
+}
+
+var receiversTypes = map[string]attr.Type{
+	"name":             types.StringType,
+	"email_configs":    types.ListType{ElemType: types.ObjectType{AttrTypes: emailConfigsTypes}},
+	"opsgenie_configs": types.ListType{ElemType: types.ObjectType{AttrTypes: opsgenieConfigsTypes}},
+	"webhooks_configs": types.ListType{ElemType: types.ObjectType{AttrTypes: webHooksConfigsTypes}},
+}
+
+// Struct corresponding to Model.AlertConfig.receivers.emailConfigs
+type emailConfigsModel struct {
+	AuthIdentity types.String `tfsdk:"auth_identity"`
+	AuthPassword types.String `tfsdk:"auth_password"`
+	AuthUsername types.String `tfsdk:"auth_username"`
+	From         types.String `tfsdk:"from"`
+	Smarthost    types.String `tfsdk:"smart_host"`
+	To           types.String `tfsdk:"to"`
+}
+
+var emailConfigsTypes = map[string]attr.Type{
+	"auth_identity": types.StringType,
+	"auth_password": types.StringType,
+	"auth_username": types.StringType,
+	"from":          types.StringType,
+	"smart_host":    types.StringType,
+	"to":            types.StringType,
+}
+
+// Struct corresponding to Model.AlertConfig.receivers.opsGenieConfigs
+type opsgenieConfigsModel struct {
+	ApiKey types.String `tfsdk:"api_key"`
+	ApiUrl types.String `tfsdk:"api_url"`
+	Tags   types.String `tfsdk:"tags"`
+}
+
+var opsgenieConfigsTypes = map[string]attr.Type{
+	"api_key": types.StringType,
+	"api_url": types.StringType,
+	"tags":    types.StringType,
+}
+
+// Struct corresponding to Model.AlertConfig.receivers.webHooksConfigs
+type webHooksConfigsModel struct {
+	Url     types.String `tfsdk:"url"`
+	MsTeams types.Bool   `tfsdk:"ms_teams"`
+}
+
+var webHooksConfigsTypes = map[string]attr.Type{
+	"url":      types.StringType,
+	"ms_teams": types.BoolType,
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -269,6 +351,119 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					),
 				},
 			},
+			"alert_config": schema.SingleNestedAttribute{
+				Description: "Alert configuration for the instance.",
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"receivers": schema.ListNestedAttribute{
+						Description: "List of alert receivers.",
+						Required:    true,
+						Validators: []validator.List{
+							listvalidator.SizeAtLeast(1),
+						},
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"name": schema.StringAttribute{
+									Description: "Name of the receiver.",
+									Required:    true,
+								},
+								"email_configs": schema.ListNestedAttribute{
+									Description: "List of email configurations.",
+									Computed:    true,
+									Optional:    true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"auth_identity": schema.StringAttribute{
+												Description: "SMTP authentication information. Must be a valid email address",
+												Computed:    true,
+												Optional:    true,
+											},
+											"auth_password": schema.StringAttribute{
+												Description: "SMTP authentication password.",
+												Computed:    true,
+												Optional:    true,
+											},
+											"auth_username": schema.StringAttribute{
+												Description: "SMTP authentication username.",
+												Computed:    true,
+												Optional:    true,
+											},
+											"from": schema.StringAttribute{
+												Description: "The sender email address. Must be a valid email address",
+												Computed:    true,
+												Optional:    true,
+											},
+											"smart_host": schema.StringAttribute{
+												Description: "The SMTP host through which emails are sent.",
+												Computed:    true,
+												Optional:    true,
+											},
+											"to": schema.StringAttribute{
+												Description: "The email address to send notifications to. Must be a valid email address",
+												Computed:    true,
+												Optional:    true,
+											},
+										},
+									},
+								},
+								"opsgenie_configs": schema.ListNestedAttribute{
+									Description: "List of OpsGenie configurations.",
+									Computed:    true,
+									Optional:    true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"api_key": schema.StringAttribute{
+												Description: "The API key for OpsGenie.",
+												Computed:    true,
+												Optional:    true,
+											},
+											"api_url": schema.StringAttribute{
+												Description: "The host to send OpsGenie API requests to. Must be a valid URL",
+												Computed:    true,
+												Optional:    true,
+											},
+											"tags": schema.StringAttribute{
+												Description: "Comma separated list of tags attached to the notifications.",
+												Computed:    true,
+												Optional:    true,
+											},
+										},
+									},
+								},
+								"webhooks_configs": schema.ListNestedAttribute{
+									Description: "List of Webhooks configurations.",
+									Computed:    true,
+									Optional:    true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"url": schema.StringAttribute{
+												Description: "The endpoint to send HTTP POST requests to. Must be a valid URL",
+												Computed:    true,
+												Optional:    true,
+											},
+											"ms_teams": schema.BoolAttribute{
+												Description: "Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.",
+												Computed:    true,
+												Optional:    true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					"route": schema.SingleNestedAttribute{
+						Description: "Route configuration for the alerts.",
+						Required:    true,
+						Attributes: map[string]schema.Attribute{
+							"receiver": schema.StringAttribute{
+								Description: "The name of the receiver to route the alerts to.",
+								Required:    true,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -295,6 +490,15 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	metricsRetentionDays := conversion.Int64ValueToPointer(model.MetricsRetentionDays)
 	metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays5mDownsampling)
 	metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays1hDownsampling)
+
+	alertConfig := alertConfigModel{}
+	if !(model.AlertConfig.IsNull() || model.AlertConfig.IsUnknown()) {
+		diags = model.AlertConfig.As(ctx, &alertConfig, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -405,6 +609,44 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	// Alert Config
+
+	if model.AlertConfig.IsUnknown() || model.AlertConfig.IsNull() {
+		alertConfig, err = getMockAlertConfig(ctx)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Getting mock alert config: %v", err))
+			return
+		}
+	}
+
+	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, alertConfig)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building alert config payload: %v", err))
+		return
+	}
+
+	var updatedAlertConfig *argus.UpdateAlertConfigsResponse
+	if alertConfigPayload != nil {
+		updatedAlertConfig, err = r.client.UpdateAlertConfigs(ctx, *instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting alert config: %v", err))
+			return
+		}
+	}
+	// Map response body to schema
+	err = mapUpdateAlertConfigField(ctx, updatedAlertConfig, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
+		return
+	}
+
+	// Set state to fully populated data
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	tflog.Info(ctx, "Argus instance created")
 }
 
@@ -448,6 +690,12 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
+	alertConfigResp, err := r.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get alert config: %v", err))
+		return
+	}
+
 	// Map response body to schema
 	err = mapFields(ctx, instanceResp, &model)
 	if err != nil {
@@ -466,6 +714,13 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = mapMetricsRetentionField(metricsRetentionResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapAlertConfigField(ctx, alertConfigResp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
 		return
 	}
 
@@ -503,6 +758,15 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	metricsRetentionDays := conversion.Int64ValueToPointer(model.MetricsRetentionDays)
 	metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays5mDownsampling)
 	metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays1hDownsampling)
+
+	alertConfig := alertConfigModel{}
+	if !(model.AlertConfig.IsNull() || model.AlertConfig.IsUnknown()) {
+		diags = model.AlertConfig.As(ctx, &alertConfig, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 
 	err := r.loadPlanId(ctx, &model)
 	if err != nil {
@@ -599,6 +863,44 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API response for the metrics retention %v", err))
 		return
 	}
+	// Set state to fully populated data
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Alert Config
+
+	if model.AlertConfig.IsUnknown() || model.AlertConfig.IsNull() {
+		alertConfig, err = getMockAlertConfig(ctx)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Getting mock alert config: %v", err))
+			return
+		}
+	}
+
+	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, alertConfig)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building alert config payload: %v", err))
+		return
+	}
+
+	var updatedAlertConfig *argus.UpdateAlertConfigsResponse
+	if alertConfigPayload != nil {
+		updatedAlertConfig, err = r.client.UpdateAlertConfigs(ctx, instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting alert config: %v", err))
+			return
+		}
+	}
+	// Map response body to schema
+	err = mapUpdateAlertConfigField(ctx, updatedAlertConfig, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
+		return
+	}
+
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
@@ -784,6 +1086,270 @@ func mapMetricsRetentionField(r *argus.GetMetricsStorageRetentionResponse, model
 	return nil
 }
 
+func mapUpdateAlertConfigField(ctx context.Context, resp *argus.UpdateAlertConfigsResponse, model *Model) error {
+	if resp == nil || resp.Data == nil || resp.Data.Receivers == nil || resp.Data.Route == nil {
+		model.AlertConfig = types.ObjectNull(alertConfigTypes)
+		return nil
+	}
+
+	if model == nil {
+		return fmt.Errorf("nil model")
+	}
+
+	// Receivers
+	respReceivers := *resp.Data.Receivers
+	respRoute := *resp.Data.Route
+
+	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute)
+	if err != nil {
+		return fmt.Errorf("mapping alert config: %w", err)
+	}
+
+	model.AlertConfig = alertConfig
+	return nil
+}
+
+func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsResponse, model *Model) error {
+	if resp == nil || resp.Data == nil || resp.Data.Receivers == nil || resp.Data.Route == nil {
+		model.AlertConfig = types.ObjectNull(alertConfigTypes)
+		return nil
+	}
+
+	if model == nil {
+		return fmt.Errorf("nil model")
+	}
+
+	// Receivers
+	respReceivers := *resp.Data.Receivers
+	respRoute := *resp.Data.Route
+
+	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute)
+	if err != nil {
+		return fmt.Errorf("mapping alert config: %w", err)
+	}
+
+	model.AlertConfig = alertConfig
+	return nil
+}
+
+func mapAlertConfigAttribute(ctx context.Context, respReceivers []argus.Receivers, respRoute argus.Route) (basetypes.ObjectValue, error) {
+	receiversList, err := mapReceiversToAttributes(ctx, respReceivers)
+	if err != nil {
+		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping receivers: %w", err)
+	}
+
+	route, err := mapRouteToAttributes(respRoute)
+	if err != nil {
+		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping route: %w", err)
+	}
+
+	alertConfig, diags := types.ObjectValue(alertConfigTypes, map[string]attr.Value{
+		"receivers": receiversList,
+		"route":     route,
+	})
+	if diags.HasError() {
+		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping alert config: %w", core.DiagsToError(diags))
+	}
+
+	// Check if the alert config is equal to the mock alert config
+	// This is done because the Alert Config cannot be removed from the instance, but can be unset by the user in the Terraform configuration
+	// If the alert config is equal to the mock alert config, we will map the Alert Config to an empty object in the Terraform state
+	// This is done to avoid inconsistent applies or non-empty plans after applying
+	mockAlertConfig, err := getMockAlertConfig(ctx)
+	if err != nil {
+		return types.ObjectNull(alertConfigTypes), fmt.Errorf("getting mock alert config: %w", err)
+	}
+	modelMockAlertConfig, diags := types.ObjectValueFrom(ctx, alertConfigTypes, mockAlertConfig)
+	if diags.HasError() {
+		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping mock alert config: %w", core.DiagsToError(diags))
+	}
+	if alertConfig.Equal(modelMockAlertConfig) {
+		return types.ObjectNull(alertConfigTypes), nil
+	}
+
+	return alertConfig, nil
+}
+
+// getMockAlertConfig returns a default alert config to be set in the instance if the alert config is unset in the Terraform configuration
+//
+// This is done because the Alert Config cannot be removed from the instance, but can be unset by the user in the Terraform configuration.
+// So, we set the Alert Config in the instance to our mock configuration and
+// map the Alert Config to an empty object in the Terraform state if it matches the mock alert config
+func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
+	mockEmailConfig, diags := types.ObjectValue(emailConfigsTypes, map[string]attr.Value{
+		"to":            types.StringValue("123@gmail.com"),
+		"smart_host":    types.StringValue("smtp.gmail.com:587"),
+		"from":          types.StringValue("xxxx@gmail.com"),
+		"auth_username": types.StringValue("xxxx@gmail.com"),
+		"auth_password": types.StringValue("xxxxxxxxx"),
+		"auth_identity": types.StringValue("xxxx@gmail.com"),
+	})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping email config: %w", core.DiagsToError(diags))
+	}
+
+	mockEmailConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: emailConfigsTypes}, []attr.Value{
+		mockEmailConfig,
+	})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping email configs: %w", core.DiagsToError(diags))
+	}
+
+	mockOpsGenieConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: opsgenieConfigsTypes}, []attr.Value{})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping opsgenie configs: %w", core.DiagsToError(diags))
+	}
+
+	mockWebHooksConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping webhooks configs: %w", core.DiagsToError(diags))
+	}
+
+	mockReceiver, diags := types.ObjectValue(receiversTypes, map[string]attr.Value{
+		"name":             types.StringValue("email-me"),
+		"email_configs":    mockEmailConfigs,
+		"opsgenie_configs": mockOpsGenieConfigs,
+		"webhooks_configs": mockWebHooksConfigs,
+	})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping receiver: %w", core.DiagsToError(diags))
+	}
+
+	mockReceivers, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+		mockReceiver,
+	})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping receivers: %w", core.DiagsToError(diags))
+	}
+
+	mockRoute, diags := types.ObjectValue(routeTypes, map[string]attr.Value{
+		"receiver": types.StringValue("email-me"),
+	})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
+	}
+
+	return alertConfigModel{
+		Receivers: mockReceivers,
+		Route:     mockRoute,
+	}, nil
+}
+
+func mapReceiversToAttributes(ctx context.Context, respReceivers []argus.Receivers) (basetypes.ListValue, error) {
+	receiversList := []attr.Value{}
+	emptyList, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{})
+	if diags.HasError() {
+		// Should not happen
+		return emptyList, fmt.Errorf("mapping empty list: %w", core.DiagsToError(diags))
+	}
+
+	if len(respReceivers) == 0 {
+		return emptyList, nil
+	}
+
+	for i := range respReceivers {
+		receiver := respReceivers[i]
+
+		emailConfigList := []attr.Value{}
+		if receiver.EmailConfigs != nil {
+			for _, emailConfig := range *receiver.EmailConfigs {
+				emailConfigMap := map[string]attr.Value{
+					"auth_identity": types.StringPointerValue(emailConfig.AuthIdentity),
+					"auth_password": types.StringPointerValue(emailConfig.AuthPassword),
+					"auth_username": types.StringPointerValue(emailConfig.AuthUsername),
+					"from":          types.StringPointerValue(emailConfig.From),
+					"smart_host":    types.StringPointerValue(emailConfig.Smarthost),
+					"to":            types.StringPointerValue(emailConfig.To),
+				}
+				emailConfigModel, diags := types.ObjectValue(emailConfigsTypes, emailConfigMap)
+				if diags.HasError() {
+					return emptyList, fmt.Errorf("mapping email config: %w", core.DiagsToError(diags))
+				}
+				emailConfigList = append(emailConfigList, emailConfigModel)
+			}
+		}
+
+		opsgenieConfigList := []attr.Value{}
+		if receiver.OpsgenieConfigs != nil {
+			for _, opsgenieConfig := range *receiver.OpsgenieConfigs {
+				opsGenieConfigMap := map[string]attr.Value{
+					"api_key": types.StringPointerValue(opsgenieConfig.ApiKey),
+					"api_url": types.StringPointerValue(opsgenieConfig.ApiUrl),
+					"tags":    types.StringPointerValue(opsgenieConfig.Tags),
+				}
+				opsGenieConfigModel, diags := types.ObjectValue(opsgenieConfigsTypes, opsGenieConfigMap)
+				if diags.HasError() {
+					return emptyList, fmt.Errorf("mapping opsgenie config: %w", core.DiagsToError(diags))
+				}
+				opsgenieConfigList = append(opsgenieConfigList, opsGenieConfigModel)
+			}
+		}
+
+		webhooksConfigList := []attr.Value{}
+		if receiver.WebHookConfigs != nil {
+			for _, webhookConfig := range *receiver.WebHookConfigs {
+				webHookConfigsMap := map[string]attr.Value{
+					"url":      types.StringPointerValue(webhookConfig.Url),
+					"ms_teams": types.BoolPointerValue(webhookConfig.MsTeams),
+				}
+				webHookConfigsModel, diags := types.ObjectValue(webHooksConfigsTypes, webHookConfigsMap)
+				if diags.HasError() {
+					return emptyList, fmt.Errorf("mapping webhooks config: %w", core.DiagsToError(diags))
+				}
+				webhooksConfigList = append(webhooksConfigList, webHookConfigsModel)
+			}
+		}
+
+		emailConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: emailConfigsTypes}, emailConfigList)
+		if diags.HasError() {
+			return emptyList, fmt.Errorf("mapping email configs: %w", core.DiagsToError(diags))
+		}
+
+		opsGenieConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: opsgenieConfigsTypes}, opsgenieConfigList)
+		if diags.HasError() {
+			return emptyList, fmt.Errorf("mapping opsgenie configs: %w", core.DiagsToError(diags))
+		}
+
+		webHooksConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: webHooksConfigsTypes}, webhooksConfigList)
+		if diags.HasError() {
+			return emptyList, fmt.Errorf("mapping webhooks configs: %w", core.DiagsToError(diags))
+		}
+
+		receiverMap := map[string]attr.Value{
+			"name":             types.StringPointerValue(receiver.Name),
+			"email_configs":    emailConfigs,
+			"opsgenie_configs": opsGenieConfigs,
+			"webhooks_configs": webHooksConfigs,
+		}
+
+		receiversModel, diags := types.ObjectValue(receiversTypes, receiverMap)
+		if diags.HasError() {
+			return emptyList, fmt.Errorf("mapping receiver: %w", core.DiagsToError(diags))
+		}
+
+		receiversList = append(receiversList, receiversModel)
+	}
+
+	returnReceiversList, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: receiversTypes}, receiversList)
+	if diags.HasError() {
+		return emptyList, fmt.Errorf("mapping receivers list: %w", core.DiagsToError(diags))
+	}
+	return returnReceiversList, nil
+}
+
+func mapRouteToAttributes(route argus.Route) (attr.Value, error) {
+	routeMap := map[string]attr.Value{
+		"receiver": types.StringPointerValue(route.Receiver),
+	}
+
+	routeModel, diags := types.ObjectValue(routeTypes, routeMap)
+	if diags.HasError() {
+		return types.ObjectNull(routeTypes), fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
+	}
+
+	return routeModel, nil
+}
+
 func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
@@ -861,6 +1427,101 @@ func toUpdatePayload(model *Model) (*argus.UpdateInstancePayload, error) {
 		PlanId:    conversion.StringValueToPointer(model.PlanId),
 		Parameter: &pa,
 	}, nil
+}
+
+func toUpdateAlertConfigPayload(ctx context.Context, model alertConfigModel) (*argus.UpdateAlertConfigsPayload, error) {
+	if model.Receivers.IsNull() || model.Receivers.IsUnknown() {
+		return nil, nil
+	}
+
+	payload := argus.UpdateAlertConfigsPayload{}
+
+	receiversModel := []receiversModel{}
+	diags := model.Receivers.ElementsAs(ctx, &receiversModel, false)
+	if diags.HasError() {
+		return nil, fmt.Errorf("mapping receivers: %w", core.DiagsToError(diags))
+	}
+
+	receivers := []argus.UpdateAlertConfigsPayloadReceiversInner{}
+
+	for i := range receiversModel {
+		receiver := receiversModel[i]
+		receiverPayload := argus.UpdateAlertConfigsPayloadReceiversInner{
+			Name: conversion.StringValueToPointer(receiver.Name),
+		}
+
+		if !receiver.EmailConfigs.IsNull() && !receiver.EmailConfigs.IsUnknown() {
+			emailConfigs := []emailConfigsModel{}
+			diags := receiver.EmailConfigs.ElementsAs(ctx, &emailConfigs, false)
+			if diags.HasError() {
+				return nil, fmt.Errorf("mapping email configs: %w", core.DiagsToError(diags))
+			}
+			payloadEmailConfigs := []argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{}
+			for i := range emailConfigs {
+				emailConfig := emailConfigs[i]
+				payloadEmailConfigs = append(payloadEmailConfigs, argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{
+					AuthIdentity: conversion.StringValueToPointer(emailConfig.AuthIdentity),
+					AuthPassword: conversion.StringValueToPointer(emailConfig.AuthPassword),
+					AuthUsername: conversion.StringValueToPointer(emailConfig.AuthUsername),
+					From:         conversion.StringValueToPointer(emailConfig.From),
+					Smarthost:    conversion.StringValueToPointer(emailConfig.Smarthost),
+					To:           conversion.StringValueToPointer(emailConfig.To),
+				})
+			}
+			receiverPayload.EmailConfigs = &payloadEmailConfigs
+		}
+
+		if !receiver.OpsGenieConfigs.IsNull() && !receiver.OpsGenieConfigs.IsUnknown() {
+			opsgenieConfigs := []opsgenieConfigsModel{}
+			diags := receiver.OpsGenieConfigs.ElementsAs(ctx, &opsgenieConfigs, false)
+			if diags.HasError() {
+				return nil, fmt.Errorf("mapping opsgenie configs: %w", core.DiagsToError(diags))
+			}
+			payloadOpsGenieConfigs := []argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{}
+			for i := range opsgenieConfigs {
+				opsgenieConfig := opsgenieConfigs[i]
+				payloadOpsGenieConfigs = append(payloadOpsGenieConfigs, argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{
+					ApiKey: conversion.StringValueToPointer(opsgenieConfig.ApiKey),
+					ApiUrl: conversion.StringValueToPointer(opsgenieConfig.ApiUrl),
+					Tags:   conversion.StringValueToPointer(opsgenieConfig.Tags),
+				})
+			}
+			receiverPayload.OpsgenieConfigs = &payloadOpsGenieConfigs
+		}
+
+		if !receiver.WebHooksConfigs.IsNull() && !receiver.WebHooksConfigs.IsUnknown() {
+			receiverWebHooksConfigs := []webHooksConfigsModel{}
+			diags := receiver.WebHooksConfigs.ElementsAs(ctx, &receiverWebHooksConfigs, false)
+			if diags.HasError() {
+				return nil, fmt.Errorf("mapping webhooks configs: %w", core.DiagsToError(diags))
+			}
+			payloadWebHooksConfigs := []argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{}
+			for i := range receiverWebHooksConfigs {
+				webHooksConfig := receiverWebHooksConfigs[i]
+				payloadWebHooksConfigs = append(payloadWebHooksConfigs, argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
+					Url:     conversion.StringValueToPointer(webHooksConfig.Url),
+					MsTeams: conversion.BoolValueToPointer(webHooksConfig.MsTeams),
+				})
+			}
+			receiverPayload.WebHookConfigs = &payloadWebHooksConfigs
+		}
+
+		receivers = append(receivers, receiverPayload)
+	}
+
+	payload.Receivers = &receivers
+
+	routeModel := routeModel{}
+	diags = model.Route.As(ctx, &routeModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
+	}
+
+	payload.Route = &argus.UpdateAlertConfigsPayloadRoute{
+		Receiver: conversion.StringValueToPointer(routeModel.Receiver),
+	}
+
+	return &payload, nil
 }
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
