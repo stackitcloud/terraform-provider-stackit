@@ -87,6 +87,31 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"plan_id":     "The selected plan ID.",
 	}
 
+	parametersDescriptions := map[string]string{
+		"sgw_acl":                 "Comma separated list of IP networks in CIDR notation which are allowed to access this instance.",
+		"down_after_milliseconds": "The number of milliseconds after which the instance is considered down.",
+		"enable_monitoring":       "Enable monitoring.",
+		"failover_timeout":        "The failover timeout in milliseconds.",
+		"graphite":                "Graphite server URL (host and port). If set, monitoring with Graphite will be enabled.",
+		"lazyfree_lazy_eviction":  "The lazy eviction enablement (yes or no).",
+		"lazyfree_lazy_expire":    "The lazy expire enablement (yes or no).",
+		"lua_time_limit":          "The Lua time limit.",
+		"max_disk_threshold":      "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
+		"maxclients":              "The maximum number of clients.",
+		"maxmemory_policy":        "The policy to handle the maximum memory (volatile-lru, noeviction, etc).",
+		"maxmemory_samples":       "The maximum memory samples.",
+		"metrics_frequency":       "The frequency in seconds at which metrics are emitted.",
+		"metrics_prefix":          "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key",
+		"min_replicas_max_lag":    "The minimum replicas maximum lag.",
+		"monitoring_instance_id":  "The monitoring instance ID.",
+		"notify_keyspace_events":  "The notify keyspace events.",
+		"snapshot":                "The snapshot configuration.",
+		"syslog":                  "List of syslog servers to send logs to.",
+		"tls_ciphers":             "List of TLS ciphers to use.",
+		"tls_ciphersuites":        "TLS cipher suites to use.",
+		"tls_protocols":           "TLS protocol to use.",
+	}
+
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -129,90 +154,117 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"parameters": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"sgw_acl": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["sgw_acl"],
+						Computed:    true,
 					},
 					"down_after_milliseconds": schema.Int64Attribute{
-						Computed: true,
+						Description: parametersDescriptions["down_after_milliseconds"],
+						Computed:    true,
 					},
 					"enable_monitoring": schema.BoolAttribute{
-						Computed: true,
+						Description: parametersDescriptions["enable_monitoring"],
+						Computed:    true,
 					},
 					"failover_timeout": schema.Int64Attribute{
-						Computed: true,
+						Description: parametersDescriptions["failover_timeout"],
+						Computed:    true,
 					},
 					"graphite": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["graphite"],
+						Computed:    true,
 					},
 					"lazyfree_lazy_eviction": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["lazyfree_lazy_eviction"],
+						Computed:    true,
 					},
 					"lazyfree_lazy_expire": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["lazyfree_lazy_expire"],
+						Computed:    true,
 					},
 					"lua_time_limit": schema.Int64Attribute{
-						Computed: true,
+						Description: parametersDescriptions["lua_time_limit"],
+						Computed:    true,
 					},
 					"max_disk_threshold": schema.Int64Attribute{
-						Computed: true,
+						Description: parametersDescriptions["max_disk_threshold"],
+						Computed:    true,
 					},
 					"maxclients": schema.Int64Attribute{
-						Computed: true,
+						Description: parametersDescriptions["maxclients"],
+						Computed:    true,
 					},
 					"maxmemory_policy": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["maxmemory_policy"],
+						Computed:    true,
 					},
 					"maxmemory_samples": schema.Int64Attribute{
-						Computed: true,
+						Description: parametersDescriptions["maxmemory_samples"],
+						Computed:    true,
 					},
 					"metrics_frequency": schema.Int64Attribute{
-						Computed: true,
+						Description: parametersDescriptions["metrics_frequency"],
+						Computed:    true,
 					},
 					"metrics_prefix": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["metrics_prefix"],
+						Computed:    true,
 					},
 					"min_replicas_max_lag": schema.Int64Attribute{
-						Computed: true,
+						Description: parametersDescriptions["min_replicas_max_lag"],
+						Computed:    true,
 					},
 					"monitoring_instance_id": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["monitoring_instance_id"],
+						Computed:    true,
 					},
 					"notify_keyspace_events": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["notify_keyspace_events"],
+						Computed:    true,
 					},
 					"snapshot": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["snapshot"],
+						Computed:    true,
 					},
 					"syslog": schema.ListAttribute{
 						ElementType: types.StringType,
+						Description: parametersDescriptions["syslog"],
 						Computed:    true,
 					},
 					"tls_ciphers": schema.ListAttribute{
 						ElementType: types.StringType,
+						Description: parametersDescriptions["tls_ciphers"],
 						Computed:    true,
 					},
 					"tls_ciphersuites": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["tls_ciphersuites"],
+						Computed:    true,
 					},
 					"tls_protocols": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["tls_protocols"],
+						Computed:    true,
 					},
 				},
 				Computed: true,
 			},
 			"cf_guid": schema.StringAttribute{
-				Computed: true,
+				Description: descriptions["cf_guid"],
+				Computed:    true,
 			},
 			"cf_space_guid": schema.StringAttribute{
-				Computed: true,
+				Description: descriptions["cf_space_guid"],
+				Computed:    true,
 			},
 			"dashboard_url": schema.StringAttribute{
-				Computed: true,
+				Description: descriptions["dashboard_url"],
+				Computed:    true,
 			},
 			"image_url": schema.StringAttribute{
-				Computed: true,
+				Description: descriptions["image_url"],
+				Computed:    true,
 			},
 			"cf_organization_guid": schema.StringAttribute{
-				Computed: true,
+				Description: descriptions["cf_organization_guid"],
+				Computed:    true,
 			},
 		},
 	}
