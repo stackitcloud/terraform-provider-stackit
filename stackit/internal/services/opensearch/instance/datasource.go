@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -86,6 +87,23 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"plan_id":     "The selected plan ID.",
 	}
 
+	parametersDescriptions := map[string]string{
+		"sgw_acl":                "Comma separated list of IP networks in CIDR notation which are allowed to access this instance.",
+		"enable_monitoring":      "Enable monitoring.",
+		"graphite":               "If set, monitoring with Graphite will be enabled. Expects the host and port where the Graphite metrics should be sent to (host:port).",
+		"max_disk_threshold":     "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
+		"metrics_frequency":      "The frequency in seconds at which metrics are emitted (in seconds).",
+		"metrics_prefix":         "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key.",
+		"monitoring_instance_id": "The monitoring instance ID.",
+		"java_garbage_collector": "The garbage collector to use for OpenSearch.",
+		"java_heapspace":         "The amount of memory (in MB) allocated as heap by the JVM for OpenSearch.",
+		"java_maxmetaspace":      "The amount of memory (in MB) used by the JVM to store metadata for OpenSearch.",
+		"plugins":                "List of plugins to install. Must be a supported plugin name. The plugins `repository-s3` and `repository-azure` are enabled by default and cannot be disabled.",
+		"syslog":                 "List of syslog servers to send logs to.",
+		"tls_ciphers":            "List of TLS ciphers to use.",
+		"tls_protocols":          "The TLS protocol to use.",
+	}
+
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -128,7 +146,63 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"parameters": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"sgw_acl": schema.StringAttribute{
-						Computed: true,
+						Description: parametersDescriptions["sgw_acl"],
+						Computed:    true,
+					},
+					"enable_monitoring": schema.BoolAttribute{
+						Description: parametersDescriptions["enable_monitoring"],
+						Computed:    true,
+					},
+					"graphite": schema.StringAttribute{
+						Description: parametersDescriptions["graphite"],
+						Computed:    true,
+					},
+					"java_garbage_collector": schema.StringAttribute{
+						Description: parametersDescriptions["java_garbage_collector"],
+						Computed:    true,
+					},
+					"java_heapspace": schema.Int64Attribute{
+						Description: parametersDescriptions["java_heapspace"],
+						Computed:    true,
+					},
+					"java_maxmetaspace": schema.Int64Attribute{
+						Description: parametersDescriptions["java_maxmetaspace"],
+						Computed:    true,
+					},
+					"max_disk_threshold": schema.Int64Attribute{
+						Description: parametersDescriptions["max_disk_threshold"],
+						Computed:    true,
+					},
+					"metrics_frequency": schema.Int64Attribute{
+						Description: parametersDescriptions["metrics_frequency"],
+						Computed:    true,
+					},
+					"metrics_prefix": schema.StringAttribute{
+						Description: parametersDescriptions["metrics_prefix"],
+						Computed:    true,
+					},
+					"monitoring_instance_id": schema.StringAttribute{
+						Description: parametersDescriptions["monitoring_instance_id"],
+						Computed:    true,
+					},
+					"plugins": schema.ListAttribute{
+						ElementType: types.StringType,
+						Description: parametersDescriptions["plugins"],
+						Computed:    true,
+					},
+					"syslog": schema.ListAttribute{
+						ElementType: types.StringType,
+						Description: parametersDescriptions["syslog"],
+						Computed:    true,
+					},
+					"tls_ciphers": schema.ListAttribute{
+						ElementType: types.StringType,
+						Description: parametersDescriptions["tls_ciphers"],
+						Computed:    true,
+					},
+					"tls_protocols": schema.StringAttribute{
+						Description: parametersDescriptions["tls_protocols"],
+						Computed:    true,
 					},
 				},
 				Computed: true,

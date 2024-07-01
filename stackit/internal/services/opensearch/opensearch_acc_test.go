@@ -18,15 +18,42 @@ import (
 
 // Instance resource data
 var instanceResource = map[string]string{
-	"project_id": testutil.ProjectId,
-	"name":       testutil.ResourceNameWithDateTime("opensearch"),
-	"plan_id":    "9e4eac4b-b03d-4d7b-b01b-6d1224aa2d68",
-	"plan_name":  "stackit-opensearch-1.2.10-replica",
-	"version":    "2",
-	"sgw_acl":    "192.168.0.0/24",
+	"project_id":         testutil.ProjectId,
+	"name":               testutil.ResourceNameWithDateTime("opensearch"),
+	"plan_id":            "9e4eac4b-b03d-4d7b-b01b-6d1224aa2d68",
+	"plan_name":          "stackit-opensearch-1.2.10-replica",
+	"version":            "2",
+	"sgw_acl-1":          "192.168.0.0/16",
+	"sgw_acl-2":          "192.168.0.0/24",
+	"max_disk_threshold": "80",
+	"enable_monitoring":  "false",
+	"syslog-0":           "syslog.example.com:514",
 }
 
-func resourceConfig() string {
+func parametersConfig(params map[string]string) string {
+	nonStringParams := []string{
+		"enable_monitoring",
+		"max_disk_threshold",
+		"metrics_frequency",
+		"java_heapspace",
+		"java_maxmetaspace",
+		"plugins",
+		"syslog",
+		"tls_ciphers",
+	}
+	parameters := "parameters = {"
+	for k, v := range params {
+		if utils.Contains(nonStringParams, k) {
+			parameters += fmt.Sprintf("%s = %s\n", k, v)
+		} else {
+			parameters += fmt.Sprintf("%s = %q\n", k, v)
+		}
+	}
+	parameters += "\n}"
+	return parameters
+}
+
+func resourceConfig(params map[string]string) string {
 	return fmt.Sprintf(`
 				%s
 
@@ -35,6 +62,7 @@ func resourceConfig() string {
 					name    = "%s"
 					plan_name  = "%s"
  				 	version    = "%s"
+					%s
 				}
 
 				resource "stackit_opensearch_credential" "credential" {
@@ -47,34 +75,7 @@ func resourceConfig() string {
 		instanceResource["name"],
 		instanceResource["plan_name"],
 		instanceResource["version"],
-	)
-}
-
-func resourceConfigUpdate() string {
-	return fmt.Sprintf(`
-				%s
-
-				resource "stackit_opensearch_instance" "instance" {
-					project_id = "%s"
-					name    = "%s"
-					plan_name  = "%s"
- 				 	version    = "%s"
-					parameters = {
-						sgw_acl = "%s"
-					}
-				}
-
-				resource "stackit_opensearch_credential" "credential" {
-					project_id = stackit_opensearch_instance.instance.project_id
-					instance_id = stackit_opensearch_instance.instance.instance_id
-				}
-				`,
-		testutil.OpenSearchProviderConfig(),
-		instanceResource["project_id"],
-		instanceResource["name"],
-		instanceResource["plan_name"],
-		instanceResource["version"],
-		instanceResource["sgw_acl"],
+		parametersConfig(params),
 	)
 }
 
@@ -86,7 +87,13 @@ func TestAccOpenSearchResource(t *testing.T) {
 
 			// Creation
 			{
-				Config: resourceConfig(),
+				Config: resourceConfig(
+					map[string]string{
+						"sgw_acl":            instanceResource["sgw_acl-1"],
+						"max_disk_threshold": instanceResource["max_disk_threshold"],
+						"enable_monitoring":  instanceResource["enable_monitoring"],
+						"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
+					}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "project_id", instanceResource["project_id"]),
@@ -95,7 +102,11 @@ func TestAccOpenSearchResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "plan_name", instanceResource["plan_name"]),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "name", instanceResource["name"]),
-					resource.TestCheckResourceAttrSet("stackit_opensearch_instance.instance", "parameters.sgw_acl"),
+					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.sgw_acl", instanceResource["sqw_acl-1"]),
+					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.max_disk_threshold", instanceResource["max_disk_threshold"]),
+					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
+					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.syslog.#", "1"),
+					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.syslog.0", instanceResource["syslog-0"]),
 
 					// Credential data
 					resource.TestCheckResourceAttrPair(
@@ -125,7 +136,13 @@ func TestAccOpenSearchResource(t *testing.T) {
 						instance_id    = stackit_opensearch_credential.credential.instance_id
 					    credential_id = stackit_opensearch_credential.credential.credential_id
 					}`,
-					resourceConfig(),
+					resourceConfig(
+						map[string]string{
+							"sgw_acl":            instanceResource["sgw_acl-1"],
+							"max_disk_threshold": instanceResource["max_disk_threshold"],
+							"enable_monitoring":  instanceResource["enable_monitoring"],
+							"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
+						}),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -136,7 +153,11 @@ func TestAccOpenSearchResource(t *testing.T) {
 						"data.stackit_opensearch_credential.credential", "credential_id"),
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "plan_id", instanceResource["plan_id"]),
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "name", instanceResource["name"]),
-					resource.TestCheckResourceAttrSet("data.stackit_opensearch_instance.instance", "parameters.sgw_acl"),
+					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.sgw_acl", instanceResource["sqw_acl-1"]),
+					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.max_disk_threshold", instanceResource["max_disk_threshold"]),
+					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
+					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.syslog.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.syslog.0", instanceResource["syslog-0"]),
 
 					// Credential data
 					resource.TestCheckResourceAttr("data.stackit_opensearch_credential.credential", "project_id", instanceResource["project_id"]),
@@ -187,7 +208,13 @@ func TestAccOpenSearchResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfigUpdate(),
+				Config: resourceConfig(
+					map[string]string{
+						"sgw_acl":            instanceResource["sgw_acl-2"],
+						"max_disk_threshold": instanceResource["max_disk_threshold"],
+						"enable_monitoring":  instanceResource["enable_monitoring"],
+						"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
+					}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "project_id", instanceResource["project_id"]),
@@ -196,7 +223,11 @@ func TestAccOpenSearchResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "plan_name", instanceResource["plan_name"]),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "name", instanceResource["name"]),
-					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl"]),
+					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.sgw_acl", instanceResource["sqw_acl-2"]),
+					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.max_disk_threshold", instanceResource["max_disk_threshold"]),
+					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
+					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.syslog.#", "1"),
+					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.syslog.0", instanceResource["syslog-0"]),
 				),
 			},
 			// Deletion is done by the framework implicitly

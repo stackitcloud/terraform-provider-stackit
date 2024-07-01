@@ -1,14 +1,76 @@
 package opensearch
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/opensearch"
 )
+
+var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]attr.Value{
+	"sgw_acl":                types.StringValue("acl"),
+	"enable_monitoring":      types.BoolValue(true),
+	"graphite":               types.StringValue("graphite"),
+	"java_garbage_collector": types.StringValue("gc"),
+	"java_heapspace":         types.Int64Value(10),
+	"java_maxmetaspace":      types.Int64Value(10),
+	"max_disk_threshold":     types.Int64Value(10),
+	"metrics_frequency":      types.Int64Value(10),
+	"metrics_prefix":         types.StringValue("prefix"),
+	"monitoring_instance_id": types.StringValue("mid"),
+	"plugins": types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("plugin"),
+		types.StringValue("plugin2"),
+	}),
+	"syslog": types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("syslog"),
+		types.StringValue("syslog2"),
+	}),
+	"tls_ciphers": types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("cipher"),
+		types.StringValue("cipher2"),
+	}),
+	"tls_protocols": types.StringValue("protocol"),
+})
+
+var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[string]attr.Value{
+	"sgw_acl":                types.StringNull(),
+	"enable_monitoring":      types.BoolNull(),
+	"graphite":               types.StringNull(),
+	"java_garbage_collector": types.StringNull(),
+	"java_heapspace":         types.Int64Null(),
+	"java_maxmetaspace":      types.Int64Null(),
+	"max_disk_threshold":     types.Int64Null(),
+	"metrics_frequency":      types.Int64Null(),
+	"metrics_prefix":         types.StringNull(),
+	"monitoring_instance_id": types.StringNull(),
+	"plugins":                types.ListNull(types.StringType),
+	"syslog":                 types.ListNull(types.StringType),
+	"tls_ciphers":            types.ListNull(types.StringType),
+	"tls_protocols":          types.StringNull(),
+})
+
+var fixtureInstanceParameters = opensearch.InstanceParameters{
+	SgwAcl:               utils.Ptr("acl"),
+	EnableMonitoring:     utils.Ptr(true),
+	Graphite:             utils.Ptr("graphite"),
+	JavaGarbageCollector: utils.Ptr("gc"),
+	JavaHeapspace:        utils.Ptr(int64(10)),
+	JavaMaxmetaspace:     utils.Ptr(int64(10)),
+	MaxDiskThreshold:     utils.Ptr(int64(10)),
+	MetricsFrequency:     utils.Ptr(int64(10)),
+	MetricsPrefix:        utils.Ptr("prefix"),
+	MonitoringInstanceId: utils.Ptr("mid"),
+	Plugins:              &[]string{"plugin", "plugin2"},
+	Syslog:               &[]string{"syslog", "syslog2"},
+	TlsCiphers:           &[]string{"cipher", "cipher2"},
+	TlsProtocols:         utils.Ptr("protocol"),
+}
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
@@ -47,7 +109,20 @@ func TestMapFields(t *testing.T) {
 				Name:               utils.Ptr("name"),
 				CfOrganizationGuid: utils.Ptr("org"),
 				Parameters: &map[string]interface{}{
-					"sgw_acl": "acl",
+					"sgw_acl":                "acl",
+					"enable_monitoring":      true,
+					"graphite":               "graphite",
+					"java_garbage_collector": "gc",
+					"java_heapspace":         int64(10),
+					"java_maxmetaspace":      int64(10),
+					"max_disk_threshold":     int64(10),
+					"metrics_frequency":      int64(10),
+					"metrics_prefix":         "prefix",
+					"monitoring_instance_id": "mid",
+					"plugins":                []string{"plugin", "plugin2"},
+					"syslog":                 []string{"syslog", "syslog2"},
+					"tls_ciphers":            []string{"cipher", "cipher2"},
+					"tls_protocols":          "protocol",
 				},
 			},
 			Model{
@@ -61,9 +136,7 @@ func TestMapFields(t *testing.T) {
 				DashboardUrl:       types.StringValue("dashboard"),
 				ImageUrl:           types.StringValue("image"),
 				CfOrganizationGuid: types.StringValue("org"),
-				Parameters: types.ObjectValueMust(parametersTypes, map[string]attr.Value{
-					"sgw_acl": types.StringValue("acl"),
-				}),
+				Parameters:         fixtureModelParameters,
 			},
 			true,
 		},
@@ -125,61 +198,48 @@ func TestMapFields(t *testing.T) {
 
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
-		description     string
-		input           *Model
-		inputParameters *parametersModel
-		expected        *opensearch.CreateInstancePayload
-		isValid         bool
+		description string
+		input       *Model
+		expected    *opensearch.CreateInstancePayload
+		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
-			&parametersModel{},
-			&opensearch.CreateInstancePayload{
-				Parameters: &opensearch.InstanceParameters{},
-			},
+			&opensearch.CreateInstancePayload{},
 			true,
 		},
 		{
 			"simple_values",
 			&Model{
-				Name:   types.StringValue("name"),
-				PlanId: types.StringValue("plan"),
-			},
-			&parametersModel{
-				SgwAcl: types.StringValue("sgw"),
+				Name:       types.StringValue("name"),
+				PlanId:     types.StringValue("plan"),
+				Parameters: fixtureModelParameters,
 			},
 			&opensearch.CreateInstancePayload{
 				InstanceName: utils.Ptr("name"),
-				Parameters: &opensearch.InstanceParameters{
-					SgwAcl: utils.Ptr("sgw"),
-				},
-				PlanId: utils.Ptr("plan"),
+				Parameters:   &fixtureInstanceParameters,
+				PlanId:       utils.Ptr("plan"),
 			},
 			true,
 		},
 		{
 			"null_fields_and_int_conversions",
 			&Model{
-				Name:   types.StringValue(""),
-				PlanId: types.StringValue(""),
-			},
-			&parametersModel{
-				SgwAcl: types.StringNull(),
+				Name:       types.StringValue(""),
+				PlanId:     types.StringValue(""),
+				Parameters: fixtureNullModelParameters,
 			},
 			&opensearch.CreateInstancePayload{
 				InstanceName: utils.Ptr(""),
-				Parameters: &opensearch.InstanceParameters{
-					SgwAcl: nil,
-				},
-				PlanId: utils.Ptr(""),
+				Parameters:   &opensearch.InstanceParameters{},
+				PlanId:       utils.Ptr(""),
 			},
 			true,
 		},
 		{
 			"nil_model",
 			nil,
-			&parametersModel{},
 			nil,
 			false,
 		},
@@ -189,7 +249,6 @@ func TestToCreatePayload(t *testing.T) {
 				Name:   types.StringValue("name"),
 				PlanId: types.StringValue("plan"),
 			},
-			nil,
 			&opensearch.CreateInstancePayload{
 				InstanceName: utils.Ptr("name"),
 				PlanId:       utils.Ptr("plan"),
@@ -199,7 +258,17 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(tt.input, tt.inputParameters)
+			var parameters *parametersModel
+			if tt.input != nil {
+				if !(tt.input.Parameters.IsNull() || tt.input.Parameters.IsUnknown()) {
+					parameters = &parametersModel{}
+					diags := tt.input.Parameters.As(context.Background(), parameters, basetypes.ObjectAsOptions{})
+					if diags.HasError() {
+						t.Fatalf("Error converting parameters: %v", diags.Errors())
+					}
+				}
+			}
+			output, err := toCreatePayload(tt.input, parameters)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -218,57 +287,44 @@ func TestToCreatePayload(t *testing.T) {
 
 func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
-		description     string
-		input           *Model
-		inputParameters *parametersModel
-		expected        *opensearch.PartialUpdateInstancePayload
-		isValid         bool
+		description string
+		input       *Model
+		expected    *opensearch.PartialUpdateInstancePayload
+		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
-			&parametersModel{},
-			&opensearch.PartialUpdateInstancePayload{
-				Parameters: &opensearch.InstanceParameters{},
-			},
+			&opensearch.PartialUpdateInstancePayload{},
 			true,
 		},
 		{
 			"simple_values",
 			&Model{
-				PlanId: types.StringValue("plan"),
-			},
-			&parametersModel{
-				SgwAcl: types.StringValue("sgw"),
+				PlanId:     types.StringValue("plan"),
+				Parameters: fixtureModelParameters,
 			},
 			&opensearch.PartialUpdateInstancePayload{
-				Parameters: &opensearch.InstanceParameters{
-					SgwAcl: utils.Ptr("sgw"),
-				},
-				PlanId: utils.Ptr("plan"),
+				Parameters: &fixtureInstanceParameters,
+				PlanId:     utils.Ptr("plan"),
 			},
 			true,
 		},
 		{
 			"null_fields_and_int_conversions",
 			&Model{
-				PlanId: types.StringValue(""),
-			},
-			&parametersModel{
-				SgwAcl: types.StringNull(),
+				PlanId:     types.StringValue(""),
+				Parameters: fixtureNullModelParameters,
 			},
 			&opensearch.PartialUpdateInstancePayload{
-				Parameters: &opensearch.InstanceParameters{
-					SgwAcl: nil,
-				},
-				PlanId: utils.Ptr(""),
+				Parameters: &opensearch.InstanceParameters{},
+				PlanId:     utils.Ptr(""),
 			},
 			true,
 		},
 		{
 			"nil_model",
 			nil,
-			&parametersModel{},
 			nil,
 			false,
 		},
@@ -277,7 +333,6 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{
 				PlanId: types.StringValue("plan"),
 			},
-			nil,
 			&opensearch.PartialUpdateInstancePayload{
 				PlanId: utils.Ptr("plan"),
 			},
@@ -286,7 +341,17 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(tt.input, tt.inputParameters)
+			var parameters *parametersModel
+			if tt.input != nil {
+				if !(tt.input.Parameters.IsNull() || tt.input.Parameters.IsUnknown()) {
+					parameters = &parametersModel{}
+					diags := tt.input.Parameters.As(context.Background(), parameters, basetypes.ObjectAsOptions{})
+					if diags.HasError() {
+						t.Fatalf("Error converting parameters: %v", diags.Errors())
+					}
+				}
+			}
+			output, err := toUpdatePayload(tt.input, parameters)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
