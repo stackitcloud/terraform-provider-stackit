@@ -30,6 +30,7 @@ data "stackit_argus_instance" "example" {
 ### Read-Only
 
 - `acl` (Set of String) The access control list for this instance. Each entry is an IP address range that is permitted to access, in CIDR notation.
+- `alert_config` (Attributes) Alert configuration for the instance. (see [below for nested schema](#nestedatt--alert_config))
 - `alerting_url` (String) Specifies Alerting URL.
 - `dashboard_url` (String) Specifies Argus instance dashboard URL.
 - `grafana_initial_admin_password` (String, Sensitive) Specifies an initial Grafana admin password.
@@ -54,3 +55,61 @@ data "stackit_argus_instance" "example" {
 - `plan_name` (String) Specifies the Argus plan. E.g. `Monitoring-Medium-EU01`.
 - `targets_url` (String) Specifies Targets URL.
 - `zipkin_spans_url` (String)
+
+<a id="nestedatt--alert_config"></a>
+### Nested Schema for `alert_config`
+
+Read-Only:
+
+- `receivers` (Attributes List) List of alert receivers. (see [below for nested schema](#nestedatt--alert_config--receivers))
+- `route` (Attributes) The route for the alert. (see [below for nested schema](#nestedatt--alert_config--route))
+
+<a id="nestedatt--alert_config--receivers"></a>
+### Nested Schema for `alert_config.receivers`
+
+Read-Only:
+
+- `email_configs` (Attributes List) List of email configurations. (see [below for nested schema](#nestedatt--alert_config--receivers--email_configs))
+- `name` (String) Name of the receiver.
+- `opsgenie_configs` (Attributes List) List of OpsGenie configurations. (see [below for nested schema](#nestedatt--alert_config--receivers--opsgenie_configs))
+- `webhooks_configs` (Attributes List) List of Webhooks configurations. (see [below for nested schema](#nestedatt--alert_config--receivers--webhooks_configs))
+
+<a id="nestedatt--alert_config--receivers--email_configs"></a>
+### Nested Schema for `alert_config.receivers.email_configs`
+
+Read-Only:
+
+- `auth_identity` (String) SMTP authentication information. Must be a valid email address
+- `auth_password` (String) SMTP authentication password.
+- `auth_username` (String) SMTP authentication username.
+- `from` (String) The sender email address. Must be a valid email address
+- `smart_host` (String) The SMTP host through which emails are sent.
+- `to` (String) The email address to send notifications to. Must be a valid email address
+
+
+<a id="nestedatt--alert_config--receivers--opsgenie_configs"></a>
+### Nested Schema for `alert_config.receivers.opsgenie_configs`
+
+Read-Only:
+
+- `api_key` (String) The API key for OpsGenie.
+- `api_url` (String) The host to send OpsGenie API requests to. Must be a valid URL
+- `tags` (String) Comma separated list of tags attached to the notifications.
+
+
+<a id="nestedatt--alert_config--receivers--webhooks_configs"></a>
+### Nested Schema for `alert_config.receivers.webhooks_configs`
+
+Read-Only:
+
+- `ms_teams` (Boolean) Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.
+- `url` (String) The endpoint to send HTTP POST requests to. Must be a valid URL
+
+
+
+<a id="nestedatt--alert_config--route"></a>
+### Nested Schema for `alert_config.route`
+
+Read-Only:
+
+- `receiver` (String) The name of the receiver to send the alert to.
