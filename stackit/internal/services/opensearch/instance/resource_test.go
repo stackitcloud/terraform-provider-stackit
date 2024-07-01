@@ -109,6 +109,7 @@ func TestMapFields(t *testing.T) {
 				Name:               utils.Ptr("name"),
 				CfOrganizationGuid: utils.Ptr("org"),
 				Parameters: &map[string]interface{}{
+					// Using "-" on purpose on some fields because that is the API response
 					"sgw_acl":                "acl",
 					"enable_monitoring":      true,
 					"graphite":               "graphite",
@@ -121,8 +122,8 @@ func TestMapFields(t *testing.T) {
 					"monitoring_instance_id": "mid",
 					"plugins":                []string{"plugin", "plugin2"},
 					"syslog":                 []string{"syslog", "syslog2"},
-					"tls_ciphers":            []string{"cipher", "cipher2"},
-					"tls_protocols":          "protocol",
+					"tls-ciphers":            []string{"cipher", "cipher2"},
+					"tls-protocols":          "protocol",
 				},
 			},
 			Model{
