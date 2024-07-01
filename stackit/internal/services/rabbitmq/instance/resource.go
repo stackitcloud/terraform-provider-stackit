@@ -156,7 +156,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"max_disk_threshold":     "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
 		"metrics_frequency":      "The frequency in seconds at which metrics are emitted.",
 		"metrics_prefix":         "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key",
-		"monitoring_instance_id": "The monitoring instance ID.",
+		"monitoring_instance_id": "The ID of the monitoring instance. Required if `enable_monitoring` is set to `true`.",
 		"plugins":                "List of plugins to install. Must be a supported plugin name.",
 		"roles":                  "List of roles to assign to the instance.",
 		"syslog":                 "List of syslog servers to send logs to.",
@@ -261,6 +261,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: parametersDescriptions["monitoring_instance_id"],
 						Optional:    true,
 						Computed:    true,
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
 					},
 					"plugins": schema.ListAttribute{
 						Description: parametersDescriptions["plugins"],
