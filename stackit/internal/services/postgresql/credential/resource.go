@@ -98,8 +98,8 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		"main": "PostgreSQL credential resource schema. Must have a `region` specified in the provider configuration.",
 		"deprecation_message": strings.Join(
 			[]string{
-				"The STACKIT PostgreSQL service will reach its end of support on June 30th 2024.",
-				"Resources of this type will stop working after that.",
+				"The STACKIT PostgreSQL service has reached its end of support on June 30th 2024.",
+				"Resources of this type have stopped working since then.",
 				"Use stackit_postgresflex_user instead.",
 				"For more details, check https://docs.stackit.cloud/stackit/en/bring-your-data-to-stackit-postgresql-flex-138347648.html",
 			},
@@ -192,27 +192,26 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *credentialResource) Create(ctx context.Context, _ resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Deprecated, always error
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", "The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Resources of this type will stop working after that. Use stackit_postgresflex_credential instead.")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working since then. Use stackit_postgresflex_instance instead.")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *credentialResource) Read(ctx context.Context, _ resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", "The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Resources of this type will stop working after that. Use stackit_postgresflex_credential instead.")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working since then. Use stackit_postgresflex_instance instead.")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *credentialResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credential", "The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Resources of this type will stop working after that. Use stackit_postgresflex_credential instead.")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credential", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working since then. Use stackit_postgresflex_instance instead.")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *credentialResource) Delete(ctx context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", "The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Resources of this type will stop working after that. Use stackit_postgresflex_credential instead.")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working since then. Use stackit_postgresflex_instance instead.")
 }
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: project_id,instance_id
 func (r *credentialResource) ImportState(ctx context.Context, _ resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing credential", "The STACKIT PostgreSQL service will reach its end of support on June 30th 2024. Resources of this type will stop working after that. Use stackit_postgresflex_credential instead.")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing credential", "The STACKIT PostgreSQL service has reached its end of support on June 30th 2024. Resources of this type have stopped working since then. Use stackit_postgresflex_instance instead.")
 }
