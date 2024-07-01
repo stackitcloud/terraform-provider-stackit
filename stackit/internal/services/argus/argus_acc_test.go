@@ -28,7 +28,7 @@ var instanceResource = map[string]string{
 	"metrics_retention_days":                 "60",
 	"metrics_retention_days_5m_downsampling": "30",
 	"metrics_retention_days_1h_downsampling": "15",
-	"alert_config":                           alertConfigResource,
+	"alert_config":                           alertConfig,
 }
 
 var scrapeConfigResource = map[string]string{
@@ -46,7 +46,7 @@ var credentialResource = map[string]string{
 	"project_id": testutil.ProjectId,
 }
 
-const alertConfigResource = `{
+const alertConfig = `{
     "receivers" : [
       {
         "name" : "OpsGenieReceiverInfo",
