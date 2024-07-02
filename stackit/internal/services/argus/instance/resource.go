@@ -86,25 +86,25 @@ var alertConfigTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.AlertConfig.global
 type globalConfigurationModel struct {
-	OpsgenieApiKey types.String `tfsdk:"opsgenie_api_key"`
-	OpsgenieApiUrl types.String `tfsdk:"opsgenie_api_url"`
-	ResolveTimeout types.String `tfsdk:"resolve_timeout"`
-	// SmtpAuthIdentity types.String `tfsdk:"smtp_auth_identity"`
-	// SmtpAuthPassword types.String `tfsdk:"smtp_auth_password"`
-	// SmtpAuthUsername types.String `tfsdk:"smtp_auth_username"`
-	SmtpFrom      types.String `tfsdk:"smtp_from"`
-	SmtpsmartHost types.String `tfsdk:"smtp_smart_host"`
+	OpsgenieApiKey   types.String `tfsdk:"opsgenie_api_key"`
+	OpsgenieApiUrl   types.String `tfsdk:"opsgenie_api_url"`
+	ResolveTimeout   types.String `tfsdk:"resolve_timeout"`
+	SmtpAuthIdentity types.String `tfsdk:"smtp_auth_identity"`
+	SmtpAuthPassword types.String `tfsdk:"smtp_auth_password"`
+	SmtpAuthUsername types.String `tfsdk:"smtp_auth_username"`
+	SmtpFrom         types.String `tfsdk:"smtp_from"`
+	SmtpsmartHost    types.String `tfsdk:"smtp_smart_host"`
 }
 
 var globalConfigurationTypes = map[string]attr.Type{
-	"opsgenie_api_key": types.StringType,
-	"opsgenie_api_url": types.StringType,
-	"resolve_timeout":  types.StringType,
-	// "smtp_auth_identity": types.StringType,
-	// "smtp_auth_password": types.StringType,
-	// "smtp_auth_username": types.StringType,
-	"smtp_from":       types.StringType,
-	"smtp_smart_host": types.StringType,
+	"opsgenie_api_key":   types.StringType,
+	"opsgenie_api_url":   types.StringType,
+	"resolve_timeout":    types.StringType,
+	"smtp_auth_identity": types.StringType,
+	"smtp_auth_password": types.StringType,
+	"smtp_auth_username": types.StringType,
+	"smtp_from":          types.StringType,
+	"smtp_smart_host":    types.StringType,
 }
 
 // Struct corresponding to Model.AlertConfig.inhibitRules
@@ -525,21 +525,21 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								Computed:    true,
 								Optional:    true,
 							},
-							// "smtp_auth_identity": schema.StringAttribute{
-							// 	Description: "SMTP authentication information. Must be a valid email address",
-							// 	Computed:    true,
-							// 	Optional:    true,
-							// },
-							// "smtp_auth_password": schema.StringAttribute{
-							// 	Description: "SMTP Auth using LOGIN and PLAIN.",
-							// 	Computed:    true,
-							// 	Optional:    true,
-							// },
-							// "smtp_auth_username": schema.StringAttribute{
-							// 	Description: "SMTP Auth using CRAM-MD5, LOGIN and PLAIN. If empty, Alertmanager doesn't authenticate to the SMTP server.",
-							// 	Computed:    true,
-							// 	Optional:    true,
-							// },
+							"smtp_auth_identity": schema.StringAttribute{
+								Description: "SMTP authentication information. Must be a valid email address",
+								Computed:    true,
+								Optional:    true,
+							},
+							"smtp_auth_password": schema.StringAttribute{
+								Description: "SMTP Auth using LOGIN and PLAIN.",
+								Computed:    true,
+								Optional:    true,
+							},
+							"smtp_auth_username": schema.StringAttribute{
+								Description: "SMTP Auth using CRAM-MD5, LOGIN and PLAIN. If empty, Alertmanager doesn't authenticate to the SMTP server.",
+								Computed:    true,
+								Optional:    true,
+							},
 							"smtp_from": schema.StringAttribute{
 								Description: "The default SMTP From header field. Must be a valid email address",
 								Computed:    true,
@@ -1363,14 +1363,14 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 	}
 
 	mockGlobalConfig, diags := types.ObjectValue(globalConfigurationTypes, map[string]attr.Value{
-		"opsgenie_api_key": types.StringNull(),
-		"opsgenie_api_url": types.StringNull(),
-		"resolve_timeout":  types.StringValue("5m"),
-		// "smtp_auth_identity": types.StringNull(),
-		// "smtp_auth_password": types.StringNull(),
-		// "smtp_auth_username": types.StringNull(),
-		"smtp_from":       types.StringNull(),
-		"smtp_smart_host": types.StringNull(),
+		"opsgenie_api_key":   types.StringNull(),
+		"opsgenie_api_url":   types.StringNull(),
+		"resolve_timeout":    types.StringValue("5m"),
+		"smtp_auth_identity": types.StringNull(),
+		"smtp_auth_password": types.StringNull(),
+		"smtp_auth_username": types.StringNull(),
+		"smtp_from":          types.StringNull(),
+		"smtp_smart_host":    types.StringNull(),
 	})
 	if diags.HasError() {
 		return alertConfigModel{}, fmt.Errorf("mapping global config: %w", core.DiagsToError(diags))
@@ -1389,14 +1389,14 @@ func mapGlobalConfigToAttributes(respGlobalConfigs *argus.Global) (basetypes.Obj
 	}
 
 	globalConfigObject, diags := types.ObjectValue(globalConfigurationTypes, map[string]attr.Value{
-		"opsgenie_api_key": types.StringPointerValue(respGlobalConfigs.OpsgenieApiKey),
-		"opsgenie_api_url": types.StringPointerValue(respGlobalConfigs.OpsgenieApiUrl),
-		"resolve_timeout":  types.StringPointerValue(respGlobalConfigs.ResolveTimeout),
-		// "smtp_auth_identity": types.StringPointerValue(respGlobalConfigs.SmtpAuthIdentity),
-		// "smtp_auth_password": types.StringPointerValue(respGlobalConfigs.SmtpAuthPassword),
-		// "smtp_auth_username": types.StringPointerValue(respGlobalConfigs.SmtpAuthUsername),
-		"smtp_from":       types.StringPointerValue(respGlobalConfigs.SmtpFrom),
-		"smtp_smart_host": types.StringPointerValue(respGlobalConfigs.SmtpSmarthost),
+		"opsgenie_api_key":   types.StringPointerValue(respGlobalConfigs.OpsgenieApiKey),
+		"opsgenie_api_url":   types.StringPointerValue(respGlobalConfigs.OpsgenieApiUrl),
+		"resolve_timeout":    types.StringPointerValue(respGlobalConfigs.ResolveTimeout),
+		"smtp_auth_identity": types.StringPointerValue(respGlobalConfigs.SmtpAuthIdentity),
+		"smtp_auth_password": types.StringPointerValue(respGlobalConfigs.SmtpAuthPassword),
+		"smtp_auth_username": types.StringPointerValue(respGlobalConfigs.SmtpAuthUsername),
+		"smtp_from":          types.StringPointerValue(respGlobalConfigs.SmtpFrom),
+		"smtp_smart_host":    types.StringPointerValue(respGlobalConfigs.SmtpSmarthost),
 	})
 	if diags.HasError() {
 		return types.ObjectNull(globalConfigurationTypes), fmt.Errorf("mapping global config: %w", core.DiagsToError(diags))
@@ -1735,14 +1735,14 @@ func toGlobalConfigPayload(ctx context.Context, model *alertConfigModel) (*argus
 	}
 
 	return &argus.UpdateAlertConfigsPayloadGlobal{
-		OpsgenieApiKey: conversion.StringValueToPointer(globalConfigModel.OpsgenieApiKey),
-		OpsgenieApiUrl: conversion.StringValueToPointer(globalConfigModel.OpsgenieApiUrl),
-		ResolveTimeout: conversion.StringValueToPointer(globalConfigModel.ResolveTimeout),
-		// SmtpAuthIdentity: conversion.StringValueToPointer(globalConfigModel.SmtpAuthIdentity),
-		// SmtpAuthPassword: conversion.StringValueToPointer(globalConfigModel.SmtpAuthPassword),
-		// SmtpAuthUsername: conversion.StringValueToPointer(globalConfigModel.SmtpAuthUsername),
-		SmtpFrom:      conversion.StringValueToPointer(globalConfigModel.SmtpFrom),
-		SmtpSmarthost: conversion.StringValueToPointer(globalConfigModel.SmtpsmartHost),
+		OpsgenieApiKey:   conversion.StringValueToPointer(globalConfigModel.OpsgenieApiKey),
+		OpsgenieApiUrl:   conversion.StringValueToPointer(globalConfigModel.OpsgenieApiUrl),
+		ResolveTimeout:   conversion.StringValueToPointer(globalConfigModel.ResolveTimeout),
+		SmtpAuthIdentity: conversion.StringValueToPointer(globalConfigModel.SmtpAuthIdentity),
+		SmtpAuthPassword: conversion.StringValueToPointer(globalConfigModel.SmtpAuthPassword),
+		SmtpAuthUsername: conversion.StringValueToPointer(globalConfigModel.SmtpAuthUsername),
+		SmtpFrom:         conversion.StringValueToPointer(globalConfigModel.SmtpFrom),
+		SmtpSmarthost:    conversion.StringValueToPointer(globalConfigModel.SmtpsmartHost),
 	}, nil
 }
 
