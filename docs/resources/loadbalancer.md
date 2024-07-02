@@ -8,23 +8,25 @@ description: |-
   To automate the creation of load balancers, OpenStack can be used to setup the supporting infrastructure.
   To set up the OpenStack provider, you can create a token through the STACKIT Portal, in your project's Infrastructure API page.
   There, the OpenStack user domain name, username, and password are generated and can be obtained. The provider can then be configured as follows:
-  ```terraform
+  
   terraform {
-      required_providers {
-          (...)
-          openstack = {
-              source = "terraform-provider-openstack/openstack"
-          }
-      }
+  	required_providers {
+  		(...)
+  		openstack = {
+  			source = "terraform-provider-openstack/openstack"
+  		}
+  	}
   }
+  
   provider "openstack" {
-      userdomainname = "{OpenStack user domain name}"
-      username        = "{OpenStack username}"
-      password         = "{OpenStack password}"
-      region           = "RegionOne"
-      authurl         = "https://keystone.api.iaas.eu01.stackit.cloud/v3"
+  	user_domain_name = "{OpenStack user domain name}"
+  	user_name        = "{OpenStack username}"
+  	password         = "{OpenStack password}"
+  	region           = "RegionOne"
+  	auth_url         = "https://keystone.api.iaas.eu01.stackit.cloud/v3"
   }
-  ```
+  
+  
   Configuring the supporting infrastructure
   The example below uses OpenStack to create the network, router, a public IP address and a compute instance.
 ---
