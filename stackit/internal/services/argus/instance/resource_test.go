@@ -123,19 +123,6 @@ func fixtureWebHooksConfigsGetPayload() argus.WebHook {
 	}
 }
 
-func fixtureGlobalOptionsGetPayload() *argus.Global {
-	return &argus.Global{
-		OpsgenieApiKey:   utils.Ptr("key"),
-		OpsgenieApiUrl:   utils.Ptr("ops.example.com"),
-		ResolveTimeout:   utils.Ptr("1m"),
-		SmtpAuthIdentity: utils.Ptr("identity"),
-		SmtpAuthUsername: utils.Ptr("username"),
-		SmtpAuthPassword: utils.Ptr("password"),
-		SmtpFrom:         utils.Ptr("me@example.com"),
-		SmtpSmarthost:    utils.Ptr("smtp.example.com"),
-	}
-}
-
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description             string
@@ -423,14 +410,14 @@ func TestMapAlertConfigField(t *testing.T) {
 						Receiver: utils.Ptr("name"),
 					},
 					Global: &argus.Global{
-						OpsgenieApiKey:   utils.Ptr("key"),
-						OpsgenieApiUrl:   utils.Ptr("ops.example.com"),
-						ResolveTimeout:   utils.Ptr("1m"),
-						SmtpAuthIdentity: utils.Ptr("identity"),
-						SmtpAuthUsername: utils.Ptr("username"),
-						SmtpAuthPassword: utils.Ptr("password"),
-						SmtpFrom:         utils.Ptr("me@example.com"),
-						SmtpSmarthost:    utils.Ptr("smtp.example.com:25"),
+						OpsgenieApiKey: utils.Ptr("key"),
+						OpsgenieApiUrl: utils.Ptr("ops.example.com"),
+						ResolveTimeout: utils.Ptr("1m"),
+						// SmtpAuthIdentity: utils.Ptr("identity"),
+						// SmtpAuthUsername: utils.Ptr("username"),
+						// SmtpAuthPassword: utils.Ptr("password"),
+						SmtpFrom:      utils.Ptr("me@example.com"),
+						SmtpSmarthost: utils.Ptr("smtp.example.com:25"),
 					},
 				},
 			},
@@ -449,14 +436,14 @@ func TestMapAlertConfigField(t *testing.T) {
 						"receiver": types.StringValue("name"),
 					}),
 					"global": types.ObjectValueMust(globalConfigurationTypes, map[string]attr.Value{
-						"opsgenie_api_key":   types.StringValue("key"),
-						"opsgenie_api_url":   types.StringValue("ops.example.com"),
-						"resolve_timeout":    types.StringValue("1m"),
-						"smtp_auth_identity": types.StringValue("identity"),
-						"smtp_auth_username": types.StringValue("username"),
-						"smtp_auth_password": types.StringValue("password"),
-						"smtp_from":          types.StringValue("me@example.com"),
-						"smtp_smart_host":    types.StringValue("smtp.example.com:25"),
+						"opsgenie_api_key": types.StringValue("key"),
+						"opsgenie_api_url": types.StringValue("ops.example.com"),
+						"resolve_timeout":  types.StringValue("1m"),
+						// "smtp_auth_identity": types.StringValue("identity"),
+						// "smtp_auth_username": types.StringValue("username"),
+						// "smtp_auth_password": types.StringValue("password"),
+						"smtp_from":       types.StringValue("me@example.com"),
+						"smtp_smart_host": types.StringValue("smtp.example.com:25"),
 					}),
 				}),
 			},
@@ -962,14 +949,14 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 					"receiver": types.StringValue("example-receiver"),
 				}),
 				GlobalConfiguration: types.ObjectValueMust(globalConfigurationTypes, map[string]attr.Value{
-					"opsgenie_api_key":   types.StringValue("key"),
-					"opsgenie_api_url":   types.StringValue("ops.example.com"),
-					"resolve_timeout":    types.StringValue("1m"),
-					"smtp_auth_identity": types.StringValue("identity"),
-					"smtp_auth_username": types.StringValue("username"),
-					"smtp_auth_password": types.StringValue("password"),
-					"smtp_from":          types.StringValue("me@example.com"),
-					"smtp_smart_host":    types.StringValue("smtp.example.com:25"),
+					"opsgenie_api_key": types.StringValue("key"),
+					"opsgenie_api_url": types.StringValue("ops.example.com"),
+					"resolve_timeout":  types.StringValue("1m"),
+					// "smtp_auth_identity": types.StringValue("identity"),
+					// "smtp_auth_username": types.StringValue("username"),
+					// "smtp_auth_password": types.StringValue("password"),
+					"smtp_from":       types.StringValue("me@example.com"),
+					"smtp_smart_host": types.StringValue("smtp.example.com:25"),
 				}),
 			},
 			expected: &argus.UpdateAlertConfigsPayload{
@@ -984,14 +971,14 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 					Receiver: utils.Ptr("example-receiver"),
 				},
 				Global: &argus.UpdateAlertConfigsPayloadGlobal{
-					OpsgenieApiKey:   utils.Ptr("key"),
-					OpsgenieApiUrl:   utils.Ptr("ops.example.com"),
-					ResolveTimeout:   utils.Ptr("1m"),
-					SmtpAuthIdentity: utils.Ptr("identity"),
-					SmtpAuthUsername: utils.Ptr("username"),
-					SmtpAuthPassword: utils.Ptr("password"),
-					SmtpFrom:         utils.Ptr("me@example.com"),
-					SmtpSmarthost:    utils.Ptr("smtp.example.com:25"),
+					OpsgenieApiKey: utils.Ptr("key"),
+					OpsgenieApiUrl: utils.Ptr("ops.example.com"),
+					ResolveTimeout: utils.Ptr("1m"),
+					// SmtpAuthIdentity: utils.Ptr("identity"),
+					// SmtpAuthUsername: utils.Ptr("username"),
+					// SmtpAuthPassword: utils.Ptr("password"),
+					SmtpFrom:      utils.Ptr("me@example.com"),
+					SmtpSmarthost: utils.Ptr("smtp.example.com:25"),
 				},
 			},
 			isValid: true,
@@ -1126,7 +1113,7 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdateAlertConfigPayload(context.Background(), tt.input)
+			output, err := toUpdateAlertConfigPayload(context.Background(), &tt.input)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
