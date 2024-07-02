@@ -71,17 +71,59 @@ type Model struct {
 
 // Struct corresponding to Model.AlertConfig
 type alertConfigModel struct {
-	// GlobalConfiguration types.Object `tfsdk:"global_configuration"`
-	// Inhibition_rules    types.Object `tfsdk:"inhibition_rules"`
-	Receivers types.List   `tfsdk:"receivers"`
-	Route     types.Object `tfsdk:"route"`
+	GlobalConfiguration types.Object `tfsdk:"global"`
+	InhibitRules        types.Object `tfsdk:"inhibit_rules"`
+	Receivers           types.List   `tfsdk:"receivers"`
+	Route               types.Object `tfsdk:"route"`
 }
 
 var alertConfigTypes = map[string]attr.Type{
 	"receivers": types.ListType{ElemType: types.ObjectType{AttrTypes: receiversTypes}},
 	"route":     types.ObjectType{AttrTypes: routeTypes},
+	"global":    types.ObjectType{AttrTypes: globalConfigurationTypes},
 }
 
+// Struct corresponding to Model.AlertConfig.global
+type globalConfigurationModel struct {
+	OpsgenieApiKey   types.String `tfsdk:"opsgenie_api_key"`
+	OpsgenieApiUrl   types.String `tfsdk:"opsgenie_api_url"`
+	ResolveTimeout   types.String `tfsdk:"resolve_timeout"`
+	SmtpAuthIdentity types.String `tfsdk:"smtp_auth_identity"`
+	SmtpAuthPassword types.String `tfsdk:"smtp_auth_password"`
+	SmtpAuthUsername types.String `tfsdk:"smtp_auth_username"`
+	SmtpFrom         types.String `tfsdk:"smtp_from"`
+	SmtpsmartHost    types.String `tfsdk:"smtp_smart_host"`
+}
+
+var globalConfigurationTypes = map[string]attr.Type{
+	"opsgenie_api_key":   types.StringType,
+	"opsgenie_api_url":   types.StringType,
+	"resolve_timeout":    types.StringType,
+	"smtp_auth_identity": types.StringType,
+	"smtp_auth_password": types.StringType,
+	"smtp_auth_username": types.StringType,
+	"smtp_from":          types.StringType,
+	"smtp_smart_host":    types.StringType,
+}
+
+// Struct corresponding to Model.AlertConfig.inhibitRules
+type inhibitRulesModel struct {
+	Equal            types.List `tfsdk:"equal"`
+	SourceMatch      types.Map  `tfsdk:"source_match"`
+	SourceMatchRegex types.Map  `tfsdk:"source_match_regex"`
+	TargetMatch      types.Map  `tfsdk:"target_match"`
+	TargetMatchRegex types.Map  `tfsdk:"target_match_regex"`
+}
+
+var inhibitRulesTypes = map[string]attr.Type{
+	"equal":              types.ListType{ElemType: types.StringType},
+	"source_match":       types.MapType{ElemType: types.StringType},
+	"source_match_regex": types.MapType{ElemType: types.StringType},
+	"target_match":       types.MapType{ElemType: types.StringType},
+	"target_match_regex": types.MapType{ElemType: types.StringType},
+}
+
+// Struct corresponding to Model.AlertConfig.route
 type routeModel struct {
 	Receiver types.String `tfsdk:"receiver"`
 }
@@ -459,6 +501,90 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"receiver": schema.StringAttribute{
 								Description: "The name of the receiver to route the alerts to.",
 								Required:    true,
+							},
+						},
+					},
+					"global": schema.SingleNestedAttribute{
+						Description: "Global configuration for the alerts.",
+						Optional:    true,
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"opsgenie_api_key": schema.StringAttribute{
+								Description: "The API key for OpsGenie.",
+								Computed:    true,
+								Optional:    true,
+							},
+							"opsgenie_api_url": schema.StringAttribute{
+								Description: "The host to send OpsGenie API requests to. Must be a valid URL",
+								Computed:    true,
+								Optional:    true,
+							},
+							"resolve_timeout": schema.StringAttribute{
+								Description: "ResolveTimeout is the default value used by alertmanager if the alert does not include EndsAt, after this time passes it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.",
+								Computed:    true,
+								Optional:    true,
+							},
+							"smtp_auth_identity": schema.StringAttribute{
+								Description: "SMTP authentication information. Must be a valid email address",
+								Computed:    true,
+								Optional:    true,
+							},
+							"smtp_auth_password": schema.StringAttribute{
+								Description: "SMTP Auth using LOGIN and PLAIN.",
+								Computed:    true,
+								Optional:    true,
+							},
+							"smtp_auth_username": schema.StringAttribute{
+								Description: "SMTP Auth using CRAM-MD5, LOGIN and PLAIN. If empty, Alertmanager doesn't authenticate to the SMTP server.",
+								Computed:    true,
+								Optional:    true,
+							},
+							"smtp_from": schema.StringAttribute{
+								Description: "The default SMTP From header field. Must be a valid email address",
+								Computed:    true,
+								Optional:    true,
+							},
+							"smtp_smart_host": schema.StringAttribute{
+								Description: "The default SMTP smarthost used for sending emails, including port number. Port number usually is 25, or 587 for SMTP over TLS (sometimes referred to as STARTTLS).",
+								Computed:    true,
+								Optional:    true,
+							},
+						},
+					},
+					"inhibit_rules": schema.SingleNestedAttribute{
+						Description: "Inhibit rules for the alerts.",
+						Optional:    true,
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"equal": schema.ListAttribute{
+								Description: "Labels that must have an equal value in the source and target alert for the inhibition to take effect.",
+								Computed:    true,
+								Optional:    true,
+								ElementType: types.StringType,
+							},
+							"source_match": schema.MapAttribute{
+								Description: "Matchers for which one or more alerts have to exist for the inhibition to take effect.",
+								Computed:    true,
+								Optional:    true,
+								ElementType: types.StringType,
+							},
+							"source_match_regex": schema.MapAttribute{
+								Description: "Matchers in regex for which one or more alerts have to exist for the inhibition to take effect.",
+								Computed:    true,
+								Optional:    true,
+								ElementType: types.StringType,
+							},
+							"target_match": schema.MapAttribute{
+								Description: "Matchers that have to be fulfilled in the alerts to be muted.",
+								Computed:    true,
+								Optional:    true,
+								ElementType: types.StringType,
+							},
+							"target_match_regex": schema.MapAttribute{
+								Description: "Matchers in regex that have to be fulfilled in the alerts to be muted.",
+								Computed:    true,
+								Optional:    true,
+								ElementType: types.StringType,
 							},
 						},
 					},
@@ -1431,7 +1557,7 @@ func toUpdatePayload(model *Model) (*argus.UpdateInstancePayload, error) {
 
 func toUpdateAlertConfigPayload(ctx context.Context, model alertConfigModel) (*argus.UpdateAlertConfigsPayload, error) {
 	if model.Receivers.IsNull() || model.Receivers.IsUnknown() {
-		return nil, nil
+		return nil, fmt.Errorf("receivers in the model are null or unknown")
 	}
 
 	payload := argus.UpdateAlertConfigsPayload{}
@@ -1519,6 +1645,88 @@ func toUpdateAlertConfigPayload(ctx context.Context, model alertConfigModel) (*a
 
 	payload.Route = &argus.UpdateAlertConfigsPayloadRoute{
 		Receiver: conversion.StringValueToPointer(routeModel.Receiver),
+	}
+
+	globalConfigModel := globalConfigurationModel{}
+	diags = model.GlobalConfiguration.As(ctx, &globalConfigModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("mapping global configuration: %w", core.DiagsToError(diags))
+	}
+
+	payload.Global = &argus.UpdateAlertConfigsPayloadGlobal{
+		OpsgenieApiKey:   conversion.StringValueToPointer(globalConfigModel.OpsgenieApiKey),
+		OpsgenieApiUrl:   conversion.StringValueToPointer(globalConfigModel.OpsgenieApiUrl),
+		ResolveTimeout:   conversion.StringValueToPointer(globalConfigModel.ResolveTimeout),
+		SmtpAuthIdentity: conversion.StringValueToPointer(globalConfigModel.SmtpAuthIdentity),
+		SmtpAuthPassword: conversion.StringValueToPointer(globalConfigModel.SmtpAuthPassword),
+		SmtpAuthUsername: conversion.StringValueToPointer(globalConfigModel.SmtpAuthUsername),
+		SmtpFrom:         conversion.StringValueToPointer(globalConfigModel.SmtpFrom),
+		SmtpSmarthost:    conversion.StringValueToPointer(globalConfigModel.SmtpsmartHost),
+	}
+
+	inhibitRulesModel := inhibitRulesModel{}
+	diags = model.InhibitRules.As(ctx, &inhibitRulesModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("mapping inhibit rules: %w", core.DiagsToError(diags))
+	}
+
+	var equalPayload *[]string
+	var sourceMatchPayload *map[string]interface{}
+	var sourceMatchRegexPayload *map[string]interface{}
+	var targetMatchPayload *map[string]interface{}
+	var targetMatchRegexPayload *map[string]interface{}
+
+	if !inhibitRulesModel.Equal.IsNull() && !inhibitRulesModel.Equal.IsUnknown() {
+		equalList := []string{}
+		diags = inhibitRulesModel.Equal.ElementsAs(ctx, &equalList, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("mapping equal: %w", core.DiagsToError(diags))
+		}
+		equalPayload = &equalList
+	}
+
+	if !inhibitRulesModel.SourceMatch.IsNull() && !inhibitRulesModel.SourceMatch.IsUnknown() {
+		elements := inhibitRulesModel.SourceMatch.Elements()
+		sourceMatchMap := make(map[string]interface{}, len(elements))
+		for k := range elements {
+			sourceMatchMap[k] = elements[k].String()
+		}
+		sourceMatchPayload = &sourceMatchMap
+	}
+
+	if !inhibitRulesModel.SourceMatchRegex.IsNull() && !inhibitRulesModel.SourceMatchRegex.IsUnknown() {
+		elements := inhibitRulesModel.SourceMatchRegex.Elements()
+		sourceMatchRegexMap := make(map[string]interface{}, len(elements))
+		for k := range elements {
+			sourceMatchRegexMap[k] = elements[k].String()
+		}
+		sourceMatchRegexPayload = &sourceMatchRegexMap
+	}
+
+	if !inhibitRulesModel.TargetMatch.IsNull() && !inhibitRulesModel.TargetMatch.IsUnknown() {
+		elements := inhibitRulesModel.TargetMatch.Elements()
+		targetMatchMap := make(map[string]interface{}, len(elements))
+		for k := range elements {
+			targetMatchMap[k] = elements[k].String()
+		}
+		targetMatchPayload = &targetMatchMap
+	}
+
+	if !inhibitRulesModel.TargetMatchRegex.IsNull() && !inhibitRulesModel.TargetMatchRegex.IsUnknown() {
+		elements := inhibitRulesModel.TargetMatchRegex.Elements()
+		targetMatchRegexMap := make(map[string]interface{}, len(elements))
+		for k := range elements {
+			targetMatchRegexMap[k] = elements[k].String()
+		}
+		targetMatchRegexPayload = &targetMatchRegexMap
+	}
+
+	payload.InhibitRules = &argus.UpdateAlertConfigsPayloadInhibitRules{
+		Equal:         equalPayload,
+		SourceMatch:   sourceMatchPayload,
+		SourceMatchRe: sourceMatchRegexPayload,
+		TargetMatch:   targetMatchPayload,
+		TargetMatchRe: targetMatchRegexPayload,
 	}
 
 	return &payload, nil
