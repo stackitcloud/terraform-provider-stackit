@@ -3,7 +3,7 @@
 page_title: "stackit_resourcemanager_project Data Source - stackit"
 subcategory: ""
 description: |-
-  Resource Manager project data source schema. To identify the project, you need to provider either projectid or containerid. If you provide both, project_id will be used.
+  Resource Manager project data source schema. To identify the project, you need to provider either project_id or container_id. If you provide both, project_id will be used.
 ---
 
 # stackit_resourcemanager_project (Data Source)
