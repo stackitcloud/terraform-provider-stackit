@@ -1461,36 +1461,44 @@ func TestGetMaintenanceTimes(t *testing.T) {
 			endExpected:   "14:15:16Z",
 		},
 		{
-			description: "tf_state_doesnt_match_1",
-			startAPI:    "0001-02-03T04:05:06+07:08",
-			startTF:     utils.Ptr("00:00:00+07:08"),
-			endAPI:      "0011-12-13T14:15:16+17:18",
-			endTF:       utils.Ptr("14:15:16+17:18"),
-			isValid:     false,
+			description:   "api_takes_precedence_if_different_1",
+			startAPI:      "0001-02-03T04:05:06+07:08",
+			startTF:       utils.Ptr("00:00:00+07:08"),
+			endAPI:        "0011-12-13T14:15:16+17:18",
+			endTF:         utils.Ptr("14:15:16+17:18"),
+			isValid:       true,
+			startExpected: "04:05:06+07:08",
+			endExpected:   "14:15:16+17:18",
 		},
 		{
-			description: "tf_state_doesnt_match_2",
-			startAPI:    "0001-02-03T04:05:06+07:08",
-			startTF:     utils.Ptr("04:05:06+07:08"),
-			endAPI:      "0011-12-13T14:15:16+17:18",
-			endTF:       utils.Ptr("00:00:00+17:18"),
-			isValid:     false,
+			description:   "api_takes_precedence_if_different_2",
+			startAPI:      "0001-02-03T04:05:06+07:08",
+			startTF:       utils.Ptr("04:05:06+07:08"),
+			endAPI:        "0011-12-13T14:15:16+17:18",
+			endTF:         utils.Ptr("00:00:00+17:18"),
+			isValid:       true,
+			startExpected: "04:05:06+07:08",
+			endExpected:   "14:15:16+17:18",
 		},
 		{
-			description: "tf_state_doesnt_match_3",
-			startAPI:    "0001-02-03T04:05:06+07:08",
-			startTF:     utils.Ptr("04:05:06Z"),
-			endAPI:      "0011-12-13T14:15:16+17:18",
-			endTF:       utils.Ptr("14:15:16+17:18"),
-			isValid:     false,
+			description:   "api_takes_precedence_if_different_3",
+			startAPI:      "0001-02-03T04:05:06+07:08",
+			startTF:       utils.Ptr("04:05:06Z"),
+			endAPI:        "0011-12-13T14:15:16+17:18",
+			endTF:         utils.Ptr("14:15:16+17:18"),
+			isValid:       true,
+			startExpected: "04:05:06+07:08",
+			endExpected:   "14:15:16+17:18",
 		},
 		{
-			description: "tf_state_doesnt_match_4",
-			startAPI:    "0001-02-03T04:05:06+07:08",
-			startTF:     utils.Ptr("04:05:06+07:08"),
-			endAPI:      "0011-12-13T14:15:16+17:18",
-			endTF:       utils.Ptr("14:15:16Z"),
-			isValid:     false,
+			description:   "api_takes_precedence_if_different_3",
+			startAPI:      "0001-02-03T04:05:06+07:08",
+			startTF:       utils.Ptr("04:05:06+07:08"),
+			endAPI:        "0011-12-13T14:15:16+17:18",
+			endTF:         utils.Ptr("14:15:16Z"),
+			isValid:       true,
+			startExpected: "04:05:06+07:08",
+			endExpected:   "14:15:16+17:18",
 		},
 	}
 	for _, tt := range tests {
@@ -1530,10 +1538,10 @@ func TestGetMaintenanceTimes(t *testing.T) {
 				t.Fatalf("getMaintenanceTimes didn't fail on invalid input")
 			}
 			if tt.startExpected != start {
-				t.Errorf("extected start '%s', got '%s'", tt.startExpected, start)
+				t.Errorf("expected start '%s', got '%s'", tt.startExpected, start)
 			}
 			if tt.endExpected != end {
-				t.Errorf("extected end '%s', got '%s'", tt.endExpected, end)
+				t.Errorf("expected end '%s', got '%s'", tt.endExpected, end)
 			}
 		})
 	}

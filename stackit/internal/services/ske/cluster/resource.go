@@ -1522,30 +1522,28 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startT
 		return "", "", fmt.Errorf("converting maintenance object %w", core.DiagsToError(diags.Errors()))
 	}
 
-	if maintenance.Start.IsNull() || maintenance.Start.IsUnknown() {
-		startTime = startTimeAPI.Format("15:04:05Z07:00")
-	} else {
+	startTime = startTimeAPI.Format("15:04:05Z07:00")
+	if !(maintenance.Start.IsNull() || maintenance.Start.IsUnknown()) {
 		startTimeTF, err := time.Parse("15:04:05Z07:00", maintenance.Start.ValueString())
 		if err != nil {
 			return "", "", fmt.Errorf("parsing start time '%s' from TF config as RFC time: %w", maintenance.Start.ValueString(), err)
 		}
-		if startTimeAPI.Format("15:04:05Z07:00") != startTimeTF.Format("15:04:05Z07:00") {
-			return "", "", fmt.Errorf("start time '%v' from API response doesn't match start time '%v' from TF config", *cl.Maintenance.TimeWindow.Start, maintenance.Start.ValueString())
+		// If the start times from the API and the TF model just differ in format, we keep the current TF model value
+		if startTimeAPI.Format("15:04:05Z07:00") == startTimeTF.Format("15:04:05Z07:00") {
+			startTime = maintenance.Start.ValueString()
 		}
-		startTime = maintenance.Start.ValueString()
 	}
 
-	if maintenance.End.IsNull() || maintenance.End.IsUnknown() {
-		endTime = endTimeAPI.Format("15:04:05Z07:00")
-	} else {
+	endTime = endTimeAPI.Format("15:04:05Z07:00")
+	if !(maintenance.End.IsNull() || maintenance.End.IsUnknown()) {
 		endTimeTF, err := time.Parse("15:04:05Z07:00", maintenance.End.ValueString())
 		if err != nil {
 			return "", "", fmt.Errorf("parsing end time '%s' from TF config as RFC time: %w", maintenance.End.ValueString(), err)
 		}
-		if endTimeAPI.Format("15:04:05Z07:00") != endTimeTF.Format("15:04:05Z07:00") {
-			return "", "", fmt.Errorf("end time '%v' from API response doesn't match end time '%v' from TF config", *cl.Maintenance.TimeWindow.End, maintenance.End.ValueString())
+		// If the end times from the API and the TF model just differ in format, we keep the current TF model value
+		if endTimeAPI.Format("15:04:05Z07:00") == endTimeTF.Format("15:04:05Z07:00") {
+			endTime = maintenance.End.ValueString()
 		}
-		endTime = maintenance.End.ValueString()
 	}
 
 	return startTime, endTime, nil
