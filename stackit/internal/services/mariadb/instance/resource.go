@@ -136,7 +136,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"version":     "The service version.",
 		"plan_name":   "The selected plan name.",
 		"plan_id":     "The selected plan ID.",
-		"parameters":  "Configuration parameters. Since the API only allows updating these through a PATCH request, removing a previsouly configured field from your Terraform configuration won't replace its value in the API. To update a previously configured field, please explicitly set a new value for it.",
+		"parameters":  "Configuration parameters. Please note that removing a previously configured field from your Terraform configuration won't replace its value in the API. To update a previously configured field, explicitly set a new value for it.",
 	}
 
 	parametersDescriptions := map[string]string{

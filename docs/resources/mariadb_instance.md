@@ -36,7 +36,7 @@ resource "stackit_mariadb_instance" "example" {
 
 ### Optional
 
-- `parameters` (Attributes) Configuration parameters. Since the API only allows updating these through a PATCH request, removing a previsouly configured field from your Terraform configuration won't replace its value in the API. To update a previously configured field, please explicitly set a new value for it. (see [below for nested schema](#nestedatt--parameters))
+- `parameters` (Attributes) Configuration parameters. Please note that removing a previously configured field from your Terraform configuration won't replace its value in the API. To update a previously configured field, explicitly set a new value for it. (see [below for nested schema](#nestedatt--parameters))
 
 ### Read-Only
 
