@@ -305,13 +305,14 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							"opsgenie_api_key": schema.StringAttribute{
 								Description: "The API key for OpsGenie.",
 								Computed:    true,
+								Sensitive:   true,
 							},
 							"opsgenie_api_url": schema.StringAttribute{
 								Description: "The host to send OpsGenie API requests to. Must be a valid URL",
 								Computed:    true,
 							},
 							"resolve_timeout": schema.StringAttribute{
-								Description: "ResolveTimeout is the default value used by alertmanager if the alert does not include EndsAt, after this time passes it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.",
+								Description: "The default value used by alertmanager if the alert does not include EndsAt. After this time passes, it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.",
 								Computed:    true,
 							},
 							"smtp_auth_identity": schema.StringAttribute{
@@ -321,6 +322,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							"smtp_auth_password": schema.StringAttribute{
 								Description: "SMTP Auth using LOGIN and PLAIN.",
 								Computed:    true,
+								Sensitive:   true,
 							},
 							"smtp_auth_username": schema.StringAttribute{
 								Description: "SMTP Auth using CRAM-MD5, LOGIN and PLAIN. If empty, Alertmanager doesn't authenticate to the SMTP server.",

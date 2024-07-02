@@ -91,7 +91,7 @@ type globalConfigurationModel struct {
 	SmtpAuthPassword types.String `tfsdk:"smtp_auth_password"`
 	SmtpAuthUsername types.String `tfsdk:"smtp_auth_username"`
 	SmtpFrom         types.String `tfsdk:"smtp_from"`
-	SmtpsmartHost    types.String `tfsdk:"smtp_smart_host"`
+	SmtpSmartHost    types.String `tfsdk:"smtp_smart_host"`
 }
 
 var globalConfigurationTypes = map[string]attr.Type{
@@ -495,6 +495,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								Description: "The API key for OpsGenie.",
 								Computed:    true,
 								Optional:    true,
+								Sensitive:   true,
 							},
 							"opsgenie_api_url": schema.StringAttribute{
 								Description: "The host to send OpsGenie API requests to. Must be a valid URL",
@@ -502,7 +503,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								Optional:    true,
 							},
 							"resolve_timeout": schema.StringAttribute{
-								Description: "ResolveTimeout is the default value used by alertmanager if the alert does not include EndsAt, after this time passes it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.",
+								Description: "The default value used by alertmanager if the alert does not include EndsAt. After this time passes, it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.",
 								Computed:    true,
 								Optional:    true,
 							},
@@ -515,6 +516,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								Description: "SMTP Auth using LOGIN and PLAIN.",
 								Computed:    true,
 								Optional:    true,
+								Sensitive:   true,
 							},
 							"smtp_auth_username": schema.StringAttribute{
 								Description: "SMTP Auth using CRAM-MD5, LOGIN and PLAIN. If empty, Alertmanager doesn't authenticate to the SMTP server.",
@@ -1312,7 +1314,7 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		"smtp_auth_identity": types.StringNull(),
 		"smtp_auth_password": types.StringNull(),
 		"smtp_auth_username": types.StringNull(),
-		"smtp_from":          types.StringNull(),
+		"smtp_from":          types.StringValue("argus@argus.stackit.cloud"),
 		"smtp_smart_host":    types.StringNull(),
 	})
 	if diags.HasError() {
@@ -1680,7 +1682,7 @@ func toGlobalConfigPayload(ctx context.Context, model *alertConfigModel) (*argus
 		SmtpAuthPassword: conversion.StringValueToPointer(globalConfigModel.SmtpAuthPassword),
 		SmtpAuthUsername: conversion.StringValueToPointer(globalConfigModel.SmtpAuthUsername),
 		SmtpFrom:         conversion.StringValueToPointer(globalConfigModel.SmtpFrom),
-		SmtpSmarthost:    conversion.StringValueToPointer(globalConfigModel.SmtpsmartHost),
+		SmtpSmarthost:    conversion.StringValueToPointer(globalConfigModel.SmtpSmartHost),
 	}, nil
 }
 
