@@ -1222,11 +1222,12 @@ func mapUpdateAlertConfigField(ctx context.Context, resp *argus.UpdateAlertConfi
 		return fmt.Errorf("nil model")
 	}
 
-	// Receivers
 	respReceivers := *resp.Data.Receivers
 	respRoute := *resp.Data.Route
+	respGlobalConfig := resp.Data.Global
+	respInhibitRules := resp.Data.InhibitRules
 
-	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute)
+	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute, respGlobalConfig, respInhibitRules)
 	if err != nil {
 		return fmt.Errorf("mapping alert config: %w", err)
 	}
@@ -1245,11 +1246,12 @@ func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsRespons
 		return fmt.Errorf("nil model")
 	}
 
-	// Receivers
 	respReceivers := *resp.Data.Receivers
 	respRoute := *resp.Data.Route
+	respGlobalConfig := resp.Data.Global
+	respInhibitRules := resp.Data.InhibitRules
 
-	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute)
+	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute, respGlobalConfig, respInhibitRules)
 	if err != nil {
 		return fmt.Errorf("mapping alert config: %w", err)
 	}
@@ -1258,7 +1260,7 @@ func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsRespons
 	return nil
 }
 
-func mapAlertConfigAttribute(ctx context.Context, respReceivers []argus.Receivers, respRoute argus.Route) (basetypes.ObjectValue, error) {
+func mapAlertConfigAttribute(ctx context.Context, respReceivers []argus.Receivers, respRoute argus.Route, respGlobalConfigs *argus.Global, respInhibitRules *[]argus.InhibitRules) (basetypes.ObjectValue, error) {
 	receiversList, err := mapReceiversToAttributes(ctx, respReceivers)
 	if err != nil {
 		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping receivers: %w", err)
@@ -1269,9 +1271,15 @@ func mapAlertConfigAttribute(ctx context.Context, respReceivers []argus.Receiver
 		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping route: %w", err)
 	}
 
+	globalConfig, err := mapGlobalConfigToAttributes(respGlobalConfigs)
+	if err != nil {
+		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping global config: %w", err)
+	}
+
 	alertConfig, diags := types.ObjectValue(alertConfigTypes, map[string]attr.Value{
 		"receivers": receiversList,
 		"route":     route,
+		"global":    globalConfig,
 	})
 	if diags.HasError() {
 		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping alert config: %w", core.DiagsToError(diags))
@@ -1359,6 +1367,28 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		Receivers: mockReceivers,
 		Route:     mockRoute,
 	}, nil
+}
+
+func mapGlobalConfigToAttributes(respGlobalConfigs *argus.Global) (basetypes.ObjectValue, error) {
+	if respGlobalConfigs == nil {
+		return types.ObjectNull(globalConfigurationTypes), nil
+	}
+
+	globalConfigObject, diags := types.ObjectValue(globalConfigurationTypes, map[string]attr.Value{
+		"opsgenie_api_key":   types.StringPointerValue(respGlobalConfigs.OpsgenieApiKey),
+		"opsgenie_api_url":   types.StringPointerValue(respGlobalConfigs.OpsgenieApiUrl),
+		"resolve_timeout":    types.StringPointerValue(respGlobalConfigs.ResolveTimeout),
+		"smtp_auth_identity": types.StringPointerValue(respGlobalConfigs.SmtpAuthIdentity),
+		"smtp_auth_password": types.StringPointerValue(respGlobalConfigs.SmtpAuthPassword),
+		"smtp_auth_username": types.StringPointerValue(respGlobalConfigs.SmtpAuthUsername),
+		"smtp_from":          types.StringPointerValue(respGlobalConfigs.SmtpFrom),
+		"smtp_smart_host":    types.StringPointerValue(respGlobalConfigs.SmtpSmarthost),
+	})
+	if diags.HasError() {
+		return types.ObjectNull(globalConfigurationTypes), fmt.Errorf("mapping global config: %w", core.DiagsToError(diags))
+	}
+
+	return globalConfigObject, nil
 }
 
 func mapReceiversToAttributes(ctx context.Context, respReceivers []argus.Receivers) (basetypes.ListValue, error) {
@@ -1560,8 +1590,34 @@ func toUpdateAlertConfigPayload(ctx context.Context, model alertConfigModel) (*a
 		return nil, fmt.Errorf("receivers in the model are null or unknown")
 	}
 
+	var err error
+
 	payload := argus.UpdateAlertConfigsPayload{}
 
+	payload.Receivers, err = toReceiverPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("mapping receivers: %w", err)
+	}
+
+	payload.Route, err = toRoutePayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("mapping route: %w", err)
+	}
+
+	payload.Global, err = toGlobalConfigPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("mapping global: %w", err)
+	}
+
+	payload.InhibitRules, err = toInhibitRulesPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("mapping inhibit rules: %w", err)
+	}
+
+	return &payload, nil
+}
+
+func toReceiverPayload(ctx context.Context, model alertConfigModel) (*[]argus.UpdateAlertConfigsPayloadReceiversInner, error) {
 	receiversModel := []receiversModel{}
 	diags := model.Receivers.ElementsAs(ctx, &receiversModel, false)
 	if diags.HasError() {
@@ -1634,26 +1690,29 @@ func toUpdateAlertConfigPayload(ctx context.Context, model alertConfigModel) (*a
 
 		receivers = append(receivers, receiverPayload)
 	}
+	return &receivers, nil
+}
 
-	payload.Receivers = &receivers
-
+func toRoutePayload(ctx context.Context, model alertConfigModel) (*argus.UpdateAlertConfigsPayloadRoute, error) {
 	routeModel := routeModel{}
-	diags = model.Route.As(ctx, &routeModel, basetypes.ObjectAsOptions{})
+	diags := model.Route.As(ctx, &routeModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
 	}
 
-	payload.Route = &argus.UpdateAlertConfigsPayloadRoute{
+	return &argus.UpdateAlertConfigsPayloadRoute{
 		Receiver: conversion.StringValueToPointer(routeModel.Receiver),
-	}
+	}, nil
+}
 
+func toGlobalConfigPayload(ctx context.Context, model alertConfigModel) (*argus.UpdateAlertConfigsPayloadGlobal, error) {
 	globalConfigModel := globalConfigurationModel{}
-	diags = model.GlobalConfiguration.As(ctx, &globalConfigModel, basetypes.ObjectAsOptions{})
+	diags := model.GlobalConfiguration.As(ctx, &globalConfigModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("mapping global configuration: %w", core.DiagsToError(diags))
 	}
 
-	payload.Global = &argus.UpdateAlertConfigsPayloadGlobal{
+	return &argus.UpdateAlertConfigsPayloadGlobal{
 		OpsgenieApiKey:   conversion.StringValueToPointer(globalConfigModel.OpsgenieApiKey),
 		OpsgenieApiUrl:   conversion.StringValueToPointer(globalConfigModel.OpsgenieApiUrl),
 		ResolveTimeout:   conversion.StringValueToPointer(globalConfigModel.ResolveTimeout),
@@ -1662,10 +1721,12 @@ func toUpdateAlertConfigPayload(ctx context.Context, model alertConfigModel) (*a
 		SmtpAuthUsername: conversion.StringValueToPointer(globalConfigModel.SmtpAuthUsername),
 		SmtpFrom:         conversion.StringValueToPointer(globalConfigModel.SmtpFrom),
 		SmtpSmarthost:    conversion.StringValueToPointer(globalConfigModel.SmtpsmartHost),
-	}
+	}, nil
+}
 
+func toInhibitRulesPayload(ctx context.Context, model alertConfigModel) (*argus.UpdateAlertConfigsPayloadInhibitRules, error) {
 	inhibitRulesModel := inhibitRulesModel{}
-	diags = model.InhibitRules.As(ctx, &inhibitRulesModel, basetypes.ObjectAsOptions{})
+	diags := model.InhibitRules.As(ctx, &inhibitRulesModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("mapping inhibit rules: %w", core.DiagsToError(diags))
 	}
@@ -1721,15 +1782,13 @@ func toUpdateAlertConfigPayload(ctx context.Context, model alertConfigModel) (*a
 		targetMatchRegexPayload = &targetMatchRegexMap
 	}
 
-	payload.InhibitRules = &argus.UpdateAlertConfigsPayloadInhibitRules{
+	return &argus.UpdateAlertConfigsPayloadInhibitRules{
 		Equal:         equalPayload,
 		SourceMatch:   sourceMatchPayload,
 		SourceMatchRe: sourceMatchRegexPayload,
 		TargetMatch:   targetMatchPayload,
 		TargetMatchRe: targetMatchRegexPayload,
-	}
-
-	return &payload, nil
+	}, nil
 }
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
