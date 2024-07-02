@@ -66,6 +66,13 @@ const alertConfig = `{
         ]
       }
     ],
+	"route" : {
+	  "receiver" : "OpsGenieReceiverInfo"
+	},
+	"global" : {
+	  "smtpSmarthost" : "smtp.example.com:587",
+	  "smtpFrom" : "example@argus.stackit"
+    }
 }`
 
 func instanceResourceConfig(acl, metricsRetentionDays, metricsRetentionDays1hDownsampling, metricsRetentionDays5mDownsampling *string, instanceName, planName string) string {

@@ -298,6 +298,44 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							},
 						},
 					},
+					"global": schema.SingleNestedAttribute{
+						Description: "Global configuration for the alerts.",
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"opsgenie_api_key": schema.StringAttribute{
+								Description: "The API key for OpsGenie.",
+								Computed:    true,
+							},
+							"opsgenie_api_url": schema.StringAttribute{
+								Description: "The host to send OpsGenie API requests to. Must be a valid URL",
+								Computed:    true,
+							},
+							"resolve_timeout": schema.StringAttribute{
+								Description: "ResolveTimeout is the default value used by alertmanager if the alert does not include EndsAt, after this time passes it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.",
+								Computed:    true,
+							},
+							"smtp_auth_identity": schema.StringAttribute{
+								Description: "SMTP authentication information. Must be a valid email address",
+								Computed:    true,
+							},
+							"smtp_auth_password": schema.StringAttribute{
+								Description: "SMTP Auth using LOGIN and PLAIN.",
+								Computed:    true,
+							},
+							"smtp_auth_username": schema.StringAttribute{
+								Description: "SMTP Auth using CRAM-MD5, LOGIN and PLAIN. If empty, Alertmanager doesn't authenticate to the SMTP server.",
+								Computed:    true,
+							},
+							"smtp_from": schema.StringAttribute{
+								Description: "The default SMTP From header field. Must be a valid email address",
+								Computed:    true,
+							},
+							"smtp_smart_host": schema.StringAttribute{
+								Description: "The default SMTP smarthost used for sending emails, including port number. Port number usually is 25, or 587 for SMTP over TLS (sometimes referred to as STARTTLS).",
+								Computed:    true,
+							},
+						},
+					},
 				},
 			},
 		},

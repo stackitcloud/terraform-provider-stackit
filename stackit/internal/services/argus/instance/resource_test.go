@@ -123,6 +123,19 @@ func fixtureWebHooksConfigsGetPayload() argus.WebHook {
 	}
 }
 
+func fixtureGlobalOptionsGetPayload() *argus.Global {
+	return &argus.Global{
+		OpsgenieApiKey:   utils.Ptr("key"),
+		OpsgenieApiUrl:   utils.Ptr("ops.example.com"),
+		ResolveTimeout:   utils.Ptr("1m"),
+		SmtpAuthIdentity: utils.Ptr("identity"),
+		SmtpAuthUsername: utils.Ptr("username"),
+		SmtpAuthPassword: utils.Ptr("password"),
+		SmtpFrom:         utils.Ptr("me@example.com"),
+		SmtpSmarthost:    utils.Ptr("smtp.example.com"),
+	}
+}
+
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description             string
@@ -409,6 +422,16 @@ func TestMapAlertConfigField(t *testing.T) {
 					Route: &argus.Route{
 						Receiver: utils.Ptr("name"),
 					},
+					Global: &argus.Global{
+						OpsgenieApiKey:   utils.Ptr("key"),
+						OpsgenieApiUrl:   utils.Ptr("ops.example.com"),
+						ResolveTimeout:   utils.Ptr("1m"),
+						SmtpAuthIdentity: utils.Ptr("identity"),
+						SmtpAuthUsername: utils.Ptr("username"),
+						SmtpAuthPassword: utils.Ptr("password"),
+						SmtpFrom:         utils.Ptr("me@example.com"),
+						SmtpSmarthost:    utils.Ptr("smtp.example.com:25"),
+					},
 				},
 			},
 			expected: Model{
@@ -424,6 +447,16 @@ func TestMapAlertConfigField(t *testing.T) {
 					}),
 					"route": types.ObjectValueMust(routeTypes, map[string]attr.Value{
 						"receiver": types.StringValue("name"),
+					}),
+					"global": types.ObjectValueMust(globalConfigurationTypes, map[string]attr.Value{
+						"opsgenie_api_key":   types.StringValue("key"),
+						"opsgenie_api_url":   types.StringValue("ops.example.com"),
+						"resolve_timeout":    types.StringValue("1m"),
+						"smtp_auth_identity": types.StringValue("identity"),
+						"smtp_auth_username": types.StringValue("username"),
+						"smtp_auth_password": types.StringValue("password"),
+						"smtp_from":          types.StringValue("me@example.com"),
+						"smtp_smart_host":    types.StringValue("smtp.example.com:25"),
 					}),
 				}),
 			},
@@ -458,10 +491,10 @@ func TestMapAlertConfigField(t *testing.T) {
 							types.ListValueMust(types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{}),
 						),
 					}),
-
 					"route": types.ObjectValueMust(routeTypes, map[string]attr.Value{
 						"receiver": types.StringValue("name"),
 					}),
+					"global": types.ObjectNull(globalConfigurationTypes),
 				}),
 			},
 			isValid: true,
@@ -499,6 +532,7 @@ func TestMapAlertConfigField(t *testing.T) {
 					"route": types.ObjectValueMust(routeTypes, map[string]attr.Value{
 						"receiver": types.StringValue("name"),
 					}),
+					"global": types.ObjectNull(globalConfigurationTypes),
 				}),
 			},
 			isValid: true,
@@ -536,6 +570,7 @@ func TestMapAlertConfigField(t *testing.T) {
 					"route": types.ObjectValueMust(routeTypes, map[string]attr.Value{
 						"receiver": types.StringValue("name"),
 					}),
+					"global": types.ObjectNull(globalConfigurationTypes),
 				}),
 			},
 			isValid: true,
@@ -557,6 +592,7 @@ func TestMapAlertConfigField(t *testing.T) {
 					"route": types.ObjectValueMust(routeTypes, map[string]attr.Value{
 						"receiver": types.StringNull(),
 					}),
+					"global": types.ObjectNull(globalConfigurationTypes),
 				}),
 			},
 			isValid: true,
@@ -573,6 +609,47 @@ func TestMapAlertConfigField(t *testing.T) {
 				ACL:         types.SetNull(types.StringType),
 				Parameters:  types.MapNull(types.StringType),
 				AlertConfig: types.ObjectNull(receiversTypes),
+			},
+			isValid: true,
+		},
+		{
+			description: "no global options",
+			alertConfigResp: &argus.GetAlertConfigsResponse{
+				Data: &argus.Alert{
+					Receivers: &[]argus.Receivers{
+						fixtureReceiverGetPayload(
+							&[]argus.EmailConfig{
+								fixtureEmailConfigsGetPayload(),
+							},
+							&[]argus.OpsgenieConfig{
+								fixtureOpsGenieConfigsGetPayload(),
+							},
+							&[]argus.WebHook{
+								fixtureWebHooksConfigsGetPayload(),
+							},
+						),
+					},
+					Route: &argus.Route{
+						Receiver: utils.Ptr("name"),
+					},
+				},
+			},
+			expected: Model{
+				ACL:        types.SetNull(types.StringType),
+				Parameters: types.MapNull(types.StringType),
+				AlertConfig: types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
+					"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+						fixtureReceiverModel(
+							fixtureEmailConfigsModel(),
+							fixtureOpsGenieConfigsModel(),
+							fixtureWebHooksConfigsModel(),
+						),
+					}),
+					"route": types.ObjectValueMust(routeTypes, map[string]attr.Value{
+						"receiver": types.StringValue("name"),
+					}),
+					"global": types.ObjectNull(globalConfigurationTypes),
+				}),
 			},
 			isValid: true,
 		},
@@ -884,6 +961,16 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 				Route: types.ObjectValueMust(routeTypes, map[string]attr.Value{
 					"receiver": types.StringValue("example-receiver"),
 				}),
+				GlobalConfiguration: types.ObjectValueMust(globalConfigurationTypes, map[string]attr.Value{
+					"opsgenie_api_key":   types.StringValue("key"),
+					"opsgenie_api_url":   types.StringValue("ops.example.com"),
+					"resolve_timeout":    types.StringValue("1m"),
+					"smtp_auth_identity": types.StringValue("identity"),
+					"smtp_auth_username": types.StringValue("username"),
+					"smtp_auth_password": types.StringValue("password"),
+					"smtp_from":          types.StringValue("me@example.com"),
+					"smtp_smart_host":    types.StringValue("smtp.example.com:25"),
+				}),
 			},
 			expected: &argus.UpdateAlertConfigsPayload{
 				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
@@ -895,6 +982,16 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 				},
 				Route: &argus.UpdateAlertConfigsPayloadRoute{
 					Receiver: utils.Ptr("example-receiver"),
+				},
+				Global: &argus.UpdateAlertConfigsPayloadGlobal{
+					OpsgenieApiKey:   utils.Ptr("key"),
+					OpsgenieApiUrl:   utils.Ptr("ops.example.com"),
+					ResolveTimeout:   utils.Ptr("1m"),
+					SmtpAuthIdentity: utils.Ptr("identity"),
+					SmtpAuthUsername: utils.Ptr("username"),
+					SmtpAuthPassword: utils.Ptr("password"),
+					SmtpFrom:         utils.Ptr("me@example.com"),
+					SmtpSmarthost:    utils.Ptr("smtp.example.com:25"),
 				},
 			},
 			isValid: true,
@@ -994,10 +1091,37 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 			isValid: true,
 		},
 		{
+			description: "no global options",
+			input: alertConfigModel{
+				Receivers: types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+					fixtureReceiverModel(
+						fixtureEmailConfigsModel(),
+						fixtureOpsGenieConfigsModel(),
+						fixtureWebHooksConfigsModel(),
+					),
+				}),
+				Route: types.ObjectValueMust(routeTypes, map[string]attr.Value{
+					"receiver": types.StringValue("example-receiver"),
+				}),
+			},
+			expected: &argus.UpdateAlertConfigsPayload{
+				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
+					fixtureReceiverPayload(
+						&[]argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{fixtureEmailConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{fixtureOpsGenieConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{fixtureWebHooksConfigsPayload()},
+					),
+				},
+				Route: &argus.UpdateAlertConfigsPayloadRoute{
+					Receiver: utils.Ptr("example-receiver"),
+				},
+			},
+			isValid: true,
+		},
+		{
 			description: "empty alert config",
 			input:       alertConfigModel{},
-			expected:    nil,
-			isValid:     true,
+			isValid:     false,
 		},
 	}
 	for _, tt := range tests {

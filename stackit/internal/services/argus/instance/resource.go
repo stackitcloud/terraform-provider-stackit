@@ -72,15 +72,16 @@ type Model struct {
 // Struct corresponding to Model.AlertConfig
 type alertConfigModel struct {
 	GlobalConfiguration types.Object `tfsdk:"global"`
-	InhibitRules        types.Object `tfsdk:"inhibit_rules"`
-	Receivers           types.List   `tfsdk:"receivers"`
-	Route               types.Object `tfsdk:"route"`
+	// InhibitRules        types.Object `tfsdk:"inhibit_rules"`
+	Receivers types.List   `tfsdk:"receivers"`
+	Route     types.Object `tfsdk:"route"`
 }
 
 var alertConfigTypes = map[string]attr.Type{
 	"receivers": types.ListType{ElemType: types.ObjectType{AttrTypes: receiversTypes}},
 	"route":     types.ObjectType{AttrTypes: routeTypes},
 	"global":    types.ObjectType{AttrTypes: globalConfigurationTypes},
+	// "inhibit_rules": types.ObjectType{AttrTypes: inhibitRulesTypes},
 }
 
 // Struct corresponding to Model.AlertConfig.global
@@ -107,21 +108,21 @@ var globalConfigurationTypes = map[string]attr.Type{
 }
 
 // Struct corresponding to Model.AlertConfig.inhibitRules
-type inhibitRulesModel struct {
-	Equal            types.List `tfsdk:"equal"`
-	SourceMatch      types.Map  `tfsdk:"source_match"`
-	SourceMatchRegex types.Map  `tfsdk:"source_match_regex"`
-	TargetMatch      types.Map  `tfsdk:"target_match"`
-	TargetMatchRegex types.Map  `tfsdk:"target_match_regex"`
-}
+// type inhibitRulesModel struct {
+// 	Equal            types.List `tfsdk:"equal"`
+// 	SourceMatch      types.Map  `tfsdk:"source_match"`
+// 	SourceMatchRegex types.Map  `tfsdk:"source_match_regex"`
+// 	TargetMatch      types.Map  `tfsdk:"target_match"`
+// 	TargetMatchRegex types.Map  `tfsdk:"target_match_regex"`
+// }
 
-var inhibitRulesTypes = map[string]attr.Type{
-	"equal":              types.ListType{ElemType: types.StringType},
-	"source_match":       types.MapType{ElemType: types.StringType},
-	"source_match_regex": types.MapType{ElemType: types.StringType},
-	"target_match":       types.MapType{ElemType: types.StringType},
-	"target_match_regex": types.MapType{ElemType: types.StringType},
-}
+// var inhibitRulesTypes = map[string]attr.Type{
+// 	"equal":              types.ListType{ElemType: types.StringType},
+// 	"source_match":       types.MapType{ElemType: types.StringType},
+// 	"source_match_regex": types.MapType{ElemType: types.StringType},
+// 	"target_match":       types.MapType{ElemType: types.StringType},
+// 	"target_match_regex": types.MapType{ElemType: types.StringType},
+// }
 
 // Struct corresponding to Model.AlertConfig.route
 type routeModel struct {
@@ -551,43 +552,43 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							},
 						},
 					},
-					"inhibit_rules": schema.SingleNestedAttribute{
-						Description: "Inhibit rules for the alerts.",
-						Optional:    true,
-						Computed:    true,
-						Attributes: map[string]schema.Attribute{
-							"equal": schema.ListAttribute{
-								Description: "Labels that must have an equal value in the source and target alert for the inhibition to take effect.",
-								Computed:    true,
-								Optional:    true,
-								ElementType: types.StringType,
-							},
-							"source_match": schema.MapAttribute{
-								Description: "Matchers for which one or more alerts have to exist for the inhibition to take effect.",
-								Computed:    true,
-								Optional:    true,
-								ElementType: types.StringType,
-							},
-							"source_match_regex": schema.MapAttribute{
-								Description: "Matchers in regex for which one or more alerts have to exist for the inhibition to take effect.",
-								Computed:    true,
-								Optional:    true,
-								ElementType: types.StringType,
-							},
-							"target_match": schema.MapAttribute{
-								Description: "Matchers that have to be fulfilled in the alerts to be muted.",
-								Computed:    true,
-								Optional:    true,
-								ElementType: types.StringType,
-							},
-							"target_match_regex": schema.MapAttribute{
-								Description: "Matchers in regex that have to be fulfilled in the alerts to be muted.",
-								Computed:    true,
-								Optional:    true,
-								ElementType: types.StringType,
-							},
-						},
-					},
+					// "inhibit_rules": schema.SingleNestedAttribute{
+					// 	Description: "Inhibit rules for the alerts.",
+					// 	Optional:    true,
+					// 	Computed:    true,
+					// 	Attributes: map[string]schema.Attribute{
+					// 		"equal": schema.ListAttribute{
+					// 			Description: "Labels that must have an equal value in the source and target alert for the inhibition to take effect.",
+					// 			Computed:    true,
+					// 			Optional:    true,
+					// 			ElementType: types.StringType,
+					// 		},
+					// 		"source_match": schema.MapAttribute{
+					// 			Description: "Matchers for which one or more alerts have to exist for the inhibition to take effect.",
+					// 			Computed:    true,
+					// 			Optional:    true,
+					// 			ElementType: types.StringType,
+					// 		},
+					// 		"source_match_regex": schema.MapAttribute{
+					// 			Description: "Matchers in regex for which one or more alerts have to exist for the inhibition to take effect.",
+					// 			Computed:    true,
+					// 			Optional:    true,
+					// 			ElementType: types.StringType,
+					// 		},
+					// 		"target_match": schema.MapAttribute{
+					// 			Description: "Matchers that have to be fulfilled in the alerts to be muted.",
+					// 			Computed:    true,
+					// 			Optional:    true,
+					// 			ElementType: types.StringType,
+					// 		},
+					// 		"target_match_regex": schema.MapAttribute{
+					// 			Description: "Matchers in regex that have to be fulfilled in the alerts to be muted.",
+					// 			Computed:    true,
+					// 			Optional:    true,
+					// 			ElementType: types.StringType,
+					// 		},
+					// 	},
+					// },
 				},
 			},
 		},
@@ -1225,9 +1226,9 @@ func mapUpdateAlertConfigField(ctx context.Context, resp *argus.UpdateAlertConfi
 	respReceivers := *resp.Data.Receivers
 	respRoute := *resp.Data.Route
 	respGlobalConfig := resp.Data.Global
-	respInhibitRules := resp.Data.InhibitRules
+	// respInhibitRules := resp.Data.InhibitRules
 
-	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute, respGlobalConfig, respInhibitRules)
+	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute, respGlobalConfig)
 	if err != nil {
 		return fmt.Errorf("mapping alert config: %w", err)
 	}
@@ -1249,9 +1250,8 @@ func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsRespons
 	respReceivers := *resp.Data.Receivers
 	respRoute := *resp.Data.Route
 	respGlobalConfig := resp.Data.Global
-	respInhibitRules := resp.Data.InhibitRules
 
-	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute, respGlobalConfig, respInhibitRules)
+	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute, respGlobalConfig)
 	if err != nil {
 		return fmt.Errorf("mapping alert config: %w", err)
 	}
@@ -1260,7 +1260,7 @@ func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsRespons
 	return nil
 }
 
-func mapAlertConfigAttribute(ctx context.Context, respReceivers []argus.Receivers, respRoute argus.Route, respGlobalConfigs *argus.Global, respInhibitRules *[]argus.InhibitRules) (basetypes.ObjectValue, error) {
+func mapAlertConfigAttribute(ctx context.Context, respReceivers []argus.Receivers, respRoute argus.Route, respGlobalConfigs *argus.Global) (basetypes.ObjectValue, error) {
 	receiversList, err := mapReceiversToAttributes(ctx, respReceivers)
 	if err != nil {
 		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping receivers: %w", err)
@@ -1363,9 +1363,24 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		return alertConfigModel{}, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
 	}
 
+	mockGlobalConfig, diags := types.ObjectValue(globalConfigurationTypes, map[string]attr.Value{
+		"opsgenie_api_key":   types.StringNull(),
+		"opsgenie_api_url":   types.StringNull(),
+		"resolve_timeout":    types.StringValue("5m"),
+		"smtp_auth_identity": types.StringNull(),
+		"smtp_auth_password": types.StringNull(),
+		"smtp_auth_username": types.StringNull(),
+		"smtp_from":          types.StringNull(),
+		"smtp_smart_host":    types.StringNull(),
+	})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping global config: %w", core.DiagsToError(diags))
+	}
+
 	return alertConfigModel{
-		Receivers: mockReceivers,
-		Route:     mockRoute,
+		Receivers:           mockReceivers,
+		Route:               mockRoute,
+		GlobalConfiguration: mockGlobalConfig,
 	}, nil
 }
 
@@ -1604,15 +1619,17 @@ func toUpdateAlertConfigPayload(ctx context.Context, model alertConfigModel) (*a
 		return nil, fmt.Errorf("mapping route: %w", err)
 	}
 
-	payload.Global, err = toGlobalConfigPayload(ctx, model)
-	if err != nil {
-		return nil, fmt.Errorf("mapping global: %w", err)
+	if !model.GlobalConfiguration.IsNull() && !model.GlobalConfiguration.IsUnknown() {
+		payload.Global, err = toGlobalConfigPayload(ctx, model)
+		if err != nil {
+			return nil, fmt.Errorf("mapping global: %w", err)
+		}
 	}
 
-	payload.InhibitRules, err = toInhibitRulesPayload(ctx, model)
-	if err != nil {
-		return nil, fmt.Errorf("mapping inhibit rules: %w", err)
-	}
+	// payload.InhibitRules, err = toInhibitRulesPayload(ctx, model)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("mapping inhibit rules: %w", err)
+	// }
 
 	return &payload, nil
 }
@@ -1724,72 +1741,72 @@ func toGlobalConfigPayload(ctx context.Context, model alertConfigModel) (*argus.
 	}, nil
 }
 
-func toInhibitRulesPayload(ctx context.Context, model alertConfigModel) (*argus.UpdateAlertConfigsPayloadInhibitRules, error) {
-	inhibitRulesModel := inhibitRulesModel{}
-	diags := model.InhibitRules.As(ctx, &inhibitRulesModel, basetypes.ObjectAsOptions{})
-	if diags.HasError() {
-		return nil, fmt.Errorf("mapping inhibit rules: %w", core.DiagsToError(diags))
-	}
+// func toInhibitRulesPayload(ctx context.Context, model alertConfigModel) (*argus.UpdateAlertConfigsPayloadInhibitRules, error) {
+// 	inhibitRulesModel := inhibitRulesModel{}
+// 	diags := model.InhibitRules.As(ctx, &inhibitRulesModel, basetypes.ObjectAsOptions{})
+// 	if diags.HasError() {
+// 		return nil, fmt.Errorf("mapping inhibit rules: %w", core.DiagsToError(diags))
+// 	}
 
-	var equalPayload *[]string
-	var sourceMatchPayload *map[string]interface{}
-	var sourceMatchRegexPayload *map[string]interface{}
-	var targetMatchPayload *map[string]interface{}
-	var targetMatchRegexPayload *map[string]interface{}
+// 	var equalPayload *[]string
+// 	var sourceMatchPayload *map[string]interface{}
+// 	var sourceMatchRegexPayload *map[string]interface{}
+// 	var targetMatchPayload *map[string]interface{}
+// 	var targetMatchRegexPayload *map[string]interface{}
 
-	if !inhibitRulesModel.Equal.IsNull() && !inhibitRulesModel.Equal.IsUnknown() {
-		equalList := []string{}
-		diags = inhibitRulesModel.Equal.ElementsAs(ctx, &equalList, false)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping equal: %w", core.DiagsToError(diags))
-		}
-		equalPayload = &equalList
-	}
+// 	if !inhibitRulesModel.Equal.IsNull() && !inhibitRulesModel.Equal.IsUnknown() {
+// 		equalList := []string{}
+// 		diags = inhibitRulesModel.Equal.ElementsAs(ctx, &equalList, false)
+// 		if diags.HasError() {
+// 			return nil, fmt.Errorf("mapping equal: %w", core.DiagsToError(diags))
+// 		}
+// 		equalPayload = &equalList
+// 	}
 
-	if !inhibitRulesModel.SourceMatch.IsNull() && !inhibitRulesModel.SourceMatch.IsUnknown() {
-		elements := inhibitRulesModel.SourceMatch.Elements()
-		sourceMatchMap := make(map[string]interface{}, len(elements))
-		for k := range elements {
-			sourceMatchMap[k] = elements[k].String()
-		}
-		sourceMatchPayload = &sourceMatchMap
-	}
+// 	if !inhibitRulesModel.SourceMatch.IsNull() && !inhibitRulesModel.SourceMatch.IsUnknown() {
+// 		elements := inhibitRulesModel.SourceMatch.Elements()
+// 		sourceMatchMap := make(map[string]interface{}, len(elements))
+// 		for k := range elements {
+// 			sourceMatchMap[k] = elements[k].String()
+// 		}
+// 		sourceMatchPayload = &sourceMatchMap
+// 	}
 
-	if !inhibitRulesModel.SourceMatchRegex.IsNull() && !inhibitRulesModel.SourceMatchRegex.IsUnknown() {
-		elements := inhibitRulesModel.SourceMatchRegex.Elements()
-		sourceMatchRegexMap := make(map[string]interface{}, len(elements))
-		for k := range elements {
-			sourceMatchRegexMap[k] = elements[k].String()
-		}
-		sourceMatchRegexPayload = &sourceMatchRegexMap
-	}
+// 	if !inhibitRulesModel.SourceMatchRegex.IsNull() && !inhibitRulesModel.SourceMatchRegex.IsUnknown() {
+// 		elements := inhibitRulesModel.SourceMatchRegex.Elements()
+// 		sourceMatchRegexMap := make(map[string]interface{}, len(elements))
+// 		for k := range elements {
+// 			sourceMatchRegexMap[k] = elements[k].String()
+// 		}
+// 		sourceMatchRegexPayload = &sourceMatchRegexMap
+// 	}
 
-	if !inhibitRulesModel.TargetMatch.IsNull() && !inhibitRulesModel.TargetMatch.IsUnknown() {
-		elements := inhibitRulesModel.TargetMatch.Elements()
-		targetMatchMap := make(map[string]interface{}, len(elements))
-		for k := range elements {
-			targetMatchMap[k] = elements[k].String()
-		}
-		targetMatchPayload = &targetMatchMap
-	}
+// 	if !inhibitRulesModel.TargetMatch.IsNull() && !inhibitRulesModel.TargetMatch.IsUnknown() {
+// 		elements := inhibitRulesModel.TargetMatch.Elements()
+// 		targetMatchMap := make(map[string]interface{}, len(elements))
+// 		for k := range elements {
+// 			targetMatchMap[k] = elements[k].String()
+// 		}
+// 		targetMatchPayload = &targetMatchMap
+// 	}
 
-	if !inhibitRulesModel.TargetMatchRegex.IsNull() && !inhibitRulesModel.TargetMatchRegex.IsUnknown() {
-		elements := inhibitRulesModel.TargetMatchRegex.Elements()
-		targetMatchRegexMap := make(map[string]interface{}, len(elements))
-		for k := range elements {
-			targetMatchRegexMap[k] = elements[k].String()
-		}
-		targetMatchRegexPayload = &targetMatchRegexMap
-	}
+// 	if !inhibitRulesModel.TargetMatchRegex.IsNull() && !inhibitRulesModel.TargetMatchRegex.IsUnknown() {
+// 		elements := inhibitRulesModel.TargetMatchRegex.Elements()
+// 		targetMatchRegexMap := make(map[string]interface{}, len(elements))
+// 		for k := range elements {
+// 			targetMatchRegexMap[k] = elements[k].String()
+// 		}
+// 		targetMatchRegexPayload = &targetMatchRegexMap
+// 	}
 
-	return &argus.UpdateAlertConfigsPayloadInhibitRules{
-		Equal:         equalPayload,
-		SourceMatch:   sourceMatchPayload,
-		SourceMatchRe: sourceMatchRegexPayload,
-		TargetMatch:   targetMatchPayload,
-		TargetMatchRe: targetMatchRegexPayload,
-	}, nil
-}
+// 	return &argus.UpdateAlertConfigsPayloadInhibitRules{
+// 		Equal:         equalPayload,
+// 		SourceMatch:   sourceMatchPayload,
+// 		SourceMatchRe: sourceMatchRegexPayload,
+// 		TargetMatch:   targetMatchPayload,
+// 		TargetMatchRe: targetMatchRegexPayload,
+// 	}, nil
+// }
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
