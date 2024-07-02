@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -52,12 +53,38 @@ type Model struct {
 
 // Struct corresponding to DataSourceModel.Parameters
 type parametersModel struct {
-	SgwAcl types.String `tfsdk:"sgw_acl"`
+	SgwAcl               types.String `tfsdk:"sgw_acl"`
+	EnableMonitoring     types.Bool   `tfsdk:"enable_monitoring"`
+	Graphite             types.String `tfsdk:"graphite"`
+	JavaGarbageCollector types.String `tfsdk:"java_garbage_collector"`
+	JavaHeapspace        types.Int64  `tfsdk:"java_heapspace"`
+	JavaMaxmetaspace     types.Int64  `tfsdk:"java_maxmetaspace"`
+	MaxDiskThreshold     types.Int64  `tfsdk:"max_disk_threshold"`
+	MetricsFrequency     types.Int64  `tfsdk:"metrics_frequency"`
+	MetricsPrefix        types.String `tfsdk:"metrics_prefix"`
+	MonitoringInstanceId types.String `tfsdk:"monitoring_instance_id"`
+	Plugins              types.List   `tfsdk:"plugins"`
+	Syslog               types.List   `tfsdk:"syslog"`
+	TlsCiphers           types.List   `tfsdk:"tls_ciphers"`
+	TlsProtocols         types.String `tfsdk:"tls_protocols"`
 }
 
 // Types corresponding to parametersModel
 var parametersTypes = map[string]attr.Type{
-	"sgw_acl": basetypes.StringType{},
+	"sgw_acl":                basetypes.StringType{},
+	"enable_monitoring":      basetypes.BoolType{},
+	"graphite":               basetypes.StringType{},
+	"java_garbage_collector": basetypes.StringType{},
+	"java_heapspace":         basetypes.Int64Type{},
+	"java_maxmetaspace":      basetypes.Int64Type{},
+	"max_disk_threshold":     basetypes.Int64Type{},
+	"metrics_frequency":      basetypes.Int64Type{},
+	"metrics_prefix":         basetypes.StringType{},
+	"monitoring_instance_id": basetypes.StringType{},
+	"plugins":                basetypes.ListType{ElemType: types.StringType},
+	"syslog":                 basetypes.ListType{ElemType: types.StringType},
+	"tls_ciphers":            basetypes.ListType{ElemType: types.StringType},
+	"tls_protocols":          basetypes.StringType{},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -124,6 +151,23 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"plan_id":     "The selected plan ID.",
 	}
 
+	parametersDescriptions := map[string]string{
+		"sgw_acl":                "Comma separated list of IP networks in CIDR notation which are allowed to access this instance.",
+		"enable_monitoring":      "Enable monitoring.",
+		"graphite":               "If set, monitoring with Graphite will be enabled. Expects the host and port where the Graphite metrics should be sent to (host:port).",
+		"max_disk_threshold":     "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
+		"metrics_frequency":      "The frequency in seconds at which metrics are emitted (in seconds).",
+		"metrics_prefix":         "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key.",
+		"monitoring_instance_id": "The ID of the STACKIT monitoring instance.",
+		"java_garbage_collector": "The garbage collector to use for OpenSearch.",
+		"java_heapspace":         "The amount of memory (in MB) allocated as heap by the JVM for OpenSearch.",
+		"java_maxmetaspace":      "The amount of memory (in MB) used by the JVM to store metadata for OpenSearch.",
+		"plugins":                "List of plugins to install. Must be a supported plugin name. The plugins `repository-s3` and `repository-azure` are enabled by default and cannot be disabled.",
+		"syslog":                 "List of syslog servers to send logs to.",
+		"tls_ciphers":            "List of TLS ciphers to use.",
+		"tls_protocols":          "The TLS protocol to use.",
+	}
+
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -183,8 +227,77 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"parameters": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"sgw_acl": schema.StringAttribute{
-						Optional: true,
-						Computed: true,
+						Description: parametersDescriptions["sgw_acl"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"enable_monitoring": schema.BoolAttribute{
+						Description: parametersDescriptions["enable_monitoring"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"graphite": schema.StringAttribute{
+						Description: parametersDescriptions["graphite"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"java_garbage_collector": schema.StringAttribute{
+						Description: parametersDescriptions["java_garbage_collector"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"java_heapspace": schema.Int64Attribute{
+						Description: parametersDescriptions["java_heapspace"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"java_maxmetaspace": schema.Int64Attribute{
+						Description: parametersDescriptions["java_maxmetaspace"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"max_disk_threshold": schema.Int64Attribute{
+						Description: parametersDescriptions["max_disk_threshold"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"metrics_frequency": schema.Int64Attribute{
+						Description: parametersDescriptions["metrics_frequency"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"metrics_prefix": schema.StringAttribute{
+						Description: parametersDescriptions["metrics_prefix"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"monitoring_instance_id": schema.StringAttribute{
+						Description: parametersDescriptions["monitoring_instance_id"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"plugins": schema.ListAttribute{
+						ElementType: types.StringType,
+						Description: parametersDescriptions["plugins"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"syslog": schema.ListAttribute{
+						ElementType: types.StringType,
+						Description: parametersDescriptions["syslog"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"tls_ciphers": schema.ListAttribute{
+						ElementType: types.StringType,
+						Description: parametersDescriptions["tls_ciphers"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"tls_protocols": schema.StringAttribute{
+						Description: parametersDescriptions["tls_protocols"],
+						Optional:    true,
+						Computed:    true,
 					},
 				},
 				Optional: true,
@@ -235,8 +348,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	var parameters = &parametersModel{}
+	var parameters *parametersModel
 	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
+		parameters = &parametersModel{}
 		diags = model.Parameters.As(ctx, parameters, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -346,8 +460,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	var parameters = &parametersModel{}
+	var parameters *parametersModel
 	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
+		parameters := &parametersModel{}
 		diags = model.Parameters.As(ctx, parameters, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -488,7 +603,22 @@ func mapFields(instance *opensearch.Instance, model *Model) error {
 func mapParameters(params map[string]interface{}) (types.Object, error) {
 	attributes := map[string]attr.Value{}
 	for attribute := range parametersTypes {
-		valueInterface, ok := params[attribute]
+		var valueInterface interface{}
+		var ok bool
+
+		// This replacement is necessary because Terraform does not allow hyphens in attribute names
+		// And the API uses hyphens in some of the attribute names, which would cause a mismatch
+		// The following attributes have hyphens in the API but underscores in the schema
+		hyphenAttributes := []string{
+			"tls_ciphers",
+			"tls_protocols",
+		}
+		if slices.Contains(hyphenAttributes, attribute) {
+			alteredAttribute := strings.ReplaceAll(attribute, "_", "-")
+			valueInterface, ok = params[alteredAttribute]
+		} else {
+			valueInterface, ok = params[attribute]
+		}
 		if !ok {
 			// All fields are optional, so this is ok
 			// Set the value as nil, will be handled accordingly
@@ -584,15 +714,9 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*opensearch.Cre
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	if parameters == nil {
-		return &opensearch.CreateInstancePayload{
-			InstanceName: conversion.StringValueToPointer(model.Name),
-			PlanId:       conversion.StringValueToPointer(model.PlanId),
-		}, nil
-	}
-	payloadParams := &opensearch.InstanceParameters{}
-	if parameters.SgwAcl.ValueString() != "" {
-		payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
+	payloadParams, err := toInstanceParams(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("convert parameters: %w", err)
 	}
 	return &opensearch.CreateInstancePayload{
 		InstanceName: conversion.StringValueToPointer(model.Name),
@@ -605,18 +729,51 @@ func toUpdatePayload(model *Model, parameters *parametersModel) (*opensearch.Par
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-
-	if parameters == nil {
-		return &opensearch.PartialUpdateInstancePayload{
-			PlanId: conversion.StringValueToPointer(model.PlanId),
-		}, nil
+	payloadParams, err := toInstanceParams(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("convert parameters: %w", err)
 	}
 	return &opensearch.PartialUpdateInstancePayload{
-		Parameters: &opensearch.InstanceParameters{
-			SgwAcl: conversion.StringValueToPointer(parameters.SgwAcl),
-		},
-		PlanId: conversion.StringValueToPointer(model.PlanId),
+		Parameters: payloadParams,
+		PlanId:     conversion.StringValueToPointer(model.PlanId),
 	}, nil
+}
+
+func toInstanceParams(parameters *parametersModel) (*opensearch.InstanceParameters, error) {
+	if parameters == nil {
+		return nil, nil
+	}
+	payloadParams := &opensearch.InstanceParameters{}
+
+	payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
+	payloadParams.EnableMonitoring = conversion.BoolValueToPointer(parameters.EnableMonitoring)
+	payloadParams.Graphite = conversion.StringValueToPointer(parameters.Graphite)
+	payloadParams.JavaGarbageCollector = conversion.StringValueToPointer(parameters.JavaGarbageCollector)
+	payloadParams.JavaHeapspace = conversion.Int64ValueToPointer(parameters.JavaHeapspace)
+	payloadParams.JavaMaxmetaspace = conversion.Int64ValueToPointer(parameters.JavaMaxmetaspace)
+	payloadParams.MaxDiskThreshold = conversion.Int64ValueToPointer(parameters.MaxDiskThreshold)
+	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
+	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
+	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
+	payloadParams.TlsProtocols = conversion.StringValueToPointer(parameters.TlsProtocols)
+
+	var err error
+	payloadParams.Plugins, err = conversion.StringListToPointer(parameters.Plugins)
+	if err != nil {
+		return nil, fmt.Errorf("convert plugins: %w", err)
+	}
+
+	payloadParams.Syslog, err = conversion.StringListToPointer(parameters.Syslog)
+	if err != nil {
+		return nil, fmt.Errorf("convert syslog: %w", err)
+	}
+
+	payloadParams.TlsCiphers, err = conversion.StringListToPointer(parameters.TlsCiphers)
+	if err != nil {
+		return nil, fmt.Errorf("convert tls_ciphers: %w", err)
+	}
+
+	return payloadParams, nil
 }
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
