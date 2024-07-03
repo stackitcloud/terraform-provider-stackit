@@ -71,17 +71,41 @@ type Model struct {
 
 // Struct corresponding to Model.AlertConfig
 type alertConfigModel struct {
-	// GlobalConfiguration types.Object `tfsdk:"global_configuration"`
-	// Inhibition_rules    types.Object `tfsdk:"inhibition_rules"`
-	Receivers types.List   `tfsdk:"receivers"`
-	Route     types.Object `tfsdk:"route"`
+	GlobalConfiguration types.Object `tfsdk:"global"`
+	Receivers           types.List   `tfsdk:"receivers"`
+	Route               types.Object `tfsdk:"route"`
 }
 
 var alertConfigTypes = map[string]attr.Type{
 	"receivers": types.ListType{ElemType: types.ObjectType{AttrTypes: receiversTypes}},
 	"route":     types.ObjectType{AttrTypes: routeTypes},
+	"global":    types.ObjectType{AttrTypes: globalConfigurationTypes},
 }
 
+// Struct corresponding to Model.AlertConfig.global
+type globalConfigurationModel struct {
+	OpsgenieApiKey   types.String `tfsdk:"opsgenie_api_key"`
+	OpsgenieApiUrl   types.String `tfsdk:"opsgenie_api_url"`
+	ResolveTimeout   types.String `tfsdk:"resolve_timeout"`
+	SmtpAuthIdentity types.String `tfsdk:"smtp_auth_identity"`
+	SmtpAuthPassword types.String `tfsdk:"smtp_auth_password"`
+	SmtpAuthUsername types.String `tfsdk:"smtp_auth_username"`
+	SmtpFrom         types.String `tfsdk:"smtp_from"`
+	SmtpSmartHost    types.String `tfsdk:"smtp_smart_host"`
+}
+
+var globalConfigurationTypes = map[string]attr.Type{
+	"opsgenie_api_key":   types.StringType,
+	"opsgenie_api_url":   types.StringType,
+	"resolve_timeout":    types.StringType,
+	"smtp_auth_identity": types.StringType,
+	"smtp_auth_password": types.StringType,
+	"smtp_auth_username": types.StringType,
+	"smtp_from":          types.StringType,
+	"smtp_smart_host":    types.StringType,
+}
+
+// Struct corresponding to Model.AlertConfig.route
 type routeModel struct {
 	Receiver types.String `tfsdk:"receiver"`
 }
@@ -462,6 +486,55 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							},
 						},
 					},
+					"global": schema.SingleNestedAttribute{
+						Description: "Global configuration for the alerts.",
+						Optional:    true,
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"opsgenie_api_key": schema.StringAttribute{
+								Description: "The API key for OpsGenie.",
+								Computed:    true,
+								Optional:    true,
+								Sensitive:   true,
+							},
+							"opsgenie_api_url": schema.StringAttribute{
+								Description: "The host to send OpsGenie API requests to. Must be a valid URL",
+								Computed:    true,
+								Optional:    true,
+							},
+							"resolve_timeout": schema.StringAttribute{
+								Description: "The default value used by alertmanager if the alert does not include EndsAt. After this time passes, it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.",
+								Computed:    true,
+								Optional:    true,
+							},
+							"smtp_auth_identity": schema.StringAttribute{
+								Description: "SMTP authentication information. Must be a valid email address",
+								Computed:    true,
+								Optional:    true,
+							},
+							"smtp_auth_password": schema.StringAttribute{
+								Description: "SMTP Auth using LOGIN and PLAIN.",
+								Computed:    true,
+								Optional:    true,
+								Sensitive:   true,
+							},
+							"smtp_auth_username": schema.StringAttribute{
+								Description: "SMTP Auth using CRAM-MD5, LOGIN and PLAIN. If empty, Alertmanager doesn't authenticate to the SMTP server.",
+								Computed:    true,
+								Optional:    true,
+							},
+							"smtp_from": schema.StringAttribute{
+								Description: "The default SMTP From header field. Must be a valid email address",
+								Computed:    true,
+								Optional:    true,
+							},
+							"smtp_smart_host": schema.StringAttribute{
+								Description: "The default SMTP smarthost used for sending emails, including port number. Port number usually is 25, or 587 for SMTP over TLS (sometimes referred to as STARTTLS).",
+								Computed:    true,
+								Optional:    true,
+							},
+						},
+					},
 				},
 			},
 		},
@@ -610,7 +683,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Alert Config
-
 	if model.AlertConfig.IsUnknown() || model.AlertConfig.IsNull() {
 		alertConfig, err = getMockAlertConfig(ctx)
 		if err != nil {
@@ -619,7 +691,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
-	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, alertConfig)
+	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, &alertConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building alert config payload: %v", err))
 		return
@@ -880,7 +952,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
-	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, alertConfig)
+	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, &alertConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building alert config payload: %v", err))
 		return
@@ -1096,11 +1168,11 @@ func mapUpdateAlertConfigField(ctx context.Context, resp *argus.UpdateAlertConfi
 		return fmt.Errorf("nil model")
 	}
 
-	// Receivers
 	respReceivers := *resp.Data.Receivers
 	respRoute := *resp.Data.Route
+	respGlobalConfig := resp.Data.Global
 
-	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute)
+	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute, respGlobalConfig)
 	if err != nil {
 		return fmt.Errorf("mapping alert config: %w", err)
 	}
@@ -1119,11 +1191,11 @@ func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsRespons
 		return fmt.Errorf("nil model")
 	}
 
-	// Receivers
 	respReceivers := *resp.Data.Receivers
 	respRoute := *resp.Data.Route
+	respGlobalConfig := resp.Data.Global
 
-	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute)
+	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute, respGlobalConfig)
 	if err != nil {
 		return fmt.Errorf("mapping alert config: %w", err)
 	}
@@ -1132,7 +1204,7 @@ func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsRespons
 	return nil
 }
 
-func mapAlertConfigAttribute(ctx context.Context, respReceivers []argus.Receivers, respRoute argus.Route) (basetypes.ObjectValue, error) {
+func mapAlertConfigAttribute(ctx context.Context, respReceivers []argus.Receivers, respRoute argus.Route, respGlobalConfigs *argus.Global) (basetypes.ObjectValue, error) {
 	receiversList, err := mapReceiversToAttributes(ctx, respReceivers)
 	if err != nil {
 		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping receivers: %w", err)
@@ -1143,9 +1215,15 @@ func mapAlertConfigAttribute(ctx context.Context, respReceivers []argus.Receiver
 		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping route: %w", err)
 	}
 
+	globalConfig, err := mapGlobalConfigToAttributes(respGlobalConfigs)
+	if err != nil {
+		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping global config: %w", err)
+	}
+
 	alertConfig, diags := types.ObjectValue(alertConfigTypes, map[string]attr.Value{
 		"receivers": receiversList,
 		"route":     route,
+		"global":    globalConfig,
 	})
 	if diags.HasError() {
 		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping alert config: %w", core.DiagsToError(diags))
@@ -1229,10 +1307,47 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		return alertConfigModel{}, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
 	}
 
+	mockGlobalConfig, diags := types.ObjectValue(globalConfigurationTypes, map[string]attr.Value{
+		"opsgenie_api_key":   types.StringNull(),
+		"opsgenie_api_url":   types.StringNull(),
+		"resolve_timeout":    types.StringValue("5m"),
+		"smtp_auth_identity": types.StringNull(),
+		"smtp_auth_password": types.StringNull(),
+		"smtp_auth_username": types.StringNull(),
+		"smtp_from":          types.StringValue("argus@argus.stackit.cloud"),
+		"smtp_smart_host":    types.StringNull(),
+	})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping global config: %w", core.DiagsToError(diags))
+	}
+
 	return alertConfigModel{
-		Receivers: mockReceivers,
-		Route:     mockRoute,
+		Receivers:           mockReceivers,
+		Route:               mockRoute,
+		GlobalConfiguration: mockGlobalConfig,
 	}, nil
+}
+
+func mapGlobalConfigToAttributes(respGlobalConfigs *argus.Global) (basetypes.ObjectValue, error) {
+	if respGlobalConfigs == nil {
+		return types.ObjectNull(globalConfigurationTypes), nil
+	}
+
+	globalConfigObject, diags := types.ObjectValue(globalConfigurationTypes, map[string]attr.Value{
+		"opsgenie_api_key":   types.StringPointerValue(respGlobalConfigs.OpsgenieApiKey),
+		"opsgenie_api_url":   types.StringPointerValue(respGlobalConfigs.OpsgenieApiUrl),
+		"resolve_timeout":    types.StringPointerValue(respGlobalConfigs.ResolveTimeout),
+		"smtp_auth_identity": types.StringPointerValue(respGlobalConfigs.SmtpAuthIdentity),
+		"smtp_auth_password": types.StringPointerValue(respGlobalConfigs.SmtpAuthPassword),
+		"smtp_auth_username": types.StringPointerValue(respGlobalConfigs.SmtpAuthUsername),
+		"smtp_from":          types.StringPointerValue(respGlobalConfigs.SmtpFrom),
+		"smtp_smart_host":    types.StringPointerValue(respGlobalConfigs.SmtpSmarthost),
+	})
+	if diags.HasError() {
+		return types.ObjectNull(globalConfigurationTypes), fmt.Errorf("mapping global config: %w", core.DiagsToError(diags))
+	}
+
+	return globalConfigObject, nil
 }
 
 func mapReceiversToAttributes(ctx context.Context, respReceivers []argus.Receivers) (basetypes.ListValue, error) {
@@ -1429,13 +1544,42 @@ func toUpdatePayload(model *Model) (*argus.UpdateInstancePayload, error) {
 	}, nil
 }
 
-func toUpdateAlertConfigPayload(ctx context.Context, model alertConfigModel) (*argus.UpdateAlertConfigsPayload, error) {
-	if model.Receivers.IsNull() || model.Receivers.IsUnknown() {
-		return nil, nil
+func toUpdateAlertConfigPayload(ctx context.Context, model *alertConfigModel) (*argus.UpdateAlertConfigsPayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
 	}
+	if model.Receivers.IsNull() || model.Receivers.IsUnknown() {
+		return nil, fmt.Errorf("receivers in the model are null or unknown")
+	}
+
+	var err error
 
 	payload := argus.UpdateAlertConfigsPayload{}
 
+	payload.Receivers, err = toReceiverPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("mapping receivers: %w", err)
+	}
+
+	payload.Route, err = toRoutePayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("mapping route: %w", err)
+	}
+
+	if !model.GlobalConfiguration.IsNull() && !model.GlobalConfiguration.IsUnknown() {
+		payload.Global, err = toGlobalConfigPayload(ctx, model)
+		if err != nil {
+			return nil, fmt.Errorf("mapping global: %w", err)
+		}
+	}
+
+	return &payload, nil
+}
+
+func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]argus.UpdateAlertConfigsPayloadReceiversInner, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
 	receiversModel := []receiversModel{}
 	diags := model.Receivers.ElementsAs(ctx, &receiversModel, false)
 	if diags.HasError() {
@@ -1508,20 +1652,38 @@ func toUpdateAlertConfigPayload(ctx context.Context, model alertConfigModel) (*a
 
 		receivers = append(receivers, receiverPayload)
 	}
+	return &receivers, nil
+}
 
-	payload.Receivers = &receivers
-
+func toRoutePayload(ctx context.Context, model *alertConfigModel) (*argus.UpdateAlertConfigsPayloadRoute, error) {
 	routeModel := routeModel{}
-	diags = model.Route.As(ctx, &routeModel, basetypes.ObjectAsOptions{})
+	diags := model.Route.As(ctx, &routeModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
 	}
 
-	payload.Route = &argus.UpdateAlertConfigsPayloadRoute{
+	return &argus.UpdateAlertConfigsPayloadRoute{
 		Receiver: conversion.StringValueToPointer(routeModel.Receiver),
+	}, nil
+}
+
+func toGlobalConfigPayload(ctx context.Context, model *alertConfigModel) (*argus.UpdateAlertConfigsPayloadGlobal, error) {
+	globalConfigModel := globalConfigurationModel{}
+	diags := model.GlobalConfiguration.As(ctx, &globalConfigModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("mapping global configuration: %w", core.DiagsToError(diags))
 	}
 
-	return &payload, nil
+	return &argus.UpdateAlertConfigsPayloadGlobal{
+		OpsgenieApiKey:   conversion.StringValueToPointer(globalConfigModel.OpsgenieApiKey),
+		OpsgenieApiUrl:   conversion.StringValueToPointer(globalConfigModel.OpsgenieApiUrl),
+		ResolveTimeout:   conversion.StringValueToPointer(globalConfigModel.ResolveTimeout),
+		SmtpAuthIdentity: conversion.StringValueToPointer(globalConfigModel.SmtpAuthIdentity),
+		SmtpAuthPassword: conversion.StringValueToPointer(globalConfigModel.SmtpAuthPassword),
+		SmtpAuthUsername: conversion.StringValueToPointer(globalConfigModel.SmtpAuthUsername),
+		SmtpFrom:         conversion.StringValueToPointer(globalConfigModel.SmtpFrom),
+		SmtpSmarthost:    conversion.StringValueToPointer(globalConfigModel.SmtpSmartHost),
+	}, nil
 }
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {

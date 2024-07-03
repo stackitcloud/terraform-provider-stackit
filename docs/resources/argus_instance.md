@@ -72,6 +72,10 @@ Required:
 - `receivers` (Attributes List) List of alert receivers. (see [below for nested schema](#nestedatt--alert_config--receivers))
 - `route` (Attributes) Route configuration for the alerts. (see [below for nested schema](#nestedatt--alert_config--route))
 
+Optional:
+
+- `global` (Attributes) Global configuration for the alerts. (see [below for nested schema](#nestedatt--alert_config--global))
+
 <a id="nestedatt--alert_config--receivers"></a>
 ### Nested Schema for `alert_config.receivers`
 
@@ -124,3 +128,18 @@ Optional:
 Required:
 
 - `receiver` (String) The name of the receiver to route the alerts to.
+
+
+<a id="nestedatt--alert_config--global"></a>
+### Nested Schema for `alert_config.global`
+
+Optional:
+
+- `opsgenie_api_key` (String) The API key for OpsGenie.
+- `opsgenie_api_url` (String) The host to send OpsGenie API requests to. Must be a valid URL
+- `resolve_timeout` (String) ResolveTimeout is the default value used by alertmanager if the alert does not include EndsAt, after this time passes it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.
+- `smtp_auth_identity` (String) SMTP authentication information. Must be a valid email address
+- `smtp_auth_password` (String) SMTP Auth using LOGIN and PLAIN.
+- `smtp_auth_username` (String) SMTP Auth using CRAM-MD5, LOGIN and PLAIN. If empty, Alertmanager doesn't authenticate to the SMTP server.
+- `smtp_from` (String) The default SMTP From header field. Must be a valid email address
+- `smtp_smart_host` (String) The default SMTP smarthost used for sending emails, including port number. Port number usually is 25, or 587 for SMTP over TLS (sometimes referred to as STARTTLS).
