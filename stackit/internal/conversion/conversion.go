@@ -64,7 +64,7 @@ func FromTerraformStringMapToInterfaceMap(ctx context.Context, m basetypes.MapVa
 	labels := map[string]string{}
 	diags := m.ElementsAs(ctx, &labels, false)
 	if diags.HasError() {
-		return nil, fmt.Errorf("converting from MapValue: %v", core.DiagsToError(diags))
+		return nil, fmt.Errorf("converting from MapValue: %w", core.DiagsToError(diags))
 	}
 
 	interfaceMap := make(map[string]interface{}, len(labels))
