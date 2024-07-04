@@ -56,22 +56,20 @@ const alertConfig = `{
             "priority" : "P5"
           }
         ]
-      },
-      {
-        "name" : "example-receiver",
-        "emailConfigs" : [
-          {
-            "to" : "me@example.com"
-          }
-        ]
       }
     ],
 	"route" : {
-	  "receiver" : "OpsGenieReceiverInfo"
+	  "receiver" : "OpsGenieReceiverInfo",
+	  "groupBy" : ["alertname"],
+	  "groupInterval" : "5m",
+	  "groupWait" : "30s",
+	  "repeatInterval" : "1h",
 	},
 	"global" : {
-	  "smtpSmarthost" : "smtp.example.com:587",
-	  "smtpFrom" : "example@argus.stackit"
+      "resolve_timeout" = "5m"
+      "smtp_from"        = "argus@argus.stackit.cloud"
+      "opsgenie_api_key" = "example-api-key"
+      "opsgenie_api_url" = "https://api.eu.opsgenie.com"
     }
 }`
 

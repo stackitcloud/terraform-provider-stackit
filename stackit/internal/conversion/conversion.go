@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
 func ToString(ctx context.Context, v attr.Value) (string, error) {
@@ -56,6 +57,22 @@ func ToTerraformStringMap(ctx context.Context, m map[string]string) (basetypes.M
 	}
 
 	return res, nil
+}
+
+// FromTerraformStringMapToInterfaceMap converts a basetypes.MapValue of Strings to a map[string]interface{}.
+func FromTerraformStringMapToInterfaceMap(ctx context.Context, m basetypes.MapValue) (map[string]interface{}, error) {
+	labels := map[string]string{}
+	diags := m.ElementsAs(ctx, &labels, false)
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting from MapValue: %v", core.DiagsToError(diags))
+	}
+
+	interfaceMap := make(map[string]interface{}, len(labels))
+	for k, v := range labels {
+		interfaceMap[k] = v
+	}
+
+	return interfaceMap, nil
 }
 
 // StringValueToPointer converts basetypes.StringValue to a pointer to string.
