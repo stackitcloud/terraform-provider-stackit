@@ -988,7 +988,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Alert Config
-
 	if model.AlertConfig.IsUnknown() || model.AlertConfig.IsNull() {
 		alertConfig, err = getMockAlertConfig(ctx)
 		if err != nil {
@@ -1345,14 +1344,21 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		return alertConfigModel{}, fmt.Errorf("mapping receivers: %w", core.DiagsToError(diags))
 	}
 
+	mockGroupByList, diags := types.ListValueFrom(ctx, types.StringType, []attr.Value{
+		types.StringValue("job"),
+	})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping group by list: %w", core.DiagsToError(diags))
+	}
+
 	mockRoute, diags := types.ObjectValue(routeTypes, map[string]attr.Value{
-		"group_by":        types.ListNull(types.StringType),
-		"group_interval":  types.StringNull(),
-		"group_wait":      types.StringNull(),
+		"receiver":        types.StringValue("email-me"),
+		"group_by":        mockGroupByList,
+		"group_wait":      types.StringValue("30s"),
+		"group_interval":  types.StringValue("5m"),
+		"repeat_interval": types.StringValue("4h"),
 		"match":           types.MapNull(types.StringType),
 		"match_regex":     types.MapNull(types.StringType),
-		"receiver":        types.StringValue("email-me"),
-		"repeat_interval": types.StringNull(),
 	})
 	if diags.HasError() {
 		return alertConfigModel{}, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
@@ -1750,7 +1756,6 @@ func toRoutePayload(ctx context.Context, model *alertConfigModel) (*argus.Update
 		if diags.HasError() {
 			return nil, fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
 		}
-		tflog.Debug(ctx, fmt.Sprintf("group by payload: %v", groupByPayload))
 	}
 
 	if !routeModel.Match.IsNull() && !routeModel.Match.IsUnknown() {

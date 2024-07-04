@@ -28,7 +28,6 @@ var instanceResource = map[string]string{
 	"metrics_retention_days":                 "60",
 	"metrics_retention_days_5m_downsampling": "30",
 	"metrics_retention_days_1h_downsampling": "15",
-	"alert_config":                           alertConfig,
 }
 
 var scrapeConfigResource = map[string]string{
@@ -46,38 +45,95 @@ var credentialResource = map[string]string{
 	"project_id": testutil.ProjectId,
 }
 
-const alertConfig = `{
-    "receivers" : [
-      {
-        "name" : "OpsGenieReceiverInfo",
-        "opsgenieConfigs" : [
-          {
-            "tags" : "iam,argus-alert",
-            "priority" : "P5"
-          }
-        ]
-      }
-    ],
-	"route" : {
-	  "receiver" : "OpsGenieReceiverInfo",
-	  "groupBy" : ["alertname"],
-	  "groupInterval" : "5m",
-	  "groupWait" : "30s",
-	  "repeatInterval" : "1h",
-	},
-	"global" : {
-      "resolve_timeout" = "5m"
-      "smtp_from"        = "argus@argus.stackit.cloud"
-      "opsgenie_api_key" = "example-api-key"
-      "opsgenie_api_url" = "https://api.eu.opsgenie.com"
-    }
-}`
+func buildAlertConfigReceivers(hasOpsGenie, hasEmail, hasWebhook bool) string {
+	if !hasOpsGenie && !hasEmail && !hasWebhook {
+		return ""
+	}
 
-func instanceResourceConfig(acl, metricsRetentionDays, metricsRetentionDays1hDownsampling, metricsRetentionDays5mDownsampling *string, instanceName, planName string) string {
+	receivers := "["
+
+	if hasOpsGenie {
+		receivers += `
+	{
+		name = "OpsGenieReceiverInfo"
+		opsgenieConfigs = [
+			{
+				tags : "iam,argus-alert"
+				priority : "P5"
+			}
+		]
+	},
+`
+	}
+
+	if hasEmail {
+		receivers += `
+	{
+		"name" : "EmailReceiverInfo",
+		"emailConfigs" : [
+			{
+				"to" : "me@example.com"
+			},
+		]
+	},
+`
+	}
+
+	if hasWebhook {
+		receivers += `
+	{
+		"name" : "WebhookReceiverInfo",
+		"webhookConfigs" : [
+			{
+				"url" : "http://example.com"
+			},
+		]
+	},
+`
+	}
+
+	return receivers + "]"
+}
+
+func buildAlertConfigRoute() string {
+	return `{
+		receiver = "OpsGenieReceiverInfo"
+		groupBy = ["alertname"]
+		groupInterval = "5m"
+		groupWait = "30s"
+		repeatInterval = "1h"
+	}`
+}
+
+func buildAlertConfigGlobal() string {
+	return `{
+    	"resolve_timeout" = "5m"
+		"smtp_from"        = "argus@argus.stackit.cloud"
+		"opsgenie_api_key" = "example-api-key"
+    	"opsgenie_api_url" = "https://api.eu.opsgenie.com"
+	}`
+}
+
+func buildAlertConfig(receivers, route, global string) *string {
+	if receivers == "" && route == "" && global == "" {
+		return nil
+	}
+	returnStr := fmt.Sprintf(`
+	alert_config = {
+		receivers = %s,
+		route = %s,
+		global = %s
+	}
+	`, receivers, route, global)
+	return &returnStr
+}
+
+func instanceResourceConfig(acl, metricsRetentionDays, metricsRetentionDays1hDownsampling, metricsRetentionDays5mDownsampling, alertConfig *string, instanceName, planName string) string {
 	var aclStr string
 	var metricsRetentionDaysStr string
 	var metricsRetentionDays1hDownsamplingStr string
 	var metricsRetentionDays5mDownsamplingStr string
+	var alertConfigStr string
 
 	if acl != nil {
 		aclStr = fmt.Sprintf("acl = %s", *acl)
@@ -95,7 +151,11 @@ func instanceResourceConfig(acl, metricsRetentionDays, metricsRetentionDays1hDow
 		metricsRetentionDays5mDownsamplingStr = fmt.Sprintf("metrics_retention_days_5m_downsampling = %s", *metricsRetentionDays5mDownsampling)
 	}
 
-	optionalsStr := strings.Join([]string{aclStr, metricsRetentionDaysStr, metricsRetentionDays1hDownsamplingStr, metricsRetentionDays5mDownsamplingStr}, "\n")
+	if alertConfig != nil {
+		alertConfigStr = *alertConfig
+	}
+
+	optionalsStr := strings.Join([]string{aclStr, metricsRetentionDaysStr, metricsRetentionDays1hDownsamplingStr, metricsRetentionDays5mDownsamplingStr, alertConfigStr}, "\n")
 
 	return fmt.Sprintf(`
 		resource "stackit_argus_instance" "instance" {
@@ -142,10 +202,16 @@ func credentialResourceConfig() string {
 	}`
 }
 
-func resourceConfig(acl, metricsRetentionDays, metricsRetentionDays1hDownsampling, metricsRetentionDays5mDownsampling *string, instanceName, planName, target, saml2EnableUrlParameters string) string {
+func resourceConfig(acl, metricsRetentionDays, metricsRetentionDays1hDownsampling, metricsRetentionDays5mDownsampling, alertConfig *string, instanceName, planName, target, saml2EnableUrlParameters string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
 		testutil.ArgusProviderConfig(),
-		instanceResourceConfig(acl, metricsRetentionDays, metricsRetentionDays1hDownsampling, metricsRetentionDays5mDownsampling, instanceName, planName),
+		instanceResourceConfig(acl,
+			metricsRetentionDays,
+			metricsRetentionDays1hDownsampling,
+			metricsRetentionDays5mDownsampling,
+			alertConfig,
+			instanceName,
+			planName),
 		scrapeConfigResourceConfig(target, saml2EnableUrlParameters),
 		credentialResourceConfig(),
 	)
@@ -168,6 +234,7 @@ func TestAccResource(t *testing.T) {
 					utils.Ptr(instanceResource["metrics_retention_days"]),
 					utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
 					utils.Ptr(instanceResource["metrics_retention_days_5m_downsampling"]),
+					buildAlertConfig(buildAlertConfigReceivers(true, true, true), buildAlertConfigRoute(), buildAlertConfigGlobal()),
 					instanceResource["name"],
 					instanceResource["plan_name"],
 					scrapeConfigResource["urls"],
@@ -238,6 +305,7 @@ func TestAccResource(t *testing.T) {
 					nil,
 					utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
 					nil,
+					nil,
 					instanceResource["name"],
 					instanceResource["plan_name"],
 					scrapeConfigResource["urls"],
@@ -306,6 +374,7 @@ func TestAccResource(t *testing.T) {
 					nil,
 					nil,
 					nil,
+					nil,
 					instanceResource["name"],
 					instanceResource["plan_name"],
 					scrapeConfigResource["urls"],
@@ -367,8 +436,8 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "password"),
 				),
 			},
+			// Data source
 			{
-				// Data source
 				Config: fmt.Sprintf(`
 					%s
 
@@ -392,6 +461,7 @@ func TestAccResource(t *testing.T) {
 						utils.Ptr(instanceResource["metrics_retention_days"]),
 						utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
 						utils.Ptr(instanceResource["metrics_retention_days_5m_downsampling"]),
+						buildAlertConfig(buildAlertConfigReceivers(true, true, true), buildAlertConfigRoute(), buildAlertConfigGlobal()),
 						instanceResource["name"],
 						instanceResource["plan_name"],
 						scrapeConfigResource["urls"],
@@ -437,8 +507,7 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_argus_scrapeconfig.scrapeconfig", "saml2.enable_url_parameters", scrapeConfigResource["saml2_enable_url_parameters"]),
 				),
 			},
-
-			// Import
+			// Import 1
 			{
 				ResourceName: "stackit_argus_instance.instance",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
@@ -456,6 +525,7 @@ func TestAccResource(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
+			// Import 2
 			{
 				ResourceName: "stackit_argus_scrapeconfig.scrapeconfig",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
@@ -487,6 +557,7 @@ func TestAccResource(t *testing.T) {
 					utils.Ptr(instanceResource["metrics_retention_days"]),
 					utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
 					utils.Ptr(instanceResource["metrics_retention_days_5m_downsampling"]),
+					buildAlertConfig(buildAlertConfigReceivers(true, true, true), buildAlertConfigRoute(), buildAlertConfigGlobal()),
 					fmt.Sprintf("%s-new", instanceResource["name"]),
 					instanceResource["new_plan_name"],
 					"",
