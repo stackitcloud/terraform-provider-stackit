@@ -1636,6 +1636,10 @@ func toUpdateAlertConfigPayload(ctx context.Context, model *alertConfigModel) (*
 		return nil, fmt.Errorf("receivers in the model are null or unknown")
 	}
 
+	if model.Route.IsNull() || model.Route.IsUnknown() {
+		return nil, fmt.Errorf("route in the model is null or unknown")
+	}
+
 	var err error
 
 	payload := argus.UpdateAlertConfigsPayload{}

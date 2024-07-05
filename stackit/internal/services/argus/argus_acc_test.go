@@ -54,25 +54,25 @@ func buildAlertConfigReceivers(hasOpsGenie, hasEmail, hasWebhook bool) string {
 
 	if hasOpsGenie {
 		receivers += `
-	{
-		name = "OpsGenieReceiverInfo"
-		opsgenieConfigs = [
-			{
-				tags : "iam,argus-alert"
-				priority : "P5"
-			}
-		]
-	},
+      {
+        name = "OpsGenieReceiverInfo"
+        opsgenie_configs = [
+          {
+            tags    = "iam,argus-alert"
+            api_key = "example-api-key"
+          }
+        ]
+      },
 `
 	}
 
 	if hasEmail {
 		receivers += `
 	{
-		"name" : "EmailReceiverInfo",
-		"emailConfigs" : [
+		name = "EmailReceiverInfo"
+		email_configs = [
 			{
-				"to" : "me@example.com"
+				to = "me@example.com"
 			},
 		]
 	},
@@ -81,14 +81,15 @@ func buildAlertConfigReceivers(hasOpsGenie, hasEmail, hasWebhook bool) string {
 
 	if hasWebhook {
 		receivers += `
-	{
-		"name" : "WebhookReceiverInfo",
-		"webhookConfigs" : [
-			{
-				"url" : "http://example.com"
-			},
-		]
-	},
+      {
+        name = "WebhookReceiverInfo"
+        webhooks_configs = [
+          {
+            url      = "https://example.com"
+            ms_teams = true
+          },
+        ]
+      },
 `
 	}
 
@@ -97,21 +98,27 @@ func buildAlertConfigReceivers(hasOpsGenie, hasEmail, hasWebhook bool) string {
 
 func buildAlertConfigRoute() string {
 	return `{
-		receiver = "OpsGenieReceiverInfo"
-		groupBy = ["alertname"]
-		groupInterval = "5m"
-		groupWait = "30s"
-		repeatInterval = "1h"
+      receiver        = "OpsGenieReceiverInfo"
+      group_by        = ["alertname"]
+      group_interval  = "10m"
+      group_wait      = "1m"
+      repeat_interval = "1h"
 	}`
 }
 
-func buildAlertConfigGlobal() string {
-	return `{
-    	"resolve_timeout" = "5m"
-		"smtp_from"        = "argus@argus.stackit.cloud"
-		"opsgenie_api_key" = "example-api-key"
-    	"opsgenie_api_url" = "https://api.eu.opsgenie.com"
-	}`
+func buildAlertConfigGlobal(includeEmailOptions bool) string {
+	defaultOptions := `{
+    	resolve_timeout = "5m"
+		opsgenie_api_key = "example-api-key"
+    	opsgenie_api_url = "https://api.eu.opsgenie.com"`
+
+	if !includeEmailOptions {
+		return defaultOptions + "\n}"
+	}
+	return defaultOptions + `
+		smtp_smart_host = "smtp.example.com:587"
+		smtp_from = "me@example.com"
+}`
 }
 
 func buildAlertConfig(receivers, route, global string) *string {
@@ -234,7 +241,7 @@ func TestAccResource(t *testing.T) {
 					utils.Ptr(instanceResource["metrics_retention_days"]),
 					utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
 					utils.Ptr(instanceResource["metrics_retention_days_5m_downsampling"]),
-					buildAlertConfig(buildAlertConfigReceivers(true, true, true), buildAlertConfigRoute(), buildAlertConfigGlobal()),
+					buildAlertConfig(buildAlertConfigReceivers(true, false, true), buildAlertConfigRoute(), buildAlertConfigGlobal(false)),
 					instanceResource["name"],
 					instanceResource["plan_name"],
 					scrapeConfigResource["urls"],
@@ -265,6 +272,27 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "jaeger_ui_url"),
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "otlp_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "zipkin_spans_url"),
+
+					// Alert Config
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.#", "2"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.group_by.#", "1"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.group_by.0", "alertname"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.group_interval", "10m"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.group_wait", "1m"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.repeat_interval", "1h"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.global.resolve_timeout", "5m"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.global.opsgenie_api_key", "example-api-key"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.global.opsgenie_api_url", "https://api.eu.opsgenie.com"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.receiver", "OpsGenieReceiverInfo"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.0.name", "OpsGenieReceiverInfo"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.0.opsgenie_configs.#", "1"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.tags", "iam,argus-alert"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.api_key",
+						"example-api-key"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.1.name", "WebhookReceiverInfo"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.1.webhooks_configs.#", "1"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.1.webhooks_configs.0.url", "https://example.com"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.1.webhooks_configs.0.ms_teams", "true"),
 
 					// ACL
 					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "acl.#", "2"),
@@ -298,7 +326,112 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "password"),
 				),
 			},
-			// Creation without ACL and partial metrics retention days
+			// Creation with Alert Configs emailConfigs and global options
+			{
+				Config: resourceConfig(
+					utils.Ptr(fmt.Sprintf(
+						"[%q, %q, %q]",
+						instanceResource["acl-0"],
+						instanceResource["acl-1"],
+						instanceResource["acl-1"],
+					)),
+					utils.Ptr(instanceResource["metrics_retention_days"]),
+					utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
+					utils.Ptr(instanceResource["metrics_retention_days_5m_downsampling"]),
+					buildAlertConfig(buildAlertConfigReceivers(true, true, true), buildAlertConfigRoute(), buildAlertConfigGlobal(true)),
+					instanceResource["name"],
+					instanceResource["plan_name"],
+					scrapeConfigResource["urls"],
+					scrapeConfigResource["saml2_enable_url_parameters"],
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance data
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "instance_id"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "plan_name", instanceResource["plan_name"]),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "dashboard_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "is_updatable"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "grafana_public_read_access"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "grafana_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "grafana_initial_admin_user"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "grafana_initial_admin_password"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "metrics_retention_days", instanceResource["metrics_retention_days"]),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "metrics_retention_days_5m_downsampling", instanceResource["metrics_retention_days_5m_downsampling"]),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "metrics_retention_days_1h_downsampling", instanceResource["metrics_retention_days_1h_downsampling"]),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "metrics_push_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "targets_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "alerting_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "logs_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "logs_push_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "jaeger_traces_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "jaeger_ui_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "otlp_traces_url"),
+					resource.TestCheckResourceAttrSet("stackit_argus_instance.instance", "zipkin_spans_url"),
+
+					// Alert Config
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.#", "3"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.group_by.#", "1"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.group_by.0", "alertname"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.group_interval", "10m"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.group_wait", "1m"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.repeat_interval", "1h"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.global.resolve_timeout", "5m"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.global.opsgenie_api_key", "example-api-key"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.global.opsgenie_api_url", "https://api.eu.opsgenie.com"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.global.smtp_smart_host", "smtp.example.com:587"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.global.smtp_from", "me@example.com"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.receiver", "OpsGenieReceiverInfo"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.0.name", "OpsGenieReceiverInfo"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.0.opsgenie_configs.#", "1"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.tags", "iam,argus-alert"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.api_key",
+						"example-api-key"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.1.name", "EmailReceiverInfo"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.1.email_configs.#", "1"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.1.email_configs.0.to", "me@example.com"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.2.name", "WebhookReceiverInfo"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.2.webhooks_configs.#", "1"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.2.webhooks_configs.0.url", "https://example.com"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.2.webhooks_configs.0.ms_teams", "true"),
+
+					// ACL
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "acl.#", "2"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "acl.0", instanceResource["acl-0"]),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "acl.1", instanceResource["acl-1"]),
+
+					// scrape config data
+					resource.TestCheckResourceAttrPair(
+						"stackit_argus_instance.instance", "project_id",
+						"stackit_argus_scrapeconfig.scrapeconfig", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_argus_instance.instance", "instance_id",
+						"stackit_argus_scrapeconfig.scrapeconfig", "instance_id",
+					),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "name", scrapeConfigResource["name"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "targets.0.urls.#", "2"),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "metrics_path", scrapeConfigResource["metrics_path"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "scheme", scrapeConfigResource["scheme"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "scrape_interval", scrapeConfigResource["scrape_interval"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "sample_limit", scrapeConfigResource["sample_limit"]),
+					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "saml2.enable_url_parameters", scrapeConfigResource["saml2_enable_url_parameters"]),
+
+					// credentials
+					resource.TestCheckResourceAttr("stackit_argus_credential.credential", "project_id", credentialResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_argus_instance.instance", "instance_id",
+						"stackit_argus_credential.credential", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "username"),
+					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "password"),
+				),
+				// This is needed because the GET request to the alert config endpoint doesn't return some of the global options
+				// and the emailConfigs. Therefore, the state file doesn't contain them and the diff will fail.
+				ExpectNonEmptyPlan: true,
+			},
+			// Creation without ACL, partial metrics retention days and NO alert configs
 			{
 				Config: resourceConfig(
 					nil,
@@ -367,7 +500,7 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "password"),
 				),
 			},
-			// Creation with empty ACL
+			// Creation with empty ACL, NO metrics retention days and NO alert configs
 			{
 				Config: resourceConfig(
 					utils.Ptr("[]"),
@@ -461,7 +594,7 @@ func TestAccResource(t *testing.T) {
 						utils.Ptr(instanceResource["metrics_retention_days"]),
 						utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
 						utils.Ptr(instanceResource["metrics_retention_days_5m_downsampling"]),
-						buildAlertConfig(buildAlertConfigReceivers(true, true, true), buildAlertConfigRoute(), buildAlertConfigGlobal()),
+						buildAlertConfig(buildAlertConfigReceivers(true, false, true), buildAlertConfigRoute(), buildAlertConfigGlobal(false)),
 						instanceResource["name"],
 						instanceResource["plan_name"],
 						scrapeConfigResource["urls"],
@@ -557,7 +690,7 @@ func TestAccResource(t *testing.T) {
 					utils.Ptr(instanceResource["metrics_retention_days"]),
 					utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
 					utils.Ptr(instanceResource["metrics_retention_days_5m_downsampling"]),
-					buildAlertConfig(buildAlertConfigReceivers(true, true, true), buildAlertConfigRoute(), buildAlertConfigGlobal()),
+					buildAlertConfig(buildAlertConfigReceivers(true, false, true), buildAlertConfigRoute(), buildAlertConfigGlobal(false)),
 					fmt.Sprintf("%s-new", instanceResource["name"]),
 					instanceResource["new_plan_name"],
 					"",
@@ -572,6 +705,27 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "acl.#", "2"),
 					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "acl.0", instanceResource["acl-0"]),
 					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "acl.1", instanceResource["acl-1-updated"]),
+
+					// Alert Config
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.group_by.#", "1"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.group_by.0", "alertname"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.group_interval", "10m"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.group_wait", "1m"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.repeat_interval", "1h"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.global.resolve_timeout", "5m"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.global.opsgenie_api_key", "example-api-key"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.global.opsgenie_api_url", "https://api.eu.opsgenie.com"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.route.receiver", "OpsGenieReceiverInfo"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.#", "2"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.0.name", "OpsGenieReceiverInfo"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.0.opsgenie_configs.#", "1"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.tags", "iam,argus-alert"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.api_key",
+						"example-api-key"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.1.name", "WebhookReceiverInfo"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.1.webhooks_configs.#", "1"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.1.webhooks_configs.0.url", "https://example.com"),
+					resource.TestCheckResourceAttr("stackit_argus_instance.instance", "alert_config.receivers.1.webhooks_configs.0.ms_teams", "true"),
 
 					// Scrape Config
 					resource.TestCheckResourceAttr("stackit_argus_scrapeconfig.scrapeconfig", "name", scrapeConfigResource["name"]),
