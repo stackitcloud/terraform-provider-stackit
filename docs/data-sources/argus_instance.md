@@ -70,11 +70,11 @@ Read-Only:
 
 Read-Only:
 
-- `opsgenie_api_key` (String) The API key for OpsGenie.
+- `opsgenie_api_key` (String, Sensitive) The API key for OpsGenie.
 - `opsgenie_api_url` (String) The host to send OpsGenie API requests to. Must be a valid URL
-- `resolve_timeout` (String) ResolveTimeout is the default value used by alertmanager if the alert does not include EndsAt, after this time passes it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.
+- `resolve_timeout` (String) The default value used by alertmanager if the alert does not include EndsAt. After this time passes, it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.
 - `smtp_auth_identity` (String) SMTP authentication information. Must be a valid email address
-- `smtp_auth_password` (String) SMTP Auth using LOGIN and PLAIN.
+- `smtp_auth_password` (String, Sensitive) SMTP Auth using LOGIN and PLAIN.
 - `smtp_auth_username` (String) SMTP Auth using CRAM-MD5, LOGIN and PLAIN. If empty, Alertmanager doesn't authenticate to the SMTP server.
 - `smtp_from` (String) The default SMTP From header field. Must be a valid email address
 - `smtp_smart_host` (String) The default SMTP smarthost used for sending emails, including port number. Port number usually is 25, or 587 for SMTP over TLS (sometimes referred to as STARTTLS).
@@ -128,4 +128,10 @@ Read-Only:
 
 Read-Only:
 
-- `receiver` (String) The name of the receiver to send the alert to.
+- `group_by` (List of String) The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.
+- `group_interval` (String) How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)
+- `group_wait` (String) How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .
+- `match` (Map of String) A set of equality matchers an alert has to fulfill to match the node.
+- `match_regex` (Map of String) A set of regex-matchers an alert has to fulfill to match the node.
+- `receiver` (String) The name of the receiver to route the alerts to.
+- `repeat_interval` (String) How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).

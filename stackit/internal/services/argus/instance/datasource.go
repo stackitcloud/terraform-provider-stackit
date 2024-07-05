@@ -292,8 +292,35 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: "The route for the alert.",
 						Computed:    true,
 						Attributes: map[string]schema.Attribute{
+							"group_by": schema.ListAttribute{
+								Description: "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
+								Computed:    true,
+								ElementType: types.StringType,
+							},
+							"group_interval": schema.StringAttribute{
+								Description: "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
+								Computed:    true,
+							},
+							"group_wait": schema.StringAttribute{
+								Description: "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .",
+								Computed:    true,
+							},
+							"match": schema.MapAttribute{
+								Description: "A set of equality matchers an alert has to fulfill to match the node.",
+								Computed:    true,
+								ElementType: types.StringType,
+							},
+							"match_regex": schema.MapAttribute{
+								Description: "A set of regex-matchers an alert has to fulfill to match the node.",
+								Computed:    true,
+								ElementType: types.StringType,
+							},
 							"receiver": schema.StringAttribute{
-								Description: "The name of the receiver to send the alert to.",
+								Description: "The name of the receiver to route the alerts to.",
+								Computed:    true,
+							},
+							"repeat_interval": schema.StringAttribute{
+								Description: "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
 								Computed:    true,
 							},
 						},

@@ -107,11 +107,23 @@ var globalConfigurationTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.AlertConfig.route
 type routeModel struct {
-	Receiver types.String `tfsdk:"receiver"`
+	GroupBy        types.List   `tfsdk:"group_by"`
+	GroupInterval  types.String `tfsdk:"group_interval"`
+	GroupWait      types.String `tfsdk:"group_wait"`
+	Match          types.Map    `tfsdk:"match"`
+	MatchRegex     types.Map    `tfsdk:"match_regex"`
+	Receiver       types.String `tfsdk:"receiver"`
+	RepeatInterval types.String `tfsdk:"repeat_interval"`
 }
 
 var routeTypes = map[string]attr.Type{
-	"receiver": types.StringType,
+	"group_by":        types.ListType{ElemType: types.StringType},
+	"group_interval":  types.StringType,
+	"group_wait":      types.StringType,
+	"match":           types.MapType{ElemType: types.StringType},
+	"match_regex":     types.MapType{ElemType: types.StringType},
+	"receiver":        types.StringType,
+	"repeat_interval": types.StringType,
 }
 
 // Struct corresponding to Model.AlertConfig.receivers
@@ -480,9 +492,42 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: "Route configuration for the alerts.",
 						Required:    true,
 						Attributes: map[string]schema.Attribute{
+							"group_by": schema.ListAttribute{
+								Description: "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+							},
+							"group_interval": schema.StringAttribute{
+								Description: "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
+								Optional:    true,
+								Computed:    true,
+							},
+							"group_wait": schema.StringAttribute{
+								Description: "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .",
+								Optional:    true,
+								Computed:    true,
+							},
+							"match": schema.MapAttribute{
+								Description: "A set of equality matchers an alert has to fulfill to match the node.",
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+							},
+							"match_regex": schema.MapAttribute{
+								Description: "A set of regex-matchers an alert has to fulfill to match the node.",
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+							},
 							"receiver": schema.StringAttribute{
 								Description: "The name of the receiver to route the alerts to.",
 								Required:    true,
+							},
+							"repeat_interval": schema.StringAttribute{
+								Description: "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
+								Optional:    true,
+								Computed:    true,
 							},
 						},
 					},
@@ -943,7 +988,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Alert Config
-
 	if model.AlertConfig.IsUnknown() || model.AlertConfig.IsNull() {
 		alertConfig, err = getMockAlertConfig(ctx)
 		if err != nil {
@@ -1159,7 +1203,7 @@ func mapMetricsRetentionField(r *argus.GetMetricsStorageRetentionResponse, model
 }
 
 func mapUpdateAlertConfigField(ctx context.Context, resp *argus.UpdateAlertConfigsResponse, model *Model) error {
-	if resp == nil || resp.Data == nil || resp.Data.Receivers == nil || resp.Data.Route == nil {
+	if resp == nil || resp.Data == nil {
 		model.AlertConfig = types.ObjectNull(alertConfigTypes)
 		return nil
 	}
@@ -1168,8 +1212,8 @@ func mapUpdateAlertConfigField(ctx context.Context, resp *argus.UpdateAlertConfi
 		return fmt.Errorf("nil model")
 	}
 
-	respReceivers := *resp.Data.Receivers
-	respRoute := *resp.Data.Route
+	respReceivers := resp.Data.Receivers
+	respRoute := resp.Data.Route
 	respGlobalConfig := resp.Data.Global
 
 	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute, respGlobalConfig)
@@ -1182,7 +1226,7 @@ func mapUpdateAlertConfigField(ctx context.Context, resp *argus.UpdateAlertConfi
 }
 
 func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsResponse, model *Model) error {
-	if resp == nil || resp.Data == nil || resp.Data.Receivers == nil || resp.Data.Route == nil {
+	if resp == nil || resp.Data == nil {
 		model.AlertConfig = types.ObjectNull(alertConfigTypes)
 		return nil
 	}
@@ -1191,8 +1235,8 @@ func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsRespons
 		return fmt.Errorf("nil model")
 	}
 
-	respReceivers := *resp.Data.Receivers
-	respRoute := *resp.Data.Route
+	respReceivers := resp.Data.Receivers
+	respRoute := resp.Data.Route
 	respGlobalConfig := resp.Data.Global
 
 	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute, respGlobalConfig)
@@ -1204,13 +1248,13 @@ func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsRespons
 	return nil
 }
 
-func mapAlertConfigAttribute(ctx context.Context, respReceivers []argus.Receivers, respRoute argus.Route, respGlobalConfigs *argus.Global) (basetypes.ObjectValue, error) {
+func mapAlertConfigAttribute(ctx context.Context, respReceivers *[]argus.Receivers, respRoute *argus.Route, respGlobalConfigs *argus.Global) (basetypes.ObjectValue, error) {
 	receiversList, err := mapReceiversToAttributes(ctx, respReceivers)
 	if err != nil {
 		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping receivers: %w", err)
 	}
 
-	route, err := mapRouteToAttributes(respRoute)
+	route, err := mapRouteToAttributes(ctx, respRoute)
 	if err != nil {
 		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping route: %w", err)
 	}
@@ -1300,8 +1344,21 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		return alertConfigModel{}, fmt.Errorf("mapping receivers: %w", core.DiagsToError(diags))
 	}
 
+	mockGroupByList, diags := types.ListValueFrom(ctx, types.StringType, []attr.Value{
+		types.StringValue("job"),
+	})
+	if diags.HasError() {
+		return alertConfigModel{}, fmt.Errorf("mapping group by list: %w", core.DiagsToError(diags))
+	}
+
 	mockRoute, diags := types.ObjectValue(routeTypes, map[string]attr.Value{
-		"receiver": types.StringValue("email-me"),
+		"receiver":        types.StringValue("email-me"),
+		"group_by":        mockGroupByList,
+		"group_wait":      types.StringValue("30s"),
+		"group_interval":  types.StringValue("5m"),
+		"repeat_interval": types.StringValue("4h"),
+		"match":           types.MapNull(types.StringType),
+		"match_regex":     types.MapNull(types.StringType),
 	})
 	if diags.HasError() {
 		return alertConfigModel{}, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
@@ -1350,7 +1407,10 @@ func mapGlobalConfigToAttributes(respGlobalConfigs *argus.Global) (basetypes.Obj
 	return globalConfigObject, nil
 }
 
-func mapReceiversToAttributes(ctx context.Context, respReceivers []argus.Receivers) (basetypes.ListValue, error) {
+func mapReceiversToAttributes(ctx context.Context, respReceivers *[]argus.Receivers) (basetypes.ListValue, error) {
+	if respReceivers == nil {
+		return types.ListNull(types.ObjectType{AttrTypes: receiversTypes}), nil
+	}
 	receiversList := []attr.Value{}
 	emptyList, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{})
 	if diags.HasError() {
@@ -1358,12 +1418,12 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers []argus.Receive
 		return emptyList, fmt.Errorf("mapping empty list: %w", core.DiagsToError(diags))
 	}
 
-	if len(respReceivers) == 0 {
+	if len(*respReceivers) == 0 {
 		return emptyList, nil
 	}
 
-	for i := range respReceivers {
-		receiver := respReceivers[i]
+	for i := range *respReceivers {
+		receiver := (*respReceivers)[i]
 
 		emailConfigList := []attr.Value{}
 		if receiver.EmailConfigs != nil {
@@ -1452,9 +1512,33 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers []argus.Receive
 	return returnReceiversList, nil
 }
 
-func mapRouteToAttributes(route argus.Route) (attr.Value, error) {
+func mapRouteToAttributes(ctx context.Context, route *argus.Route) (attr.Value, error) {
+	if route == nil {
+		return types.ObjectNull(routeTypes), nil
+	}
+	groupByModel, diags := types.ListValueFrom(ctx, types.StringType, route.GroupBy)
+	if diags.HasError() {
+		return types.ObjectNull(routeTypes), fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
+	}
+
+	matchModel, diags := types.MapValueFrom(ctx, types.StringType, route.Match)
+	if diags.HasError() {
+		return types.ObjectNull(routeTypes), fmt.Errorf("mapping match: %w", core.DiagsToError(diags))
+	}
+
+	matchRegexModel, diags := types.MapValueFrom(ctx, types.StringType, route.MatchRe)
+	if diags.HasError() {
+		return types.ObjectNull(routeTypes), fmt.Errorf("mapping match regex: %w", core.DiagsToError(diags))
+	}
+
 	routeMap := map[string]attr.Value{
-		"receiver": types.StringPointerValue(route.Receiver),
+		"group_by":        groupByModel,
+		"group_interval":  types.StringPointerValue(route.GroupInterval),
+		"group_wait":      types.StringPointerValue(route.GroupWait),
+		"match":           matchModel,
+		"match_regex":     matchRegexModel,
+		"receiver":        types.StringPointerValue(route.Receiver),
+		"repeat_interval": types.StringPointerValue(route.RepeatInterval),
 	}
 
 	routeModel, diags := types.ObjectValue(routeTypes, routeMap)
@@ -1550,6 +1634,10 @@ func toUpdateAlertConfigPayload(ctx context.Context, model *alertConfigModel) (*
 	}
 	if model.Receivers.IsNull() || model.Receivers.IsUnknown() {
 		return nil, fmt.Errorf("receivers in the model are null or unknown")
+	}
+
+	if model.Route.IsNull() || model.Route.IsUnknown() {
+		return nil, fmt.Errorf("route in the model is null or unknown")
 	}
 
 	var err error
@@ -1662,8 +1750,42 @@ func toRoutePayload(ctx context.Context, model *alertConfigModel) (*argus.Update
 		return nil, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
 	}
 
+	var groupByPayload *[]string
+	var matchPayload *map[string]interface{}
+	var matchRegexPayload *map[string]interface{}
+
+	if !routeModel.GroupBy.IsNull() && !routeModel.GroupBy.IsUnknown() {
+		groupByPayload = &[]string{}
+		diags := routeModel.GroupBy.ElementsAs(ctx, groupByPayload, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
+		}
+	}
+
+	if !routeModel.Match.IsNull() && !routeModel.Match.IsUnknown() {
+		matchMap, err := conversion.ToStringInterfaceMap(ctx, routeModel.Match)
+		if err != nil {
+			return nil, fmt.Errorf("mapping match: %w", err)
+		}
+		matchPayload = &matchMap
+	}
+
+	if !routeModel.MatchRegex.IsNull() && !routeModel.MatchRegex.IsUnknown() {
+		matchRegexMap, err := conversion.ToStringInterfaceMap(ctx, routeModel.MatchRegex)
+		if err != nil {
+			return nil, fmt.Errorf("mapping match regex: %w", err)
+		}
+		matchRegexPayload = &matchRegexMap
+	}
+
 	return &argus.UpdateAlertConfigsPayloadRoute{
-		Receiver: conversion.StringValueToPointer(routeModel.Receiver),
+		GroupBy:        groupByPayload,
+		GroupInterval:  conversion.StringValueToPointer(routeModel.GroupInterval),
+		GroupWait:      conversion.StringValueToPointer(routeModel.GroupWait),
+		Match:          matchPayload,
+		MatchRe:        matchRegexPayload,
+		Receiver:       conversion.StringValueToPointer(routeModel.Receiver),
+		RepeatInterval: conversion.StringValueToPointer(routeModel.RepeatInterval),
 	}, nil
 }
 
