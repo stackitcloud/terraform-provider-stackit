@@ -69,7 +69,7 @@ func TestFromTerraformStringMapToInterfaceMap(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := FromTerraformStringMapToInterfaceMap(tt.args.ctx, tt.args.m)
+			got, err := ToStringInterfaceMap(tt.args.ctx, tt.args.m)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("FromTerraformStringMapToInterfaceMap() error = %v, wantErr %v", err, tt.wantErr)
 				return

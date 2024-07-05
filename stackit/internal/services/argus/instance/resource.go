@@ -1759,7 +1759,7 @@ func toRoutePayload(ctx context.Context, model *alertConfigModel) (*argus.Update
 	}
 
 	if !routeModel.Match.IsNull() && !routeModel.Match.IsUnknown() {
-		matchMap, err := conversion.FromTerraformStringMapToInterfaceMap(ctx, routeModel.Match)
+		matchMap, err := conversion.ToStringInterfaceMap(ctx, routeModel.Match)
 		if err != nil {
 			return nil, fmt.Errorf("mapping match: %w", err)
 		}
@@ -1767,7 +1767,7 @@ func toRoutePayload(ctx context.Context, model *alertConfigModel) (*argus.Update
 	}
 
 	if !routeModel.MatchRegex.IsNull() && !routeModel.MatchRegex.IsUnknown() {
-		matchRegexMap, err := conversion.FromTerraformStringMapToInterfaceMap(ctx, routeModel.MatchRegex)
+		matchRegexMap, err := conversion.ToStringInterfaceMap(ctx, routeModel.MatchRegex)
 		if err != nil {
 			return nil, fmt.Errorf("mapping match regex: %w", err)
 		}

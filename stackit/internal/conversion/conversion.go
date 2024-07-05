@@ -59,8 +59,8 @@ func ToTerraformStringMap(ctx context.Context, m map[string]string) (basetypes.M
 	return res, nil
 }
 
-// FromTerraformStringMapToInterfaceMap converts a basetypes.MapValue of Strings to a map[string]interface{}.
-func FromTerraformStringMapToInterfaceMap(ctx context.Context, m basetypes.MapValue) (map[string]interface{}, error) {
+// ToStringInterfaceMap converts a basetypes.MapValue of Strings to a map[string]interface{}.
+func ToStringInterfaceMap(ctx context.Context, m basetypes.MapValue) (map[string]interface{}, error) {
 	labels := map[string]string{}
 	diags := m.ElementsAs(ctx, &labels, false)
 	if diags.HasError() {

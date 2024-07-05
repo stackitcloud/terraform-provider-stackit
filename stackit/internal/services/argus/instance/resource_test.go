@@ -166,7 +166,7 @@ func fixtureGlobalConfigPayload() *argus.UpdateAlertConfigsPayloadGlobal {
 	}
 }
 
-func fixtureReceiverGetPayload(emailConfigs *[]argus.EmailConfig, opsGenieConfigs *[]argus.OpsgenieConfig, webhookConfigs *[]argus.WebHook) argus.Receivers {
+func fixtureReceiverResponse(emailConfigs *[]argus.EmailConfig, opsGenieConfigs *[]argus.OpsgenieConfig, webhookConfigs *[]argus.WebHook) argus.Receivers {
 	return argus.Receivers{
 		Name:            utils.Ptr("name"),
 		EmailConfigs:    emailConfigs,
@@ -175,7 +175,7 @@ func fixtureReceiverGetPayload(emailConfigs *[]argus.EmailConfig, opsGenieConfig
 	}
 }
 
-func fixtureEmailConfigsGetPayload() argus.EmailConfig {
+func fixtureEmailConfigsResponse() argus.EmailConfig {
 	return argus.EmailConfig{
 		AuthIdentity: utils.Ptr("identity"),
 		AuthPassword: utils.Ptr("password"),
@@ -186,7 +186,7 @@ func fixtureEmailConfigsGetPayload() argus.EmailConfig {
 	}
 }
 
-func fixtureOpsGenieConfigsGetPayload() argus.OpsgenieConfig {
+func fixtureOpsGenieConfigsResponse() argus.OpsgenieConfig {
 	return argus.OpsgenieConfig{
 		ApiKey: utils.Ptr("key"),
 		Tags:   utils.Ptr("tag"),
@@ -194,14 +194,14 @@ func fixtureOpsGenieConfigsGetPayload() argus.OpsgenieConfig {
 	}
 }
 
-func fixtureWebHooksConfigsGetPayload() argus.WebHook {
+func fixtureWebHooksConfigsResponse() argus.WebHook {
 	return argus.WebHook{
 		Url:     utils.Ptr("http://example.com"),
 		MsTeams: utils.Ptr(true),
 	}
 }
 
-func fixtureRouteGetPayload() *argus.Route {
+func fixtureRouteResponse() *argus.Route {
 	return &argus.Route{
 		GroupBy:        utils.Ptr([]string{"label1", "label2"}),
 		GroupInterval:  utils.Ptr("1m"),
@@ -213,7 +213,7 @@ func fixtureRouteGetPayload() *argus.Route {
 	}
 }
 
-func fixtureGlobalConfigGetPayload() *argus.Global {
+func fixtureGlobalConfigResponse() *argus.Global {
 	return &argus.Global{
 		OpsgenieApiKey:   utils.Ptr("key"),
 		OpsgenieApiUrl:   utils.Ptr("ops.example.com"),
@@ -497,20 +497,20 @@ func TestMapAlertConfigField(t *testing.T) {
 			alertConfigResp: &argus.GetAlertConfigsResponse{
 				Data: &argus.Alert{
 					Receivers: &[]argus.Receivers{
-						fixtureReceiverGetPayload(
+						fixtureReceiverResponse(
 							&[]argus.EmailConfig{
-								fixtureEmailConfigsGetPayload(),
+								fixtureEmailConfigsResponse(),
 							},
 							&[]argus.OpsgenieConfig{
-								fixtureOpsGenieConfigsGetPayload(),
+								fixtureOpsGenieConfigsResponse(),
 							},
 							&[]argus.WebHook{
-								fixtureWebHooksConfigsGetPayload(),
+								fixtureWebHooksConfigsResponse(),
 							},
 						),
 					},
-					Route:  fixtureRouteGetPayload(),
-					Global: fixtureGlobalConfigGetPayload(),
+					Route:  fixtureRouteResponse(),
+					Global: fixtureGlobalConfigResponse(),
 				},
 			},
 			expected: Model{
@@ -535,15 +535,15 @@ func TestMapAlertConfigField(t *testing.T) {
 			alertConfigResp: &argus.GetAlertConfigsResponse{
 				Data: &argus.Alert{
 					Receivers: &[]argus.Receivers{
-						fixtureReceiverGetPayload(
+						fixtureReceiverResponse(
 							&[]argus.EmailConfig{
-								fixtureEmailConfigsGetPayload(),
+								fixtureEmailConfigsResponse(),
 							},
 							nil,
 							nil,
 						),
 					},
-					Route: fixtureRouteGetPayload(),
+					Route: fixtureRouteResponse(),
 				},
 			},
 			expected: Model{
@@ -568,15 +568,15 @@ func TestMapAlertConfigField(t *testing.T) {
 			alertConfigResp: &argus.GetAlertConfigsResponse{
 				Data: &argus.Alert{
 					Receivers: &[]argus.Receivers{
-						fixtureReceiverGetPayload(
+						fixtureReceiverResponse(
 							nil,
 							&[]argus.OpsgenieConfig{
-								fixtureOpsGenieConfigsGetPayload(),
+								fixtureOpsGenieConfigsResponse(),
 							},
 							nil,
 						),
 					},
-					Route: fixtureRouteGetPayload(),
+					Route: fixtureRouteResponse(),
 				},
 			},
 			expected: Model{
@@ -601,15 +601,15 @@ func TestMapAlertConfigField(t *testing.T) {
 			alertConfigResp: &argus.GetAlertConfigsResponse{
 				Data: &argus.Alert{
 					Receivers: &[]argus.Receivers{
-						fixtureReceiverGetPayload(
+						fixtureReceiverResponse(
 							nil,
 							nil,
 							&[]argus.WebHook{
-								fixtureWebHooksConfigsGetPayload(),
+								fixtureWebHooksConfigsResponse(),
 							},
 						),
 					},
-					Route: fixtureRouteGetPayload(),
+					Route: fixtureRouteResponse(),
 				},
 			},
 			expected: Model{
@@ -653,7 +653,7 @@ func TestMapAlertConfigField(t *testing.T) {
 			alertConfigResp: &argus.GetAlertConfigsResponse{
 				Data: &argus.Alert{
 					Receivers: &[]argus.Receivers{},
-					Route:     fixtureRouteGetPayload(),
+					Route:     fixtureRouteResponse(),
 				},
 			},
 			expected: Model{
@@ -672,15 +672,15 @@ func TestMapAlertConfigField(t *testing.T) {
 			alertConfigResp: &argus.GetAlertConfigsResponse{
 				Data: &argus.Alert{
 					Receivers: &[]argus.Receivers{
-						fixtureReceiverGetPayload(
+						fixtureReceiverResponse(
 							&[]argus.EmailConfig{
-								fixtureEmailConfigsGetPayload(),
+								fixtureEmailConfigsResponse(),
 							},
 							&[]argus.OpsgenieConfig{
-								fixtureOpsGenieConfigsGetPayload(),
+								fixtureOpsGenieConfigsResponse(),
 							},
 							&[]argus.WebHook{
-								fixtureWebHooksConfigsGetPayload(),
+								fixtureWebHooksConfigsResponse(),
 							},
 						),
 					},
@@ -709,7 +709,7 @@ func TestMapAlertConfigField(t *testing.T) {
 			alertConfigResp: &argus.GetAlertConfigsResponse{
 				Data: &argus.Alert{
 					Receivers: nil,
-					Route:     fixtureRouteGetPayload(),
+					Route:     fixtureRouteResponse(),
 				},
 			},
 			expected: Model{
@@ -728,15 +728,15 @@ func TestMapAlertConfigField(t *testing.T) {
 			alertConfigResp: &argus.GetAlertConfigsResponse{
 				Data: &argus.Alert{
 					Receivers: &[]argus.Receivers{
-						fixtureReceiverGetPayload(
+						fixtureReceiverResponse(
 							&[]argus.EmailConfig{
-								fixtureEmailConfigsGetPayload(),
+								fixtureEmailConfigsResponse(),
 							},
 							&[]argus.OpsgenieConfig{
-								fixtureOpsGenieConfigsGetPayload(),
+								fixtureOpsGenieConfigsResponse(),
 							},
 							&[]argus.WebHook{
-								fixtureWebHooksConfigsGetPayload(),
+								fixtureWebHooksConfigsResponse(),
 							},
 						),
 					},
@@ -765,19 +765,19 @@ func TestMapAlertConfigField(t *testing.T) {
 			alertConfigResp: &argus.GetAlertConfigsResponse{
 				Data: &argus.Alert{
 					Receivers: &[]argus.Receivers{
-						fixtureReceiverGetPayload(
+						fixtureReceiverResponse(
 							&[]argus.EmailConfig{
-								fixtureEmailConfigsGetPayload(),
+								fixtureEmailConfigsResponse(),
 							},
 							&[]argus.OpsgenieConfig{
-								fixtureOpsGenieConfigsGetPayload(),
+								fixtureOpsGenieConfigsResponse(),
 							},
 							&[]argus.WebHook{
-								fixtureWebHooksConfigsGetPayload(),
+								fixtureWebHooksConfigsResponse(),
 							},
 						),
 					},
-					Route:  fixtureRouteGetPayload(),
+					Route:  fixtureRouteResponse(),
 					Global: &argus.Global{},
 				},
 			},
