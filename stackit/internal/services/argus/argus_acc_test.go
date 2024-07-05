@@ -326,7 +326,7 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "password"),
 				),
 			},
-			// Creation with Alert Configs emailConfigs and global options
+			// Update with Alert Configs emailConfigs and global options
 			{
 				Config: resourceConfig(
 					utils.Ptr(fmt.Sprintf(
@@ -431,7 +431,7 @@ func TestAccResource(t *testing.T) {
 				// and the emailConfigs. Therefore, the state file doesn't contain them and the diff will fail.
 				ExpectNonEmptyPlan: true,
 			},
-			// Creation without ACL, partial metrics retention days and NO alert configs
+			// Update without ACL, partial metrics retention days and NO alert configs
 			{
 				Config: resourceConfig(
 					nil,
@@ -500,7 +500,7 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "password"),
 				),
 			},
-			// Creation with empty ACL, NO metrics retention days and NO alert configs
+			// Update with empty ACL, NO metrics retention days and NO alert configs
 			{
 				Config: resourceConfig(
 					utils.Ptr("[]"),
