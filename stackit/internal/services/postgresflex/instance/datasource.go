@@ -73,13 +73,13 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "PostgresFlex instance client configured")
+	tflog.Info(ctx, "Postgres Flex instance client configured")
 }
 
 // Schema defines the schema for the data source.
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "PostgresFlex instance data source schema. Must have a `region` specified in the provider configuration.",
+		"main":        "Postgres Flex instance data source schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`\".",
 		"instance_id": "ID of the PostgresFlex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
@@ -216,5 +216,5 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "PostgresFlex instance read")
+	tflog.Info(ctx, "Postgres Flex instance read")
 }

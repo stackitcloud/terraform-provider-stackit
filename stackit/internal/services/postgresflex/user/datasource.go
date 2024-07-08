@@ -84,13 +84,13 @@ func (r *userDataSource) Configure(ctx context.Context, req datasource.Configure
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "PostgresFlex user client configured")
+	tflog.Info(ctx, "Postgres Flex user client configured")
 }
 
 // Schema defines the schema for the data source.
 func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "PostgresFlex user data source schema. Must have a `region` specified in the provider configuration.",
+		"main":        "Postgres Flex user data source schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the PostgresFlex instance.",
@@ -182,7 +182,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "PostgresFlex user read")
+	tflog.Info(ctx, "Postgres Flex user read")
 }
 
 func mapDataSourceFields(userResp *postgresflex.GetUserResponse, model *DataSourceModel) error {
