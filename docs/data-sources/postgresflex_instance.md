@@ -3,12 +3,12 @@
 page_title: "stackit_postgresflex_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  PostgresFlex instance data source schema. Must have a region specified in the provider configuration.
+  Postgres Flex instance data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_postgresflex_instance (Data Source)
 
-PostgresFlex instance data source schema. Must have a `region` specified in the provider configuration.
+Postgres Flex instance data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

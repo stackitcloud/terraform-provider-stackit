@@ -3,12 +3,12 @@
 page_title: "stackit_postgresflex_user Resource - stackit"
 subcategory: ""
 description: |-
-  PostgresFlex user resource schema. Must have a region specified in the provider configuration.
+  Postgres Flex user resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_postgresflex_user (Resource)
 
-PostgresFlex user resource schema. Must have a `region` specified in the provider configuration.
+Postgres Flex user resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
