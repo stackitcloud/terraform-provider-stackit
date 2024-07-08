@@ -553,8 +553,8 @@ func TestMapAlertConfigField(t *testing.T) {
 					"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
 						fixtureReceiverModel(
 							fixtureEmailConfigsModel(),
-							types.ListValueMust(types.ObjectType{AttrTypes: opsgenieConfigsTypes}, []attr.Value{}),
-							types.ListValueMust(types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{}),
+							types.ListNull(types.ObjectType{AttrTypes: opsgenieConfigsTypes}),
+							types.ListNull(types.ObjectType{AttrTypes: webHooksConfigsTypes}),
 						),
 					}),
 					"route":  fixtureRouteModel(),
@@ -585,9 +585,9 @@ func TestMapAlertConfigField(t *testing.T) {
 				AlertConfig: types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
 					"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
 						fixtureReceiverModel(
-							types.ListValueMust(types.ObjectType{AttrTypes: emailConfigsTypes}, []attr.Value{}),
+							types.ListNull(types.ObjectType{AttrTypes: emailConfigsTypes}),
 							fixtureOpsGenieConfigsModel(),
-							types.ListValueMust(types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{}),
+							types.ListNull(types.ObjectType{AttrTypes: webHooksConfigsTypes}),
 						),
 					}),
 					"route":  fixtureRouteModel(),
@@ -618,8 +618,8 @@ func TestMapAlertConfigField(t *testing.T) {
 				AlertConfig: types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
 					"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
 						fixtureReceiverModel(
-							types.ListValueMust(types.ObjectType{AttrTypes: emailConfigsTypes}, []attr.Value{}),
-							types.ListValueMust(types.ObjectType{AttrTypes: opsgenieConfigsTypes}, []attr.Value{}),
+							types.ListNull(types.ObjectType{AttrTypes: emailConfigsTypes}),
+							types.ListNull(types.ObjectType{AttrTypes: opsgenieConfigsTypes}),
 							fixtureWebHooksConfigsModel(),
 						),
 					}),
