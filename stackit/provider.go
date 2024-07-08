@@ -29,6 +29,7 @@ import (
 	objecStorageCredentialsGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credentialsgroup"
 	openSearchCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/credential"
 	openSearchInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/instance"
+	postgresFlexDatabase "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/database"
 	postgresFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/instance"
 	postgresFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/user"
 	postgresCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresql/credential"
@@ -394,6 +395,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		objecStorageCredential.NewCredentialDataSource,
 		openSearchInstance.NewInstanceDataSource,
 		openSearchCredential.NewCredentialDataSource,
+		postgresFlexDatabase.NewDatabaseDataSource,
 		postgresFlexInstance.NewInstanceDataSource,
 		postgresFlexUser.NewUserDataSource,
 		postgresInstance.NewInstanceDataSource,
@@ -437,6 +439,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		objecStorageCredential.NewCredentialResource,
 		openSearchInstance.NewInstanceResource,
 		openSearchCredential.NewCredentialResource,
+		postgresFlexDatabase.NewDatabaseResource,
 		postgresFlexInstance.NewInstanceResource,
 		postgresFlexUser.NewUserResource,
 		postgresInstance.NewInstanceResource,
