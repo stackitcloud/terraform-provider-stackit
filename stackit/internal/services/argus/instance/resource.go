@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -291,6 +292,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Validators: []validator.String{
 					validate.UUID(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"parameters": schema.MapAttribute{
 				Description: "Additional parameters.",
@@ -304,27 +308,45 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"dashboard_url": schema.StringAttribute{
 				Description: "Specifies Argus instance dashboard URL.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"is_updatable": schema.BoolAttribute{
 				Description: "Specifies if the instance can be updated.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"grafana_public_read_access": schema.BoolAttribute{
 				Description: "If true, anyone can access Grafana dashboards without logging in.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"grafana_url": schema.StringAttribute{
 				Description: "Specifies Grafana URL.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"grafana_initial_admin_user": schema.StringAttribute{
 				Description: "Specifies an initial Grafana admin username.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"grafana_initial_admin_password": schema.StringAttribute{
 				Description: "Specifies an initial Grafana admin password.",
 				Computed:    true,
 				Sensitive:   true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"metrics_retention_days": schema.Int64Attribute{
 				Description: "Specifies for how many days the raw metrics are kept.",
@@ -344,38 +366,68 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"metrics_url": schema.StringAttribute{
 				Description: "Specifies metrics URL.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"metrics_push_url": schema.StringAttribute{
 				Description: "Specifies URL for pushing metrics.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"targets_url": schema.StringAttribute{
 				Description: "Specifies Targets URL.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"alerting_url": schema.StringAttribute{
 				Description: "Specifies Alerting URL.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"logs_url": schema.StringAttribute{
 				Description: "Specifies Logs URL.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"logs_push_url": schema.StringAttribute{
 				Description: "Specifies URL for pushing logs.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"jaeger_traces_url": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"jaeger_ui_url": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"otlp_traces_url": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"zipkin_spans_url": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"acl": schema.SetAttribute{
 				Description: "The access control list for this instance. Each entry is an IP address range that is permitted to access, in CIDR notation.",
@@ -405,38 +457,34 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								},
 								"email_configs": schema.ListNestedAttribute{
 									Description: "List of email configurations.",
-									Computed:    true,
 									Optional:    true,
+									Validators: []validator.List{
+										listvalidator.SizeAtLeast(1),
+									},
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
 											"auth_identity": schema.StringAttribute{
 												Description: "SMTP authentication information. Must be a valid email address",
-												Computed:    true,
 												Optional:    true,
 											},
 											"auth_password": schema.StringAttribute{
 												Description: "SMTP authentication password.",
-												Computed:    true,
 												Optional:    true,
 											},
 											"auth_username": schema.StringAttribute{
 												Description: "SMTP authentication username.",
-												Computed:    true,
 												Optional:    true,
 											},
 											"from": schema.StringAttribute{
 												Description: "The sender email address. Must be a valid email address",
-												Computed:    true,
 												Optional:    true,
 											},
 											"smart_host": schema.StringAttribute{
 												Description: "The SMTP host through which emails are sent.",
-												Computed:    true,
 												Optional:    true,
 											},
 											"to": schema.StringAttribute{
 												Description: "The email address to send notifications to. Must be a valid email address",
-												Computed:    true,
 												Optional:    true,
 											},
 										},
@@ -444,23 +492,22 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								},
 								"opsgenie_configs": schema.ListNestedAttribute{
 									Description: "List of OpsGenie configurations.",
-									Computed:    true,
 									Optional:    true,
+									Validators: []validator.List{
+										listvalidator.SizeAtLeast(1),
+									},
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
 											"api_key": schema.StringAttribute{
 												Description: "The API key for OpsGenie.",
-												Computed:    true,
 												Optional:    true,
 											},
 											"api_url": schema.StringAttribute{
 												Description: "The host to send OpsGenie API requests to. Must be a valid URL",
-												Computed:    true,
 												Optional:    true,
 											},
 											"tags": schema.StringAttribute{
 												Description: "Comma separated list of tags attached to the notifications.",
-												Computed:    true,
 												Optional:    true,
 											},
 										},
@@ -468,18 +515,18 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								},
 								"webhooks_configs": schema.ListNestedAttribute{
 									Description: "List of Webhooks configurations.",
-									Computed:    true,
 									Optional:    true,
+									Validators: []validator.List{
+										listvalidator.SizeAtLeast(1),
+									},
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
 											"url": schema.StringAttribute{
 												Description: "The endpoint to send HTTP POST requests to. Must be a valid URL",
-												Computed:    true,
 												Optional:    true,
 											},
 											"ms_teams": schema.BoolAttribute{
 												Description: "Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.",
-												Computed:    true,
 												Optional:    true,
 											},
 										},
@@ -495,29 +542,24 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"group_by": schema.ListAttribute{
 								Description: "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
 								Optional:    true,
-								Computed:    true,
 								ElementType: types.StringType,
 							},
 							"group_interval": schema.StringAttribute{
 								Description: "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
 								Optional:    true,
-								Computed:    true,
 							},
 							"group_wait": schema.StringAttribute{
 								Description: "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .",
 								Optional:    true,
-								Computed:    true,
 							},
 							"match": schema.MapAttribute{
 								Description: "A set of equality matchers an alert has to fulfill to match the node.",
 								Optional:    true,
-								Computed:    true,
 								ElementType: types.StringType,
 							},
 							"match_regex": schema.MapAttribute{
 								Description: "A set of regex-matchers an alert has to fulfill to match the node.",
 								Optional:    true,
-								Computed:    true,
 								ElementType: types.StringType,
 							},
 							"receiver": schema.StringAttribute{
@@ -527,55 +569,45 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"repeat_interval": schema.StringAttribute{
 								Description: "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
 								Optional:    true,
-								Computed:    true,
 							},
 						},
 					},
 					"global": schema.SingleNestedAttribute{
 						Description: "Global configuration for the alerts.",
 						Optional:    true,
-						Computed:    true,
 						Attributes: map[string]schema.Attribute{
 							"opsgenie_api_key": schema.StringAttribute{
 								Description: "The API key for OpsGenie.",
-								Computed:    true,
 								Optional:    true,
 								Sensitive:   true,
 							},
 							"opsgenie_api_url": schema.StringAttribute{
 								Description: "The host to send OpsGenie API requests to. Must be a valid URL",
-								Computed:    true,
 								Optional:    true,
 							},
 							"resolve_timeout": schema.StringAttribute{
 								Description: "The default value used by alertmanager if the alert does not include EndsAt. After this time passes, it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.",
-								Computed:    true,
 								Optional:    true,
 							},
 							"smtp_auth_identity": schema.StringAttribute{
 								Description: "SMTP authentication information. Must be a valid email address",
-								Computed:    true,
 								Optional:    true,
 							},
 							"smtp_auth_password": schema.StringAttribute{
 								Description: "SMTP Auth using LOGIN and PLAIN.",
-								Computed:    true,
 								Optional:    true,
 								Sensitive:   true,
 							},
 							"smtp_auth_username": schema.StringAttribute{
 								Description: "SMTP Auth using CRAM-MD5, LOGIN and PLAIN. If empty, Alertmanager doesn't authenticate to the SMTP server.",
-								Computed:    true,
 								Optional:    true,
 							},
 							"smtp_from": schema.StringAttribute{
 								Description: "The default SMTP From header field. Must be a valid email address",
-								Computed:    true,
 								Optional:    true,
 							},
 							"smtp_smart_host": schema.StringAttribute{
-								Description: "The default SMTP smarthost used for sending emails, including port number. Port number usually is 25, or 587 for SMTP over TLS (sometimes referred to as STARTTLS).",
-								Computed:    true,
+								Description: "The default SMTP smarthost used for sending emails, including port number in format `host:port` (eg. `smtp.example.com:587`). Port number usually is 25, or 587 for SMTP over TLS (sometimes referred to as STARTTLS).",
 								Optional:    true,
 							},
 						},
@@ -1317,21 +1349,11 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		return alertConfigModel{}, fmt.Errorf("mapping email configs: %w", core.DiagsToError(diags))
 	}
 
-	mockOpsGenieConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: opsgenieConfigsTypes}, []attr.Value{})
-	if diags.HasError() {
-		return alertConfigModel{}, fmt.Errorf("mapping opsgenie configs: %w", core.DiagsToError(diags))
-	}
-
-	mockWebHooksConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{})
-	if diags.HasError() {
-		return alertConfigModel{}, fmt.Errorf("mapping webhooks configs: %w", core.DiagsToError(diags))
-	}
-
 	mockReceiver, diags := types.ObjectValue(receiversTypes, map[string]attr.Value{
 		"name":             types.StringValue("email-me"),
 		"email_configs":    mockEmailConfigs,
-		"opsgenie_configs": mockOpsGenieConfigs,
-		"webhooks_configs": mockWebHooksConfigs,
+		"opsgenie_configs": types.ListNull(types.ObjectType{AttrTypes: opsgenieConfigsTypes}),
+		"webhooks_configs": types.ListNull(types.ObjectType{AttrTypes: webHooksConfigsTypes}),
 	})
 	if diags.HasError() {
 		return alertConfigModel{}, fmt.Errorf("mapping receiver: %w", core.DiagsToError(diags))
@@ -1475,19 +1497,38 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]argus.Receiv
 			}
 		}
 
-		emailConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: emailConfigsTypes}, emailConfigList)
-		if diags.HasError() {
-			return emptyList, fmt.Errorf("mapping email configs: %w", core.DiagsToError(diags))
+		if receiver.Name == nil {
+			return emptyList, fmt.Errorf("receiver name is nil")
 		}
 
-		opsGenieConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: opsgenieConfigsTypes}, opsgenieConfigList)
-		if diags.HasError() {
-			return emptyList, fmt.Errorf("mapping opsgenie configs: %w", core.DiagsToError(diags))
+		var emailConfigs basetypes.ListValue
+		if len(emailConfigList) == 0 {
+			emailConfigs = types.ListNull(types.ObjectType{AttrTypes: emailConfigsTypes})
+		} else {
+			emailConfigs, diags = types.ListValueFrom(ctx, types.ObjectType{AttrTypes: emailConfigsTypes}, emailConfigList)
+			if diags.HasError() {
+				return emptyList, fmt.Errorf("mapping email configs: %w", core.DiagsToError(diags))
+			}
 		}
 
-		webHooksConfigs, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: webHooksConfigsTypes}, webhooksConfigList)
-		if diags.HasError() {
-			return emptyList, fmt.Errorf("mapping webhooks configs: %w", core.DiagsToError(diags))
+		var opsGenieConfigs basetypes.ListValue
+		if len(opsgenieConfigList) == 0 {
+			opsGenieConfigs = types.ListNull(types.ObjectType{AttrTypes: opsgenieConfigsTypes})
+		} else {
+			opsGenieConfigs, diags = types.ListValueFrom(ctx, types.ObjectType{AttrTypes: opsgenieConfigsTypes}, opsgenieConfigList)
+			if diags.HasError() {
+				return emptyList, fmt.Errorf("mapping opsgenie configs: %w", core.DiagsToError(diags))
+			}
+		}
+
+		var webHooksConfigs basetypes.ListValue
+		if len(webhooksConfigList) == 0 {
+			webHooksConfigs = types.ListNull(types.ObjectType{AttrTypes: webHooksConfigsTypes})
+		} else {
+			webHooksConfigs, diags = types.ListValueFrom(ctx, types.ObjectType{AttrTypes: webHooksConfigsTypes}, webhooksConfigList)
+			if diags.HasError() {
+				return emptyList, fmt.Errorf("mapping webhooks configs: %w", core.DiagsToError(diags))
+			}
 		}
 
 		receiverMap := map[string]attr.Value{
