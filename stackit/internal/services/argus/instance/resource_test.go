@@ -65,6 +65,7 @@ func fixtureRouteModel() basetypes.ObjectValue {
 		"match_regex":     types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
 		"receiver":        types.StringValue("name"),
 		"repeat_interval": types.StringValue("1m"),
+		"routes":          types.ListNull(getRouteListType()),
 	})
 }
 
@@ -77,6 +78,7 @@ func fixtureNullRouteModel() basetypes.ObjectValue {
 		"match_regex":     types.MapNull(types.StringType),
 		"receiver":        types.StringNull(),
 		"repeat_interval": types.StringNull(),
+		"routes":          types.ListNull(getRouteListType()),
 	})
 }
 

@@ -32,6 +32,8 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
+const childRouteMaxRecursionLevel = 10
+
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &instanceResource{}
@@ -115,6 +117,7 @@ type routeModel struct {
 	MatchRegex     types.Map    `tfsdk:"match_regex"`
 	Receiver       types.String `tfsdk:"receiver"`
 	RepeatInterval types.String `tfsdk:"repeat_interval"`
+	Routes         types.List   `tfsdk:"routes"`
 }
 
 var routeTypes = map[string]attr.Type{
@@ -125,6 +128,7 @@ var routeTypes = map[string]attr.Type{
 	"match_regex":     types.MapType{ElemType: types.StringType},
 	"receiver":        types.StringType,
 	"repeat_interval": types.StringType,
+	"routes":          types.ListType{ElemType: getRouteListType()},
 }
 
 // Struct corresponding to Model.AlertConfig.receivers
@@ -183,6 +187,123 @@ type webHooksConfigsModel struct {
 var webHooksConfigsTypes = map[string]attr.Type{
 	"url":      types.StringType,
 	"ms_teams": types.BoolType,
+}
+
+func getRouteListType() types.ObjectType {
+	return getRouteListTypeAux(1)
+}
+
+func getRouteListTypeAux(level int) types.ObjectType {
+	attributeTypes := map[string]attr.Type{
+		"group_by":        types.ListType{ElemType: types.StringType},
+		"group_interval":  types.StringType,
+		"group_wait":      types.StringType,
+		"match":           types.MapType{ElemType: types.StringType},
+		"match_regex":     types.MapType{ElemType: types.StringType},
+		"receiver":        types.StringType,
+		"repeat_interval": types.StringType,
+	}
+
+	if level == childRouteMaxRecursionLevel {
+		return types.ObjectType{AttrTypes: attributeTypes}
+	}
+
+	attributeTypes["routes"] = types.ListType{ElemType: getRouteListTypeAux(level + 1)}
+	return types.ObjectType{AttrTypes: attributeTypes}
+}
+
+func getRouteNestedObject() schema.ListNestedAttribute {
+	return getRouteNestedObjectAux(1)
+}
+
+func getRouteNestedObjectAux(level int) schema.ListNestedAttribute {
+	if level == childRouteMaxRecursionLevel {
+		return schema.ListNestedAttribute{
+			Description: "List of email configurations.",
+			Optional:    true,
+			Validators: []validator.List{
+				listvalidator.SizeAtLeast(1),
+			},
+			NestedObject: schema.NestedAttributeObject{
+				Attributes: map[string]schema.Attribute{
+					"group_by": schema.ListAttribute{
+						Description: "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
+						Optional:    true,
+						ElementType: types.StringType,
+					},
+					"group_interval": schema.StringAttribute{
+						Description: "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
+						Optional:    true,
+					},
+					"group_wait": schema.StringAttribute{
+						Description: "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .",
+						Optional:    true,
+					},
+					"match": schema.MapAttribute{
+						Description: "A set of equality matchers an alert has to fulfill to match the node.",
+						Optional:    true,
+						ElementType: types.StringType,
+					},
+					"match_regex": schema.MapAttribute{
+						Description: "A set of regex-matchers an alert has to fulfill to match the node.",
+						Optional:    true,
+						ElementType: types.StringType,
+					},
+					"receiver": schema.StringAttribute{
+						Description: "The name of the receiver to route the alerts to.",
+						Required:    true,
+					},
+					"repeat_interval": schema.StringAttribute{
+						Description: "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
+						Optional:    true,
+					},
+				},
+			},
+		}
+	}
+	return schema.ListNestedAttribute{
+		Description: "List of email configurations.",
+		Optional:    true,
+		Validators: []validator.List{
+			listvalidator.SizeAtLeast(1),
+		},
+		NestedObject: schema.NestedAttributeObject{
+			Attributes: map[string]schema.Attribute{
+				"group_by": schema.ListAttribute{
+					Description: "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
+					Optional:    true,
+					ElementType: types.StringType,
+				},
+				"group_interval": schema.StringAttribute{
+					Description: "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
+					Optional:    true,
+				},
+				"group_wait": schema.StringAttribute{
+					Description: "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .",
+					Optional:    true,
+				},
+				"match": schema.MapAttribute{
+					Description: "A set of equality matchers an alert has to fulfill to match the node.",
+					Optional:    true,
+					ElementType: types.StringType,
+				},
+				"match_regex": schema.MapAttribute{
+					Description: "A set of regex-matchers an alert has to fulfill to match the node.",
+					Optional:    true,
+					ElementType: types.StringType,
+				},
+				"receiver": schema.StringAttribute{
+					Description: "The name of the receiver to route the alerts to.",
+					Required:    true,
+				},
+				"repeat_interval": schema.StringAttribute{
+					Description: "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
+					Optional:    true,
+				},
+				"routes": getRouteNestedObjectAux(level + 1),
+			},
+		},
+	}
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -570,6 +691,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								Description: "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
 								Optional:    true,
 							},
+							"routes": getRouteNestedObject(),
 						},
 					},
 					"global": schema.SingleNestedAttribute{
@@ -1381,6 +1503,7 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		"repeat_interval": types.StringValue("4h"),
 		"match":           types.MapNull(types.StringType),
 		"match_regex":     types.MapNull(types.StringType),
+		"routes":          types.ListNull(getRouteListType()),
 	})
 	if diags.HasError() {
 		return alertConfigModel{}, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
@@ -1557,19 +1680,15 @@ func mapRouteToAttributes(ctx context.Context, route *argus.Route) (attr.Value, 
 	if route == nil {
 		return types.ObjectNull(routeTypes), nil
 	}
-	groupByModel, diags := types.ListValueFrom(ctx, types.StringType, route.GroupBy)
-	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
+
+	groupByModel, matchModel, matchRegexModel, err := mapRouteFieldsToAttributes(ctx, route.GroupBy, route.Match, route.MatchRe)
+	if err != nil {
+		return types.ObjectNull(routeTypes), err
 	}
 
-	matchModel, diags := types.MapValueFrom(ctx, types.StringType, route.Match)
-	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping match: %w", core.DiagsToError(diags))
-	}
-
-	matchRegexModel, diags := types.MapValueFrom(ctx, types.StringType, route.MatchRe)
-	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping match regex: %w", core.DiagsToError(diags))
+	childRoutes, err := mapChildRoutesToAttributes(ctx, route.Routes)
+	if err != nil {
+		return types.ObjectNull(routeTypes), fmt.Errorf("mapping child routes: %w", err)
 	}
 
 	routeMap := map[string]attr.Value{
@@ -1580,6 +1699,7 @@ func mapRouteToAttributes(ctx context.Context, route *argus.Route) (attr.Value, 
 		"match_regex":     matchRegexModel,
 		"receiver":        types.StringPointerValue(route.Receiver),
 		"repeat_interval": types.StringPointerValue(route.RepeatInterval),
+		"routes":          childRoutes,
 	}
 
 	routeModel, diags := types.ObjectValue(routeTypes, routeMap)
@@ -1588,6 +1708,55 @@ func mapRouteToAttributes(ctx context.Context, route *argus.Route) (attr.Value, 
 	}
 
 	return routeModel, nil
+}
+
+func mapChildRoutesToAttributes(_ context.Context, routes *[]argus.RouteSerializer) (basetypes.ListValue, error) {
+	if routes == nil {
+		return types.ListNull(getRouteListType()), nil
+	}
+
+	// routesList := []attr.Value{}
+	// for _, route := range *routes {
+	// 	groupByModel, matchModel, matchRegexModel, err := mapRouteFieldsToAttributes(ctx, route)
+	// 	if err != nil {
+	// 		return types.ListNull(getRouteListType()), fmt.Errorf("mapping child routes field: %w", err)
+	// 	}
+
+	// 	routeMap := map[string]attr.Value{
+	// 		"group_by":        groupByModel,
+	// 		"group_interval":  types.StringPointerValue(route.GroupInterval),
+	// 		"group_wait":      types.StringPointerValue(route.GroupWait),
+	// 		"match":           matchModel,
+	// 		"match_regex":     matchRegexModel,
+	// 		"receiver":        types.StringPointerValue(route.Receiver),
+	// 		"repeat_interval": types.StringPointerValue(route.RepeatInterval),
+	// 	}
+
+	// }
+
+	return types.ListNull(getRouteListType()), nil
+}
+
+func mapRouteFieldsToAttributes(ctx context.Context, groupBy *[]string, match *map[string]string, matchRegex *map[string]string) (groupByModel basetypes.ListValue, matchModel, matchRegexModel basetypes.MapValue, err error) {
+	nullList := types.ListNull(types.StringType)
+	nullMap := types.MapNull(types.StringType)
+
+	groupByModel, diags := types.ListValueFrom(ctx, types.StringType, groupBy)
+	if diags.HasError() {
+		return nullList, nullMap, nullMap, fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
+	}
+
+	matchModel, diags = types.MapValueFrom(ctx, types.StringType, match)
+	if diags.HasError() {
+		return nullList, nullMap, nullMap, fmt.Errorf("mapping match: %w", core.DiagsToError(diags))
+	}
+
+	matchRegexModel, diags = types.MapValueFrom(ctx, types.StringType, matchRegex)
+	if diags.HasError() {
+		return nullList, nullMap, nullMap, fmt.Errorf("mapping match regex: %w", core.DiagsToError(diags))
+	}
+
+	return groupByModel, matchModel, matchRegexModel, nil
 }
 
 func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {
