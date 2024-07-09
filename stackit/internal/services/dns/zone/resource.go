@@ -114,6 +114,8 @@ func (r *zoneResource) Configure(ctx context.Context, req resource.ConfigureRequ
 
 // Schema defines the schema for the resource.
 func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	primaryOptions := []string{"primary", "secondary"}
+
 	resp.Schema = schema.Schema{
 		Description: "DNS Zone resource schema.",
 		Attributes: map[string]schema.Attribute{
@@ -254,12 +256,12 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"type": schema.StringAttribute{
-				Description: "Zone type. Defaults to `primary`",
+				Description: "Zone type. Defaults to `primary`. " + utils.SupportedValuesDocumentation(primaryOptions),
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("primary"),
 				Validators: []validator.String{
-					stringvalidator.OneOf("primary", "secondary"),
+					stringvalidator.OneOf(primaryOptions...),
 				},
 			},
 			"primary_name_server": schema.StringAttribute{
