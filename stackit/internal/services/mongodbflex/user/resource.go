@@ -108,7 +108,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 		"user_id":     "User ID.",
 		"instance_id": "ID of the MongoDB Flex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"roles":       "Database access levels for the user. " + utils.PossibleValuesDocumentation(rolesOptions),
+		"roles":       "Database access levels for the user. " + utils.SupportedValuesDocumentation(rolesOptions),
 	}
 
 	resp.Schema = schema.Schema{

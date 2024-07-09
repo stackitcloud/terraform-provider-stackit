@@ -28,7 +28,7 @@ resource "stackit_postgresflex_user" "example" {
 
 - `instance_id` (String) ID of the PostgresFlex instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
-- `roles` (Set of String) Database access levels for the user. Possible values are: `login`, `createdb`.
+- `roles` (Set of String) Database access levels for the user. Supported values are: `login`, `createdb`.
 - `username` (String)
 
 ### Read-Only

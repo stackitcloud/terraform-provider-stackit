@@ -77,11 +77,11 @@ func SimplifyBackupSchedule(schedule string) string {
 	return simplifiedSchedule
 }
 
-func PossibleValuesDocumentation(values []string) string {
+func SupportedValuesDocumentation(values []string) string {
 	if len(values) == 0 {
 		return ""
 	}
-	return "Possible values are: " + strings.Join(quoteValues(values), ", ") + "."
+	return "Supported values are: " + strings.Join(quoteValues(values), ", ") + "."
 }
 
 func quoteValues(values []string) []string {
