@@ -203,7 +203,7 @@ Optional:
 
 - `display_name` (String)
 - `port` (Number) Port number where we listen for traffic.
-- `protocol` (String) Protocol is the highest network protocol we understand to load balance.
+- `protocol` (String) Protocol is the highest network protocol we understand to load balance. Possible values are: `PROTOCOL_UNSPECIFIED`, `PROTOCOL_TCP`, `PROTOCOL_UDP`, `PROTOCOL_TCP_PROXY`, `PROTOCOL_TLS_PASSTHROUGH`.
 - `server_name_indicators` (Attributes List) A list of domain names to match in order to pass TLS traffic to the target pool in the current listener (see [below for nested schema](#nestedatt--listeners--server_name_indicators))
 - `target_pool` (String) Reference target pool by target pool name.
 
@@ -225,7 +225,7 @@ Required:
 
 Optional:
 
-- `role` (String) The role defines how the load balancer is using the network.
+- `role` (String) The role defines how the load balancer is using the network. Possible values are: `ROLE_UNSPECIFIED`, `ROLE_LISTENERS_AND_TARGETS`, `ROLE_LISTENERS`, `ROLE_TARGETS`.
 
 
 <a id="nestedatt--target_pools"></a>

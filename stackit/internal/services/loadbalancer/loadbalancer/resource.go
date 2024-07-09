@@ -28,11 +28,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -219,6 +220,9 @@ func (r *loadBalancerResource) Configure(ctx context.Context, req resource.Confi
 
 // Schema defines the schema for the resource.
 func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	protocolOptions := []string{"PROTOCOL_UNSPECIFIED", "PROTOCOL_TCP", "PROTOCOL_UDP", "PROTOCOL_TCP_PROXY", "PROTOCOL_TLS_PASSTHROUGH"}
+	roleOptions := []string{"ROLE_UNSPECIFIED", "ROLE_LISTENERS_AND_TARGETS", "ROLE_LISTENERS", "ROLE_TARGETS"}
+
 	descriptions := map[string]string{
 		"main":                        "Load Balancer resource schema.",
 		"id":                          "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`name`\".",
@@ -226,12 +230,12 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 		"external_address":            "External Load Balancer IP address where this Load Balancer is exposed.",
 		"listeners":                   "List of all listeners which will accept traffic. Limited to 20.",
 		"port":                        "Port number where we listen for traffic.",
-		"protocol":                    "Protocol is the highest network protocol we understand to load balance.",
+		"protocol":                    "Protocol is the highest network protocol we understand to load balance. " + utils.PossibleValuesDocumentation(protocolOptions),
 		"target_pool":                 "Reference target pool by target pool name.",
 		"name":                        "Load balancer name.",
 		"networks":                    "List of networks that listeners and targets reside in.",
 		"network_id":                  "Openstack network ID.",
-		"role":                        "The role defines how the load balancer is using the network.",
+		"role":                        "The role defines how the load balancer is using the network. " + utils.PossibleValuesDocumentation(roleOptions),
 		"options":                     "Defines any optional functionality you want to have enabled on your load balancer.",
 		"acl":                         "Load Balancer is accessible only from an IP address in this range.",
 		"private_network_only":        "If true, Load Balancer is accessible only via a private network IP address.",
@@ -350,7 +354,7 @@ The example below uses OpenStack to create the network, router, a public IP addr
 								stringplanmodifier.UseStateForUnknown(),
 							},
 							Validators: []validator.String{
-								stringvalidator.OneOf("PROTOCOL_UNSPECIFIED", "PROTOCOL_TCP", "PROTOCOL_UDP", "PROTOCOL_TCP_PROXY", "PROTOCOL_TLS_PASSTHROUGH"),
+								stringvalidator.OneOf(protocolOptions...),
 							},
 						},
 						"server_name_indicators": schema.ListNestedAttribute{
@@ -420,7 +424,7 @@ The example below uses OpenStack to create the network, router, a public IP addr
 								stringplanmodifier.UseStateForUnknown(),
 							},
 							Validators: []validator.String{
-								stringvalidator.OneOf("ROLE_UNSPECIFIED", "ROLE_LISTENERS_AND_TARGETS", "ROLE_LISTENERS", "ROLE_TARGETS"),
+								stringvalidator.OneOf(roleOptions...),
 							},
 						},
 					},
@@ -669,7 +673,7 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 		ctx = tflog.SetField(ctx, "target_pool_name", targetPoolName)
 
 		// Generate API request body from model
-		payload, err := toTargetPoolUpdatePayload(ctx, utils.Ptr(targetPoolModel))
+		payload, err := toTargetPoolUpdatePayload(ctx, sdkUtils.Ptr(targetPoolModel))
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Creating API payload for target pool: %v", err))
 			return
