@@ -344,7 +344,10 @@ func mapFields(databaseResp *postgresflex.InstanceDatabase, model *Model) error 
 	if databaseResp.Options != nil {
 		owner, ok := (*databaseResp.Options)["owner"]
 		if ok {
-			ownerStr := owner.(string)
+			ownerStr, ok := owner.(string)
+			if !ok {
+				return fmt.Errorf("owner is not a string")
+			}
 			model.Owner = types.StringValue(ownerStr)
 		}
 	}
