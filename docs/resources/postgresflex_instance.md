@@ -3,12 +3,12 @@
 page_title: "stackit_postgresflex_instance Resource - stackit"
 subcategory: ""
 description: |-
-  PostgresFlex instance resource schema. Must have a region specified in the provider configuration.
+  Postgres Flex instance resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_postgresflex_instance (Resource)
 
-PostgresFlex instance resource schema. Must have a `region` specified in the provider configuration.
+Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

@@ -127,13 +127,13 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "PostgresFlex instance client configured")
+	tflog.Info(ctx, "Postgres Flex instance client configured")
 }
 
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "PostgresFlex instance resource schema. Must have a `region` specified in the provider configuration.",
+		"main":        "Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
 		"instance_id": "ID of the PostgresFlex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
@@ -314,7 +314,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "PostgresFlex instance created")
+	tflog.Info(ctx, "Postgres Flex instance created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -374,7 +374,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "PostgresFlex instance read")
+	tflog.Info(ctx, "Postgres Flex instance read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -478,7 +478,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
-	tflog.Info(ctx, "PostgresFlex instance deleted")
+	tflog.Info(ctx, "Postgres Flex instance deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.

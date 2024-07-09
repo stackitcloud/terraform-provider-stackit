@@ -96,7 +96,7 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "PostgresFlex user client configured")
+	tflog.Info(ctx, "Postgres Flex user client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -104,7 +104,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 	rolesOptions := []string{"login", "createdb"}
 
 	descriptions := map[string]string{
-		"main":        "PostgresFlex user resource schema. Must have a `region` specified in the provider configuration.",
+		"main":        "Postgres Flex user resource schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the PostgresFlex instance.",
@@ -242,7 +242,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "PostgresFlex user created")
+	tflog.Info(ctx, "Postgres Flex user created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -284,7 +284,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "PostgresFlex user read")
+	tflog.Info(ctx, "Postgres Flex user read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -320,7 +320,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
-	tflog.Info(ctx, "PostgresFlex user deleted")
+	tflog.Info(ctx, "Postgres Flex user deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
