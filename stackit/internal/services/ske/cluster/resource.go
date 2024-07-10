@@ -1323,7 +1323,11 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 			nodePool["cri"] = types.StringPointerValue(nodePoolResp.Cri.Name)
 		}
 
-		err := mapTaints(nodePoolResp.Taints, nodePool)
+		modelNodePoolTaints := types.ListNull(types.ObjectType{AttrTypes: taintTypes})
+		if i < len(modelNodePools) {
+			modelNodePoolTaints = modelNodePools[i].Taints
+		}
+		err := mapTaints(modelNodePoolTaints, nodePoolResp.Taints, nodePool)
 		if err != nil {
 			return fmt.Errorf("mapping index %d, field taints: %w", i, err)
 		}
@@ -1362,9 +1366,17 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	return nil
 }
 
-func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value) error {
+func mapTaints(modelTaints basetypes.ListValue, t *[]ske.Taint, nodePool map[string]attr.Value) error {
 	if t == nil || len(*t) == 0 {
-		nodePool["taints"] = types.ListNull(types.ObjectType{AttrTypes: taintTypes})
+		if modelTaints.IsNull() || modelTaints.IsUnknown() {
+			nodePool["taints"] = types.ListNull(types.ObjectType{AttrTypes: taintTypes})
+			return nil
+		}
+		taintsTF, diags := types.ListValue(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{})
+		if diags.HasError() {
+			return fmt.Errorf("convert empty taints list: %w", core.DiagsToError(diags))
+		}
+		nodePool["taints"] = taintsTF
 		return nil
 	}
 
