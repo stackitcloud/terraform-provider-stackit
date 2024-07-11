@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -121,6 +120,16 @@ type routeModel struct {
 	Routes         types.List   `tfsdk:"routes"`
 }
 
+type RouteModelFields struct {
+	GroupBy        types.List   `tfsdk:"group_by"`
+	GroupInterval  types.String `tfsdk:"group_interval"`
+	GroupWait      types.String `tfsdk:"group_wait"`
+	Match          types.Map    `tfsdk:"match"`
+	MatchRegex     types.Map    `tfsdk:"match_regex"`
+	Receiver       types.String `tfsdk:"receiver"`
+	RepeatInterval types.String `tfsdk:"repeat_interval"`
+}
+
 var routeTypes = map[string]attr.Type{
 	"group_by":        types.ListType{ElemType: types.StringType},
 	"group_interval":  types.StringType,
@@ -130,16 +139,6 @@ var routeTypes = map[string]attr.Type{
 	"receiver":        types.StringType,
 	"repeat_interval": types.StringType,
 	"routes":          types.ListType{ElemType: getRouteListType()},
-}
-
-type routeModelFields struct {
-	GroupBy        types.List   `tfsdk:"group_by"`
-	GroupInterval  types.String `tfsdk:"group_interval"`
-	GroupWait      types.String `tfsdk:"group_wait"`
-	Match          types.Map    `tfsdk:"match"`
-	MatchRegex     types.Map    `tfsdk:"match_regex"`
-	Receiver       types.String `tfsdk:"receiver"`
-	RepeatInterval types.String `tfsdk:"repeat_interval"`
 }
 
 // Struct corresponding to Model.AlertConfig.receivers
@@ -200,10 +199,26 @@ var webHooksConfigsTypes = map[string]attr.Type{
 	"ms_teams": types.BoolType,
 }
 
+var routeDescriptions = map[string]string{
+	"group_by":        "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
+	"group_interval":  "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
+	"group_wait":      "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.)",
+	"match":           "A set of equality matchers an alert has to fulfill to match the node.",
+	"match_regex":     "A set of regex-matchers an alert has to fulfill to match the node.",
+	"receiver":        "The name of the receiver to route the alerts to.",
+	"repeat_interval": "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
+	"routes":          "List of child routes.",
+}
+
+// getRouteListType is a helper function to return the route list attribute type.
 func getRouteListType() types.ObjectType {
 	return getRouteListTypeAux(1, childRouteMaxRecursionLevel)
 }
 
+// getRouteListTypeAux returns the type of the route list attribute with the given level of child routes recursion.
+// The level is used to determine the current depth of the nested object.
+// The limit is used to determine the maximum depth of the nested object.
+// The level should be lower or equal to the limit, if higher, the function will produce a stack overflow.
 func getRouteListTypeAux(level, limit int) types.ObjectType {
 	attributeTypes := map[string]attr.Type{
 		"group_by":        types.ListType{ElemType: types.StringType},
@@ -215,75 +230,68 @@ func getRouteListTypeAux(level, limit int) types.ObjectType {
 		"repeat_interval": types.StringType,
 	}
 
-	if level == limit {
-		return types.ObjectType{AttrTypes: attributeTypes}
+	if level != limit {
+		attributeTypes["routes"] = types.ListType{ElemType: getRouteListTypeAux(level+1, limit)}
 	}
 
-	attributeTypes["routes"] = types.ListType{ElemType: getRouteListTypeAux(level+1, limit)}
 	return types.ObjectType{AttrTypes: attributeTypes}
 }
 
 func getRouteNestedObject() schema.ListNestedAttribute {
-	return getRouteNestedObjectAux(1)
+	return getRouteNestedObjectAux(1, childRouteMaxRecursionLevel)
 }
 
-func getRouteNestedObjectAux(level int) schema.ListNestedAttribute {
-	if level == childRouteMaxRecursionLevel {
-		return schema.ListNestedAttribute{
-			Description: "List of email configurations.",
+func getRouteNestedObjectAux(level, limit int) schema.ListNestedAttribute {
+	attributesMap := map[string]schema.Attribute{
+		"group_by": schema.ListAttribute{
+			Description: routeDescriptions["group_by"],
 			Optional:    true,
-			Validators: []validator.List{
-				listvalidator.SizeAtLeast(1),
+			ElementType: types.StringType,
+		},
+		"group_interval": schema.StringAttribute{
+			Description: routeDescriptions["group_interval"],
+			Optional:    true,
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
 			},
-			NestedObject: schema.NestedAttributeObject{
-				Attributes: map[string]schema.Attribute{
-					"group_by": schema.ListAttribute{
-						Description: "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
-						Optional:    true,
-						ElementType: types.StringType,
-					},
-					"group_interval": schema.StringAttribute{
-						Description: "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
-						Optional:    true,
-						Computed:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
-					},
-					"group_wait": schema.StringAttribute{
-						Description: "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .",
-						Optional:    true,
-						Computed:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
-					},
-					"match": schema.MapAttribute{
-						Description: "A set of equality matchers an alert has to fulfill to match the node.",
-						Optional:    true,
-						ElementType: types.StringType,
-					},
-					"match_regex": schema.MapAttribute{
-						Description: "A set of regex-matchers an alert has to fulfill to match the node.",
-						Optional:    true,
-						ElementType: types.StringType,
-					},
-					"receiver": schema.StringAttribute{
-						Description: "The name of the receiver to route the alerts to.",
-						Required:    true,
-					},
-					"repeat_interval": schema.StringAttribute{
-						Description: "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
-						Optional:    true,
-						Computed:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
-					},
-				},
+		},
+		"group_wait": schema.StringAttribute{
+			Description: routeDescriptions["group_wait"],
+			Optional:    true,
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
 			},
-		}
+		},
+		"match": schema.MapAttribute{
+			Description: routeDescriptions["match"],
+			Optional:    true,
+			ElementType: types.StringType,
+		},
+		"match_regex": schema.MapAttribute{
+			Description: routeDescriptions["match_regex"],
+			Optional:    true,
+			ElementType: types.StringType,
+		},
+		"receiver": schema.StringAttribute{
+			Description: routeDescriptions["receiver"],
+			Required:    true,
+		},
+		"repeat_interval": schema.StringAttribute{
+			Description: routeDescriptions["repeat_interval"],
+			Optional:    true,
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
 	}
+
+	if level != limit {
+		attributesMap["routes"] = getRouteNestedObjectAux(level+1, limit)
+	}
+
 	return schema.ListNestedAttribute{
 		Description: "List of email configurations.",
 		Optional:    true,
@@ -291,52 +299,7 @@ func getRouteNestedObjectAux(level int) schema.ListNestedAttribute {
 			listvalidator.SizeAtLeast(1),
 		},
 		NestedObject: schema.NestedAttributeObject{
-			Attributes: map[string]schema.Attribute{
-				"group_by": schema.ListAttribute{
-					Description: "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
-					Optional:    true,
-					ElementType: types.StringType,
-				},
-				"group_interval": schema.StringAttribute{
-					Description: "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
-					Optional:    true,
-					Computed:    true,
-					PlanModifiers: []planmodifier.String{
-						stringplanmodifier.UseStateForUnknown(),
-					},
-				},
-				"group_wait": schema.StringAttribute{
-					Description: "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .",
-					Optional:    true,
-					Computed:    true,
-					PlanModifiers: []planmodifier.String{
-						stringplanmodifier.UseStateForUnknown(),
-					},
-				},
-				"match": schema.MapAttribute{
-					Description: "A set of equality matchers an alert has to fulfill to match the node.",
-					Optional:    true,
-					ElementType: types.StringType,
-				},
-				"match_regex": schema.MapAttribute{
-					Description: "A set of regex-matchers an alert has to fulfill to match the node.",
-					Optional:    true,
-					ElementType: types.StringType,
-				},
-				"receiver": schema.StringAttribute{
-					Description: "The name of the receiver to route the alerts to.",
-					Required:    true,
-				},
-				"repeat_interval": schema.StringAttribute{
-					Description: "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
-					Optional:    true,
-					Computed:    true,
-					PlanModifiers: []planmodifier.String{
-						stringplanmodifier.UseStateForUnknown(),
-					},
-				},
-				"routes": getRouteNestedObjectAux(level + 1),
-			},
+			Attributes: attributesMap,
 		},
 	}
 }
@@ -696,12 +659,12 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Required:    true,
 						Attributes: map[string]schema.Attribute{
 							"group_by": schema.ListAttribute{
-								Description: "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
+								Description: routeDescriptions["group_by"],
 								Optional:    true,
 								ElementType: types.StringType,
 							},
 							"group_interval": schema.StringAttribute{
-								Description: "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
+								Description: routeDescriptions["group_interval"],
 								Optional:    true,
 								Computed:    true,
 								PlanModifiers: []planmodifier.String{
@@ -709,7 +672,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								},
 							},
 							"group_wait": schema.StringAttribute{
-								Description: "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .",
+								Description: routeDescriptions["group_wait"],
 								Optional:    true,
 								Computed:    true,
 								PlanModifiers: []planmodifier.String{
@@ -717,21 +680,21 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								},
 							},
 							"match": schema.MapAttribute{
-								Description: "A set of equality matchers an alert has to fulfill to match the node.",
+								Description: routeDescriptions["match"],
 								Optional:    true,
 								ElementType: types.StringType,
 							},
 							"match_regex": schema.MapAttribute{
-								Description: "A set of regex-matchers an alert has to fulfill to match the node.",
+								Description: routeDescriptions["match_regex"],
 								Optional:    true,
 								ElementType: types.StringType,
 							},
 							"receiver": schema.StringAttribute{
-								Description: "The name of the receiver to route the alerts to.",
+								Description: routeDescriptions["receiver"],
 								Required:    true,
 							},
 							"repeat_interval": schema.StringAttribute{
-								Description: "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
+								Description: routeDescriptions["repeat_interval"],
 								Optional:    true,
 								Computed:    true,
 								PlanModifiers: []planmodifier.String{
@@ -949,16 +912,23 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	var updatedAlertConfig *argus.UpdateAlertConfigsResponse
 	if alertConfigPayload != nil {
-		updatedAlertConfig, err = r.client.UpdateAlertConfigs(ctx, *instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
+		_, err = r.client.UpdateAlertConfigs(ctx, *instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting alert config: %v", err))
 			return
 		}
 	}
+
+	// Get alert config after update
+	alertConfigResp, err := r.client.GetAlertConfigs(ctx, *instanceId, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Getting alert config: %v", err))
+		return
+	}
+
 	// Map response body to schema
-	err = mapUpdateAlertConfigField(ctx, updatedAlertConfig, &model)
+	err = mapAlertConfigField(ctx, alertConfigResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
 		return
@@ -1209,16 +1179,23 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	var updatedAlertConfig *argus.UpdateAlertConfigsResponse
 	if alertConfigPayload != nil {
-		updatedAlertConfig, err = r.client.UpdateAlertConfigs(ctx, instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
+		_, err = r.client.UpdateAlertConfigs(ctx, instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting alert config: %v", err))
 			return
 		}
 	}
+
+	// Get updated alert config
+	alertConfigResp, err := r.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API to get alert config: %v", err))
+		return
+	}
+
 	// Map response body to schema
-	err = mapUpdateAlertConfigField(ctx, updatedAlertConfig, &model)
+	err = mapAlertConfigField(ctx, alertConfigResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
 		return
@@ -1409,29 +1386,6 @@ func mapMetricsRetentionField(r *argus.GetMetricsStorageRetentionResponse, model
 	return nil
 }
 
-func mapUpdateAlertConfigField(ctx context.Context, resp *argus.UpdateAlertConfigsResponse, model *Model) error {
-	if resp == nil || resp.Data == nil {
-		model.AlertConfig = types.ObjectNull(alertConfigTypes)
-		return nil
-	}
-
-	if model == nil {
-		return fmt.Errorf("nil model")
-	}
-
-	respReceivers := resp.Data.Receivers
-	respRoute := resp.Data.Route
-	respGlobalConfig := resp.Data.Global
-
-	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute, respGlobalConfig)
-	if err != nil {
-		return fmt.Errorf("mapping alert config: %w", err)
-	}
-
-	model.AlertConfig = alertConfig
-	return nil
-}
-
 func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsResponse, model *Model) error {
 	if resp == nil || resp.Data == nil {
 		model.AlertConfig = types.ObjectNull(alertConfigTypes)
@@ -1442,33 +1396,41 @@ func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsRespons
 		return fmt.Errorf("nil model")
 	}
 
-	respReceivers := resp.Data.Receivers
-	respRoute := resp.Data.Route
-	respGlobalConfig := resp.Data.Global
-
-	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute, respGlobalConfig)
-	if err != nil {
-		return fmt.Errorf("mapping alert config: %w", err)
+	var alertConfigTF *alertConfigModel
+	if !(model.AlertConfig.IsNull() || model.AlertConfig.IsUnknown()) {
+		alertConfigTF = &alertConfigModel{}
+		diags := model.AlertConfig.As(ctx, &alertConfigTF, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return fmt.Errorf("mapping alert config: %w", core.DiagsToError(diags))
+		}
 	}
 
-	model.AlertConfig = alertConfig
-	return nil
-}
+	respReceivers := resp.Data.Receivers
+	respRoute := resp.Data.Route
+	respGlobalConfigs := resp.Data.Global
 
-func mapAlertConfigAttribute(ctx context.Context, respReceivers *[]argus.Receivers, respRoute *argus.Route, respGlobalConfigs *argus.Global) (basetypes.ObjectValue, error) {
 	receiversList, err := mapReceiversToAttributes(ctx, respReceivers)
 	if err != nil {
-		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping receivers: %w", err)
+		return fmt.Errorf("mapping alert config receivers: %w", err)
 	}
 
 	route, err := mapRouteToAttributes(ctx, respRoute)
 	if err != nil {
-		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping route: %w", err)
+		return fmt.Errorf("mapping alert config route: %w", err)
 	}
 
-	globalConfig, err := mapGlobalConfigToAttributes(respGlobalConfigs)
+	var globalConfigModel *globalConfigurationModel
+	if alertConfigTF != nil && !alertConfigTF.GlobalConfiguration.IsNull() && !alertConfigTF.GlobalConfiguration.IsUnknown() {
+		globalConfigModel = &globalConfigurationModel{}
+		diags := alertConfigTF.GlobalConfiguration.As(ctx, globalConfigModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return fmt.Errorf("mapping alert config: %w", core.DiagsToError(diags))
+		}
+	}
+
+	globalConfig, err := mapGlobalConfigToAttributes(respGlobalConfigs, globalConfigModel)
 	if err != nil {
-		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping global config: %w", err)
+		return fmt.Errorf("mapping alert config global config: %w", err)
 	}
 
 	alertConfig, diags := types.ObjectValue(alertConfigTypes, map[string]attr.Value{
@@ -1477,7 +1439,7 @@ func mapAlertConfigAttribute(ctx context.Context, respReceivers *[]argus.Receive
 		"global":    globalConfig,
 	})
 	if diags.HasError() {
-		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping alert config: %w", core.DiagsToError(diags))
+		return fmt.Errorf("converting alert config to TF type: %w", core.DiagsToError(diags))
 	}
 
 	// Check if the alert config is equal to the mock alert config
@@ -1486,17 +1448,18 @@ func mapAlertConfigAttribute(ctx context.Context, respReceivers *[]argus.Receive
 	// This is done to avoid inconsistent applies or non-empty plans after applying
 	mockAlertConfig, err := getMockAlertConfig(ctx)
 	if err != nil {
-		return types.ObjectNull(alertConfigTypes), fmt.Errorf("getting mock alert config: %w", err)
+		return fmt.Errorf("getting mock alert config: %w", err)
 	}
 	modelMockAlertConfig, diags := types.ObjectValueFrom(ctx, alertConfigTypes, mockAlertConfig)
 	if diags.HasError() {
-		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping mock alert config: %w", core.DiagsToError(diags))
+		return fmt.Errorf("converting mock alert config to TF type: %w", core.DiagsToError(diags))
 	}
 	if alertConfig.Equal(modelMockAlertConfig) {
-		return types.ObjectNull(alertConfigTypes), nil
+		alertConfig = types.ObjectNull(alertConfigTypes)
 	}
 
-	return alertConfig, nil
+	model.AlertConfig = alertConfig
+	return nil
 }
 
 // getMockAlertConfig returns a default alert config to be set in the instance if the alert config is unset in the Terraform configuration
@@ -1583,20 +1546,44 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 	}, nil
 }
 
-func mapGlobalConfigToAttributes(respGlobalConfigs *argus.Global) (basetypes.ObjectValue, error) {
+func mapGlobalConfigToAttributes(respGlobalConfigs *argus.Global, globalConfigsTF *globalConfigurationModel) (basetypes.ObjectValue, error) {
 	if respGlobalConfigs == nil {
 		return types.ObjectNull(globalConfigurationTypes), nil
+	}
+
+	// This bypass is needed because these values are not returned in the API GET response
+	smtpSmartHost := respGlobalConfigs.SmtpSmarthost
+	smtpAuthIdentity := respGlobalConfigs.SmtpAuthIdentity
+	smtpAuthPassword := respGlobalConfigs.SmtpAuthPassword
+	smtpAuthUsername := respGlobalConfigs.SmtpAuthUsername
+	if globalConfigsTF != nil {
+		if respGlobalConfigs.SmtpSmarthost == nil &&
+			!globalConfigsTF.SmtpSmartHost.IsNull() && !globalConfigsTF.SmtpSmartHost.IsUnknown() {
+			smtpSmartHost = utils.Ptr(globalConfigsTF.SmtpSmartHost.ValueString())
+		}
+		if respGlobalConfigs.SmtpAuthIdentity == nil &&
+			!globalConfigsTF.SmtpAuthIdentity.IsNull() && !globalConfigsTF.SmtpAuthIdentity.IsUnknown() {
+			smtpAuthIdentity = utils.Ptr(globalConfigsTF.SmtpAuthIdentity.ValueString())
+		}
+		if respGlobalConfigs.SmtpAuthPassword == nil &&
+			!globalConfigsTF.SmtpAuthPassword.IsNull() && !globalConfigsTF.SmtpAuthPassword.IsUnknown() {
+			smtpAuthPassword = utils.Ptr(globalConfigsTF.SmtpAuthPassword.ValueString())
+		}
+		if respGlobalConfigs.SmtpAuthUsername == nil &&
+			!globalConfigsTF.SmtpAuthUsername.IsNull() && !globalConfigsTF.SmtpAuthUsername.IsUnknown() {
+			smtpAuthUsername = utils.Ptr(globalConfigsTF.SmtpAuthUsername.ValueString())
+		}
 	}
 
 	globalConfigObject, diags := types.ObjectValue(globalConfigurationTypes, map[string]attr.Value{
 		"opsgenie_api_key":   types.StringPointerValue(respGlobalConfigs.OpsgenieApiKey),
 		"opsgenie_api_url":   types.StringPointerValue(respGlobalConfigs.OpsgenieApiUrl),
 		"resolve_timeout":    types.StringPointerValue(respGlobalConfigs.ResolveTimeout),
-		"smtp_auth_identity": types.StringPointerValue(respGlobalConfigs.SmtpAuthIdentity),
-		"smtp_auth_password": types.StringPointerValue(respGlobalConfigs.SmtpAuthPassword),
-		"smtp_auth_username": types.StringPointerValue(respGlobalConfigs.SmtpAuthUsername),
 		"smtp_from":          types.StringPointerValue(respGlobalConfigs.SmtpFrom),
-		"smtp_smart_host":    types.StringPointerValue(respGlobalConfigs.SmtpSmarthost),
+		"smtp_auth_identity": types.StringPointerValue(smtpAuthIdentity),
+		"smtp_auth_password": types.StringPointerValue(smtpAuthPassword),
+		"smtp_auth_username": types.StringPointerValue(smtpAuthUsername),
+		"smtp_smart_host":    types.StringPointerValue(smtpSmartHost),
 	})
 	if diags.HasError() {
 		return types.ObjectNull(globalConfigurationTypes), fmt.Errorf("mapping global config: %w", core.DiagsToError(diags))
@@ -1734,9 +1721,19 @@ func mapRouteToAttributes(ctx context.Context, route *argus.Route) (attr.Value, 
 		return types.ObjectNull(routeTypes), nil
 	}
 
-	groupByModel, matchModel, matchRegexModel, err := mapRouteFieldsToAttributes(ctx, route.GroupBy, route.Match, route.MatchRe)
-	if err != nil {
-		return types.ObjectNull(routeTypes), err
+	groupByModel, diags := types.ListValueFrom(ctx, types.StringType, route.GroupBy)
+	if diags.HasError() {
+		return types.ObjectNull(routeTypes), fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
+	}
+
+	matchModel, diags := types.MapValueFrom(ctx, types.StringType, route.Match)
+	if diags.HasError() {
+		return types.ObjectNull(routeTypes), fmt.Errorf("mapping match: %w", core.DiagsToError(diags))
+	}
+
+	matchRegexModel, diags := types.MapValueFrom(ctx, types.StringType, route.MatchRe)
+	if diags.HasError() {
+		return types.ObjectNull(routeTypes), fmt.Errorf("mapping match regex: %w", core.DiagsToError(diags))
 	}
 
 	childRoutes, err := mapChildRoutesToAttributes(ctx, route.Routes)
@@ -1764,15 +1761,26 @@ func mapRouteToAttributes(ctx context.Context, route *argus.Route) (attr.Value, 
 }
 
 func mapChildRoutesToAttributes(ctx context.Context, routes *[]argus.RouteSerializer) (basetypes.ListValue, error) {
+	nullList := types.ListNull(getRouteListType())
 	if routes == nil {
-		return types.ListNull(getRouteListType()), nil
+		return nullList, nil
 	}
 
 	routesList := []attr.Value{}
 	for _, route := range *routes {
-		groupByModel, matchModel, matchRegexModel, err := mapRouteFieldsToAttributes(ctx, route.GroupBy, route.Match, route.MatchRe)
-		if err != nil {
-			return types.ListNull(getRouteListType()), fmt.Errorf("mapping child route fields: %w", err)
+		groupByModel, diags := types.ListValueFrom(ctx, types.StringType, route.GroupBy)
+		if diags.HasError() {
+			return nullList, fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
+		}
+
+		matchModel, diags := types.MapValueFrom(ctx, types.StringType, route.Match)
+		if diags.HasError() {
+			return nullList, fmt.Errorf("mapping match: %w", core.DiagsToError(diags))
+		}
+
+		matchRegexModel, diags := types.MapValueFrom(ctx, types.StringType, route.MatchRe)
+		if diags.HasError() {
+			return nullList, fmt.Errorf("mapping match regex: %w", core.DiagsToError(diags))
 		}
 
 		routeMap := map[string]attr.Value{
@@ -1795,32 +1803,9 @@ func mapChildRoutesToAttributes(ctx context.Context, routes *[]argus.RouteSerial
 
 	returnRoutesList, diags := types.ListValueFrom(ctx, getRouteListType(), routesList)
 	if diags.HasError() {
-		return types.ListNull(getRouteListType()), fmt.Errorf("mapping child routes list: %w", core.DiagsToError(diags))
+		return nullList, fmt.Errorf("mapping child routes list: %w", core.DiagsToError(diags))
 	}
 	return returnRoutesList, nil
-}
-
-func mapRouteFieldsToAttributes(ctx context.Context, groupBy *[]string, match, matchRegex *map[string]string) (groupByModel basetypes.ListValue, matchModel, matchRegexModel basetypes.MapValue, err error) {
-	var diags diag.Diagnostics
-	nullList := types.ListNull(types.StringType)
-	nullMap := types.MapNull(types.StringType)
-
-	groupByModel, diags = types.ListValueFrom(ctx, types.StringType, groupBy)
-	if diags.HasError() {
-		return nullList, nullMap, nullMap, fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
-	}
-
-	matchModel, diags = types.MapValueFrom(ctx, types.StringType, match)
-	if diags.HasError() {
-		return nullList, nullMap, nullMap, fmt.Errorf("mapping match: %w", core.DiagsToError(diags))
-	}
-
-	matchRegexModel, diags = types.MapValueFrom(ctx, types.StringType, matchRegex)
-	if diags.HasError() {
-		return nullList, nullMap, nullMap, fmt.Errorf("mapping match regex: %w", core.DiagsToError(diags))
-	}
-
-	return groupByModel, matchModel, matchRegexModel, nil
 }
 
 func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {
@@ -2059,9 +2044,12 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*argus.UpdateAler
 
 	if !routeTF.Routes.IsNull() && !routeTF.Routes.IsUnknown() {
 		childRoutes := []routeModel{}
-		lastChildRoutes := []routeModelFields{}
 		diags := routeTF.Routes.ElementsAs(ctx, &childRoutes, false)
 		if diags.HasError() {
+			// If there is an error, we will try to map the child routes as if they are the last child routes
+			// This is done because the last child routes in the recursion have a different structure (don't have the `routes` fields)
+			// and need to be unpacked to a different struct (RouteModelFields)
+			lastChildRoutes := []RouteModelFields{}
 			diags = routeTF.Routes.ElementsAs(ctx, &lastChildRoutes, true)
 			if diags.HasError() {
 				return nil, fmt.Errorf("mapping child routes: %w", core.DiagsToError(diags))
