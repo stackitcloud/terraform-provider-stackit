@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -32,7 +33,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
-const childRouteMaxRecursionLevel = 10
+const childRouteMaxRecursionLevel = 1
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -131,6 +132,16 @@ var routeTypes = map[string]attr.Type{
 	"routes":          types.ListType{ElemType: getRouteListType()},
 }
 
+type routeModelFields struct {
+	GroupBy        types.List   `tfsdk:"group_by"`
+	GroupInterval  types.String `tfsdk:"group_interval"`
+	GroupWait      types.String `tfsdk:"group_wait"`
+	Match          types.Map    `tfsdk:"match"`
+	MatchRegex     types.Map    `tfsdk:"match_regex"`
+	Receiver       types.String `tfsdk:"receiver"`
+	RepeatInterval types.String `tfsdk:"repeat_interval"`
+}
+
 // Struct corresponding to Model.AlertConfig.receivers
 type receiversModel struct {
 	Name            types.String `tfsdk:"name"`
@@ -190,10 +201,10 @@ var webHooksConfigsTypes = map[string]attr.Type{
 }
 
 func getRouteListType() types.ObjectType {
-	return getRouteListTypeAux(1)
+	return getRouteListTypeAux(1, childRouteMaxRecursionLevel)
 }
 
-func getRouteListTypeAux(level int) types.ObjectType {
+func getRouteListTypeAux(level, limit int) types.ObjectType {
 	attributeTypes := map[string]attr.Type{
 		"group_by":        types.ListType{ElemType: types.StringType},
 		"group_interval":  types.StringType,
@@ -204,11 +215,11 @@ func getRouteListTypeAux(level int) types.ObjectType {
 		"repeat_interval": types.StringType,
 	}
 
-	if level == childRouteMaxRecursionLevel {
+	if level == limit {
 		return types.ObjectType{AttrTypes: attributeTypes}
 	}
 
-	attributeTypes["routes"] = types.ListType{ElemType: getRouteListTypeAux(level + 1)}
+	attributeTypes["routes"] = types.ListType{ElemType: getRouteListTypeAux(level+1, limit)}
 	return types.ObjectType{AttrTypes: attributeTypes}
 }
 
@@ -234,10 +245,18 @@ func getRouteNestedObjectAux(level int) schema.ListNestedAttribute {
 					"group_interval": schema.StringAttribute{
 						Description: "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
 						Optional:    true,
+						Computed:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"group_wait": schema.StringAttribute{
 						Description: "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .",
 						Optional:    true,
+						Computed:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"match": schema.MapAttribute{
 						Description: "A set of equality matchers an alert has to fulfill to match the node.",
@@ -256,6 +275,10 @@ func getRouteNestedObjectAux(level int) schema.ListNestedAttribute {
 					"repeat_interval": schema.StringAttribute{
 						Description: "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
 						Optional:    true,
+						Computed:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 				},
 			},
@@ -277,10 +300,18 @@ func getRouteNestedObjectAux(level int) schema.ListNestedAttribute {
 				"group_interval": schema.StringAttribute{
 					Description: "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
 					Optional:    true,
+					Computed:    true,
+					PlanModifiers: []planmodifier.String{
+						stringplanmodifier.UseStateForUnknown(),
+					},
 				},
 				"group_wait": schema.StringAttribute{
 					Description: "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .",
 					Optional:    true,
+					Computed:    true,
+					PlanModifiers: []planmodifier.String{
+						stringplanmodifier.UseStateForUnknown(),
+					},
 				},
 				"match": schema.MapAttribute{
 					Description: "A set of equality matchers an alert has to fulfill to match the node.",
@@ -299,6 +330,10 @@ func getRouteNestedObjectAux(level int) schema.ListNestedAttribute {
 				"repeat_interval": schema.StringAttribute{
 					Description: "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
 					Optional:    true,
+					Computed:    true,
+					PlanModifiers: []planmodifier.String{
+						stringplanmodifier.UseStateForUnknown(),
+					},
 				},
 				"routes": getRouteNestedObjectAux(level + 1),
 			},
@@ -668,10 +703,18 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"group_interval": schema.StringAttribute{
 								Description: "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"group_wait": schema.StringAttribute{
 								Description: "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .",
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"match": schema.MapAttribute{
 								Description: "A set of equality matchers an alert has to fulfill to match the node.",
@@ -690,6 +733,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"repeat_interval": schema.StringAttribute{
 								Description: "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"routes": getRouteNestedObject(),
 						},
@@ -697,6 +744,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"global": schema.SingleNestedAttribute{
 						Description: "Global configuration for the alerts.",
 						Optional:    true,
+						Computed:    true,
 						Attributes: map[string]schema.Attribute{
 							"opsgenie_api_key": schema.StringAttribute{
 								Description: "The API key for OpsGenie.",
@@ -710,6 +758,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"resolve_timeout": schema.StringAttribute{
 								Description: "The default value used by alertmanager if the alert does not include EndsAt. After this time passes, it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.",
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"smtp_auth_identity": schema.StringAttribute{
 								Description: "SMTP authentication information. Must be a valid email address",
@@ -727,6 +779,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"smtp_from": schema.StringAttribute{
 								Description: "The default SMTP From header field. Must be a valid email address",
 								Optional:    true,
+								Computed:    true,
 							},
 							"smtp_smart_host": schema.StringAttribute{
 								Description: "The default SMTP smarthost used for sending emails, including port number in format `host:port` (eg. `smtp.example.com:587`). Port number usually is 25, or 587 for SMTP over TLS (sometimes referred to as STARTTLS).",
@@ -1704,44 +1757,55 @@ func mapRouteToAttributes(ctx context.Context, route *argus.Route) (attr.Value, 
 
 	routeModel, diags := types.ObjectValue(routeTypes, routeMap)
 	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
+		return types.ObjectNull(routeTypes), fmt.Errorf("converting route to TF types: %w", core.DiagsToError(diags))
 	}
 
 	return routeModel, nil
 }
 
-func mapChildRoutesToAttributes(_ context.Context, routes *[]argus.RouteSerializer) (basetypes.ListValue, error) {
+func mapChildRoutesToAttributes(ctx context.Context, routes *[]argus.RouteSerializer) (basetypes.ListValue, error) {
 	if routes == nil {
 		return types.ListNull(getRouteListType()), nil
 	}
 
-	// routesList := []attr.Value{}
-	// for _, route := range *routes {
-	// 	groupByModel, matchModel, matchRegexModel, err := mapRouteFieldsToAttributes(ctx, route)
-	// 	if err != nil {
-	// 		return types.ListNull(getRouteListType()), fmt.Errorf("mapping child routes field: %w", err)
-	// 	}
+	routesList := []attr.Value{}
+	for _, route := range *routes {
+		groupByModel, matchModel, matchRegexModel, err := mapRouteFieldsToAttributes(ctx, route.GroupBy, route.Match, route.MatchRe)
+		if err != nil {
+			return types.ListNull(getRouteListType()), fmt.Errorf("mapping child route fields: %w", err)
+		}
 
-	// 	routeMap := map[string]attr.Value{
-	// 		"group_by":        groupByModel,
-	// 		"group_interval":  types.StringPointerValue(route.GroupInterval),
-	// 		"group_wait":      types.StringPointerValue(route.GroupWait),
-	// 		"match":           matchModel,
-	// 		"match_regex":     matchRegexModel,
-	// 		"receiver":        types.StringPointerValue(route.Receiver),
-	// 		"repeat_interval": types.StringPointerValue(route.RepeatInterval),
-	// 	}
+		routeMap := map[string]attr.Value{
+			"group_by":        groupByModel,
+			"group_interval":  types.StringPointerValue(route.GroupInterval),
+			"group_wait":      types.StringPointerValue(route.GroupWait),
+			"match":           matchModel,
+			"match_regex":     matchRegexModel,
+			"receiver":        types.StringPointerValue(route.Receiver),
+			"repeat_interval": types.StringPointerValue(route.RepeatInterval),
+		}
 
-	// }
+		routeModel, diags := types.ObjectValue(getRouteListType().AttrTypes, routeMap)
+		if diags.HasError() {
+			return types.ListNull(getRouteListType()), fmt.Errorf("converting child route to TF types: %w", core.DiagsToError(diags))
+		}
 
-	return types.ListNull(getRouteListType()), nil
+		routesList = append(routesList, routeModel)
+	}
+
+	returnRoutesList, diags := types.ListValueFrom(ctx, getRouteListType(), routesList)
+	if diags.HasError() {
+		return types.ListNull(getRouteListType()), fmt.Errorf("mapping child routes list: %w", core.DiagsToError(diags))
+	}
+	return returnRoutesList, nil
 }
 
-func mapRouteFieldsToAttributes(ctx context.Context, groupBy *[]string, match *map[string]string, matchRegex *map[string]string) (groupByModel basetypes.ListValue, matchModel, matchRegexModel basetypes.MapValue, err error) {
+func mapRouteFieldsToAttributes(ctx context.Context, groupBy *[]string, match, matchRegex *map[string]string) (groupByModel basetypes.ListValue, matchModel, matchRegexModel basetypes.MapValue, err error) {
+	var diags diag.Diagnostics
 	nullList := types.ListNull(types.StringType)
 	nullMap := types.MapNull(types.StringType)
 
-	groupByModel, diags := types.ListValueFrom(ctx, types.StringType, groupBy)
+	groupByModel, diags = types.ListValueFrom(ctx, types.StringType, groupBy)
 	if diags.HasError() {
 		return nullList, nullMap, nullMap, fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
 	}
@@ -1859,7 +1923,13 @@ func toUpdateAlertConfigPayload(ctx context.Context, model *alertConfigModel) (*
 		return nil, fmt.Errorf("mapping receivers: %w", err)
 	}
 
-	payload.Route, err = toRoutePayload(ctx, model)
+	routeTF := routeModel{}
+	diags := model.Route.As(ctx, &routeTF, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
+	}
+
+	payload.Route, err = toRoutePayload(ctx, &routeTF)
 	if err != nil {
 		return nil, fmt.Errorf("mapping route: %w", err)
 	}
@@ -1953,50 +2023,103 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]argus.U
 	return &receivers, nil
 }
 
-func toRoutePayload(ctx context.Context, model *alertConfigModel) (*argus.UpdateAlertConfigsPayloadRoute, error) {
-	routeModel := routeModel{}
-	diags := model.Route.As(ctx, &routeModel, basetypes.ObjectAsOptions{})
-	if diags.HasError() {
-		return nil, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
+func toRoutePayload(ctx context.Context, routeTF *routeModel) (*argus.UpdateAlertConfigsPayloadRoute, error) {
+	if routeTF == nil {
+		return nil, fmt.Errorf("nil route model")
 	}
 
 	var groupByPayload *[]string
 	var matchPayload *map[string]interface{}
 	var matchRegexPayload *map[string]interface{}
+	var childRoutesPayload *[]argus.CreateAlertConfigRoutePayloadRoutesInner
 
-	if !routeModel.GroupBy.IsNull() && !routeModel.GroupBy.IsUnknown() {
+	if !routeTF.GroupBy.IsNull() && !routeTF.GroupBy.IsUnknown() {
 		groupByPayload = &[]string{}
-		diags := routeModel.GroupBy.ElementsAs(ctx, groupByPayload, false)
+		diags := routeTF.GroupBy.ElementsAs(ctx, groupByPayload, false)
 		if diags.HasError() {
 			return nil, fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
 		}
 	}
 
-	if !routeModel.Match.IsNull() && !routeModel.Match.IsUnknown() {
-		matchMap, err := conversion.ToStringInterfaceMap(ctx, routeModel.Match)
+	if !routeTF.Match.IsNull() && !routeTF.Match.IsUnknown() {
+		matchMap, err := conversion.ToStringInterfaceMap(ctx, routeTF.Match)
 		if err != nil {
 			return nil, fmt.Errorf("mapping match: %w", err)
 		}
 		matchPayload = &matchMap
 	}
 
-	if !routeModel.MatchRegex.IsNull() && !routeModel.MatchRegex.IsUnknown() {
-		matchRegexMap, err := conversion.ToStringInterfaceMap(ctx, routeModel.MatchRegex)
+	if !routeTF.MatchRegex.IsNull() && !routeTF.MatchRegex.IsUnknown() {
+		matchRegexMap, err := conversion.ToStringInterfaceMap(ctx, routeTF.MatchRegex)
 		if err != nil {
 			return nil, fmt.Errorf("mapping match regex: %w", err)
 		}
 		matchRegexPayload = &matchRegexMap
 	}
 
+	if !routeTF.Routes.IsNull() && !routeTF.Routes.IsUnknown() {
+		childRoutes := []routeModel{}
+		lastChildRoutes := []routeModelFields{}
+		diags := routeTF.Routes.ElementsAs(ctx, &childRoutes, false)
+		if diags.HasError() {
+			diags = routeTF.Routes.ElementsAs(ctx, &lastChildRoutes, true)
+			if diags.HasError() {
+				return nil, fmt.Errorf("mapping child routes: %w", core.DiagsToError(diags))
+			}
+			for i := range lastChildRoutes {
+				childRoute := routeModel{
+					GroupBy:        lastChildRoutes[i].GroupBy,
+					GroupInterval:  lastChildRoutes[i].GroupInterval,
+					GroupWait:      lastChildRoutes[i].GroupWait,
+					Match:          lastChildRoutes[i].Match,
+					MatchRegex:     lastChildRoutes[i].MatchRegex,
+					Receiver:       lastChildRoutes[i].Receiver,
+					RepeatInterval: lastChildRoutes[i].RepeatInterval,
+					Routes:         types.ListNull(getRouteListType()),
+				}
+				childRoutes = append(childRoutes, childRoute)
+			}
+		}
+
+		childRoutesList := []argus.CreateAlertConfigRoutePayloadRoutesInner{}
+		for i := range childRoutes {
+			childRoute := childRoutes[i]
+			childRoutePayload, err := toRoutePayload(ctx, &childRoute)
+			if err != nil {
+				return nil, fmt.Errorf("mapping child route: %w", err)
+			}
+			childRoutesList = append(childRoutesList, *toChildRoutePayload(childRoutePayload))
+		}
+
+		childRoutesPayload = &childRoutesList
+	}
+
 	return &argus.UpdateAlertConfigsPayloadRoute{
 		GroupBy:        groupByPayload,
-		GroupInterval:  conversion.StringValueToPointer(routeModel.GroupInterval),
-		GroupWait:      conversion.StringValueToPointer(routeModel.GroupWait),
+		GroupInterval:  conversion.StringValueToPointer(routeTF.GroupInterval),
+		GroupWait:      conversion.StringValueToPointer(routeTF.GroupWait),
 		Match:          matchPayload,
 		MatchRe:        matchRegexPayload,
-		Receiver:       conversion.StringValueToPointer(routeModel.Receiver),
-		RepeatInterval: conversion.StringValueToPointer(routeModel.RepeatInterval),
+		Receiver:       conversion.StringValueToPointer(routeTF.Receiver),
+		RepeatInterval: conversion.StringValueToPointer(routeTF.RepeatInterval),
+		Routes:         childRoutesPayload,
 	}, nil
+}
+
+func toChildRoutePayload(in *argus.UpdateAlertConfigsPayloadRoute) *argus.CreateAlertConfigRoutePayloadRoutesInner {
+	if in == nil {
+		return nil
+	}
+	return &argus.CreateAlertConfigRoutePayloadRoutesInner{
+		GroupBy:        in.GroupBy,
+		GroupInterval:  in.GroupInterval,
+		GroupWait:      in.GroupWait,
+		Match:          in.Match,
+		MatchRe:        in.MatchRe,
+		Receiver:       in.Receiver,
+		RepeatInterval: in.RepeatInterval,
+		// Routes not currently supported
+	}
 }
 
 func toGlobalConfigPayload(ctx context.Context, model *alertConfigModel) (*argus.UpdateAlertConfigsPayloadGlobal, error) {

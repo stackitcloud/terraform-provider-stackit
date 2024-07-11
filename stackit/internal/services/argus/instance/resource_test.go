@@ -1254,6 +1254,83 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 	}
 }
 
+func TestGetRouteListTypeAux(t *testing.T) {
+	tests := []struct {
+		description    string
+		startingLevel  int
+		recursionLimit int
+		expected       types.ObjectType
+	}{
+		{
+			"no recursion",
+			1,
+			1,
+			types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"group_by":        types.ListType{ElemType: types.StringType},
+					"group_interval":  types.StringType,
+					"group_wait":      types.StringType,
+					"match":           types.MapType{ElemType: types.StringType},
+					"match_regex":     types.MapType{ElemType: types.StringType},
+					"receiver":        types.StringType,
+					"repeat_interval": types.StringType,
+				},
+			},
+		},
+		{
+			"recursion 1",
+			1,
+			2,
+			types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"group_by":        types.ListType{ElemType: types.StringType},
+					"group_interval":  types.StringType,
+					"group_wait":      types.StringType,
+					"match":           types.MapType{ElemType: types.StringType},
+					"match_regex":     types.MapType{ElemType: types.StringType},
+					"receiver":        types.StringType,
+					"repeat_interval": types.StringType,
+					"routes": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{
+						"group_by":        types.ListType{ElemType: types.StringType},
+						"group_interval":  types.StringType,
+						"group_wait":      types.StringType,
+						"match":           types.MapType{ElemType: types.StringType},
+						"match_regex":     types.MapType{ElemType: types.StringType},
+						"receiver":        types.StringType,
+						"repeat_interval": types.StringType,
+					}}},
+				},
+			},
+		},
+		{
+			"recursion 2",
+			2,
+			2,
+			types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"group_by":        types.ListType{ElemType: types.StringType},
+					"group_interval":  types.StringType,
+					"group_wait":      types.StringType,
+					"match":           types.MapType{ElemType: types.StringType},
+					"match_regex":     types.MapType{ElemType: types.StringType},
+					"receiver":        types.StringType,
+					"repeat_interval": types.StringType,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output := getRouteListTypeAux(tt.startingLevel, tt.recursionLimit)
+			diff := cmp.Diff(output, tt.expected)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
 func makeTestMap(t *testing.T) basetypes.MapValue {
 	p := make(map[string]attr.Value, 1)
 	p["key"] = types.StringValue("value")
