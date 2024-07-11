@@ -5,7 +5,12 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
@@ -226,6 +231,58 @@ func fixtureGlobalConfigResponse() *argus.Global {
 		SmtpFrom:         utils.Ptr("me@example.com"),
 		SmtpSmarthost:    utils.Ptr("smtp.example.com:25"),
 	}
+}
+
+func fixtureRouteAttributeSchema(route *schema.ListNestedAttribute) map[string]schema.Attribute {
+	attributeMap := map[string]schema.Attribute{
+		"group_by": schema.ListAttribute{
+			Description: routeDescriptions["group_by"],
+			Optional:    true,
+			ElementType: types.StringType,
+		},
+		"group_interval": schema.StringAttribute{
+			Description: routeDescriptions["group_interval"],
+			Optional:    true,
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
+		"group_wait": schema.StringAttribute{
+			Description: routeDescriptions["group_wait"],
+			Optional:    true,
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
+		"match": schema.MapAttribute{
+			Description: routeDescriptions["match"],
+			Optional:    true,
+			ElementType: types.StringType,
+		},
+		"match_regex": schema.MapAttribute{
+			Description: routeDescriptions["match_regex"],
+			Optional:    true,
+			ElementType: types.StringType,
+		},
+		"receiver": schema.StringAttribute{
+			Description: routeDescriptions["receiver"],
+			Required:    true,
+		},
+		"repeat_interval": schema.StringAttribute{
+			Description: routeDescriptions["repeat_interval"],
+			Optional:    true,
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
+	}
+	if route != nil {
+		attributeMap["routes"] = *route
+	}
+	return attributeMap
 }
 
 func TestMapFields(t *testing.T) {
@@ -1249,6 +1306,67 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
+			}
+		})
+	}
+}
+
+func TestGetRouteNestedObjectAux(t *testing.T) {
+	tests := []struct {
+		description    string
+		startingLevel  int
+		recursionLimit int
+		expected       schema.ListNestedAttribute
+	}{
+		{
+			"no recursion",
+			1,
+			1,
+			schema.ListNestedAttribute{
+				Description: routeDescriptions["routes"],
+				Optional:    true,
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+				},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: fixtureRouteAttributeSchema(nil),
+				},
+			},
+		},
+		{
+			"recursion 1",
+			1,
+			2,
+			schema.ListNestedAttribute{
+				Description: routeDescriptions["routes"],
+				Optional:    true,
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+				},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: fixtureRouteAttributeSchema(
+						&schema.ListNestedAttribute{
+							Description: routeDescriptions["routes"],
+							Optional:    true,
+							Validators: []validator.List{
+								listvalidator.SizeAtLeast(1),
+							},
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: fixtureRouteAttributeSchema(nil),
+							},
+						},
+					),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output := getRouteNestedObjectAux(tt.startingLevel, tt.recursionLimit)
+			diff := cmp.Diff(output, tt.expected)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
 			}
 		})
 	}

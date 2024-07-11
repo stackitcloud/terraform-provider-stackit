@@ -293,7 +293,7 @@ func getRouteNestedObjectAux(level, limit int) schema.ListNestedAttribute {
 	}
 
 	return schema.ListNestedAttribute{
-		Description: "List of email configurations.",
+		Description: routeDescriptions["routes"],
 		Optional:    true,
 		Validators: []validator.List{
 			listvalidator.SizeAtLeast(1),

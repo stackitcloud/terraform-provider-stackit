@@ -137,7 +137,7 @@ Optional:
 - `match` (Map of String) A set of equality matchers an alert has to fulfill to match the node.
 - `match_regex` (Map of String) A set of regex-matchers an alert has to fulfill to match the node.
 - `repeat_interval` (String) How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).
-- `routes` (Attributes List) List of email configurations. (see [below for nested schema](#nestedatt--alert_config--route--routes))
+- `routes` (Attributes List) List of child routes. (see [below for nested schema](#nestedatt--alert_config--route--routes))
 
 <a id="nestedatt--alert_config--route--routes"></a>
 ### Nested Schema for `alert_config.route.routes`
