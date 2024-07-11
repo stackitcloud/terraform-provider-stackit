@@ -1324,11 +1324,8 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		}
 
 		taintsInModel := false
-		if i < len(modelNodePools) {
-			modelNodePoolTaints := modelNodePools[i].Taints
-			if !modelNodePoolTaints.IsNull() && !modelNodePoolTaints.IsUnknown() {
-				taintsInModel = true
-			}
+		if i < len(modelNodePools) && !modelNodePools[i].Taints.IsNull() && !modelNodePools[i].Taints.IsUnknown() {
+			taintsInModel = true
 		}
 		err := mapTaints(nodePoolResp.Taints, nodePool, taintsInModel)
 		if err != nil {
@@ -1374,7 +1371,7 @@ func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value, existInModel bool
 		if existInModel {
 			taintsTF, diags := types.ListValue(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{})
 			if diags.HasError() {
-				return fmt.Errorf("convert empty taints list: %w", core.DiagsToError(diags))
+				return fmt.Errorf("create empty taints list: %w", core.DiagsToError(diags))
 			}
 			nodePool["taints"] = taintsTF
 			return nil
