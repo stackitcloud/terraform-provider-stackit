@@ -351,7 +351,7 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "password"),
 				),
 			},
-			// Update with Alert Configs emailConfigs and global options
+			// Update Alert Config with complete Receiver (email, webhook and opsgenie configs), global options and Route with child routes
 			{
 				Config: resourceConfig(
 					utils.Ptr(fmt.Sprintf(
@@ -462,9 +462,6 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "username"),
 					resource.TestCheckResourceAttrSet("stackit_argus_credential.credential", "password"),
 				),
-				// This is needed because the GET request to the alert config endpoint doesn't return some of the global options
-				// and the emailConfigs. Therefore, the state file doesn't contain them and the diff will fail.
-				// ExpectNonEmptyPlan: true,
 			},
 			// Update without ACL, partial metrics retention days and NO alert configs
 			{
