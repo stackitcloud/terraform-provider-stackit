@@ -32,6 +32,8 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
+// Currently, due to incorrect types in the API, the maximum recursion level for child routes is set to 1.
+// Once this is fixed, the value should be set to 10.
 const childRouteMaxRecursionLevel = 1
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -120,7 +122,9 @@ type routeModel struct {
 	Routes         types.List   `tfsdk:"routes"`
 }
 
-type RouteModelFields struct {
+// Struct corresponding to Model.AlertConfig.route but without the recursive routes field
+// This is used to map the last level of recursion of the routes field
+type routeModelNoRoutes struct {
 	GroupBy        types.List   `tfsdk:"group_by"`
 	GroupInterval  types.String `tfsdk:"group_interval"`
 	GroupWait      types.String `tfsdk:"group_wait"`
@@ -1760,6 +1764,10 @@ func mapRouteToAttributes(ctx context.Context, route *argus.Route) (attr.Value, 
 	return routeModel, nil
 }
 
+// mapChildRoutesToAttributes maps the child routes to the Terraform attributes
+// This should be a recursive function to handle nested child routes
+// However, the API does not currently have the correct type for the child routes
+// In the future, the current implementation should be the final case of the recursive function
 func mapChildRoutesToAttributes(ctx context.Context, routes *[]argus.RouteSerializer) (basetypes.ListValue, error) {
 	nullList := types.ListNull(getRouteListType())
 	if routes == nil {
@@ -2048,8 +2056,8 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*argus.UpdateAler
 		if diags.HasError() {
 			// If there is an error, we will try to map the child routes as if they are the last child routes
 			// This is done because the last child routes in the recursion have a different structure (don't have the `routes` fields)
-			// and need to be unpacked to a different struct (RouteModelFields)
-			lastChildRoutes := []RouteModelFields{}
+			// and need to be unpacked to a different struct (routeModelNoRoutes)
+			lastChildRoutes := []routeModelNoRoutes{}
 			diags = routeTF.Routes.ElementsAs(ctx, &lastChildRoutes, true)
 			if diags.HasError() {
 				return nil, fmt.Errorf("mapping child routes: %w", core.DiagsToError(diags))

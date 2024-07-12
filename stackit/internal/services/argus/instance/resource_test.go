@@ -71,6 +71,20 @@ func fixtureRouteModel() basetypes.ObjectValue {
 		"receiver":        types.StringValue("name"),
 		"repeat_interval": types.StringValue("1m"),
 		"routes":          types.ListNull(getRouteListType()),
+		// "routes": types.ListValueMust(getRouteListType(), []attr.Value{
+		// 	types.ObjectValueMust(getRouteListType().AttrTypes, map[string]attr.Value{
+		// 		"group_by": types.ListValueMust(types.StringType, []attr.Value{
+		// 			types.StringValue("label1"),
+		// 			types.StringValue("label2"),
+		// 		}),
+		// 		"group_interval":  types.StringValue("1m"),
+		// 		"group_wait":      types.StringValue("1m"),
+		// 		"match":           types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+		// 		"match_regex":     types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+		// 		"receiver":        types.StringValue("name"),
+		// 		"repeat_interval": types.StringValue("1m"),
+		// 	}),
+		// }),
 	})
 }
 
@@ -157,6 +171,17 @@ func fixtureRoutePayload() *argus.UpdateAlertConfigsPayloadRoute {
 		MatchRe:        &map[string]interface{}{"key": "value"},
 		Receiver:       utils.Ptr("name"),
 		RepeatInterval: utils.Ptr("1m"),
+		// Routes: &[]argus.CreateAlertConfigRoutePayloadRoutesInner{
+		// 	{
+		// 		GroupBy:        utils.Ptr([]string{"label1", "label2"}),
+		// 		GroupInterval:  utils.Ptr("1m"),
+		// 		GroupWait:      utils.Ptr("1m"),
+		// 		Match:          &map[string]interface{}{"key": "value"},
+		// 		MatchRe:        &map[string]interface{}{"key": "value"},
+		// 		Receiver:       utils.Ptr("name"),
+		// 		RepeatInterval: utils.Ptr("1m"),
+		// 	},
+		// },
 	}
 }
 
@@ -885,7 +910,7 @@ func TestMapAlertConfigField(t *testing.T) {
 			}
 
 			if tt.isValid {
-				diff := cmp.Diff(state, &tt.expected)
+				diff := cmp.Diff(state.AlertConfig, tt.expected.AlertConfig)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
