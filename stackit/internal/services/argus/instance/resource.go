@@ -32,6 +32,10 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
+// Currently, due to incorrect types in the API, the maximum recursion level for child routes is set to 1.
+// Once this is fixed, the value should be set to 10.
+const childRouteMaxRecursionLevel = 1
+
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &instanceResource{}
@@ -115,6 +119,19 @@ type routeModel struct {
 	MatchRegex     types.Map    `tfsdk:"match_regex"`
 	Receiver       types.String `tfsdk:"receiver"`
 	RepeatInterval types.String `tfsdk:"repeat_interval"`
+	Routes         types.List   `tfsdk:"routes"`
+}
+
+// Struct corresponding to Model.AlertConfig.route but without the recursive routes field
+// This is used to map the last level of recursion of the routes field
+type routeModelNoRoutes struct {
+	GroupBy        types.List   `tfsdk:"group_by"`
+	GroupInterval  types.String `tfsdk:"group_interval"`
+	GroupWait      types.String `tfsdk:"group_wait"`
+	Match          types.Map    `tfsdk:"match"`
+	MatchRegex     types.Map    `tfsdk:"match_regex"`
+	Receiver       types.String `tfsdk:"receiver"`
+	RepeatInterval types.String `tfsdk:"repeat_interval"`
 }
 
 var routeTypes = map[string]attr.Type{
@@ -125,6 +142,7 @@ var routeTypes = map[string]attr.Type{
 	"match_regex":     types.MapType{ElemType: types.StringType},
 	"receiver":        types.StringType,
 	"repeat_interval": types.StringType,
+	"routes":          types.ListType{ElemType: getRouteListType()},
 }
 
 // Struct corresponding to Model.AlertConfig.receivers
@@ -183,6 +201,125 @@ type webHooksConfigsModel struct {
 var webHooksConfigsTypes = map[string]attr.Type{
 	"url":      types.StringType,
 	"ms_teams": types.BoolType,
+}
+
+var routeDescriptions = map[string]string{
+	"group_by":        "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
+	"group_interval":  "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
+	"group_wait":      "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.)",
+	"match":           "A set of equality matchers an alert has to fulfill to match the node.",
+	"match_regex":     "A set of regex-matchers an alert has to fulfill to match the node.",
+	"receiver":        "The name of the receiver to route the alerts to.",
+	"repeat_interval": "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
+	"routes":          "List of child routes.",
+}
+
+// getRouteListType is a helper function to return the route list attribute type.
+func getRouteListType() types.ObjectType {
+	return getRouteListTypeAux(1, childRouteMaxRecursionLevel)
+}
+
+// getRouteListTypeAux returns the type of the route list attribute with the given level of child routes recursion.
+// The level is used to determine the current depth of the nested object.
+// The limit is used to determine the maximum depth of the nested object.
+// The level should be lower or equal to the limit, if higher, the function will produce a stack overflow.
+func getRouteListTypeAux(level, limit int) types.ObjectType {
+	attributeTypes := map[string]attr.Type{
+		"group_by":        types.ListType{ElemType: types.StringType},
+		"group_interval":  types.StringType,
+		"group_wait":      types.StringType,
+		"match":           types.MapType{ElemType: types.StringType},
+		"match_regex":     types.MapType{ElemType: types.StringType},
+		"receiver":        types.StringType,
+		"repeat_interval": types.StringType,
+	}
+
+	if level != limit {
+		attributeTypes["routes"] = types.ListType{ElemType: getRouteListTypeAux(level+1, limit)}
+	}
+
+	return types.ObjectType{AttrTypes: attributeTypes}
+}
+
+func getRouteNestedObject() schema.ListNestedAttribute {
+	return getRouteNestedObjectAux(false, 1, childRouteMaxRecursionLevel)
+}
+
+func getDatasourceRouteNestedObject() schema.ListNestedAttribute {
+	return getRouteNestedObjectAux(true, 1, childRouteMaxRecursionLevel)
+}
+
+// getRouteNestedObjectAux returns the nested object for the route attribute with the given level of child routes recursion.
+// The isDatasource is used to determine if the route is used in a datasource schema or not. If it is a datasource, all fields are computed.
+// The level is used to determine the current depth of the nested object.
+// The limit is used to determine the maximum depth of the nested object.
+// The level should be lower or equal to the limit, if higher, the function will produce a stack overflow.
+func getRouteNestedObjectAux(isDatasource bool, level, limit int) schema.ListNestedAttribute {
+	attributesMap := map[string]schema.Attribute{
+		"group_by": schema.ListAttribute{
+			Description: routeDescriptions["group_by"],
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
+			ElementType: types.StringType,
+		},
+		"group_interval": schema.StringAttribute{
+			Description: routeDescriptions["group_interval"],
+			Optional:    !isDatasource,
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
+		"group_wait": schema.StringAttribute{
+			Description: routeDescriptions["group_wait"],
+			Optional:    !isDatasource,
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
+		"match": schema.MapAttribute{
+			Description: routeDescriptions["match"],
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
+			ElementType: types.StringType,
+		},
+		"match_regex": schema.MapAttribute{
+			Description: routeDescriptions["match_regex"],
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
+			ElementType: types.StringType,
+		},
+		"receiver": schema.StringAttribute{
+			Description: routeDescriptions["receiver"],
+			Required:    !isDatasource,
+			Computed:    isDatasource,
+		},
+		"repeat_interval": schema.StringAttribute{
+			Description: routeDescriptions["repeat_interval"],
+			Optional:    !isDatasource,
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
+	}
+
+	if level != limit {
+		attributesMap["routes"] = getRouteNestedObjectAux(isDatasource, level+1, limit)
+	}
+
+	return schema.ListNestedAttribute{
+		Description: routeDescriptions["routes"],
+		Optional:    !isDatasource,
+		Computed:    isDatasource,
+		Validators: []validator.List{
+			listvalidator.SizeAtLeast(1),
+		},
+		NestedObject: schema.NestedAttributeObject{
+			Attributes: attributesMap,
+		},
+	}
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -291,9 +428,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Computed:    true,
 				Validators: []validator.String{
 					validate.UUID(),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"parameters": schema.MapAttribute{
@@ -540,41 +674,55 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Required:    true,
 						Attributes: map[string]schema.Attribute{
 							"group_by": schema.ListAttribute{
-								Description: "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
+								Description: routeDescriptions["group_by"],
 								Optional:    true,
 								ElementType: types.StringType,
 							},
 							"group_interval": schema.StringAttribute{
-								Description: "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
+								Description: routeDescriptions["group_interval"],
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"group_wait": schema.StringAttribute{
-								Description: "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .",
+								Description: routeDescriptions["group_wait"],
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"match": schema.MapAttribute{
-								Description: "A set of equality matchers an alert has to fulfill to match the node.",
+								Description: routeDescriptions["match"],
 								Optional:    true,
 								ElementType: types.StringType,
 							},
 							"match_regex": schema.MapAttribute{
-								Description: "A set of regex-matchers an alert has to fulfill to match the node.",
+								Description: routeDescriptions["match_regex"],
 								Optional:    true,
 								ElementType: types.StringType,
 							},
 							"receiver": schema.StringAttribute{
-								Description: "The name of the receiver to route the alerts to.",
+								Description: routeDescriptions["receiver"],
 								Required:    true,
 							},
 							"repeat_interval": schema.StringAttribute{
-								Description: "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
+								Description: routeDescriptions["repeat_interval"],
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
+							"routes": getRouteNestedObject(),
 						},
 					},
 					"global": schema.SingleNestedAttribute{
 						Description: "Global configuration for the alerts.",
 						Optional:    true,
+						Computed:    true,
 						Attributes: map[string]schema.Attribute{
 							"opsgenie_api_key": schema.StringAttribute{
 								Description: "The API key for OpsGenie.",
@@ -588,6 +736,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"resolve_timeout": schema.StringAttribute{
 								Description: "The default value used by alertmanager if the alert does not include EndsAt. After this time passes, it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.",
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"smtp_auth_identity": schema.StringAttribute{
 								Description: "SMTP authentication information. Must be a valid email address",
@@ -605,6 +757,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"smtp_from": schema.StringAttribute{
 								Description: "The default SMTP From header field. Must be a valid email address",
 								Optional:    true,
+								Computed:    true,
 							},
 							"smtp_smart_host": schema.StringAttribute{
 								Description: "The default SMTP smarthost used for sending emails, including port number in format `host:port` (eg. `smtp.example.com:587`). Port number usually is 25, or 587 for SMTP over TLS (sometimes referred to as STARTTLS).",
@@ -774,16 +927,23 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	var updatedAlertConfig *argus.UpdateAlertConfigsResponse
 	if alertConfigPayload != nil {
-		updatedAlertConfig, err = r.client.UpdateAlertConfigs(ctx, *instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
+		_, err = r.client.UpdateAlertConfigs(ctx, *instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting alert config: %v", err))
 			return
 		}
 	}
+
+	// Get alert config after update
+	alertConfigResp, err := r.client.GetAlertConfigs(ctx, *instanceId, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Getting alert config: %v", err))
+		return
+	}
+
 	// Map response body to schema
-	err = mapUpdateAlertConfigField(ctx, updatedAlertConfig, &model)
+	err = mapAlertConfigField(ctx, alertConfigResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
 		return
@@ -1034,16 +1194,23 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	var updatedAlertConfig *argus.UpdateAlertConfigsResponse
 	if alertConfigPayload != nil {
-		updatedAlertConfig, err = r.client.UpdateAlertConfigs(ctx, instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
+		_, err = r.client.UpdateAlertConfigs(ctx, instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting alert config: %v", err))
 			return
 		}
 	}
+
+	// Get updated alert config
+	alertConfigResp, err := r.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API to get alert config: %v", err))
+		return
+	}
+
 	// Map response body to schema
-	err = mapUpdateAlertConfigField(ctx, updatedAlertConfig, &model)
+	err = mapAlertConfigField(ctx, alertConfigResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
 		return
@@ -1234,29 +1401,6 @@ func mapMetricsRetentionField(r *argus.GetMetricsStorageRetentionResponse, model
 	return nil
 }
 
-func mapUpdateAlertConfigField(ctx context.Context, resp *argus.UpdateAlertConfigsResponse, model *Model) error {
-	if resp == nil || resp.Data == nil {
-		model.AlertConfig = types.ObjectNull(alertConfigTypes)
-		return nil
-	}
-
-	if model == nil {
-		return fmt.Errorf("nil model")
-	}
-
-	respReceivers := resp.Data.Receivers
-	respRoute := resp.Data.Route
-	respGlobalConfig := resp.Data.Global
-
-	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute, respGlobalConfig)
-	if err != nil {
-		return fmt.Errorf("mapping alert config: %w", err)
-	}
-
-	model.AlertConfig = alertConfig
-	return nil
-}
-
 func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsResponse, model *Model) error {
 	if resp == nil || resp.Data == nil {
 		model.AlertConfig = types.ObjectNull(alertConfigTypes)
@@ -1267,33 +1411,41 @@ func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsRespons
 		return fmt.Errorf("nil model")
 	}
 
-	respReceivers := resp.Data.Receivers
-	respRoute := resp.Data.Route
-	respGlobalConfig := resp.Data.Global
-
-	alertConfig, err := mapAlertConfigAttribute(ctx, respReceivers, respRoute, respGlobalConfig)
-	if err != nil {
-		return fmt.Errorf("mapping alert config: %w", err)
+	var alertConfigTF *alertConfigModel
+	if !(model.AlertConfig.IsNull() || model.AlertConfig.IsUnknown()) {
+		alertConfigTF = &alertConfigModel{}
+		diags := model.AlertConfig.As(ctx, &alertConfigTF, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return fmt.Errorf("mapping alert config: %w", core.DiagsToError(diags))
+		}
 	}
 
-	model.AlertConfig = alertConfig
-	return nil
-}
+	respReceivers := resp.Data.Receivers
+	respRoute := resp.Data.Route
+	respGlobalConfigs := resp.Data.Global
 
-func mapAlertConfigAttribute(ctx context.Context, respReceivers *[]argus.Receivers, respRoute *argus.Route, respGlobalConfigs *argus.Global) (basetypes.ObjectValue, error) {
 	receiversList, err := mapReceiversToAttributes(ctx, respReceivers)
 	if err != nil {
-		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping receivers: %w", err)
+		return fmt.Errorf("mapping alert config receivers: %w", err)
 	}
 
 	route, err := mapRouteToAttributes(ctx, respRoute)
 	if err != nil {
-		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping route: %w", err)
+		return fmt.Errorf("mapping alert config route: %w", err)
 	}
 
-	globalConfig, err := mapGlobalConfigToAttributes(respGlobalConfigs)
+	var globalConfigModel *globalConfigurationModel
+	if alertConfigTF != nil && !alertConfigTF.GlobalConfiguration.IsNull() && !alertConfigTF.GlobalConfiguration.IsUnknown() {
+		globalConfigModel = &globalConfigurationModel{}
+		diags := alertConfigTF.GlobalConfiguration.As(ctx, globalConfigModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return fmt.Errorf("mapping alert config: %w", core.DiagsToError(diags))
+		}
+	}
+
+	globalConfig, err := mapGlobalConfigToAttributes(respGlobalConfigs, globalConfigModel)
 	if err != nil {
-		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping global config: %w", err)
+		return fmt.Errorf("mapping alert config global config: %w", err)
 	}
 
 	alertConfig, diags := types.ObjectValue(alertConfigTypes, map[string]attr.Value{
@@ -1302,7 +1454,7 @@ func mapAlertConfigAttribute(ctx context.Context, respReceivers *[]argus.Receive
 		"global":    globalConfig,
 	})
 	if diags.HasError() {
-		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping alert config: %w", core.DiagsToError(diags))
+		return fmt.Errorf("converting alert config to TF type: %w", core.DiagsToError(diags))
 	}
 
 	// Check if the alert config is equal to the mock alert config
@@ -1311,17 +1463,18 @@ func mapAlertConfigAttribute(ctx context.Context, respReceivers *[]argus.Receive
 	// This is done to avoid inconsistent applies or non-empty plans after applying
 	mockAlertConfig, err := getMockAlertConfig(ctx)
 	if err != nil {
-		return types.ObjectNull(alertConfigTypes), fmt.Errorf("getting mock alert config: %w", err)
+		return fmt.Errorf("getting mock alert config: %w", err)
 	}
 	modelMockAlertConfig, diags := types.ObjectValueFrom(ctx, alertConfigTypes, mockAlertConfig)
 	if diags.HasError() {
-		return types.ObjectNull(alertConfigTypes), fmt.Errorf("mapping mock alert config: %w", core.DiagsToError(diags))
+		return fmt.Errorf("converting mock alert config to TF type: %w", core.DiagsToError(diags))
 	}
 	if alertConfig.Equal(modelMockAlertConfig) {
-		return types.ObjectNull(alertConfigTypes), nil
+		alertConfig = types.ObjectNull(alertConfigTypes)
 	}
 
-	return alertConfig, nil
+	model.AlertConfig = alertConfig
+	return nil
 }
 
 // getMockAlertConfig returns a default alert config to be set in the instance if the alert config is unset in the Terraform configuration
@@ -1381,6 +1534,7 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		"repeat_interval": types.StringValue("4h"),
 		"match":           types.MapNull(types.StringType),
 		"match_regex":     types.MapNull(types.StringType),
+		"routes":          types.ListNull(getRouteListType()),
 	})
 	if diags.HasError() {
 		return alertConfigModel{}, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
@@ -1407,20 +1561,44 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 	}, nil
 }
 
-func mapGlobalConfigToAttributes(respGlobalConfigs *argus.Global) (basetypes.ObjectValue, error) {
+func mapGlobalConfigToAttributes(respGlobalConfigs *argus.Global, globalConfigsTF *globalConfigurationModel) (basetypes.ObjectValue, error) {
 	if respGlobalConfigs == nil {
 		return types.ObjectNull(globalConfigurationTypes), nil
+	}
+
+	// This bypass is needed because these values are not returned in the API GET response
+	smtpSmartHost := respGlobalConfigs.SmtpSmarthost
+	smtpAuthIdentity := respGlobalConfigs.SmtpAuthIdentity
+	smtpAuthPassword := respGlobalConfigs.SmtpAuthPassword
+	smtpAuthUsername := respGlobalConfigs.SmtpAuthUsername
+	if globalConfigsTF != nil {
+		if respGlobalConfigs.SmtpSmarthost == nil &&
+			!globalConfigsTF.SmtpSmartHost.IsNull() && !globalConfigsTF.SmtpSmartHost.IsUnknown() {
+			smtpSmartHost = utils.Ptr(globalConfigsTF.SmtpSmartHost.ValueString())
+		}
+		if respGlobalConfigs.SmtpAuthIdentity == nil &&
+			!globalConfigsTF.SmtpAuthIdentity.IsNull() && !globalConfigsTF.SmtpAuthIdentity.IsUnknown() {
+			smtpAuthIdentity = utils.Ptr(globalConfigsTF.SmtpAuthIdentity.ValueString())
+		}
+		if respGlobalConfigs.SmtpAuthPassword == nil &&
+			!globalConfigsTF.SmtpAuthPassword.IsNull() && !globalConfigsTF.SmtpAuthPassword.IsUnknown() {
+			smtpAuthPassword = utils.Ptr(globalConfigsTF.SmtpAuthPassword.ValueString())
+		}
+		if respGlobalConfigs.SmtpAuthUsername == nil &&
+			!globalConfigsTF.SmtpAuthUsername.IsNull() && !globalConfigsTF.SmtpAuthUsername.IsUnknown() {
+			smtpAuthUsername = utils.Ptr(globalConfigsTF.SmtpAuthUsername.ValueString())
+		}
 	}
 
 	globalConfigObject, diags := types.ObjectValue(globalConfigurationTypes, map[string]attr.Value{
 		"opsgenie_api_key":   types.StringPointerValue(respGlobalConfigs.OpsgenieApiKey),
 		"opsgenie_api_url":   types.StringPointerValue(respGlobalConfigs.OpsgenieApiUrl),
 		"resolve_timeout":    types.StringPointerValue(respGlobalConfigs.ResolveTimeout),
-		"smtp_auth_identity": types.StringPointerValue(respGlobalConfigs.SmtpAuthIdentity),
-		"smtp_auth_password": types.StringPointerValue(respGlobalConfigs.SmtpAuthPassword),
-		"smtp_auth_username": types.StringPointerValue(respGlobalConfigs.SmtpAuthUsername),
 		"smtp_from":          types.StringPointerValue(respGlobalConfigs.SmtpFrom),
-		"smtp_smart_host":    types.StringPointerValue(respGlobalConfigs.SmtpSmarthost),
+		"smtp_auth_identity": types.StringPointerValue(smtpAuthIdentity),
+		"smtp_auth_password": types.StringPointerValue(smtpAuthPassword),
+		"smtp_auth_username": types.StringPointerValue(smtpAuthUsername),
+		"smtp_smart_host":    types.StringPointerValue(smtpSmartHost),
 	})
 	if diags.HasError() {
 		return types.ObjectNull(globalConfigurationTypes), fmt.Errorf("mapping global config: %w", core.DiagsToError(diags))
@@ -1557,6 +1735,7 @@ func mapRouteToAttributes(ctx context.Context, route *argus.Route) (attr.Value, 
 	if route == nil {
 		return types.ObjectNull(routeTypes), nil
 	}
+
 	groupByModel, diags := types.ListValueFrom(ctx, types.StringType, route.GroupBy)
 	if diags.HasError() {
 		return types.ObjectNull(routeTypes), fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
@@ -1572,6 +1751,11 @@ func mapRouteToAttributes(ctx context.Context, route *argus.Route) (attr.Value, 
 		return types.ObjectNull(routeTypes), fmt.Errorf("mapping match regex: %w", core.DiagsToError(diags))
 	}
 
+	childRoutes, err := mapChildRoutesToAttributes(ctx, route.Routes)
+	if err != nil {
+		return types.ObjectNull(routeTypes), fmt.Errorf("mapping child routes: %w", err)
+	}
+
 	routeMap := map[string]attr.Value{
 		"group_by":        groupByModel,
 		"group_interval":  types.StringPointerValue(route.GroupInterval),
@@ -1580,14 +1764,67 @@ func mapRouteToAttributes(ctx context.Context, route *argus.Route) (attr.Value, 
 		"match_regex":     matchRegexModel,
 		"receiver":        types.StringPointerValue(route.Receiver),
 		"repeat_interval": types.StringPointerValue(route.RepeatInterval),
+		"routes":          childRoutes,
 	}
 
 	routeModel, diags := types.ObjectValue(routeTypes, routeMap)
 	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
+		return types.ObjectNull(routeTypes), fmt.Errorf("converting route to TF types: %w", core.DiagsToError(diags))
 	}
 
 	return routeModel, nil
+}
+
+// mapChildRoutesToAttributes maps the child routes to the Terraform attributes
+// This should be a recursive function to handle nested child routes
+// However, the API does not currently have the correct type for the child routes
+// In the future, the current implementation should be the final case of the recursive function
+func mapChildRoutesToAttributes(ctx context.Context, routes *[]argus.RouteSerializer) (basetypes.ListValue, error) {
+	nullList := types.ListNull(getRouteListType())
+	if routes == nil {
+		return nullList, nil
+	}
+
+	routesList := []attr.Value{}
+	for _, route := range *routes {
+		groupByModel, diags := types.ListValueFrom(ctx, types.StringType, route.GroupBy)
+		if diags.HasError() {
+			return nullList, fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
+		}
+
+		matchModel, diags := types.MapValueFrom(ctx, types.StringType, route.Match)
+		if diags.HasError() {
+			return nullList, fmt.Errorf("mapping match: %w", core.DiagsToError(diags))
+		}
+
+		matchRegexModel, diags := types.MapValueFrom(ctx, types.StringType, route.MatchRe)
+		if diags.HasError() {
+			return nullList, fmt.Errorf("mapping match regex: %w", core.DiagsToError(diags))
+		}
+
+		routeMap := map[string]attr.Value{
+			"group_by":        groupByModel,
+			"group_interval":  types.StringPointerValue(route.GroupInterval),
+			"group_wait":      types.StringPointerValue(route.GroupWait),
+			"match":           matchModel,
+			"match_regex":     matchRegexModel,
+			"receiver":        types.StringPointerValue(route.Receiver),
+			"repeat_interval": types.StringPointerValue(route.RepeatInterval),
+		}
+
+		routeModel, diags := types.ObjectValue(getRouteListType().AttrTypes, routeMap)
+		if diags.HasError() {
+			return types.ListNull(getRouteListType()), fmt.Errorf("converting child route to TF types: %w", core.DiagsToError(diags))
+		}
+
+		routesList = append(routesList, routeModel)
+	}
+
+	returnRoutesList, diags := types.ListValueFrom(ctx, getRouteListType(), routesList)
+	if diags.HasError() {
+		return nullList, fmt.Errorf("mapping child routes list: %w", core.DiagsToError(diags))
+	}
+	return returnRoutesList, nil
 }
 
 func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {
@@ -1690,7 +1927,13 @@ func toUpdateAlertConfigPayload(ctx context.Context, model *alertConfigModel) (*
 		return nil, fmt.Errorf("mapping receivers: %w", err)
 	}
 
-	payload.Route, err = toRoutePayload(ctx, model)
+	routeTF := routeModel{}
+	diags := model.Route.As(ctx, &routeTF, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
+	}
+
+	payload.Route, err = toRoutePayload(ctx, &routeTF)
 	if err != nil {
 		return nil, fmt.Errorf("mapping route: %w", err)
 	}
@@ -1784,50 +2027,106 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]argus.U
 	return &receivers, nil
 }
 
-func toRoutePayload(ctx context.Context, model *alertConfigModel) (*argus.UpdateAlertConfigsPayloadRoute, error) {
-	routeModel := routeModel{}
-	diags := model.Route.As(ctx, &routeModel, basetypes.ObjectAsOptions{})
-	if diags.HasError() {
-		return nil, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
+func toRoutePayload(ctx context.Context, routeTF *routeModel) (*argus.UpdateAlertConfigsPayloadRoute, error) {
+	if routeTF == nil {
+		return nil, fmt.Errorf("nil route model")
 	}
 
 	var groupByPayload *[]string
 	var matchPayload *map[string]interface{}
 	var matchRegexPayload *map[string]interface{}
+	var childRoutesPayload *[]argus.CreateAlertConfigRoutePayloadRoutesInner
 
-	if !routeModel.GroupBy.IsNull() && !routeModel.GroupBy.IsUnknown() {
+	if !routeTF.GroupBy.IsNull() && !routeTF.GroupBy.IsUnknown() {
 		groupByPayload = &[]string{}
-		diags := routeModel.GroupBy.ElementsAs(ctx, groupByPayload, false)
+		diags := routeTF.GroupBy.ElementsAs(ctx, groupByPayload, false)
 		if diags.HasError() {
 			return nil, fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
 		}
 	}
 
-	if !routeModel.Match.IsNull() && !routeModel.Match.IsUnknown() {
-		matchMap, err := conversion.ToStringInterfaceMap(ctx, routeModel.Match)
+	if !routeTF.Match.IsNull() && !routeTF.Match.IsUnknown() {
+		matchMap, err := conversion.ToStringInterfaceMap(ctx, routeTF.Match)
 		if err != nil {
 			return nil, fmt.Errorf("mapping match: %w", err)
 		}
 		matchPayload = &matchMap
 	}
 
-	if !routeModel.MatchRegex.IsNull() && !routeModel.MatchRegex.IsUnknown() {
-		matchRegexMap, err := conversion.ToStringInterfaceMap(ctx, routeModel.MatchRegex)
+	if !routeTF.MatchRegex.IsNull() && !routeTF.MatchRegex.IsUnknown() {
+		matchRegexMap, err := conversion.ToStringInterfaceMap(ctx, routeTF.MatchRegex)
 		if err != nil {
 			return nil, fmt.Errorf("mapping match regex: %w", err)
 		}
 		matchRegexPayload = &matchRegexMap
 	}
 
+	if !routeTF.Routes.IsNull() && !routeTF.Routes.IsUnknown() {
+		childRoutes := []routeModel{}
+		diags := routeTF.Routes.ElementsAs(ctx, &childRoutes, false)
+		if diags.HasError() {
+			// If there is an error, we will try to map the child routes as if they are the last child routes
+			// This is done because the last child routes in the recursion have a different structure (don't have the `routes` fields)
+			// and need to be unpacked to a different struct (routeModelNoRoutes)
+			lastChildRoutes := []routeModelNoRoutes{}
+			diags = routeTF.Routes.ElementsAs(ctx, &lastChildRoutes, true)
+			if diags.HasError() {
+				return nil, fmt.Errorf("mapping child routes: %w", core.DiagsToError(diags))
+			}
+			for i := range lastChildRoutes {
+				childRoute := routeModel{
+					GroupBy:        lastChildRoutes[i].GroupBy,
+					GroupInterval:  lastChildRoutes[i].GroupInterval,
+					GroupWait:      lastChildRoutes[i].GroupWait,
+					Match:          lastChildRoutes[i].Match,
+					MatchRegex:     lastChildRoutes[i].MatchRegex,
+					Receiver:       lastChildRoutes[i].Receiver,
+					RepeatInterval: lastChildRoutes[i].RepeatInterval,
+					Routes:         types.ListNull(getRouteListType()),
+				}
+				childRoutes = append(childRoutes, childRoute)
+			}
+		}
+
+		childRoutesList := []argus.CreateAlertConfigRoutePayloadRoutesInner{}
+		for i := range childRoutes {
+			childRoute := childRoutes[i]
+			childRoutePayload, err := toRoutePayload(ctx, &childRoute)
+			if err != nil {
+				return nil, fmt.Errorf("mapping child route: %w", err)
+			}
+			childRoutesList = append(childRoutesList, *toChildRoutePayload(childRoutePayload))
+		}
+
+		childRoutesPayload = &childRoutesList
+	}
+
 	return &argus.UpdateAlertConfigsPayloadRoute{
 		GroupBy:        groupByPayload,
-		GroupInterval:  conversion.StringValueToPointer(routeModel.GroupInterval),
-		GroupWait:      conversion.StringValueToPointer(routeModel.GroupWait),
+		GroupInterval:  conversion.StringValueToPointer(routeTF.GroupInterval),
+		GroupWait:      conversion.StringValueToPointer(routeTF.GroupWait),
 		Match:          matchPayload,
 		MatchRe:        matchRegexPayload,
-		Receiver:       conversion.StringValueToPointer(routeModel.Receiver),
-		RepeatInterval: conversion.StringValueToPointer(routeModel.RepeatInterval),
+		Receiver:       conversion.StringValueToPointer(routeTF.Receiver),
+		RepeatInterval: conversion.StringValueToPointer(routeTF.RepeatInterval),
+		Routes:         childRoutesPayload,
 	}, nil
+}
+
+func toChildRoutePayload(in *argus.UpdateAlertConfigsPayloadRoute) *argus.CreateAlertConfigRoutePayloadRoutesInner {
+	if in == nil {
+		return nil
+	}
+	return &argus.CreateAlertConfigRoutePayloadRoutesInner{
+		GroupBy:        in.GroupBy,
+		GroupInterval:  in.GroupInterval,
+		GroupWait:      in.GroupWait,
+		Match:          in.Match,
+		MatchRe:        in.MatchRe,
+		Receiver:       in.Receiver,
+		RepeatInterval: in.RepeatInterval,
+		// Routes not currently supported
+	}
 }
 
 func toGlobalConfigPayload(ctx context.Context, model *alertConfigModel) (*argus.UpdateAlertConfigsPayloadGlobal, error) {
