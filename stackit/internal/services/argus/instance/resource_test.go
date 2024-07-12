@@ -70,21 +70,21 @@ func fixtureRouteModel() basetypes.ObjectValue {
 		"match_regex":     types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
 		"receiver":        types.StringValue("name"),
 		"repeat_interval": types.StringValue("1m"),
-		"routes":          types.ListNull(getRouteListType()),
-		// "routes": types.ListValueMust(getRouteListType(), []attr.Value{
-		// 	types.ObjectValueMust(getRouteListType().AttrTypes, map[string]attr.Value{
-		// 		"group_by": types.ListValueMust(types.StringType, []attr.Value{
-		// 			types.StringValue("label1"),
-		// 			types.StringValue("label2"),
-		// 		}),
-		// 		"group_interval":  types.StringValue("1m"),
-		// 		"group_wait":      types.StringValue("1m"),
-		// 		"match":           types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
-		// 		"match_regex":     types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
-		// 		"receiver":        types.StringValue("name"),
-		// 		"repeat_interval": types.StringValue("1m"),
-		// 	}),
-		// }),
+		// "routes":          types.ListNull(getRouteListType()),
+		"routes": types.ListValueMust(getRouteListType(), []attr.Value{
+			types.ObjectValueMust(getRouteListType().AttrTypes, map[string]attr.Value{
+				"group_by": types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("label1"),
+					types.StringValue("label2"),
+				}),
+				"group_interval":  types.StringValue("1m"),
+				"group_wait":      types.StringValue("1m"),
+				"match":           types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+				"match_regex":     types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+				"receiver":        types.StringValue("name"),
+				"repeat_interval": types.StringValue("1m"),
+			}),
+		}),
 	})
 }
 
@@ -171,17 +171,17 @@ func fixtureRoutePayload() *argus.UpdateAlertConfigsPayloadRoute {
 		MatchRe:        &map[string]interface{}{"key": "value"},
 		Receiver:       utils.Ptr("name"),
 		RepeatInterval: utils.Ptr("1m"),
-		// Routes: &[]argus.CreateAlertConfigRoutePayloadRoutesInner{
-		// 	{
-		// 		GroupBy:        utils.Ptr([]string{"label1", "label2"}),
-		// 		GroupInterval:  utils.Ptr("1m"),
-		// 		GroupWait:      utils.Ptr("1m"),
-		// 		Match:          &map[string]interface{}{"key": "value"},
-		// 		MatchRe:        &map[string]interface{}{"key": "value"},
-		// 		Receiver:       utils.Ptr("name"),
-		// 		RepeatInterval: utils.Ptr("1m"),
-		// 	},
-		// },
+		Routes: &[]argus.CreateAlertConfigRoutePayloadRoutesInner{
+			{
+				GroupBy:        utils.Ptr([]string{"label1", "label2"}),
+				GroupInterval:  utils.Ptr("1m"),
+				GroupWait:      utils.Ptr("1m"),
+				Match:          &map[string]interface{}{"key": "value"},
+				MatchRe:        &map[string]interface{}{"key": "value"},
+				Receiver:       utils.Ptr("name"),
+				RepeatInterval: utils.Ptr("1m"),
+			},
+		},
 	}
 }
 
@@ -242,6 +242,17 @@ func fixtureRouteResponse() *argus.Route {
 		MatchRe:        &map[string]string{"key": "value"},
 		Receiver:       utils.Ptr("name"),
 		RepeatInterval: utils.Ptr("1m"),
+		Routes: &[]argus.RouteSerializer{
+			{
+				GroupBy:        utils.Ptr([]string{"label1", "label2"}),
+				GroupInterval:  utils.Ptr("1m"),
+				GroupWait:      utils.Ptr("1m"),
+				Match:          &map[string]string{"key": "value"},
+				MatchRe:        &map[string]string{"key": "value"},
+				Receiver:       utils.Ptr("name"),
+				RepeatInterval: utils.Ptr("1m"),
+			},
+		},
 	}
 }
 
@@ -258,16 +269,17 @@ func fixtureGlobalConfigResponse() *argus.Global {
 	}
 }
 
-func fixtureRouteAttributeSchema(route *schema.ListNestedAttribute) map[string]schema.Attribute {
+func fixtureRouteAttributeSchema(route *schema.ListNestedAttribute, isDatasource bool) map[string]schema.Attribute {
 	attributeMap := map[string]schema.Attribute{
 		"group_by": schema.ListAttribute{
 			Description: routeDescriptions["group_by"],
-			Optional:    true,
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
 			ElementType: types.StringType,
 		},
 		"group_interval": schema.StringAttribute{
 			Description: routeDescriptions["group_interval"],
-			Optional:    true,
+			Optional:    !isDatasource,
 			Computed:    true,
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.UseStateForUnknown(),
@@ -275,7 +287,7 @@ func fixtureRouteAttributeSchema(route *schema.ListNestedAttribute) map[string]s
 		},
 		"group_wait": schema.StringAttribute{
 			Description: routeDescriptions["group_wait"],
-			Optional:    true,
+			Optional:    !isDatasource,
 			Computed:    true,
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.UseStateForUnknown(),
@@ -283,21 +295,24 @@ func fixtureRouteAttributeSchema(route *schema.ListNestedAttribute) map[string]s
 		},
 		"match": schema.MapAttribute{
 			Description: routeDescriptions["match"],
-			Optional:    true,
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
 			ElementType: types.StringType,
 		},
 		"match_regex": schema.MapAttribute{
 			Description: routeDescriptions["match_regex"],
-			Optional:    true,
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
 			ElementType: types.StringType,
 		},
 		"receiver": schema.StringAttribute{
 			Description: routeDescriptions["receiver"],
-			Required:    true,
+			Required:    !isDatasource,
+			Computed:    isDatasource,
 		},
 		"repeat_interval": schema.StringAttribute{
 			Description: routeDescriptions["repeat_interval"],
-			Optional:    true,
+			Optional:    !isDatasource,
 			Computed:    true,
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.UseStateForUnknown(),
@@ -1341,12 +1356,14 @@ func TestGetRouteNestedObjectAux(t *testing.T) {
 		description    string
 		startingLevel  int
 		recursionLimit int
+		isDatasource   bool
 		expected       schema.ListNestedAttribute
 	}{
 		{
-			"no recursion",
+			"no recursion, resource",
 			1,
 			1,
+			false,
 			schema.ListNestedAttribute{
 				Description: routeDescriptions["routes"],
 				Optional:    true,
@@ -1354,14 +1371,15 @@ func TestGetRouteNestedObjectAux(t *testing.T) {
 					listvalidator.SizeAtLeast(1),
 				},
 				NestedObject: schema.NestedAttributeObject{
-					Attributes: fixtureRouteAttributeSchema(nil),
+					Attributes: fixtureRouteAttributeSchema(nil, false),
 				},
 			},
 		},
 		{
-			"recursion 1",
+			"recursion 1, resource",
 			1,
 			2,
+			false,
 			schema.ListNestedAttribute{
 				Description: routeDescriptions["routes"],
 				Optional:    true,
@@ -1377,9 +1395,54 @@ func TestGetRouteNestedObjectAux(t *testing.T) {
 								listvalidator.SizeAtLeast(1),
 							},
 							NestedObject: schema.NestedAttributeObject{
-								Attributes: fixtureRouteAttributeSchema(nil),
+								Attributes: fixtureRouteAttributeSchema(nil, false),
 							},
 						},
+						false,
+					),
+				},
+			},
+		},
+		{
+			"no recursion,datasource",
+			1,
+			1,
+			true,
+			schema.ListNestedAttribute{
+				Description: routeDescriptions["routes"],
+				Computed:    true,
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+				},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: fixtureRouteAttributeSchema(nil, true),
+				},
+			},
+		},
+		{
+			"recursion 1, datasource",
+			1,
+			2,
+			true,
+			schema.ListNestedAttribute{
+				Description: routeDescriptions["routes"],
+				Computed:    true,
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+				},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: fixtureRouteAttributeSchema(
+						&schema.ListNestedAttribute{
+							Description: routeDescriptions["routes"],
+							Computed:    true,
+							Validators: []validator.List{
+								listvalidator.SizeAtLeast(1),
+							},
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: fixtureRouteAttributeSchema(nil, true),
+							},
+						},
+						true,
 					),
 				},
 			},
@@ -1388,7 +1451,7 @@ func TestGetRouteNestedObjectAux(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output := getRouteNestedObjectAux(tt.startingLevel, tt.recursionLimit)
+			output := getRouteNestedObjectAux(tt.isDatasource, tt.startingLevel, tt.recursionLimit)
 			diff := cmp.Diff(output, tt.expected)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)

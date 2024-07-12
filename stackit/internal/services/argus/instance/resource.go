@@ -242,19 +242,29 @@ func getRouteListTypeAux(level, limit int) types.ObjectType {
 }
 
 func getRouteNestedObject() schema.ListNestedAttribute {
-	return getRouteNestedObjectAux(1, childRouteMaxRecursionLevel)
+	return getRouteNestedObjectAux(false, 1, childRouteMaxRecursionLevel)
 }
 
-func getRouteNestedObjectAux(level, limit int) schema.ListNestedAttribute {
+func getDatasourceRouteNestedObject() schema.ListNestedAttribute {
+	return getRouteNestedObjectAux(true, 1, childRouteMaxRecursionLevel)
+}
+
+// getRouteNestedObjectAux returns the nested object for the route attribute with the given level of child routes recursion.
+// The isDatasource is used to determine if the route is used in a datasource schema or not. If it is a datasource, all fields are computed.
+// The level is used to determine the current depth of the nested object.
+// The limit is used to determine the maximum depth of the nested object.
+// The level should be lower or equal to the limit, if higher, the function will produce a stack overflow.
+func getRouteNestedObjectAux(isDatasource bool, level, limit int) schema.ListNestedAttribute {
 	attributesMap := map[string]schema.Attribute{
 		"group_by": schema.ListAttribute{
 			Description: routeDescriptions["group_by"],
-			Optional:    true,
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
 			ElementType: types.StringType,
 		},
 		"group_interval": schema.StringAttribute{
 			Description: routeDescriptions["group_interval"],
-			Optional:    true,
+			Optional:    !isDatasource,
 			Computed:    true,
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.UseStateForUnknown(),
@@ -262,7 +272,7 @@ func getRouteNestedObjectAux(level, limit int) schema.ListNestedAttribute {
 		},
 		"group_wait": schema.StringAttribute{
 			Description: routeDescriptions["group_wait"],
-			Optional:    true,
+			Optional:    !isDatasource,
 			Computed:    true,
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.UseStateForUnknown(),
@@ -270,21 +280,24 @@ func getRouteNestedObjectAux(level, limit int) schema.ListNestedAttribute {
 		},
 		"match": schema.MapAttribute{
 			Description: routeDescriptions["match"],
-			Optional:    true,
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
 			ElementType: types.StringType,
 		},
 		"match_regex": schema.MapAttribute{
 			Description: routeDescriptions["match_regex"],
-			Optional:    true,
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
 			ElementType: types.StringType,
 		},
 		"receiver": schema.StringAttribute{
 			Description: routeDescriptions["receiver"],
-			Required:    true,
+			Required:    !isDatasource,
+			Computed:    isDatasource,
 		},
 		"repeat_interval": schema.StringAttribute{
 			Description: routeDescriptions["repeat_interval"],
-			Optional:    true,
+			Optional:    !isDatasource,
 			Computed:    true,
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.UseStateForUnknown(),
@@ -293,12 +306,13 @@ func getRouteNestedObjectAux(level, limit int) schema.ListNestedAttribute {
 	}
 
 	if level != limit {
-		attributesMap["routes"] = getRouteNestedObjectAux(level+1, limit)
+		attributesMap["routes"] = getRouteNestedObjectAux(isDatasource, level+1, limit)
 	}
 
 	return schema.ListNestedAttribute{
 		Description: routeDescriptions["routes"],
-		Optional:    true,
+		Optional:    !isDatasource,
+		Computed:    isDatasource,
 		Validators: []validator.List{
 			listvalidator.SizeAtLeast(1),
 		},
@@ -414,9 +428,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Computed:    true,
 				Validators: []validator.String{
 					validate.UUID(),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"parameters": schema.MapAttribute{

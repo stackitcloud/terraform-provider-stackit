@@ -323,6 +323,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 								Description: "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
 								Computed:    true,
 							},
+							"routes": getDatasourceRouteNestedObject(),
 						},
 					},
 					"global": schema.SingleNestedAttribute{

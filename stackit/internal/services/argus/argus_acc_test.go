@@ -96,14 +96,33 @@ func buildAlertConfigReceivers(hasOpsGenie, hasEmail, hasWebhook bool) string {
 	return receivers + "]"
 }
 
-func buildAlertConfigRoute() string {
-	return `{
+func buildAlertConfigRoute(childRoutes bool) string {
+	route := `{
       receiver        = "OpsGenieReceiverInfo"
       group_by        = ["alertname"]
       group_interval  = "10m"
       group_wait      = "1m"
-      repeat_interval = "1h"
-	}`
+      repeat_interval = "1h"`
+
+	if childRoutes {
+		route += `
+	  routes = [
+        {
+          match = {
+            severity = "critical"
+          }
+          receiver = "OpsGenieReceiverInfo"
+        },
+        {
+          match = {
+            severity = "warning"
+          }
+          receiver = "WebhookReceiverInfo"
+        }
+	  ]`
+	}
+
+	return route + "\n}"
 }
 
 func buildAlertConfigGlobal(includeEmailOptions bool) string {
@@ -241,7 +260,7 @@ func TestAccResource(t *testing.T) {
 					utils.Ptr(instanceResource["metrics_retention_days"]),
 					utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
 					utils.Ptr(instanceResource["metrics_retention_days_5m_downsampling"]),
-					buildAlertConfig(buildAlertConfigReceivers(true, false, true), buildAlertConfigRoute(), buildAlertConfigGlobal(false)),
+					buildAlertConfig(buildAlertConfigReceivers(true, false, true), buildAlertConfigRoute(false), buildAlertConfigGlobal(false)),
 					instanceResource["name"],
 					instanceResource["plan_name"],
 					scrapeConfigResource["urls"],
@@ -338,7 +357,7 @@ func TestAccResource(t *testing.T) {
 					utils.Ptr(instanceResource["metrics_retention_days"]),
 					utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
 					utils.Ptr(instanceResource["metrics_retention_days_5m_downsampling"]),
-					buildAlertConfig(buildAlertConfigReceivers(true, true, true), buildAlertConfigRoute(), buildAlertConfigGlobal(true)),
+					buildAlertConfig(buildAlertConfigReceivers(true, true, true), buildAlertConfigRoute(true), buildAlertConfigGlobal(true)),
 					instanceResource["name"],
 					instanceResource["plan_name"],
 					scrapeConfigResource["urls"],
@@ -429,7 +448,7 @@ func TestAccResource(t *testing.T) {
 				),
 				// This is needed because the GET request to the alert config endpoint doesn't return some of the global options
 				// and the emailConfigs. Therefore, the state file doesn't contain them and the diff will fail.
-				ExpectNonEmptyPlan: true,
+				// ExpectNonEmptyPlan: true,
 			},
 			// Update without ACL, partial metrics retention days and NO alert configs
 			{
@@ -594,7 +613,7 @@ func TestAccResource(t *testing.T) {
 						utils.Ptr(instanceResource["metrics_retention_days"]),
 						utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
 						utils.Ptr(instanceResource["metrics_retention_days_5m_downsampling"]),
-						buildAlertConfig(buildAlertConfigReceivers(true, false, true), buildAlertConfigRoute(), buildAlertConfigGlobal(false)),
+						buildAlertConfig(buildAlertConfigReceivers(true, false, true), buildAlertConfigRoute(true), buildAlertConfigGlobal(false)),
 						instanceResource["name"],
 						instanceResource["plan_name"],
 						scrapeConfigResource["urls"],
@@ -690,7 +709,7 @@ func TestAccResource(t *testing.T) {
 					utils.Ptr(instanceResource["metrics_retention_days"]),
 					utils.Ptr(instanceResource["metrics_retention_days_1h_downsampling"]),
 					utils.Ptr(instanceResource["metrics_retention_days_5m_downsampling"]),
-					buildAlertConfig(buildAlertConfigReceivers(true, false, true), buildAlertConfigRoute(), buildAlertConfigGlobal(false)),
+					buildAlertConfig(buildAlertConfigReceivers(true, false, true), buildAlertConfigRoute(true), buildAlertConfigGlobal(false)),
 					fmt.Sprintf("%s-new", instanceResource["name"]),
 					instanceResource["new_plan_name"],
 					"",
