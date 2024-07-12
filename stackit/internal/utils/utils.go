@@ -85,8 +85,9 @@ func SupportedValuesDocumentation(values []string) string {
 }
 
 func quoteValues(values []string) []string {
+	quotedValues := make([]string, len(values))
 	for i, value := range values {
-		values[i] = fmt.Sprintf("`%s`", value)
+		quotedValues[i] = fmt.Sprintf("`%s`", value)
 	}
-	return values
+	return quotedValues
 }
