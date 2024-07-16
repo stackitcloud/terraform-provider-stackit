@@ -10,6 +10,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+const (
+	SKEServiceId = "cloud.stackit.ske"
+)
+
 // ReconcileStringSlices reconciles two string lists by removing elements from the
 // first list that are not in the second list and appending elements from the
 // second list that are not in the first list.
