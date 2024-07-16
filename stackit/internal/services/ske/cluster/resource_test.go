@@ -31,6 +31,7 @@ func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description     string
 		stateExtensions types.Object
+		stateNodePools  types.List
 		input           *ske.Cluster
 		expected        Model
 		isValid         bool
@@ -38,6 +39,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values",
 			types.ObjectNull(extensionsTypes),
+			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{
 				Name: utils.Ptr("name"),
 			},
@@ -59,6 +61,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			types.ObjectNull(extensionsTypes),
+			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
@@ -233,6 +236,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"empty_network",
 			types.ObjectNull(extensionsTypes),
+			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{
 				Name:    utils.Ptr("name"),
 				Network: &ske.Network{},
@@ -255,6 +259,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"extensions_mixed_values",
 			types.ObjectNull(extensionsTypes),
+			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
@@ -303,6 +308,7 @@ func TestMapFields(t *testing.T) {
 					"argus_instance_id": types.StringNull(),
 				}),
 			}),
+			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{
 				Extensions: &ske.Extension{},
 				Name:       utils.Ptr("name"),
@@ -344,6 +350,7 @@ func TestMapFields(t *testing.T) {
 					"argus_instance_id": types.StringValue("id"),
 				}),
 			}),
+			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
@@ -381,6 +388,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"extensions_not_set",
 			types.ObjectNull(extensionsTypes),
+			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{
 				Extensions: &ske.Extension{},
 				Name:       utils.Ptr("name"),
@@ -400,8 +408,201 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
+			"nil_taints_when_empty_list_on_state",
+			types.ObjectNull(extensionsTypes),
+			types.ListValueMust(
+				types.ObjectType{AttrTypes: nodePoolTypes},
+				[]attr.Value{
+					types.ObjectValueMust(
+						nodePoolTypes,
+						map[string]attr.Value{
+							"name":            types.StringValue("node"),
+							"machine_type":    types.StringValue("B"),
+							"os_name":         types.StringValue("os"),
+							"os_version":      types.StringNull(),
+							"os_version_min":  types.StringNull(),
+							"os_version_used": types.StringValue("os-ver"),
+							"minimum":         types.Int64Value(1),
+							"maximum":         types.Int64Value(5),
+							"max_surge":       types.Int64Value(3),
+							"max_unavailable": types.Int64Null(),
+							"volume_type":     types.StringValue("type"),
+							"volume_size":     types.Int64Value(3),
+							"labels": types.MapValueMust(
+								types.StringType,
+								map[string]attr.Value{
+									"k": types.StringValue("v"),
+								},
+							),
+							"taints": types.ListValueMust(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{}),
+							"cri":    types.StringValue("cri"),
+							"availability_zones": types.ListValueMust(
+								types.StringType,
+								[]attr.Value{
+									types.StringValue("z1"),
+									types.StringValue("z2"),
+								},
+							),
+						},
+					),
+				},
+			),
+			&ske.Cluster{
+				Extensions: &ske.Extension{
+					Acl: &ske.ACL{
+						AllowedCidrs: &[]string{"cidr1"},
+						Enabled:      utils.Ptr(true),
+					},
+					Argus: &ske.Argus{
+						ArgusInstanceId: utils.Ptr("aid"),
+						Enabled:         utils.Ptr(true),
+					},
+				},
+				Hibernation: &ske.Hibernation{
+					Schedules: &[]ske.HibernationSchedule{
+						{
+							End:      utils.Ptr("2"),
+							Start:    utils.Ptr("1"),
+							Timezone: utils.Ptr("CET"),
+						},
+					},
+				},
+				Kubernetes: &ske.Kubernetes{
+					AllowPrivilegedContainers: utils.Ptr(true),
+					Version:                   utils.Ptr("1.2.3"),
+				},
+				Maintenance: &ske.Maintenance{
+					AutoUpdate: &ske.MaintenanceAutoUpdate{
+						KubernetesVersion:   utils.Ptr(true),
+						MachineImageVersion: utils.Ptr(true),
+					},
+					TimeWindow: &ske.TimeWindow{
+						Start: utils.Ptr("0000-01-02T03:04:05+06:00"),
+						End:   utils.Ptr("0010-11-12T13:14:15Z"),
+					},
+				},
+				Network: &ske.Network{
+					Id: utils.Ptr("nid"),
+				},
+				Name: utils.Ptr("name"),
+				Nodepools: &[]ske.Nodepool{
+					{
+						AvailabilityZones: &[]string{"z1", "z2"},
+						Cri: &ske.CRI{
+							Name: utils.Ptr("cri"),
+						},
+						Labels: &map[string]string{"k": "v"},
+						Machine: &ske.Machine{
+							Image: &ske.Image{
+								Name:    utils.Ptr("os"),
+								Version: utils.Ptr("os-ver"),
+							},
+							Type: utils.Ptr("B"),
+						},
+						MaxSurge:       utils.Ptr(int64(3)),
+						MaxUnavailable: nil,
+						Maximum:        utils.Ptr(int64(5)),
+						Minimum:        utils.Ptr(int64(1)),
+						Name:           utils.Ptr("node"),
+						Taints:         nil,
+						Volume: &ske.Volume{
+							Size: utils.Ptr(int64(3)),
+							Type: utils.Ptr("type"),
+						},
+					},
+				},
+				Status: &ske.ClusterStatus{
+					Aggregated: &cs,
+					Error:      nil,
+					Hibernated: nil,
+				},
+			},
+			Model{
+				Id:                        types.StringValue("pid,name"),
+				ProjectId:                 types.StringValue("pid"),
+				Name:                      types.StringValue("name"),
+				KubernetesVersion:         types.StringNull(),
+				KubernetesVersionUsed:     types.StringValue("1.2.3"),
+				AllowPrivilegedContainers: types.BoolValue(true),
+				NodePools: types.ListValueMust(
+					types.ObjectType{AttrTypes: nodePoolTypes},
+					[]attr.Value{
+						types.ObjectValueMust(
+							nodePoolTypes,
+							map[string]attr.Value{
+								"name":            types.StringValue("node"),
+								"machine_type":    types.StringValue("B"),
+								"os_name":         types.StringValue("os"),
+								"os_version":      types.StringNull(),
+								"os_version_min":  types.StringNull(),
+								"os_version_used": types.StringValue("os-ver"),
+								"minimum":         types.Int64Value(1),
+								"maximum":         types.Int64Value(5),
+								"max_surge":       types.Int64Value(3),
+								"max_unavailable": types.Int64Null(),
+								"volume_type":     types.StringValue("type"),
+								"volume_size":     types.Int64Value(3),
+								"labels": types.MapValueMust(
+									types.StringType,
+									map[string]attr.Value{
+										"k": types.StringValue("v"),
+									},
+								),
+								"taints": types.ListValueMust(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{}),
+								"cri":    types.StringValue("cri"),
+								"availability_zones": types.ListValueMust(
+									types.StringType,
+									[]attr.Value{
+										types.StringValue("z1"),
+										types.StringValue("z2"),
+									},
+								),
+							},
+						),
+					},
+				),
+				Maintenance: types.ObjectValueMust(maintenanceTypes, map[string]attr.Value{
+					"enable_kubernetes_version_updates":    types.BoolValue(true),
+					"enable_machine_image_version_updates": types.BoolValue(true),
+					"start":                                types.StringValue("03:04:05+06:00"),
+					"end":                                  types.StringValue("13:14:15Z"),
+				}),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"id": types.StringValue("nid"),
+				}),
+				Hibernations: types.ListValueMust(
+					types.ObjectType{AttrTypes: hibernationTypes},
+					[]attr.Value{
+						types.ObjectValueMust(
+							hibernationTypes,
+							map[string]attr.Value{
+								"start":    types.StringValue("1"),
+								"end":      types.StringValue("2"),
+								"timezone": types.StringValue("CET"),
+							},
+						),
+					},
+				),
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
+						"allowed_cidrs": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("cidr1"),
+						}),
+					}),
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+						"enabled":           types.BoolValue(true),
+						"argus_instance_id": types.StringValue("aid"),
+					}),
+				}),
+				KubeConfig: types.StringNull(),
+			},
+			true,
+		},
+		{
 			"nil_response",
 			types.ObjectNull(extensionsTypes),
+			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			nil,
 			Model{},
 			false,
@@ -409,6 +610,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_resource_id",
 			types.ObjectNull(extensionsTypes),
+			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{},
 			Model{},
 			false,
@@ -419,6 +621,7 @@ func TestMapFields(t *testing.T) {
 			state := &Model{
 				ProjectId:  tt.expected.ProjectId,
 				Extensions: tt.stateExtensions,
+				NodePools:  tt.stateNodePools,
 			}
 			err := mapFields(context.Background(), tt.input, state)
 			if !tt.isValid && err == nil {

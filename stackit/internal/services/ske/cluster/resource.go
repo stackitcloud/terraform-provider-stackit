@@ -29,11 +29,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
+	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 	"golang.org/x/mod/semver"
 )
@@ -214,7 +216,8 @@ func NewClusterResource() resource.Resource {
 
 // clusterResource is the resource implementation.
 type clusterResource struct {
-	client *ske.APIClient
+	skeClient        *ske.APIClient
+	enablementClient *serviceenablement.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -235,27 +238,46 @@ func (r *clusterResource) Configure(ctx context.Context, req resource.ConfigureR
 		return
 	}
 
-	var apiClient *ske.APIClient
+	var skeClient *ske.APIClient
+	var enablementClient *serviceenablement.APIClient
 	var err error
 	if providerData.SKECustomEndpoint != "" {
-		apiClient, err = ske.NewAPIClient(
+		skeClient, err = ske.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.SKECustomEndpoint),
 		)
 	} else {
-		apiClient, err = ske.NewAPIClient(
+		skeClient, err = ske.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring SKE API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 
-	r.client = apiClient
-	tflog.Info(ctx, "SKE cluster client configured")
+	if providerData.ServiceEnablementCustomEndpoint != "" {
+		enablementClient, err = serviceenablement.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithEndpoint(providerData.ServiceEnablementCustomEndpoint),
+		)
+	} else {
+		enablementClient, err = serviceenablement.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithRegion(providerData.Region),
+		)
+	}
+
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring Service Enablement API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+		return
+	}
+
+	r.skeClient = skeClient
+	r.enablementClient = enablementClient
+	tflog.Info(ctx, "SKE cluster clients configured")
 }
 
 // Schema defines the schema for the resource.
@@ -641,13 +663,13 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	ctx = tflog.SetField(ctx, "name", clusterName)
 
 	// If SKE functionality is not enabled, enable it
-	_, err := r.client.EnableService(ctx, projectId).Execute()
+	err := r.enablementClient.EnableService(ctx, projectId, utils.SKEServiceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Calling API to enable SKE: %v", err))
 		return
 	}
 
-	_, err = wait.EnableServiceWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
+	_, err = wait.EnableServiceWaitHandler(ctx, r.skeClient, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Wait for SKE enablement: %v", err))
 		return
@@ -674,7 +696,7 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 }
 
 func (r *clusterResource) loadAvailableVersions(ctx context.Context) ([]ske.KubernetesVersion, []ske.MachineImage, error) {
-	c := r.client
+	c := r.skeClient
 	res, err := c.ListProviderOptions(ctx).Execute()
 	if err != nil {
 		return nil, nil, fmt.Errorf("calling API: %w", err)
@@ -768,13 +790,13 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		Network:     network,
 		Nodepools:   &nodePools,
 	}
-	_, err = r.client.CreateOrUpdateCluster(ctx, projectId, name).CreateOrUpdateClusterPayload(payload).Execute()
+	_, err = r.skeClient.CreateOrUpdateCluster(ctx, projectId, name).CreateOrUpdateClusterPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	waitResp, err := wait.CreateOrUpdateClusterWaitHandler(ctx, r.client, projectId, name).WaitWithContext(ctx)
+	waitResp, err := wait.CreateOrUpdateClusterWaitHandler(ctx, r.skeClient, projectId, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Cluster creation waiting: %v", err))
 		return
@@ -798,7 +820,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 }
 
 func (r *clusterResource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Model) error {
-	c := r.client
+	c := r.skeClient
 	// for kubernetes with version >= 1.27, the deprecated endpoint will not work, so we set kubeconfig to nil
 	if semver.Compare(fmt.Sprintf("v%s", model.KubernetesVersion.ValueString()), "v1.27") >= 0 {
 		core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "Kubernetes version is 1.27 or higher, you must use the stackit_ske_kubeconfig resource instead.")
@@ -1172,7 +1194,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 	var timeWindowStart *string
 	if !(maintenance.Start.IsNull() || maintenance.Start.IsUnknown()) {
 		// API expects RFC3339 datetime
-		timeWindowStart = utils.Ptr(
+		timeWindowStart = sdkUtils.Ptr(
 			fmt.Sprintf("0000-01-01T%s", maintenance.Start.ValueString()),
 		)
 	}
@@ -1180,7 +1202,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 	var timeWindowEnd *string
 	if !(maintenance.End.IsNull() || maintenance.End.IsUnknown()) {
 		// API expects RFC3339 datetime
-		timeWindowEnd = utils.Ptr(
+		timeWindowEnd = sdkUtils.Ptr(
 			fmt.Sprintf("0000-01-01T%s", maintenance.End.ValueString()),
 		)
 	}
@@ -1323,7 +1345,11 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 			nodePool["cri"] = types.StringPointerValue(nodePoolResp.Cri.Name)
 		}
 
-		err := mapTaints(nodePoolResp.Taints, nodePool)
+		taintsInModel := false
+		if i < len(modelNodePools) && !modelNodePools[i].Taints.IsNull() && !modelNodePools[i].Taints.IsUnknown() {
+			taintsInModel = true
+		}
+		err := mapTaints(nodePoolResp.Taints, nodePool, taintsInModel)
 		if err != nil {
 			return fmt.Errorf("mapping index %d, field taints: %w", i, err)
 		}
@@ -1362,8 +1388,16 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	return nil
 }
 
-func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value) error {
+func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value, existInModel bool) error {
 	if t == nil || len(*t) == 0 {
+		if existInModel {
+			taintsTF, diags := types.ListValue(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{})
+			if diags.HasError() {
+				return fmt.Errorf("create empty taints list: %w", core.DiagsToError(diags))
+			}
+			nodePool["taints"] = taintsTF
+			return nil
+		}
 		nodePool["taints"] = types.ListNull(types.ObjectType{AttrTypes: taintTypes})
 		return nil
 	}
@@ -1821,7 +1855,7 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	clResp, err := r.client.GetCluster(ctx, projectId, name).Execute()
+	clResp, err := r.skeClient.GetCluster(ctx, projectId, name).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -1884,7 +1918,7 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	currentKubernetesVersion, currentMachineImages := getCurrentVersions(ctx, r.client, &model)
+	currentKubernetesVersion, currentMachineImages := getCurrentVersions(ctx, r.skeClient, &model)
 
 	r.createOrUpdateCluster(ctx, &resp.Diagnostics, &model, availableKubernetesVersions, availableMachines, currentKubernetesVersion, currentMachineImages)
 	if resp.Diagnostics.HasError() {
@@ -1910,13 +1944,13 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	c := r.client
+	c := r.skeClient
 	_, err := c.DeleteCluster(ctx, projectId, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = wait.DeleteClusterWaitHandler(ctx, r.client, projectId, name).WaitWithContext(ctx)
+	_, err = wait.DeleteClusterWaitHandler(ctx, r.skeClient, projectId, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Cluster deletion waiting: %v", err))
 		return
