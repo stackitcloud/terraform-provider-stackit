@@ -5,12 +5,325 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/argus"
 )
+
+func fixtureEmailConfigsModel() basetypes.ListValue {
+	return types.ListValueMust(types.ObjectType{AttrTypes: emailConfigsTypes}, []attr.Value{
+		types.ObjectValueMust(emailConfigsTypes, map[string]attr.Value{
+			"auth_identity": types.StringValue("identity"),
+			"auth_password": types.StringValue("password"),
+			"auth_username": types.StringValue("username"),
+			"from":          types.StringValue("notification@example.com"),
+			"smart_host":    types.StringValue("smtp.example.com"),
+			"to":            types.StringValue("me@example.com"),
+		}),
+	})
+}
+
+func fixtureOpsGenieConfigsModel() basetypes.ListValue {
+	return types.ListValueMust(types.ObjectType{AttrTypes: opsgenieConfigsTypes}, []attr.Value{
+		types.ObjectValueMust(opsgenieConfigsTypes, map[string]attr.Value{
+			"api_key": types.StringValue("key"),
+			"tags":    types.StringValue("tag"),
+			"api_url": types.StringValue("ops.example.com"),
+		}),
+	})
+}
+
+func fixtureWebHooksConfigsModel() basetypes.ListValue {
+	return types.ListValueMust(types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{
+		types.ObjectValueMust(webHooksConfigsTypes, map[string]attr.Value{
+			"url":      types.StringValue("http://example.com"),
+			"ms_teams": types.BoolValue(true),
+		}),
+	})
+}
+
+func fixtureReceiverModel(emailConfigs, opsGenieConfigs, webHooksConfigs basetypes.ListValue) basetypes.ObjectValue {
+	return types.ObjectValueMust(receiversTypes, map[string]attr.Value{
+		"name":             types.StringValue("name"),
+		"email_configs":    emailConfigs,
+		"opsgenie_configs": opsGenieConfigs,
+		"webhooks_configs": webHooksConfigs,
+	})
+}
+
+func fixtureRouteModel() basetypes.ObjectValue {
+	return types.ObjectValueMust(routeTypes, map[string]attr.Value{
+		"group_by": types.ListValueMust(types.StringType, []attr.Value{
+			types.StringValue("label1"),
+			types.StringValue("label2"),
+		}),
+		"group_interval":  types.StringValue("1m"),
+		"group_wait":      types.StringValue("1m"),
+		"match":           types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+		"match_regex":     types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+		"receiver":        types.StringValue("name"),
+		"repeat_interval": types.StringValue("1m"),
+		// "routes":          types.ListNull(getRouteListType()),
+		"routes": types.ListValueMust(getRouteListType(), []attr.Value{
+			types.ObjectValueMust(getRouteListType().AttrTypes, map[string]attr.Value{
+				"group_by": types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("label1"),
+					types.StringValue("label2"),
+				}),
+				"group_interval":  types.StringValue("1m"),
+				"group_wait":      types.StringValue("1m"),
+				"match":           types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+				"match_regex":     types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+				"receiver":        types.StringValue("name"),
+				"repeat_interval": types.StringValue("1m"),
+			}),
+		}),
+	})
+}
+
+func fixtureNullRouteModel() basetypes.ObjectValue {
+	return types.ObjectValueMust(routeTypes, map[string]attr.Value{
+		"group_by":        types.ListNull(types.StringType),
+		"group_interval":  types.StringNull(),
+		"group_wait":      types.StringNull(),
+		"match":           types.MapNull(types.StringType),
+		"match_regex":     types.MapNull(types.StringType),
+		"receiver":        types.StringNull(),
+		"repeat_interval": types.StringNull(),
+		"routes":          types.ListNull(getRouteListType()),
+	})
+}
+
+func fixtureGlobalConfigModel() basetypes.ObjectValue {
+	return types.ObjectValueMust(globalConfigurationTypes, map[string]attr.Value{
+		"opsgenie_api_key":   types.StringValue("key"),
+		"opsgenie_api_url":   types.StringValue("ops.example.com"),
+		"resolve_timeout":    types.StringValue("1m"),
+		"smtp_auth_identity": types.StringValue("identity"),
+		"smtp_auth_username": types.StringValue("username"),
+		"smtp_auth_password": types.StringValue("password"),
+		"smtp_from":          types.StringValue("me@example.com"),
+		"smtp_smart_host":    types.StringValue("smtp.example.com:25"),
+	})
+}
+
+func fixtureNullGlobalConfigModel() basetypes.ObjectValue {
+	return types.ObjectValueMust(globalConfigurationTypes, map[string]attr.Value{
+		"opsgenie_api_key":   types.StringNull(),
+		"opsgenie_api_url":   types.StringNull(),
+		"resolve_timeout":    types.StringNull(),
+		"smtp_auth_identity": types.StringNull(),
+		"smtp_auth_username": types.StringNull(),
+		"smtp_auth_password": types.StringNull(),
+		"smtp_from":          types.StringNull(),
+		"smtp_smart_host":    types.StringNull(),
+	})
+}
+
+func fixtureEmailConfigsPayload() argus.CreateAlertConfigReceiverPayloadEmailConfigsInner {
+	return argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{
+		AuthIdentity: utils.Ptr("identity"),
+		AuthPassword: utils.Ptr("password"),
+		AuthUsername: utils.Ptr("username"),
+		From:         utils.Ptr("notification@example.com"),
+		Smarthost:    utils.Ptr("smtp.example.com"),
+		To:           utils.Ptr("me@example.com"),
+	}
+}
+
+func fixtureOpsGenieConfigsPayload() argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner {
+	return argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{
+		ApiKey: utils.Ptr("key"),
+		Tags:   utils.Ptr("tag"),
+		ApiUrl: utils.Ptr("ops.example.com"),
+	}
+}
+
+func fixtureWebHooksConfigsPayload() argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner {
+	return argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
+		Url:     utils.Ptr("http://example.com"),
+		MsTeams: utils.Ptr(true),
+	}
+}
+
+func fixtureReceiverPayload(emailConfigs *[]argus.CreateAlertConfigReceiverPayloadEmailConfigsInner, opsGenieConfigs *[]argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner, webHooksConfigs *[]argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner) argus.UpdateAlertConfigsPayloadReceiversInner {
+	return argus.UpdateAlertConfigsPayloadReceiversInner{
+		EmailConfigs:    emailConfigs,
+		Name:            utils.Ptr("name"),
+		OpsgenieConfigs: opsGenieConfigs,
+		WebHookConfigs:  webHooksConfigs,
+	}
+}
+
+func fixtureRoutePayload() *argus.UpdateAlertConfigsPayloadRoute {
+	return &argus.UpdateAlertConfigsPayloadRoute{
+		GroupBy:        utils.Ptr([]string{"label1", "label2"}),
+		GroupInterval:  utils.Ptr("1m"),
+		GroupWait:      utils.Ptr("1m"),
+		Match:          &map[string]interface{}{"key": "value"},
+		MatchRe:        &map[string]interface{}{"key": "value"},
+		Receiver:       utils.Ptr("name"),
+		RepeatInterval: utils.Ptr("1m"),
+		Routes: &[]argus.CreateAlertConfigRoutePayloadRoutesInner{
+			{
+				GroupBy:        utils.Ptr([]string{"label1", "label2"}),
+				GroupInterval:  utils.Ptr("1m"),
+				GroupWait:      utils.Ptr("1m"),
+				Match:          &map[string]interface{}{"key": "value"},
+				MatchRe:        &map[string]interface{}{"key": "value"},
+				Receiver:       utils.Ptr("name"),
+				RepeatInterval: utils.Ptr("1m"),
+			},
+		},
+	}
+}
+
+func fixtureGlobalConfigPayload() *argus.UpdateAlertConfigsPayloadGlobal {
+	return &argus.UpdateAlertConfigsPayloadGlobal{
+		OpsgenieApiKey:   utils.Ptr("key"),
+		OpsgenieApiUrl:   utils.Ptr("ops.example.com"),
+		ResolveTimeout:   utils.Ptr("1m"),
+		SmtpAuthIdentity: utils.Ptr("identity"),
+		SmtpAuthUsername: utils.Ptr("username"),
+		SmtpAuthPassword: utils.Ptr("password"),
+		SmtpFrom:         utils.Ptr("me@example.com"),
+		SmtpSmarthost:    utils.Ptr("smtp.example.com:25"),
+	}
+}
+
+func fixtureReceiverResponse(emailConfigs *[]argus.EmailConfig, opsGenieConfigs *[]argus.OpsgenieConfig, webhookConfigs *[]argus.WebHook) argus.Receivers {
+	return argus.Receivers{
+		Name:            utils.Ptr("name"),
+		EmailConfigs:    emailConfigs,
+		OpsgenieConfigs: opsGenieConfigs,
+		WebHookConfigs:  webhookConfigs,
+	}
+}
+
+func fixtureEmailConfigsResponse() argus.EmailConfig {
+	return argus.EmailConfig{
+		AuthIdentity: utils.Ptr("identity"),
+		AuthPassword: utils.Ptr("password"),
+		AuthUsername: utils.Ptr("username"),
+		From:         utils.Ptr("notification@example.com"),
+		Smarthost:    utils.Ptr("smtp.example.com"),
+		To:           utils.Ptr("me@example.com"),
+	}
+}
+
+func fixtureOpsGenieConfigsResponse() argus.OpsgenieConfig {
+	return argus.OpsgenieConfig{
+		ApiKey: utils.Ptr("key"),
+		Tags:   utils.Ptr("tag"),
+		ApiUrl: utils.Ptr("ops.example.com"),
+	}
+}
+
+func fixtureWebHooksConfigsResponse() argus.WebHook {
+	return argus.WebHook{
+		Url:     utils.Ptr("http://example.com"),
+		MsTeams: utils.Ptr(true),
+	}
+}
+
+func fixtureRouteResponse() *argus.Route {
+	return &argus.Route{
+		GroupBy:        utils.Ptr([]string{"label1", "label2"}),
+		GroupInterval:  utils.Ptr("1m"),
+		GroupWait:      utils.Ptr("1m"),
+		Match:          &map[string]string{"key": "value"},
+		MatchRe:        &map[string]string{"key": "value"},
+		Receiver:       utils.Ptr("name"),
+		RepeatInterval: utils.Ptr("1m"),
+		Routes: &[]argus.RouteSerializer{
+			{
+				GroupBy:        utils.Ptr([]string{"label1", "label2"}),
+				GroupInterval:  utils.Ptr("1m"),
+				GroupWait:      utils.Ptr("1m"),
+				Match:          &map[string]string{"key": "value"},
+				MatchRe:        &map[string]string{"key": "value"},
+				Receiver:       utils.Ptr("name"),
+				RepeatInterval: utils.Ptr("1m"),
+			},
+		},
+	}
+}
+
+func fixtureGlobalConfigResponse() *argus.Global {
+	return &argus.Global{
+		OpsgenieApiKey:   utils.Ptr("key"),
+		OpsgenieApiUrl:   utils.Ptr("ops.example.com"),
+		ResolveTimeout:   utils.Ptr("1m"),
+		SmtpAuthIdentity: utils.Ptr("identity"),
+		SmtpAuthUsername: utils.Ptr("username"),
+		SmtpAuthPassword: utils.Ptr("password"),
+		SmtpFrom:         utils.Ptr("me@example.com"),
+		SmtpSmarthost:    utils.Ptr("smtp.example.com:25"),
+	}
+}
+
+func fixtureRouteAttributeSchema(route *schema.ListNestedAttribute, isDatasource bool) map[string]schema.Attribute {
+	attributeMap := map[string]schema.Attribute{
+		"group_by": schema.ListAttribute{
+			Description: routeDescriptions["group_by"],
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
+			ElementType: types.StringType,
+		},
+		"group_interval": schema.StringAttribute{
+			Description: routeDescriptions["group_interval"],
+			Optional:    !isDatasource,
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
+		"group_wait": schema.StringAttribute{
+			Description: routeDescriptions["group_wait"],
+			Optional:    !isDatasource,
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
+		"match": schema.MapAttribute{
+			Description: routeDescriptions["match"],
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
+			ElementType: types.StringType,
+		},
+		"match_regex": schema.MapAttribute{
+			Description: routeDescriptions["match_regex"],
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
+			ElementType: types.StringType,
+		},
+		"receiver": schema.StringAttribute{
+			Description: routeDescriptions["receiver"],
+			Required:    !isDatasource,
+			Computed:    isDatasource,
+		},
+		"repeat_interval": schema.StringAttribute{
+			Description: routeDescriptions["repeat_interval"],
+			Optional:    !isDatasource,
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
+	}
+	if route != nil {
+		attributeMap["routes"] = *route
+	}
+	return attributeMap
+}
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
@@ -271,6 +584,356 @@ func TestMapFields(t *testing.T) {
 	}
 }
 
+func TestMapAlertConfigField(t *testing.T) {
+	tests := []struct {
+		description     string
+		alertConfigResp *argus.GetAlertConfigsResponse
+		expected        Model
+		isValid         bool
+	}{
+		{
+			description: "basic_ok",
+			alertConfigResp: &argus.GetAlertConfigsResponse{
+				Data: &argus.Alert{
+					Receivers: &[]argus.Receivers{
+						fixtureReceiverResponse(
+							&[]argus.EmailConfig{
+								fixtureEmailConfigsResponse(),
+							},
+							&[]argus.OpsgenieConfig{
+								fixtureOpsGenieConfigsResponse(),
+							},
+							&[]argus.WebHook{
+								fixtureWebHooksConfigsResponse(),
+							},
+						),
+					},
+					Route:  fixtureRouteResponse(),
+					Global: fixtureGlobalConfigResponse(),
+				},
+			},
+			expected: Model{
+				ACL:        types.SetNull(types.StringType),
+				Parameters: types.MapNull(types.StringType),
+				AlertConfig: types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
+					"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+						fixtureReceiverModel(
+							fixtureEmailConfigsModel(),
+							fixtureOpsGenieConfigsModel(),
+							fixtureWebHooksConfigsModel(),
+						),
+					}),
+					"route":  fixtureRouteModel(),
+					"global": fixtureGlobalConfigModel(),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			description: "receivers only emailconfigs",
+			alertConfigResp: &argus.GetAlertConfigsResponse{
+				Data: &argus.Alert{
+					Receivers: &[]argus.Receivers{
+						fixtureReceiverResponse(
+							&[]argus.EmailConfig{
+								fixtureEmailConfigsResponse(),
+							},
+							nil,
+							nil,
+						),
+					},
+					Route: fixtureRouteResponse(),
+				},
+			},
+			expected: Model{
+				ACL:        types.SetNull(types.StringType),
+				Parameters: types.MapNull(types.StringType),
+				AlertConfig: types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
+					"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+						fixtureReceiverModel(
+							fixtureEmailConfigsModel(),
+							types.ListNull(types.ObjectType{AttrTypes: opsgenieConfigsTypes}),
+							types.ListNull(types.ObjectType{AttrTypes: webHooksConfigsTypes}),
+						),
+					}),
+					"route":  fixtureRouteModel(),
+					"global": types.ObjectNull(globalConfigurationTypes),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			description: "receivers only opsgenieconfigs",
+			alertConfigResp: &argus.GetAlertConfigsResponse{
+				Data: &argus.Alert{
+					Receivers: &[]argus.Receivers{
+						fixtureReceiverResponse(
+							nil,
+							&[]argus.OpsgenieConfig{
+								fixtureOpsGenieConfigsResponse(),
+							},
+							nil,
+						),
+					},
+					Route: fixtureRouteResponse(),
+				},
+			},
+			expected: Model{
+				ACL:        types.SetNull(types.StringType),
+				Parameters: types.MapNull(types.StringType),
+				AlertConfig: types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
+					"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+						fixtureReceiverModel(
+							types.ListNull(types.ObjectType{AttrTypes: emailConfigsTypes}),
+							fixtureOpsGenieConfigsModel(),
+							types.ListNull(types.ObjectType{AttrTypes: webHooksConfigsTypes}),
+						),
+					}),
+					"route":  fixtureRouteModel(),
+					"global": types.ObjectNull(globalConfigurationTypes),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			description: "receivers only webhooksconfigs",
+			alertConfigResp: &argus.GetAlertConfigsResponse{
+				Data: &argus.Alert{
+					Receivers: &[]argus.Receivers{
+						fixtureReceiverResponse(
+							nil,
+							nil,
+							&[]argus.WebHook{
+								fixtureWebHooksConfigsResponse(),
+							},
+						),
+					},
+					Route: fixtureRouteResponse(),
+				},
+			},
+			expected: Model{
+				ACL:        types.SetNull(types.StringType),
+				Parameters: types.MapNull(types.StringType),
+				AlertConfig: types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
+					"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+						fixtureReceiverModel(
+							types.ListNull(types.ObjectType{AttrTypes: emailConfigsTypes}),
+							types.ListNull(types.ObjectType{AttrTypes: opsgenieConfigsTypes}),
+							fixtureWebHooksConfigsModel(),
+						),
+					}),
+					"route":  fixtureRouteModel(),
+					"global": types.ObjectNull(globalConfigurationTypes),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			description: "no receivers, no routes",
+			alertConfigResp: &argus.GetAlertConfigsResponse{
+				Data: &argus.Alert{
+					Receivers: &[]argus.Receivers{},
+					Route:     &argus.Route{},
+				},
+			},
+			expected: Model{
+				ACL:        types.SetNull(types.StringType),
+				Parameters: types.MapNull(types.StringType),
+				AlertConfig: types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
+					"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{}),
+					"route":     fixtureNullRouteModel(),
+					"global":    types.ObjectNull(globalConfigurationTypes),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			description: "no receivers, default routes",
+			alertConfigResp: &argus.GetAlertConfigsResponse{
+				Data: &argus.Alert{
+					Receivers: &[]argus.Receivers{},
+					Route:     fixtureRouteResponse(),
+				},
+			},
+			expected: Model{
+				ACL:        types.SetNull(types.StringType),
+				Parameters: types.MapNull(types.StringType),
+				AlertConfig: types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
+					"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{}),
+					"route":     fixtureRouteModel(),
+					"global":    types.ObjectNull(globalConfigurationTypes),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			description: "default receivers, no routes",
+			alertConfigResp: &argus.GetAlertConfigsResponse{
+				Data: &argus.Alert{
+					Receivers: &[]argus.Receivers{
+						fixtureReceiverResponse(
+							&[]argus.EmailConfig{
+								fixtureEmailConfigsResponse(),
+							},
+							&[]argus.OpsgenieConfig{
+								fixtureOpsGenieConfigsResponse(),
+							},
+							&[]argus.WebHook{
+								fixtureWebHooksConfigsResponse(),
+							},
+						),
+					},
+					Route: &argus.Route{},
+				},
+			},
+			expected: Model{
+				ACL:        types.SetNull(types.StringType),
+				Parameters: types.MapNull(types.StringType),
+				AlertConfig: types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
+					"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+						fixtureReceiverModel(
+							fixtureEmailConfigsModel(),
+							fixtureOpsGenieConfigsModel(),
+							fixtureWebHooksConfigsModel(),
+						),
+					}),
+					"route":  fixtureNullRouteModel(),
+					"global": types.ObjectNull(globalConfigurationTypes),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			description: "nil receivers",
+			alertConfigResp: &argus.GetAlertConfigsResponse{
+				Data: &argus.Alert{
+					Receivers: nil,
+					Route:     fixtureRouteResponse(),
+				},
+			},
+			expected: Model{
+				ACL:        types.SetNull(types.StringType),
+				Parameters: types.MapNull(types.StringType),
+				AlertConfig: types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
+					"receivers": types.ListNull(types.ObjectType{AttrTypes: receiversTypes}),
+					"route":     fixtureRouteModel(),
+					"global":    types.ObjectNull(globalConfigurationTypes),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			description: "nil route",
+			alertConfigResp: &argus.GetAlertConfigsResponse{
+				Data: &argus.Alert{
+					Receivers: &[]argus.Receivers{
+						fixtureReceiverResponse(
+							&[]argus.EmailConfig{
+								fixtureEmailConfigsResponse(),
+							},
+							&[]argus.OpsgenieConfig{
+								fixtureOpsGenieConfigsResponse(),
+							},
+							&[]argus.WebHook{
+								fixtureWebHooksConfigsResponse(),
+							},
+						),
+					},
+					Route: nil,
+				},
+			},
+			expected: Model{
+				ACL:        types.SetNull(types.StringType),
+				Parameters: types.MapNull(types.StringType),
+				AlertConfig: types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
+					"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+						fixtureReceiverModel(
+							fixtureEmailConfigsModel(),
+							fixtureOpsGenieConfigsModel(),
+							fixtureWebHooksConfigsModel(),
+						),
+					}),
+					"route":  types.ObjectNull(routeTypes),
+					"global": types.ObjectNull(globalConfigurationTypes),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			description: "empty global options",
+			alertConfigResp: &argus.GetAlertConfigsResponse{
+				Data: &argus.Alert{
+					Receivers: &[]argus.Receivers{
+						fixtureReceiverResponse(
+							&[]argus.EmailConfig{
+								fixtureEmailConfigsResponse(),
+							},
+							&[]argus.OpsgenieConfig{
+								fixtureOpsGenieConfigsResponse(),
+							},
+							&[]argus.WebHook{
+								fixtureWebHooksConfigsResponse(),
+							},
+						),
+					},
+					Route:  fixtureRouteResponse(),
+					Global: &argus.Global{},
+				},
+			},
+			expected: Model{
+				ACL:        types.SetNull(types.StringType),
+				Parameters: types.MapNull(types.StringType),
+				AlertConfig: types.ObjectValueMust(alertConfigTypes, map[string]attr.Value{
+					"receivers": types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+						fixtureReceiverModel(
+							fixtureEmailConfigsModel(),
+							fixtureOpsGenieConfigsModel(),
+							fixtureWebHooksConfigsModel(),
+						),
+					}),
+					"route":  fixtureRouteModel(),
+					"global": fixtureNullGlobalConfigModel(),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			description:     "nil resp",
+			alertConfigResp: nil,
+			expected: Model{
+				ACL:         types.SetNull(types.StringType),
+				Parameters:  types.MapNull(types.StringType),
+				AlertConfig: types.ObjectNull(receiversTypes),
+			},
+			isValid: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			state := &Model{
+				ProjectId:  tt.expected.ProjectId,
+				ACL:        types.SetNull(types.StringType),
+				Parameters: types.MapNull(types.StringType),
+			}
+			err := mapAlertConfigField(context.Background(), tt.alertConfigResp, state)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+
+			if tt.isValid {
+				diff := cmp.Diff(state.AlertConfig, tt.expected.AlertConfig)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
@@ -517,6 +1180,358 @@ func TestToUpdateMetricsStorageRetentionPayload(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
+			}
+		})
+	}
+}
+
+func TestToUpdateAlertConfigPayload(t *testing.T) {
+	tests := []struct {
+		description string
+		input       alertConfigModel
+		expected    *argus.UpdateAlertConfigsPayload
+		isValid     bool
+	}{
+		{
+			description: "base",
+			input: alertConfigModel{
+				Receivers: types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+					fixtureReceiverModel(
+						fixtureEmailConfigsModel(),
+						fixtureOpsGenieConfigsModel(),
+						fixtureWebHooksConfigsModel(),
+					),
+				}),
+				Route:               fixtureRouteModel(),
+				GlobalConfiguration: fixtureGlobalConfigModel(),
+			},
+			expected: &argus.UpdateAlertConfigsPayload{
+				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
+					fixtureReceiverPayload(
+						&[]argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{fixtureEmailConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{fixtureOpsGenieConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{fixtureWebHooksConfigsPayload()},
+					),
+				},
+				Route:  fixtureRoutePayload(),
+				Global: fixtureGlobalConfigPayload(),
+			},
+			isValid: true,
+		},
+		{
+			description: "receivers only emailconfigs",
+			input: alertConfigModel{
+				Receivers: types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+					fixtureReceiverModel(
+						fixtureEmailConfigsModel(),
+						types.ListNull(types.ObjectType{AttrTypes: opsgenieConfigsTypes}),
+						types.ListNull(types.ObjectType{AttrTypes: webHooksConfigsTypes}),
+					),
+				}),
+				Route: fixtureRouteModel(),
+			},
+			expected: &argus.UpdateAlertConfigsPayload{
+				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
+					fixtureReceiverPayload(
+						&[]argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{fixtureEmailConfigsPayload()},
+						nil,
+						nil,
+					),
+				},
+				Route: fixtureRoutePayload(),
+			},
+			isValid: true,
+		},
+		{
+			description: "receivers only opsgenieconfigs",
+			input: alertConfigModel{
+				Receivers: types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+					fixtureReceiverModel(
+						types.ListNull(types.ObjectType{AttrTypes: emailConfigsTypes}),
+						fixtureOpsGenieConfigsModel(),
+						types.ListNull(types.ObjectType{AttrTypes: webHooksConfigsTypes}),
+					),
+				}),
+				Route: fixtureRouteModel(),
+			},
+			expected: &argus.UpdateAlertConfigsPayload{
+				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
+					fixtureReceiverPayload(
+						nil,
+						&[]argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{fixtureOpsGenieConfigsPayload()},
+						nil,
+					),
+				},
+				Route: fixtureRoutePayload(),
+			},
+			isValid: true,
+		},
+		{
+			description: "multiple receivers",
+			input: alertConfigModel{
+				Receivers: types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+					fixtureReceiverModel(
+						fixtureEmailConfigsModel(),
+						fixtureOpsGenieConfigsModel(),
+						fixtureWebHooksConfigsModel(),
+					),
+					fixtureReceiverModel(
+						fixtureEmailConfigsModel(),
+						fixtureOpsGenieConfigsModel(),
+						fixtureWebHooksConfigsModel(),
+					),
+				}),
+				Route: fixtureRouteModel(),
+			},
+			expected: &argus.UpdateAlertConfigsPayload{
+				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
+					fixtureReceiverPayload(
+						&[]argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{fixtureEmailConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{fixtureOpsGenieConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{fixtureWebHooksConfigsPayload()},
+					),
+					fixtureReceiverPayload(
+						&[]argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{fixtureEmailConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{fixtureOpsGenieConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{fixtureWebHooksConfigsPayload()},
+					),
+				},
+				Route: fixtureRoutePayload(),
+			},
+			isValid: true,
+		},
+		{
+			description: "empty global options",
+			input: alertConfigModel{
+				Receivers: types.ListValueMust(types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{
+					fixtureReceiverModel(
+						fixtureEmailConfigsModel(),
+						fixtureOpsGenieConfigsModel(),
+						fixtureWebHooksConfigsModel(),
+					),
+				}),
+				Route:               fixtureRouteModel(),
+				GlobalConfiguration: fixtureNullGlobalConfigModel(),
+			},
+			expected: &argus.UpdateAlertConfigsPayload{
+				Receivers: &[]argus.UpdateAlertConfigsPayloadReceiversInner{
+					fixtureReceiverPayload(
+						&[]argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{fixtureEmailConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{fixtureOpsGenieConfigsPayload()},
+						&[]argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{fixtureWebHooksConfigsPayload()},
+					),
+				},
+				Route:  fixtureRoutePayload(),
+				Global: &argus.UpdateAlertConfigsPayloadGlobal{},
+			},
+			isValid: true,
+		},
+		{
+			description: "empty alert config",
+			input:       alertConfigModel{},
+			isValid:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output, err := toUpdateAlertConfigPayload(context.Background(), &tt.input)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(output, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestGetRouteNestedObjectAux(t *testing.T) {
+	tests := []struct {
+		description    string
+		startingLevel  int
+		recursionLimit int
+		isDatasource   bool
+		expected       schema.ListNestedAttribute
+	}{
+		{
+			"no recursion, resource",
+			1,
+			1,
+			false,
+			schema.ListNestedAttribute{
+				Description: routeDescriptions["routes"],
+				Optional:    true,
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+				},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: fixtureRouteAttributeSchema(nil, false),
+				},
+			},
+		},
+		{
+			"recursion 1, resource",
+			1,
+			2,
+			false,
+			schema.ListNestedAttribute{
+				Description: routeDescriptions["routes"],
+				Optional:    true,
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+				},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: fixtureRouteAttributeSchema(
+						&schema.ListNestedAttribute{
+							Description: routeDescriptions["routes"],
+							Optional:    true,
+							Validators: []validator.List{
+								listvalidator.SizeAtLeast(1),
+							},
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: fixtureRouteAttributeSchema(nil, false),
+							},
+						},
+						false,
+					),
+				},
+			},
+		},
+		{
+			"no recursion,datasource",
+			1,
+			1,
+			true,
+			schema.ListNestedAttribute{
+				Description: routeDescriptions["routes"],
+				Computed:    true,
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+				},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: fixtureRouteAttributeSchema(nil, true),
+				},
+			},
+		},
+		{
+			"recursion 1, datasource",
+			1,
+			2,
+			true,
+			schema.ListNestedAttribute{
+				Description: routeDescriptions["routes"],
+				Computed:    true,
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+				},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: fixtureRouteAttributeSchema(
+						&schema.ListNestedAttribute{
+							Description: routeDescriptions["routes"],
+							Computed:    true,
+							Validators: []validator.List{
+								listvalidator.SizeAtLeast(1),
+							},
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: fixtureRouteAttributeSchema(nil, true),
+							},
+						},
+						true,
+					),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output := getRouteNestedObjectAux(tt.isDatasource, tt.startingLevel, tt.recursionLimit)
+			diff := cmp.Diff(output, tt.expected)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
+func TestGetRouteListTypeAux(t *testing.T) {
+	tests := []struct {
+		description    string
+		startingLevel  int
+		recursionLimit int
+		expected       types.ObjectType
+	}{
+		{
+			"no recursion",
+			1,
+			1,
+			types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"group_by":        types.ListType{ElemType: types.StringType},
+					"group_interval":  types.StringType,
+					"group_wait":      types.StringType,
+					"match":           types.MapType{ElemType: types.StringType},
+					"match_regex":     types.MapType{ElemType: types.StringType},
+					"receiver":        types.StringType,
+					"repeat_interval": types.StringType,
+				},
+			},
+		},
+		{
+			"recursion 1",
+			1,
+			2,
+			types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"group_by":        types.ListType{ElemType: types.StringType},
+					"group_interval":  types.StringType,
+					"group_wait":      types.StringType,
+					"match":           types.MapType{ElemType: types.StringType},
+					"match_regex":     types.MapType{ElemType: types.StringType},
+					"receiver":        types.StringType,
+					"repeat_interval": types.StringType,
+					"routes": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{
+						"group_by":        types.ListType{ElemType: types.StringType},
+						"group_interval":  types.StringType,
+						"group_wait":      types.StringType,
+						"match":           types.MapType{ElemType: types.StringType},
+						"match_regex":     types.MapType{ElemType: types.StringType},
+						"receiver":        types.StringType,
+						"repeat_interval": types.StringType,
+					}}},
+				},
+			},
+		},
+		{
+			"recursion 2",
+			2,
+			2,
+			types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"group_by":        types.ListType{ElemType: types.StringType},
+					"group_interval":  types.StringType,
+					"group_wait":      types.StringType,
+					"match":           types.MapType{ElemType: types.StringType},
+					"match_regex":     types.MapType{ElemType: types.StringType},
+					"receiver":        types.StringType,
+					"repeat_interval": types.StringType,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output := getRouteListTypeAux(tt.startingLevel, tt.recursionLimit)
+			diff := cmp.Diff(output, tt.expected)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
 			}
 		})
 	}
