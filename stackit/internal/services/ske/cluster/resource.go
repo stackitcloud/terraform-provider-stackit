@@ -828,7 +828,7 @@ func (r *clusterResource) getCredential(ctx context.Context, diags *diag.Diagnos
 		model.KubeConfig = types.StringPointerValue(nil)
 		return nil
 	}
-	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute()
+	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute() //nolint:staticcheck //This endpoint is deprecated but is called to support a deprecated attribute, will be removed with the attribute
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if !ok {
