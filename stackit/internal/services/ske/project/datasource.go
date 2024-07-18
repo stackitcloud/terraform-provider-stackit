@@ -10,8 +10,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -27,7 +29,8 @@ func NewProjectDataSource() datasource.DataSource {
 
 // projectDataSource is the data source implementation.
 type projectDataSource struct {
-	client *ske.APIClient
+	skeClient        *ske.APIClient
+	enablementClient *serviceenablement.APIClient
 }
 
 // Metadata returns the data source type name.
@@ -49,6 +52,7 @@ func (r *projectDataSource) Configure(ctx context.Context, req datasource.Config
 	}
 
 	var apiClient *ske.APIClient
+	var enablementClient *serviceenablement.APIClient
 	var err error
 	if providerData.SKECustomEndpoint != "" {
 		apiClient, err = ske.NewAPIClient(
@@ -67,7 +71,25 @@ func (r *projectDataSource) Configure(ctx context.Context, req datasource.Config
 		return
 	}
 
-	r.client = apiClient
+	if providerData.ServiceEnablementCustomEndpoint != "" {
+		enablementClient, err = serviceenablement.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithEndpoint(providerData.ServiceEnablementCustomEndpoint),
+		)
+	} else {
+		enablementClient, err = serviceenablement.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithRegion(providerData.Region),
+		)
+	}
+
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring Service Enablement API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+		return
+	}
+
+	r.skeClient = apiClient
+	r.enablementClient = enablementClient
 	tflog.Info(ctx, "SKE client configured")
 }
 
@@ -104,7 +126,7 @@ func (r *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	_, err := r.client.GetServiceStatus(ctx, projectId).Execute()
+	_, err := r.enablementClient.GetServiceStatus(ctx, projectId, utils.SKEServiceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Calling API: %v", err))
 		return

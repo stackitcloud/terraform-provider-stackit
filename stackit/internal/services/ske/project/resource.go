@@ -14,9 +14,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
+	enablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/wait"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -39,7 +41,8 @@ func NewProjectResource() resource.Resource {
 
 // projectResource is the resource implementation.
 type projectResource struct {
-	client *ske.APIClient
+	skeClient        *ske.APIClient
+	enablementClient *serviceenablement.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -61,6 +64,7 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 	}
 
 	var apiClient *ske.APIClient
+	var enablementClient *serviceenablement.APIClient
 	var err error
 	if providerData.SKECustomEndpoint != "" {
 		apiClient, err = ske.NewAPIClient(
@@ -75,11 +79,29 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring SKE API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 
-	r.client = apiClient
+	if providerData.ServiceEnablementCustomEndpoint != "" {
+		enablementClient, err = serviceenablement.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithEndpoint(providerData.ServiceEnablementCustomEndpoint),
+		)
+	} else {
+		enablementClient, err = serviceenablement.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithRegion(providerData.Region),
+		)
+	}
+
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring Service Enablement API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+		return
+	}
+
+	r.skeClient = apiClient
+	r.enablementClient = enablementClient
 	tflog.Info(ctx, "SKE project client configured")
 }
 
@@ -122,16 +144,17 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	_, err := r.client.EnableService(ctx, projectId).Execute()
+
+	// If SKE functionality is not enabled, enable it
+	err := r.enablementClient.EnableService(ctx, projectId, utils.SKEServiceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Calling API to enable SKE: %v", err))
 		return
 	}
 
-	model.Id = types.StringValue(projectId)
-	_, err = wait.EnableServiceWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
+	_, err = enablementWait.EnableServiceWaitHandler(ctx, r.enablementClient, projectId, utils.SKEServiceId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Project creation waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Wait for SKE enablement: %v", err))
 		return
 	}
 
@@ -152,7 +175,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 	projectId := model.ProjectId.ValueString()
-	_, err := r.client.GetServiceStatus(ctx, projectId).Execute()
+	_, err := r.enablementClient.GetServiceStatus(ctx, projectId, utils.SKEServiceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -183,7 +206,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	c := r.client
+	c := r.skeClient
 
 	clusters, err := c.ListClusters(ctx, projectId).Execute()
 	if err != nil {
@@ -196,14 +219,15 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	_, err = c.DisableService(ctx, projectId).Execute()
+	err = r.enablementClient.DisableService(ctx, projectId, utils.SKEServiceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Calling API to disable SKE: %v", err))
 		return
 	}
-	_, err = wait.DisableServiceWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
+
+	_, err = enablementWait.DisableServiceWaitHandler(ctx, r.enablementClient, projectId, utils.SKEServiceId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Project deletion waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Wait for SKE disabling: %v", err))
 		return
 	}
 	tflog.Info(ctx, "SKE project deleted")
