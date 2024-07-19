@@ -203,7 +203,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	var roles []sqlserverflex.Role
+	var roles []string
 	if !(model.Roles.IsNull() || model.Roles.IsUnknown()) {
 		diags = model.Roles.ElementsAs(ctx, &roles, false)
 		resp.Diagnostics.Append(diags...)
@@ -441,7 +441,7 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model) error {
 	return nil
 }
 
-func toCreatePayload(model *Model, roles []sqlserverflex.Role) (*sqlserverflex.CreateUserPayload, error) {
+func toCreatePayload(model *Model, roles []string) (*sqlserverflex.CreateUserPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
