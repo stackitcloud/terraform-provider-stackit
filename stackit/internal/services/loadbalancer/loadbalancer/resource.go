@@ -591,7 +591,7 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model)
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -632,7 +632,7 @@ func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	// Map response body to schema
-	err = mapFields(lbResp, &model)
+	err = mapFields(ctx, lbResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -696,7 +696,7 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// Map response body to schema
-	err = mapFields(getResp, &model)
+	err = mapFields(ctx, getResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -1039,7 +1039,7 @@ func toTargetsPayload(ctx context.Context, tp *targetPool) (*[]loadbalancer.Targ
 	return &payload, nil
 }
 
-func mapFields(lb *loadbalancer.LoadBalancer, m *Model) error {
+func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) error {
 	if lb == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -1075,7 +1075,7 @@ func mapFields(lb *loadbalancer.LoadBalancer, m *Model) error {
 	if err != nil {
 		return fmt.Errorf("mapping network: %w", err)
 	}
-	err = mapOptions(lb, m)
+	err = mapOptions(ctx, lb, m)
 	if err != nil {
 		return fmt.Errorf("mapping options: %w", err)
 	}
@@ -1192,14 +1192,29 @@ func mapNetworks(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 	return nil
 }
 
-func mapOptions(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
+func mapOptions(ctx context.Context, loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 	if loadBalancerResp.Options == nil {
 		m.Options = types.ObjectNull(optionsTypes)
 		return nil
 	}
 
+	privateNetworkOnlyTF := types.BoolPointerValue(loadBalancerResp.Options.PrivateNetworkOnly)
+
+	// If the private_network_only field is nil in the response but is explicitly set to false in the model,
+	// we set it to false in the TF state to prevent an inconsistency result after apply error
+	if !m.Options.IsNull() && !m.Options.IsUnknown() {
+		optionsModel := options{}
+		diags := m.Options.As(ctx, &optionsModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return fmt.Errorf("convert options: %w", core.DiagsToError(diags))
+		}
+		if loadBalancerResp.Options.PrivateNetworkOnly == nil && !optionsModel.PrivateNetworkOnly.IsNull() && !optionsModel.PrivateNetworkOnly.IsUnknown() && !optionsModel.PrivateNetworkOnly.ValueBool() {
+			privateNetworkOnlyTF = types.BoolValue(false)
+		}
+	}
+
 	optionsMap := map[string]attr.Value{
-		"private_network_only": types.BoolPointerValue(loadBalancerResp.Options.PrivateNetworkOnly),
+		"private_network_only": privateNetworkOnlyTF,
 	}
 
 	err := mapACL(loadBalancerResp.Options.AccessControl, optionsMap)
