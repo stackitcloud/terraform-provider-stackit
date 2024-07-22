@@ -1201,7 +1201,7 @@ func mapOptions(ctx context.Context, loadBalancerResp *loadbalancer.LoadBalancer
 	privateNetworkOnlyTF := types.BoolPointerValue(loadBalancerResp.Options.PrivateNetworkOnly)
 
 	// If the private_network_only field is nil in the response but is explicitly set to false in the model,
-	// we set it to false in the TF state to prevent an inconsistency result after apply error
+	// we set it to false in the TF state to prevent an inconsistent result after apply error
 	if !m.Options.IsNull() && !m.Options.IsUnknown() {
 		optionsModel := options{}
 		diags := m.Options.As(ctx, &optionsModel, basetypes.ObjectAsOptions{})
