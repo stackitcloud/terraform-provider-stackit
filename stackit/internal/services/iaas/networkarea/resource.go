@@ -3,12 +3,13 @@ package networkarea
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"net/http"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -51,7 +52,7 @@ type Model struct {
 	Name                types.String `tfsdk:"name"`
 	ProjectCount        types.Int64  `tfsdk:"project_count"`
 	DefaultNameservers  types.List   `tfsdk:"default_nameservers"`
-	NetworkRanges       types.List   `tfsdk:"network_ranges"`
+	NetworkRanges       types.Set    `tfsdk:"network_ranges"`
 	TransferNetwork     types.String `tfsdk:"transfer_network"`
 	DefaultPrefixLength types.Int64  `tfsdk:"default_prefix_length"`
 	MaxPrefixLength     types.Int64  `tfsdk:"max_prefix_length"`
@@ -183,19 +184,13 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Optional:    true,
 				ElementType: types.StringType,
 			},
-			"network_ranges": schema.ListNestedAttribute{
+			"network_ranges": schema.SetAttribute{
 				Description: "List of Network ranges.",
+				ElementType: types.StringType,
 				Required:    true,
-				Validators: []validator.List{
-					listvalidator.SizeAtLeast(1),
-					listvalidator.SizeAtMost(64),
-				},
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"prefix": schema.StringAttribute{
-							Required: true,
-						},
-					},
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+					setvalidator.SizeAtMost(64),
 				},
 			},
 			"transfer_network": schema.StringAttribute{
@@ -356,7 +351,7 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	var ranges []iaas.NetworkRange
+	var ranges []string
 	if !(model.NetworkRanges.IsNull() || model.NetworkRanges.IsUnknown()) {
 		diags = model.NetworkRanges.ElementsAs(ctx, &ranges, false)
 		resp.Diagnostics.Append(diags...)
@@ -527,40 +522,55 @@ func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, networkAr
 
 func mapNetworkRanges(networkAreaRangesList *iaas.NetworkRangeListResponse, m *Model) error {
 	if networkAreaRangesList == nil {
-		m.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
-		return nil
-	}
-
-	if networkAreaRangesList == nil {
 		return fmt.Errorf("nil network area ranges list")
 	}
 	if networkAreaRangesList.Items == nil || len(*networkAreaRangesList.Items) == 0 {
-		m.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
+		m.NetworkRanges = types.SetNull(types.StringType)
 		return nil
 	}
 
+	//if networkAreaRangesList == nil {
+	//	m.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
+	//	return nil
+	//}
+
+	//if networkAreaRangesList.Items == nil || len(*networkAreaRangesList.Items) == 0 {
+	//	m.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
+	//	return nil
+	//}
+
 	networkRangesList := []attr.Value{}
-	for i, networkRangeResp := range *networkAreaRangesList.Items {
-		networkRangeMap := map[string]attr.Value{
-			"prefix": types.StringPointerValue(networkRangeResp.Prefix),
-		}
-
-		networkRangeTF, diags := types.ObjectValue(networkRangeTypes, networkRangeMap)
-		if diags.HasError() {
-			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
-		}
-
-		networkRangesList = append(networkRangesList, networkRangeTF)
+	for _, networkRangeResp := range *networkAreaRangesList.Items {
+		networkRangesList = append(networkRangesList, types.StringValue(*networkRangeResp.Prefix))
 	}
+	//for i, networkRangeResp := range *networkAreaRangesList.Items {
+	//	networkRangeMap := map[string]attr.Value{
+	//		"prefix": types.StringPointerValue(networkRangeResp.Prefix),
+	//	}
+	//
+	//	networkRangeTF, diags := types.ObjectValue(networkRangeTypes, networkRangeMap)
+	//	if diags.HasError() {
+	//		return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
+	//	}
+	//
+	//	networkRangesList = append(networkRangesList, networkRangeTF)
+	//}
 
-	networkRangesTF, diags := types.ListValue(
-		types.ObjectType{AttrTypes: networkRangeTypes},
-		networkRangesList,
-	)
+	//networkRangesTF, diags := types.ListValue(
+	//	types.ObjectType{AttrTypes: networkRangeTypes},
+	//	networkRangesList,
+	//)
+	//if diags.HasError() {
+	//	return core.DiagsToError(diags)
+	//}
+	//
+	//m.NetworkRanges = networkRangesTF
+	//return nil
+
+	networkRangesTF, diags := types.SetValue(types.StringType, networkRangesList)
 	if diags.HasError() {
-		return core.DiagsToError(diags)
+		return fmt.Errorf("mapping network ranges: %w", core.DiagsToError(diags))
 	}
-
 	m.NetworkRanges = networkRangesTF
 	return nil
 }
@@ -631,7 +641,7 @@ func toNetworkRangesPayload(ctx context.Context, model *Model) (*[]iaas.NetworkR
 		return nil, nil
 	}
 
-	networkRangesModel := []networkRange{}
+	networkRangesModel := []basetypes.StringValue{}
 	diags := model.NetworkRanges.ElementsAs(ctx, &networkRangesModel, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
@@ -645,7 +655,7 @@ func toNetworkRangesPayload(ctx context.Context, model *Model) (*[]iaas.NetworkR
 	for i := range networkRangesModel {
 		networkRangeModel := networkRangesModel[i]
 		payload = append(payload, iaas.NetworkRange{
-			Prefix: conversion.StringValueToPointer(networkRangeModel.Prefix),
+			Prefix: conversion.StringValueToPointer(networkRangeModel),
 		})
 	}
 
@@ -653,7 +663,7 @@ func toNetworkRangesPayload(ctx context.Context, model *Model) (*[]iaas.NetworkR
 }
 
 // updateNetworkRanges creates and deletes network ranges so that network area ranges are the ones in the model
-func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId string, ranges []iaas.NetworkRange, client *iaas.APIClient) error {
+func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId string, ranges []string, client *iaas.APIClient) error {
 	// Get network ranges current state
 	currentNetworkRangesResp, err := client.ListNetworkAreaRanges(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
@@ -665,19 +675,21 @@ func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId stri
 		isCreated bool
 		id        string
 	}
+
 	networkRangesState := make(map[string]*networkRangeState)
-	for _, nwRange := range ranges {
-		networkRangesState[*nwRange.NetworkRangeId] = &networkRangeState{
+	for _, prefix := range ranges {
+		networkRangesState[prefix] = &networkRangeState{
 			isInModel: true,
 		}
 	}
+
 	for _, networkRange := range *currentNetworkRangesResp.Items {
-		nwRangeId := *networkRange.NetworkRangeId
-		if _, ok := networkRangesState[nwRangeId]; !ok {
-			networkRangesState[nwRangeId] = &networkRangeState{}
+		prefix := *networkRange.Prefix
+		if _, ok := networkRangesState[prefix]; !ok {
+			networkRangesState[prefix] = &networkRangeState{}
 		}
-		networkRangesState[nwRangeId].isCreated = true
-		networkRangesState[nwRangeId].id = *networkRange.NetworkRangeId
+		networkRangesState[prefix].isCreated = true
+		networkRangesState[prefix].id = *networkRange.NetworkRangeId
 	}
 
 	// Create/delete network ranges
@@ -686,8 +698,7 @@ func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId stri
 			payload := iaas.CreateNetworkAreaRangePayload{
 				Ipv4: &[]iaas.NetworkRange{
 					{
-						NetworkRangeId: utils.Ptr(networkAreaId),
-						Prefix:         utils.Ptr(prefix),
+						Prefix: utils.Ptr(prefix),
 					},
 				},
 			}

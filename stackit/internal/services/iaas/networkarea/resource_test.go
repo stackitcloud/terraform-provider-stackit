@@ -20,6 +20,13 @@ import (
 
 var testOrganizationId = uuid.NewString()
 var testAreaId = uuid.NewString()
+var testRangeId1 = uuid.NewString()
+var testRangeId2 = uuid.NewString()
+var testRangeId3 = uuid.NewString()
+var testRangeId4 = uuid.NewString()
+var testRangeId5 = uuid.NewString()
+var testRangeId6 = uuid.NewString()
+var testRangeId2Repeated = uuid.NewString()
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
@@ -65,13 +72,9 @@ func TestMapFields(t *testing.T) {
 				DefaultPrefixLength: types.Int64Null(),
 				MaxPrefixLength:     types.Int64Null(),
 				MinPrefixLength:     types.Int64Null(),
-				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-1"),
-					}),
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-2"),
-					}),
+				NetworkRanges: types.SetValueMust(types.StringType, []attr.Value{
+					types.StringValue("prefix-1"),
+					types.StringValue("prefix-2"),
 				}),
 			},
 			true,
@@ -123,13 +126,9 @@ func TestMapFields(t *testing.T) {
 				DefaultPrefixLength: types.Int64Value(20),
 				MaxPrefixLength:     types.Int64Value(22),
 				MinPrefixLength:     types.Int64Value(18),
-				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-1"),
-					}),
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-2"),
-					}),
+				NetworkRanges: types.SetValueMust(types.StringType, []attr.Value{
+					types.StringValue("prefix-1"),
+					types.StringValue("prefix-2"),
 				}),
 			},
 			true,
@@ -173,13 +172,9 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("ns2"),
 					types.StringValue("ns3"),
 				}),
-				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-1"),
-					}),
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-2"),
-					}),
+				NetworkRanges: types.SetValueMust(types.StringType, []attr.Value{
+					types.StringValue("prefix-1"),
+					types.StringValue("prefix-2"),
 				}),
 			},
 			true,
@@ -189,13 +184,9 @@ func TestMapFields(t *testing.T) {
 			Model{
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("naid"),
-				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("pr-1"),
-					}),
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("pr-2"),
-					}),
+				NetworkRanges: types.SetValueMust(types.StringType, []attr.Value{
+					types.StringValue("prefix-1"),
+					types.StringValue("prefix-2"),
 				}),
 			},
 			&iaas.NetworkArea{
@@ -206,10 +197,10 @@ func TestMapFields(t *testing.T) {
 			&iaas.NetworkRangeListResponse{
 				Items: &[]iaas.NetworkRange{
 					{
-						Prefix: utils.Ptr("pr-2"),
+						Prefix: utils.Ptr("prefix-2"),
 					},
 					{
-						Prefix: utils.Ptr("pr-3"),
+						Prefix: utils.Ptr("prefix-3"),
 					},
 				},
 			},
@@ -219,13 +210,9 @@ func TestMapFields(t *testing.T) {
 				NetworkAreaId:      types.StringValue("naid"),
 				ProjectCount:       types.Int64Value(2),
 				DefaultNameservers: types.ListNull(types.StringType),
-				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("pr-2"),
-					}),
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("pr-3"),
-					}),
+				NetworkRanges: types.SetValueMust(types.StringType, []attr.Value{
+					types.StringValue("prefix-2"),
+					types.StringValue("prefix-3"),
 				}),
 			},
 			true,
@@ -291,13 +278,9 @@ func TestToCreatePayload(t *testing.T) {
 					types.StringValue("ns1"),
 					types.StringValue("ns2"),
 				}),
-				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("pr-1"),
-					}),
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("pr-2"),
-					}),
+				NetworkRanges: types.SetValueMust(types.StringType, []attr.Value{
+					types.StringValue("pr-1"),
+					types.StringValue("pr-2"),
 				}),
 				TransferNetwork:     types.StringValue("network"),
 				DefaultPrefixLength: types.Int64Value(20),
@@ -408,20 +391,20 @@ func TestUpdateNetworkRanges(t *testing.T) {
 	getAllNetworkRangesResp := iaas.NetworkRangeListResponse{
 		Items: &[]iaas.NetworkRange{
 			{
-				Prefix:         utils.Ptr("acl-1"),
-				NetworkRangeId: utils.Ptr("id-acl-1"),
+				Prefix:         utils.Ptr("pr-1"),
+				NetworkRangeId: utils.Ptr(testRangeId1),
 			},
 			{
-				Prefix:         utils.Ptr("acl-2"),
-				NetworkRangeId: utils.Ptr("id-acl-2"),
+				Prefix:         utils.Ptr("pr-2"),
+				NetworkRangeId: utils.Ptr(testRangeId2),
 			},
 			{
-				Prefix:         utils.Ptr("acl-3"),
-				NetworkRangeId: utils.Ptr("id-acl-3"),
+				Prefix:         utils.Ptr("pr-3"),
+				NetworkRangeId: utils.Ptr(testRangeId3),
 			},
 			{
-				Prefix:         utils.Ptr("acl-2"),
-				NetworkRangeId: utils.Ptr("id-acl-2-repeated"),
+				Prefix:         utils.Ptr("pr-2"),
+				NetworkRangeId: utils.Ptr(testRangeId2Repeated),
 			},
 		},
 	}
@@ -435,6 +418,7 @@ func TestUpdateNetworkRanges(t *testing.T) {
 
 	tests := []struct {
 		description                 string
+		networkRanges               []string
 		ipv4                        []iaas.NetworkRange
 		getAllNetworkRangesFails    bool
 		createNetworkRangesFails    bool
@@ -443,37 +427,18 @@ func TestUpdateNetworkRanges(t *testing.T) {
 		expectedNetworkRangesStates map[string]bool // Keys are prefix; value is true if prefix should exist at the end, false if should be deleted
 	}{
 		{
-			description: "no_changes",
-			ipv4: []iaas.NetworkRange{
-				{
-					Prefix: utils.Ptr("pr-1"),
-				},
-				{
-					Prefix: utils.Ptr("pr-2"),
-				},
-			},
+			description:   "no_changes",
+			networkRanges: []string{"pr-1", "pr-2", "pr-3"},
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": true,
 				"pr-2": true,
+				"pr-3": true,
 			},
 			isValid: true,
 		},
 		{
-			description: "create_network_ranges",
-			ipv4: []iaas.NetworkRange{
-				{
-					Prefix: utils.Ptr("pr-1"),
-				},
-				{
-					Prefix: utils.Ptr("pr-2"),
-				},
-				{
-					Prefix: utils.Ptr("pr-3"),
-				},
-				{
-					Prefix: utils.Ptr("pr-4"),
-				},
-			},
+			description:   "create_network_ranges",
+			networkRanges: []string{"pr-1", "pr-2", "pr-3", "pr-4"},
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": true,
 				"pr-2": true,
@@ -483,15 +448,8 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description: "delete_network_ranges",
-			ipv4: []iaas.NetworkRange{
-				{
-					Prefix: utils.Ptr("pr-3"),
-				},
-				{
-					Prefix: utils.Ptr("pr-1"),
-				},
-			},
+			description:   "delete_network_ranges",
+			networkRanges: []string{"pr-1", "pr-3"},
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": true,
 				"pr-2": false,
@@ -500,21 +458,8 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description: "multiple_changes",
-			ipv4: []iaas.NetworkRange{
-				{
-					Prefix: utils.Ptr("pr-4"),
-				},
-				{
-					Prefix: utils.Ptr("pr-3"),
-				},
-				{
-					Prefix: utils.Ptr("pr-1"),
-				},
-				{
-					Prefix: utils.Ptr("pr-5"),
-				},
-			},
+			description:   "multiple_changes",
+			networkRanges: []string{"pr-1", "pr-3", "pr-4", "pr-5"},
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": true,
 				"pr-2": false,
@@ -525,24 +470,8 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description: "multiple_changes_repetition",
-			ipv4: []iaas.NetworkRange{
-				{
-					Prefix: utils.Ptr("pr-4"),
-				},
-				{
-					Prefix: utils.Ptr("pr-3"),
-				},
-				{
-					Prefix: utils.Ptr("pr-1"),
-				},
-				{
-					Prefix: utils.Ptr("pr-5"),
-				},
-				{
-					Prefix: utils.Ptr("pr-5"),
-				},
-			},
+			description:   "multiple_changes_repetition",
+			networkRanges: []string{"pr-1", "pr-3", "pr-4", "pr-5", "pr-5"},
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": true,
 				"pr-2": false,
@@ -553,15 +482,8 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description: "multiple_changes_2",
-			ipv4: []iaas.NetworkRange{
-				{
-					Prefix: utils.Ptr("pr-4"),
-				},
-				{
-					Prefix: utils.Ptr("pr-5"),
-				},
-			},
+			description:   "multiple_changes_2",
+			networkRanges: []string{"pr-4", "pr-5"},
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": false,
 				"pr-2": false,
@@ -572,8 +494,8 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description: "multiple_changes_3",
-			ipv4:        []iaas.NetworkRange{},
+			description:   "multiple_changes_3",
+			networkRanges: []string{},
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": false,
 				"pr-2": false,
@@ -582,50 +504,20 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description: "get_fails",
-			ipv4: []iaas.NetworkRange{
-				{
-					Prefix: utils.Ptr("pr-1"),
-				},
-				{
-					Prefix: utils.Ptr("pr-2"),
-				},
-				{
-					Prefix: utils.Ptr("pr-3"),
-				},
-			},
+			description:              "get_fails",
+			networkRanges:            []string{"pr-1", "pr-2", "pr-3"},
 			getAllNetworkRangesFails: true,
 			isValid:                  false,
 		},
 		{
-			description: "create_fails_1",
-			ipv4: []iaas.NetworkRange{
-				{
-					Prefix: utils.Ptr("pr-1"),
-				},
-				{
-					Prefix: utils.Ptr("pr-2"),
-				},
-				{
-					Prefix: utils.Ptr("pr-3"),
-				},
-				{
-					Prefix: utils.Ptr("pr-4"),
-				},
-			},
+			description:              "create_fails_1",
+			networkRanges:            []string{"pr-1", "pr-2", "pr-3", "pr-4"},
 			createNetworkRangesFails: true,
 			isValid:                  false,
 		},
 		{
-			description: "create_fails_2",
-			ipv4: []iaas.NetworkRange{
-				{
-					Prefix: utils.Ptr("pr-1"),
-				},
-				{
-					Prefix: utils.Ptr("pr-2"),
-				},
-			},
+			description:              "create_fails_2",
+			networkRanges:            []string{"pr-1", "pr-2"},
 			createNetworkRangesFails: true,
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": true,
@@ -635,34 +527,14 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description: "delete_fails_1",
-			ipv4: []iaas.NetworkRange{
-				{
-					Prefix: utils.Ptr("pr-1"),
-				},
-				{
-					Prefix: utils.Ptr("pr-2"),
-				},
-			},
+			description:              "delete_fails_1",
+			networkRanges:            []string{"pr-1", "pr-2"},
 			deleteNetworkRangesFails: true,
 			isValid:                  false,
 		},
 		{
-			description: "delete_fails_2",
-			ipv4: []iaas.NetworkRange{
-				{
-					Prefix: utils.Ptr("pr-1"),
-				},
-				{
-					Prefix: utils.Ptr("pr-2"),
-				},
-				{
-					Prefix: utils.Ptr("pr-3"),
-				},
-				{
-					Prefix: utils.Ptr("pr-4"),
-				},
-			},
+			description:              "delete_fails_2",
+			networkRanges:            []string{"pr-1", "pr-2", "pr-3", "pr-4"},
 			deleteNetworkRangesFails: true,
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": true,
@@ -676,28 +548,13 @@ func TestUpdateNetworkRanges(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			// Will be compared to tt.expectedACLsStates at the end
-			ipv4States := make(map[*[]iaas.NetworkRange]bool)
-			ipv4States[&[]iaas.NetworkRange{
-				{
-					NetworkRangeId: utils.Ptr("uuid"),
-					Prefix:         utils.Ptr("pr-1"),
-				},
-			}] = true
-			ipv4States[&[]iaas.NetworkRange{
-				{
-					NetworkRangeId: utils.Ptr("uuid2"),
-					Prefix:         utils.Ptr("pr-2"),
-				},
-			}] = true
-			ipv4States[&[]iaas.NetworkRange{
-				{
-					NetworkRangeId: utils.Ptr("uuid3"),
-					Prefix:         utils.Ptr("pr-3"),
-				},
-			}] = true
+			// Will be compared to tt.expectedNetworkRangesStates at the end
+			networkRangesStates := make(map[string]bool)
+			networkRangesStates["pr-1"] = true
+			networkRangesStates["pr-2"] = true
+			networkRangesStates["pr-3"] = true
 
-			// Handler for getting all ACLs
+			// Handler for getting all network ranges
 			getAllNetworkRangesHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				if tt.getAllNetworkRangesFails {
@@ -715,7 +572,7 @@ func TestUpdateNetworkRanges(t *testing.T) {
 				}
 			})
 
-			// Handler for creating ACL
+			// Handler for creating network range
 			createNetworkRangeHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				decoder := json.NewDecoder(r.Body)
 				var payload iaas.CreateNetworkAreaRangePayload
@@ -729,52 +586,68 @@ func TestUpdateNetworkRanges(t *testing.T) {
 					return
 				}
 				ipv4 := *payload.Ipv4
-				if ipv4Exists, ipv4WasCreated := ipv4States[&ipv4]; ipv4WasCreated && ipv4Exists {
-					t.Errorf("Create network range handler: attempted to create range '%v' that already exists", *payload.Ipv4)
-					return
-				}
 
-				w.Header().Set("Content-Type", "application/json")
-				if tt.createNetworkRangesFails {
-					w.WriteHeader(http.StatusInternalServerError)
-					_, err := w.Write(failureRespBytes)
-					if err != nil {
-						t.Errorf("Create network ranges handler: failed to write bad response: %v", err)
+				for _, networkRange := range ipv4 {
+					prefix := *networkRange.Prefix
+					if prefixExists, prefixWasCreated := networkRangesStates[prefix]; prefixWasCreated && prefixExists {
+						t.Errorf("Create network range handler: attempted to create range '%v' that already exists", *payload.Ipv4)
+						return
 					}
-					return
-				}
+					w.Header().Set("Content-Type", "application/json")
+					if tt.createNetworkRangesFails {
+						w.WriteHeader(http.StatusInternalServerError)
+						_, err := w.Write(failureRespBytes)
+						if err != nil {
+							t.Errorf("Create network ranges handler: failed to write bad response: %v", err)
+						}
+						return
+					}
 
-				resp := iaas.NetworkRange{
-					Prefix:         utils.Ptr("prefix"),
-					NetworkRangeId: utils.Ptr(fmt.Sprintf("id-range")),
+					resp := iaas.NetworkRange{
+						Prefix:         utils.Ptr("prefix"),
+						NetworkRangeId: utils.Ptr(fmt.Sprintf("id-range")),
+					}
+					respBytes, err := json.Marshal(resp)
+					if err != nil {
+						t.Errorf("Create network range handler: failed to marshal response: %v", err)
+						return
+					}
+					_, err = w.Write(respBytes)
+					if err != nil {
+						t.Errorf("Create network range handler: failed to write response: %v", err)
+					}
+					networkRangesStates[prefix] = true
 				}
-				respBytes, err := json.Marshal(resp)
-				if err != nil {
-					t.Errorf("Create network range handler: failed to marshal response: %v", err)
-					return
-				}
-				_, err = w.Write(respBytes)
-				if err != nil {
-					t.Errorf("Create network range handler: failed to write response: %v", err)
-				}
-				ipv4States[&ipv4] = true
 			})
 
 			// Handler for deleting Network range
 			deleteNetworkRangeHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				networkRange := []iaas.NetworkRange{{
-					NetworkRangeId: utils.Ptr("uuid6"),
-					Prefix:         utils.Ptr("pr-6"),
-				},
-				}
-
-				ipv4Exists, ipv4WasCreated := ipv4States[&networkRange]
-				if !ipv4WasCreated {
-					t.Errorf("Delete network range handler: attempted to delete range '%v' that wasn't created", networkRange)
+				//networkRange := []iaas.NetworkRange{{
+				//	NetworkRangeId: utils.Ptr(testRangeId6),
+				//	Prefix:         utils.Ptr("pr-6"),
+				//}}
+				//prefix := "pr-6"
+				vars := mux.Vars(r)
+				networkRangeId, ok := vars["networkRangeId"]
+				if !ok {
+					t.Errorf("Delete network range handler: no range ID")
 					return
 				}
-				if ipv4WasCreated && !ipv4Exists {
-					t.Errorf("Delete network range handler: attempted to delete range '%v' that was already deleted", networkRange)
+
+				var prefix string
+				for _, rangeItem := range *getAllNetworkRangesResp.Items {
+					if *rangeItem.NetworkRangeId == networkRangeId {
+						prefix = *rangeItem.Prefix
+					}
+
+				}
+				prefixExists, prefixWasCreated := networkRangesStates[prefix]
+				if !prefixWasCreated {
+					t.Errorf("Delete network range handler: attempted to delete range '%v' that wasn't created", prefix)
+					return
+				}
+				if prefixWasCreated && !prefixExists {
+					t.Errorf("Delete network range handler: attempted to delete range '%v' that was already deleted", prefix)
 					return
 				}
 
@@ -792,19 +665,19 @@ func TestUpdateNetworkRanges(t *testing.T) {
 				if err != nil {
 					t.Errorf("Delete network range handler: failed to write response: %v", err)
 				}
-				ipv4States[&networkRange] = false
+				networkRangesStates[prefix] = false
 			})
 
 			// Setup server and client
 			router := mux.NewRouter()
-			router.HandleFunc("/v1/organizations/{organizationId}/network-areas/{areaId}/network-ranges", func(w http.ResponseWriter, r *http.Request) {
+			router.HandleFunc("/v1beta1/organizations/{organizationId}/network-areas/{areaId}/network-ranges", func(w http.ResponseWriter, r *http.Request) {
 				if r.Method == "GET" {
 					getAllNetworkRangesHandler(w, r)
 				} else if r.Method == "POST" {
 					createNetworkRangeHandler(w, r)
 				}
 			})
-			router.HandleFunc("/v1/organizations/{organizationId}/network-areas/{areaId}/network-ranges/{networkRangeId}", deleteNetworkRangeHandler)
+			router.HandleFunc("/v1beta1/organizations/{organizationId}/network-areas/{areaId}/network-ranges/{networkRangeId}", deleteNetworkRangeHandler)
 			mockedServer := httptest.NewServer(router)
 			defer mockedServer.Close()
 			client, err := iaas.NewAPIClient(
@@ -816,7 +689,7 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			}
 
 			// Run test
-			err = updateNetworkRanges(context.Background(), testOrganizationId, testAreaId, tt.ipv4, client)
+			err = updateNetworkRanges(context.Background(), testOrganizationId, testAreaId, tt.networkRanges, client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -824,7 +697,7 @@ func TestUpdateNetworkRanges(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(ipv4States, tt.expectedNetworkRangesStates)
+				diff := cmp.Diff(networkRangesStates, tt.expectedNetworkRangesStates)
 				if diff != "" {
 					t.Fatalf("Network range states do not match: %s", diff)
 				}
