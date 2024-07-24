@@ -3,17 +3,16 @@ package networkarea
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"github.com/google/uuid"
-	"github.com/gorilla/mux"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
@@ -23,9 +22,6 @@ var testAreaId = uuid.NewString()
 var testRangeId1 = uuid.NewString()
 var testRangeId2 = uuid.NewString()
 var testRangeId3 = uuid.NewString()
-var testRangeId4 = uuid.NewString()
-var testRangeId5 = uuid.NewString()
-var testRangeId6 = uuid.NewString()
 var testRangeId2Repeated = uuid.NewString()
 
 func TestMapFields(t *testing.T) {
@@ -605,7 +601,7 @@ func TestUpdateNetworkRanges(t *testing.T) {
 
 					resp := iaas.NetworkRange{
 						Prefix:         utils.Ptr("prefix"),
-						NetworkRangeId: utils.Ptr(fmt.Sprintf("id-range")),
+						NetworkRangeId: utils.Ptr("id-range"),
 					}
 					respBytes, err := json.Marshal(resp)
 					if err != nil {
@@ -622,11 +618,6 @@ func TestUpdateNetworkRanges(t *testing.T) {
 
 			// Handler for deleting Network range
 			deleteNetworkRangeHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				//networkRange := []iaas.NetworkRange{{
-				//	NetworkRangeId: utils.Ptr(testRangeId6),
-				//	Prefix:         utils.Ptr("pr-6"),
-				//}}
-				//prefix := "pr-6"
 				vars := mux.Vars(r)
 				networkRangeId, ok := vars["networkRangeId"]
 				if !ok {
@@ -639,7 +630,6 @@ func TestUpdateNetworkRanges(t *testing.T) {
 					if *rangeItem.NetworkRangeId == networkRangeId {
 						prefix = *rangeItem.Prefix
 					}
-
 				}
 				prefixExists, prefixWasCreated := networkRangesStates[prefix]
 				if !prefixWasCreated {

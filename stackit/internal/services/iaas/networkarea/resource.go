@@ -3,13 +3,11 @@ package networkarea
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"net/http"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -20,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -29,6 +28,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	internalUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -57,16 +57,6 @@ type Model struct {
 	DefaultPrefixLength types.Int64  `tfsdk:"default_prefix_length"`
 	MaxPrefixLength     types.Int64  `tfsdk:"max_prefix_length"`
 	MinPrefixLength     types.Int64  `tfsdk:"min_prefix_length"`
-}
-
-// Struct corresponding to Model.NetworkRanges[i]
-type networkRange struct {
-	Prefix types.String `tfsdk:"prefix"`
-}
-
-// Types corresponding to networkRanges
-var networkRangeTypes = map[string]attr.Type{
-	"prefix": types.StringType,
 }
 
 // NewNetworkAreaResource is a helper function to simplify the provider implementation.
@@ -529,43 +519,10 @@ func mapNetworkRanges(networkAreaRangesList *iaas.NetworkRangeListResponse, m *M
 		return nil
 	}
 
-	//if networkAreaRangesList == nil {
-	//	m.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
-	//	return nil
-	//}
-
-	//if networkAreaRangesList.Items == nil || len(*networkAreaRangesList.Items) == 0 {
-	//	m.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
-	//	return nil
-	//}
-
 	networkRangesList := []attr.Value{}
 	for _, networkRangeResp := range *networkAreaRangesList.Items {
 		networkRangesList = append(networkRangesList, types.StringValue(*networkRangeResp.Prefix))
 	}
-	//for i, networkRangeResp := range *networkAreaRangesList.Items {
-	//	networkRangeMap := map[string]attr.Value{
-	//		"prefix": types.StringPointerValue(networkRangeResp.Prefix),
-	//	}
-	//
-	//	networkRangeTF, diags := types.ObjectValue(networkRangeTypes, networkRangeMap)
-	//	if diags.HasError() {
-	//		return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
-	//	}
-	//
-	//	networkRangesList = append(networkRangesList, networkRangeTF)
-	//}
-
-	//networkRangesTF, diags := types.ListValue(
-	//	types.ObjectType{AttrTypes: networkRangeTypes},
-	//	networkRangesList,
-	//)
-	//if diags.HasError() {
-	//	return core.DiagsToError(diags)
-	//}
-	//
-	//m.NetworkRanges = networkRangesTF
-	//return nil
 
 	networkRangesTF, diags := types.SetValue(types.StringType, networkRangesList)
 	if diags.HasError() {
