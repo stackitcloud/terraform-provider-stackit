@@ -384,6 +384,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
 		iaasNetwork.NewNetworkDataSource,
+		iaasNetworkArea.NewNetworkAreaDataSource,
 		loadBalancer.NewLoadBalancerDataSource,
 		logMeInstance.NewInstanceDataSource,
 		logMeCredential.NewCredentialDataSource,
