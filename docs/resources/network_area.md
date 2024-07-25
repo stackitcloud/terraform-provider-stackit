@@ -16,7 +16,14 @@ Network area resource schema. Must have a `region` specified in the provider con
 resource "stackit_network_area" "example" {
   organization_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name             = "example-network-area"
-  network_ranges   = ["1.2.3.4", "5.6.7.8"]
+  network_ranges   = [
+    {
+      prefix = "1.2.3.4"
+    },
+    {
+      prefix = "5.6.7.8"
+    }
+  ]
   transfer_network = "1.2.3.4/5"
 }
 ```
@@ -27,7 +34,7 @@ resource "stackit_network_area" "example" {
 ### Required
 
 - `name` (String) The name of the network area.
-- `network_ranges` (Set of String) List of Network ranges.
+- `network_ranges` (Attributes List) List of Network ranges. (see [below for nested schema](#nestedatt--network_ranges))
 - `organization_id` (String) STACKIT organization ID to which the network area is associated.
 - `transfer_network` (String) Classless Inter-Domain Routing (CIDR).
 
@@ -45,3 +52,10 @@ resource "stackit_network_area" "example" {
 ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 - `network_area_id` (String) The network area ID.
 - `project_count` (Number) The amount of projects currently referencing this area.
+
+<a id="nestedatt--network_ranges"></a>
+### Nested Schema for `network_ranges`
+
+Required:
+
+- `prefix` (String)
