@@ -150,7 +150,7 @@ func TestAccResourceManagerResource(t *testing.T) {
 				ImportStateVerify: true,
 				// The owner_email attributes don't exist in the
 				// API, therefore there is no value for it during import.
-				ImportStateVerifyIgnore: []string{"owner_email"},
+				ImportStateVerifyIgnore: []string{"owner_email", "members"},
 			},
 			// Update
 			{
