@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -51,11 +50,21 @@ type Model struct {
 	Name                types.String `tfsdk:"name"`
 	ProjectCount        types.Int64  `tfsdk:"project_count"`
 	DefaultNameservers  types.List   `tfsdk:"default_nameservers"`
-	NetworkRanges       types.Set    `tfsdk:"network_ranges"`
+	NetworkRanges       types.List   `tfsdk:"network_ranges"`
 	TransferNetwork     types.String `tfsdk:"transfer_network"`
 	DefaultPrefixLength types.Int64  `tfsdk:"default_prefix_length"`
 	MaxPrefixLength     types.Int64  `tfsdk:"max_prefix_length"`
 	MinPrefixLength     types.Int64  `tfsdk:"min_prefix_length"`
+}
+
+// Struct corresponding to Model.NetworkRanges[i]
+type networkRange struct {
+	Prefix types.String `tfsdk:"prefix"`
+}
+
+// Types corresponding to networkRanges
+var networkRangeTypes = map[string]attr.Type{
+	"prefix": types.StringType,
 }
 
 // NewNetworkAreaResource is a helper function to simplify the provider implementation.
@@ -173,13 +182,19 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Optional:    true,
 				ElementType: types.StringType,
 			},
-			"network_ranges": schema.SetAttribute{
+			"network_ranges": schema.ListNestedAttribute{
 				Description: "List of Network ranges.",
-				ElementType: types.StringType,
 				Required:    true,
-				Validators: []validator.Set{
-					setvalidator.SizeAtLeast(1),
-					setvalidator.SizeAtMost(64),
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+					listvalidator.SizeAtMost(64),
+				},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"prefix": schema.StringAttribute{
+							Required: true,
+						},
+					},
 				},
 			},
 			"transfer_network": schema.StringAttribute{
@@ -511,19 +526,32 @@ func mapNetworkRanges(networkAreaRangesList *[]iaas.NetworkRange, m *Model) erro
 		return fmt.Errorf("nil network area ranges list")
 	}
 	if len(*networkAreaRangesList) == 0 {
-		m.NetworkRanges = types.SetNull(types.StringType)
+		m.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
 		return nil
 	}
 
 	networkRangesList := []attr.Value{}
-	for _, networkRangeResp := range *networkAreaRangesList {
-		networkRangesList = append(networkRangesList, types.StringValue(*networkRangeResp.Prefix))
+	for i, networkRangeResp := range *networkAreaRangesList {
+		networkRangeMap := map[string]attr.Value{
+			"prefix": types.StringPointerValue(networkRangeResp.Prefix),
+		}
+
+		networkRangeTF, diags := types.ObjectValue(networkRangeTypes, networkRangeMap)
+		if diags.HasError() {
+			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
+		}
+
+		networkRangesList = append(networkRangesList, networkRangeTF)
 	}
 
-	networkRangesTF, diags := types.SetValue(types.StringType, networkRangesList)
+	networkRangesTF, diags := types.ListValue(
+		types.ObjectType{AttrTypes: networkRangeTypes},
+		networkRangesList,
+	)
 	if diags.HasError() {
-		return fmt.Errorf("mapping network ranges: %w", core.DiagsToError(diags))
+		return core.DiagsToError(diags)
 	}
+
 	m.NetworkRanges = networkRangesTF
 	return nil
 }
@@ -594,7 +622,7 @@ func toNetworkRangesPayload(ctx context.Context, model *Model) (*[]iaas.NetworkR
 		return nil, nil
 	}
 
-	networkRangesModel := []basetypes.StringValue{}
+	networkRangesModel := []networkRange{}
 	diags := model.NetworkRanges.ElementsAs(ctx, &networkRangesModel, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
@@ -608,7 +636,7 @@ func toNetworkRangesPayload(ctx context.Context, model *Model) (*[]iaas.NetworkR
 	for i := range networkRangesModel {
 		networkRangeModel := networkRangesModel[i]
 		payload = append(payload, iaas.NetworkRange{
-			Prefix: conversion.StringValueToPointer(networkRangeModel),
+			Prefix: conversion.StringValueToPointer(networkRangeModel.Prefix),
 		})
 	}
 

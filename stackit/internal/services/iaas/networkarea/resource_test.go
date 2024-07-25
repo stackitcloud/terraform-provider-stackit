@@ -64,9 +64,13 @@ func TestMapFields(t *testing.T) {
 				DefaultPrefixLength: types.Int64Null(),
 				MaxPrefixLength:     types.Int64Null(),
 				MinPrefixLength:     types.Int64Null(),
-				NetworkRanges: types.SetValueMust(types.StringType, []attr.Value{
-					types.StringValue("prefix-1"),
-					types.StringValue("prefix-2"),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"prefix": types.StringValue("prefix-1"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"prefix": types.StringValue("prefix-2"),
+					}),
 				}),
 			},
 			true,
@@ -114,9 +118,13 @@ func TestMapFields(t *testing.T) {
 				DefaultPrefixLength: types.Int64Value(20),
 				MaxPrefixLength:     types.Int64Value(22),
 				MinPrefixLength:     types.Int64Value(18),
-				NetworkRanges: types.SetValueMust(types.StringType, []attr.Value{
-					types.StringValue("prefix-1"),
-					types.StringValue("prefix-2"),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"prefix": types.StringValue("prefix-1"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"prefix": types.StringValue("prefix-2"),
+					}),
 				}),
 			},
 			true,
@@ -156,9 +164,13 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("ns2"),
 					types.StringValue("ns3"),
 				}),
-				NetworkRanges: types.SetValueMust(types.StringType, []attr.Value{
-					types.StringValue("prefix-1"),
-					types.StringValue("prefix-2"),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"prefix": types.StringValue("prefix-1"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"prefix": types.StringValue("prefix-2"),
+					}),
 				}),
 			},
 			true,
@@ -168,9 +180,13 @@ func TestMapFields(t *testing.T) {
 			Model{
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("naid"),
-				NetworkRanges: types.SetValueMust(types.StringType, []attr.Value{
-					types.StringValue("prefix-1"),
-					types.StringValue("prefix-2"),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"prefix": types.StringValue("prefix-1"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"prefix": types.StringValue("prefix-2"),
+					}),
 				}),
 			},
 			&iaas.NetworkArea{
@@ -190,9 +206,13 @@ func TestMapFields(t *testing.T) {
 				OrganizationId:     types.StringValue("oid"),
 				NetworkAreaId:      types.StringValue("naid"),
 				DefaultNameservers: types.ListNull(types.StringType),
-				NetworkRanges: types.SetValueMust(types.StringType, []attr.Value{
-					types.StringValue("prefix-2"),
-					types.StringValue("prefix-3"),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"prefix": types.StringValue("prefix-2"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"prefix": types.StringValue("prefix-3"),
+					}),
 				}),
 			},
 			true,
@@ -258,9 +278,13 @@ func TestToCreatePayload(t *testing.T) {
 					types.StringValue("ns1"),
 					types.StringValue("ns2"),
 				}),
-				NetworkRanges: types.SetValueMust(types.StringType, []attr.Value{
-					types.StringValue("pr-1"),
-					types.StringValue("pr-2"),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"prefix": types.StringValue("pr-1"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"prefix": types.StringValue("pr-2"),
+					}),
 				}),
 				TransferNetwork:     types.StringValue("network"),
 				DefaultPrefixLength: types.Int64Value(20),
