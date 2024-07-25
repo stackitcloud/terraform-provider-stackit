@@ -213,13 +213,9 @@ func (d *networkAreaDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	networkAreaRangesResp, err := d.client.ListNetworkAreaRanges(ctx, organizationId, networkAreaId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area ranges", fmt.Sprintf("Calling API for network area  data: %v", err))
-		return
-	}
+	networkAreaRanges := networkAreaResp.Ipv4.NetworkRanges
 
-	err = mapFields(ctx, networkAreaResp, networkAreaRangesResp, &model)
+	err = mapFields(ctx, networkAreaResp, networkAreaRanges, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area", fmt.Sprintf("Processing API payload: %v", err))
 		return

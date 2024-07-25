@@ -261,14 +261,10 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 	networkAreaId := *networkArea.AreaId
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	networkAreaRangesResp, err := r.client.ListNetworkAreaRanges(ctx, organizationId, networkAreaId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area ranges", fmt.Sprintf("Calling API for network area  data: %v", err))
-		return
-	}
+	networkAreaRanges := networkArea.Ipv4.NetworkRanges
 
 	// Map response body to schema
-	err = mapFields(ctx, networkArea, networkAreaRangesResp, &model)
+	err = mapFields(ctx, networkArea, networkAreaRanges, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -306,14 +302,10 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	networkAreaRangesResp, err := r.client.ListNetworkAreaRanges(ctx, organizationId, networkAreaId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area ranges", fmt.Sprintf("Calling API for network area  data: %v", err))
-		return
-	}
+	networkAreaRanges := networkAreaResp.Ipv4.NetworkRanges
 
 	// Map response body to schema
-	err = mapFields(ctx, networkAreaResp, networkAreaRangesResp, &model)
+	err = mapFields(ctx, networkAreaResp, networkAreaRanges, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -368,20 +360,27 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	// Update ACLs
+	// Update network ranges
 	err = updateNetworkRanges(ctx, organizationId, networkAreaId, ranges, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area", fmt.Sprintf("Updating Network ranges: %v", err))
 		return
 	}
 
-	networkAreaRangesResp, err := r.client.ListNetworkAreaRanges(ctx, organizationId, networkAreaId).Execute()
+	networkAreaResp, err := r.client.GetNetworkArea(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area ranges", fmt.Sprintf("Calling API for network area  data: %v", err))
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	err = mapFields(ctx, waitResp, networkAreaRangesResp, &model)
+	networkAreaRanges := networkAreaResp.Ipv4.NetworkRanges
+
+	err = mapFields(ctx, waitResp, networkAreaRanges, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -447,7 +446,7 @@ func (r *networkAreaResource) ImportState(ctx context.Context, req resource.Impo
 	tflog.Info(ctx, "Network state imported")
 }
 
-func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, networkAreaRangesResp *iaas.NetworkRangeListResponse, model *Model) error {
+func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, networkAreaRangesResp *[]iaas.NetworkRange, model *Model) error {
 	if networkAreaResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -510,17 +509,17 @@ func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, networkAr
 	return nil
 }
 
-func mapNetworkRanges(networkAreaRangesList *iaas.NetworkRangeListResponse, m *Model) error {
+func mapNetworkRanges(networkAreaRangesList *[]iaas.NetworkRange, m *Model) error {
 	if networkAreaRangesList == nil {
 		return fmt.Errorf("nil network area ranges list")
 	}
-	if networkAreaRangesList.Items == nil || len(*networkAreaRangesList.Items) == 0 {
+	if len(*networkAreaRangesList) == 0 {
 		m.NetworkRanges = types.SetNull(types.StringType)
 		return nil
 	}
 
 	networkRangesList := []attr.Value{}
-	for _, networkRangeResp := range *networkAreaRangesList.Items {
+	for _, networkRangeResp := range *networkAreaRangesList {
 		networkRangesList = append(networkRangesList, types.StringValue(*networkRangeResp.Prefix))
 	}
 

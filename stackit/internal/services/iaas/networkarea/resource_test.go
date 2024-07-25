@@ -26,12 +26,12 @@ var testRangeId2Repeated = uuid.NewString()
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
-		description               string
-		state                     Model
-		input                     *iaas.NetworkArea
-		ListNetworkRangesResponse *iaas.NetworkRangeListResponse
-		expected                  Model
-		isValid                   bool
+		description       string
+		state             Model
+		input             *iaas.NetworkArea
+		ListNetworkRanges *[]iaas.NetworkRange
+		expected          Model
+		isValid           bool
 	}{
 		{
 			"id_ok",
@@ -43,18 +43,17 @@ func TestMapFields(t *testing.T) {
 				AreaId: utils.Ptr("naid"),
 				Ipv4:   &iaas.NetworkAreaIPv4{},
 			},
-			&iaas.NetworkRangeListResponse{
-				Items: &[]iaas.NetworkRange{
-					{
-						//NetworkRangeId: utils.Ptr("range-1"),
-						Prefix: utils.Ptr("prefix-1"),
-					},
-					{
-						//NetworkRangeId: utils.Ptr("range-2"),
-						Prefix: utils.Ptr("prefix-2"),
-					},
+			&[]iaas.NetworkRange{
+				{
+					//NetworkRangeId: utils.Ptr("range-1"),
+					Prefix: utils.Ptr("prefix-1"),
+				},
+				{
+					//NetworkRangeId: utils.Ptr("range-2"),
+					Prefix: utils.Ptr("prefix-2"),
 				},
 			},
+
 			Model{
 				Id:                  types.StringValue("oid,naid"),
 				OrganizationId:      types.StringValue("oid"),
@@ -92,16 +91,14 @@ func TestMapFields(t *testing.T) {
 				},
 				Name: utils.Ptr("name"),
 			},
-			&iaas.NetworkRangeListResponse{
-				Items: &[]iaas.NetworkRange{
-					{
-						//NetworkRangeId: utils.Ptr("range-1"),
-						Prefix: utils.Ptr("prefix-1"),
-					},
-					{
-						//NetworkRangeId: utils.Ptr("range-2"),
-						Prefix: utils.Ptr("prefix-2"),
-					},
+			&[]iaas.NetworkRange{
+				{
+					//NetworkRangeId: utils.Ptr("range-1"),
+					Prefix: utils.Ptr("prefix-1"),
+				},
+				{
+					//NetworkRangeId: utils.Ptr("range-2"),
+					Prefix: utils.Ptr("prefix-2"),
 				},
 			},
 			Model{
@@ -143,14 +140,12 @@ func TestMapFields(t *testing.T) {
 					},
 				},
 			},
-			&iaas.NetworkRangeListResponse{
-				Items: &[]iaas.NetworkRange{
-					{
-						Prefix: utils.Ptr("prefix-1"),
-					},
-					{
-						Prefix: utils.Ptr("prefix-2"),
-					},
+			&[]iaas.NetworkRange{
+				{
+					Prefix: utils.Ptr("prefix-1"),
+				},
+				{
+					Prefix: utils.Ptr("prefix-2"),
 				},
 			},
 			Model{
@@ -182,14 +177,12 @@ func TestMapFields(t *testing.T) {
 				AreaId: utils.Ptr("naid"),
 				Ipv4:   &iaas.NetworkAreaIPv4{},
 			},
-			&iaas.NetworkRangeListResponse{
-				Items: &[]iaas.NetworkRange{
-					{
-						Prefix: utils.Ptr("prefix-2"),
-					},
-					{
-						Prefix: utils.Ptr("prefix-3"),
-					},
+			&[]iaas.NetworkRange{
+				{
+					Prefix: utils.Ptr("prefix-2"),
+				},
+				{
+					Prefix: utils.Ptr("prefix-3"),
 				},
 			},
 			Model{
@@ -226,14 +219,14 @@ func TestMapFields(t *testing.T) {
 				OrganizationId: types.StringValue("oid"),
 			},
 			&iaas.NetworkArea{},
-			&iaas.NetworkRangeListResponse{},
+			&[]iaas.NetworkRange{},
 			Model{},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, tt.ListNetworkRangesResponse, &tt.state)
+			err := mapFields(context.Background(), tt.input, tt.ListNetworkRanges, &tt.state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
