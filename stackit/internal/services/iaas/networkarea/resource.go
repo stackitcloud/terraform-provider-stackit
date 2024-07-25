@@ -22,7 +22,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/runtime"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
@@ -245,9 +244,7 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	// Create new network area
-	var httpResp *http.Response
-	ctxWithHTTPResp := runtime.WithCaptureHTTPResponse(ctx, &httpResp)
-	area, err := r.client.CreateNetworkArea(ctxWithHTTPResp, organizationId).CreateNetworkAreaPayload(*payload).Execute()
+	area, err := r.client.CreateNetworkArea(ctx, organizationId).CreateNetworkAreaPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area", fmt.Sprintf("Calling API: %v", err))
 		return
