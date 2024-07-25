@@ -23,6 +23,7 @@ type ProviderData struct {
 	LoadBalancerCustomEndpoint      string
 	LogMeCustomEndpoint             string
 	MariaDBCustomEndpoint           string
+	MembershipCustomEndpoint        string
 	MongoDBFlexCustomEndpoint       string
 	ObjectStorageCustomEndpoint     string
 	OpenSearchCustomEndpoint        string

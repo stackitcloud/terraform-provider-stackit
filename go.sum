@@ -158,6 +158,8 @@ github.com/stackitcloud/stackit-sdk-go/services/logme v0.17.0 h1:S8UZYBu2lHmKCPT
 github.com/stackitcloud/stackit-sdk-go/services/logme v0.17.0/go.mod h1:bj9cn1treNSxKTRCEmESwqfENN8vCYn60HUnEA0P83c=
 github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.17.0 h1:+amOO/LW/PfUVU2ptxoB8PuNacawjjX2gGh7bHd45RE=
 github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.17.0/go.mod h1:kPetkX9hNm9HkRyiKQL/tlgdi8frZdMP8afg0mEvQ9s=
+github.com/stackitcloud/stackit-sdk-go/services/membership v0.4.0 h1:zaPHs2Xq/pj/f1Tj8JPbjYyxFWhsaItOqJJR+8ofzPw=
+github.com/stackitcloud/stackit-sdk-go/services/membership v0.4.0/go.mod h1:7iH3lrgFEgAoePbp5ZiLnHPNTEyBPimozy0wKG1gU5w=
 github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.14.0 h1:FaJYVfha+atvPfFIf3h3+BFjOjeux9OBHukG1J98kq0=
 github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.14.0/go.mod h1:iFerEzGmkg6R13ldFUyHUWHm0ac9cS4ftTDLhP0k/dU=
 github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.10.0 h1:tn1MD1nu+gYEbT3lslRI6BrapKwuvHv5Wi2Zw9uVPPc=
