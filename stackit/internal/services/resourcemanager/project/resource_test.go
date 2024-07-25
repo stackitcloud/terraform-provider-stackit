@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/membership"
+	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 )
@@ -25,7 +25,7 @@ func TestMapFields(t *testing.T) {
 		description           string
 		uuidContainerParentId bool
 		projectResp           *resourcemanager.GetProjectResponse
-		membersResp           *[]membership.Member
+		membersResp           *[]authorization.Member
 		expected              Model
 		expectedLabels        *map[string]string
 		isValid               bool
@@ -289,7 +289,7 @@ func TestToCreatePayload(t *testing.T) {
 					tt.input.Labels = convertedLabels
 				}
 			}
-			output, err := toCreatePayload(context.Background(), tt.input, "service_account_email")
+			output, err := toCreatePayload(context.Background(), tt.input)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -384,7 +384,7 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 }
 
-var fixtureMembers = []membership.Member{
+var fixtureMembers = []authorization.Member{
 	{
 		Subject: utils.Ptr("email_owner"),
 		Role:    utils.Ptr(projectOwnerRole),
@@ -401,7 +401,7 @@ var fixtureMembers = []membership.Member{
 
 func TestUpdateMembers(t *testing.T) {
 	// This is the response used when getting all members currently, across all tests
-	getAllMembersResp := membership.MembersResponse{
+	getAllMembersResp := authorization.MembersResponse{
 		Members: &fixtureMembers,
 	}
 	getAllMembersRespBytes, err := json.Marshal(getAllMembersResp)
@@ -414,7 +414,7 @@ func TestUpdateMembers(t *testing.T) {
 
 	tests := []struct {
 		description           string
-		modelMembers          []membership.Member
+		modelMembers          []authorization.Member
 		getAllMembersFails    bool
 		addMembersFails       bool
 		removeMembersFails    bool
@@ -435,7 +435,7 @@ func TestUpdateMembers(t *testing.T) {
 			description: "add one member",
 			modelMembers: append(
 				fixtureMembers,
-				membership.Member{Subject: utils.Ptr("email_reader_2"), Role: utils.Ptr("reader")},
+				authorization.Member{Subject: utils.Ptr("email_reader_2"), Role: utils.Ptr("reader")},
 			),
 			expectedMembersStates: map[string]bool{
 				memberId(fixtureMembers[0]): true,
@@ -449,8 +449,8 @@ func TestUpdateMembers(t *testing.T) {
 			description: "add multiple members",
 			modelMembers: append(
 				fixtureMembers,
-				membership.Member{Subject: utils.Ptr("email_reader_2"), Role: utils.Ptr("reader")},
-				membership.Member{Subject: utils.Ptr("email_reader_3"), Role: utils.Ptr("reader")},
+				authorization.Member{Subject: utils.Ptr("email_reader_2"), Role: utils.Ptr("reader")},
+				authorization.Member{Subject: utils.Ptr("email_reader_3"), Role: utils.Ptr("reader")},
 			),
 			expectedMembersStates: map[string]bool{
 				memberId(fixtureMembers[0]): true,
@@ -485,8 +485,8 @@ func TestUpdateMembers(t *testing.T) {
 			description: "multiple changes (add and remove)",
 			modelMembers: append(
 				fixtureMembers[:2],
-				membership.Member{Subject: utils.Ptr("email_reader_2"), Role: utils.Ptr("reader")},
-				membership.Member{Subject: utils.Ptr("email_reader_3"), Role: utils.Ptr("reader")},
+				authorization.Member{Subject: utils.Ptr("email_reader_2"), Role: utils.Ptr("reader")},
+				authorization.Member{Subject: utils.Ptr("email_reader_3"), Role: utils.Ptr("reader")},
 			),
 			expectedMembersStates: map[string]bool{
 				memberId(fixtureMembers[0]): true,
@@ -499,7 +499,7 @@ func TestUpdateMembers(t *testing.T) {
 		},
 		{
 			description: "multiple changes 2 (add and remove)",
-			modelMembers: []membership.Member{
+			modelMembers: []authorization.Member{
 				{Subject: utils.Ptr("email_reader_2"), Role: utils.Ptr("reader")},
 				{Subject: utils.Ptr("email_reader_3"), Role: utils.Ptr("reader")},
 			},
@@ -522,7 +522,7 @@ func TestUpdateMembers(t *testing.T) {
 			description: "add fails",
 			modelMembers: append(
 				fixtureMembers,
-				membership.Member{Subject: utils.Ptr("email_reader_2"), Role: utils.Ptr("reader")},
+				authorization.Member{Subject: utils.Ptr("email_reader_2"), Role: utils.Ptr("reader")},
 			),
 			addMembersFails: true,
 			isValid:         false,
@@ -565,7 +565,7 @@ func TestUpdateMembers(t *testing.T) {
 			// Handler for adding members
 			addMembersHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				decoder := json.NewDecoder(r.Body)
-				var payload membership.AddMembersPayload
+				var payload authorization.AddMembersPayload
 				err := decoder.Decode(&payload)
 				if err != nil {
 					t.Errorf("Add members handler: failed to parse payload")
@@ -601,7 +601,7 @@ func TestUpdateMembers(t *testing.T) {
 			// Handler for removing members
 			removeMembersHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				decoder := json.NewDecoder(r.Body)
-				var payload membership.RemoveMembersPayload
+				var payload authorization.RemoveMembersPayload
 				err := decoder.Decode(&payload)
 				if err != nil {
 					t.Errorf("Remove members handler: failed to parse payload")
@@ -664,7 +664,7 @@ func TestUpdateMembers(t *testing.T) {
 			})
 			mockedServer := httptest.NewServer(router)
 			defer mockedServer.Close()
-			client, err := membership.NewAPIClient(
+			client, err := authorization.NewAPIClient(
 				config.WithEndpoint(mockedServer.URL),
 				config.WithoutAuthentication(),
 			)

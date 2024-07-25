@@ -29,7 +29,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/membership"
+	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/wait"
 )
@@ -77,7 +77,7 @@ func NewProjectResource() resource.Resource {
 // projectResource is the resource implementation.
 type projectResource struct {
 	resourceManagerClient *resourcemanager.APIClient
-	membershipClient      *membership.APIClient
+	authorizationClient   *authorization.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -119,15 +119,15 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 		return
 	}
 
-	var mClient *membership.APIClient
-	if providerData.MembershipCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "membership_custom_endpoint", providerData.MembershipCustomEndpoint)
-		mClient, err = membership.NewAPIClient(
+	var aClient *authorization.APIClient
+	if providerData.AuthorizationCustomEndpoint != "" {
+		ctx = tflog.SetField(ctx, "authorization_custom_endpoint", providerData.AuthorizationCustomEndpoint)
+		aClient, err = authorization.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.MembershipCustomEndpoint),
+			config.WithEndpoint(providerData.AuthorizationCustomEndpoint),
 		)
 	} else {
-		mClient, err = membership.NewAPIClient(
+		aClient, err = authorization.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 		)
 	}
@@ -138,7 +138,7 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 	}
 
 	r.resourceManagerClient = rmClient
-	r.membershipClient = mClient
+	r.authorizationClient = aClient
 	tflog.Info(ctx, "Resource Manager project client configured")
 }
 
@@ -279,7 +279,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Generate API request body from model
-	payload, err := toCreatePayload(ctx, &model, serviceAccountEmail)
+	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -300,7 +300,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	membersResp, err := r.membershipClient.ListMembersExecute(ctx, projectResourceType, *waitResp.ProjectId)
+	membersResp, err := r.authorizationClient.ListMembersExecute(ctx, projectResourceType, *waitResp.ProjectId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Reading members: %v", err))
 		return
@@ -343,7 +343,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	membersResp, err := r.membershipClient.ListMembersExecute(ctx, projectResourceType, *projectResp.ProjectId)
+	membersResp, err := r.authorizationClient.ListMembersExecute(ctx, projectResourceType, *projectResp.ProjectId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Reading members: %v", err))
 		return
@@ -402,7 +402,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	err = updateMembers(ctx, *projectResp.ProjectId, members, r.membershipClient)
+	err = updateMembers(ctx, *projectResp.ProjectId, members, r.authorizationClient)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Updating members: %v", err))
 		return
@@ -468,7 +468,7 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 	tflog.Info(ctx, "Resource Manager Project state imported")
 }
 
-func mapFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, membersResp *[]membership.Member, model *Model) (err error) {
+func mapFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, membersResp *[]authorization.Member, model *Model) (err error) {
 	if projectResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -526,7 +526,7 @@ func mapFields(ctx context.Context, projectResp *resourcemanager.GetProjectRespo
 	return nil
 }
 
-func mapMembers(members *[]membership.Member, model *Model) error {
+func mapMembers(members *[]authorization.Member, model *Model) error {
 	if members == nil {
 		model.Members = types.ListNull(types.ObjectType{AttrTypes: memberTypes})
 		return nil
@@ -569,12 +569,12 @@ func mapMembers(members *[]membership.Member, model *Model) error {
 	return nil
 }
 
-func toMembersPayload(ctx context.Context, model *Model) (*[]membership.Member, error) {
+func toMembersPayload(ctx context.Context, model *Model) (*[]authorization.Member, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 	if model.Members.IsNull() || model.Members.IsUnknown() {
-		return &[]membership.Member{}, nil
+		return &[]authorization.Member{}, nil
 	}
 
 	membersModel := []member{}
@@ -583,17 +583,17 @@ func toMembersPayload(ctx context.Context, model *Model) (*[]membership.Member, 
 		return nil, core.DiagsToError(diags)
 	}
 
-	members := []membership.Member{}
+	members := []authorization.Member{}
 	// If the new "members" fields is set, it has precedence over the deprecated "owner_email" field
 	if !model.Members.IsNull() && !model.Members.IsUnknown() {
 		for _, m := range membersModel {
-			members = append(members, membership.Member{
+			members = append(members, authorization.Member{
 				Role:    m.Role.ValueStringPointer(),
 				Subject: m.Subject.ValueStringPointer(),
 			})
 		}
 	} else {
-		members = append(members, membership.Member{
+		members = append(members, authorization.Member{
 			Subject: model.OwnerEmail.ValueStringPointer(),
 			Role:    sdkUtils.Ptr(projectOwnerRole),
 		})
@@ -602,20 +602,12 @@ func toMembersPayload(ctx context.Context, model *Model) (*[]membership.Member, 
 	return &members, nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model, serviceAccountEmail string) (*resourcemanager.CreateProjectPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*resourcemanager.CreateProjectPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	owner := projectOwnerRole
-	serviceAccountSubject := serviceAccountEmail
-	members := []resourcemanager.Member{
-		{
-			Subject: &serviceAccountSubject,
-			Role:    &owner,
-		},
-	}
-
+	var members []resourcemanager.Member
 	otherMembers, err := toMembersPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("processing members: %w", err)
@@ -661,7 +653,7 @@ func toUpdatePayload(model *Model) (*resourcemanager.PartialUpdateProjectPayload
 }
 
 // updateMembers adds and removes members to match the model
-func updateMembers(ctx context.Context, projectId string, modelMembers *[]membership.Member, client *membership.APIClient) error {
+func updateMembers(ctx context.Context, projectId string, modelMembers *[]authorization.Member, client *authorization.APIClient) error {
 	if modelMembers == nil || len(*modelMembers) == 0 {
 		return nil
 	}
@@ -705,11 +697,11 @@ func updateMembers(ctx context.Context, projectId string, modelMembers *[]member
 	}
 
 	// Add/remove members
-	membersToAdd := make([]membership.Member, 0)
-	membersToRemove := make([]membership.Member, 0)
+	membersToAdd := make([]authorization.Member, 0)
+	membersToRemove := make([]authorization.Member, 0)
 	for _, state := range membersState {
 		if state.isInModel && !state.isCreated {
-			m := membership.Member{
+			m := authorization.Member{
 				Subject: &state.subject,
 				Role:    &state.role,
 			}
@@ -720,7 +712,7 @@ func updateMembers(ctx context.Context, projectId string, modelMembers *[]member
 		}
 
 		if !state.isInModel && state.isCreated {
-			m := membership.Member{
+			m := authorization.Member{
 				Subject: &state.subject,
 				Role:    &state.role,
 			}
@@ -732,7 +724,7 @@ func updateMembers(ctx context.Context, projectId string, modelMembers *[]member
 	}
 
 	if len(membersToAdd) > 0 {
-		payload := membership.AddMembersPayload{
+		payload := authorization.AddMembersPayload{
 			Members:      &membersToAdd,
 			ResourceType: sdkUtils.Ptr(projectResourceType),
 		}
@@ -743,7 +735,7 @@ func updateMembers(ctx context.Context, projectId string, modelMembers *[]member
 	}
 
 	if len(membersToRemove) > 0 {
-		payload := membership.RemoveMembersPayload{
+		payload := authorization.RemoveMembersPayload{
 			Members:      &membersToRemove,
 			ResourceType: sdkUtils.Ptr(projectResourceType),
 		}
@@ -757,6 +749,6 @@ func updateMembers(ctx context.Context, projectId string, modelMembers *[]member
 }
 
 // Internal representation of a member, which is uniquely identified by the subject and role
-func memberId(member membership.Member) string {
+func memberId(member authorization.Member) string {
 	return fmt.Sprintf("%s,%s", *member.Subject, *member.Role)
 }

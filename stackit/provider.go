@@ -97,7 +97,7 @@ type providerModel struct {
 	LogMeCustomEndpoint           types.String `tfsdk:"logme_custom_endpoint"`
 	RabbitMQCustomEndpoint        types.String `tfsdk:"rabbitmq_custom_endpoint"`
 	MariaDBCustomEndpoint         types.String `tfsdk:"mariadb_custom_endpoint"`
-	MembershipCustomEndpoint      types.String `tfsdk:"membership_custom_endpoint"`
+	AuthorizationCustomEndpoint   types.String `tfsdk:"authorization_custom_endpoint"`
 	ObjectStorageCustomEndpoint   types.String `tfsdk:"objectstorage_custom_endpoint"`
 	OpenSearchCustomEndpoint      types.String `tfsdk:"opensearch_custom_endpoint"`
 	RedisCustomEndpoint           types.String `tfsdk:"redis_custom_endpoint"`
@@ -130,7 +130,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"logme_custom_endpoint":           "Custom endpoint for the LogMe service",
 		"rabbitmq_custom_endpoint":        "Custom endpoint for the RabbitMQ service",
 		"mariadb_custom_endpoint":         "Custom endpoint for the MariaDB service",
-		"membership_custom_endpoint":      "Custom endpoint for the Membership service",
+		"authorization_custom_endpoint":   "Custom endpoint for the Membership service",
 		"objectstorage_custom_endpoint":   "Custom endpoint for the Object Storage service",
 		"opensearch_custom_endpoint":      "Custom endpoint for the OpenSearch service",
 		"postgresql_custom_endpoint":      "Custom endpoint for the PostgreSQL service",
@@ -204,9 +204,9 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["mariadb_custom_endpoint"],
 			},
-			"membership_custom_endpoint": schema.StringAttribute{
+			"authorization_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
-				Description: descriptions["membership_custom_endpoint"],
+				Description: descriptions["authorization_custom_endpoint"],
 			},
 			"mongodbflex_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -341,8 +341,8 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.MariaDBCustomEndpoint.IsUnknown() || providerConfig.MariaDBCustomEndpoint.IsNull()) {
 		providerData.MariaDBCustomEndpoint = providerConfig.MariaDBCustomEndpoint.ValueString()
 	}
-	if !(providerConfig.MembershipCustomEndpoint.IsUnknown() || providerConfig.MembershipCustomEndpoint.IsNull()) {
-		providerData.MembershipCustomEndpoint = providerConfig.MembershipCustomEndpoint.ValueString()
+	if !(providerConfig.AuthorizationCustomEndpoint.IsUnknown() || providerConfig.AuthorizationCustomEndpoint.IsNull()) {
+		providerData.AuthorizationCustomEndpoint = providerConfig.AuthorizationCustomEndpoint.ValueString()
 	}
 	if !(providerConfig.ObjectStorageCustomEndpoint.IsUnknown() || providerConfig.ObjectStorageCustomEndpoint.IsNull()) {
 		providerData.ObjectStorageCustomEndpoint = providerConfig.ObjectStorageCustomEndpoint.ValueString()

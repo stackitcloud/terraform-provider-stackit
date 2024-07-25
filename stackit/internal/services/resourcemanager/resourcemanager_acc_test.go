@@ -3,6 +3,7 @@ package resourcemanager_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -10,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -24,7 +26,19 @@ var projectResource = map[string]string{
 	"new_label":           "a-label",
 }
 
-func resourceConfig(name string, label *string) string {
+func membersConfig(members []authorization.Member) string {
+	membersConfig := make([]string, 0, len(members))
+	for _, m := range members {
+		memberConfig := fmt.Sprintf(`{
+			subject = "%s"
+			role = "%s"
+		}`, *m.Subject, *m.Role)
+		membersConfig = append(membersConfig, memberConfig)
+	}
+	return strings.Join(membersConfig, ",\n")
+}
+
+func resourceConfig(name string, label *string, members string) string {
 	labelConfig := ""
 	if label != nil {
 		labelConfig = fmt.Sprintf("new_label = %q", *label)
@@ -39,13 +53,17 @@ func resourceConfig(name string, label *string) string {
 						"billing_reference" = "%[4]s"
 						%[5]s
 					}
-					owner_email = "%[6]s"
+					members = [
+						%[7]s
+					]
 				}
 
 				resource "stackit_resourcemanager_project" "parent_by_uuid" {
-					parent_container_id = "%[7]s"
+					parent_container_id = "%[6]s"
 					name = "%[3]s-uuid"
-					owner_email = "%[6]s"
+					members = [
+						%[7]s
+					]
 				}
 				`,
 		testutil.ResourceManagerProviderConfig(),
@@ -53,19 +71,37 @@ func resourceConfig(name string, label *string) string {
 		name,
 		projectResource["billing_reference"],
 		labelConfig,
-		testutil.TestProjectServiceAccountEmail,
 		projectResource["parent_uuid"],
+		members,
 	)
 }
 
 func TestAccResourceManagerResource(t *testing.T) {
+	initialMembersConfig := membersConfig([]authorization.Member{
+		{
+			Subject: &testutil.TestProjectUserEmail,
+			Role:    utils.Ptr("owner"),
+		},
+	})
+
+	updatedMembersConfig := membersConfig([]authorization.Member{
+		{
+			Subject: &testutil.TestProjectUserEmail,
+			Role:    utils.Ptr("owner"),
+		},
+		{
+			Subject: &testutil.TestProjectUserEmail,
+			Role:    utils.Ptr("reader"),
+		},
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckResourceManagerDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: resourceConfig(projectResource["name"], nil),
+				Config: resourceConfig(projectResource["name"], nil, initialMembersConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Parent container id project data
 					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.parent_by_container", "container_id"),
@@ -100,7 +136,7 @@ func TestAccResourceManagerResource(t *testing.T) {
 						project_id = stackit_resourcemanager_project.parent_by_container.project_id
 					}
 					`,
-					resourceConfig(projectResource["name"], nil),
+					resourceConfig(projectResource["name"], nil, initialMembersConfig),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Container project data
@@ -154,7 +190,7 @@ func TestAccResourceManagerResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfig(fmt.Sprintf("%s-new", projectResource["name"]), utils.Ptr("a-label")),
+				Config: resourceConfig(fmt.Sprintf("%s-new", projectResource["name"]), utils.Ptr("a-label"), updatedMembersConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Project data
 					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.parent_by_container", "container_id"),

@@ -38,8 +38,8 @@ var (
 	TestProjectParentUUID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_UUID")
 	// TestProjectServiceAccountEmail is the e-mail of a service account with admin permissions on the organization under which projects are created as part of the resource-manager acceptance tests
 	TestProjectServiceAccountEmail = os.Getenv("TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL")
-	// TestProjectOwnerEmail is the e-mail of the owner of the project created as part of the resource-manager acceptance tests
-	TestProjectOwnerEmail = os.Getenv("TF_ACC_TEST_PROJECT_OWNER_EMAIL")
+	// TestProjectUserEmail is the e-mail of a user for the project created as part of the resource-manager acceptance tests
+	TestProjectUserEmail = os.Getenv("TF_ACC_TEST_PROJECT_USER_EMAIL")
 
 	ArgusCustomEndpoint           = os.Getenv("TF_ACC_ARGUS_CUSTOM_ENDPOINT")
 	DnsCustomEndpoint             = os.Getenv("TF_ACC_DNS_CUSTOM_ENDPOINT")
@@ -47,7 +47,7 @@ var (
 	LoadBalancerCustomEndpoint    = os.Getenv("TF_ACC_LOADBALANCER_CUSTOM_ENDPOINT")
 	LogMeCustomEndpoint           = os.Getenv("TF_ACC_LOGME_CUSTOM_ENDPOINT")
 	MariaDBCustomEndpoint         = os.Getenv("TF_ACC_MARIADB_CUSTOM_ENDPOINT")
-	MembershipCustomEndpoint      = os.Getenv("TF_ACC_MEMBERSHIP_CUSTOM_ENDPOINT")
+	AuthorizationCustomEndpoint   = os.Getenv("TF_ACC_authorization_custom_endpoint")
 	MongoDBFlexCustomEndpoint     = os.Getenv("TF_ACC_MONGODBFLEX_CUSTOM_ENDPOINT")
 	OpenSearchCustomEndpoint      = os.Getenv("TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT")
 	ObjectStorageCustomEndpoint   = os.Getenv("TF_ACC_OBJECTSTORAGE_CUSTOM_ENDPOINT")
@@ -264,7 +264,7 @@ func RedisProviderConfig() string {
 
 func ResourceManagerProviderConfig() string {
 	token := getTestProjectServiceAccountToken("")
-	if ResourceManagerCustomEndpoint == "" || MembershipCustomEndpoint == "" {
+	if ResourceManagerCustomEndpoint == "" || AuthorizationCustomEndpoint == "" {
 		return fmt.Sprintf(`
 		provider "stackit" {
 			service_account_email = "%s"
@@ -277,12 +277,12 @@ func ResourceManagerProviderConfig() string {
 	return fmt.Sprintf(`
 	provider "stackit" {
 		resourcemanager_custom_endpoint = "%s"
-		membership_custom_endpoint = "%s"
+		authorization_custom_endpoint = "%s"
 		service_account_email = "%s"
 		service_account_token = "%s"
 	}`,
 		ResourceManagerCustomEndpoint,
-		MembershipCustomEndpoint,
+		AuthorizationCustomEndpoint,
 		TestProjectServiceAccountEmail,
 		token,
 	)

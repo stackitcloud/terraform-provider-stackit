@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/membership"
+	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 )
 
@@ -37,7 +37,7 @@ func NewProjectDataSource() datasource.DataSource {
 // projectDataSource is the data source implementation.
 type projectDataSource struct {
 	resourceManagerClient *resourcemanager.APIClient
-	membershipClient      *membership.APIClient
+	membershipClient      *authorization.APIClient
 }
 
 // Metadata returns the data source type name.
@@ -76,15 +76,15 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 		return
 	}
 
-	var mClient *membership.APIClient
-	if providerData.MembershipCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "membership_custom_endpoint", providerData.MembershipCustomEndpoint)
-		mClient, err = membership.NewAPIClient(
+	var aClient *authorization.APIClient
+	if providerData.AuthorizationCustomEndpoint != "" {
+		ctx = tflog.SetField(ctx, "authorization_custom_endpoint", providerData.AuthorizationCustomEndpoint)
+		aClient, err = authorization.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.MembershipCustomEndpoint),
+			config.WithEndpoint(providerData.AuthorizationCustomEndpoint),
 		)
 	} else {
-		mClient, err = membership.NewAPIClient(
+		aClient, err = authorization.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 		)
 	}
@@ -95,7 +95,7 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 	}
 
 	d.resourceManagerClient = rmClient
-	d.membershipClient = mClient
+	d.membershipClient = aClient
 	tflog.Info(ctx, "Resource Manager project client configured")
 }
 
