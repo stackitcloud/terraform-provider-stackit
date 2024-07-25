@@ -164,7 +164,7 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 			},
 			"project_count": schema.Int64Attribute{
 				Description: "The amount of projects currently referencing this area.",
-				Required:    true,
+				Computed:    true,
 				Validators: []validator.Int64{
 					int64validator.AtLeast(0),
 				},

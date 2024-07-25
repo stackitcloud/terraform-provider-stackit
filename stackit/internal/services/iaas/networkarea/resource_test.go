@@ -38,12 +38,10 @@ func TestMapFields(t *testing.T) {
 			Model{
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("naid"),
-				//ProjectCount:   types.Int64Value(2),
 			},
 			&iaas.NetworkArea{
-				AreaId:       utils.Ptr("naid"),
-				Ipv4:         &iaas.NetworkAreaIPv4{},
-				ProjectCount: utils.Ptr(int64(2)),
+				AreaId: utils.Ptr("naid"),
+				Ipv4:   &iaas.NetworkAreaIPv4{},
 			},
 			&iaas.NetworkRangeListResponse{
 				Items: &[]iaas.NetworkRange{
@@ -62,7 +60,6 @@ func TestMapFields(t *testing.T) {
 				OrganizationId:      types.StringValue("oid"),
 				NetworkAreaId:       types.StringValue("naid"),
 				Name:                types.StringNull(),
-				ProjectCount:        types.Int64Value(2),
 				DefaultNameservers:  types.ListNull(types.StringType),
 				TransferNetwork:     types.StringNull(),
 				DefaultPrefixLength: types.Int64Null(),
@@ -93,8 +90,7 @@ func TestMapFields(t *testing.T) {
 					MaxPrefixLen:     utils.Ptr(int64(22)),
 					MinPrefixLen:     utils.Ptr(int64(18)),
 				},
-				ProjectCount: utils.Ptr(int64(2)),
-				Name:         utils.Ptr("name"),
+				Name: utils.Ptr("name"),
 			},
 			&iaas.NetworkRangeListResponse{
 				Items: &[]iaas.NetworkRange{
@@ -113,7 +109,6 @@ func TestMapFields(t *testing.T) {
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("naid"),
 				Name:           types.StringValue("name"),
-				ProjectCount:   types.Int64Value(2),
 				DefaultNameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("nameserver1"),
 					types.StringValue("nameserver2"),
@@ -147,7 +142,6 @@ func TestMapFields(t *testing.T) {
 						"ns3",
 					},
 				},
-				ProjectCount: utils.Ptr(int64(2)),
 			},
 			&iaas.NetworkRangeListResponse{
 				Items: &[]iaas.NetworkRange{
@@ -163,7 +157,6 @@ func TestMapFields(t *testing.T) {
 				Id:             types.StringValue("oid,naid"),
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("naid"),
-				ProjectCount:   types.Int64Value(2),
 				DefaultNameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns2"),
 					types.StringValue("ns3"),
@@ -186,9 +179,8 @@ func TestMapFields(t *testing.T) {
 				}),
 			},
 			&iaas.NetworkArea{
-				AreaId:       utils.Ptr("naid"),
-				Ipv4:         &iaas.NetworkAreaIPv4{},
-				ProjectCount: utils.Ptr(int64(2)),
+				AreaId: utils.Ptr("naid"),
+				Ipv4:   &iaas.NetworkAreaIPv4{},
 			},
 			&iaas.NetworkRangeListResponse{
 				Items: &[]iaas.NetworkRange{
@@ -204,7 +196,6 @@ func TestMapFields(t *testing.T) {
 				Id:                 types.StringValue("oid,naid"),
 				OrganizationId:     types.StringValue("oid"),
 				NetworkAreaId:      types.StringValue("naid"),
-				ProjectCount:       types.Int64Value(2),
 				DefaultNameservers: types.ListNull(types.StringType),
 				NetworkRanges: types.SetValueMust(types.StringType, []attr.Value{
 					types.StringValue("prefix-2"),
