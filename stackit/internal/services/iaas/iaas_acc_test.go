@@ -26,7 +26,7 @@ var networkResource = map[string]string{
 }
 
 var networkAreaResource = map[string]string{
-	"organization_id ": testutil.OrganizationId,
+	"organization_id":  testutil.OrganizationId,
 	"name":             fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 	"networkrange0":    "1.2.3.4/5",
 	"networkrange1":    "11.12.13.14/15",
@@ -35,8 +35,6 @@ var networkAreaResource = map[string]string{
 
 func networkResourceConfig(name, nameservers string) string {
 	return fmt.Sprintf(`
-				%s
-
 				resource "stackit_network" "network" {
 					project_id = "%s"
 					name       = "%s"
@@ -53,8 +51,6 @@ func networkResourceConfig(name, nameservers string) string {
 
 func networkAreaResourceConfig(areaname, networkranges string) string {
 	return fmt.Sprintf(`
-				%s
-
 				resource "stackit_network_area" "network_area" {
 					organization_id = "%s"
 					name       = "%s"
@@ -145,7 +141,7 @@ func TestAccIaaS(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_network.network", "name", networkResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
 
-					//Network area
+					// Network area
 					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "organization_id", networkAreaResource["organization_id"]),
 					resource.TestCheckResourceAttrPair(
 						"stackit_network_area.network_area", "network_area_id",
