@@ -157,27 +157,6 @@ func (d *networkAreaDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 					},
 				},
 			},
-			"routes": schema.ListNestedAttribute{
-				Description: "List of routes.",
-				Computed:    true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"route_id": schema.StringAttribute{
-							Computed: true,
-							Validators: []validator.String{
-								validate.UUID(),
-								validate.NoSeparator(),
-							},
-						},
-						"prefix": schema.StringAttribute{
-							Computed: true,
-						},
-						"next_hop": schema.StringAttribute{
-							Computed: true,
-						},
-					},
-				},
-			},
 			"transfer_network": schema.StringAttribute{
 				Description: "Classless Inter-Domain Routing (CIDR).",
 				Computed:    true,
