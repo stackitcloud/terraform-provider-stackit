@@ -523,7 +523,10 @@ func mapFields(ctx context.Context, projectResp *resourcemanager.GetProjectRespo
 	model.Name = types.StringPointerValue(projectResp.Name)
 	model.Labels = labels
 
-	mapMembers(membersResp, model)
+	err = mapMembers(membersResp, model)
+	if err != nil {
+		return fmt.Errorf("map members: %w", err)
+	}
 
 	return nil
 }

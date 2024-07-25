@@ -229,7 +229,7 @@ func TestToCreatePayload(t *testing.T) {
 			true,
 		},
 		{
-			"new members field takes precendece over deprecated owner_email field",
+			"new members field takes precedence over deprecated owner_email field",
 			&Model{
 				ContainerParentId: types.StringValue("pid"),
 				Name:              types.StringValue("name"),
