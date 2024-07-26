@@ -28,9 +28,8 @@ var networkResource = map[string]string{
 var networkAreaResource = map[string]string{
 	"organization_id":  testutil.OrganizationId,
 	"name":             fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
-	"networkrange0":    "1.2.3.4/5",
-	"networkrange1":    "11.12.13.14/15",
-	"transfer_network": "6.7.8.9/10",
+	"networkrange0":    "10.0.0.0/16",
+	"transfer_network": "10.1.2.0/24",
 }
 
 func networkResourceConfig(name, nameservers string) string {
@@ -54,7 +53,9 @@ func networkAreaResourceConfig(areaname, networkranges string) string {
 				resource "stackit_network_area" "network_area" {
 					organization_id = "%s"
 					name       = "%s"
-					networkranges = "%s"
+					network_ranges = [{
+						prefix = "%s"
+					}]
 					transfer_network = "%s"
 				}
 				`,
@@ -87,10 +88,10 @@ func TestAccIaaS(t *testing.T) {
 						"[%q]",
 						networkResource["nameserver0"],
 					),
-					networkAreaResource["areaname"],
+					networkAreaResource["name"],
 					fmt.Sprintf(
-						"[%q]",
-						networkAreaResource["networkrange1"],
+						"%s",
+						networkAreaResource["networkrange0"],
 					),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -104,9 +105,10 @@ func TestAccIaaS(t *testing.T) {
 					// Network Area
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "organization_id", networkAreaResource["organization_id"]),
 					resource.TestCheckResourceAttrSet("stackit_network_area.network_area", "network_area_id"),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "name", networkAreaResource["areaname"]),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "networkranges.#", "1"),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "networkranges.0", networkResource["networkrange0"]),
+					resource.TestCheckResourceAttr("stackit_network_area.network_area", "name", networkAreaResource["name"]),
+					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.#", "1"),
+					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.0.prefix", networkAreaResource["networkrange0"]),
+					resource.TestCheckResourceAttrSet("stackit_network_area.network_area", "network_ranges.0.network_range_id"),
 				),
 			},
 			// Data source
@@ -117,17 +119,23 @@ func TestAccIaaS(t *testing.T) {
 					data "stackit_network" "network" {
 						project_id  = stackit_network.network.project_id
 						network_id = stackit_network.network.network_id
-					}`,
+					}
+
+					data "stackit_network_area" "network_area" {
+						organization_id  = stackit_network_area.network_area.organization_id
+						network_area_id  = stackit_network_area.network_area.network_area_id
+					}
+					`,
 					resourceConfig(
 						networkResource["name"],
 						fmt.Sprintf(
 							"[%q]",
 							networkResource["nameserver0"],
 						),
-						networkAreaResource["areaname"],
+						networkAreaResource["name"],
 						fmt.Sprintf(
-							"[%q]",
-							networkAreaResource["networkrange1"],
+							"%s",
+							networkAreaResource["networkrange0"],
 						),
 					),
 				),
@@ -147,8 +155,9 @@ func TestAccIaaS(t *testing.T) {
 						"stackit_network_area.network_area", "network_area_id",
 						"data.stackit_network_area.network_area", "network_area_id",
 					),
-					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "areaname", networkResource["name"]),
-					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "networkranges.0", networkResource["networkrange0"]),
+					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "name", networkAreaResource["name"]),
+					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "network_ranges.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "network_ranges.0.prefix", networkAreaResource["networkrange0"]),
 				),
 			},
 			// Import
@@ -180,7 +189,7 @@ func TestAccIaaS(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_area_id")
 					}
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, networkAreaId), nil
+					return fmt.Sprintf("%s,%s", testutil.OrganizationId, networkAreaId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -194,11 +203,10 @@ func TestAccIaaS(t *testing.T) {
 						networkResource["nameserver0"],
 						networkResource["nameserver1"],
 					),
-					fmt.Sprintf("%s-updated", networkAreaResource["areaname"]),
+					fmt.Sprintf("%s-updated", networkAreaResource["name"]),
 					fmt.Sprintf(
-						"[%q, %q]",
+						"%s",
 						networkAreaResource["networkrange0"],
-						networkAreaResource["networkrange1"],
 					),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -213,10 +221,9 @@ func TestAccIaaS(t *testing.T) {
 					// Network area
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "organization_id", networkAreaResource["organization_id"]),
 					resource.TestCheckResourceAttrSet("stackit_network_area.network_area", "network_area_id"),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "areaname", fmt.Sprintf("%s-updated", networkAreaResource["areaname"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "networkranges.#", "2"),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "networkranges.0", networkAreaResource["networkrange0"]),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "networkranges.1", networkAreaResource["networkrange1"]),
+					resource.TestCheckResourceAttr("stackit_network_area.network_area", "name", fmt.Sprintf("%s-updated", networkAreaResource["name"])),
+					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.#", "1"),
+					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.0.prefix", networkAreaResource["networkrange0"]),
 				),
 			},
 			// Deletion is done by the framework implicitly
