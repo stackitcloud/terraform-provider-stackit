@@ -212,7 +212,42 @@ func TestToCreatePayload(t *testing.T) {
 			true,
 		},
 		{
-			"mapping_with_conversions_ok",
+			"mapping_with_conversions_single_member",
+			&Model{
+				ContainerParentId: types.StringValue("pid"),
+				Name:              types.StringValue("name"),
+				Members: types.ListValueMust(types.ObjectType{AttrTypes: memberTypes}, []attr.Value{
+					types.ObjectValueMust(
+						memberTypes,
+						map[string]attr.Value{
+							"subject": types.StringValue("owner_email"),
+							"role":    types.StringValue("owner"),
+						},
+					),
+				}),
+			},
+			&map[string]string{
+				"label1": "1",
+				"label2": "2",
+			},
+			&resourcemanager.CreateProjectPayload{
+				ContainerParentId: utils.Ptr("pid"),
+				Labels: &map[string]string{
+					"label1": "1",
+					"label2": "2",
+				},
+				Members: &[]resourcemanager.Member{
+					{
+						Subject: utils.Ptr("owner_email"),
+						Role:    utils.Ptr("owner"),
+					},
+				},
+				Name: utils.Ptr("name"),
+			},
+			true,
+		},
+		{
+			"mapping_with_conversions_ok_multiple_members",
 			&Model{
 				ContainerParentId: types.StringValue("pid"),
 				Name:              types.StringValue("name"),
