@@ -514,67 +514,6 @@ func setStateAfterProjectCreationOrUpdate(ctx context.Context, state tfsdk.State
 	return allDiags
 }
 
-// func mapFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, membersResp *[]authorization.Member, model *Model) (err error) {
-// 	if projectResp == nil {
-// 		return fmt.Errorf("response input is nil")
-// 	}
-// 	if model == nil {
-// 		return fmt.Errorf("model input is nil")
-// 	}
-
-// 	var projectId string
-// 	if model.ProjectId.ValueString() != "" {
-// 		projectId = model.ProjectId.ValueString()
-// 	} else if projectResp.ProjectId != nil {
-// 		projectId = *projectResp.ProjectId
-// 	} else {
-// 		return fmt.Errorf("project id not present")
-// 	}
-
-// 	var containerId string
-// 	if model.ContainerId.ValueString() != "" {
-// 		containerId = model.ContainerId.ValueString()
-// 	} else if projectResp.ContainerId != nil {
-// 		containerId = *projectResp.ContainerId
-// 	} else {
-// 		return fmt.Errorf("container id not present")
-// 	}
-
-// 	var labels basetypes.MapValue
-// 	if projectResp.Labels != nil && len(*projectResp.Labels) != 0 {
-// 		labels, err = conversion.ToTerraformStringMap(ctx, *projectResp.Labels)
-// 		if err != nil {
-// 			return fmt.Errorf("converting to StringValue map: %w", err)
-// 		}
-// 	} else {
-// 		labels = types.MapNull(types.StringType)
-// 	}
-
-// 	model.Id = types.StringValue(containerId)
-// 	model.ProjectId = types.StringValue(projectId)
-// 	model.ContainerId = types.StringValue(containerId)
-// 	if projectResp.Parent != nil {
-// 		if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
-// 			// the provided containerParentId is the UUID identifier
-// 			model.ContainerParentId = types.StringPointerValue(projectResp.Parent.Id)
-// 		} else {
-// 			// the provided containerParentId is the user-friendly container id
-// 			model.ContainerParentId = types.StringPointerValue(projectResp.Parent.ContainerId)
-// 		}
-// 	} else {
-// 		model.ContainerParentId = types.StringNull()
-// 	}
-// 	model.Name = types.StringPointerValue(projectResp.Name)
-// 	model.Labels = labels
-
-// 	err = mapMembersFields(membersResp, model)
-// 	if err != nil {
-// 		return fmt.Errorf("map members: %w", err)
-// 	}
-
-// 	return nil
-// }
-
 func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, model *Model) (err error) {
 	if projectResp == nil {
 		return fmt.Errorf("response input is nil")
