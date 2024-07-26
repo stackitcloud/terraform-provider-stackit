@@ -191,9 +191,16 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"network_range_id": schema.StringAttribute{
+							Computed: true,
+							Validators: []validator.String{
+								validate.UUID(),
+								validate.NoSeparator(),
+							},
+						},
 						"prefix": schema.StringAttribute{
-                            Description: "Classless Inter-Domain Routing (CIDR)."
-							Required: true,
+							Description: "Classless Inter-Domain Routing (CIDR).",
+							Required:    true,
 						},
 					},
 				},
