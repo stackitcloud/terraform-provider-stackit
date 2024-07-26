@@ -355,7 +355,7 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	var ranges []string
+	ranges := []networkRange{}
 	if !(model.NetworkRanges.IsNull() || model.NetworkRanges.IsUnknown()) {
 		diags = model.NetworkRanges.ElementsAs(ctx, &ranges, false)
 		resp.Diagnostics.Append(diags...)
@@ -655,7 +655,7 @@ func toNetworkRangesPayload(ctx context.Context, model *Model) (*[]iaas.NetworkR
 }
 
 // updateNetworkRanges creates and deletes network ranges so that network area ranges are the ones in the model
-func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId string, ranges []string, client *iaas.APIClient) error {
+func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId string, ranges []networkRange, client *iaas.APIClient) error {
 	// Get network ranges current state
 	currentNetworkRangesResp, err := client.ListNetworkAreaRanges(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
@@ -669,8 +669,8 @@ func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId stri
 	}
 
 	networkRangesState := make(map[string]*networkRangeState)
-	for _, prefix := range ranges {
-		networkRangesState[prefix] = &networkRangeState{
+	for _, nwRange := range ranges {
+		networkRangesState[nwRange.Prefix.ValueString()] = &networkRangeState{
 			isInModel: true,
 		}
 	}

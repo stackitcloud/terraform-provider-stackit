@@ -27,7 +27,7 @@ var networkResource = map[string]string{
 
 var networkAreaResource = map[string]string{
 	"organization_id":  testutil.OrganizationId,
-	"name":             fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
+	"name":             fmt.Sprintf("acc-test-gg-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 	"networkrange0":    "10.0.0.0/16",
 	"transfer_network": "10.1.2.0/24",
 }
@@ -89,10 +89,7 @@ func TestAccIaaS(t *testing.T) {
 						networkResource["nameserver0"],
 					),
 					networkAreaResource["name"],
-					fmt.Sprintf(
-						"%s",
-						networkAreaResource["networkrange0"],
-					),
+					networkAreaResource["networkrange0"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -115,12 +112,12 @@ func TestAccIaaS(t *testing.T) {
 			{
 				Config: fmt.Sprintf(`
 					%s
-
+			
 					data "stackit_network" "network" {
 						project_id  = stackit_network.network.project_id
 						network_id = stackit_network.network.network_id
 					}
-
+			
 					data "stackit_network_area" "network_area" {
 						organization_id  = stackit_network_area.network_area.organization_id
 						network_area_id  = stackit_network_area.network_area.network_area_id
@@ -133,10 +130,7 @@ func TestAccIaaS(t *testing.T) {
 							networkResource["nameserver0"],
 						),
 						networkAreaResource["name"],
-						fmt.Sprintf(
-							"%s",
-							networkAreaResource["networkrange0"],
-						),
+						networkAreaResource["networkrange0"],
 					),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -204,10 +198,7 @@ func TestAccIaaS(t *testing.T) {
 						networkResource["nameserver1"],
 					),
 					fmt.Sprintf("%s-updated", networkAreaResource["name"]),
-					fmt.Sprintf(
-						"%s",
-						networkAreaResource["networkrange0"],
-					),
+					networkAreaResource["networkrange0"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance

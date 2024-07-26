@@ -22,6 +22,8 @@ var testAreaId = uuid.NewString()
 var testRangeId1 = uuid.NewString()
 var testRangeId2 = uuid.NewString()
 var testRangeId3 = uuid.NewString()
+var testRangeId4 = uuid.NewString()
+var testRangeId5 = uuid.NewString()
 var testRangeId2Repeated = uuid.NewString()
 
 func TestMapFields(t *testing.T) {
@@ -438,7 +440,7 @@ func TestUpdateNetworkRanges(t *testing.T) {
 
 	tests := []struct {
 		description                 string
-		networkRanges               []string
+		networkRanges               []networkRange
 		ipv4                        []iaas.NetworkRange
 		getAllNetworkRangesFails    bool
 		createNetworkRangesFails    bool
@@ -447,8 +449,21 @@ func TestUpdateNetworkRanges(t *testing.T) {
 		expectedNetworkRangesStates map[string]bool // Keys are prefix; value is true if prefix should exist at the end, false if should be deleted
 	}{
 		{
-			description:   "no_changes",
-			networkRanges: []string{"pr-1", "pr-2", "pr-3"},
+			description: "no_changes",
+			networkRanges: []networkRange{
+				{
+					NetworkRangeId: types.StringValue(testRangeId1),
+					Prefix:         types.StringValue("pr-1"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId2),
+					Prefix:         types.StringValue("pr-2"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId3),
+					Prefix:         types.StringValue("pr-3"),
+				},
+			},
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": true,
 				"pr-2": true,
@@ -457,8 +472,25 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description:   "create_network_ranges",
-			networkRanges: []string{"pr-1", "pr-2", "pr-3", "pr-4"},
+			description: "create_network_ranges",
+			networkRanges: []networkRange{
+				{
+					NetworkRangeId: types.StringValue(testRangeId1),
+					Prefix:         types.StringValue("pr-1"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId2),
+					Prefix:         types.StringValue("pr-2"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId3),
+					Prefix:         types.StringValue("pr-3"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId4),
+					Prefix:         types.StringValue("pr-4"),
+				},
+			},
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": true,
 				"pr-2": true,
@@ -468,8 +500,17 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description:   "delete_network_ranges",
-			networkRanges: []string{"pr-1", "pr-3"},
+			description: "delete_network_ranges",
+			networkRanges: []networkRange{
+				{
+					NetworkRangeId: types.StringValue(testRangeId1),
+					Prefix:         types.StringValue("pr-1"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId3),
+					Prefix:         types.StringValue("pr-3"),
+				},
+			},
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": true,
 				"pr-2": false,
@@ -478,8 +519,25 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description:   "multiple_changes",
-			networkRanges: []string{"pr-1", "pr-3", "pr-4", "pr-5"},
+			description: "multiple_changes",
+			networkRanges: []networkRange{
+				{
+					NetworkRangeId: types.StringValue(testRangeId1),
+					Prefix:         types.StringValue("pr-1"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId3),
+					Prefix:         types.StringValue("pr-3"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId4),
+					Prefix:         types.StringValue("pr-4"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId5),
+					Prefix:         types.StringValue("pr-5"),
+				},
+			},
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": true,
 				"pr-2": false,
@@ -490,8 +548,29 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description:   "multiple_changes_repetition",
-			networkRanges: []string{"pr-1", "pr-3", "pr-4", "pr-5", "pr-5"},
+			description: "multiple_changes_repetition",
+			networkRanges: []networkRange{
+				{
+					NetworkRangeId: types.StringValue(testRangeId1),
+					Prefix:         types.StringValue("pr-1"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId3),
+					Prefix:         types.StringValue("pr-3"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId4),
+					Prefix:         types.StringValue("pr-4"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId5),
+					Prefix:         types.StringValue("pr-5"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId5),
+					Prefix:         types.StringValue("pr-5"),
+				},
+			},
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": true,
 				"pr-2": false,
@@ -502,8 +581,17 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description:   "multiple_changes_2",
-			networkRanges: []string{"pr-4", "pr-5"},
+			description: "multiple_changes_2",
+			networkRanges: []networkRange{
+				{
+					NetworkRangeId: types.StringValue(testRangeId4),
+					Prefix:         types.StringValue("pr-4"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId5),
+					Prefix:         types.StringValue("pr-5"),
+				},
+			},
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": false,
 				"pr-2": false,
@@ -515,7 +603,7 @@ func TestUpdateNetworkRanges(t *testing.T) {
 		},
 		{
 			description:   "multiple_changes_3",
-			networkRanges: []string{},
+			networkRanges: []networkRange{},
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": false,
 				"pr-2": false,
@@ -524,20 +612,59 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description:              "get_fails",
-			networkRanges:            []string{"pr-1", "pr-2", "pr-3"},
+			description: "get_fails",
+			networkRanges: []networkRange{
+				{
+					NetworkRangeId: types.StringValue(testRangeId1),
+					Prefix:         types.StringValue("pr-1"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId2),
+					Prefix:         types.StringValue("pr-2"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId3),
+					Prefix:         types.StringValue("pr-3"),
+				},
+			},
 			getAllNetworkRangesFails: true,
 			isValid:                  false,
 		},
 		{
-			description:              "create_fails_1",
-			networkRanges:            []string{"pr-1", "pr-2", "pr-3", "pr-4"},
+			description: "create_fails_1",
+			networkRanges: []networkRange{
+				{
+					NetworkRangeId: types.StringValue(testRangeId1),
+					Prefix:         types.StringValue("pr-1"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId2),
+					Prefix:         types.StringValue("pr-2"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId3),
+					Prefix:         types.StringValue("pr-3"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId4),
+					Prefix:         types.StringValue("pr-4"),
+				},
+			},
 			createNetworkRangesFails: true,
 			isValid:                  false,
 		},
 		{
-			description:              "create_fails_2",
-			networkRanges:            []string{"pr-1", "pr-2"},
+			description: "create_fails_2",
+			networkRanges: []networkRange{
+				{
+					NetworkRangeId: types.StringValue(testRangeId1),
+					Prefix:         types.StringValue("pr-1"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId2),
+					Prefix:         types.StringValue("pr-2"),
+				},
+			},
 			createNetworkRangesFails: true,
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": true,
@@ -547,14 +674,40 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description:              "delete_fails_1",
-			networkRanges:            []string{"pr-1", "pr-2"},
+			description: "delete_fails_1",
+			networkRanges: []networkRange{
+				{
+					NetworkRangeId: types.StringValue(testRangeId1),
+					Prefix:         types.StringValue("pr-1"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId2),
+					Prefix:         types.StringValue("pr-2"),
+				},
+			},
 			deleteNetworkRangesFails: true,
 			isValid:                  false,
 		},
 		{
-			description:              "delete_fails_2",
-			networkRanges:            []string{"pr-1", "pr-2", "pr-3", "pr-4"},
+			description: "delete_fails_2",
+			networkRanges: []networkRange{
+				{
+					NetworkRangeId: types.StringValue(testRangeId1),
+					Prefix:         types.StringValue("pr-1"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId2),
+					Prefix:         types.StringValue("pr-2"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId3),
+					Prefix:         types.StringValue("pr-3"),
+				},
+				{
+					NetworkRangeId: types.StringValue(testRangeId4),
+					Prefix:         types.StringValue("pr-4"),
+				},
+			},
 			deleteNetworkRangesFails: true,
 			expectedNetworkRangesStates: map[string]bool{
 				"pr-1": true,
