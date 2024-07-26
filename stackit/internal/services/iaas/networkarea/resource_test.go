@@ -294,10 +294,12 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("pr-1"),
+						"network_range_id": types.StringUnknown(),
+						"prefix":           types.StringValue("pr-1"),
 					}),
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("pr-2"),
+						"network_range_id": types.StringUnknown(),
+						"prefix":           types.StringValue("pr-2"),
 					}),
 				}),
 				TransferNetwork:     types.StringValue("network"),
