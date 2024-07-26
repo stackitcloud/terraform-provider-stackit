@@ -192,6 +192,7 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"prefix": schema.StringAttribute{
+                            Description: "Classless Inter-Domain Routing (CIDR)."
 							Required: true,
 						},
 					},
