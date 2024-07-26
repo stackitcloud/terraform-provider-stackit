@@ -12,7 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -302,14 +304,24 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	err = mapProjectFields(ctx, waitResp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Processing API response: %v", err))
+		return
+	}
+	diags = setStateAfterProjectCreationOrUpdate(ctx, resp.State, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	membersResp, err := r.authorizationClient.ListMembersExecute(ctx, projectResourceType, *waitResp.ProjectId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Reading members: %v", err))
 		return
 	}
 
-	// Map response body to schema
-	err = mapFields(ctx, waitResp, membersResp.Members, &model)
+	err = mapMembersFields(membersResp.Members, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -345,16 +357,26 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	membersResp, err := r.authorizationClient.ListMembersExecute(ctx, projectResourceType, *projectResp.ProjectId)
+	err = mapProjectFields(ctx, projectResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Reading members: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
+		return
+	}
+	diags = setStateAfterProjectCreationOrUpdate(ctx, resp.State, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Map response body to schema
-	err = mapFields(ctx, projectResp, membersResp.Members, &model)
+	membersResp, err := r.authorizationClient.ListMembersExecute(ctx, projectResourceType, *projectResp.ProjectId)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Reading members: %v", err))
+		return
+	}
+
+	err = mapMembersFields(membersResp.Members, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
 		return
 	}
 	// Set refreshed model
@@ -398,6 +420,17 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
+	err = mapProjectFields(ctx, projectResp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Processing API response: %v", err))
+		return
+	}
+	diags = setStateAfterProjectCreationOrUpdate(ctx, resp.State, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	members, err := toMembersPayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Processing members: %v", err))
@@ -410,9 +443,9 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	err = mapFields(ctx, projectResp, members, &model)
+	err = mapMembersFields(members, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Processing API response: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
@@ -470,7 +503,79 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 	tflog.Info(ctx, "Resource Manager Project state imported")
 }
 
-func mapFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, membersResp *[]authorization.Member, model *Model) (err error) {
+func setStateAfterProjectCreationOrUpdate(ctx context.Context, state tfsdk.State, model *Model) diag.Diagnostics {
+	allDiags := diag.Diagnostics{}
+	allDiags.Append(state.SetAttribute(ctx, path.Root("id"), model.Id)...)
+	allDiags.Append(state.SetAttribute(ctx, path.Root("project_id"), model.ProjectId)...)
+	allDiags.Append(state.SetAttribute(ctx, path.Root("container_id"), model.ContainerId)...)
+	allDiags.Append(state.SetAttribute(ctx, path.Root("parent_container_id"), model.ContainerParentId)...)
+	allDiags.Append(state.SetAttribute(ctx, path.Root("name"), model.Name)...)
+	allDiags.Append(state.SetAttribute(ctx, path.Root("labels"), model.Labels)...)
+	return allDiags
+}
+
+// func mapFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, membersResp *[]authorization.Member, model *Model) (err error) {
+// 	if projectResp == nil {
+// 		return fmt.Errorf("response input is nil")
+// 	}
+// 	if model == nil {
+// 		return fmt.Errorf("model input is nil")
+// 	}
+
+// 	var projectId string
+// 	if model.ProjectId.ValueString() != "" {
+// 		projectId = model.ProjectId.ValueString()
+// 	} else if projectResp.ProjectId != nil {
+// 		projectId = *projectResp.ProjectId
+// 	} else {
+// 		return fmt.Errorf("project id not present")
+// 	}
+
+// 	var containerId string
+// 	if model.ContainerId.ValueString() != "" {
+// 		containerId = model.ContainerId.ValueString()
+// 	} else if projectResp.ContainerId != nil {
+// 		containerId = *projectResp.ContainerId
+// 	} else {
+// 		return fmt.Errorf("container id not present")
+// 	}
+
+// 	var labels basetypes.MapValue
+// 	if projectResp.Labels != nil && len(*projectResp.Labels) != 0 {
+// 		labels, err = conversion.ToTerraformStringMap(ctx, *projectResp.Labels)
+// 		if err != nil {
+// 			return fmt.Errorf("converting to StringValue map: %w", err)
+// 		}
+// 	} else {
+// 		labels = types.MapNull(types.StringType)
+// 	}
+
+// 	model.Id = types.StringValue(containerId)
+// 	model.ProjectId = types.StringValue(projectId)
+// 	model.ContainerId = types.StringValue(containerId)
+// 	if projectResp.Parent != nil {
+// 		if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
+// 			// the provided containerParentId is the UUID identifier
+// 			model.ContainerParentId = types.StringPointerValue(projectResp.Parent.Id)
+// 		} else {
+// 			// the provided containerParentId is the user-friendly container id
+// 			model.ContainerParentId = types.StringPointerValue(projectResp.Parent.ContainerId)
+// 		}
+// 	} else {
+// 		model.ContainerParentId = types.StringNull()
+// 	}
+// 	model.Name = types.StringPointerValue(projectResp.Name)
+// 	model.Labels = labels
+
+// 	err = mapMembersFields(membersResp, model)
+// 	if err != nil {
+// 		return fmt.Errorf("map members: %w", err)
+// 	}
+
+// 	return nil
+// }
+
+func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, model *Model) (err error) {
 	if projectResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -523,15 +628,10 @@ func mapFields(ctx context.Context, projectResp *resourcemanager.GetProjectRespo
 	model.Name = types.StringPointerValue(projectResp.Name)
 	model.Labels = labels
 
-	err = mapMembers(membersResp, model)
-	if err != nil {
-		return fmt.Errorf("map members: %w", err)
-	}
-
 	return nil
 }
 
-func mapMembers(members *[]authorization.Member, model *Model) error {
+func mapMembersFields(members *[]authorization.Member, model *Model) error {
 	if members == nil {
 		model.Members = types.ListNull(types.ObjectType{AttrTypes: memberTypes})
 		return nil

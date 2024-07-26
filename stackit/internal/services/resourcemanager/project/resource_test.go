@@ -19,13 +19,12 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 )
 
-func TestMapFields(t *testing.T) {
+func TestMapProjectFields(t *testing.T) {
 	testUUID := uuid.New().String()
 	tests := []struct {
 		description           string
 		uuidContainerParentId bool
 		projectResp           *resourcemanager.GetProjectResponse
-		membersResp           *[]authorization.Member
 		expected              Model
 		expectedLabels        *map[string]string
 		isValid               bool
@@ -37,38 +36,13 @@ func TestMapFields(t *testing.T) {
 				ContainerId: utils.Ptr("cid"),
 				ProjectId:   utils.Ptr("pid"),
 			},
-			&[]authorization.Member{
-				{
-					Subject: utils.Ptr("owner_email"),
-					Role:    utils.Ptr("owner"),
-				},
-				{
-					Subject: utils.Ptr("reader_email"),
-					Role:    utils.Ptr("reader"),
-				},
-			},
 			Model{
 				Id:                types.StringValue("cid"),
 				ContainerId:       types.StringValue("cid"),
 				ProjectId:         types.StringValue("pid"),
 				ContainerParentId: types.StringNull(),
 				Name:              types.StringNull(),
-				Members: types.ListValueMust(types.ObjectType{AttrTypes: memberTypes}, []attr.Value{
-					types.ObjectValueMust(
-						memberTypes,
-						map[string]attr.Value{
-							"subject": types.StringValue("owner_email"),
-							"role":    types.StringValue("owner"),
-						},
-					),
-					types.ObjectValueMust(
-						memberTypes,
-						map[string]attr.Value{
-							"subject": types.StringValue("reader_email"),
-							"role":    types.StringValue("reader"),
-						},
-					),
-				}),
+				Members:           types.ListNull(types.ObjectType{AttrTypes: memberTypes}),
 			},
 			nil,
 			true,
@@ -89,7 +63,6 @@ func TestMapFields(t *testing.T) {
 				},
 				Name: utils.Ptr("name"),
 			},
-			nil,
 			Model{
 				Id:                types.StringValue("cid"),
 				ContainerId:       types.StringValue("cid"),
@@ -120,7 +93,6 @@ func TestMapFields(t *testing.T) {
 				},
 				Name: utils.Ptr("name"),
 			},
-			nil,
 			Model{
 				Id:                types.StringValue("cid"),
 				ContainerId:       types.StringValue("cid"),
@@ -139,7 +111,6 @@ func TestMapFields(t *testing.T) {
 			"response_nil_fail",
 			false,
 			nil,
-			nil,
 			Model{},
 			nil,
 			false,
@@ -148,7 +119,6 @@ func TestMapFields(t *testing.T) {
 			"no_resource_id",
 			false,
 			&resourcemanager.GetProjectResponse{},
-			nil,
 			Model{},
 			nil,
 			false,
@@ -172,9 +142,115 @@ func TestMapFields(t *testing.T) {
 			state := &Model{
 				ContainerId:       tt.expected.ContainerId,
 				ContainerParentId: containerParentId,
+				Members:           types.ListNull(types.ObjectType{AttrTypes: memberTypes}),
 			}
 
-			err := mapFields(context.Background(), tt.projectResp, tt.membersResp, state)
+			err := mapProjectFields(context.Background(), tt.projectResp, state)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(state, &tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestMapMembersFields(t *testing.T) {
+	tests := []struct {
+		description    string
+		membersResp    *[]authorization.Member
+		expected       Model
+		expectedLabels *map[string]string
+		isValid        bool
+	}{
+		{
+			"default_ok",
+			&[]authorization.Member{
+				{
+					Subject: utils.Ptr("owner_email"),
+					Role:    utils.Ptr("owner"),
+				},
+				{
+					Subject: utils.Ptr("reader_email"),
+					Role:    utils.Ptr("reader"),
+				},
+			},
+			Model{
+				Id:                types.StringNull(),
+				ProjectId:         types.StringNull(),
+				ContainerId:       types.StringNull(),
+				ContainerParentId: types.StringNull(),
+				Name:              types.StringNull(),
+				Labels:            types.MapNull(types.StringType),
+				Members: types.ListValueMust(types.ObjectType{AttrTypes: memberTypes}, []attr.Value{
+					types.ObjectValueMust(
+						memberTypes,
+						map[string]attr.Value{
+							"subject": types.StringValue("owner_email"),
+							"role":    types.StringValue("owner"),
+						},
+					),
+					types.ObjectValueMust(
+						memberTypes,
+						map[string]attr.Value{
+							"subject": types.StringValue("reader_email"),
+							"role":    types.StringValue("reader"),
+						},
+					),
+				}),
+			},
+			nil,
+			true,
+		},
+		{
+			"empty members",
+			&[]authorization.Member{},
+			Model{
+				Id:                types.StringNull(),
+				ProjectId:         types.StringNull(),
+				ContainerId:       types.StringNull(),
+				ContainerParentId: types.StringNull(),
+				Name:              types.StringNull(),
+				Labels:            types.MapNull(types.StringType),
+				Members:           types.ListValueMust(types.ObjectType{AttrTypes: memberTypes}, []attr.Value{}),
+			},
+			nil,
+			true,
+		},
+		{
+			"nil members",
+			nil,
+			Model{
+				Id:                types.StringNull(),
+				ProjectId:         types.StringNull(),
+				ContainerId:       types.StringNull(),
+				ContainerParentId: types.StringNull(),
+				Name:              types.StringNull(),
+				Members:           types.ListNull(types.ObjectType{AttrTypes: memberTypes}),
+				Labels:            types.MapNull(types.StringType),
+			},
+			nil,
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			state := &Model{
+				Id:                types.StringNull(),
+				ProjectId:         types.StringNull(),
+				ContainerId:       types.StringNull(),
+				ContainerParentId: types.StringNull(),
+				Name:              types.StringNull(),
+				Labels:            types.MapNull(types.StringType),
+			}
+			err := mapMembersFields(tt.membersResp, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

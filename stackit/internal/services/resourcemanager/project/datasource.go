@@ -200,17 +200,17 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 
 // Read refreshes the Terraform state with the latest data.
 func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var state Model
-	diags := req.Config.Get(ctx, &state)
+	var model Model
+	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	projectId := state.ProjectId.ValueString()
+	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	containerId := state.ContainerId.ValueString()
+	containerId := model.ContainerId.ValueString()
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	if containerId == "" && projectId == "" {
@@ -234,18 +234,29 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	membersResp, err := d.membershipClient.ListMembersExecute(ctx, projectResourceType, *projectResp.ProjectId)
+	err = mapProjectFields(ctx, projectResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Reading members: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
+		return
+	}
+	diags = setStateAfterProjectCreationOrUpdate(ctx, resp.State, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	err = mapFields(ctx, projectResp, membersResp.Members, &state)
+	membersResp, err := d.membershipClient.ListMembersExecute(ctx, projectResourceType, *projectResp.ProjectId)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Reading members: %v", err))
 		return
 	}
-	diags = resp.State.Set(ctx, &state)
+
+	err = mapMembersFields(membersResp.Members, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
+		return
+	}
+	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
