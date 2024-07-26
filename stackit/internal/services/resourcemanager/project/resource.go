@@ -304,14 +304,9 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	err = mapProjectFields(ctx, waitResp, &model)
+	err = mapProjectFields(ctx, waitResp, &model, resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Processing API response: %v", err))
-		return
-	}
-	diags = setStateAfterProjectCreationOrUpdate(ctx, resp.State, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -357,14 +352,9 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	err = mapProjectFields(ctx, projectResp, &model)
+	err = mapProjectFields(ctx, projectResp, &model, resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
-		return
-	}
-	diags = setStateAfterProjectCreationOrUpdate(ctx, resp.State, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -420,14 +410,9 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	err = mapProjectFields(ctx, projectResp, &model)
+	err = mapProjectFields(ctx, projectResp, &model, resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Processing API response: %v", err))
-		return
-	}
-	diags = setStateAfterProjectCreationOrUpdate(ctx, resp.State, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -503,18 +488,8 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 	tflog.Info(ctx, "Resource Manager Project state imported")
 }
 
-func setStateAfterProjectCreationOrUpdate(ctx context.Context, state tfsdk.State, model *Model) diag.Diagnostics {
-	allDiags := diag.Diagnostics{}
-	allDiags.Append(state.SetAttribute(ctx, path.Root("id"), model.Id)...)
-	allDiags.Append(state.SetAttribute(ctx, path.Root("project_id"), model.ProjectId)...)
-	allDiags.Append(state.SetAttribute(ctx, path.Root("container_id"), model.ContainerId)...)
-	allDiags.Append(state.SetAttribute(ctx, path.Root("parent_container_id"), model.ContainerParentId)...)
-	allDiags.Append(state.SetAttribute(ctx, path.Root("name"), model.Name)...)
-	allDiags.Append(state.SetAttribute(ctx, path.Root("labels"), model.Labels)...)
-	return allDiags
-}
-
-func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, model *Model) (err error) {
+// mapProjectFields maps the API response to the Terraform model and update the Terraform state
+func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, model *Model, state tfsdk.State) (err error) {
 	if projectResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -550,22 +525,38 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 		labels = types.MapNull(types.StringType)
 	}
 
-	model.Id = types.StringValue(containerId)
-	model.ProjectId = types.StringValue(projectId)
-	model.ContainerId = types.StringValue(containerId)
+	var containerParentIdTF basetypes.StringValue
 	if projectResp.Parent != nil {
 		if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
 			// the provided containerParentId is the UUID identifier
-			model.ContainerParentId = types.StringPointerValue(projectResp.Parent.Id)
+			containerParentIdTF = types.StringPointerValue(projectResp.Parent.Id)
 		} else {
 			// the provided containerParentId is the user-friendly container id
-			model.ContainerParentId = types.StringPointerValue(projectResp.Parent.ContainerId)
+			containerParentIdTF = types.StringPointerValue(projectResp.Parent.ContainerId)
 		}
 	} else {
-		model.ContainerParentId = types.StringNull()
+		containerParentIdTF = types.StringNull()
 	}
+
+	model.Id = types.StringValue(containerId)
+	model.ProjectId = types.StringValue(projectId)
+	model.ContainerParentId = containerParentIdTF
+	model.ContainerId = types.StringValue(containerId)
 	model.Name = types.StringPointerValue(projectResp.Name)
 	model.Labels = labels
+
+	if state.Schema != nil {
+		diags := diag.Diagnostics{}
+		diags.Append(state.SetAttribute(ctx, path.Root("id"), model.Id)...)
+		diags.Append(state.SetAttribute(ctx, path.Root("project_id"), model.ProjectId)...)
+		diags.Append(state.SetAttribute(ctx, path.Root("parent_container_id"), model.ContainerParentId)...)
+		diags.Append(state.SetAttribute(ctx, path.Root("container_id"), model.ContainerId)...)
+		diags.Append(state.SetAttribute(ctx, path.Root("name"), model.Name)...)
+		diags.Append(state.SetAttribute(ctx, path.Root("labels"), model.Labels)...)
+		if diags.HasError() {
+			return fmt.Errorf("update terraform state: %w", core.DiagsToError(diags))
+		}
+	}
 
 	return nil
 }

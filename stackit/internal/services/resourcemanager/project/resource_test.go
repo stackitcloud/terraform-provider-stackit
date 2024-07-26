@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
@@ -139,13 +140,13 @@ func TestMapProjectFields(t *testing.T) {
 			if tt.uuidContainerParentId {
 				containerParentId = types.StringValue(testUUID)
 			}
-			state := &Model{
+			model := &Model{
 				ContainerId:       tt.expected.ContainerId,
 				ContainerParentId: containerParentId,
 				Members:           types.ListNull(types.ObjectType{AttrTypes: memberTypes}),
 			}
 
-			err := mapProjectFields(context.Background(), tt.projectResp, state)
+			err := mapProjectFields(context.Background(), tt.projectResp, model, tfsdk.State{})
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -153,7 +154,7 @@ func TestMapProjectFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(state, &tt.expected)
+				diff := cmp.Diff(model, &tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

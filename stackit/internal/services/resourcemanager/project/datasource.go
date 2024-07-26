@@ -234,14 +234,9 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	err = mapProjectFields(ctx, projectResp, &model)
+	err = mapProjectFields(ctx, projectResp, &model, resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
-		return
-	}
-	diags = setStateAfterProjectCreationOrUpdate(ctx, resp.State, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
 		return
 	}
 
