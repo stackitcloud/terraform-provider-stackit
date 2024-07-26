@@ -304,7 +304,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	err = mapProjectFields(ctx, waitResp, &model, resp.State)
+	err = mapProjectFields(ctx, waitResp, &model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Processing API response: %v", err))
 		return
@@ -352,7 +352,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	err = mapProjectFields(ctx, projectResp, &model, resp.State)
+	err = mapProjectFields(ctx, projectResp, &model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
 		return
@@ -410,7 +410,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	err = mapProjectFields(ctx, projectResp, &model, resp.State)
+	err = mapProjectFields(ctx, projectResp, &model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Processing API response: %v", err))
 		return
@@ -489,7 +489,7 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 }
 
 // mapProjectFields maps the API response to the Terraform model and update the Terraform state
-func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, model *Model, state tfsdk.State) (err error) {
+func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, model *Model, state *tfsdk.State) (err error) {
 	if projectResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -545,7 +545,7 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 	model.Name = types.StringPointerValue(projectResp.Name)
 	model.Labels = labels
 
-	if state.Schema != nil {
+	if state != nil {
 		diags := diag.Diagnostics{}
 		diags.Append(state.SetAttribute(ctx, path.Root("id"), model.Id)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("project_id"), model.ProjectId)...)

@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
@@ -146,7 +145,7 @@ func TestMapProjectFields(t *testing.T) {
 				Members:           types.ListNull(types.ObjectType{AttrTypes: memberTypes}),
 			}
 
-			err := mapProjectFields(context.Background(), tt.projectResp, model, tfsdk.State{})
+			err := mapProjectFields(context.Background(), tt.projectResp, model, nil)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
