@@ -612,29 +612,33 @@ func toCreatePayload(ctx context.Context, model *Model) (*resourcemanager.Create
 		return nil, fmt.Errorf("nil model")
 	}
 
-	var members []resourcemanager.Member
-	otherMembers, err := toMembersPayload(ctx, model)
+	members, err := toMembersPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("processing members: %w", err)
 	}
-	for _, m := range *otherMembers {
-		members = append(members,
+	var convertedMembers []resourcemanager.Member
+	for _, m := range *members {
+		convertedMembers = append(convertedMembers,
 			resourcemanager.Member{
 				Subject: m.Subject,
 				Role:    m.Role,
 			})
 	}
+	var membersPayload *[]resourcemanager.Member
+	if len(convertedMembers) > 0 {
+		membersPayload = &convertedMembers
+	}
 
 	modelLabels := model.Labels.Elements()
 	labels, err := conversion.ToOptStringMap(modelLabels)
 	if err != nil {
-		return nil, fmt.Errorf("converting to GO map: %w", err)
+		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
 	return &resourcemanager.CreateProjectPayload{
 		ContainerParentId: conversion.StringValueToPointer(model.ContainerParentId),
 		Labels:            labels,
-		Members:           &members,
+		Members:           membersPayload,
 		Name:              conversion.StringValueToPointer(model.Name),
 	}, nil
 }

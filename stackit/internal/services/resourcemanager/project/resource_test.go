@@ -37,13 +37,38 @@ func TestMapFields(t *testing.T) {
 				ContainerId: utils.Ptr("cid"),
 				ProjectId:   utils.Ptr("pid"),
 			},
-			nil,
+			&[]authorization.Member{
+				{
+					Subject: utils.Ptr("owner_email"),
+					Role:    utils.Ptr("owner"),
+				},
+				{
+					Subject: utils.Ptr("reader_email"),
+					Role:    utils.Ptr("reader"),
+				},
+			},
 			Model{
 				Id:                types.StringValue("cid"),
 				ContainerId:       types.StringValue("cid"),
 				ProjectId:         types.StringValue("pid"),
 				ContainerParentId: types.StringNull(),
 				Name:              types.StringNull(),
+				Members: types.ListValueMust(types.ObjectType{AttrTypes: memberTypes}, []attr.Value{
+					types.ObjectValueMust(
+						memberTypes,
+						map[string]attr.Value{
+							"subject": types.StringValue("owner_email"),
+							"role":    types.StringValue("owner"),
+						},
+					),
+					types.ObjectValueMust(
+						memberTypes,
+						map[string]attr.Value{
+							"subject": types.StringValue("reader_email"),
+							"role":    types.StringValue("reader"),
+						},
+					),
+				}),
 			},
 			nil,
 			true,
@@ -71,6 +96,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:         types.StringValue("pid"),
 				ContainerParentId: types.StringValue("parent_cid"),
 				Name:              types.StringValue("name"),
+				Members:           types.ListNull(types.ObjectType{AttrTypes: memberTypes}),
 			},
 			&map[string]string{
 				"label1": "ref1",
@@ -101,6 +127,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:         types.StringValue("pid"),
 				ContainerParentId: types.StringValue(testUUID),
 				Name:              types.StringValue("name"),
+				Members:           types.ListNull(types.ObjectType{AttrTypes: memberTypes}),
 			},
 			&map[string]string{
 				"label1": "ref1",
@@ -179,13 +206,8 @@ func TestToCreatePayload(t *testing.T) {
 			&resourcemanager.CreateProjectPayload{
 				ContainerParentId: nil,
 				Labels:            nil,
-				Members: &[]resourcemanager.Member{
-					{
-						Role:    utils.Ptr(projectOwnerRole),
-						Subject: utils.Ptr("service_account_email"),
-					},
-				},
-				Name: nil,
+				Members:           nil,
+				Name:              nil,
 			},
 			true,
 		},
@@ -198,8 +220,15 @@ func TestToCreatePayload(t *testing.T) {
 					types.ObjectValueMust(
 						memberTypes,
 						map[string]attr.Value{
-							"subject": types.StringValue("some_email"),
-							"role":    types.StringValue(projectOwnerRole),
+							"subject": types.StringValue("owner_email"),
+							"role":    types.StringValue("owner"),
+						},
+					),
+					types.ObjectValueMust(
+						memberTypes,
+						map[string]attr.Value{
+							"subject": types.StringValue("reader_email"),
+							"role":    types.StringValue("reader"),
 						},
 					),
 				}),
@@ -216,12 +245,12 @@ func TestToCreatePayload(t *testing.T) {
 				},
 				Members: &[]resourcemanager.Member{
 					{
-						Role:    utils.Ptr(projectOwnerRole),
-						Subject: utils.Ptr("service_account_email"),
+						Subject: utils.Ptr("owner_email"),
+						Role:    utils.Ptr("owner"),
 					},
 					{
-						Role:    utils.Ptr(projectOwnerRole),
-						Subject: utils.Ptr("some_email"),
+						Subject: utils.Ptr("reader_email"),
+						Role:    utils.Ptr("reader"),
 					},
 				},
 				Name: utils.Ptr("name"),
@@ -238,8 +267,8 @@ func TestToCreatePayload(t *testing.T) {
 					types.ObjectValueMust(
 						memberTypes,
 						map[string]attr.Value{
-							"subject": types.StringValue("some_email"),
-							"role":    types.StringValue(projectOwnerRole),
+							"subject": types.StringValue("owner_email"),
+							"role":    types.StringValue("owner"),
 						},
 					),
 				}),
@@ -256,12 +285,8 @@ func TestToCreatePayload(t *testing.T) {
 				},
 				Members: &[]resourcemanager.Member{
 					{
-						Role:    utils.Ptr(projectOwnerRole),
-						Subject: utils.Ptr("service_account_email"),
-					},
-					{
-						Role:    utils.Ptr(projectOwnerRole),
-						Subject: utils.Ptr("some_email"),
+						Subject: utils.Ptr("owner_email"),
+						Role:    utils.Ptr("owner"),
 					},
 				},
 				Name: utils.Ptr("name"),
@@ -387,11 +412,11 @@ func TestToUpdatePayload(t *testing.T) {
 var fixtureMembers = []authorization.Member{
 	{
 		Subject: utils.Ptr("email_owner"),
-		Role:    utils.Ptr(projectOwnerRole),
+		Role:    utils.Ptr("owner"),
 	},
 	{
 		Subject: utils.Ptr("email_owner_2"),
-		Role:    utils.Ptr(projectOwnerRole),
+		Role:    utils.Ptr("owner"),
 	},
 	{
 		Subject: utils.Ptr("email_reader"),
