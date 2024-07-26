@@ -45,12 +45,12 @@ func TestMapFields(t *testing.T) {
 			},
 			&[]iaas.NetworkRange{
 				{
-					//NetworkRangeId: utils.Ptr("range-1"),
-					Prefix: utils.Ptr("prefix-1"),
+					NetworkRangeId: utils.Ptr(testRangeId1),
+					Prefix:         utils.Ptr("prefix-1"),
 				},
 				{
-					//NetworkRangeId: utils.Ptr("range-2"),
-					Prefix: utils.Ptr("prefix-2"),
+					NetworkRangeId: utils.Ptr(testRangeId2),
+					Prefix:         utils.Ptr("prefix-2"),
 				},
 			},
 
@@ -66,10 +66,12 @@ func TestMapFields(t *testing.T) {
 				MinPrefixLength:     types.Int64Null(),
 				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-1"),
+						"network_range_id": types.StringValue(testRangeId1),
+						"prefix":           types.StringValue("prefix-1"),
 					}),
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-2"),
+						"network_range_id": types.StringValue(testRangeId2),
+						"prefix":           types.StringValue("prefix-2"),
 					}),
 				}),
 			},
@@ -97,12 +99,12 @@ func TestMapFields(t *testing.T) {
 			},
 			&[]iaas.NetworkRange{
 				{
-					//NetworkRangeId: utils.Ptr("range-1"),
-					Prefix: utils.Ptr("prefix-1"),
+					NetworkRangeId: utils.Ptr(testRangeId1),
+					Prefix:         utils.Ptr("prefix-1"),
 				},
 				{
-					//NetworkRangeId: utils.Ptr("range-2"),
-					Prefix: utils.Ptr("prefix-2"),
+					NetworkRangeId: utils.Ptr(testRangeId2),
+					Prefix:         utils.Ptr("prefix-2"),
 				},
 			},
 			Model{
@@ -120,10 +122,12 @@ func TestMapFields(t *testing.T) {
 				MinPrefixLength:     types.Int64Value(18),
 				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-1"),
+						"network_range_id": types.StringValue(testRangeId1),
+						"prefix":           types.StringValue("prefix-1"),
 					}),
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-2"),
+						"network_range_id": types.StringValue(testRangeId2),
+						"prefix":           types.StringValue("prefix-2"),
 					}),
 				}),
 			},
@@ -150,10 +154,12 @@ func TestMapFields(t *testing.T) {
 			},
 			&[]iaas.NetworkRange{
 				{
-					Prefix: utils.Ptr("prefix-1"),
+					NetworkRangeId: utils.Ptr(testRangeId1),
+					Prefix:         utils.Ptr("prefix-1"),
 				},
 				{
-					Prefix: utils.Ptr("prefix-2"),
+					NetworkRangeId: utils.Ptr(testRangeId2),
+					Prefix:         utils.Ptr("prefix-2"),
 				},
 			},
 			Model{
@@ -166,10 +172,12 @@ func TestMapFields(t *testing.T) {
 				}),
 				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-1"),
+						"network_range_id": types.StringValue(testRangeId1),
+						"prefix":           types.StringValue("prefix-1"),
 					}),
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-2"),
+						"network_range_id": types.StringValue(testRangeId2),
+						"prefix":           types.StringValue("prefix-2"),
 					}),
 				}),
 			},
@@ -182,10 +190,12 @@ func TestMapFields(t *testing.T) {
 				NetworkAreaId:  types.StringValue("naid"),
 				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-1"),
+						"network_range_id": types.StringValue(testRangeId1),
+						"prefix":           types.StringValue("prefix-1"),
 					}),
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-2"),
+						"network_range_id": types.StringValue(testRangeId2),
+						"prefix":           types.StringValue("prefix-2"),
 					}),
 				}),
 			},
@@ -195,10 +205,12 @@ func TestMapFields(t *testing.T) {
 			},
 			&[]iaas.NetworkRange{
 				{
-					Prefix: utils.Ptr("prefix-2"),
+					NetworkRangeId: utils.Ptr(testRangeId2),
+					Prefix:         utils.Ptr("prefix-2"),
 				},
 				{
-					Prefix: utils.Ptr("prefix-3"),
+					NetworkRangeId: utils.Ptr(testRangeId3),
+					Prefix:         utils.Ptr("prefix-3"),
 				},
 			},
 			Model{
@@ -208,10 +220,12 @@ func TestMapFields(t *testing.T) {
 				DefaultNameservers: types.ListNull(types.StringType),
 				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-2"),
+						"network_range_id": types.StringValue(testRangeId2),
+						"prefix":           types.StringValue("prefix-2"),
 					}),
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"prefix": types.StringValue("prefix-3"),
+						"network_range_id": types.StringValue(testRangeId3),
+						"prefix":           types.StringValue("prefix-3"),
 					}),
 				}),
 			},

@@ -59,12 +59,14 @@ type Model struct {
 
 // Struct corresponding to Model.NetworkRanges[i]
 type networkRange struct {
-	Prefix types.String `tfsdk:"prefix"`
+	Prefix         types.String `tfsdk:"prefix"`
+	NetworkRangeId types.String `tfsdk:"network_range_id"`
 }
 
 // Types corresponding to networkRanges
 var networkRangeTypes = map[string]attr.Type{
-	"prefix": types.StringType,
+	"prefix":           types.StringType,
+	"network_range_id": types.StringType,
 }
 
 // NewNetworkAreaResource is a helper function to simplify the provider implementation.
@@ -541,7 +543,8 @@ func mapNetworkRanges(networkAreaRangesList *[]iaas.NetworkRange, m *Model) erro
 	networkRangesList := []attr.Value{}
 	for i, networkRangeResp := range *networkAreaRangesList {
 		networkRangeMap := map[string]attr.Value{
-			"prefix": types.StringPointerValue(networkRangeResp.Prefix),
+			"prefix":           types.StringPointerValue(networkRangeResp.Prefix),
+			"network_range_id": types.StringPointerValue(networkRangeResp.NetworkRangeId),
 		}
 
 		networkRangeTF, diags := types.ObjectValue(networkRangeTypes, networkRangeMap)
