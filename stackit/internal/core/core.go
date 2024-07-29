@@ -18,6 +18,7 @@ type ProviderData struct {
 	ServiceAccountEmail             string
 	Region                          string
 	ArgusCustomEndpoint             string
+	AuthorizationCustomEndpoint     string
 	DnsCustomEndpoint               string
 	IaaSCustomEndpoint              string
 	LoadBalancerCustomEndpoint      string

@@ -6,12 +6,17 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 const (
 	SKEServiceId = "cloud.stackit.ske"
+)
+
+var (
+	LegacyProjectRoles = []string{"project.admin", "project.auditor", "project.member", "project.owner"}
 )
 
 // ReconcileStringSlices reconciles two string lists by removing elements from the
@@ -85,13 +90,17 @@ func SupportedValuesDocumentation(values []string) string {
 	if len(values) == 0 {
 		return ""
 	}
-	return "Supported values are: " + strings.Join(quoteValues(values), ", ") + "."
+	return "Supported values are: " + strings.Join(QuoteValues(values), ", ") + "."
 }
 
-func quoteValues(values []string) []string {
+func QuoteValues(values []string) []string {
 	quotedValues := make([]string, len(values))
 	for i, value := range values {
 		quotedValues[i] = fmt.Sprintf("`%s`", value)
 	}
 	return quotedValues
+}
+
+func IsLegacyProjectRole(role string) bool {
+	return utils.Contains(LegacyProjectRoles, role)
 }

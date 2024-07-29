@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/teambition/rrule-go"
 )
 
@@ -127,6 +128,23 @@ func NoSeparator() *Validator {
 		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			if strings.Contains(req.ConfigValue.ValueString(), core.Separator) {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
+
+func NonLegacyProjectRole() *Validator {
+	description := "legacy roles are not supported"
+
+	return &Validator{
+		description: description,
+		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			if utils.IsLegacyProjectRole(req.ConfigValue.ValueString()) {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
 					description,

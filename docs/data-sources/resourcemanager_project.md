@@ -25,11 +25,23 @@ data "stackit_resourcemanager_project" "example" {
 ### Optional
 
 - `container_id` (String) Project container ID. Globally unique, user-friendly identifier.
+- `owner_email` (String, Deprecated) Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.
+
+!> The "owner_email" field has been deprecated in favor of the "members" field. Please use the "members" field to assign the owner role to a user, by setting the "role" field to `owner`.
 - `project_id` (String) Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.
 
 ### Read-Only
 
 - `id` (String) Terraform's internal data source. ID. It is structured as "`container_id`".
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}
+- `members` (Attributes List) The members assigned to the project. At least one subject needs to be a user, and not a client or service account. (see [below for nested schema](#nestedatt--members))
 - `name` (String) Project name.
 - `parent_container_id` (String) Parent resource identifier. Both container ID (user-friendly) and UUID are supported
+
+<a id="nestedatt--members"></a>
+### Nested Schema for `members`
+
+Read-Only:
+
+- `role` (String) The role of the member in the project. At least one user must have the `owner` role. Legacy roles (`project.admin`, `project.auditor`, `project.member`, `project.owner`) are not supported.
+- `subject` (String) Unique identifier of the user, service account or client. This is usually the email address for users or service accounts, and the name in case of clients.

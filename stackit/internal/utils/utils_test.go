@@ -225,3 +225,46 @@ func TestSupportedValuesDocumentation(t *testing.T) {
 		})
 	}
 }
+
+func TestIsLegacyProjectRole(t *testing.T) {
+	tests := []struct {
+		description string
+		role        string
+		expected    bool
+	}{
+		{
+			"non legacy role",
+			"owner",
+			false,
+		},
+		{
+			"leagcy role",
+			"project.owner",
+			true,
+		},
+		{
+			"leagcy role 2",
+			"project.admin",
+			true,
+		},
+		{
+			"leagcy role 3",
+			"project.member",
+			true,
+		},
+		{
+			"leagcy role 4",
+			"project.auditor",
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output := IsLegacyProjectRole(tt.role)
+			if output != tt.expected {
+				t.Fatalf("Data does not match: %v", output)
+			}
+		})
+	}
+}

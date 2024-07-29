@@ -299,6 +299,60 @@ func TestNoSeparator(t *testing.T) {
 	}
 }
 
+func TestNonLegacyProjectRole(t *testing.T) {
+	tests := []struct {
+		description string
+		input       string
+		isValid     bool
+	}{
+		{
+			"ok",
+			"owner",
+			true,
+		},
+		{
+			"ok-2",
+			"reader",
+			true,
+		},
+		{
+			"leagcy-role",
+			"project.owner",
+			false,
+		},
+		{
+			"leagcy-role-2",
+			"project.admin",
+			false,
+		},
+		{
+			"leagcy-role-3",
+			"project.member",
+			false,
+		},
+		{
+			"leagcy-role-4",
+			"project.auditor",
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			r := validator.StringResponse{}
+			NonLegacyProjectRole().ValidateString(context.Background(), validator.StringRequest{
+				ConfigValue: types.StringValue(tt.input),
+			}, &r)
+
+			if !tt.isValid && !r.Diagnostics.HasError() {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && r.Diagnostics.HasError() {
+				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
+			}
+		})
+	}
+}
+
 func TestMinorVersionNumber(t *testing.T) {
 	tests := []struct {
 		description string
