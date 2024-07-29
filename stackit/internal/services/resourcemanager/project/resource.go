@@ -157,7 +157,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		"owner_email":                     "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
 		"owner_email_deprecation_message": "The \"owner_email\" field has been deprecated in favor of the \"members\" field. Please use the \"members\" field to assign the owner role to a user, by setting the \"role\" field to `owner`.",
 		"members":                         "The members assigned to the project. At least one subject needs to be a user, and not a client or service account.",
-		"members.role":                    fmt.Sprintf("The role of the member in the project. At least one user must have the `owner` role. Legacy roles (%s) are not supported.", strings.Join(utils.QuoteValues(utils.LegacyProjectRoles), ", ")),
+		"members.role":                    fmt.Sprintf("The role of the member in the project. Possible values include, but are not limited to: `owner`, `editor`, `reader`. At least one user must have the `owner` role. Legacy roles (%s) are not supported.", strings.Join(utils.QuoteValues(utils.LegacyProjectRoles), ", ")),
 		"members.subject":                 "Unique identifier of the user, service account or client. This is usually the email address for users or service accounts, and the name in case of clients.",
 	}
 
