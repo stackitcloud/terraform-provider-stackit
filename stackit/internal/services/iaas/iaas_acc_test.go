@@ -27,7 +27,7 @@ var networkResource = map[string]string{
 
 var networkAreaResource = map[string]string{
 	"organization_id":  testutil.OrganizationId,
-	"name":             fmt.Sprintf("acc-test-gg-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
+	"name":             fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 	"networkrange0":    "10.0.0.0/16",
 	"transfer_network": "10.1.2.0/24",
 }
