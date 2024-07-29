@@ -42,4 +42,5 @@ export STACKIT_TF_ENABLE_BETA_RESOURCES=true
 ## Listing Beta Data Sources
 
 - [`stackit_server_backup_schedule`](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/data-sources/server_backup_schedule)
+- [`stackit_server_backup_schedules`](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/data-sources/server_backup_schedules)
 - [`stackit_network_area`](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/data-sources/network_area)
