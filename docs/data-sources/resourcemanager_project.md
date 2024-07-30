@@ -43,5 +43,5 @@ data "stackit_resourcemanager_project" "example" {
 
 Read-Only:
 
-- `role` (String) The role of the member in the project. At least one user must have the `owner` role. Legacy roles (`project.admin`, `project.auditor`, `project.member`, `project.owner`) are not supported.
+- `role` (String) The role of the member in the project. Legacy roles (`project.admin`, `project.auditor`, `project.member`, `project.owner`) are not supported.
 - `subject` (String) Unique identifier of the user, service account or client. This is usually the email address for users or service accounts, and the name in case of clients.

@@ -157,7 +157,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		"owner_email":                     "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
 		"owner_email_deprecation_message": "The \"owner_email\" field has been deprecated in favor of the \"members\" field. Please use the \"members\" field to assign the owner role to a user, by setting the \"role\" field to `owner`.",
 		"members":                         "The members assigned to the project. At least one subject needs to be a user, and not a client or service account.",
-		"members.role":                    fmt.Sprintf("The role of the member in the project. Possible values include, but are not limited to: `owner`, `editor`, `reader`. At least one user must have the `owner` role. Legacy roles (%s) are not supported.", strings.Join(utils.QuoteValues(utils.LegacyProjectRoles), ", ")),
+		"members.role":                    fmt.Sprintf("The role of the member in the project. Possible values include, but are not limited to: `owner`, `editor`, `reader`. Legacy roles (%s) are not supported.", strings.Join(utils.QuoteValues(utils.LegacyProjectRoles), ", ")),
 		"members.subject":                 "Unique identifier of the user, service account or client. This is usually the email address for users or service accounts, and the name in case of clients.",
 	}
 
@@ -316,7 +316,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	err = mapMembersFields(membersResp.Members, &model)
+	err = mapMembersFields(ctx, membersResp.Members, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -364,7 +364,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	err = mapMembersFields(membersResp.Members, &model)
+	err = mapMembersFields(ctx, membersResp.Members, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
 		return
@@ -428,7 +428,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	err = mapMembersFields(members, &model)
+	err = mapMembersFields(ctx, members, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Processing API response: %v", err))
 		return
@@ -561,7 +561,7 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 	return nil
 }
 
-func mapMembersFields(members *[]authorization.Member, model *Model) error {
+func mapMembersFields(ctx context.Context, members *[]authorization.Member, model *Model) error {
 	if members == nil {
 		model.Members = types.ListNull(types.ObjectType{AttrTypes: memberTypes})
 		return nil
@@ -574,14 +574,42 @@ func mapMembersFields(members *[]authorization.Member, model *Model) error {
 		return nil
 	}
 
-	membersList := []attr.Value{}
-	for i, m := range *members {
+	modelMembers := []member{}
+	if !(model.Members.IsNull() || model.Members.IsUnknown()) {
+		diags := model.Members.ElementsAs(ctx, &modelMembers, false)
+		if diags.HasError() {
+			return fmt.Errorf("processing members: %w", core.DiagsToError(diags))
+		}
+	}
+	modelMemberIds := make([]string, len(modelMembers))
+	for i, m := range modelMembers {
+		modelMemberIds[i] = memberId(authorization.Member{
+			Role:    m.Role.ValueStringPointer(),
+			Subject: m.Subject.ValueStringPointer(),
+		})
+	}
+
+	apiMemberIds := []string{}
+	for _, m := range *members {
 		if utils.IsLegacyProjectRole(*m.Role) {
 			continue
 		}
+		apiMemberIds = append(apiMemberIds, memberId(m))
+	}
+
+	reconciledMembersIds := utils.ReconcileStringSlices(modelMemberIds, apiMemberIds)
+
+	membersList := []attr.Value{}
+	for i, m := range reconciledMembersIds {
+		role := roleFromId(m)
+		subject := subjectFromId(m)
+		if role == "" || subject == "" {
+			return fmt.Errorf("reconcile list of members")
+		}
+
 		membersMap := map[string]attr.Value{
-			"subject": types.StringPointerValue(m.Subject),
-			"role":    types.StringPointerValue(m.Role),
+			"subject": types.StringValue(subject),
+			"role":    types.StringValue(role),
 		}
 
 		memberTF, diags := types.ObjectValue(memberTypes, membersMap)
@@ -609,7 +637,16 @@ func toMembersPayload(ctx context.Context, model *Model) (*[]authorization.Membe
 		return nil, fmt.Errorf("nil model")
 	}
 	if model.Members.IsNull() || model.Members.IsUnknown() {
-		return &[]authorization.Member{}, nil
+		if model.OwnerEmail.IsNull() {
+			return nil, fmt.Errorf("members and owner_email are both null or unknown")
+		}
+
+		return &[]authorization.Member{
+			{
+				Subject: model.OwnerEmail.ValueStringPointer(),
+				Role:    sdkUtils.Ptr(projectOwnerRole),
+			},
+		}, nil
 	}
 
 	membersModel := []member{}
@@ -618,19 +655,12 @@ func toMembersPayload(ctx context.Context, model *Model) (*[]authorization.Membe
 		return nil, core.DiagsToError(diags)
 	}
 
-	members := []authorization.Member{}
 	// If the new "members" fields is set, it has precedence over the deprecated "owner_email" field
-	if !model.Members.IsNull() && !model.Members.IsUnknown() {
-		for _, m := range membersModel {
-			members = append(members, authorization.Member{
-				Role:    m.Role.ValueStringPointer(),
-				Subject: m.Subject.ValueStringPointer(),
-			})
-		}
-	} else {
+	members := []authorization.Member{}
+	for _, m := range membersModel {
 		members = append(members, authorization.Member{
-			Subject: model.OwnerEmail.ValueStringPointer(),
-			Role:    sdkUtils.Ptr(projectOwnerRole),
+			Role:    m.Role.ValueStringPointer(),
+			Subject: m.Subject.ValueStringPointer(),
 		})
 	}
 
@@ -790,4 +820,22 @@ func updateMembers(ctx context.Context, projectId string, modelMembers *[]author
 // Internal representation of a member, which is uniquely identified by the subject and role
 func memberId(member authorization.Member) string {
 	return fmt.Sprintf("%s,%s", *member.Subject, *member.Role)
+}
+
+// Extract the role from the member ID representation
+func roleFromId(id string) string {
+	parts := strings.Split(id, ",")
+	if len(parts) != 2 {
+		return ""
+	}
+	return parts[1]
+}
+
+// Extract the subject from the member ID representation
+func subjectFromId(id string) string {
+	parts := strings.Split(id, ",")
+	if len(parts) != 2 {
+		return ""
+	}
+	return parts[0]
 }
