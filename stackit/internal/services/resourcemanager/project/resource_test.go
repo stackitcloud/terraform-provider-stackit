@@ -483,7 +483,7 @@ func TestToCreatePayload(t *testing.T) {
 			true,
 		},
 		{
-			"no members pr owner_email fails",
+			"no members or owner_email fails",
 			&Model{
 				ContainerParentId: types.StringValue("pid"),
 				Name:              types.StringValue("name"),
