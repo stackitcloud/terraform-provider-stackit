@@ -551,18 +551,31 @@ func mapNetworkRanges(ctx context.Context, networkAreaRangesList *[]iaas.Network
 		}
 	}
 
+	modelNetworkRangePrefixes := []string{}
+	for _, m := range ranges {
+		modelNetworkRangePrefixes = append(modelNetworkRangePrefixes, m.Prefix.ValueString())
+	}
+
+	apiNetworkRangePrefixes := []string{}
+	for _, n := range *networkAreaRangesList {
+		apiNetworkRangePrefixes = append(apiNetworkRangePrefixes, *n.Prefix)
+	}
+
+	reconciledRangePrefixes := internalUtils.ReconcileStringSlices(modelNetworkRangePrefixes, apiNetworkRangePrefixes)
+
 	networkRangesList := []attr.Value{}
-	for i, networkRangeItem := range ranges {
-		prefix := networkRangeItem.Prefix
-		networkRangeId := networkRangeItem.NetworkRangeId
+	for i, networkRangeItem := range reconciledRangePrefixes {
+		prefix := networkRangeItem
+		var networkRangeId string
 		for _, networkRangeElement := range *networkAreaRangesList {
-			if types.StringValue(*networkRangeElement.Prefix) == prefix {
-				networkRangeId = types.StringValue(*networkRangeElement.NetworkRangeId)
+			if *networkRangeElement.Prefix == prefix {
+				networkRangeId = *networkRangeElement.NetworkRangeId
+				break
 			}
 		}
 		networkRangeMap := map[string]attr.Value{
-			"prefix":           prefix,
-			"network_range_id": networkRangeId,
+			"prefix":           types.StringValue(prefix),
+			"network_range_id": types.StringValue(networkRangeId),
 		}
 
 		networkRangeTF, diags := types.ObjectValue(networkRangeTypes, networkRangeMap)
