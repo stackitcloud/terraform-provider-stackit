@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -512,7 +513,7 @@ func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, networkAr
 		model.DefaultNameservers = defaultNameserversTF
 	}
 
-	err := mapNetworkRanges(networkAreaRangesResp, model)
+	err := mapNetworkRanges(ctx, networkAreaRangesResp, model)
 	if err != nil {
 		return fmt.Errorf("mapping network ranges: %w", err)
 	}
@@ -531,20 +532,49 @@ func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, networkAr
 	return nil
 }
 
-func mapNetworkRanges(networkAreaRangesList *[]iaas.NetworkRange, m *Model) error {
+func mapNetworkRanges(ctx context.Context, networkAreaRangesList *[]iaas.NetworkRange, model *Model) error {
+	var diags diag.Diagnostics
+
 	if networkAreaRangesList == nil {
 		return fmt.Errorf("nil network area ranges list")
 	}
 	if len(*networkAreaRangesList) == 0 {
-		m.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
+		model.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
 		return nil
 	}
 
+	ranges := []networkRange{}
+	if !(model.NetworkRanges.IsNull() || model.NetworkRanges.IsUnknown()) {
+		diags = model.NetworkRanges.ElementsAs(ctx, &ranges, false)
+		if diags.HasError() {
+			return fmt.Errorf("map network ranges: %w", core.DiagsToError(diags))
+		}
+	}
+
+	modelNetworkRangePrefixes := []string{}
+	for _, m := range ranges {
+		modelNetworkRangePrefixes = append(modelNetworkRangePrefixes, m.Prefix.ValueString())
+	}
+
+	apiNetworkRangePrefixes := []string{}
+	for _, n := range *networkAreaRangesList {
+		apiNetworkRangePrefixes = append(apiNetworkRangePrefixes, *n.Prefix)
+	}
+
+	reconciledRangePrefixes := internalUtils.ReconcileStringSlices(modelNetworkRangePrefixes, apiNetworkRangePrefixes)
+
 	networkRangesList := []attr.Value{}
-	for i, networkRangeResp := range *networkAreaRangesList {
+	for i, prefix := range reconciledRangePrefixes {
+		var networkRangeId string
+		for _, networkRangeElement := range *networkAreaRangesList {
+			if *networkRangeElement.Prefix == prefix {
+				networkRangeId = *networkRangeElement.NetworkRangeId
+				break
+			}
+		}
 		networkRangeMap := map[string]attr.Value{
-			"prefix":           types.StringPointerValue(networkRangeResp.Prefix),
-			"network_range_id": types.StringPointerValue(networkRangeResp.NetworkRangeId),
+			"prefix":           types.StringValue(prefix),
+			"network_range_id": types.StringValue(networkRangeId),
 		}
 
 		networkRangeTF, diags := types.ObjectValue(networkRangeTypes, networkRangeMap)
@@ -563,7 +593,7 @@ func mapNetworkRanges(networkAreaRangesList *[]iaas.NetworkRange, m *Model) erro
 		return core.DiagsToError(diags)
 	}
 
-	m.NetworkRanges = networkRangesTF
+	model.NetworkRanges = networkRangesTF
 	return nil
 }
 
@@ -684,7 +714,17 @@ func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId stri
 		networkRangesState[prefix].id = *networkRange.NetworkRangeId
 	}
 
-	// Create/delete network ranges
+	// Delete network ranges
+	for prefix, state := range networkRangesState {
+		if !state.isInModel && state.isCreated {
+			err := client.DeleteNetworkAreaRange(ctx, organizationId, networkAreaId, state.id).Execute()
+			if err != nil {
+				return fmt.Errorf("deleting network area range '%v': %w", prefix, err)
+			}
+		}
+	}
+
+	// Create network ranges
 	for prefix, state := range networkRangesState {
 		if state.isInModel && !state.isCreated {
 			payload := iaas.CreateNetworkAreaRangePayload{
@@ -698,13 +738,6 @@ func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId stri
 			_, err := client.CreateNetworkAreaRange(ctx, organizationId, networkAreaId).CreateNetworkAreaRangePayload(payload).Execute()
 			if err != nil {
 				return fmt.Errorf("creating network range '%v': %w", prefix, err)
-			}
-		}
-
-		if !state.isInModel && state.isCreated {
-			err := client.DeleteNetworkAreaRange(ctx, organizationId, networkAreaId, state.id).Execute()
-			if err != nil {
-				return fmt.Errorf("deleting network area range '%v': %w", prefix, err)
 			}
 		}
 	}
