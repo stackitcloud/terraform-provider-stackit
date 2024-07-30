@@ -246,7 +246,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	err = mapMembersFields(membersResp.Members, &model)
+	err = mapMembersFields(ctx, membersResp.Members, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
 		return

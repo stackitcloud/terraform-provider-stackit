@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
@@ -165,6 +166,7 @@ func TestMapProjectFields(t *testing.T) {
 func TestMapMembersFields(t *testing.T) {
 	tests := []struct {
 		description    string
+		configMembers  basetypes.ListValue
 		membersResp    *[]authorization.Member
 		expected       Model
 		expectedLabels *map[string]string
@@ -172,6 +174,7 @@ func TestMapMembersFields(t *testing.T) {
 	}{
 		{
 			"default_ok",
+			types.ListNull(types.ObjectType{AttrTypes: memberTypes}),
 			&[]authorization.Member{
 				{
 					Subject: utils.Ptr("owner_email"),
@@ -210,7 +213,63 @@ func TestMapMembersFields(t *testing.T) {
 			true,
 		},
 		{
+			"default_ok (preserve model order)",
+			types.ListValueMust(types.ObjectType{AttrTypes: memberTypes}, []attr.Value{
+				types.ObjectValueMust(
+					memberTypes,
+					map[string]attr.Value{
+						"subject": types.StringValue("reader_email"),
+						"role":    types.StringValue("reader"),
+					},
+				),
+				types.ObjectValueMust(
+					memberTypes,
+					map[string]attr.Value{
+						"subject": types.StringValue("owner_email"),
+						"role":    types.StringValue("owner"),
+					},
+				),
+			}),
+			&[]authorization.Member{
+				{
+					Subject: utils.Ptr("owner_email"),
+					Role:    utils.Ptr("owner"),
+				},
+				{
+					Subject: utils.Ptr("reader_email"),
+					Role:    utils.Ptr("reader"),
+				},
+			},
+			Model{
+				Id:                types.StringNull(),
+				ProjectId:         types.StringNull(),
+				ContainerId:       types.StringNull(),
+				ContainerParentId: types.StringNull(),
+				Name:              types.StringNull(),
+				Labels:            types.MapNull(types.StringType),
+				Members: types.ListValueMust(types.ObjectType{AttrTypes: memberTypes}, []attr.Value{
+					types.ObjectValueMust(
+						memberTypes,
+						map[string]attr.Value{
+							"subject": types.StringValue("reader_email"),
+							"role":    types.StringValue("reader"),
+						},
+					),
+					types.ObjectValueMust(
+						memberTypes,
+						map[string]attr.Value{
+							"subject": types.StringValue("owner_email"),
+							"role":    types.StringValue("owner"),
+						},
+					),
+				}),
+			},
+			nil,
+			true,
+		},
+		{
 			"empty members",
+			types.ListNull(types.ObjectType{AttrTypes: memberTypes}),
 			&[]authorization.Member{},
 			Model{
 				Id:                types.StringNull(),
@@ -226,6 +285,7 @@ func TestMapMembersFields(t *testing.T) {
 		},
 		{
 			"nil members",
+			types.ListNull(types.ObjectType{AttrTypes: memberTypes}),
 			nil,
 			Model{
 				Id:                types.StringNull(),
@@ -250,7 +310,10 @@ func TestMapMembersFields(t *testing.T) {
 				Name:              types.StringNull(),
 				Labels:            types.MapNull(types.StringType),
 			}
-			err := mapMembersFields(tt.membersResp, state)
+			if !tt.configMembers.IsNull() {
+				state.Members = tt.configMembers
+			}
+			err := mapMembersFields(context.Background(), tt.membersResp, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
