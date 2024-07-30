@@ -156,6 +156,80 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
+			"model and response have ranges in different order",
+			Model{
+				OrganizationId: types.StringValue("oid"),
+				NetworkAreaId:  types.StringValue("naid"),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId1),
+						"prefix":           types.StringValue("prefix-1"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId2),
+						"prefix":           types.StringValue("prefix-2"),
+					}),
+				}),
+			},
+			&iaas.NetworkArea{
+				AreaId: utils.Ptr("naid"),
+				Ipv4: &iaas.NetworkAreaIPv4{
+					DefaultNameservers: &[]string{
+						"nameserver1",
+						"nameserver2",
+					},
+					TransferNetwork:  utils.Ptr("network"),
+					DefaultPrefixLen: utils.Ptr(int64(20)),
+					MaxPrefixLen:     utils.Ptr(int64(22)),
+					MinPrefixLen:     utils.Ptr(int64(18)),
+				},
+				Name: utils.Ptr("name"),
+			},
+			&[]iaas.NetworkRange{
+				{
+					NetworkRangeId: utils.Ptr(testRangeId2),
+					Prefix:         utils.Ptr("prefix-2"),
+				},
+				{
+					NetworkRangeId: utils.Ptr(testRangeId3),
+					Prefix:         utils.Ptr("prefix-3"),
+				},
+				{
+					NetworkRangeId: utils.Ptr(testRangeId1),
+					Prefix:         utils.Ptr("prefix-1"),
+				},
+			},
+			Model{
+				Id:             types.StringValue("oid,naid"),
+				OrganizationId: types.StringValue("oid"),
+				NetworkAreaId:  types.StringValue("naid"),
+				Name:           types.StringValue("name"),
+				DefaultNameservers: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("nameserver1"),
+					types.StringValue("nameserver2"),
+				}),
+				TransferNetwork:     types.StringValue("network"),
+				DefaultPrefixLength: types.Int64Value(20),
+				MaxPrefixLength:     types.Int64Value(22),
+				MinPrefixLength:     types.Int64Value(18),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId1),
+						"prefix":           types.StringValue("prefix-1"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId2),
+						"prefix":           types.StringValue("prefix-2"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId3),
+						"prefix":           types.StringValue("prefix-3"),
+					}),
+				}),
+			},
+			true,
+		},
+		{
 			"default_nameservers_changed_outside_tf",
 			Model{
 				OrganizationId: types.StringValue("oid"),
