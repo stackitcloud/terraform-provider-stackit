@@ -40,6 +40,16 @@ func TestMapFields(t *testing.T) {
 			Model{
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("naid"),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId1),
+						"prefix":           types.StringValue("prefix-1"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId2),
+						"prefix":           types.StringValue("prefix-2"),
+					}),
+				}),
 			},
 			&iaas.NetworkArea{
 				AreaId: utils.Ptr("naid"),
@@ -84,6 +94,16 @@ func TestMapFields(t *testing.T) {
 			Model{
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("naid"),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId1),
+						"prefix":           types.StringValue("prefix-1"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId2),
+						"prefix":           types.StringValue("prefix-2"),
+					}),
+				}),
 			},
 			&iaas.NetworkArea{
 				AreaId: utils.Ptr("naid"),
@@ -143,6 +163,16 @@ func TestMapFields(t *testing.T) {
 				DefaultNameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
 					types.StringValue("ns2"),
+				}),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId1),
+						"prefix":           types.StringValue("prefix-1"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId2),
+						"prefix":           types.StringValue("prefix-2"),
+					}),
 				}),
 			},
 			&iaas.NetworkArea{
