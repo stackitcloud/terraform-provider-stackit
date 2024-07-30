@@ -637,7 +637,16 @@ func toMembersPayload(ctx context.Context, model *Model) (*[]authorization.Membe
 		return nil, fmt.Errorf("nil model")
 	}
 	if model.Members.IsNull() || model.Members.IsUnknown() {
-		return &[]authorization.Member{}, nil
+		if model.OwnerEmail.IsNull() {
+			return nil, fmt.Errorf("members and owner_email are both null or unknown")
+		}
+
+		return &[]authorization.Member{
+			{
+				Subject: model.OwnerEmail.ValueStringPointer(),
+				Role:    sdkUtils.Ptr(projectOwnerRole),
+			},
+		}, nil
 	}
 
 	membersModel := []member{}
@@ -646,19 +655,12 @@ func toMembersPayload(ctx context.Context, model *Model) (*[]authorization.Membe
 		return nil, core.DiagsToError(diags)
 	}
 
-	members := []authorization.Member{}
 	// If the new "members" fields is set, it has precedence over the deprecated "owner_email" field
-	if !model.Members.IsNull() && !model.Members.IsUnknown() {
-		for _, m := range membersModel {
-			members = append(members, authorization.Member{
-				Role:    m.Role.ValueStringPointer(),
-				Subject: m.Subject.ValueStringPointer(),
-			})
-		}
-	} else {
+	members := []authorization.Member{}
+	for _, m := range membersModel {
 		members = append(members, authorization.Member{
-			Subject: model.OwnerEmail.ValueStringPointer(),
-			Role:    sdkUtils.Ptr(projectOwnerRole),
+			Role:    m.Role.ValueStringPointer(),
+			Subject: m.Subject.ValueStringPointer(),
 		})
 	}
 

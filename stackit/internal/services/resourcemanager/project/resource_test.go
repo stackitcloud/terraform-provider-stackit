@@ -339,18 +339,6 @@ func TestToCreatePayload(t *testing.T) {
 		isValid     bool
 	}{
 		{
-			"default_ok",
-			&Model{},
-			nil,
-			&resourcemanager.CreateProjectPayload{
-				ContainerParentId: nil,
-				Labels:            nil,
-				Members:           nil,
-				Name:              nil,
-			},
-			true,
-		},
-		{
 			"mapping_with_conversions_single_member",
 			&Model{
 				ContainerParentId: types.StringValue("pid"),
@@ -466,6 +454,43 @@ func TestToCreatePayload(t *testing.T) {
 				Name: utils.Ptr("name"),
 			},
 			true,
+		},
+		{
+			"deprecated owner_email field still works",
+			&Model{
+				ContainerParentId: types.StringValue("pid"),
+				Name:              types.StringValue("name"),
+				OwnerEmail:        types.StringValue("some_email_deprecated"),
+			},
+			&map[string]string{
+				"label1": "1",
+				"label2": "2",
+			},
+			&resourcemanager.CreateProjectPayload{
+				ContainerParentId: utils.Ptr("pid"),
+				Labels: &map[string]string{
+					"label1": "1",
+					"label2": "2",
+				},
+				Members: &[]resourcemanager.Member{
+					{
+						Subject: utils.Ptr("some_email_deprecated"),
+						Role:    utils.Ptr("owner"),
+					},
+				},
+				Name: utils.Ptr("name"),
+			},
+			true,
+		},
+		{
+			"no members pr owner_email fails",
+			&Model{
+				ContainerParentId: types.StringValue("pid"),
+				Name:              types.StringValue("name"),
+			},
+			&map[string]string{},
+			nil,
+			false,
 		},
 		{
 			"nil_model",
