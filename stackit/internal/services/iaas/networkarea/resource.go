@@ -564,8 +564,7 @@ func mapNetworkRanges(ctx context.Context, networkAreaRangesList *[]iaas.Network
 	reconciledRangePrefixes := internalUtils.ReconcileStringSlices(modelNetworkRangePrefixes, apiNetworkRangePrefixes)
 
 	networkRangesList := []attr.Value{}
-	for i, networkRangeItem := range reconciledRangePrefixes {
-		prefix := networkRangeItem
+	for i, prefix := range reconciledRangePrefixes {
 		var networkRangeId string
 		for _, networkRangeElement := range *networkAreaRangesList {
 			if *networkRangeElement.Prefix == prefix {
