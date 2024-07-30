@@ -702,7 +702,17 @@ func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId stri
 		networkRangesState[prefix].id = *networkRange.NetworkRangeId
 	}
 
-	// Create/delete network ranges
+	// Delete network ranges
+	for prefix, state := range networkRangesState {
+		if !state.isInModel && state.isCreated {
+			err := client.DeleteNetworkAreaRange(ctx, organizationId, networkAreaId, state.id).Execute()
+			if err != nil {
+				return fmt.Errorf("deleting network area range '%v': %w", prefix, err)
+			}
+		}
+	}
+
+	// Create network ranges
 	for prefix, state := range networkRangesState {
 		if state.isInModel && !state.isCreated {
 			payload := iaas.CreateNetworkAreaRangePayload{
@@ -716,13 +726,6 @@ func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId stri
 			_, err := client.CreateNetworkAreaRange(ctx, organizationId, networkAreaId).CreateNetworkAreaRangePayload(payload).Execute()
 			if err != nil {
 				return fmt.Errorf("creating network range '%v': %w", prefix, err)
-			}
-		}
-
-		if !state.isInModel && state.isCreated {
-			err := client.DeleteNetworkAreaRange(ctx, organizationId, networkAreaId, state.id).Execute()
-			if err != nil {
-				return fmt.Errorf("deleting network area range '%v': %w", prefix, err)
 			}
 		}
 	}
