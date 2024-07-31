@@ -11,9 +11,10 @@ resource "stackit_mongodbflex_instance" "example" {
     class = "class"
     size  = 10
   }
-  version = "5.0"
+  version = "7.0"
   options = {
-    type = "Single"
+    type                    = "Single"
+    snapshot_retention_days = 3
   }
   backup_schedule = "0 0 * * *"
 }

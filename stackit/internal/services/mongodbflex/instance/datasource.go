@@ -78,14 +78,20 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 // Schema defines the schema for the data source.
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":            "MongoDB Flex instance data source schema. Must have a `region` specified in the provider configuration.",
-		"id":              "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`\".",
-		"instance_id":     "ID of the MongoDB Flex instance.",
-		"project_id":      "STACKIT project ID to which the instance is associated.",
-		"name":            "Instance name.",
-		"acl":             "The Access Control List (ACL) for the MongoDB Flex instance.",
-		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
-		"options":         "Custom parameters for the MongoDB Flex instance.",
+		"main":                              "MongoDB Flex instance data source schema. Must have a `region` specified in the provider configuration.",
+		"id":                                "Terraform's internal data source ID. It is structured as \"`project_id`,`instance_id`\".",
+		"instance_id":                       "ID of the MongoDB Flex instance.",
+		"project_id":                        "STACKIT project ID to which the instance is associated.",
+		"name":                              "Instance name.",
+		"acl":                               "The Access Control List (ACL) for the MongoDB Flex instance.",
+		"backup_schedule":                   `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
+		"options":                           "Custom parameters for the MongoDB Flex instance.",
+		"type":                              "Type of the MongoDB Flex instance.",
+		"snapshot_retention_days":           "The number of days that continuous backups (controlled via the `backup_schedule`) will be retained.",
+		"daily_snapshot_retention_days":     "The number of days that daily backups will be retained.",
+		"weekly_snapshot_retention_weeks":   "The number of weeks that weekly backups will be retained.",
+		"monthly_snapshot_retention_months": "The number of months that monthly backups will be retained.",
+		"point_in_time_window_hours":        "The number of hours back in time the point-in-time recovery feature will be able to recover.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -163,7 +169,28 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						Computed: true,
+						Description: descriptions["type"],
+						Computed:    true,
+					},
+					"snapshot_retention_days": schema.Int64Attribute{
+						Description: descriptions["snapshot_retention_days"],
+						Computed:    true,
+					},
+					"daily_snapshot_retention_days": schema.Int64Attribute{
+						Description: descriptions["daily_snapshot_retention_days"],
+						Computed:    true,
+					},
+					"weekly_snapshot_retention_weeks": schema.Int64Attribute{
+						Description: descriptions["weekly_snapshot_retention_weeks"],
+						Computed:    true,
+					},
+					"monthly_snapshot_retention_months": schema.Int64Attribute{
+						Description: descriptions["monthly_snapshot_retention_months"],
+						Computed:    true,
+					},
+					"point_in_time_window_hours": schema.Int64Attribute{
+						Description: descriptions["point_in_time_window_hours"],
+						Computed:    true,
 					},
 				},
 			},
