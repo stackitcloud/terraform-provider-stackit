@@ -418,7 +418,6 @@ func TestMapOptions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			err := mapOptions(tt.model, tt.options, tt.backup)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
