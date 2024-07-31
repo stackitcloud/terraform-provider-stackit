@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
@@ -67,7 +68,12 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Null(),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-					"type": types.StringNull(),
+					"type":                              types.StringNull(),
+					"snapshot_retention_days":           types.Int64Null(),
+					"daily_snapshot_retention_days":     types.Int64Null(),
+					"weekly_snapshot_retention_weeks":   types.Int64Null(),
+					"monthly_snapshot_retention_months": types.Int64Null(),
+					"point_in_time_window_hours":        types.Int64Null(),
 				}),
 				Version: types.StringNull(),
 			},
@@ -104,7 +110,12 @@ func TestMapFields(t *testing.T) {
 						Size:  utils.Ptr(int64(78)),
 					},
 					Options: &map[string]string{
-						"type": "type",
+						"type":                           "type",
+						"snapshotRetentionDays":          "5",
+						"dailySnapshotRetentionDays":     "6",
+						"weeklySnapshotRetentionWeeks":   "7",
+						"monthlySnapshotRetentionMonths": "8",
+						"pointInTimeWindowHours":         "9",
 					},
 					Version: utils.Ptr("version"),
 				},
@@ -135,7 +146,12 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Value(78),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-					"type": types.StringValue("type"),
+					"type":                              types.StringValue("type"),
+					"snapshot_retention_days":           types.Int64Value(5),
+					"daily_snapshot_retention_days":     types.Int64Value(6),
+					"weekly_snapshot_retention_weeks":   types.Int64Value(7),
+					"monthly_snapshot_retention_months": types.Int64Value(8),
+					"point_in_time_window_hours":        types.Int64Value(9),
 				}),
 				Version: types.StringValue("version"),
 			},
@@ -164,7 +180,12 @@ func TestMapFields(t *testing.T) {
 					Status:         utils.Ptr("status"),
 					Storage:        nil,
 					Options: &map[string]string{
-						"type": "type",
+						"type":                           "type",
+						"snapshotRetentionDays":          "5",
+						"dailySnapshotRetentionDays":     "6",
+						"weeklySnapshotRetentionWeeks":   "7",
+						"monthlySnapshotRetentionMonths": "8",
+						"pointInTimeWindowHours":         "9",
 					},
 					Version: utils.Ptr("version"),
 				},
@@ -203,7 +224,12 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Value(78),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-					"type": types.StringValue("type"),
+					"type":                              types.StringValue("type"),
+					"snapshot_retention_days":           types.Int64Value(5),
+					"daily_snapshot_retention_days":     types.Int64Value(6),
+					"weekly_snapshot_retention_weeks":   types.Int64Value(7),
+					"monthly_snapshot_retention_months": types.Int64Value(8),
+					"point_in_time_window_hours":        types.Int64Value(9),
 				}),
 				Version: types.StringValue("version"),
 			},
@@ -237,7 +263,12 @@ func TestMapFields(t *testing.T) {
 					Status:         utils.Ptr("status"),
 					Storage:        nil,
 					Options: &map[string]string{
-						"type": "type",
+						"type":                           "type",
+						"snapshotRetentionDays":          "5",
+						"dailySnapshotRetentionDays":     "6",
+						"weeklySnapshotRetentionWeeks":   "7",
+						"monthlySnapshotRetentionMonths": "8",
+						"pointInTimeWindowHours":         "9",
 					},
 					Version: utils.Ptr("version"),
 				},
@@ -276,7 +307,12 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Value(78),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-					"type": types.StringValue("type"),
+					"type":                              types.StringValue("type"),
+					"snapshot_retention_days":           types.Int64Value(5),
+					"daily_snapshot_retention_days":     types.Int64Value(6),
+					"weekly_snapshot_retention_weeks":   types.Int64Value(7),
+					"monthly_snapshot_retention_months": types.Int64Value(8),
+					"point_in_time_window_hours":        types.Int64Value(9),
 				}),
 				Version: types.StringValue("version"),
 			},
@@ -320,6 +356,78 @@ func TestMapFields(t *testing.T) {
 			}
 			if tt.isValid {
 				diff := cmp.Diff(tt.state, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestMapOptions(t *testing.T) {
+	tests := []struct {
+		description string
+		model       *Model
+		options     *optionsModel
+		backup      *mongodbflex.BackupSchedule
+		expected    *Model
+		isValid     bool
+	}{
+		{
+			"default_values",
+			&Model{},
+			&optionsModel{},
+			nil,
+			&Model{
+				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+					"type":                              types.StringNull(),
+					"snapshot_retention_days":           types.Int64Null(),
+					"daily_snapshot_retention_days":     types.Int64Null(),
+					"weekly_snapshot_retention_weeks":   types.Int64Null(),
+					"monthly_snapshot_retention_months": types.Int64Null(),
+					"point_in_time_window_hours":        types.Int64Null(),
+				}),
+			},
+			true,
+		},
+		{
+			"simple_values",
+			&Model{},
+			&optionsModel{
+				Type: types.StringValue("type"),
+			},
+			&mongodbflex.BackupSchedule{
+				SnapshotRetentionDays:          utils.Ptr(int64(1)),
+				DailySnapshotRetentionDays:     utils.Ptr(int64(2)),
+				WeeklySnapshotRetentionWeeks:   utils.Ptr(int64(3)),
+				MonthlySnapshotRetentionMonths: utils.Ptr(int64(4)),
+				PointInTimeWindowHours:         utils.Ptr(int64(5)),
+			},
+			&Model{
+				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+					"type":                              types.StringValue("type"),
+					"snapshot_retention_days":           types.Int64Value(1),
+					"daily_snapshot_retention_days":     types.Int64Value(2),
+					"weekly_snapshot_retention_weeks":   types.Int64Value(3),
+					"monthly_snapshot_retention_months": types.Int64Value(4),
+					"point_in_time_window_hours":        types.Int64Value(5),
+				}),
+			},
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+
+			err := mapOptions(tt.model, tt.options, tt.backup)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(tt.model, tt.expected, cmpopts.IgnoreFields(Model{}, "ACL", "Flavor", "Replicas", "Storage", "Version"))
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
@@ -670,6 +778,130 @@ func TestToUpdatePayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			output, err := toUpdatePayload(tt.input, tt.inputAcl, tt.inputFlavor, tt.inputStorage, tt.inputOptions)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(output, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestToUpdateBackupScheduleOptionsPayload(t *testing.T) {
+	tests := []struct {
+		description       string
+		model             *Model
+		configuredOptions *optionsModel
+		expected          *mongodbflex.UpdateBackupSchedulePayload
+		isValid           bool
+	}{
+		{
+			"default_values",
+			&Model{},
+			&optionsModel{},
+			&mongodbflex.UpdateBackupSchedulePayload{
+				BackupSchedule:                 nil,
+				SnapshotRetentionDays:          nil,
+				DailySnapshotRetentionDays:     nil,
+				WeeklySnapshotRetentionWeeks:   nil,
+				MonthlySnapshotRetentionMonths: nil,
+				PointInTimeWindowHours:         nil,
+			},
+			true,
+		},
+		{
+			"config values override current values in model",
+			&Model{
+				BackupSchedule: types.StringValue("schedule"),
+				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+					"type":                              types.StringValue("type"),
+					"snapshot_retention_days":           types.Int64Value(1),
+					"daily_snapshot_retention_days":     types.Int64Value(2),
+					"weekly_snapshot_retention_weeks":   types.Int64Value(3),
+					"monthly_snapshot_retention_months": types.Int64Value(4),
+					"point_in_time_window_hours":        types.Int64Value(5),
+				}),
+			},
+			&optionsModel{
+				SnapshotRetentionDays:          types.Int64Value(6),
+				DailySnapshotRetentionDays:     types.Int64Value(7),
+				WeeklySnapshotRetentionWeeks:   types.Int64Value(8),
+				MonthlySnapshotRetentionMonths: types.Int64Value(9),
+				PointInTimeWindowHours:         types.Int64Value(10),
+			},
+			&mongodbflex.UpdateBackupSchedulePayload{
+				BackupSchedule:                 utils.Ptr("schedule"),
+				SnapshotRetentionDays:          utils.Ptr(int64(6)),
+				DailySnapshotRetentionDays:     utils.Ptr(int64(7)),
+				WeeklySnapshotRetentionWeeks:   utils.Ptr(int64(8)),
+				MonthlySnapshotRetentionMonths: utils.Ptr(int64(9)),
+				PointInTimeWindowHours:         utils.Ptr(int64(10)),
+			},
+			true,
+		},
+		{
+			"current values in model fill in missing values in config",
+			&Model{
+				BackupSchedule: types.StringValue("schedule"),
+				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+					"type":                              types.StringValue("type"),
+					"snapshot_retention_days":           types.Int64Value(1),
+					"daily_snapshot_retention_days":     types.Int64Value(2),
+					"weekly_snapshot_retention_weeks":   types.Int64Value(3),
+					"monthly_snapshot_retention_months": types.Int64Value(4),
+					"point_in_time_window_hours":        types.Int64Value(5),
+				}),
+			},
+			&optionsModel{
+				SnapshotRetentionDays:          types.Int64Value(6),
+				DailySnapshotRetentionDays:     types.Int64Value(7),
+				WeeklySnapshotRetentionWeeks:   types.Int64Null(),
+				MonthlySnapshotRetentionMonths: types.Int64Null(),
+				PointInTimeWindowHours:         types.Int64Null(),
+			},
+			&mongodbflex.UpdateBackupSchedulePayload{
+				BackupSchedule:                 utils.Ptr("schedule"),
+				SnapshotRetentionDays:          utils.Ptr(int64(6)),
+				DailySnapshotRetentionDays:     utils.Ptr(int64(7)),
+				WeeklySnapshotRetentionWeeks:   utils.Ptr(int64(3)),
+				MonthlySnapshotRetentionMonths: utils.Ptr(int64(4)),
+				PointInTimeWindowHours:         utils.Ptr(int64(5)),
+			},
+			true,
+		},
+		{
+			"null_fields_and_int_conversions",
+			&Model{
+				BackupSchedule: types.StringNull(),
+			},
+			&optionsModel{
+				SnapshotRetentionDays:          types.Int64Null(),
+				DailySnapshotRetentionDays:     types.Int64Null(),
+				WeeklySnapshotRetentionWeeks:   types.Int64Null(),
+				MonthlySnapshotRetentionMonths: types.Int64Null(),
+				PointInTimeWindowHours:         types.Int64Null(),
+			},
+			&mongodbflex.UpdateBackupSchedulePayload{
+				BackupSchedule:                 nil,
+				SnapshotRetentionDays:          nil,
+				DailySnapshotRetentionDays:     nil,
+				WeeklySnapshotRetentionWeeks:   nil,
+				MonthlySnapshotRetentionMonths: nil,
+				PointInTimeWindowHours:         nil,
+			},
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output, err := toUpdateBackupScheduleOptionsPayload(context.Background(), tt.model, tt.configuredOptions)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

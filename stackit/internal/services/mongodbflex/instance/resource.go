@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -86,12 +88,22 @@ var storageTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.Options
 type optionsModel struct {
-	Type types.String `tfsdk:"type"`
+	Type                           types.String `tfsdk:"type"`
+	SnapshotRetentionDays          types.Int64  `tfsdk:"snapshot_retention_days"`
+	PointInTimeWindowHours         types.Int64  `tfsdk:"point_in_time_window_hours"`
+	DailySnapshotRetentionDays     types.Int64  `tfsdk:"daily_snapshot_retention_days"`
+	WeeklySnapshotRetentionWeeks   types.Int64  `tfsdk:"weekly_snapshot_retention_weeks"`
+	MonthlySnapshotRetentionMonths types.Int64  `tfsdk:"monthly_snapshot_retention_months"`
 }
 
 // Types corresponding to optionsModel
 var optionsTypes = map[string]attr.Type{
-	"type": basetypes.StringType{},
+	"type":                              basetypes.StringType{},
+	"snapshot_retention_days":           basetypes.Int64Type{},
+	"point_in_time_window_hours":        basetypes.Int64Type{},
+	"daily_snapshot_retention_days":     basetypes.Int64Type{},
+	"weekly_snapshot_retention_weeks":   basetypes.Int64Type{},
+	"monthly_snapshot_retention_months": basetypes.Int64Type{},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -147,15 +159,23 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	typeOptions := []string{"Replica", "Sharded", "Single"}
+
 	descriptions := map[string]string{
-		"main":            "MongoDB Flex instance resource schema. Must have a `region` specified in the provider configuration.",
-		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
-		"instance_id":     "ID of the MongoDB Flex instance.",
-		"project_id":      "STACKIT project ID to which the instance is associated.",
-		"name":            "Instance name.",
-		"acl":             "The Access Control List (ACL) for the MongoDB Flex instance.",
-		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
-		"options":         "Custom parameters for the MongoDB Flex instance.",
+		"main":                              "MongoDB Flex instance resource schema. Must have a `region` specified in the provider configuration.",
+		"id":                                "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
+		"instance_id":                       "ID of the MongoDB Flex instance.",
+		"project_id":                        "STACKIT project ID to which the instance is associated.",
+		"name":                              "Instance name.",
+		"acl":                               "The Access Control List (ACL) for the MongoDB Flex instance.",
+		"backup_schedule":                   `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
+		"options":                           "Custom parameters for the MongoDB Flex instance.",
+		"type":                              fmt.Sprintf("Type of the MongoDB Flex instance. %s", utils.SupportedValuesDocumentation(typeOptions)),
+		"snapshot_retention_days":           "The number of days that continuous backups (controlled via the `backup_schedule`) will be retained.",
+		"daily_snapshot_retention_days":     "The number of days that daily backups will be retained.",
+		"weekly_snapshot_retention_weeks":   "The number of weeks that weekly backups will be retained.",
+		"monthly_snapshot_retention_months": "The number of months that monthly backups will be retained.",
+		"point_in_time_window_hours":        "The number of hours back in time the point-in-time recovery feature will be able to recover.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -252,9 +272,50 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						Required: true,
+						Description: descriptions["type"],
+						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"snapshot_retention_days": schema.Int64Attribute{
+						Description: descriptions["snapshot_retention_days"],
+						Optional:    true,
+						Computed:    true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
+						},
+					},
+					"daily_snapshot_retention_days": schema.Int64Attribute{
+						Description: descriptions["daily_snapshot_retention_days"],
+						Optional:    true,
+						Computed:    true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
+						},
+					},
+					"weekly_snapshot_retention_weeks": schema.Int64Attribute{
+						Description: descriptions["weekly_snapshot_retention_weeks"],
+						Optional:    true,
+						Computed:    true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
+						},
+					},
+					"monthly_snapshot_retention_months": schema.Int64Attribute{
+						Description: descriptions["monthly_snapshot_retention_months"],
+						Optional:    true,
+						Computed:    true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
+						},
+					},
+					"point_in_time_window_hours": schema.Int64Attribute{
+						Description: descriptions["point_in_time_window_hours"],
+						Optional:    true,
+						Computed:    true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
 						},
 					},
 				},
@@ -340,6 +401,24 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
+	backupScheduleOptionsPayload, err := toUpdateBackupScheduleOptionsPayload(ctx, &model, options)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
+		return
+	}
+	backupScheduleOptions, err := r.client.UpdateBackupSchedule(ctx, projectId, instanceId).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Updating options: %v", err))
+		return
+	}
+
+	err = mapOptions(&model, options, backupScheduleOptions)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response: %v", err))
+		return
+	}
+
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
@@ -491,6 +570,24 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
+	backupScheduleOptionsPayload, err := toUpdateBackupScheduleOptionsPayload(ctx, &model, options)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
+		return
+	}
+	backupScheduleOptions, err := r.client.UpdateBackupSchedule(ctx, projectId, instanceId).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Updating options: %v", err))
+		return
+	}
+
+	err = mapOptions(&model, options, backupScheduleOptions)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response: %v", err))
+		return
+	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -631,11 +728,47 @@ func mapFields(ctx context.Context, resp *mongodbflex.GetInstanceResponse, model
 	var optionsValues map[string]attr.Value
 	if instance.Options == nil {
 		optionsValues = map[string]attr.Value{
-			"type": options.Type,
+			"type":                              options.Type,
+			"snapshot_retention_days":           types.Int64Null(),
+			"daily_snapshot_retention_days":     types.Int64Null(),
+			"weekly_snapshot_retention_weeks":   types.Int64Null(),
+			"monthly_snapshot_retention_months": types.Int64Null(),
+			"point_in_time_window_hours":        types.Int64Null(),
 		}
 	} else {
+		snapshotRetentionDaysStr := (*instance.Options)["snapshotRetentionDays"]
+		snapshotRetentionDays, err := strconv.ParseInt(snapshotRetentionDaysStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("parse snapshot retention days: %w", err)
+		}
+		dailySnapshotRetentionDaysStr := (*instance.Options)["dailySnapshotRetentionDays"]
+		dailySnapshotRetentionDays, err := strconv.ParseInt(dailySnapshotRetentionDaysStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("parse daily snapshot retention days: %w", err)
+		}
+		weeklySnapshotRetentionWeeksStr := (*instance.Options)["weeklySnapshotRetentionWeeks"]
+		weeklySnapshotRetentionWeeks, err := strconv.ParseInt(weeklySnapshotRetentionWeeksStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("parse weekly snapshot retention weeks: %w", err)
+		}
+		monthlySnapshotRetentionMonthsStr := (*instance.Options)["monthlySnapshotRetentionMonths"]
+		monthlySnapshotRetentionMonths, err := strconv.ParseInt(monthlySnapshotRetentionMonthsStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("parse monthly snapshot retention months: %w", err)
+		}
+		pointInTimeWindowHoursStr := (*instance.Options)["pointInTimeWindowHours"]
+		pointInTimeWindowHours, err := strconv.ParseInt(pointInTimeWindowHoursStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("parse point in time window hours: %w", err)
+		}
+
 		optionsValues = map[string]attr.Value{
-			"type": types.StringValue((*instance.Options)["type"]),
+			"type":                              types.StringValue((*instance.Options)["type"]),
+			"snapshot_retention_days":           types.Int64Value(snapshotRetentionDays),
+			"daily_snapshot_retention_days":     types.Int64Value(dailySnapshotRetentionDays),
+			"weekly_snapshot_retention_weeks":   types.Int64Value(weeklySnapshotRetentionWeeks),
+			"monthly_snapshot_retention_months": types.Int64Value(monthlySnapshotRetentionMonths),
+			"point_in_time_window_hours":        types.Int64Value(pointInTimeWindowHours),
 		}
 	}
 	optionsObject, diags := types.ObjectValue(optionsTypes, optionsValues)
@@ -665,6 +798,35 @@ func mapFields(ctx context.Context, resp *mongodbflex.GetInstanceResponse, model
 	model.Storage = storageObject
 	model.Version = types.StringPointerValue(instance.Version)
 	model.Options = optionsObject
+	return nil
+}
+
+func mapOptions(model *Model, options *optionsModel, backupScheduleOptions *mongodbflex.BackupSchedule) error {
+	var optionsValues map[string]attr.Value
+	if backupScheduleOptions == nil {
+		optionsValues = map[string]attr.Value{
+			"type":                              options.Type,
+			"snapshot_retention_days":           types.Int64Null(),
+			"daily_snapshot_retention_days":     types.Int64Null(),
+			"weekly_snapshot_retention_weeks":   types.Int64Null(),
+			"monthly_snapshot_retention_months": types.Int64Null(),
+			"point_in_time_window_hours":        types.Int64Null(),
+		}
+	} else {
+		optionsValues = map[string]attr.Value{
+			"type":                              options.Type,
+			"snapshot_retention_days":           types.Int64Value(*backupScheduleOptions.SnapshotRetentionDays),
+			"daily_snapshot_retention_days":     types.Int64Value(*backupScheduleOptions.DailySnapshotRetentionDays),
+			"weekly_snapshot_retention_weeks":   types.Int64Value(*backupScheduleOptions.WeeklySnapshotRetentionWeeks),
+			"monthly_snapshot_retention_months": types.Int64Value(*backupScheduleOptions.MonthlySnapshotRetentionMonths),
+			"point_in_time_window_hours":        types.Int64Value(*backupScheduleOptions.PointInTimeWindowHours),
+		}
+	}
+	optionsTF, diags := types.ObjectValue(optionsTypes, optionsValues)
+	if diags.HasError() {
+		return fmt.Errorf("creating options: %w", core.DiagsToError(diags))
+	}
+	model.Options = optionsTF
 	return nil
 }
 
@@ -743,6 +905,57 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		},
 		Version: conversion.StringValueToPointer(model.Version),
 		Options: &payloadOptions,
+	}, nil
+}
+
+func toUpdateBackupScheduleOptionsPayload(ctx context.Context, model *Model, configuredOptions *optionsModel) (*mongodbflex.UpdateBackupSchedulePayload, error) {
+	if model == nil || configuredOptions == nil {
+		return nil, nil
+	}
+
+	var currOptions = &optionsModel{}
+	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
+		diags := model.Options.As(ctx, currOptions, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("map current options: %w", core.DiagsToError(diags))
+		}
+	}
+
+	backupSchedule := conversion.StringValueToPointer(model.BackupSchedule)
+
+	snapshotRetentionDays := conversion.Int64ValueToPointer(configuredOptions.SnapshotRetentionDays)
+	if snapshotRetentionDays == nil {
+		snapshotRetentionDays = conversion.Int64ValueToPointer(currOptions.SnapshotRetentionDays)
+	}
+
+	dailySnapshotRetentionDays := conversion.Int64ValueToPointer(configuredOptions.DailySnapshotRetentionDays)
+	if dailySnapshotRetentionDays == nil {
+		dailySnapshotRetentionDays = conversion.Int64ValueToPointer(currOptions.DailySnapshotRetentionDays)
+	}
+
+	weeklySnapshotRetentionWeeks := conversion.Int64ValueToPointer(configuredOptions.WeeklySnapshotRetentionWeeks)
+	if weeklySnapshotRetentionWeeks == nil {
+		weeklySnapshotRetentionWeeks = conversion.Int64ValueToPointer(currOptions.WeeklySnapshotRetentionWeeks)
+	}
+
+	monthlySnapshotRetentionMonths := conversion.Int64ValueToPointer(configuredOptions.MonthlySnapshotRetentionMonths)
+	if monthlySnapshotRetentionMonths == nil {
+		monthlySnapshotRetentionMonths = conversion.Int64ValueToPointer(currOptions.MonthlySnapshotRetentionMonths)
+	}
+
+	pointInTimeWindowHours := conversion.Int64ValueToPointer(configuredOptions.PointInTimeWindowHours)
+	if pointInTimeWindowHours == nil {
+		pointInTimeWindowHours = conversion.Int64ValueToPointer(currOptions.PointInTimeWindowHours)
+	}
+
+	return &mongodbflex.UpdateBackupSchedulePayload{
+		// This is a PUT endpoint and all fields are required
+		BackupSchedule:                 backupSchedule,
+		SnapshotRetentionDays:          snapshotRetentionDays,
+		DailySnapshotRetentionDays:     dailySnapshotRetentionDays,
+		WeeklySnapshotRetentionWeeks:   weeklySnapshotRetentionWeeks,
+		MonthlySnapshotRetentionMonths: monthlySnapshotRetentionMonths,
+		PointInTimeWindowHours:         pointInTimeWindowHours,
 	}, nil
 }
 
