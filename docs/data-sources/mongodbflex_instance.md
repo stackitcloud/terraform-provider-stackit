@@ -55,7 +55,12 @@ Read-Only:
 
 Read-Only:
 
-- `type` (String)
+- `daily_snapshot_retention_days` (Number) The number of days that daily backups will be retained.
+- `monthly_snapshot_retention_months` (Number) The number of months that monthly backups will be retained.
+- `point_in_time_window_hours` (Number) The number of hours back in time the point-in-time recovery feature will be able to recover.
+- `snapshot_retention_days` (Number) The number of days that continuous backups (controlled via the `backup_schedule`) will be retained.
+- `type` (String) Type of the MongoDB Flex instance.
+- `weekly_snapshot_retention_weeks` (Number) The number of weeks that weekly backups will be retained.
 
 
 <a id="nestedatt--storage"></a>
