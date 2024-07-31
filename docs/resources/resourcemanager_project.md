@@ -19,7 +19,16 @@ resource "stackit_resourcemanager_project" "example" {
   labels = {
     "Label 1" = "foo"
   }
-  owner_email = "aa@bb.ccc"
+  members = [
+    {
+      "subject" : "john.doe@stackit.cloud"
+      "role" : "owner",
+    },
+    {
+      "subject" : "some.engineer@stackit.cloud"
+      "role" : "reader",
+    },
+  ]
 }
 ```
 
