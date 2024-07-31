@@ -348,6 +348,9 @@ func mapFields(databaseResp *postgresflex.InstanceDatabase, model *Model) error 
 			if !ok {
 				return fmt.Errorf("owner is not a string")
 			}
+			// If the field is returned between with quotes, we trim them to prevent an inconsistent result after apply
+			ownerStr = strings.TrimPrefix(ownerStr, `"`)
+			ownerStr = strings.TrimSuffix(ownerStr, `"`)
 			model.Owner = types.StringValue(ownerStr)
 		}
 	}
