@@ -317,7 +317,7 @@ func (r *networkAreaRouteResource) ImportState(ctx context.Context, req resource
 
 	organizationId := idParts[0]
 	networkAreaId := idParts[1]
-	networkAreaRouteId := idParts[1]
+	networkAreaRouteId := idParts[2]
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
