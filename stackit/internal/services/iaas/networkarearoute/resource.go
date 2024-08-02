@@ -211,13 +211,16 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 
 	var routeId string
 	var route iaas.Route
-	for _, route = range *routes.Items {
-		if !(*route.Prefix == model.Prefix.ValueString() && *route.Nexthop == model.NextHop.ValueString()) {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route. New static route not found in API response", fmt.Sprintf("Prefix from the route in API: %s", *route.Prefix))
-			return
-		}
 
+	if len(*routes.Items) != 1 {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", "New static route not found or more than 1 route found in API response.")
+		return
+	}
+
+	// Gets the route ID from the first element, routes.Items[0]
+	for _, route = range *routes.Items {
 		routeId = *route.RouteId
+		break
 	}
 
 	ctx = tflog.SetField(ctx, "network_area_route_id", routeId)
@@ -225,7 +228,7 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	// Map response body to schema
 	err = mapFields(&route, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	// Set state to fully populated data
@@ -259,7 +262,7 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area route", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area route.", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
