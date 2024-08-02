@@ -120,11 +120,11 @@ func (d *networkAreaRouteDataSource) Schema(_ context.Context, _ datasource.Sche
 				},
 			},
 			"next_hop": schema.StringAttribute{
-				Description: "IPv4 address.",
+				Description: "The IP address of the routing system, that will route the prefix configured. Should be a valid IPv4 address.",
 				Computed:    true,
 			},
 			"prefix": schema.StringAttribute{
-				Description: "Classless Inter-Domain Routing (CIDR).",
+				Description: "The network, that is reachable though the Next Hop. Should use CIDR notation.",
 				Computed:    true,
 			},
 		},
