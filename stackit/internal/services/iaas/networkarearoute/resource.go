@@ -205,7 +205,7 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 	if routes.Items == nil || len(*routes.Items) == 0 {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "empty response from API", fmt.Sprintf("Routes count: %d", len(*routes.Items)))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", "Empty response from API")
 		return
 	}
 
@@ -213,7 +213,7 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	var route iaas.Route
 	for _, route = range *routes.Items {
 		if !(*route.Prefix == model.Prefix.ValueString() && *route.Nexthop == model.NextHop.ValueString()) {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "new static route not found in API response", fmt.Sprintf("Prefix from the route in API: %s", *route.Prefix))
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route. New static route not found in API response", fmt.Sprintf("Prefix from the route in API: %s", *route.Prefix))
 			return
 		}
 
