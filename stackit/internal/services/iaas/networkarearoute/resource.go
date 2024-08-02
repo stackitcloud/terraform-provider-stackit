@@ -156,12 +156,18 @@ func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRe
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+				Validators: []validator.String{
+					validate.IP(),
+				},
 			},
 			"prefix": schema.StringAttribute{
 				Description: "The network, that is reachable though the Next Hop. Should use CIDR notation.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					validate.CIDR(),
 				},
 			},
 		},
