@@ -32,7 +32,7 @@ data "stackit_mongodbflex_instance" "example" {
 - `acl` (List of String) The Access Control List (ACL) for the MongoDB Flex instance.
 - `backup_schedule` (String) The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").
 - `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
-- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`instance_id`".
+- `id` (String) Terraform's internal data source ID. It is structured as "`project_id`,`instance_id`".
 - `name` (String) Instance name.
 - `options` (Attributes) Custom parameters for the MongoDB Flex instance. (see [below for nested schema](#nestedatt--options))
 - `replicas` (Number)
