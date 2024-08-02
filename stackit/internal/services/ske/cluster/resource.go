@@ -178,12 +178,14 @@ var hibernationTypes = map[string]attr.Type{
 type extensions struct {
 	Argus types.Object `tfsdk:"argus"`
 	ACL   types.Object `tfsdk:"acl"`
+	DNS   types.Object `tfsdk:"dns"`
 }
 
 // Types corresponding to extensions
 var extensionsTypes = map[string]attr.Type{
 	"argus": basetypes.ObjectType{AttrTypes: argusTypes},
 	"acl":   basetypes.ObjectType{AttrTypes: aclTypes},
+	"dns":   basetypes.ObjectType{AttrTypes: dnsTypes},
 }
 
 // Struct corresponding to extensions.ACL
@@ -208,6 +210,18 @@ type argus struct {
 var argusTypes = map[string]attr.Type{
 	"enabled":           basetypes.BoolType{},
 	"argus_instance_id": basetypes.StringType{},
+}
+
+// Struct corresponding to extensions.DNS
+type dns struct {
+	Enabled types.Bool `tfsdk:"enabled"`
+	Zones   types.List `tfsdk:"zones"`
+}
+
+// Types corresponding to DNS
+var dnsTypes = map[string]attr.Type{
+	"enabled": basetypes.BoolType{},
+	"zones":   basetypes.ListType{ElemType: types.StringType},
 }
 
 // NewClusterResource is a helper function to simplify the provider implementation.
@@ -583,6 +597,21 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							"allowed_cidrs": schema.ListAttribute{
 								Description: "Specify a list of CIDRs to whitelist.",
 								Optional:    true,
+								ElementType: types.StringType,
+							},
+						},
+					},
+					"dns": schema.SingleNestedAttribute{
+						Description: "DNS extension configuration",
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Description: "Flag to enable/disable DNS extensions",
+								Computed:    true,
+							},
+							"zones": schema.ListAttribute{
+								Description: "Specify a list of domain filters for externalDNS (e.g., `foo.runs.onstackit.cloud`)",
+								Computed:    true,
 								ElementType: types.StringType,
 							},
 						},
@@ -1175,9 +1204,30 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 		}
 	}
 
+	var skeDNS *ske.DNS
+	if !(ex.DNS.IsNull() || ex.DNS.IsUnknown()) {
+		dns := dns{}
+		diags = ex.DNS.As(ctx, &dns, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting extensions.dns object: %v", diags.Errors())
+		}
+		dnsEnabled := conversion.BoolValueToPointer(dns.Enabled)
+
+		zones := []string{}
+		diags = dns.Zones.ElementsAs(ctx, &zones, true)
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting extensions.dns.zones object: %v", diags.Errors())
+		}
+		skeDNS = &ske.DNS{
+			Enabled: dnsEnabled,
+			Zones:   &zones,
+		}
+	}
+
 	return &ske.Extension{
 		Acl:   skeAcl,
 		Argus: skeArgus,
+		Dns:   skeDNS,
 	}, nil
 }
 
@@ -1584,7 +1634,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startT
 	return startTime, endTime, nil
 }
 
-func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, argusDisabled bool, err error) {
+func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, argusDisabled, dnsDisabled bool, err error) {
 	var diags diag.Diagnostics
 	acl := acl{}
 	if ex.ACL.IsNull() {
@@ -1592,7 +1642,7 @@ func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, a
 	} else {
 		diags = ex.ACL.As(ctx, &acl, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return false, false, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
+			return false, false, false, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
 		}
 	}
 
@@ -1602,11 +1652,21 @@ func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, a
 	} else {
 		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return false, false, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
+			return false, false, false, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
 		}
 	}
 
-	return !acl.Enabled.ValueBool(), !argus.Enabled.ValueBool(), nil
+	dns := dns{}
+	if ex.DNS.IsNull() {
+		dns.Enabled = types.BoolValue(false)
+	} else {
+		diags = ex.DNS.As(ctx, &dns, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return false, false, false, fmt.Errorf("converting extensions.dns object: %v", diags.Errors())
+		}
+	}
+
+	return !acl.Enabled.ValueBool(), !argus.Enabled.ValueBool(), !dns.Enabled.ValueBool(), nil
 }
 
 func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
@@ -1633,12 +1693,12 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	// If we parse that object into the terraform model, it will produce an inconsistent result after apply
 	// error
 
-	aclDisabled, argusDisabled, err := checkDisabledExtensions(ctx, ex)
+	aclDisabled, argusDisabled, dnsDisabled, err := checkDisabledExtensions(ctx, ex)
 	if err != nil {
 		return fmt.Errorf("checking if extensions are disabled: %w", err)
 	}
 	disabledExtensions := false
-	if aclDisabled && argusDisabled {
+	if aclDisabled && argusDisabled && dnsDisabled {
 		disabledExtensions = true
 	}
 
@@ -1700,9 +1760,35 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		argusExtension = ex.Argus
 	}
 
+	dnsExtension := types.ObjectNull(dnsTypes)
+	if cl.Extensions.Dns != nil {
+		enabled := types.BoolNull()
+		if cl.Extensions.Dns.Enabled != nil {
+			enabled = types.BoolValue(*cl.Extensions.Dns.Enabled)
+		}
+
+		zonesList, diags := types.ListValueFrom(ctx, types.StringType, cl.Extensions.Dns.Zones)
+		if diags.HasError() {
+			return fmt.Errorf("creating zones list: %w", core.DiagsToError(diags))
+		}
+
+		dnsValues := map[string]attr.Value{
+			"enabled": enabled,
+			"zones":   zonesList,
+		}
+
+		dnsExtension, diags = types.ObjectValue(dnsTypes, dnsValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating dns: %w", core.DiagsToError(diags))
+		}
+	} else if dnsDisabled && !ex.DNS.IsNull() {
+		dnsExtension = ex.DNS
+	}
+
 	extensionsValues := map[string]attr.Value{
 		"acl":   aclExtension,
 		"argus": argusExtension,
+		"dns":   dnsExtension,
 	}
 
 	extensions, diags := types.ObjectValue(extensionsTypes, extensionsValues)

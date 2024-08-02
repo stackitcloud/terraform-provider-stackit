@@ -72,6 +72,10 @@ func TestMapFields(t *testing.T) {
 						ArgusInstanceId: utils.Ptr("aid"),
 						Enabled:         utils.Ptr(true),
 					},
+					Dns: &ske.DNS{
+						Zones:   &[]string{"foo.onstackit.cloud"},
+						Enabled: utils.Ptr(true),
+					},
 				},
 				Hibernation: &ske.Hibernation{
 					Schedules: &[]ske.HibernationSchedule{
@@ -228,6 +232,12 @@ func TestMapFields(t *testing.T) {
 						"enabled":           types.BoolValue(true),
 						"argus_instance_id": types.StringValue("aid"),
 					}),
+					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
+						"zones": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("foo.onstackit.cloud"),
+						}),
+					}),
 				}),
 				KubeConfig: types.StringNull(),
 			},
@@ -270,6 +280,10 @@ func TestMapFields(t *testing.T) {
 						ArgusInstanceId: nil,
 						Enabled:         utils.Ptr(true),
 					},
+					Dns: &ske.DNS{
+						Zones:   nil,
+						Enabled: utils.Ptr(true),
+					},
 				},
 				Name: utils.Ptr("name"),
 			},
@@ -291,6 +305,10 @@ func TestMapFields(t *testing.T) {
 						"enabled":           types.BoolValue(true),
 						"argus_instance_id": types.StringNull(),
 					}),
+					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
+						"zones":   types.ListNull(types.StringType),
+					}),
 				}),
 				KubeConfig: types.StringNull(),
 			},
@@ -306,6 +324,10 @@ func TestMapFields(t *testing.T) {
 				"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
 					"enabled":           types.BoolValue(false),
 					"argus_instance_id": types.StringNull(),
+				}),
+				"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
+					"enabled": types.BoolValue(false),
+					"zones":   types.ListNull(types.StringType),
 				}),
 			}),
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
@@ -331,6 +353,10 @@ func TestMapFields(t *testing.T) {
 						"enabled":           types.BoolValue(false),
 						"argus_instance_id": types.StringNull(),
 					}),
+					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(false),
+						"zones":   types.ListNull(types.StringType),
+					}),
 				}),
 				KubeConfig: types.StringNull(),
 			},
@@ -349,6 +375,10 @@ func TestMapFields(t *testing.T) {
 					"enabled":           types.BoolValue(false),
 					"argus_instance_id": types.StringValue("id"),
 				}),
+				"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
+					"enabled": types.BoolValue(true),
+					"zones":   types.ListNull(types.StringType),
+				}),
 			}),
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{
@@ -356,6 +386,10 @@ func TestMapFields(t *testing.T) {
 					Acl: &ske.ACL{
 						AllowedCidrs: &[]string{"cidr1"},
 						Enabled:      utils.Ptr(true),
+					},
+					Dns: &ske.DNS{
+						Zones:   nil,
+						Enabled: utils.Ptr(true),
 					},
 				},
 				Name: utils.Ptr("name"),
@@ -379,6 +413,10 @@ func TestMapFields(t *testing.T) {
 					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
 						"enabled":           types.BoolValue(false),
 						"argus_instance_id": types.StringValue("id"),
+					}),
+					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
+						"zones":   types.ListNull(types.StringType),
 					}),
 				}),
 				KubeConfig: types.StringNull(),
@@ -456,6 +494,10 @@ func TestMapFields(t *testing.T) {
 					Argus: &ske.Argus{
 						ArgusInstanceId: utils.Ptr("aid"),
 						Enabled:         utils.Ptr(true),
+					},
+					Dns: &ske.DNS{
+						Zones:   &[]string{"zone1"},
+						Enabled: utils.Ptr(true),
 					},
 				},
 				Hibernation: &ske.Hibernation{
@@ -593,6 +635,12 @@ func TestMapFields(t *testing.T) {
 					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
 						"enabled":           types.BoolValue(true),
 						"argus_instance_id": types.StringValue("aid"),
+					}),
+					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
+						"zones": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("zone1"),
+						}),
 					}),
 				}),
 				KubeConfig: types.StringNull(),

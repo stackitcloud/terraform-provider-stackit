@@ -50,6 +50,8 @@ var clusterResource = map[string]string{
 	"extensions_acl_cidrs":                             "192.168.0.0/24",
 	"extensions_argus_enabled":                         "false",
 	"extensions_argus_instance_id":                     "aaaaaaaa-1111-2222-3333-444444444444", // A not-existing Argus ID let the creation time-out.
+	"extensions_dns_enabled":                           "true",
+	"extensions_dns_zones":                             "foo.onstackit.cloud",
 	"hibernations_start":                               "0 16 * * *",
 	"hibernations_end":                                 "0 18 * * *",
 	"hibernations_timezone":                            "Europe/Berlin",
@@ -103,6 +105,10 @@ func getConfig(kubernetesVersion, nodePoolMachineOSVersion string, maintenanceEn
 				argus = {
 					enabled = %s
 					argus_instance_id = "%s"
+				}
+				dns = {
+					enabled = %s
+					zones = ["%s"]
 				}
 			}
 			hibernations = [{
@@ -167,6 +173,8 @@ func getConfig(kubernetesVersion, nodePoolMachineOSVersion string, maintenanceEn
 		clusterResource["extensions_acl_cidrs"],
 		clusterResource["extensions_argus_enabled"],
 		clusterResource["extensions_argus_instance_id"],
+		clusterResource["extensions_dns_enabled"],
+		clusterResource["extensions_dns_zones"],
 		clusterResource["hibernations_start"],
 		clusterResource["hibernations_end"],
 		clusterResource["hibernations_timezone"],
@@ -231,6 +239,9 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", clusterResource["extensions_acl_cidrs"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.argus.enabled", clusterResource["extensions_argus_enabled"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.argus.argus_instance_id", clusterResource["extensions_argus_instance_id"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extenisons.dns.enabled", clusterResource["extensions_dns_enabled"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extenisons.dns.zones.#", "1"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extenisons.dns.zones.0", clusterResource["extensions_dns_zones"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.start", clusterResource["hibernations_start"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.end", clusterResource["hibernations_end"]),
@@ -396,7 +407,7 @@ func TestAccSKE(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				// The fields are not provided in the SKE API when disabled, although set actively.
-				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config", "node_pools.0.os_version_min", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%"},
+				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config", "node_pools.0.os_version_min", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%", "extensions.dns.enabled", "extensions.dns.zones", "extensions.dns.zones.#", "extensions.dns.zones.%"},
 			},
 			// 4) Import minimal cluster
 			{
@@ -453,6 +464,9 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", clusterResource["extensions_acl_cidrs"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.argus.enabled", clusterResource["extensions_argus_enabled"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.argus.argus_instance_id", clusterResource["extensions_argus_instance_id"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.enabled", clusterResource["extensions_dns_enabled"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.#", "1"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.0", clusterResource["extensions_dns_zones"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.start", clusterResource["hibernations_start"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.end", clusterResource["hibernations_end"]),
