@@ -151,7 +151,7 @@ func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"next_hop": schema.StringAttribute{
-				Description: "IPv4 address.",
+				Description: "The IP address of the routing system, that will route the prefix configured. Should be a valid IPv4 address.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
