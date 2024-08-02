@@ -158,7 +158,7 @@ func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"prefix": schema.StringAttribute{
-				Description: "Classless Inter-Domain Routing (CIDR).",
+				Description: "The network, that is reachable though the Next Hop. Should use CIDR notation.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
