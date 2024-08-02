@@ -27,9 +27,9 @@ resource "stackit_network_area" "example" {
 ### Required
 
 - `network_area_id` (String) The network area ID to which the network area route is associated.
-- `next_hop` (String) IPv4 address.
+- `next_hop` (String) The IP address of the routing system, that will route the prefix configured. Should be a valid IPv4 address.
 - `organization_id` (String) STACKIT organization ID to which the network area is associated.
-- `prefix` (String) Classless Inter-Domain Routing (CIDR).
+- `prefix` (String) The network, that is reachable though the Next Hop. Should use CIDR notation.
 
 ### Read-Only
 
