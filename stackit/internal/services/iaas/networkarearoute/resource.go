@@ -209,19 +209,15 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	var routeId string
-	var route iaas.Route
-
 	if len(*routes.Items) != 1 {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", "New static route not found or more than 1 route found in API response.")
 		return
 	}
 
 	// Gets the route ID from the first element, routes.Items[0]
-	for _, route = range *routes.Items {
-		routeId = *route.RouteId
-		break
-	}
+	routeItems := *routes.Items
+	route := routeItems[0]
+	routeId := *route.RouteId
 
 	ctx = tflog.SetField(ctx, "network_area_route_id", routeId)
 
