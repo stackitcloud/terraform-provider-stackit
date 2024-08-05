@@ -582,7 +582,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							},
 							"argus_instance_id": schema.StringAttribute{
 								Description: "Argus instance ID to choose which Argus instance is used. Required when enabled is set to `true`.",
-								Optional:    true,
+								Required:    true,
 							},
 						},
 					},
@@ -596,7 +596,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							},
 							"allowed_cidrs": schema.ListAttribute{
 								Description: "Specify a list of CIDRs to whitelist.",
-								Optional:    true,
+								Required:    true,
 								ElementType: types.StringType,
 							},
 						},
@@ -607,11 +607,11 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Description: "Flag to enable/disable DNS extensions",
-								Computed:    true,
+								Required:    true,
 							},
 							"zones": schema.ListAttribute{
 								Description: "Specify a list of domain filters for externalDNS (e.g., `foo.runs.onstackit.cloud`)",
-								Computed:    true,
+								Optional:    true,
 								ElementType: types.StringType,
 							},
 						},
