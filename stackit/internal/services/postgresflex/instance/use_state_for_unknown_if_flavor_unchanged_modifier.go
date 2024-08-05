@@ -28,7 +28,7 @@ func (m useStateForUnknownIfFlavorUnchangedModifier) MarkdownDescription(ctx con
 	return m.Description(ctx)
 }
 
-func (m useStateForUnknownIfFlavorUnchangedModifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+func (m useStateForUnknownIfFlavorUnchangedModifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) { // nolint:gocritic // function signature required by Terraform
 	// Do nothing if there is no state value.
 	if req.StateValue.IsNull() {
 		return
