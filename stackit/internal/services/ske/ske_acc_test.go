@@ -51,7 +51,7 @@ var clusterResource = map[string]string{
 	"extensions_argus_enabled":                         "false",
 	"extensions_argus_instance_id":                     "aaaaaaaa-1111-2222-3333-444444444444", // A not-existing Argus ID let the creation time-out.
 	"extensions_dns_enabled":                           "true",
-	"extensions_dns_zones":                             "foo.onstackit.cloud",
+	"extensions_dns_zones":                             "foo.onstackit.cloud", // Dummy DNS zone, replace when running the tests!
 	"hibernations_start":                               "0 16 * * *",
 	"hibernations_end":                                 "0 18 * * *",
 	"hibernations_timezone":                            "Europe/Berlin",
