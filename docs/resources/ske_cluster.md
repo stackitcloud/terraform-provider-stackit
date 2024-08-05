@@ -125,11 +125,8 @@ Read-Only:
 
 Required:
 
-- `enabled` (Boolean) Is ACL enabled?
-
-Optional:
-
 - `allowed_cidrs` (List of String) Specify a list of CIDRs to whitelist.
+- `enabled` (Boolean) Is ACL enabled?
 
 
 <a id="nestedatt--extensions--argus"></a>
@@ -137,19 +134,19 @@ Optional:
 
 Required:
 
-- `enabled` (Boolean) Flag to enable/disable Argus extensions.
-
-Optional:
-
 - `argus_instance_id` (String) Argus instance ID to choose which Argus instance is used. Required when enabled is set to `true`.
+- `enabled` (Boolean) Flag to enable/disable Argus extensions.
 
 
 <a id="nestedatt--extensions--dns"></a>
 ### Nested Schema for `extensions.dns`
 
-Read-Only:
+Required:
 
 - `enabled` (Boolean) Flag to enable/disable DNS extensions
+
+Optional:
+
 - `zones` (List of String) Specify a list of domain filters for externalDNS (e.g., `foo.runs.onstackit.cloud`)
 
 
