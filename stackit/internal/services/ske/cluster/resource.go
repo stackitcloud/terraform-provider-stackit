@@ -603,7 +603,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					},
 					"dns": schema.SingleNestedAttribute{
 						Description: "DNS extension configuration",
-						Computed:    true,
+						Optional:    true,
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Description: "Flag to enable/disable DNS extensions",
