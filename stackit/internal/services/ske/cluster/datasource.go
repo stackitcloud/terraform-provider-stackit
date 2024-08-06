@@ -296,6 +296,21 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							},
 						},
 					},
+					"dns": schema.SingleNestedAttribute{
+						Description: "DNS extension configuration",
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Description: "Flag to enable/disable DNS extensions",
+								Computed:    true,
+							},
+							"zones": schema.ListAttribute{
+								Description: "Specify a list of domain filters for externalDNS (e.g., `foo.runs.onstackit.cloud`)",
+								Computed:    true,
+								ElementType: types.StringType,
+							},
+						},
+					},
 				},
 			},
 			"kube_config": schema.StringAttribute{

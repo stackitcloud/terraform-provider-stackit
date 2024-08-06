@@ -50,6 +50,7 @@ Read-Only:
 
 - `acl` (Attributes) Cluster access control configuration (see [below for nested schema](#nestedatt--extensions--acl))
 - `argus` (Attributes) A single argus block as defined below (see [below for nested schema](#nestedatt--extensions--argus))
+- `dns` (Attributes) DNS extension configuration (see [below for nested schema](#nestedatt--extensions--dns))
 
 <a id="nestedatt--extensions--acl"></a>
 ### Nested Schema for `extensions.acl`
@@ -67,6 +68,15 @@ Read-Only:
 
 - `argus_instance_id` (String) Instance ID of argus
 - `enabled` (Boolean) Flag to enable/disable argus extensions.
+
+
+<a id="nestedatt--extensions--dns"></a>
+### Nested Schema for `extensions.dns`
+
+Read-Only:
+
+- `enabled` (Boolean) Flag to enable/disable DNS extensions
+- `zones` (List of String) Specify a list of domain filters for externalDNS (e.g., `foo.runs.onstackit.cloud`)
 
 
 
