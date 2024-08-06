@@ -21,17 +21,17 @@ var clusterResource = map[string]string{
 	"project_id":                                       testutil.ProjectId,
 	"name":                                             fmt.Sprintf("cl-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 	"name_min":                                         fmt.Sprintf("cl-min-%s", acctest.RandStringFromCharSet(3, acctest.CharSetAlphaNum)),
-	"kubernetes_version_min":                           "1.26",
-	"kubernetes_version_used":                          "1.26.15",
-	"kubernetes_version_min_new":                       "1.27",
-	"kubernetes_version_used_new":                      "1.27.13",
+	"kubernetes_version_min":                           "1.28",
+	"kubernetes_version_used":                          "1.28.11",
+	"kubernetes_version_min_new":                       "1.29",
+	"kubernetes_version_used_new":                      "1.29.6",
 	"nodepool_name":                                    "np-acc-test",
 	"nodepool_name_min":                                "np-acc-min-test",
 	"nodepool_machine_type":                            "b1.2",
 	"nodepool_os_version_min":                          "3815.2",
-	"nodepool_os_version_used":                         "3815.2.1",
-	"nodepool_os_version_min_new":                      "3815.2.1",
-	"nodepool_os_version_used_new":                     "3815.2.1",
+	"nodepool_os_version_used":                         "3815.2.3",
+	"nodepool_os_version_min_new":                      "3815.2.3",
+	"nodepool_os_version_used_new":                     "3815.2.3",
 	"nodepool_os_name":                                 "flatcar",
 	"nodepool_minimum":                                 "2",
 	"nodepool_maximum":                                 "3",
@@ -250,7 +250,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", clusterResource["maintenance_enable_machine_image_version_updates"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end"]),
-					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kube_config"),
+					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster", "kube_config"),
 
 					// Kubeconfig
 
@@ -433,7 +433,7 @@ func TestAccSKE(t *testing.T) {
 			},
 			// 5) Update kubernetes version, OS version and maintenance end
 			{
-				Config: getConfig(clusterResource["kubernetes_version_min_new"], clusterResource["os_version_min_new"], utils.Ptr(clusterResource["maintenance_end_new"])),
+				Config: getConfig(clusterResource["kubernetes_version_min_new"], clusterResource["nodepool_os_version_min_new"], utils.Ptr(clusterResource["maintenance_end_new"])),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
@@ -502,7 +502,9 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 	var client *ske.APIClient
 	var err error
 	if testutil.SKECustomEndpoint == "" {
-		client, err = ske.NewAPIClient()
+		client, err = ske.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
 	} else {
 		client, err = ske.NewAPIClient(
 			config.WithEndpoint(testutil.SKECustomEndpoint),
