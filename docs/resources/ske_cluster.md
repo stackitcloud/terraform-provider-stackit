@@ -115,9 +115,6 @@ Optional:
 
 - `acl` (Attributes) Cluster access control configuration. (see [below for nested schema](#nestedatt--extensions--acl))
 - `argus` (Attributes) A single argus block as defined below. (see [below for nested schema](#nestedatt--extensions--argus))
-
-Read-Only:
-
 - `dns` (Attributes) DNS extension configuration (see [below for nested schema](#nestedatt--extensions--dns))
 
 <a id="nestedatt--extensions--acl"></a>
