@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	_ "time/tzdata"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
