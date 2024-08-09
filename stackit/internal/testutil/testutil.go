@@ -28,6 +28,8 @@ var (
 		"stackit": providerserver.NewProtocol6WithError(stackit.New("test-version")()),
 	}
 
+	// OrganizationId is the id of organization used for tests
+	OrganizationId = os.Getenv("TF_ACC_ORGANIZATION_ID")
 	// ProjectId is the id of project used for tests
 	ProjectId = os.Getenv("TF_ACC_PROJECT_ID")
 	// ServerId is the id of a server used for some tests
