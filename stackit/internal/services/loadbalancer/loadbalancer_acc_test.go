@@ -3,13 +3,17 @@ package loadbalancer_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -354,7 +358,7 @@ type OpenStack struct {
 	password       string
 }
 
-func testAccCheckLoadBalancerDestroy(_ *terraform.State) error {
+func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *loadbalancer.APIClient
 	var err error
@@ -371,11 +375,41 @@ func testAccCheckLoadBalancerDestroy(_ *terraform.State) error {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
-	// Disabling loadbalancer functionality will delete all load balancers
-	_, err = client.DisableServiceExecute(ctx, testutil.ProjectId)
-	if err != nil {
-		return fmt.Errorf("disabling loadbalancer functionality: %w", err)
+	loadbalancersToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_loadbalancer" {
+			continue
+		}
+		// loadbalancer terraform ID: = "[project_id],[name]"
+		loadbalancerName := strings.Split(rs.Primary.ID, core.Separator)[1]
+		loadbalancersToDestroy = append(loadbalancersToDestroy, loadbalancerName)
 	}
 
+	loadbalancersResp, err := client.ListLoadBalancers(ctx, testutil.ProjectId).Execute()
+	if err != nil {
+		return fmt.Errorf("getting loadbalancersResp: %w", err)
+	}
+
+	if loadbalancersResp.LoadBalancers == nil || (loadbalancersResp.LoadBalancers != nil && len(*loadbalancersResp.LoadBalancers) == 0) {
+		fmt.Print("No load balancers found for project \n")
+		return nil
+	}
+
+	items := *loadbalancersResp.LoadBalancers
+	for i := range items {
+		if items[i].Name == nil {
+			continue
+		}
+		if utils.Contains(loadbalancersToDestroy, *items[i].Name) {
+			_, err := client.DeleteLoadBalancerExecute(ctx, testutil.ProjectId, *items[i].Name)
+			if err != nil {
+				return fmt.Errorf("destroying load balancer %s during CheckDestroy: %w", *items[i].Name, err)
+			}
+			_, err = wait.DeleteLoadBalancerWaitHandler(ctx, client, testutil.ProjectId, *items[i].Name).WaitWithContext(ctx)
+			if err != nil {
+				return fmt.Errorf("destroying load balancer %s during CheckDestroy: waiting for deletion %w", *items[i].Name, err)
+			}
+		}
+	}
 	return nil
 }
