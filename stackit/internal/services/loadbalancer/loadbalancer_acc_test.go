@@ -3,14 +3,14 @@ package loadbalancer_test
 import (
 	"context"
 	"fmt"
-	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/wait"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
