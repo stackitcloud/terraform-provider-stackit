@@ -30,7 +30,7 @@ resource "stackit_mongodbflex_user" "example" {
 - `database` (String)
 - `instance_id` (String) ID of the MongoDB Flex instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
-- `roles` (Set of String) Database access levels for the user. Supported values are: `read`, `readWrite`.
+- `roles` (Set of String) Database access levels for the user. Some of the possible values are: [`read`, `readWrite`, `readWriteAnyDatabase`]
 
 ### Optional
 
