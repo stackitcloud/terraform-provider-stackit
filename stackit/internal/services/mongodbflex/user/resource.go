@@ -6,13 +6,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -100,15 +97,13 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 
 // Schema defines the schema for the resource.
 func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	rolesOptions := []string{"read", "readWrite"}
-
 	descriptions := map[string]string{
 		"main":        "MongoDB Flex user resource schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the MongoDB Flex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"roles":       "Database access levels for the user. " + utils.SupportedValuesDocumentation(rolesOptions),
+		"roles":       "Database access levels for the user. Some of the possible values are: [`read`, `readWrite`, `readWriteAnyDatabase`]",
 	}
 
 	resp.Schema = schema.Schema{
@@ -167,11 +162,6 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Description: descriptions["roles"],
 				ElementType: types.StringType,
 				Required:    true,
-				Validators: []validator.Set{
-					setvalidator.ValueStringsAre(
-						stringvalidator.OneOf(rolesOptions...),
-					),
-				},
 			},
 			"database": schema.StringAttribute{
 				Required: true,
