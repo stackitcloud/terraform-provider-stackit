@@ -131,8 +131,11 @@ Required:
 
 Required:
 
-- `argus_instance_id` (String) Argus instance ID to choose which Argus instance is used. Required when enabled is set to `true`.
 - `enabled` (Boolean) Flag to enable/disable Argus extensions.
+
+Optional:
+
+- `argus_instance_id` (String) Argus instance ID to choose which Argus instance is used. Required when enabled is set to `true`.
 
 
 <a id="nestedatt--extensions--dns"></a>

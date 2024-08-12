@@ -582,7 +582,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							},
 							"argus_instance_id": schema.StringAttribute{
 								Description: "Argus instance ID to choose which Argus instance is used. Required when enabled is set to `true`.",
-								Required:    true,
+								Optional:    true,
 							},
 						},
 					},
