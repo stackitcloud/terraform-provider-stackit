@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -100,7 +98,7 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 
 // Schema defines the schema for the resource.
 func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	rolesOptions := []string{"read", "readWrite"}
+	rolesOptions := []string{"read", "readWrite", "readWriteAnyDatabase"}
 
 	descriptions := map[string]string{
 		"main":        "MongoDB Flex user resource schema. Must have a `region` specified in the provider configuration.",
@@ -167,11 +165,6 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Description: descriptions["roles"],
 				ElementType: types.StringType,
 				Required:    true,
-				Validators: []validator.Set{
-					setvalidator.ValueStringsAre(
-						stringvalidator.OneOf(rolesOptions...),
-					),
-				},
 			},
 			"database": schema.StringAttribute{
 				Required: true,
