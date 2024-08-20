@@ -348,6 +348,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	var parameters *parametersModel
 	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
+		parameters = &parametersModel{}
 		diags = model.Parameters.As(ctx, parameters, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
