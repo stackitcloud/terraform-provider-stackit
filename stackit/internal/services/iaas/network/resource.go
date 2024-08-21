@@ -429,7 +429,7 @@ func toCreatePayload(model *Model) (*iaas.CreateNetworkPayload, error) {
 	return &iaas.CreateNetworkPayload{
 		Name: conversion.StringValueToPointer(model.Name),
 		AddressFamily: &iaas.CreateNetworkAddressFamily{
-			Ipv4: &iaas.CreateNetworkIPv4{
+			Ipv4: &iaas.CreateNetworkIPv4Body{
 				PrefixLength: conversion.Int64ValueToPointer(model.IPv4PrefixLength),
 				Nameservers:  &modelNameservers,
 			},
@@ -454,7 +454,7 @@ func toUpdatePayload(model *Model) (*iaas.PartialUpdateNetworkPayload, error) {
 	return &iaas.PartialUpdateNetworkPayload{
 		Name: conversion.StringValueToPointer(model.Name),
 		AddressFamily: &iaas.UpdateNetworkAddressFamily{
-			Ipv4: &iaas.UpdateNetworkIPv4{
+			Ipv4: &iaas.UpdateNetworkIPv4Body{
 				Nameservers: &modelNameservers,
 			},
 		},
