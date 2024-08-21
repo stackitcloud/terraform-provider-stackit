@@ -14,7 +14,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/core v0.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.10.0
-	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.6.0
+	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.17.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.17.0
@@ -26,11 +26,11 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.17.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.17.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.9.0
-	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.8.0
+	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v0.19.0
-	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.4.0
+	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.5.0
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.20.0
 )
