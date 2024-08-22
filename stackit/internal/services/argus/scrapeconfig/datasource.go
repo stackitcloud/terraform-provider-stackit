@@ -76,8 +76,15 @@ func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.C
 
 // Schema defines the schema for the data source.
 func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	descriptions := map[string]string{
+		"main": "Argus scrape config data source schema. Must have a `region` specified in the provider configuration.",
+		"deprecation_message": "The `stackit_argus_scrapeconfig` data source has been deprecated and will be removed after February 26th 2025. " +
+			"Please use `stackit_observability_scrapeconfig` instead, which offers the exact same functionality.",
+	}
 	resp.Schema = schema.Schema{
-		Description: "Argus scrape config data source schema. Must have a `region` specified in the provider configuration.",
+		Description:         fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["deprecation_message"]),
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
+		DeprecationMessage:  descriptions["deprecation_message"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`,`name`\".",

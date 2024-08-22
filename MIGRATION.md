@@ -130,11 +130,11 @@ resource "stackit_logme_credential" "example-credential" {
 
 | Community provider                       | Official provider                       | Import available? | `id` format | Notes|
 |------------------------------------------|-----------------------------------------|-|-|-|
-| stackit_argus_credential                 | stackit_argus_credential                | :x: |  |  |
-| stackit_argus_instance                   | stackit_argus_instance                  | :white_check_mark: | [project_id],[instance_id] |  |
-| stackit_argus_job                        | stackit_argus_scrapeconfig              | :white_check_mark: | [project_id],[instance_id],[name] |  |
-| stackit_elasticsearch_credential         |                                         | |  | Service deprecated |
-| stackit_elasticsearch_instance           |                                         | |  | Service deprecated |
+| stackit_argus_credential                 | stackit_argus_credential                | | | Service deprecated |
+| stackit_argus_instance                   | stackit_argus_instance                  | | | Service deprecated |
+| stackit_argus_job                        | stackit_argus_scrapeconfig              | | | Service deprecated |
+| stackit_elasticsearch_credential         |                                         | | | Service deprecated |
+| stackit_elasticsearch_instance           |                                         | | | Service deprecated |
 | stackit_kubernetes_cluster               | stackit_ske_cluster                     | :white_check_mark: | [project_id],[name] |  |
 | stackit_kubernetes_project               | stackit_ske_project                     | :white_check_mark: | [project_id] |  |
 | stackit_load_balancer                    | stackit_loadbalancer                    | :white_check_mark: | [project_id],[name] | |
@@ -147,8 +147,8 @@ resource "stackit_logme_credential" "example-credential" {
 | stackit_object_storage_bucket            | stackit_objectstorage_bucket            | :white_check_mark: | [project_id],[name] |  |
 | stackit_object_storage_credential        | stackit_objectstorage_credential        | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |  |
 | stackit_object_storage_credentials_group | stackit_objectstorage_credentials_group | :white_check_mark: | [project_id],[credentials_group_id] |  |
-| stackit_object_storage_project           |                                         | |  | Resource deprecated |
-| stackit_observability_credential         | stackit_observability_credential        | :x: |  |  |
+| stackit_object_storage_project           |                                         | | | Resource deprecated |
+| stackit_observability_credential         | stackit_observability_credential        | :x: | |  |
 | stackit_observability_instance           | stackit_observability_instance          | :white_check_mark: | [project_id],[instance_id] |  |
 | stackit_observability_job                | stackit_observability_scrapeconfig      | :white_check_mark: | [project_id],[instance_id],[name] |  |
 | stackit_opensearch_credential            | stackit_opensearch_credential           | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |  |

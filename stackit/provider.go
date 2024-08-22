@@ -190,8 +190,9 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Description: descriptions["region"],
 			},
 			"argus_custom_endpoint": schema.StringAttribute{
-				Optional:    true,
-				Description: descriptions["argus_custom_endpoint"],
+				Optional:           true,
+				Description:        descriptions["argus_custom_endpoint"],
+				DeprecationMessage: "Argus service has been deprecated and integration will be removed after February 26th 2025. Please use `observability_custom_endpoint` and `observability` resources instead, which offer the exact same functionality.",
 			},
 			"dns_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
