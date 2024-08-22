@@ -11,15 +11,6 @@
 
 This project is the official [Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs) for [STACKIT](https://www.stackit.de/en/), which allows you to manage STACKIT resources through Terraform.
 
-> [!WARNING]
-> On August 26 2024, The STACKIT Argus service was renamed to STACKIT Observability.
->
-> This means that there are new resources for `STACKIT Observability`, which offers the same functionality as the deprecated `STACKIT Argus` resources.
->
-> Please make sure to **update your STACKIT Terraform Provider to the latest version after August 26 2024** to ensure that you start using STACKIT Observability resources.
-> 
-> You can migrate your existing STACKIT Argus resources by using the `terraform import`. https://developer.hashicorp.com/terraform/language/import
-
 ## Getting Started
 
 To install the [STACKIT Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs), copy and paste this code into your Terraform configuration. Then, run `terraform init`.
