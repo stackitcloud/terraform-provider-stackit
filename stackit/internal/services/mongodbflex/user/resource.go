@@ -42,6 +42,7 @@ type Model struct {
 	Password   types.String `tfsdk:"password"`
 	Host       types.String `tfsdk:"host"`
 	Port       types.Int64  `tfsdk:"port"`
+	Uri        types.String `tfsdk:"uri"`
 }
 
 // NewUserResource is a helper function to simplify the provider implementation.
@@ -178,6 +179,10 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			},
 			"port": schema.Int64Attribute{
 				Computed: true,
+			},
+			"uri": schema.StringAttribute{
+				Computed:  true,
+				Sensitive: true,
 			},
 		},
 	}
@@ -380,6 +385,7 @@ func mapFieldsCreate(userResp *mongodbflex.CreateUserResponse, model *Model) err
 	}
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
+	model.Uri = types.StringPointerValue(user.Uri)
 	return nil
 }
 
