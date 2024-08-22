@@ -147,18 +147,17 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 // Schema defines the schema for the resource.
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                            "Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.",
-		"id":                              "Terraform's internal resource ID. It is structured as \"`container_id`\".",
-		"project_id":                      "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
-		"container_id":                    "Project container ID. Globally unique, user-friendly identifier.",
-		"parent_container_id":             "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
-		"name":                            "Project name.",
-		"labels":                          "Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}",
-		"owner_email":                     "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
-		"owner_email_deprecation_message": "The \"owner_email\" field has been deprecated in favor of the \"members\" field. Please use the \"members\" field to assign the owner role to a user, by setting the \"role\" field to `owner`.",
-		"members":                         "The members assigned to the project. At least one subject needs to be a user, and not a client or service account.",
-		"members.role":                    fmt.Sprintf("The role of the member in the project. Possible values include, but are not limited to: `owner`, `editor`, `reader`. Legacy roles (%s) are not supported.", strings.Join(utils.QuoteValues(utils.LegacyProjectRoles), ", ")),
-		"members.subject":                 "Unique identifier of the user, service account or client. This is usually the email address for users or service accounts, and the name in case of clients.",
+		"main":                "Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.",
+		"id":                  "Terraform's internal resource ID. It is structured as \"`container_id`\".",
+		"project_id":          "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
+		"container_id":        "Project container ID. Globally unique, user-friendly identifier.",
+		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
+		"name":                "Project name.",
+		"labels":              "Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}",
+		"owner_email":         "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
+		"members":             "The members assigned to the project. At least one subject needs to be a user, and not a client or service account.",
+		"members.role":        fmt.Sprintf("The role of the member in the project. Possible values include, but are not limited to: `owner`, `editor`, `reader`. Legacy roles (%s) are not supported.", strings.Join(utils.QuoteValues(utils.LegacyProjectRoles), ", ")),
+		"members.subject":     "Unique identifier of the user, service account or client. This is usually the email address for users or service accounts, and the name in case of clients.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -224,16 +223,13 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"owner_email": schema.StringAttribute{
-				Description:         descriptions["owner_email"],
-				DeprecationMessage:  descriptions["owner_email_deprecation_message"],
-				MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["owner_email"], descriptions["owner_email_deprecation_message"]),
+				Description: descriptions["owner_email"],
 				// When removing the owner_email field, we should mark the members field as required and add a listvalidator.SizeAtLeast(1) validator to it
 				Optional: true,
 			},
 			"members": schema.ListNestedAttribute{
 				Description: descriptions["members"],
 				Optional:    true,
-				// Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"role": schema.StringAttribute{
@@ -251,6 +247,39 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 		},
+	}
+}
+
+// ModifyPlan will be called in the Plan phase and will check if the members field is set
+func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+
+	membersResp, err := r.authorizationClient.ListMembersExecute(ctx, projectResourceType, model.ProjectId.ValueString())
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Reading members: %v", err))
+		return
+	}
+
+	members := []string{}
+	for _, m := range *membersResp.Members {
+		if utils.IsLegacyProjectRole(*m.Role) {
+			continue
+		}
+		members = append(members, fmt.Sprintf("  - %s (%s)", *m.Subject, *m.Role))
+	}
+
+	if !(model.Members.IsNull() || model.Members.IsUnknown()) {
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "The members set in the \"members\" field will override the current members in your project",
+			fmt.Sprintf("%s\n%s\n%s\n\n%s",
+				"The current members in your project will be removed and replaced with the members set in the \"members\" field.",
+				"This might not be represented in the Terraform plan if you are migrating from the \"owner_email\" field, since the current members are not yet set in the state.",
+				"Please make sure that the members in the \"members\" field are correct and complete.",
+				fmt.Sprintf("Current members in your project:\n%v", strings.Join(members, "\n"))))
 	}
 }
 
