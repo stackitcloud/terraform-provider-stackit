@@ -29,6 +29,9 @@ import (
 	objectStorageBucket "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/bucket"
 	objecStorageCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credential"
 	objecStorageCredentialsGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credentialsgroup"
+	observabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/credential"
+	observabilityInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/instance"
+	observabilityScrapeConfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/scrapeconfig"
 	openSearchCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/credential"
 	openSearchInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/instance"
 	postgresFlexDatabase "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/database"
@@ -101,6 +104,7 @@ type providerModel struct {
 	MariaDBCustomEndpoint           types.String `tfsdk:"mariadb_custom_endpoint"`
 	AuthorizationCustomEndpoint     types.String `tfsdk:"authorization_custom_endpoint"`
 	ObjectStorageCustomEndpoint     types.String `tfsdk:"objectstorage_custom_endpoint"`
+	ObservabilityCustomEndpoint     types.String `tfsdk:"observability_custom_endpoint"`
 	OpenSearchCustomEndpoint        types.String `tfsdk:"opensearch_custom_endpoint"`
 	RedisCustomEndpoint             types.String `tfsdk:"redis_custom_endpoint"`
 	SecretsManagerCustomEndpoint    types.String `tfsdk:"secretsmanager_custom_endpoint"`
@@ -135,6 +139,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"mariadb_custom_endpoint":            "Custom endpoint for the MariaDB service",
 		"authorization_custom_endpoint":      "Custom endpoint for the Membership service",
 		"objectstorage_custom_endpoint":      "Custom endpoint for the Object Storage service",
+		"observability_custom_endpoint":      "Custom endpoint for the Observability service",
 		"opensearch_custom_endpoint":         "Custom endpoint for the OpenSearch service",
 		"postgresql_custom_endpoint":         "Custom endpoint for the PostgreSQL service",
 		"postgresflex_custom_endpoint":       "Custom endpoint for the PostgresFlex service",
@@ -231,6 +236,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"objectstorage_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["objectstorage_custom_endpoint"],
+			},
+			"observability_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["observability_custom_endpoint"],
 			},
 			"opensearch_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -355,6 +364,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.ObjectStorageCustomEndpoint.IsUnknown() || providerConfig.ObjectStorageCustomEndpoint.IsNull()) {
 		providerData.ObjectStorageCustomEndpoint = providerConfig.ObjectStorageCustomEndpoint.ValueString()
 	}
+	if !(providerConfig.ObservabilityCustomEndpoint.IsUnknown() || providerConfig.ObservabilityCustomEndpoint.IsNull()) {
+		providerData.ObservabilityCustomEndpoint = providerConfig.ObservabilityCustomEndpoint.ValueString()
+	}
 	if !(providerConfig.OpenSearchCustomEndpoint.IsUnknown() || providerConfig.OpenSearchCustomEndpoint.IsNull()) {
 		providerData.OpenSearchCustomEndpoint = providerConfig.OpenSearchCustomEndpoint.ValueString()
 	}
@@ -415,6 +427,8 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		objectStorageBucket.NewBucketDataSource,
 		objecStorageCredentialsGroup.NewCredentialsGroupDataSource,
 		objecStorageCredential.NewCredentialDataSource,
+		observabilityInstance.NewInstanceDataSource,
+		observabilityScrapeConfig.NewScrapeConfigDataSource,
 		openSearchInstance.NewInstanceDataSource,
 		openSearchCredential.NewCredentialDataSource,
 		postgresFlexDatabase.NewDatabaseDataSource,
@@ -461,6 +475,9 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		objectStorageBucket.NewBucketResource,
 		objecStorageCredentialsGroup.NewCredentialsGroupResource,
 		objecStorageCredential.NewCredentialResource,
+		observabilityCredential.NewCredentialResource,
+		observabilityInstance.NewInstanceResource,
+		observabilityScrapeConfig.NewScrapeConfigResource,
 		openSearchInstance.NewInstanceResource,
 		openSearchCredential.NewCredentialResource,
 		postgresFlexDatabase.NewDatabaseResource,

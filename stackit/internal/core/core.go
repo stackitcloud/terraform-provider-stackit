@@ -26,6 +26,7 @@ type ProviderData struct {
 	MariaDBCustomEndpoint           string
 	MongoDBFlexCustomEndpoint       string
 	ObjectStorageCustomEndpoint     string
+	ObservabilityCustomEndpoint     string
 	OpenSearchCustomEndpoint        string
 	PostgresFlexCustomEndpoint      string
 	PostgreSQLCustomEndpoint        string

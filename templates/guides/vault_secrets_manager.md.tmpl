@@ -51,10 +51,10 @@ This guide outlines the process of utilizing the HashiCorp Vault provider alongs
     }
     ```
 
-5. **Define Terraform Resource (Example: Argus Monitoring Instance)**
+5. **Define Terraform Resource (Example: Observability Monitoring Instance)**
 
     ```hcl
-   resource "stackit_argus_instance" "example" {
+   resource "stackit_observability_instance" "example" {
      project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
      name       = "example-instance"
      plan_name  = "Monitoring-Medium-EU01"
@@ -71,7 +71,7 @@ This guide outlines the process of utilizing the HashiCorp Vault provider alongs
       delete_all_versions = true
       data_json = jsonencode(
         {
-         grafana_password = stackit_argus_instance.example.grafana_initial_admin_password,
+         grafana_password = stackit_observability_instance.example.grafana_initial_admin_password,
          other_secret = ...,
         }
       )
@@ -80,4 +80,4 @@ This guide outlines the process of utilizing the HashiCorp Vault provider alongs
 
 ## Note
 
-This example can be adapted for various resources within the provider as well as any other Secret the user wants to set in the Secrets Manager instance. Adapting this examples means replacing the Argus Monitoring Grafana password with the appropriate value.
+This example can be adapted for various resources within the provider as well as any other Secret the user wants to set in the Secrets Manager instance. Adapting this examples means replacing the Observability Monitoring Grafana password with the appropriate value.
