@@ -1,4 +1,4 @@
-package argus
+package observability
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/argus"
+	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -33,12 +33,12 @@ func NewScrapeConfigDataSource() datasource.DataSource {
 
 // scrapeConfigDataSource is the data source implementation.
 type scrapeConfigDataSource struct {
-	client *argus.APIClient
+	client *observability.APIClient
 }
 
 // Metadata returns the data source type name.
 func (d *scrapeConfigDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_argus_scrapeconfig"
+	resp.TypeName = req.ProviderTypeName + "_observability_scrapeconfig"
 }
 
 func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -47,7 +47,7 @@ func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.C
 		return
 	}
 
-	var apiClient *argus.APIClient
+	var apiClient *observability.APIClient
 	var err error
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
@@ -56,13 +56,13 @@ func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.C
 		return
 	}
 
-	if providerData.ArgusCustomEndpoint != "" {
-		apiClient, err = argus.NewAPIClient(
+	if providerData.ObservabilityCustomEndpoint != "" {
+		apiClient, err = observability.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ArgusCustomEndpoint),
+			config.WithEndpoint(providerData.ObservabilityCustomEndpoint),
 		)
 	} else {
-		apiClient, err = argus.NewAPIClient(
+		apiClient, err = observability.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -76,15 +76,8 @@ func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.C
 
 // Schema defines the schema for the data source.
 func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	descriptions := map[string]string{
-		"main": "Argus scrape config data source schema. Must have a `region` specified in the provider configuration.",
-		"deprecation_message": "The `stackit_argus_scrapeconfig` data source has been deprecated and will be removed after February 26th 2025. " +
-			"Please use `stackit_observability_scrapeconfig` instead, which offers the exact same functionality.",
-	}
 	resp.Schema = schema.Schema{
-		Description:         fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["deprecation_message"]),
-		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
-		DeprecationMessage:  descriptions["deprecation_message"],
+		Description: "Observability scrape config data source schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`,`name`\".",
@@ -99,7 +92,7 @@ func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				},
 			},
 			"instance_id": schema.StringAttribute{
-				Description: "Argus instance ID to which the scraping job is associated.",
+				Description: "Observability instance ID to which the scraping job is associated.",
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -239,5 +232,5 @@ func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Argus scrape config read")
+	tflog.Info(ctx, "Observability scrape config read")
 }

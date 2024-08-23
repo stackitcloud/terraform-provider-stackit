@@ -140,7 +140,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 
 ### Optional
 
-- `argus_custom_endpoint` (String) Custom endpoint for the Argus service
+- `argus_custom_endpoint` (String, Deprecated) Custom endpoint for the Argus service
 - `authorization_custom_endpoint` (String) Custom endpoint for the Membership service
 - `credentials_path` (String) Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.
 - `dns_custom_endpoint` (String) Custom endpoint for the DNS service
@@ -152,6 +152,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `mariadb_custom_endpoint` (String) Custom endpoint for the MariaDB service
 - `mongodbflex_custom_endpoint` (String) Custom endpoint for the MongoDB Flex service
 - `objectstorage_custom_endpoint` (String) Custom endpoint for the Object Storage service
+- `observability_custom_endpoint` (String) Custom endpoint for the Observability service
 - `opensearch_custom_endpoint` (String) Custom endpoint for the OpenSearch service
 - `postgresflex_custom_endpoint` (String) Custom endpoint for the PostgresFlex service
 - `postgresql_custom_endpoint` (String) Custom endpoint for the PostgreSQL service
