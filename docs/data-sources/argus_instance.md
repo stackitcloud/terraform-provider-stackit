@@ -4,14 +4,11 @@ page_title: "stackit_argus_instance Data Source - stackit"
 subcategory: ""
 description: |-
   Argus instance data source schema. Must have a region specified in the provider configuration.
-  !> The stackit_argus_instance data source has been deprecated and will be removed after February 26th 2025. Please use stackit_observability_instance instead, which offers the exact same functionality.
 ---
 
 # stackit_argus_instance (Data Source)
 
 Argus instance data source schema. Must have a `region` specified in the provider configuration.
-
-!> The `stackit_argus_instance` data source has been deprecated and will be removed after February 26th 2025. Please use `stackit_observability_instance` instead, which offers the exact same functionality.
 
 ## Example Usage
 
@@ -40,7 +37,7 @@ data "stackit_argus_instance" "example" {
 - `grafana_initial_admin_user` (String) Specifies an initial Grafana admin username.
 - `grafana_public_read_access` (Boolean) If true, anyone can access Grafana dashboards without logging in.
 - `grafana_url` (String) Specifies Grafana URL.
-- `id` (String) Terraform's internal data source ID. It is structured as "`project_id`,`instance_id`".
+- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`instance_id`".
 - `is_updatable` (Boolean) Specifies if the instance can be updated.
 - `jaeger_traces_url` (String)
 - `jaeger_ui_url` (String)

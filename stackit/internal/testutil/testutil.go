@@ -52,7 +52,6 @@ var (
 	AuthorizationCustomEndpoint   = os.Getenv("TF_ACC_authorization_custom_endpoint")
 	MongoDBFlexCustomEndpoint     = os.Getenv("TF_ACC_MONGODBFLEX_CUSTOM_ENDPOINT")
 	OpenSearchCustomEndpoint      = os.Getenv("TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT")
-	ObservabilityCustomEndpoint   = os.Getenv("TF_ACC_OBSERVABILITY_CUSTOM_ENDPOINT")
 	ObjectStorageCustomEndpoint   = os.Getenv("TF_ACC_OBJECTSTORAGE_CUSTOM_ENDPOINT")
 	PostgreSQLCustomEndpoint      = os.Getenv("TF_ACC_POSTGRESQL_CUSTOM_ENDPOINT")
 	PostgresFlexCustomEndpoint    = os.Getenv("TF_ACC_POSTGRESFLEX_CUSTOM_ENDPOINT")
@@ -85,22 +84,6 @@ func ArgusProviderConfig() string {
 			argus_custom_endpoint = "%s"
 		}`,
 		ArgusCustomEndpoint,
-	)
-}
-
-// Provider config helper functions
-
-func ObservabilityProviderConfig() string {
-	if ObservabilityCustomEndpoint == "" {
-		return `provider "stackit" {
-			region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			observability_custom_endpoint = "%s"
-		}`,
-		ObservabilityCustomEndpoint,
 	)
 }
 
