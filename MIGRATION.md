@@ -130,9 +130,9 @@ resource "stackit_logme_credential" "example-credential" {
 
 | Community provider                       | Official provider                       | Import available? | `id` format | Notes                                                            |
 |------------------------------------------|-----------------------------------------|-|-|------------------------------------------------------------------|
-| stackit_argus_credential | stackit_argus_credential | :x: |  | Service deprecated, use stackit_observability_credential instead |
-| stackit_argus_instance | stackit_argus_instance | :white_check_mark: | [project_id],[instance_id] | Service deprecated, use stackit_observability_instance instead   |
-| stackit_argus_job | stackit_argus_scrapeconfig | :white_check_mark: | [project_id],[instance_id],[name] | Service deprecated, use stackit_observability_job instead        |
+| stackit_argus_credential | stackit_observability_credential | :x: |  | Service deprecated, use stackit_observability_credential instead |
+| stackit_argus_instance | stackit_observability_instance | :white_check_mark: | [project_id],[instance_id] | Service deprecated, use stackit_observability_instance instead   |
+| stackit_argus_job | stackit_observability_scrapeconfig | :white_check_mark: | [project_id],[instance_id],[name] | Service deprecated, use stackit_observability_scrapeconfig instead        |
 | stackit_elasticsearch_credential         |                                         | | | Service deprecated                                               |
 | stackit_elasticsearch_instance           |                                         | | | Service deprecated                                               |
 | stackit_kubernetes_cluster               | stackit_ske_cluster                     | :white_check_mark: | [project_id],[name] |                                                                  |
