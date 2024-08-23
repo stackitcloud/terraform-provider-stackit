@@ -252,6 +252,10 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 
 // ModifyPlan will be called in the Plan phase and will check if the members field is set
 func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	if diags.HasError() {
