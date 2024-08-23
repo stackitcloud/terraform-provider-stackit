@@ -151,15 +151,8 @@ func (r *scrapeConfigResource) Configure(ctx context.Context, req resource.Confi
 
 // Schema defines the schema for the resource.
 func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
-		"main": "Argus scrape config resource schema. Must have a `region` specified in the provider configuration.",
-		"deprecation_message": "The `stackit_argus_scrapeconfig` resource has been deprecated and will be removed after February 26th 2025. " +
-			"Please use `stackit_observability_scrapeconfig` instead, which offers the exact same functionality.",
-	}
 	resp.Schema = schema.Schema{
-		Description:         fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["deprecation_message"]),
-		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
-		DeprecationMessage:  descriptions["deprecation_message"],
+		Description: "Argus scrape config resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`name`\".",

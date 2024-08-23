@@ -4,14 +4,11 @@ page_title: "stackit_argus_scrapeconfig Data Source - stackit"
 subcategory: ""
 description: |-
   Argus scrape config data source schema. Must have a region specified in the provider configuration.
-  !> The stackit_argus_scrapeconfig data source has been deprecated and will be removed after February 26th 2025. Please use stackit_observability_scrapeconfig instead, which offers the exact same functionality.
 ---
 
 # stackit_argus_scrapeconfig (Data Source)
 
 Argus scrape config data source schema. Must have a `region` specified in the provider configuration.
-
-!> The `stackit_argus_scrapeconfig` data source has been deprecated and will be removed after February 26th 2025. Please use `stackit_observability_scrapeconfig` instead, which offers the exact same functionality.
 
 ## Example Usage
 

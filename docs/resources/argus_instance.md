@@ -4,14 +4,11 @@ page_title: "stackit_argus_instance Resource - stackit"
 subcategory: ""
 description: |-
   Argus instance resource schema. Must have a region specified in the provider configuration.
-  !> The stackit_argus_instance resource has been deprecated and will be removed after February 26th 2025. Please use stackit_observability_instance instead, which offers the exact same functionality.
 ---
 
 # stackit_argus_instance (Resource)
 
 Argus instance resource schema. Must have a `region` specified in the provider configuration.
-
-!> The `stackit_argus_instance` resource has been deprecated and will be removed after February 26th 2025. Please use `stackit_observability_instance` instead, which offers the exact same functionality.
 
 ## Example Usage
 

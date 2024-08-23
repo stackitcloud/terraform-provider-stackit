@@ -4,14 +4,11 @@ page_title: "stackit_argus_credential Resource - stackit"
 subcategory: ""
 description: |-
   Argus credential resource schema. Must have a region specified in the provider configuration.
-  !> The stackit_argus_credential resource has been deprecated and will be removed after February 26th 2025. Please use stackit_observability_credential instead, which offers the exact same functionality.
 ---
 
 # stackit_argus_credential (Resource)
 
 Argus credential resource schema. Must have a `region` specified in the provider configuration.
-
-!> The `stackit_argus_credential` resource has been deprecated and will be removed after February 26th 2025. Please use `stackit_observability_credential` instead, which offers the exact same functionality.
 
 ## Example Usage
 
