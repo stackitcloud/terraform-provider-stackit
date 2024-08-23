@@ -252,7 +252,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 
 // ModifyPlan will be called in the Plan phase and will check if the members field is set
 func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
-	if req.Plan.Raw.IsNull() {
+	if req.Plan.Raw.IsNull() { // Plan is to destroy the resource
 		return
 	}
 
@@ -263,12 +263,16 @@ func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 		return
 	}
 
-	membersResp, err := r.authorizationClient.ListMembersExecute(ctx, projectResourceType, model.ProjectId.ValueString())
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Reading members: %v", err))
+	if model.ProjectId.IsNull() || model.ProjectId.IsUnknown() || // Project does not exist yet
+		model.Members.IsNull() || model.Members.IsUnknown() { // Members field is not set
 		return
 	}
 
+	membersResp, err := r.authorizationClient.ListMembersExecute(ctx, projectResourceType, model.ProjectId.ValueString())
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error preparing the plan", fmt.Sprintf("Reading members: %v", err))
+		return
+	}
 	members := []string{}
 	for _, m := range *membersResp.Members {
 		if utils.IsLegacyProjectRole(*m.Role) {
@@ -277,14 +281,12 @@ func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 		members = append(members, fmt.Sprintf("  - %s (%s)", *m.Subject, *m.Role))
 	}
 
-	if !(model.Members.IsNull() || model.Members.IsUnknown()) {
-		core.LogAndAddWarning(ctx, &resp.Diagnostics, "The members set in the \"members\" field will override the current members in your project",
-			fmt.Sprintf("%s\n%s\n%s\n\n%s",
-				"The current members in your project will be removed and replaced with the members set in the \"members\" field.",
-				"This might not be represented in the Terraform plan if you are migrating from the \"owner_email\" field, since the current members are not yet set in the state.",
-				"Please make sure that the members in the \"members\" field are correct and complete.",
-				fmt.Sprintf("Current members in your project:\n%v", strings.Join(members, "\n"))))
-	}
+	core.LogAndAddWarning(ctx, &resp.Diagnostics, "The members set in the \"members\" field will override the current members in your project",
+		fmt.Sprintf("%s\n%s\n%s\n\n%s",
+			"The current members in your project will be removed and replaced with the members set in the \"members\" field.",
+			"This might not be represented in the Terraform plan if you are migrating from the \"owner_email\" field, since the current members are not yet set in the state.",
+			"Please make sure that the members in the \"members\" field are correct and complete.",
+			fmt.Sprintf("Current members in your project:\n%v", strings.Join(members, "\n"))))
 }
 
 // ConfigValidators validates the resource configuration
