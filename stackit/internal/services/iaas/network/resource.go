@@ -188,7 +188,7 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	networkId := *network.NetworkId
-	network, err = wait.CreateNetworkWaitHandler(ctx, r.client, projectId, networkId).WaitWithContext(context.Background())
+	network, err = wait.CreateNetworkWaitHandler(ctx, r.client, projectId, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Network creation waiting: %v", err))
 		return
