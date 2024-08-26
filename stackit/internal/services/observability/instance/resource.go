@@ -1,4 +1,4 @@
-package argus
+package observability
 
 import (
 	"context"
@@ -25,8 +25,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/argus"
-	"github.com/stackitcloud/stackit-sdk-go/services/argus/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/observability"
+	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -329,12 +329,12 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client *argus.APIClient
+	client *observability.APIClient
 }
 
 // Metadata returns the resource type name.
 func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_argus_instance"
+	resp.TypeName = req.ProviderTypeName + "_observability_instance"
 }
 
 // Configure adds the provider configured client to the resource.
@@ -350,15 +350,15 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	var apiClient *argus.APIClient
+	var apiClient *observability.APIClient
 	var err error
-	if providerData.ArgusCustomEndpoint != "" {
-		apiClient, err = argus.NewAPIClient(
+	if providerData.ObservabilityCustomEndpoint != "" {
+		apiClient, err = observability.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ArgusCustomEndpoint),
+			config.WithEndpoint(providerData.ObservabilityCustomEndpoint),
 		)
 	} else {
-		apiClient, err = argus.NewAPIClient(
+		apiClient, err = observability.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -370,20 +370,13 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "Argus instance client configured")
+	tflog.Info(ctx, "Observability instance client configured")
 }
 
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
-		"main": "Argus instance resource schema. Must have a `region` specified in the provider configuration.",
-		"deprecation_message": "The `stackit_argus_instance` resource has been deprecated and will be removed after February 26th 2025. " +
-			"Please use `stackit_observability_instance` instead, which offers the exact same functionality.",
-	}
 	resp.Schema = schema.Schema{
-		Description:         fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["deprecation_message"]),
-		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
-		DeprecationMessage:  descriptions["deprecation_message"],
+		Description: "Observability instance resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
@@ -404,7 +397,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"instance_id": schema.StringAttribute{
-				Description: "The Argus instance ID.",
+				Description: "The Observability instance ID.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -415,7 +408,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"name": schema.StringAttribute{
-				Description: "The name of the Argus instance.",
+				Description: "The name of the Observability instance.",
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -423,7 +416,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"plan_name": schema.StringAttribute{
-				Description: "Specifies the Argus plan. E.g. `Monitoring-Medium-EU01`.",
+				Description: "Specifies the Observability plan. E.g. `Monitoring-Medium-EU01`.",
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -431,7 +424,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"plan_id": schema.StringAttribute{
-				Description: "The Argus plan ID.",
+				Description: "The Observability plan ID.",
 				Computed:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -447,7 +440,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"dashboard_url": schema.StringAttribute{
-				Description: "Specifies Argus instance dashboard URL.",
+				Description: "Specifies Observability instance dashboard URL.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -963,7 +956,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	tflog.Info(ctx, "Argus instance created")
+	tflog.Info(ctx, "Observability instance created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -1047,7 +1040,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	tflog.Info(ctx, "Argus instance read")
+	tflog.Info(ctx, "Observability instance read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -1230,7 +1223,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	tflog.Info(ctx, "Argus instance updated")
+	tflog.Info(ctx, "Observability instance updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -1258,7 +1251,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	tflog.Info(ctx, "Argus instance deleted")
+	tflog.Info(ctx, "Observability instance deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -1276,10 +1269,10 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
-	tflog.Info(ctx, "Argus instance state imported")
+	tflog.Info(ctx, "Observability instance state imported")
 }
 
-func mapFields(ctx context.Context, r *argus.GetInstanceResponse, model *Model) error {
+func mapFields(ctx context.Context, r *observability.GetInstanceResponse, model *Model) error {
 	if r == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -1348,7 +1341,7 @@ func mapFields(ctx context.Context, r *argus.GetInstanceResponse, model *Model) 
 	return nil
 }
 
-func mapACLField(aclList *argus.ListACLResponse, model *Model) error {
+func mapACLField(aclList *observability.ListACLResponse, model *Model) error {
 	if aclList == nil {
 		return fmt.Errorf("mapping ACL: nil API response")
 	}
@@ -1372,7 +1365,7 @@ func mapACLField(aclList *argus.ListACLResponse, model *Model) error {
 	return nil
 }
 
-func mapMetricsRetentionField(r *argus.GetMetricsStorageRetentionResponse, model *Model) error {
+func mapMetricsRetentionField(r *observability.GetMetricsStorageRetentionResponse, model *Model) error {
 	if r == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -1408,7 +1401,7 @@ func mapMetricsRetentionField(r *argus.GetMetricsStorageRetentionResponse, model
 	return nil
 }
 
-func mapAlertConfigField(ctx context.Context, resp *argus.GetAlertConfigsResponse, model *Model) error {
+func mapAlertConfigField(ctx context.Context, resp *observability.GetAlertConfigsResponse, model *Model) error {
 	if resp == nil || resp.Data == nil {
 		model.AlertConfig = types.ObjectNull(alertConfigTypes)
 		return nil
@@ -1554,7 +1547,7 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		"smtp_auth_identity": types.StringNull(),
 		"smtp_auth_password": types.StringNull(),
 		"smtp_auth_username": types.StringNull(),
-		"smtp_from":          types.StringValue("argus@argus.stackit.cloud"),
+		"smtp_from":          types.StringValue("observability@observability.stackit.cloud"),
 		"smtp_smart_host":    types.StringNull(),
 	})
 	if diags.HasError() {
@@ -1568,7 +1561,7 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 	}, nil
 }
 
-func mapGlobalConfigToAttributes(respGlobalConfigs *argus.Global, globalConfigsTF *globalConfigurationModel) (basetypes.ObjectValue, error) {
+func mapGlobalConfigToAttributes(respGlobalConfigs *observability.Global, globalConfigsTF *globalConfigurationModel) (basetypes.ObjectValue, error) {
 	if respGlobalConfigs == nil {
 		return types.ObjectNull(globalConfigurationTypes), nil
 	}
@@ -1614,7 +1607,7 @@ func mapGlobalConfigToAttributes(respGlobalConfigs *argus.Global, globalConfigsT
 	return globalConfigObject, nil
 }
 
-func mapReceiversToAttributes(ctx context.Context, respReceivers *[]argus.Receivers) (basetypes.ListValue, error) {
+func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observability.Receivers) (basetypes.ListValue, error) {
 	if respReceivers == nil {
 		return types.ListNull(types.ObjectType{AttrTypes: receiversTypes}), nil
 	}
@@ -1738,7 +1731,7 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]argus.Receiv
 	return returnReceiversList, nil
 }
 
-func mapRouteToAttributes(ctx context.Context, route *argus.Route) (attr.Value, error) {
+func mapRouteToAttributes(ctx context.Context, route *observability.Route) (attr.Value, error) {
 	if route == nil {
 		return types.ObjectNull(routeTypes), nil
 	}
@@ -1786,7 +1779,7 @@ func mapRouteToAttributes(ctx context.Context, route *argus.Route) (attr.Value, 
 // This should be a recursive function to handle nested child routes
 // However, the API does not currently have the correct type for the child routes
 // In the future, the current implementation should be the final case of the recursive function
-func mapChildRoutesToAttributes(ctx context.Context, routes *[]argus.RouteSerializer) (basetypes.ListValue, error) {
+func mapChildRoutesToAttributes(ctx context.Context, routes *[]observability.RouteSerializer) (basetypes.ListValue, error) {
 	nullList := types.ListNull(getRouteListType())
 	if routes == nil {
 		return nullList, nil
@@ -1834,7 +1827,7 @@ func mapChildRoutesToAttributes(ctx context.Context, routes *[]argus.RouteSerial
 	return returnRoutesList, nil
 }
 
-func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {
+func toCreatePayload(model *Model) (*observability.CreateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -1843,14 +1836,14 @@ func toCreatePayload(model *Model) (*argus.CreateInstancePayload, error) {
 	for k := range elements {
 		pa[k] = elements[k].String()
 	}
-	return &argus.CreateInstancePayload{
+	return &observability.CreateInstancePayload{
 		Name:      conversion.StringValueToPointer(model.Name),
 		PlanId:    conversion.StringValueToPointer(model.PlanId),
 		Parameter: &pa,
 	}, nil
 }
 
-func toUpdateMetricsStorageRetentionPayload(retentionDaysRaw, retentionDays5m, retentionDays1h *int64, resp *argus.GetMetricsStorageRetentionResponse) (*argus.UpdateMetricsStorageRetentionPayload, error) {
+func toUpdateMetricsStorageRetentionPayload(retentionDaysRaw, retentionDays5m, retentionDays1h *int64, resp *observability.GetMetricsStorageRetentionResponse) (*observability.UpdateMetricsStorageRetentionPayload, error) {
 	var retentionTimeRaw string
 	var retentionTime5m string
 	var retentionTime1h string
@@ -1877,15 +1870,15 @@ func toUpdateMetricsStorageRetentionPayload(retentionDaysRaw, retentionDays5m, r
 		retentionTime1h = fmt.Sprintf("%dd", *retentionDays1h)
 	}
 
-	return &argus.UpdateMetricsStorageRetentionPayload{
+	return &observability.UpdateMetricsStorageRetentionPayload{
 		MetricsRetentionTimeRaw: &retentionTimeRaw,
 		MetricsRetentionTime5m:  &retentionTime5m,
 		MetricsRetentionTime1h:  &retentionTime1h,
 	}, nil
 }
 
-func updateACL(ctx context.Context, projectId, instanceId string, acl []string, client *argus.APIClient) error {
-	payload := argus.UpdateACLPayload{
+func updateACL(ctx context.Context, projectId, instanceId string, acl []string, client *observability.APIClient) error {
+	payload := observability.UpdateACLPayload{
 		Acl: utils.Ptr(acl),
 	}
 
@@ -1897,7 +1890,7 @@ func updateACL(ctx context.Context, projectId, instanceId string, acl []string, 
 	return nil
 }
 
-func toUpdatePayload(model *Model) (*argus.UpdateInstancePayload, error) {
+func toUpdatePayload(model *Model) (*observability.UpdateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -1906,14 +1899,14 @@ func toUpdatePayload(model *Model) (*argus.UpdateInstancePayload, error) {
 	for k, v := range elements {
 		pa[k] = v.String()
 	}
-	return &argus.UpdateInstancePayload{
+	return &observability.UpdateInstancePayload{
 		Name:      conversion.StringValueToPointer(model.Name),
 		PlanId:    conversion.StringValueToPointer(model.PlanId),
 		Parameter: &pa,
 	}, nil
 }
 
-func toUpdateAlertConfigPayload(ctx context.Context, model *alertConfigModel) (*argus.UpdateAlertConfigsPayload, error) {
+func toUpdateAlertConfigPayload(ctx context.Context, model *alertConfigModel) (*observability.UpdateAlertConfigsPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -1927,7 +1920,7 @@ func toUpdateAlertConfigPayload(ctx context.Context, model *alertConfigModel) (*
 
 	var err error
 
-	payload := argus.UpdateAlertConfigsPayload{}
+	payload := observability.UpdateAlertConfigsPayload{}
 
 	payload.Receivers, err = toReceiverPayload(ctx, model)
 	if err != nil {
@@ -1955,7 +1948,7 @@ func toUpdateAlertConfigPayload(ctx context.Context, model *alertConfigModel) (*
 	return &payload, nil
 }
 
-func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]argus.UpdateAlertConfigsPayloadReceiversInner, error) {
+func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]observability.UpdateAlertConfigsPayloadReceiversInner, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -1965,11 +1958,11 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]argus.U
 		return nil, fmt.Errorf("mapping receivers: %w", core.DiagsToError(diags))
 	}
 
-	receivers := []argus.UpdateAlertConfigsPayloadReceiversInner{}
+	receivers := []observability.UpdateAlertConfigsPayloadReceiversInner{}
 
 	for i := range receiversModel {
 		receiver := receiversModel[i]
-		receiverPayload := argus.UpdateAlertConfigsPayloadReceiversInner{
+		receiverPayload := observability.UpdateAlertConfigsPayloadReceiversInner{
 			Name: conversion.StringValueToPointer(receiver.Name),
 		}
 
@@ -1979,10 +1972,10 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]argus.U
 			if diags.HasError() {
 				return nil, fmt.Errorf("mapping email configs: %w", core.DiagsToError(diags))
 			}
-			payloadEmailConfigs := []argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{}
+			payloadEmailConfigs := []observability.CreateAlertConfigReceiverPayloadEmailConfigsInner{}
 			for i := range emailConfigs {
 				emailConfig := emailConfigs[i]
-				payloadEmailConfigs = append(payloadEmailConfigs, argus.CreateAlertConfigReceiverPayloadEmailConfigsInner{
+				payloadEmailConfigs = append(payloadEmailConfigs, observability.CreateAlertConfigReceiverPayloadEmailConfigsInner{
 					AuthIdentity: conversion.StringValueToPointer(emailConfig.AuthIdentity),
 					AuthPassword: conversion.StringValueToPointer(emailConfig.AuthPassword),
 					AuthUsername: conversion.StringValueToPointer(emailConfig.AuthUsername),
@@ -2000,10 +1993,10 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]argus.U
 			if diags.HasError() {
 				return nil, fmt.Errorf("mapping opsgenie configs: %w", core.DiagsToError(diags))
 			}
-			payloadOpsGenieConfigs := []argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{}
+			payloadOpsGenieConfigs := []observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{}
 			for i := range opsgenieConfigs {
 				opsgenieConfig := opsgenieConfigs[i]
-				payloadOpsGenieConfigs = append(payloadOpsGenieConfigs, argus.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{
+				payloadOpsGenieConfigs = append(payloadOpsGenieConfigs, observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{
 					ApiKey: conversion.StringValueToPointer(opsgenieConfig.ApiKey),
 					ApiUrl: conversion.StringValueToPointer(opsgenieConfig.ApiUrl),
 					Tags:   conversion.StringValueToPointer(opsgenieConfig.Tags),
@@ -2018,10 +2011,10 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]argus.U
 			if diags.HasError() {
 				return nil, fmt.Errorf("mapping webhooks configs: %w", core.DiagsToError(diags))
 			}
-			payloadWebHooksConfigs := []argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{}
+			payloadWebHooksConfigs := []observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner{}
 			for i := range receiverWebHooksConfigs {
 				webHooksConfig := receiverWebHooksConfigs[i]
-				payloadWebHooksConfigs = append(payloadWebHooksConfigs, argus.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
+				payloadWebHooksConfigs = append(payloadWebHooksConfigs, observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
 					Url:     conversion.StringValueToPointer(webHooksConfig.Url),
 					MsTeams: conversion.BoolValueToPointer(webHooksConfig.MsTeams),
 				})
@@ -2034,7 +2027,7 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]argus.U
 	return &receivers, nil
 }
 
-func toRoutePayload(ctx context.Context, routeTF *routeModel) (*argus.UpdateAlertConfigsPayloadRoute, error) {
+func toRoutePayload(ctx context.Context, routeTF *routeModel) (*observability.UpdateAlertConfigsPayloadRoute, error) {
 	if routeTF == nil {
 		return nil, fmt.Errorf("nil route model")
 	}
@@ -2042,7 +2035,7 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*argus.UpdateAler
 	var groupByPayload *[]string
 	var matchPayload *map[string]interface{}
 	var matchRegexPayload *map[string]interface{}
-	var childRoutesPayload *[]argus.CreateAlertConfigRoutePayloadRoutesInner
+	var childRoutesPayload *[]observability.CreateAlertConfigRoutePayloadRoutesInner
 
 	if !routeTF.GroupBy.IsNull() && !routeTF.GroupBy.IsUnknown() {
 		groupByPayload = &[]string{}
@@ -2095,7 +2088,7 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*argus.UpdateAler
 			}
 		}
 
-		childRoutesList := []argus.CreateAlertConfigRoutePayloadRoutesInner{}
+		childRoutesList := []observability.CreateAlertConfigRoutePayloadRoutesInner{}
 		for i := range childRoutes {
 			childRoute := childRoutes[i]
 			childRoutePayload, err := toRoutePayload(ctx, &childRoute)
@@ -2108,7 +2101,7 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*argus.UpdateAler
 		childRoutesPayload = &childRoutesList
 	}
 
-	return &argus.UpdateAlertConfigsPayloadRoute{
+	return &observability.UpdateAlertConfigsPayloadRoute{
 		GroupBy:        groupByPayload,
 		GroupInterval:  conversion.StringValueToPointer(routeTF.GroupInterval),
 		GroupWait:      conversion.StringValueToPointer(routeTF.GroupWait),
@@ -2120,11 +2113,11 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*argus.UpdateAler
 	}, nil
 }
 
-func toChildRoutePayload(in *argus.UpdateAlertConfigsPayloadRoute) *argus.CreateAlertConfigRoutePayloadRoutesInner {
+func toChildRoutePayload(in *observability.UpdateAlertConfigsPayloadRoute) *observability.CreateAlertConfigRoutePayloadRoutesInner {
 	if in == nil {
 		return nil
 	}
-	return &argus.CreateAlertConfigRoutePayloadRoutesInner{
+	return &observability.CreateAlertConfigRoutePayloadRoutesInner{
 		GroupBy:        in.GroupBy,
 		GroupInterval:  in.GroupInterval,
 		GroupWait:      in.GroupWait,
@@ -2136,14 +2129,14 @@ func toChildRoutePayload(in *argus.UpdateAlertConfigsPayloadRoute) *argus.Create
 	}
 }
 
-func toGlobalConfigPayload(ctx context.Context, model *alertConfigModel) (*argus.UpdateAlertConfigsPayloadGlobal, error) {
+func toGlobalConfigPayload(ctx context.Context, model *alertConfigModel) (*observability.UpdateAlertConfigsPayloadGlobal, error) {
 	globalConfigModel := globalConfigurationModel{}
 	diags := model.GlobalConfiguration.As(ctx, &globalConfigModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("mapping global configuration: %w", core.DiagsToError(diags))
 	}
 
-	return &argus.UpdateAlertConfigsPayloadGlobal{
+	return &observability.UpdateAlertConfigsPayloadGlobal{
 		OpsgenieApiKey:   conversion.StringValueToPointer(globalConfigModel.OpsgenieApiKey),
 		OpsgenieApiUrl:   conversion.StringValueToPointer(globalConfigModel.OpsgenieApiUrl),
 		ResolveTimeout:   conversion.StringValueToPointer(globalConfigModel.ResolveTimeout),
