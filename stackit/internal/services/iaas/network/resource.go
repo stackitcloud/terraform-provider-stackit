@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/runtime"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -181,20 +180,20 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Create new network
-	var httpResp *http.Response
-	ctxWithHTTPResp := runtime.WithCaptureHTTPResponse(ctx, &httpResp)
-	_, err = r.client.CreateNetwork(ctxWithHTTPResp, projectId).CreateNetworkPayload(*payload).Execute()
+
+	network, err := r.client.CreateNetwork(ctx, projectId).CreateNetworkPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	network, err := wait.CreateNetworkWaitHandler(ctx, r.client, projectId, httpResp.Header.Get("x-request-id")).WaitWithContext(context.Background())
+	networkId := *network.NetworkId
+	network, err = wait.CreateNetworkWaitHandler(ctx, r.client, projectId, networkId).WaitWithContext(context.Background())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Network creation waiting: %v", err))
 		return
 	}
-	networkId := *network.NetworkId
+
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 
 	// Map response body to schema
