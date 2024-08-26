@@ -1,4 +1,4 @@
-package argus
+package observability
 
 import (
 	"context"
@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/argus"
-	"github.com/stackitcloud/stackit-sdk-go/services/argus/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/observability"
+	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -31,12 +31,12 @@ func NewInstanceDataSource() datasource.DataSource {
 
 // instanceDataSource is the data source implementation.
 type instanceDataSource struct {
-	client *argus.APIClient
+	client *observability.APIClient
 }
 
 // Metadata returns the data source type name.
 func (d *instanceDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_argus_instance"
+	resp.TypeName = req.ProviderTypeName + "_observability_instance"
 }
 
 func (d *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -45,7 +45,7 @@ func (d *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 
-	var apiClient *argus.APIClient
+	var apiClient *observability.APIClient
 	var err error
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
@@ -54,13 +54,13 @@ func (d *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 
-	if providerData.ArgusCustomEndpoint != "" {
-		apiClient, err = argus.NewAPIClient(
+	if providerData.ObservabilityCustomEndpoint != "" {
+		apiClient, err = observability.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ArgusCustomEndpoint),
+			config.WithEndpoint(providerData.ObservabilityCustomEndpoint),
 		)
 	} else {
-		apiClient, err = argus.NewAPIClient(
+		apiClient, err = observability.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -70,23 +70,16 @@ func (d *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 	d.client = apiClient
-	tflog.Info(ctx, "Argus instance client configured")
+	tflog.Info(ctx, "Observability instance client configured")
 }
 
 // Schema defines the schema for the data source.
 func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	descriptions := map[string]string{
-		"main": "Argus instance data source schema. Must have a `region` specified in the provider configuration.",
-		"deprecation_message": "The `stackit_argus_instance` data source has been deprecated and will be removed after February 26th 2025. " +
-			"Please use `stackit_observability_instance` instead, which offers the exact same functionality.",
-	}
 	resp.Schema = schema.Schema{
-		Description:         fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["deprecation_message"]),
-		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
-		DeprecationMessage:  descriptions["deprecation_message"],
+		Description: "Observability instance data source schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal data source ID. It is structured as \"`project_id`,`instance_id`\".",
+				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
@@ -98,7 +91,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				},
 			},
 			"instance_id": schema.StringAttribute{
-				Description: "The Argus instance ID.",
+				Description: "The Observability instance ID.",
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -106,7 +99,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				},
 			},
 			"name": schema.StringAttribute{
-				Description: "The name of the Argus instance.",
+				Description: "The name of the Observability instance.",
 				Computed:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -114,7 +107,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				},
 			},
 			"plan_name": schema.StringAttribute{
-				Description: "Specifies the Argus plan. E.g. `Monitoring-Medium-EU01`.",
+				Description: "Specifies the Observability plan. E.g. `Monitoring-Medium-EU01`.",
 				Computed:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -122,7 +115,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				},
 			},
 			"plan_id": schema.StringAttribute{
-				Description: "The Argus plan ID.",
+				Description: "The Observability plan ID.",
 				Computed:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -134,7 +127,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				ElementType: types.StringType,
 			},
 			"dashboard_url": schema.StringAttribute{
-				Description: "Specifies Argus instance dashboard URL.",
+				Description: "Specifies Observability instance dashboard URL.",
 				Computed:    true,
 			},
 			"is_updatable": schema.BoolAttribute{
@@ -438,5 +431,5 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Argus instance read")
+	tflog.Info(ctx, "Observability instance read")
 }

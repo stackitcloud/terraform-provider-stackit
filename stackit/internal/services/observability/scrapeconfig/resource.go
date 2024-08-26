@@ -1,4 +1,4 @@
-package argus
+package observability
 
 import (
 	"context"
@@ -28,8 +28,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/argus"
-	"github.com/stackitcloud/stackit-sdk-go/services/argus/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/observability"
+	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -106,12 +106,12 @@ func NewScrapeConfigResource() resource.Resource {
 
 // scrapeConfigResource is the resource implementation.
 type scrapeConfigResource struct {
-	client *argus.APIClient
+	client *observability.APIClient
 }
 
 // Metadata returns the resource type name.
 func (r *scrapeConfigResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_argus_scrapeconfig"
+	resp.TypeName = req.ProviderTypeName + "_observability_scrapeconfig"
 }
 
 // Configure adds the provider configured client to the resource.
@@ -127,15 +127,15 @@ func (r *scrapeConfigResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 
-	var apiClient *argus.APIClient
+	var apiClient *observability.APIClient
 	var err error
-	if providerData.ArgusCustomEndpoint != "" {
-		apiClient, err = argus.NewAPIClient(
+	if providerData.ObservabilityCustomEndpoint != "" {
+		apiClient, err = observability.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ArgusCustomEndpoint),
+			config.WithEndpoint(providerData.ObservabilityCustomEndpoint),
 		)
 	} else {
-		apiClient, err = argus.NewAPIClient(
+		apiClient, err = observability.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -146,20 +146,13 @@ func (r *scrapeConfigResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 	r.client = apiClient
-	tflog.Info(ctx, "Argus scrape config client configured")
+	tflog.Info(ctx, "Observability scrape config client configured")
 }
 
 // Schema defines the schema for the resource.
 func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
-		"main": "Argus scrape config resource schema. Must have a `region` specified in the provider configuration.",
-		"deprecation_message": "The `stackit_argus_scrapeconfig` resource has been deprecated and will be removed after February 26th 2025. " +
-			"Please use `stackit_observability_scrapeconfig` instead, which offers the exact same functionality.",
-	}
 	resp.Schema = schema.Schema{
-		Description:         fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["deprecation_message"]),
-		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
-		DeprecationMessage:  descriptions["deprecation_message"],
+		Description: "Observability scrape config resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`name`\".",
@@ -180,7 +173,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 			"instance_id": schema.StringAttribute{
-				Description: "Argus instance ID to which the scraping job is associated.",
+				Description: "Observability instance ID to which the scraping job is associated.",
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -392,7 +385,7 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Argus scrape config created")
+	tflog.Info(ctx, "Observability scrape config created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -430,7 +423,7 @@ func (r *scrapeConfigResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Argus scrape config read")
+	tflog.Info(ctx, "Observability scrape config read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -484,7 +477,7 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	// We do not have an update status provided by the argus scrape config api, so we cannot use a waiter here, hence a simple sleep is used.
+	// We do not have an update status provided by the observability scrape config api, so we cannot use a waiter here, hence a simple sleep is used.
 	time.Sleep(15 * time.Second)
 
 	// Fetch updated ScrapeConfig
@@ -503,7 +496,7 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Argus scrape config updated")
+	tflog.Info(ctx, "Observability scrape config updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -532,7 +525,7 @@ func (r *scrapeConfigResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	tflog.Info(ctx, "Argus scrape config deleted")
+	tflog.Info(ctx, "Observability scrape config deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -551,10 +544,10 @@ func (r *scrapeConfigResource) ImportState(ctx context.Context, req resource.Imp
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[2])...)
-	tflog.Info(ctx, "Argus scrape config state imported")
+	tflog.Info(ctx, "Observability scrape config state imported")
 }
 
-func mapFields(ctx context.Context, sc *argus.Job, model *Model) error {
+func mapFields(ctx context.Context, sc *observability.Job, model *Model) error {
 	if sc == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -601,7 +594,7 @@ func mapFields(ctx context.Context, sc *argus.Job, model *Model) error {
 	return nil
 }
 
-func mapBasicAuth(sc *argus.Job, model *Model) error {
+func mapBasicAuth(sc *observability.Job, model *Model) error {
 	if sc.BasicAuth == nil {
 		model.BasicAuth = types.ObjectNull(basicAuthTypes)
 		return nil
@@ -618,7 +611,7 @@ func mapBasicAuth(sc *argus.Job, model *Model) error {
 	return nil
 }
 
-func mapSAML2(sc *argus.Job, model *Model) error {
+func mapSAML2(sc *observability.Job, model *Model) error {
 	if (sc.Params == nil || *sc.Params == nil) && model.SAML2.IsNull() {
 		return nil
 	}
@@ -649,7 +642,7 @@ func mapSAML2(sc *argus.Job, model *Model) error {
 	return nil
 }
 
-func mapTargets(ctx context.Context, sc *argus.Job, model *Model) error {
+func mapTargets(ctx context.Context, sc *observability.Job, model *Model) error {
 	if sc == nil || sc.StaticConfigs == nil {
 		model.Targets = types.ListNull(types.ObjectType{AttrTypes: targetTypes})
 		return nil
@@ -709,12 +702,12 @@ func mapTargets(ctx context.Context, sc *argus.Job, model *Model) error {
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel []targetModel) (*argus.CreateScrapeConfigPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel []targetModel) (*observability.CreateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	sc := argus.CreateScrapeConfigPayload{
+	sc := observability.CreateScrapeConfigPayload{
 		JobName:        conversion.StringValueToPointer(model.Name),
 		MetricsPath:    conversion.StringValueToPointer(model.MetricsPath),
 		ScrapeInterval: conversion.StringValueToPointer(model.ScrapeInterval),
@@ -739,15 +732,15 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	}
 
 	if sc.BasicAuth == nil && !basicAuthModel.Username.IsNull() && !basicAuthModel.Password.IsNull() {
-		sc.BasicAuth = &argus.CreateScrapeConfigPayloadBasicAuth{
+		sc.BasicAuth = &observability.CreateScrapeConfigPayloadBasicAuth{
 			Username: conversion.StringValueToPointer(basicAuthModel.Username),
 			Password: conversion.StringValueToPointer(basicAuthModel.Password),
 		}
 	}
 
-	t := make([]argus.CreateScrapeConfigPayloadStaticConfigsInner, len(targetsModel))
+	t := make([]observability.CreateScrapeConfigPayloadStaticConfigsInner, len(targetsModel))
 	for i, target := range targetsModel {
-		ti := argus.CreateScrapeConfigPayloadStaticConfigsInner{}
+		ti := observability.CreateScrapeConfigPayloadStaticConfigsInner{}
 
 		urls := []string{}
 		diags := target.URLs.ElementsAs(ctx, &urls, false)
@@ -768,7 +761,7 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	return &sc, nil
 }
 
-func setDefaultsCreateScrapeConfig(sc *argus.CreateScrapeConfigPayload, model *Model, saml2Model *saml2Model) {
+func setDefaultsCreateScrapeConfig(sc *observability.CreateScrapeConfigPayload, model *Model, saml2Model *saml2Model) {
 	if sc == nil {
 		return
 	}
@@ -799,12 +792,12 @@ func setDefaultsCreateScrapeConfig(sc *argus.CreateScrapeConfigPayload, model *M
 	}
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel []targetModel) (*argus.UpdateScrapeConfigPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, basicAuthModel *basicAuthModel, targetsModel []targetModel) (*observability.UpdateScrapeConfigPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	sc := argus.UpdateScrapeConfigPayload{
+	sc := observability.UpdateScrapeConfigPayload{
 		MetricsPath:    conversion.StringValueToPointer(model.MetricsPath),
 		ScrapeInterval: conversion.StringValueToPointer(model.ScrapeInterval),
 		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
@@ -828,15 +821,15 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	}
 
 	if sc.BasicAuth == nil && !basicAuthModel.Username.IsNull() && !basicAuthModel.Password.IsNull() {
-		sc.BasicAuth = &argus.CreateScrapeConfigPayloadBasicAuth{
+		sc.BasicAuth = &observability.CreateScrapeConfigPayloadBasicAuth{
 			Username: conversion.StringValueToPointer(basicAuthModel.Username),
 			Password: conversion.StringValueToPointer(basicAuthModel.Password),
 		}
 	}
 
-	t := make([]argus.UpdateScrapeConfigPayloadStaticConfigsInner, len(targetsModel))
+	t := make([]observability.UpdateScrapeConfigPayloadStaticConfigsInner, len(targetsModel))
 	for i, target := range targetsModel {
-		ti := argus.UpdateScrapeConfigPayloadStaticConfigsInner{}
+		ti := observability.UpdateScrapeConfigPayloadStaticConfigsInner{}
 
 		urls := []string{}
 		diags := target.URLs.ElementsAs(ctx, &urls, false)
@@ -857,7 +850,7 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	return &sc, nil
 }
 
-func setDefaultsUpdateScrapeConfig(sc *argus.UpdateScrapeConfigPayload, model *Model) {
+func setDefaultsUpdateScrapeConfig(sc *observability.UpdateScrapeConfigPayload, model *Model) {
 	if sc == nil {
 		return
 	}
