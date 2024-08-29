@@ -78,7 +78,7 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
-			"nameservers_changed_outisde_tf",
+			"nameservers_changed_outside_tf",
 			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
