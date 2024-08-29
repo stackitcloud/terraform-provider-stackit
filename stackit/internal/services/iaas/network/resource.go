@@ -139,7 +139,8 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"nameservers": schema.ListAttribute{
 				Description: "The nameservers of the network.",
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"ipv4_prefix_length": schema.Int64Attribute{
