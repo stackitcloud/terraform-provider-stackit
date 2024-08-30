@@ -41,7 +41,7 @@ To authenticate, you will need a [service account](https://docs.stackit.cloud/st
 
 When setting up authentication, the provider will always try to use the key flow first and search for credentials in several locations, following a specific order:
 
-1. Explicit configuration, e.g. by setting the field `stackit_service_account_key_path` in the provider block (see example below)
+1. Explicit configuration, e.g. by setting the field `service_account_key_path` in the provider block (see example below)
 2. Environment variable, e.g. by setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH`
 3. Credentials file
 
@@ -140,7 +140,8 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 
 ### Optional
 
-- `argus_custom_endpoint` (String) Custom endpoint for the Argus service
+- `argus_custom_endpoint` (String, Deprecated) Custom endpoint for the Argus service
+- `authorization_custom_endpoint` (String) Custom endpoint for the Membership service
 - `credentials_path` (String) Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.
 - `dns_custom_endpoint` (String) Custom endpoint for the DNS service
 - `enable_beta_resources` (Boolean) Enable beta resources. Default is false.
@@ -151,6 +152,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `mariadb_custom_endpoint` (String) Custom endpoint for the MariaDB service
 - `mongodbflex_custom_endpoint` (String) Custom endpoint for the MongoDB Flex service
 - `objectstorage_custom_endpoint` (String) Custom endpoint for the Object Storage service
+- `observability_custom_endpoint` (String) Custom endpoint for the Observability service
 - `opensearch_custom_endpoint` (String) Custom endpoint for the OpenSearch service
 - `postgresflex_custom_endpoint` (String) Custom endpoint for the PostgresFlex service
 - `postgresql_custom_endpoint` (String) Custom endpoint for the PostgreSQL service
@@ -166,6 +168,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `service_account_key` (String) Service account key used for authentication. If set, the key flow will be used to authenticate all operations.
 - `service_account_key_path` (String) Path for the service account key used for authentication. If set, the key flow will be used to authenticate all operations.
 - `service_account_token` (String) Token used for authentication. If set, the token flow will be used to authenticate all operations.
+- `service_enablement_custom_endpoint` (String) Custom endpoint for the Service Enablement API
 - `ske_custom_endpoint` (String) Custom endpoint for the Kubernetes Engine (SKE) service
 - `sqlserverflex_custom_endpoint` (String) Custom endpoint for the SQL Server Flex service
 - `token_custom_endpoint` (String) Custom endpoint for the token API, which is used to request access tokens when using the key flow

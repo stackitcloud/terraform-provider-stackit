@@ -20,7 +20,7 @@ func TestMapFieldsCreate(t *testing.T) {
 		{
 			"default_values",
 			&sqlserverflex.CreateUserResponse{
-				Item: &sqlserverflex.User{
+				Item: &sqlserverflex.SingleUser{
 					Id:       utils.Ptr("uid"),
 					Password: utils.Ptr(""),
 				},
@@ -41,7 +41,7 @@ func TestMapFieldsCreate(t *testing.T) {
 		{
 			"simple_values",
 			&sqlserverflex.CreateUserResponse{
-				Item: &sqlserverflex.User{
+				Item: &sqlserverflex.SingleUser{
 					Id: utils.Ptr("uid"),
 					Roles: &[]string{
 						"role_1",
@@ -74,7 +74,7 @@ func TestMapFieldsCreate(t *testing.T) {
 		{
 			"null_fields_and_int_conversions",
 			&sqlserverflex.CreateUserResponse{
-				Item: &sqlserverflex.User{
+				Item: &sqlserverflex.SingleUser{
 					Id:       utils.Ptr("uid"),
 					Roles:    &[]string{},
 					Username: nil,
@@ -111,7 +111,7 @@ func TestMapFieldsCreate(t *testing.T) {
 		{
 			"no_resource_id",
 			&sqlserverflex.CreateUserResponse{
-				Item: &sqlserverflex.User{},
+				Item: &sqlserverflex.SingleUser{},
 			},
 			Model{},
 			false,
@@ -119,7 +119,7 @@ func TestMapFieldsCreate(t *testing.T) {
 		{
 			"no_password",
 			&sqlserverflex.CreateUserResponse{
-				Item: &sqlserverflex.User{
+				Item: &sqlserverflex.SingleUser{
 					Id: utils.Ptr("uid"),
 				},
 			},
@@ -160,7 +160,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values",
 			&sqlserverflex.GetUserResponse{
-				Item: &sqlserverflex.InstanceResponseUser{},
+				Item: &sqlserverflex.UserResponseUser{},
 			},
 			Model{
 				Id:         types.StringValue("pid,iid,uid"),
@@ -177,7 +177,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&sqlserverflex.GetUserResponse{
-				Item: &sqlserverflex.InstanceResponseUser{
+				Item: &sqlserverflex.UserResponseUser{
 					Roles: &[]string{
 						"role_1",
 						"role_2",
@@ -207,7 +207,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"null_fields_and_int_conversions",
 			&sqlserverflex.GetUserResponse{
-				Item: &sqlserverflex.InstanceResponseUser{
+				Item: &sqlserverflex.UserResponseUser{
 					Id:       utils.Ptr("uid"),
 					Roles:    &[]string{},
 					Username: nil,
@@ -242,7 +242,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_resource_id",
 			&sqlserverflex.GetUserResponse{
-				Item: &sqlserverflex.InstanceResponseUser{},
+				Item: &sqlserverflex.UserResponseUser{},
 			},
 			Model{},
 			false,
@@ -276,16 +276,16 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		inputRoles  []sqlserverflex.Role
+		inputRoles  []string
 		expected    *sqlserverflex.CreateUserPayload
 		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
-			[]sqlserverflex.Role{},
+			[]string{},
 			&sqlserverflex.CreateUserPayload{
-				Roles:    &[]sqlserverflex.Role{},
+				Roles:    &[]string{},
 				Username: nil,
 			},
 			true,
@@ -295,12 +295,12 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{
 				Username: types.StringValue("username"),
 			},
-			[]sqlserverflex.Role{
+			[]string{
 				"role_1",
 				"role_2",
 			},
 			&sqlserverflex.CreateUserPayload{
-				Roles: &[]sqlserverflex.Role{
+				Roles: &[]string{
 					"role_1",
 					"role_2",
 				},
@@ -313,11 +313,11 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{
 				Username: types.StringNull(),
 			},
-			[]sqlserverflex.Role{
+			[]string{
 				"",
 			},
 			&sqlserverflex.CreateUserPayload{
-				Roles: &[]sqlserverflex.Role{
+				Roles: &[]string{
 					"",
 				},
 				Username: nil,
@@ -327,7 +327,7 @@ func TestToCreatePayload(t *testing.T) {
 		{
 			"nil_model",
 			nil,
-			[]sqlserverflex.Role{},
+			[]string{},
 			nil,
 			false,
 		},
@@ -336,9 +336,9 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{
 				Username: types.StringValue("username"),
 			},
-			[]sqlserverflex.Role{},
+			[]string{},
 			&sqlserverflex.CreateUserPayload{
-				Roles:    &[]sqlserverflex.Role{},
+				Roles:    &[]string{},
 				Username: utils.Ptr("username"),
 			},
 			true,

@@ -4,5 +4,5 @@ resource "stackit_resourcemanager_project" "example" {
   labels = {
     "Label 1" = "foo"
   }
-  owner_email = "aa@bb.ccc"
+  owner_email = "john.doe@stackit.cloud"
 }

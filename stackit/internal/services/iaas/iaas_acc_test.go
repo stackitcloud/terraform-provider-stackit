@@ -25,10 +25,22 @@ var networkResource = map[string]string{
 	"nameserver1":        "5.6.7.8",
 }
 
-func resourceConfig(name, nameservers string) string {
-	return fmt.Sprintf(`
-				%s
+var networkAreaResource = map[string]string{
+	"organization_id":  testutil.OrganizationId,
+	"name":             fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
+	"networkrange0":    "10.0.0.0/16",
+	"transfer_network": "10.1.2.0/24",
+}
 
+var networkAreaRouteResource = map[string]string{
+	"organization_id": networkAreaResource["organization_id"],
+	"network_area_id": networkAreaResource["network_area_id"],
+	"prefix":          "1.1.1.0/24",
+	"next_hop":        "1.1.1.1",
+}
+
+func networkResourceConfig(name, nameservers string) string {
+	return fmt.Sprintf(`
 				resource "stackit_network" "network" {
 					project_id = "%s"
 					name       = "%s"
@@ -36,11 +48,51 @@ func resourceConfig(name, nameservers string) string {
 					nameservers = %s
 				}
 				`,
-		testutil.IaaSProviderConfig(),
 		networkResource["project_id"],
 		name,
 		networkResource["ipv4_prefix_length"],
 		nameservers,
+	)
+}
+
+func networkAreaResourceConfig(areaname, networkranges string) string {
+	return fmt.Sprintf(`
+				resource "stackit_network_area" "network_area" {
+					organization_id = "%s"
+					name       = "%s"
+					network_ranges = [{
+						prefix = "%s"
+					}]
+					transfer_network = "%s"
+				}
+				`,
+		networkAreaResource["organization_id"],
+		areaname,
+		networkranges,
+		networkAreaResource["transfer_network"],
+	)
+}
+
+func networkAreaRouteResourceConfig() string {
+	return fmt.Sprintf(`
+				resource "stackit_network_area_route" "network_area_route" {
+					organization_id = stackit_network_area.network_area.organization_id
+					network_area_id = stackit_network_area.network_area.network_area_id
+					prefix          = "%s"
+					next_hop        = "%s"
+				}
+				`,
+		networkAreaRouteResource["prefix"],
+		networkAreaRouteResource["next_hop"],
+	)
+}
+
+func resourceConfig(name, nameservers, areaname, networkranges string) string {
+	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
+		testutil.IaaSProviderConfig(),
+		networkResourceConfig(name, nameservers),
+		networkAreaResourceConfig(areaname, networkranges),
+		networkAreaRouteResourceConfig(),
 	)
 }
 
@@ -58,6 +110,8 @@ func TestAccIaaS(t *testing.T) {
 						"[%q]",
 						networkResource["nameserver0"],
 					),
+					networkAreaResource["name"],
+					networkAreaResource["networkrange0"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -66,23 +120,58 @@ func TestAccIaaS(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network", "name", networkResource["name"]),
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.#", "1"),
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
+
+					// Network Area
+					resource.TestCheckResourceAttr("stackit_network_area.network_area", "organization_id", networkAreaResource["organization_id"]),
+					resource.TestCheckResourceAttrSet("stackit_network_area.network_area", "network_area_id"),
+					resource.TestCheckResourceAttr("stackit_network_area.network_area", "name", networkAreaResource["name"]),
+					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.#", "1"),
+					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.0.prefix", networkAreaResource["networkrange0"]),
+					resource.TestCheckResourceAttrSet("stackit_network_area.network_area", "network_ranges.0.network_range_id"),
+
+					// Network Area Route
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area_route.network_area_route", "organization_id",
+						"stackit_network_area.network_area", "organization_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area_route.network_area_route", "network_area_id",
+						"stackit_network_area.network_area", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_network_area_route.network_area_route", "network_area_route_id"),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "prefix", networkAreaRouteResource["prefix"]),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop", networkAreaRouteResource["next_hop"]),
 				),
 			},
 			// Data source
 			{
 				Config: fmt.Sprintf(`
 					%s
-
+			
 					data "stackit_network" "network" {
 						project_id  = stackit_network.network.project_id
 						network_id = stackit_network.network.network_id
-					}`,
+					}
+			
+					data "stackit_network_area" "network_area" {
+						organization_id  = stackit_network_area.network_area.organization_id
+						network_area_id  = stackit_network_area.network_area.network_area_id
+					}
+			
+					data "stackit_network_area_route" "network_area_route" {
+						organization_id  	  = stackit_network_area.network_area.organization_id
+						network_area_id  	  = stackit_network_area.network_area.network_area_id
+						network_area_route_id = stackit_network_area_route.network_area_route.network_area_route_id
+					}
+					`,
 					resourceConfig(
 						networkResource["name"],
 						fmt.Sprintf(
 							"[%q]",
 							networkResource["nameserver0"],
 						),
+						networkAreaResource["name"],
+						networkAreaResource["networkrange0"],
 					),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -94,6 +183,29 @@ func TestAccIaaS(t *testing.T) {
 					),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "name", networkResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
+
+					// Network area
+					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "organization_id", networkAreaResource["organization_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"data.stackit_network_area.network_area", "network_area_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "name", networkAreaResource["name"]),
+					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "network_ranges.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "network_ranges.0.prefix", networkAreaResource["networkrange0"]),
+
+					// Network area route
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area_route.network_area_route", "organization_id",
+						"stackit_network_area.network_area", "organization_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area_route.network_area_route", "network_area_id",
+						"stackit_network_area.network_area", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_network_area_route.network_area_route", "network_area_route_id"),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "prefix", networkAreaRouteResource["prefix"]),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop", networkAreaRouteResource["next_hop"]),
 				),
 			},
 			// Import
@@ -114,6 +226,42 @@ func TestAccIaaS(t *testing.T) {
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"ipv4_prefix_length"}, // Field is not returned by the API
 			},
+			{
+				ResourceName: "stackit_network_area.network_area",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_network_area.network_area"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_network_area.network_area")
+					}
+					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_area_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.OrganizationId, networkAreaId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName: "stackit_network_area_route.network_area_route",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_network_area_route.network_area_route"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_network_area_route.network_area_route")
+					}
+					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_area_id")
+					}
+					networkAreaRouteId, ok := r.Primary.Attributes["network_area_route_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_area_route_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.OrganizationId, networkAreaId, networkAreaRouteId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 			// Update
 			{
 				Config: resourceConfig(
@@ -123,6 +271,8 @@ func TestAccIaaS(t *testing.T) {
 						networkResource["nameserver0"],
 						networkResource["nameserver1"],
 					),
+					fmt.Sprintf("%s-updated", networkAreaResource["name"]),
+					networkAreaResource["networkrange0"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -132,6 +282,13 @@ func TestAccIaaS(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.#", "2"),
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.1", networkResource["nameserver1"]),
+
+					// Network area
+					resource.TestCheckResourceAttr("stackit_network_area.network_area", "organization_id", networkAreaResource["organization_id"]),
+					resource.TestCheckResourceAttrSet("stackit_network_area.network_area", "network_area_id"),
+					resource.TestCheckResourceAttr("stackit_network_area.network_area", "name", fmt.Sprintf("%s-updated", networkAreaResource["name"])),
+					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.#", "1"),
+					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.0.prefix", networkAreaResource["networkrange0"]),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -180,6 +337,34 @@ func testAccCheckIaaSDestroy(s *terraform.State) error {
 			err := client.DeleteNetworkExecute(ctx, testutil.ProjectId, *networks[i].NetworkId)
 			if err != nil {
 				return fmt.Errorf("destroying network %s during CheckDestroy: %w", *networks[i].NetworkId, err)
+			}
+		}
+	}
+
+	// network areas
+	networkAreasToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_network_area" {
+			continue
+		}
+		networkAreaId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		networkAreasToDestroy = append(networkAreasToDestroy, networkAreaId)
+	}
+
+	networkAreasResp, err := client.ListNetworkAreasExecute(ctx, testutil.OrganizationId)
+	if err != nil {
+		return fmt.Errorf("getting networkAreasResp: %w", err)
+	}
+
+	networkAreas := *networkAreasResp.Items
+	for i := range networkAreas {
+		if networkAreas[i].AreaId == nil {
+			continue
+		}
+		if utils.Contains(networkAreasToDestroy, *networkAreas[i].AreaId) {
+			err := client.DeleteNetworkAreaExecute(ctx, testutil.OrganizationId, *networkAreas[i].AreaId)
+			if err != nil {
+				return fmt.Errorf("destroying network area %s during CheckDestroy: %w", *networkAreas[i].AreaId, err)
 			}
 		}
 	}

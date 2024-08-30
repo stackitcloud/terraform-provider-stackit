@@ -194,7 +194,7 @@ func TestToCreatePayload(t *testing.T) {
 			&iaas.CreateNetworkPayload{
 				Name: utils.Ptr("name"),
 				AddressFamily: &iaas.CreateNetworkAddressFamily{
-					Ipv4: &iaas.CreateNetworkIPv4{
+					Ipv4: &iaas.CreateNetworkIPv4Body{
 						Nameservers: &[]string{
 							"ns1",
 							"ns2",
@@ -244,7 +244,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
 				AddressFamily: &iaas.UpdateNetworkAddressFamily{
-					Ipv4: &iaas.UpdateNetworkIPv4{
+					Ipv4: &iaas.UpdateNetworkIPv4Body{
 						Nameservers: &[]string{
 							"ns1",
 							"ns2",

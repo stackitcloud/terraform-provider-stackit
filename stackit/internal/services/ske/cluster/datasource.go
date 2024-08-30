@@ -296,6 +296,21 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							},
 						},
 					},
+					"dns": schema.SingleNestedAttribute{
+						Description: "DNS extension configuration",
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Description: "Flag to enable/disable DNS extensions",
+								Computed:    true,
+							},
+							"zones": schema.ListAttribute{
+								Description: "Specify a list of domain filters for externalDNS (e.g., `foo.runs.onstackit.cloud`)",
+								Computed:    true,
+								ElementType: types.StringType,
+							},
+						},
+					},
 				},
 			},
 			"kube_config": schema.StringAttribute{
@@ -359,7 +374,7 @@ func (r *clusterDataSource) getCredential(ctx context.Context, diags *diag.Diagn
 		model.KubeConfig = types.StringPointerValue(nil)
 		return nil
 	}
-	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute()
+	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute() //nolint:staticcheck //This endpoint is deprecated but is called to support a deprecated attribute, will be removed with the attribute
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if !ok {

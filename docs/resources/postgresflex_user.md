@@ -37,4 +37,5 @@ resource "stackit_postgresflex_user" "example" {
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`,`user_id`".
 - `password` (String, Sensitive)
 - `port` (Number)
+- `uri` (String, Sensitive)
 - `user_id` (String) User ID.

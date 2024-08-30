@@ -14,28 +14,31 @@ import (
 const Separator = ","
 
 type ProviderData struct {
-	RoundTripper                  http.RoundTripper
-	ServiceAccountEmail           string
-	Region                        string
-	ArgusCustomEndpoint           string
-	DnsCustomEndpoint             string
-	IaaSCustomEndpoint            string
-	LoadBalancerCustomEndpoint    string
-	LogMeCustomEndpoint           string
-	MariaDBCustomEndpoint         string
-	MongoDBFlexCustomEndpoint     string
-	ObjectStorageCustomEndpoint   string
-	OpenSearchCustomEndpoint      string
-	PostgresFlexCustomEndpoint    string
-	PostgreSQLCustomEndpoint      string
-	RabbitMQCustomEndpoint        string
-	RedisCustomEndpoint           string
-	ResourceManagerCustomEndpoint string
-	SecretsManagerCustomEndpoint  string
-	SQLServerFlexCustomEndpoint   string
-	ServerBackupCustomEndpoint    string
-	SKECustomEndpoint             string
-	EnableBetaResources           bool
+	RoundTripper                    http.RoundTripper
+	ServiceAccountEmail             string
+	Region                          string
+	ArgusCustomEndpoint             string
+	AuthorizationCustomEndpoint     string
+	DnsCustomEndpoint               string
+	IaaSCustomEndpoint              string
+	LoadBalancerCustomEndpoint      string
+	LogMeCustomEndpoint             string
+	MariaDBCustomEndpoint           string
+	MongoDBFlexCustomEndpoint       string
+	ObjectStorageCustomEndpoint     string
+	ObservabilityCustomEndpoint     string
+	OpenSearchCustomEndpoint        string
+	PostgresFlexCustomEndpoint      string
+	PostgreSQLCustomEndpoint        string
+	RabbitMQCustomEndpoint          string
+	RedisCustomEndpoint             string
+	ResourceManagerCustomEndpoint   string
+	SecretsManagerCustomEndpoint    string
+	SQLServerFlexCustomEndpoint     string
+	ServerBackupCustomEndpoint      string
+	SKECustomEndpoint               string
+	ServiceEnablementCustomEndpoint string
+	EnableBetaResources             bool
 }
 
 // DiagsToError Converts TF diagnostics' errors into an error with a human-readable description.

@@ -6,13 +6,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -45,6 +42,7 @@ type Model struct {
 	Password   types.String `tfsdk:"password"`
 	Host       types.String `tfsdk:"host"`
 	Port       types.Int64  `tfsdk:"port"`
+	Uri        types.String `tfsdk:"uri"`
 }
 
 // NewUserResource is a helper function to simplify the provider implementation.
@@ -100,15 +98,13 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 
 // Schema defines the schema for the resource.
 func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	rolesOptions := []string{"read", "readWrite"}
-
 	descriptions := map[string]string{
 		"main":        "MongoDB Flex user resource schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the MongoDB Flex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"roles":       "Database access levels for the user. " + utils.SupportedValuesDocumentation(rolesOptions),
+		"roles":       "Database access levels for the user. Some of the possible values are: [`read`, `readWrite`, `readWriteAnyDatabase`]",
 	}
 
 	resp.Schema = schema.Schema{
@@ -167,11 +163,6 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Description: descriptions["roles"],
 				ElementType: types.StringType,
 				Required:    true,
-				Validators: []validator.Set{
-					setvalidator.ValueStringsAre(
-						stringvalidator.OneOf(rolesOptions...),
-					),
-				},
 			},
 			"database": schema.StringAttribute{
 				Required: true,
@@ -188,6 +179,10 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			},
 			"port": schema.Int64Attribute{
 				Computed: true,
+			},
+			"uri": schema.StringAttribute{
+				Computed:  true,
+				Sensitive: true,
 			},
 		},
 	}
@@ -339,8 +334,8 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), idParts[2])...)
 	core.LogAndAddWarning(ctx, &resp.Diagnostics,
-		"MongoDB Flex user imported with empty password",
-		"The user password is not imported as it is only available upon creation of a new user. The password field will be empty.",
+		"MongoDB Flex user imported with empty password and empty uri",
+		"The user password and uri are not imported as they are only available upon creation of a new user. The password and uri fields will be empty.",
 	)
 	tflog.Info(ctx, "MongoDB Flex user state imported")
 }
@@ -390,6 +385,7 @@ func mapFieldsCreate(userResp *mongodbflex.CreateUserResponse, model *Model) err
 	}
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
+	model.Uri = types.StringPointerValue(user.Uri)
 	return nil
 }
 

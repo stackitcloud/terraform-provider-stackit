@@ -21,17 +21,17 @@ var clusterResource = map[string]string{
 	"project_id":                                       testutil.ProjectId,
 	"name":                                             fmt.Sprintf("cl-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 	"name_min":                                         fmt.Sprintf("cl-min-%s", acctest.RandStringFromCharSet(3, acctest.CharSetAlphaNum)),
-	"kubernetes_version_min":                           "1.26",
-	"kubernetes_version_used":                          "1.26.15",
-	"kubernetes_version_min_new":                       "1.27",
-	"kubernetes_version_used_new":                      "1.27.13",
+	"kubernetes_version_min":                           "1.28",
+	"kubernetes_version_used":                          "1.28.11",
+	"kubernetes_version_min_new":                       "1.29",
+	"kubernetes_version_used_new":                      "1.29.6",
 	"nodepool_name":                                    "np-acc-test",
 	"nodepool_name_min":                                "np-acc-min-test",
 	"nodepool_machine_type":                            "b1.2",
 	"nodepool_os_version_min":                          "3815.2",
-	"nodepool_os_version_used":                         "3815.2.1",
-	"nodepool_os_version_min_new":                      "3815.2.1",
-	"nodepool_os_version_used_new":                     "3815.2.1",
+	"nodepool_os_version_used":                         "3815.2.3",
+	"nodepool_os_version_min_new":                      "3815.2.3",
+	"nodepool_os_version_used_new":                     "3815.2.3",
 	"nodepool_os_name":                                 "flatcar",
 	"nodepool_minimum":                                 "2",
 	"nodepool_maximum":                                 "3",
@@ -50,6 +50,8 @@ var clusterResource = map[string]string{
 	"extensions_acl_cidrs":                             "192.168.0.0/24",
 	"extensions_argus_enabled":                         "false",
 	"extensions_argus_instance_id":                     "aaaaaaaa-1111-2222-3333-444444444444", // A not-existing Argus ID let the creation time-out.
+	"extensions_dns_enabled":                           "true",
+	"extensions_dns_zones":                             "foo.onstackit.cloud", // Dummy DNS zone, replace when running the tests!
 	"hibernations_start":                               "0 16 * * *",
 	"hibernations_end":                                 "0 18 * * *",
 	"hibernations_timezone":                            "Europe/Berlin",
@@ -103,6 +105,10 @@ func getConfig(kubernetesVersion, nodePoolMachineOSVersion string, maintenanceEn
 				argus = {
 					enabled = %s
 					argus_instance_id = "%s"
+				}
+				dns = {
+					enabled = %s
+					zones = ["%s"]
 				}
 			}
 			hibernations = [{
@@ -167,6 +173,8 @@ func getConfig(kubernetesVersion, nodePoolMachineOSVersion string, maintenanceEn
 		clusterResource["extensions_acl_cidrs"],
 		clusterResource["extensions_argus_enabled"],
 		clusterResource["extensions_argus_instance_id"],
+		clusterResource["extensions_dns_enabled"],
+		clusterResource["extensions_dns_zones"],
 		clusterResource["hibernations_start"],
 		clusterResource["hibernations_end"],
 		clusterResource["hibernations_timezone"],
@@ -231,6 +239,9 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", clusterResource["extensions_acl_cidrs"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.argus.enabled", clusterResource["extensions_argus_enabled"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.argus.argus_instance_id", clusterResource["extensions_argus_instance_id"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.enabled", clusterResource["extensions_dns_enabled"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.#", "1"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.0", clusterResource["extensions_dns_zones"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.start", clusterResource["hibernations_start"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.end", clusterResource["hibernations_end"]),
@@ -239,7 +250,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", clusterResource["maintenance_enable_machine_image_version_updates"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end"]),
-					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kube_config"),
+					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster", "kube_config"),
 
 					// Kubeconfig
 
@@ -396,7 +407,7 @@ func TestAccSKE(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				// The fields are not provided in the SKE API when disabled, although set actively.
-				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config", "node_pools.0.os_version_min", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%"},
+				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config", "node_pools.0.os_version_min", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%", "extensions.dns.enabled", "extensions.dns.zones", "extensions.dns.zones.#", "extensions.dns.zones.%"},
 			},
 			// 4) Import minimal cluster
 			{
@@ -422,7 +433,7 @@ func TestAccSKE(t *testing.T) {
 			},
 			// 5) Update kubernetes version, OS version and maintenance end
 			{
-				Config: getConfig(clusterResource["kubernetes_version_min_new"], clusterResource["os_version_min_new"], utils.Ptr(clusterResource["maintenance_end_new"])),
+				Config: getConfig(clusterResource["kubernetes_version_min_new"], clusterResource["nodepool_os_version_min_new"], utils.Ptr(clusterResource["maintenance_end_new"])),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
@@ -453,6 +464,9 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", clusterResource["extensions_acl_cidrs"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.argus.enabled", clusterResource["extensions_argus_enabled"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.argus.argus_instance_id", clusterResource["extensions_argus_instance_id"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.enabled", clusterResource["extensions_dns_enabled"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.#", "1"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.0", clusterResource["extensions_dns_zones"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.start", clusterResource["hibernations_start"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.end", clusterResource["hibernations_end"]),
@@ -488,7 +502,9 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 	var client *ske.APIClient
 	var err error
 	if testutil.SKECustomEndpoint == "" {
-		client, err = ske.NewAPIClient()
+		client, err = ske.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
 	} else {
 		client, err = ske.NewAPIClient(
 			config.WithEndpoint(testutil.SKECustomEndpoint),

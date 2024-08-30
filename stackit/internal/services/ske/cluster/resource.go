@@ -29,11 +29,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
+	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
+	enablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/wait"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
+	skeWait "github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 	"golang.org/x/mod/semver"
 )
@@ -175,12 +178,14 @@ var hibernationTypes = map[string]attr.Type{
 type extensions struct {
 	Argus types.Object `tfsdk:"argus"`
 	ACL   types.Object `tfsdk:"acl"`
+	DNS   types.Object `tfsdk:"dns"`
 }
 
 // Types corresponding to extensions
 var extensionsTypes = map[string]attr.Type{
 	"argus": basetypes.ObjectType{AttrTypes: argusTypes},
 	"acl":   basetypes.ObjectType{AttrTypes: aclTypes},
+	"dns":   basetypes.ObjectType{AttrTypes: dnsTypes},
 }
 
 // Struct corresponding to extensions.ACL
@@ -207,6 +212,18 @@ var argusTypes = map[string]attr.Type{
 	"argus_instance_id": basetypes.StringType{},
 }
 
+// Struct corresponding to extensions.DNS
+type dns struct {
+	Enabled types.Bool `tfsdk:"enabled"`
+	Zones   types.List `tfsdk:"zones"`
+}
+
+// Types corresponding to DNS
+var dnsTypes = map[string]attr.Type{
+	"enabled": basetypes.BoolType{},
+	"zones":   basetypes.ListType{ElemType: types.StringType},
+}
+
 // NewClusterResource is a helper function to simplify the provider implementation.
 func NewClusterResource() resource.Resource {
 	return &clusterResource{}
@@ -214,7 +231,8 @@ func NewClusterResource() resource.Resource {
 
 // clusterResource is the resource implementation.
 type clusterResource struct {
-	client *ske.APIClient
+	skeClient        *ske.APIClient
+	enablementClient *serviceenablement.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -235,27 +253,46 @@ func (r *clusterResource) Configure(ctx context.Context, req resource.ConfigureR
 		return
 	}
 
-	var apiClient *ske.APIClient
+	var skeClient *ske.APIClient
+	var enablementClient *serviceenablement.APIClient
 	var err error
 	if providerData.SKECustomEndpoint != "" {
-		apiClient, err = ske.NewAPIClient(
+		skeClient, err = ske.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.SKECustomEndpoint),
 		)
 	} else {
-		apiClient, err = ske.NewAPIClient(
+		skeClient, err = ske.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring SKE API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
 
-	r.client = apiClient
-	tflog.Info(ctx, "SKE cluster client configured")
+	if providerData.ServiceEnablementCustomEndpoint != "" {
+		enablementClient, err = serviceenablement.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithEndpoint(providerData.ServiceEnablementCustomEndpoint),
+		)
+	} else {
+		enablementClient, err = serviceenablement.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithRegion(providerData.Region),
+		)
+	}
+
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring Service Enablement API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+		return
+	}
+
+	r.skeClient = skeClient
+	r.enablementClient = enablementClient
+	tflog.Info(ctx, "SKE cluster clients configured")
 }
 
 // Schema defines the schema for the resource.
@@ -559,6 +596,21 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							},
 							"allowed_cidrs": schema.ListAttribute{
 								Description: "Specify a list of CIDRs to whitelist.",
+								Required:    true,
+								ElementType: types.StringType,
+							},
+						},
+					},
+					"dns": schema.SingleNestedAttribute{
+						Description: "DNS extension configuration",
+						Optional:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Description: "Flag to enable/disable DNS extensions",
+								Required:    true,
+							},
+							"zones": schema.ListAttribute{
+								Description: "Specify a list of domain filters for externalDNS (e.g., `foo.runs.onstackit.cloud`)",
 								Optional:    true,
 								ElementType: types.StringType,
 							},
@@ -641,13 +693,13 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	ctx = tflog.SetField(ctx, "name", clusterName)
 
 	// If SKE functionality is not enabled, enable it
-	_, err := r.client.EnableService(ctx, projectId).Execute()
+	err := r.enablementClient.EnableService(ctx, projectId, utils.SKEServiceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Calling API to enable SKE: %v", err))
 		return
 	}
 
-	_, err = wait.EnableServiceWaitHandler(ctx, r.client, projectId).WaitWithContext(ctx)
+	_, err = enablementWait.EnableServiceWaitHandler(ctx, r.enablementClient, projectId, utils.SKEServiceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Wait for SKE enablement: %v", err))
 		return
@@ -674,7 +726,7 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 }
 
 func (r *clusterResource) loadAvailableVersions(ctx context.Context) ([]ske.KubernetesVersion, []ske.MachineImage, error) {
-	c := r.client
+	c := r.skeClient
 	res, err := c.ListProviderOptions(ctx).Execute()
 	if err != nil {
 		return nil, nil, fmt.Errorf("calling API: %w", err)
@@ -768,18 +820,18 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		Network:     network,
 		Nodepools:   &nodePools,
 	}
-	_, err = r.client.CreateOrUpdateCluster(ctx, projectId, name).CreateOrUpdateClusterPayload(payload).Execute()
+	_, err = r.skeClient.CreateOrUpdateCluster(ctx, projectId, name).CreateOrUpdateClusterPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	waitResp, err := wait.CreateOrUpdateClusterWaitHandler(ctx, r.client, projectId, name).WaitWithContext(ctx)
+	waitResp, err := skeWait.CreateOrUpdateClusterWaitHandler(ctx, r.skeClient, projectId, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Cluster creation waiting: %v", err))
 		return
 	}
-	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == wait.InvalidArgusInstanceErrorCode {
+	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == skeWait.InvalidArgusInstanceErrorCode {
 		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid argus instance id, the cluster is usable but metrics won't be forwarded: %s", *waitResp.Status.Error.Message))
 	}
 
@@ -798,14 +850,14 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 }
 
 func (r *clusterResource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Model) error {
-	c := r.client
+	c := r.skeClient
 	// for kubernetes with version >= 1.27, the deprecated endpoint will not work, so we set kubeconfig to nil
 	if semver.Compare(fmt.Sprintf("v%s", model.KubernetesVersion.ValueString()), "v1.27") >= 0 {
 		core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "Kubernetes version is 1.27 or higher, you must use the stackit_ske_kubeconfig resource instead.")
 		model.KubeConfig = types.StringPointerValue(nil)
 		return nil
 	}
-	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute()
+	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute() //nolint:staticcheck //This endpoint is deprecated but is called to support a deprecated attribute, will be removed with the attribute
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if !ok {
@@ -1152,9 +1204,30 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 		}
 	}
 
+	var skeDNS *ske.DNS
+	if !(ex.DNS.IsNull() || ex.DNS.IsUnknown()) {
+		dns := dns{}
+		diags = ex.DNS.As(ctx, &dns, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting extensions.dns object: %v", diags.Errors())
+		}
+		dnsEnabled := conversion.BoolValueToPointer(dns.Enabled)
+
+		zones := []string{}
+		diags = dns.Zones.ElementsAs(ctx, &zones, true)
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting extensions.dns.zones object: %v", diags.Errors())
+		}
+		skeDNS = &ske.DNS{
+			Enabled: dnsEnabled,
+			Zones:   &zones,
+		}
+	}
+
 	return &ske.Extension{
 		Acl:   skeAcl,
 		Argus: skeArgus,
+		Dns:   skeDNS,
 	}, nil
 }
 
@@ -1172,7 +1245,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 	var timeWindowStart *string
 	if !(maintenance.Start.IsNull() || maintenance.Start.IsUnknown()) {
 		// API expects RFC3339 datetime
-		timeWindowStart = utils.Ptr(
+		timeWindowStart = sdkUtils.Ptr(
 			fmt.Sprintf("0000-01-01T%s", maintenance.Start.ValueString()),
 		)
 	}
@@ -1180,7 +1253,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 	var timeWindowEnd *string
 	if !(maintenance.End.IsNull() || maintenance.End.IsUnknown()) {
 		// API expects RFC3339 datetime
-		timeWindowEnd = utils.Ptr(
+		timeWindowEnd = sdkUtils.Ptr(
 			fmt.Sprintf("0000-01-01T%s", maintenance.End.ValueString()),
 		)
 	}
@@ -1323,7 +1396,11 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 			nodePool["cri"] = types.StringPointerValue(nodePoolResp.Cri.Name)
 		}
 
-		err := mapTaints(nodePoolResp.Taints, nodePool)
+		taintsInModel := false
+		if i < len(modelNodePools) && !modelNodePools[i].Taints.IsNull() && !modelNodePools[i].Taints.IsUnknown() {
+			taintsInModel = true
+		}
+		err := mapTaints(nodePoolResp.Taints, nodePool, taintsInModel)
 		if err != nil {
 			return fmt.Errorf("mapping index %d, field taints: %w", i, err)
 		}
@@ -1362,8 +1439,16 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	return nil
 }
 
-func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value) error {
+func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value, existInModel bool) error {
 	if t == nil || len(*t) == 0 {
+		if existInModel {
+			taintsTF, diags := types.ListValue(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{})
+			if diags.HasError() {
+				return fmt.Errorf("create empty taints list: %w", core.DiagsToError(diags))
+			}
+			nodePool["taints"] = taintsTF
+			return nil
+		}
 		nodePool["taints"] = types.ListNull(types.ObjectType{AttrTypes: taintTypes})
 		return nil
 	}
@@ -1549,7 +1634,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startT
 	return startTime, endTime, nil
 }
 
-func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, argusDisabled bool, err error) {
+func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, argusDisabled, dnsDisabled bool, err error) {
 	var diags diag.Diagnostics
 	acl := acl{}
 	if ex.ACL.IsNull() {
@@ -1557,7 +1642,7 @@ func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, a
 	} else {
 		diags = ex.ACL.As(ctx, &acl, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return false, false, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
+			return false, false, false, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
 		}
 	}
 
@@ -1567,11 +1652,21 @@ func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, a
 	} else {
 		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return false, false, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
+			return false, false, false, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
 		}
 	}
 
-	return !acl.Enabled.ValueBool(), !argus.Enabled.ValueBool(), nil
+	dns := dns{}
+	if ex.DNS.IsNull() {
+		dns.Enabled = types.BoolValue(false)
+	} else {
+		diags = ex.DNS.As(ctx, &dns, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return false, false, false, fmt.Errorf("converting extensions.dns object: %v", diags.Errors())
+		}
+	}
+
+	return !acl.Enabled.ValueBool(), !argus.Enabled.ValueBool(), !dns.Enabled.ValueBool(), nil
 }
 
 func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
@@ -1598,12 +1693,12 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	// If we parse that object into the terraform model, it will produce an inconsistent result after apply
 	// error
 
-	aclDisabled, argusDisabled, err := checkDisabledExtensions(ctx, ex)
+	aclDisabled, argusDisabled, dnsDisabled, err := checkDisabledExtensions(ctx, ex)
 	if err != nil {
 		return fmt.Errorf("checking if extensions are disabled: %w", err)
 	}
 	disabledExtensions := false
-	if aclDisabled && argusDisabled {
+	if aclDisabled && argusDisabled && dnsDisabled {
 		disabledExtensions = true
 	}
 
@@ -1665,9 +1760,35 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		argusExtension = ex.Argus
 	}
 
+	dnsExtension := types.ObjectNull(dnsTypes)
+	if cl.Extensions.Dns != nil {
+		enabled := types.BoolNull()
+		if cl.Extensions.Dns.Enabled != nil {
+			enabled = types.BoolValue(*cl.Extensions.Dns.Enabled)
+		}
+
+		zonesList, diags := types.ListValueFrom(ctx, types.StringType, cl.Extensions.Dns.Zones)
+		if diags.HasError() {
+			return fmt.Errorf("creating zones list: %w", core.DiagsToError(diags))
+		}
+
+		dnsValues := map[string]attr.Value{
+			"enabled": enabled,
+			"zones":   zonesList,
+		}
+
+		dnsExtension, diags = types.ObjectValue(dnsTypes, dnsValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating dns: %w", core.DiagsToError(diags))
+		}
+	} else if dnsDisabled && !ex.DNS.IsNull() {
+		dnsExtension = ex.DNS
+	}
+
 	extensionsValues := map[string]attr.Value{
 		"acl":   aclExtension,
 		"argus": argusExtension,
+		"dns":   dnsExtension,
 	}
 
 	extensions, diags := types.ObjectValue(extensionsTypes, extensionsValues)
@@ -1821,7 +1942,7 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	clResp, err := r.client.GetCluster(ctx, projectId, name).Execute()
+	clResp, err := r.skeClient.GetCluster(ctx, projectId, name).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -1884,7 +2005,7 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	currentKubernetesVersion, currentMachineImages := getCurrentVersions(ctx, r.client, &model)
+	currentKubernetesVersion, currentMachineImages := getCurrentVersions(ctx, r.skeClient, &model)
 
 	r.createOrUpdateCluster(ctx, &resp.Diagnostics, &model, availableKubernetesVersions, availableMachines, currentKubernetesVersion, currentMachineImages)
 	if resp.Diagnostics.HasError() {
@@ -1910,13 +2031,13 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	c := r.client
+	c := r.skeClient
 	_, err := c.DeleteCluster(ctx, projectId, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = wait.DeleteClusterWaitHandler(ctx, r.client, projectId, name).WaitWithContext(ctx)
+	_, err = skeWait.DeleteClusterWaitHandler(ctx, r.skeClient, projectId, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Cluster deletion waiting: %v", err))
 		return

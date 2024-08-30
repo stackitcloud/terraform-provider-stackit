@@ -20,7 +20,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			"default_values",
 			&sqlserverflex.GetUserResponse{
-				Item: &sqlserverflex.InstanceResponseUser{},
+				Item: &sqlserverflex.UserResponseUser{},
 			},
 			DataSourceModel{
 				Id:         types.StringValue("pid,iid,uid"),
@@ -37,7 +37,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			"simple_values",
 			&sqlserverflex.GetUserResponse{
-				Item: &sqlserverflex.InstanceResponseUser{
+				Item: &sqlserverflex.UserResponseUser{
 					Roles: &[]string{
 						"role_1",
 						"role_2",
@@ -67,7 +67,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			"null_fields_and_int_conversions",
 			&sqlserverflex.GetUserResponse{
-				Item: &sqlserverflex.InstanceResponseUser{
+				Item: &sqlserverflex.UserResponseUser{
 					Id:       utils.Ptr("uid"),
 					Roles:    &[]string{},
 					Username: nil,
@@ -102,7 +102,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			"no_resource_id",
 			&sqlserverflex.GetUserResponse{
-				Item: &sqlserverflex.InstanceResponseUser{},
+				Item: &sqlserverflex.UserResponseUser{},
 			},
 			DataSourceModel{},
 			false,

@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 )
 
@@ -28,15 +29,6 @@ var (
 	_ datasource.DataSource = &projectDataSource{}
 )
 
-type ModelData struct {
-	Id                types.String `tfsdk:"id"` // needed by TF
-	ProjectId         types.String `tfsdk:"project_id"`
-	ContainerId       types.String `tfsdk:"container_id"`
-	ContainerParentId types.String `tfsdk:"parent_container_id"`
-	Name              types.String `tfsdk:"name"`
-	Labels            types.Map    `tfsdk:"labels"`
-}
-
 // NewProjectDataSource is a helper function to simplify the provider implementation.
 func NewProjectDataSource() datasource.DataSource {
 	return &projectDataSource{}
@@ -44,7 +36,8 @@ func NewProjectDataSource() datasource.DataSource {
 
 // projectDataSource is the data source implementation.
 type projectDataSource struct {
-	client *resourcemanager.APIClient
+	resourceManagerClient *resourcemanager.APIClient
+	membershipClient      *authorization.APIClient
 }
 
 // Metadata returns the data source type name.
@@ -58,9 +51,8 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 		return
 	}
 
-	var apiClient *resourcemanager.APIClient
+	var rmClient *resourcemanager.APIClient
 	var err error
-
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
@@ -68,13 +60,13 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 	}
 
 	if providerData.ResourceManagerCustomEndpoint != "" {
-		apiClient, err = resourcemanager.NewAPIClient(
+		rmClient, err = resourcemanager.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithServiceAccountEmail(providerData.ServiceAccountEmail),
 			config.WithEndpoint(providerData.ResourceManagerCustomEndpoint),
 		)
 	} else {
-		apiClient, err = resourcemanager.NewAPIClient(
+		rmClient, err = resourcemanager.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithServiceAccountEmail(providerData.ServiceAccountEmail),
 		)
@@ -84,7 +76,26 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 		return
 	}
 
-	d.client = apiClient
+	var aClient *authorization.APIClient
+	if providerData.AuthorizationCustomEndpoint != "" {
+		ctx = tflog.SetField(ctx, "authorization_custom_endpoint", providerData.AuthorizationCustomEndpoint)
+		aClient, err = authorization.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithEndpoint(providerData.AuthorizationCustomEndpoint),
+		)
+	} else {
+		aClient, err = authorization.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+		)
+	}
+
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring Membership API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+		return
+	}
+
+	d.resourceManagerClient = rmClient
+	d.membershipClient = aClient
 	tflog.Info(ctx, "Resource Manager project client configured")
 }
 
@@ -98,6 +109,10 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
 		"name":                "Project name.",
 		"labels":              `Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`,
+		"owner_email":         "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
+		"members":             "The members assigned to the project. At least one subject needs to be a user, and not a client or service account.",
+		"members.role":        fmt.Sprintf("The role of the member in the project. Legacy roles (%s) are not supported.", strings.Join(utils.QuoteValues(utils.LegacyProjectRoles), ", ")),
+		"members.subject":     "Unique identifier of the user, service account or client. This is usually the email address for users or service accounts, and the name in case of clients.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -153,23 +168,46 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 					),
 				},
 			},
+			"owner_email": schema.StringAttribute{
+				Description: descriptions["owner_email"],
+				Optional:    true,
+			},
+			"members": schema.ListNestedAttribute{
+				Description: descriptions["members"],
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"role": schema.StringAttribute{
+							Description: descriptions["members.role"],
+							Computed:    true,
+							Validators: []validator.String{
+								validate.NonLegacyProjectRole(),
+							},
+						},
+						"subject": schema.StringAttribute{
+							Description: descriptions["members.subject"],
+							Computed:    true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var state ModelData
-	diags := req.Config.Get(ctx, &state)
+	var model Model
+	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	projectId := state.ProjectId.ValueString()
+	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	containerId := state.ContainerId.ValueString()
+	containerId := model.ContainerId.ValueString()
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	if containerId == "" && projectId == "" {
@@ -183,7 +221,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		identifier = projectId
 	}
 
-	projectResp, err := d.client.GetProject(ctx, identifier).Execute()
+	projectResp, err := d.resourceManagerClient.GetProject(ctx, identifier).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusForbidden {
@@ -193,60 +231,27 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	err = mapDataFields(ctx, projectResp, &state)
+	err = mapProjectFields(ctx, projectResp, &model, &resp.State)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
 		return
 	}
-	diags = resp.State.Set(ctx, &state)
+
+	membersResp, err := d.membershipClient.ListMembersExecute(ctx, projectResourceType, *projectResp.ProjectId)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Reading members: %v", err))
+		return
+	}
+
+	err = mapMembersFields(ctx, membersResp.Members, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
+		return
+	}
+	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	tflog.Info(ctx, "Resource Manager project read")
-}
-
-func mapDataFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, model *ModelData) (err error) {
-	if projectResp == nil {
-		return fmt.Errorf("response input is nil")
-	}
-	if model == nil {
-		return fmt.Errorf("model input is nil")
-	}
-
-	var projectId string
-	if model.ProjectId.ValueString() != "" {
-		projectId = model.ProjectId.ValueString()
-	} else if projectResp.ProjectId != nil {
-		projectId = *projectResp.ProjectId
-	} else {
-		return fmt.Errorf("project id not present")
-	}
-
-	var containerId string
-	if model.ContainerId.ValueString() != "" {
-		containerId = model.ContainerId.ValueString()
-	} else if projectResp.ContainerId != nil {
-		containerId = *projectResp.ContainerId
-	} else {
-		return fmt.Errorf("container id not present")
-	}
-
-	var labels basetypes.MapValue
-	if projectResp.Labels != nil {
-		labels, err = conversion.ToTerraformStringMap(ctx, *projectResp.Labels)
-		if err != nil {
-			return fmt.Errorf("converting to StringValue map: %w", err)
-		}
-	} else {
-		labels = types.MapNull(types.StringType)
-	}
-
-	model.Id = types.StringValue(containerId)
-	model.ProjectId = types.StringValue(projectId)
-	model.ContainerId = types.StringValue(containerId)
-	model.ContainerParentId = types.StringPointerValue(projectResp.Parent.ContainerId)
-	model.Name = types.StringPointerValue(projectResp.Name)
-	model.Labels = labels
-	return nil
 }

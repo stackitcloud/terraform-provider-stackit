@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/runtime"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -181,20 +180,20 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Create new network
-	var httpResp *http.Response
-	ctxWithHTTPResp := runtime.WithCaptureHTTPResponse(ctx, &httpResp)
-	_, err = r.client.CreateNetwork(ctxWithHTTPResp, projectId).CreateNetworkPayload(*payload).Execute()
+
+	network, err := r.client.CreateNetwork(ctx, projectId).CreateNetworkPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	network, err := wait.CreateNetworkWaitHandler(ctx, r.client, projectId, httpResp.Header.Get("x-request-id")).WaitWithContext(context.Background())
+	networkId := *network.NetworkId
+	network, err = wait.CreateNetworkWaitHandler(ctx, r.client, projectId, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Network creation waiting: %v", err))
 		return
 	}
-	networkId := *network.NetworkId
+
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 
 	// Map response body to schema
@@ -429,7 +428,7 @@ func toCreatePayload(model *Model) (*iaas.CreateNetworkPayload, error) {
 	return &iaas.CreateNetworkPayload{
 		Name: conversion.StringValueToPointer(model.Name),
 		AddressFamily: &iaas.CreateNetworkAddressFamily{
-			Ipv4: &iaas.CreateNetworkIPv4{
+			Ipv4: &iaas.CreateNetworkIPv4Body{
 				PrefixLength: conversion.Int64ValueToPointer(model.IPv4PrefixLength),
 				Nameservers:  &modelNameservers,
 			},
@@ -454,7 +453,7 @@ func toUpdatePayload(model *Model) (*iaas.PartialUpdateNetworkPayload, error) {
 	return &iaas.PartialUpdateNetworkPayload{
 		Name: conversion.StringValueToPointer(model.Name),
 		AddressFamily: &iaas.UpdateNetworkAddressFamily{
-			Ipv4: &iaas.UpdateNetworkIPv4{
+			Ipv4: &iaas.UpdateNetworkIPv4Body{
 				Nameservers: &modelNameservers,
 			},
 		},
