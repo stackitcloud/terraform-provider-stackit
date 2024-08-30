@@ -146,7 +146,6 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `dns_custom_endpoint` (String) Custom endpoint for the DNS service
 - `enable_beta_resources` (Boolean) Enable beta resources. Default is false.
 - `iaas_custom_endpoint` (String) Custom endpoint for the IaaS service
-- `jwks_custom_endpoint` (String, Deprecated) Custom endpoint for the jwks API, which is used to get the json web key sets (jwks) to validate tokens when using the key flow
 - `loadbalancer_custom_endpoint` (String) Custom endpoint for the Load Balancer service
 - `logme_custom_endpoint` (String) Custom endpoint for the LogMe service
 - `mariadb_custom_endpoint` (String) Custom endpoint for the MariaDB service
