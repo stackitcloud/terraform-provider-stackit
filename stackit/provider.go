@@ -113,7 +113,6 @@ type providerModel struct {
 	ServerBackupCustomEndpoint      types.String `tfsdk:"server_backup_custom_endpoint"`
 	ResourceManagerCustomEndpoint   types.String `tfsdk:"resourcemanager_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
-	JWKSCustomEndpoint              types.String `tfsdk:"jwks_custom_endpoint"`
 	EnableBetaResources             types.Bool   `tfsdk:"enable_beta_resources"`
 	ServiceEnablementCustomEndpoint types.String `tfsdk:"service_enablement_custom_endpoint"`
 }
@@ -151,7 +150,6 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"ske_custom_endpoint":                "Custom endpoint for the Kubernetes Engine (SKE) service",
 		"service_enablement_custom_endpoint": "Custom endpoint for the Service Enablement API",
 		"token_custom_endpoint":              "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
-		"jwks_custom_endpoint":               "Custom endpoint for the jwks API, which is used to get the json web key sets (jwks) to validate tokens when using the key flow",
 		"enable_beta_resources":              "Enable beta resources. Default is false.",
 	}
 
@@ -277,11 +275,6 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"token_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["token_custom_endpoint"],
-			},
-			"jwks_custom_endpoint": schema.StringAttribute{
-				Optional:           true,
-				Description:        descriptions["jwks_custom_endpoint"],
-				DeprecationMessage: "Validation using JWKS was removed, for being redundant with token validation done in the APIs. This field has no effect, and will be removed in a later update",
 			},
 			"enable_beta_resources": schema.BoolAttribute{
 				Optional:    true,
