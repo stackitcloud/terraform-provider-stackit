@@ -109,6 +109,7 @@ To configure the key flow, follow this steps:
 > - setting the environment variable: `STACKIT_PRIVATE_KEY_PATH`
 > - setting `STACKIT_PRIVATE_KEY_PATH` in the credentials file (see above)
 
+
 ### Token flow
 
 Using this flow is less secure since the token is long-lived. You can provide the token in several ways:
