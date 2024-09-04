@@ -496,7 +496,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
-	tflog.Info(ctx, "Postgresql instance state imported")
+	tflog.Info(ctx, "Postgresql Flex instance state imported")
 }
 
 func mapFields(ctx context.Context, resp *postgresflex.InstanceResponse, model *Model, flavor *flavorModel, storage *storageModel) error {
