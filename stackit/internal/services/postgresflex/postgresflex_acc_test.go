@@ -330,7 +330,7 @@ func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 
 	instancesToDestroy := []string{}
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "stackit_postgresql_instance" {
+		if rs.Type != "stackit_postgresqlflex_instance" {
 			continue
 		}
 		// instance terraform ID: = "[project_id],[instance_id]"

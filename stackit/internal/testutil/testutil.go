@@ -54,7 +54,6 @@ var (
 	OpenSearchCustomEndpoint      = os.Getenv("TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT")
 	ObservabilityCustomEndpoint   = os.Getenv("TF_ACC_OBSERVABILITY_CUSTOM_ENDPOINT")
 	ObjectStorageCustomEndpoint   = os.Getenv("TF_ACC_OBJECTSTORAGE_CUSTOM_ENDPOINT")
-	PostgreSQLCustomEndpoint      = os.Getenv("TF_ACC_POSTGRESQL_CUSTOM_ENDPOINT")
 	PostgresFlexCustomEndpoint    = os.Getenv("TF_ACC_POSTGRESFLEX_CUSTOM_ENDPOINT")
 	RabbitMQCustomEndpoint        = os.Getenv("TF_ACC_RABBITMQ_CUSTOM_ENDPOINT")
 	RedisCustomEndpoint           = os.Getenv("TF_ACC_REDIS_CUSTOM_ENDPOINT")
@@ -218,21 +217,6 @@ func OpenSearchProviderConfig() string {
 			opensearch_custom_endpoint = "%s"
 		}`,
 		OpenSearchCustomEndpoint,
-	)
-}
-
-func PostgreSQLProviderConfig() string {
-	if PostgreSQLCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			postgresql_custom_endpoint = "%s"
-		}`,
-		PostgreSQLCustomEndpoint,
 	)
 }
 
