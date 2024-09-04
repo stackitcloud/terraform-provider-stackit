@@ -165,6 +165,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `observability_custom_endpoint` (String) Custom endpoint for the Observability service
 - `opensearch_custom_endpoint` (String) Custom endpoint for the OpenSearch service
 - `postgresflex_custom_endpoint` (String) Custom endpoint for the PostgresFlex service
+- `postgresql_custom_endpoint` (String) Custom endpoint for the PostgreSQL service
 - `private_key` (String) Private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.
 - `private_key_path` (String) Path for the private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.
 - `rabbitmq_custom_endpoint` (String) Custom endpoint for the RabbitMQ service
