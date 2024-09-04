@@ -152,11 +152,11 @@ resource "stackit_logme_credential" "example-credential" {
 | stackit_observability_instance           | stackit_observability_instance          | :white_check_mark: | [project_id],[instance_id] |                                                                  |
 | stackit_observability_job                | stackit_observability_scrapeconfig      | :white_check_mark: | [project_id],[instance_id],[name] |                                                                  |
 | stackit_opensearch_credential            | stackit_opensearch_credential           | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |                                                                  |
-| stackit_opensearch_instance              | stackit_opensearch_instance             | :white_check_mark: | [project_id],[instance_id] |                                                                  |
-| stackit_postgres_credential              | stackit_postgresql_credential           | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |                                                                  |
+| stackit_opensearch_instance              | stackit_opensearch_instance             | :white_check_mark: | [project_id],[instance_id] |                                                                  |                                 |
 | stackit_postgres_flex_instance           | stackit_postgresflex_instance           | :white_check_mark: | [project_id],[instance_id] |                                                                  |
 | stackit_postgres_flex_user               | stackit_postgresflex_user               | :warning: | [project_id],[instance_id],[user_id] | `password` field will be empty                                   |
-| stackit_postgres_instance                | stackit_postgresql_instance             | :white_check_mark: | [project_id],[instance_id] |                                                                  |
+| stackit_postgres_instance                |                                          | | | Resource deprecated                                            |
+| stackit_postgres_credential              |                                         | | | Resource deprecated           
 | stackit_project                          | stackit_resourcemanager_project         | :white_check_mark: | [container_id] |                                                                  |
 | stackit_rabbitmq_credential              | stackit_rabbitmq_credential             | :white_check_mark: | [project_id],[credentials_group_id],[credential_id] |                                                                  |
 | stackit_rabbitmq_instance                | stackit_rabbitmq_instance               | :white_check_mark: | [project_id],[instance_id] |                                                                  |

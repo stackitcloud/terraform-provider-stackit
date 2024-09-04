@@ -93,7 +93,6 @@ type providerModel struct {
 	ArgusCustomEndpoint             types.String `tfsdk:"argus_custom_endpoint"`
 	DNSCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
-	PostgreSQLCustomEndpoint        types.String `tfsdk:"postgresql_custom_endpoint"`
 	PostgresFlexCustomEndpoint      types.String `tfsdk:"postgresflex_custom_endpoint"`
 	MongoDBFlexCustomEndpoint       types.String `tfsdk:"mongodbflex_custom_endpoint"`
 	LoadBalancerCustomEndpoint      types.String `tfsdk:"loadbalancer_custom_endpoint"`
@@ -138,7 +137,6 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"objectstorage_custom_endpoint":      "Custom endpoint for the Object Storage service",
 		"observability_custom_endpoint":      "Custom endpoint for the Observability service",
 		"opensearch_custom_endpoint":         "Custom endpoint for the OpenSearch service",
-		"postgresql_custom_endpoint":         "Custom endpoint for the PostgreSQL service",
 		"postgresflex_custom_endpoint":       "Custom endpoint for the PostgresFlex service",
 		"redis_custom_endpoint":              "Custom endpoint for the Redis service",
 		"server_backup_custom_endpoint":      "Custom endpoint for the Server Backup service",
@@ -197,10 +195,6 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"iaas_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["iaas_custom_endpoint"],
-			},
-			"postgresql_custom_endpoint": schema.StringAttribute{
-				Optional:    true,
-				Description: descriptions["postgresql_custom_endpoint"],
 			},
 			"postgresflex_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -328,9 +322,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	}
 	if !(providerConfig.IaaSCustomEndpoint.IsUnknown() || providerConfig.IaaSCustomEndpoint.IsNull()) {
 		providerData.IaaSCustomEndpoint = providerConfig.IaaSCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.PostgreSQLCustomEndpoint.IsUnknown() || providerConfig.PostgreSQLCustomEndpoint.IsNull()) {
-		providerData.PostgreSQLCustomEndpoint = providerConfig.PostgreSQLCustomEndpoint.ValueString()
 	}
 	if !(providerConfig.PostgresFlexCustomEndpoint.IsUnknown() || providerConfig.PostgresFlexCustomEndpoint.IsNull()) {
 		providerData.PostgresFlexCustomEndpoint = providerConfig.PostgresFlexCustomEndpoint.ValueString()
