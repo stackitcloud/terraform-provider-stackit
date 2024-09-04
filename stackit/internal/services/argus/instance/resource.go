@@ -1554,7 +1554,7 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		"smtp_auth_identity": types.StringNull(),
 		"smtp_auth_password": types.StringNull(),
 		"smtp_auth_username": types.StringNull(),
-		"smtp_from":          types.StringValue("observability@observability.stackit.cloud"),
+		"smtp_from":          types.StringValue("argus@argus.stackit.cloud"),
 		"smtp_smart_host":    types.StringNull(),
 	})
 	if diags.HasError() {
