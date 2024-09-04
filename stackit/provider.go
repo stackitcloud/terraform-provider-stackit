@@ -37,8 +37,6 @@ import (
 	postgresFlexDatabase "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/database"
 	postgresFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/instance"
 	postgresFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/user"
-	postgresCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresql/credential"
-	postgresInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresql/instance"
 	rabbitMQCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/credential"
 	rabbitMQInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/instance"
 	redisCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/credential"
@@ -428,8 +426,6 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		postgresFlexDatabase.NewDatabaseDataSource,
 		postgresFlexInstance.NewInstanceDataSource,
 		postgresFlexUser.NewUserDataSource,
-		postgresInstance.NewInstanceDataSource,
-		postgresCredential.NewCredentialDataSource,
 		rabbitMQInstance.NewInstanceDataSource,
 		rabbitMQCredential.NewCredentialDataSource,
 		redisInstance.NewInstanceDataSource,
@@ -477,8 +473,6 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		postgresFlexDatabase.NewDatabaseResource,
 		postgresFlexInstance.NewInstanceResource,
 		postgresFlexUser.NewUserResource,
-		postgresInstance.NewInstanceResource,
-		postgresCredential.NewCredentialResource,
 		rabbitMQInstance.NewInstanceResource,
 		rabbitMQCredential.NewCredentialResource,
 		redisInstance.NewInstanceResource,
