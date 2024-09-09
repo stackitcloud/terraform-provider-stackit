@@ -27,12 +27,12 @@ resource "stackit_network" "example" {
 ### Required
 
 - `name` (String) The name of the network.
-- `nameservers` (List of String) The nameservers of the network.
 - `project_id` (String) STACKIT project ID to which the network is associated.
 
 ### Optional
 
 - `ipv4_prefix_length` (Number) The IPv4 prefix length of the network.
+- `nameservers` (List of String) The nameservers of the network.
 
 ### Read-Only
 
