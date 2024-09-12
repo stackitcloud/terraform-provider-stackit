@@ -26,7 +26,6 @@ data "stackit_resourcemanager_project" "example" {
 ### Optional
 
 - `container_id` (String) Project container ID. Globally unique, user-friendly identifier.
-- `owner_email` (String) Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.
 - `project_id` (String) Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.
 
 ### Read-Only
