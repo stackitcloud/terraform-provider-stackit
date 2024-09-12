@@ -56,6 +56,7 @@ func resourceConfig(name string, label *string, members string) string {
 					members = [
 						%[7]s
 					]
+					owner_email = "%[8]s"
 				}
 
 				resource "stackit_resourcemanager_project" "parent_by_uuid" {
@@ -64,6 +65,7 @@ func resourceConfig(name string, label *string, members string) string {
 					members = [
 						%[7]s
 					]
+                    owner_email = "%[8]s"
 				}
 				`,
 		testutil.ResourceManagerProviderConfig(),
@@ -73,6 +75,7 @@ func resourceConfig(name string, label *string, members string) string {
 		labelConfig,
 		projectResource["parent_uuid"],
 		members,
+		testutil.TestProjectServiceAccountEmail,
 	)
 }
 

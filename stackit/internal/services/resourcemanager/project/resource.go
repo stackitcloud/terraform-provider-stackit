@@ -664,7 +664,7 @@ func toMembersPayload(ctx context.Context, model *Model) (*[]authorization.Membe
 		return nil, core.DiagsToError(diags)
 	}
 
-	// If the new "members" fields is set, it has precedence over the deprecated "owner_email" field
+	// If the new "members" fields is set, it has precedence over the "owner_email" field
 	members := []authorization.Member{}
 	for _, m := range membersModel {
 		members = append(members, authorization.Member{
