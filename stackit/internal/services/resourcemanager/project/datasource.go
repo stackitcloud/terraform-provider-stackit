@@ -5,20 +5,23 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
+
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -99,13 +102,18 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 // Schema defines the schema for the data source.
 func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                "Resource Manager project data source schema. To identify the project, you need to provider either project_id or container_id. If you provide both, project_id will be used.",
-		"id":                  "Terraform's internal data source. ID. It is structured as \"`container_id`\".",
-		"project_id":          "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
-		"container_id":        "Project container ID. Globally unique, user-friendly identifier.",
-		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
-		"name":                "Project name.",
-		"labels":              `Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`,
+		"main":                        "Resource Manager project data source schema. To identify the project, you need to provider either project_id or container_id. If you provide both, project_id will be used.",
+		"id":                          "Terraform's internal data source. ID. It is structured as \"`container_id`\".",
+		"project_id":                  "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
+		"container_id":                "Project container ID. Globally unique, user-friendly identifier.",
+		"parent_container_id":         "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
+		"name":                        "Project name.",
+		"labels":                      `Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`,
+		"owner_email":                 "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
+		"members":                     "The members assigned to the project. At least one subject needs to be a user, and not a client or service account.",
+		"members.role":                fmt.Sprintf("The role of the member in the project. Legacy roles (%s) are not supported.", strings.Join(utils.QuoteValues(utils.LegacyProjectRoles), ", ")),
+		"members.subject":             "Unique identifier of the user, service account or client. This is usually the email address for users or service accounts, and the name in case of clients.",
+		"members_deprecation_message": "The \"members\" field has been deprecated in favor of the \"owner_email\" field. Please use the \"owner_email\" field to assign the owner role to a user.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -159,6 +167,31 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							regexp.MustCompile(`[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`),
 							"must match expression"),
 					),
+				},
+			},
+			"owner_email": schema.StringAttribute{
+				Description: descriptions["owner_email"],
+				Optional:    true,
+			},
+			"members": schema.ListNestedAttribute{
+				Description:         descriptions["members"],
+				DeprecationMessage:  descriptions["members_deprecation_message"],
+				MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["members"], descriptions["members_deprecation_message"]),
+				Computed:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"role": schema.StringAttribute{
+							Description: descriptions["members.role"],
+							Computed:    true,
+							Validators: []validator.String{
+								validate.NonLegacyProjectRole(),
+							},
+						},
+						"subject": schema.StringAttribute{
+							Description: descriptions["members.subject"],
+							Computed:    true,
+						},
+					},
 				},
 			},
 		},
