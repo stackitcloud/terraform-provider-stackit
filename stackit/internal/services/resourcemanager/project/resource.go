@@ -147,17 +147,18 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 // Schema defines the schema for the resource.
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                "Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.",
-		"id":                  "Terraform's internal resource ID. It is structured as \"`container_id`\".",
-		"project_id":          "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
-		"container_id":        "Project container ID. Globally unique, user-friendly identifier.",
-		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
-		"name":                "Project name.",
-		"labels":              "Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}",
-		"owner_email":         "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
-		"members":             "The members assigned to the project. At least one subject needs to be a user, and not a client or service account.",
-		"members.role":        fmt.Sprintf("The role of the member in the project. Possible values include, but are not limited to: `owner`, `editor`, `reader`. Legacy roles (%s) are not supported.", strings.Join(utils.QuoteValues(utils.LegacyProjectRoles), ", ")),
-		"members.subject":     "Unique identifier of the user, service account or client. This is usually the email address for users or service accounts, and the name in case of clients.",
+		"main":                        "Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.",
+		"id":                          "Terraform's internal resource ID. It is structured as \"`container_id`\".",
+		"project_id":                  "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
+		"container_id":                "Project container ID. Globally unique, user-friendly identifier.",
+		"parent_container_id":         "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
+		"name":                        "Project name.",
+		"labels":                      "Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}",
+		"owner_email":                 "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
+		"members":                     "The members assigned to the project. At least one subject needs to be a user, and not a client or service account.",
+		"members.role":                fmt.Sprintf("The role of the member in the project. Possible values include, but are not limited to: `owner`, `editor`, `reader`. Legacy roles (%s) are not supported.", strings.Join(utils.QuoteValues(utils.LegacyProjectRoles), ", ")),
+		"members.subject":             "Unique identifier of the user, service account or client. This is usually the email address for users or service accounts, and the name in case of clients.",
+		"members_deprecation_message": "The \"members\" field has been deprecated in favor of the \"owner_email\" field. Please use the \"owner_email\" field to assign the owner role to a user.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -224,12 +225,13 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"owner_email": schema.StringAttribute{
 				Description: descriptions["owner_email"],
-				// When removing the owner_email field, we should mark the members field as required and add a listvalidator.SizeAtLeast(1) validator to it
-				Optional: true,
+				Required:    true,
 			},
 			"members": schema.ListNestedAttribute{
-				Description: descriptions["members"],
-				Optional:    true,
+				Description:         descriptions["members"],
+				DeprecationMessage:  descriptions["members_deprecation_message"],
+				MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["members"], descriptions["members_deprecation_message"]),
+				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"role": schema.StringAttribute{
@@ -393,17 +395,6 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	membersResp, err := r.authorizationClient.ListMembersExecute(ctx, projectResourceType, *projectResp.ProjectId)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Reading members: %v", err))
-		return
-	}
-
-	err = mapMembersFields(ctx, membersResp.Members, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
-		return
-	}
 	// Set refreshed model
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
@@ -451,23 +442,6 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	members, err := toMembersPayload(ctx, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Processing members: %v", err))
-		return
-	}
-
-	err = updateMembers(ctx, *projectResp.ProjectId, members, r.authorizationClient)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Updating members: %v", err))
-		return
-	}
-
-	err = mapMembersFields(ctx, members, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Processing API response: %v", err))
-		return
-	}
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -754,102 +728,6 @@ func toUpdatePayload(model *Model) (*resourcemanager.PartialUpdateProjectPayload
 		Name:              conversion.StringValueToPointer(model.Name),
 		Labels:            labels,
 	}, nil
-}
-
-// updateMembers adds and removes members to match the model
-func updateMembers(ctx context.Context, projectId string, modelMembers *[]authorization.Member, client *authorization.APIClient) error {
-	if modelMembers == nil || len(*modelMembers) == 0 {
-		return nil
-	}
-
-	// Get current members
-	currentMembersResp, err := client.ListMembersExecute(ctx, projectResourceType, projectId)
-	if err != nil {
-		return fmt.Errorf("get members: %w", err)
-	}
-
-	type memberState struct {
-		isInModel bool
-		isCreated bool
-		subject   string
-		role      string
-	}
-
-	membersState := make(map[string]*memberState) // Key in the form of "subject,role"
-	for _, m := range *modelMembers {
-		mId := memberId(m)
-		membersState[mId] = &memberState{
-			isInModel: true,
-			subject:   *m.Subject,
-			role:      *m.Role,
-		}
-	}
-
-	for _, m := range *currentMembersResp.Members {
-		if utils.IsLegacyProjectRole(*m.Role) {
-			continue
-		}
-
-		mId := memberId(m)
-		_, ok := membersState[mId]
-		if !ok {
-			membersState[mId] = &memberState{}
-		}
-		membersState[mId].isCreated = true
-		membersState[mId].subject = *m.Subject
-		membersState[mId].role = *m.Role
-	}
-
-	// Add/remove members
-	membersToAdd := make([]authorization.Member, 0)
-	membersToRemove := make([]authorization.Member, 0)
-	for _, state := range membersState {
-		if state.isInModel && !state.isCreated {
-			m := authorization.Member{
-				Subject: &state.subject,
-				Role:    &state.role,
-			}
-			membersToAdd = append(membersToAdd, m)
-
-			infoMsg := fmt.Sprintf("### Will add member to project: { role: %s, subject: %s }", state.role, state.subject)
-			tflog.Warn(ctx, infoMsg)
-		}
-
-		if !state.isInModel && state.isCreated {
-			m := authorization.Member{
-				Subject: &state.subject,
-				Role:    &state.role,
-			}
-			membersToRemove = append(membersToRemove, m)
-
-			infoMsg := fmt.Sprintf("### Will remove member from project: { role: %s, subject: %s }", state.role, state.subject)
-			tflog.Warn(ctx, infoMsg)
-		}
-	}
-
-	if len(membersToAdd) > 0 {
-		payload := authorization.AddMembersPayload{
-			Members:      &membersToAdd,
-			ResourceType: sdkUtils.Ptr(projectResourceType),
-		}
-		_, err := client.AddMembers(ctx, projectId).AddMembersPayload(payload).Execute()
-		if err != nil {
-			return fmt.Errorf("add members: %w", err)
-		}
-	}
-
-	if len(membersToRemove) > 0 {
-		payload := authorization.RemoveMembersPayload{
-			Members:      &membersToRemove,
-			ResourceType: sdkUtils.Ptr(projectResourceType),
-		}
-		_, err := client.RemoveMembers(ctx, projectId).RemoveMembersPayload(payload).Execute()
-		if err != nil {
-			return fmt.Errorf("remove members: %w", err)
-		}
-	}
-
-	return nil
 }
 
 // Internal representation of a member, which is uniquely identified by the subject and role

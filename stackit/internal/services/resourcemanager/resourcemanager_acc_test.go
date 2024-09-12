@@ -84,17 +84,6 @@ func TestAccResourceManagerResource(t *testing.T) {
 		},
 	})
 
-	updatedMembersConfig := membersConfig([]authorization.Member{
-		{
-			Subject: &testutil.TestProjectUserEmail,
-			Role:    utils.Ptr("owner"),
-		},
-		{
-			Subject: &testutil.TestProjectUserEmail,
-			Role:    utils.Ptr("reader"),
-		},
-	})
-
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckResourceManagerDestroy,
@@ -190,7 +179,7 @@ func TestAccResourceManagerResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfig(fmt.Sprintf("%s-new", projectResource["name"]), utils.Ptr("a-label"), updatedMembersConfig),
+				Config: resourceConfig(fmt.Sprintf("%s-new", projectResource["name"]), utils.Ptr("a-label"), initialMembersConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Project data
 					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.parent_by_container", "container_id"),

@@ -102,17 +102,18 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 // Schema defines the schema for the data source.
 func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                "Resource Manager project data source schema. To identify the project, you need to provider either project_id or container_id. If you provide both, project_id will be used.",
-		"id":                  "Terraform's internal data source. ID. It is structured as \"`container_id`\".",
-		"project_id":          "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
-		"container_id":        "Project container ID. Globally unique, user-friendly identifier.",
-		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
-		"name":                "Project name.",
-		"labels":              `Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`,
-		"owner_email":         "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
-		"members":             "The members assigned to the project. At least one subject needs to be a user, and not a client or service account.",
-		"members.role":        fmt.Sprintf("The role of the member in the project. Legacy roles (%s) are not supported.", strings.Join(utils.QuoteValues(utils.LegacyProjectRoles), ", ")),
-		"members.subject":     "Unique identifier of the user, service account or client. This is usually the email address for users or service accounts, and the name in case of clients.",
+		"main":                        "Resource Manager project data source schema. To identify the project, you need to provider either project_id or container_id. If you provide both, project_id will be used.",
+		"id":                          "Terraform's internal data source. ID. It is structured as \"`container_id`\".",
+		"project_id":                  "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
+		"container_id":                "Project container ID. Globally unique, user-friendly identifier.",
+		"parent_container_id":         "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
+		"name":                        "Project name.",
+		"labels":                      `Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`,
+		"owner_email":                 "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
+		"members":                     "The members assigned to the project. At least one subject needs to be a user, and not a client or service account.",
+		"members.role":                fmt.Sprintf("The role of the member in the project. Legacy roles (%s) are not supported.", strings.Join(utils.QuoteValues(utils.LegacyProjectRoles), ", ")),
+		"members.subject":             "Unique identifier of the user, service account or client. This is usually the email address for users or service accounts, and the name in case of clients.",
+		"members_deprecation_message": "The \"members\" field has been deprecated in favor of the \"owner_email\" field. Please use the \"owner_email\" field to assign the owner role to a user.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -173,8 +174,10 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Optional:    true,
 			},
 			"members": schema.ListNestedAttribute{
-				Description: descriptions["members"],
-				Computed:    true,
+				Description:         descriptions["members"],
+				DeprecationMessage:  descriptions["members_deprecation_message"],
+				MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["members"], descriptions["members_deprecation_message"]),
+				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"role": schema.StringAttribute{
@@ -237,17 +240,6 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	membersResp, err := d.membershipClient.ListMembersExecute(ctx, projectResourceType, *projectResp.ProjectId)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Reading members: %v", err))
-		return
-	}
-
-	err = mapMembersFields(ctx, membersResp.Members, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
-		return
-	}
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
