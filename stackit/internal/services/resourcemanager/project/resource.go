@@ -155,7 +155,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		"name":                        "Project name.",
 		"labels":                      "Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}",
 		"owner_email":                 "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
-		"members":                     "The members assigned to the project. At least one subject needs to be a user, and not a client or service account.",
+		"members":                     "The members assigned to the project. At least one subject needs to be a user, and not a client or service account. This value is only considered during creation. Changing it afterwards will have no effect.",
 		"members.role":                fmt.Sprintf("The role of the member in the project. Possible values include, but are not limited to: `owner`, `editor`, `reader`. Legacy roles (%s) are not supported.", strings.Join(utils.QuoteValues(utils.LegacyProjectRoles), ", ")),
 		"members.subject":             "Unique identifier of the user, service account or client. This is usually the email address for users or service accounts, and the name in case of clients.",
 		"members_deprecation_message": "The \"members\" field has been deprecated in favor of the \"owner_email\" field. Please use the \"owner_email\" field to assign the owner role to a user.",
