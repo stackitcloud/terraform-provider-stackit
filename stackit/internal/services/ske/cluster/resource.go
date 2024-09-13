@@ -303,7 +303,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"However, the SKE API correctly identifies node pools by name and applies the intended changes. Please review your changes carefully to ensure the correct configuration will be applied.",
 		"max_surge":           "Maximum number of additional VMs that are created during an update.",
 		"max_unavailable":     "Maximum number of VMs that that can be unavailable during an update.",
-		"nodepool_validators": "If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. max_surge and max_unavailable can not be 0 at the same time, at least one of them need to be set (larger than 0).",
+		"nodepool_validators": "If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. The `max_surge` and `max_unavailable` fields cannot both be unset at the same time.",
 	}
 
 	resp.Schema = schema.Schema{
