@@ -256,38 +256,6 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 	}
 }
 
-// ModifyPlan will be called in the Plan phase and will check if the members field is set
-func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
-	if req.Plan.Raw.IsNull() { // Plan is to destroy the resource
-		return
-	}
-
-	var model Model
-	diags := req.Plan.Get(ctx, &model)
-	if diags.HasError() {
-		resp.Diagnostics.Append(diags...)
-		return
-	}
-
-	if model.ProjectId.IsNull() || model.ProjectId.IsUnknown() || // Project does not exist yet
-		model.Members.IsNull() || model.Members.IsUnknown() { // Members field is not set
-		return
-	}
-
-	membersResp, err := r.authorizationClient.ListMembersExecute(ctx, projectResourceType, model.ProjectId.ValueString())
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error preparing the plan", fmt.Sprintf("Reading members: %v", err))
-		return
-	}
-	members := []string{}
-	for _, m := range *membersResp.Members {
-		if utils.IsLegacyProjectRole(*m.Role) {
-			continue
-		}
-		members = append(members, fmt.Sprintf("  - %s (%s)", *m.Subject, *m.Role))
-	}
-}
-
 // ConfigValidators validates the resource configuration
 func (r *projectResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
