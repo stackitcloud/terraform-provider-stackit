@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -232,6 +233,9 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				DeprecationMessage:  descriptions["members_deprecation_message"],
 				MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["members"], descriptions["members_deprecation_message"]),
 				Optional:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.RequiresReplace(),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"role": schema.StringAttribute{
@@ -282,13 +286,6 @@ func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 		}
 		members = append(members, fmt.Sprintf("  - %s (%s)", *m.Subject, *m.Role))
 	}
-
-	core.LogAndAddWarning(ctx, &resp.Diagnostics, "The members set in the \"members\" field will override the current members in your project",
-		fmt.Sprintf("%s\n%s\n%s\n\n%s",
-			"The current members in your project will be removed and replaced with the members set in the \"members\" field.",
-			"This might not be represented in the Terraform plan if you are migrating from the \"owner_email\" field, since the current members are not yet set in the state.",
-			"Please make sure that the members in the \"members\" field are correct and complete.",
-			fmt.Sprintf("Current members in your project:\n%v", strings.Join(members, "\n"))))
 }
 
 // ConfigValidators validates the resource configuration
