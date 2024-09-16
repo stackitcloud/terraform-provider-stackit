@@ -301,6 +301,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		"main": "SKE Cluster Resource schema. Must have a `region` specified in the provider configuration.",
 		"node_pools_plan_note": "When updating `node_pools` of a `stackit_ske_cluster`, the Terraform plan might appear incorrect as it matches the node pools by index rather than by name. " +
 			"However, the SKE API correctly identifies node pools by name and applies the intended changes. Please review your changes carefully to ensure the correct configuration will be applied.",
+		"max_surge":           "Maximum number of additional VMs that are created during an update.",
+		"max_unavailable":     "Maximum number of VMs that that can be unavailable during an update.",
+		"nodepool_validators": "If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. The `max_surge` and `max_unavailable` fields cannot both be unset at the same time.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -397,7 +400,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Required:    true,
 						},
 						"max_surge": schema.Int64Attribute{
-							Description: "Maximum number of additional VMs that are created during an update.",
+							Description: fmt.Sprintf("%s %s", descriptions["max_surge"], descriptions["nodepool_validators"]),
 							Optional:    true,
 							Computed:    true,
 							PlanModifiers: []planmodifier.Int64{
@@ -405,7 +408,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							},
 						},
 						"max_unavailable": schema.Int64Attribute{
-							Description: "Maximum number of VMs that that can be unavailable during an update.",
+							Description: fmt.Sprintf("%s %s", descriptions["max_surge"], descriptions["nodepool_validators"]),
 							Optional:    true,
 							Computed:    true,
 							PlanModifiers: []planmodifier.Int64{
