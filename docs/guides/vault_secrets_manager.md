@@ -5,7 +5,7 @@ page_title: "Using Vault Provider with STACKIT Secrets Manager"
 
 ## Overview
 
-This guide outlines the process of utilizing the HashiCorp Vault provider alongside the STACKIT provider to write secrets in the STACKIT Secrets Manager. The guide focuses on secrets from STACKIT Cloud resources but can be adapted for any secret.
+This guide outlines the process of utilizing the [HashiCorp Vault provider](https://registry.terraform.io/providers/hashicorp/vault) alongside the STACKIT provider to write secrets in the STACKIT Secrets Manager. The guide focuses on secrets from STACKIT Cloud resources but can be adapted for any secret.
 
 ## Steps
 
@@ -21,7 +21,7 @@ This guide outlines the process of utilizing the HashiCorp Vault provider alongs
 
     ```hcl
     resource "stackit_secretsmanager_instance" "example" {
-      project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx""
+      project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       name       = "example-instance"
     }
     ```
