@@ -30,7 +30,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v0.19.0
-	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.5.0
+	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.6.0
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.20.0
 )
