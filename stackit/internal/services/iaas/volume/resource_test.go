@@ -15,9 +15,9 @@ func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		input    *iaasalpha.Volume
-		expected Model
-		isValid  bool
+		input       *iaasalpha.Volume
+		expected    Model
+		isValid     bool
 	}{
 		{
 			"default_values",
@@ -141,8 +141,8 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected *iaasalpha.CreateVolumePayload
-		isValid  bool
+		expected    *iaasalpha.CreateVolumePayload
+		isValid     bool
 	}{
 		{
 			"default_ok",
