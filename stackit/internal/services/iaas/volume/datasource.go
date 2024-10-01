@@ -145,20 +145,6 @@ func (r *volumeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Description: "The size of the volume in GB. It can only be updated to a larger value than the current size",
 				Computed:    true,
 			},
-			// "source": schema.SingleNestedAttribute{
-			// 	Description: "The source of the volume. It can be either a volume, an image, a snapshot or a backup",
-			// 	Computed:    true,
-			// 	Attributes: map[string]schema.Attribute{
-			// 		"type": schema.StringAttribute{
-			// 			Description: "The type of the source. It can be `volume`, `image`, `snapshot` or `backup`",
-			// 			Computed:    true,
-			// 		},
-			// 		"id": schema.StringAttribute{
-			// 			Description: "The id of the source, e.g. image ID",
-			// 			Computed:    true,
-			// 		},
-			// 	},
-			// },
 		},
 	}
 }
@@ -186,15 +172,6 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-
-	// var source = &sourceModel{}
-	// if !(model.Source.IsNull() || model.Source.IsUnknown()) {
-	// 	diags = model.Source.As(ctx, source, basetypes.ObjectAsOptions{})
-	// 	resp.Diagnostics.Append(diags...)
-	// 	if resp.Diagnostics.HasError() {
-	// 		return
-	// 	}
-	// }
 
 	err = mapFields(ctx, volumeResp, &model)
 	if err != nil {

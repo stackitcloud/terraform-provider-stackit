@@ -53,20 +53,7 @@ type Model struct {
 	PerformanceClass types.String `tfsdk:"performance_class"`
 	Size             types.Int64  `tfsdk:"size"`
 	ServerId         types.String `tfsdk:"server_id"`
-	// Source           types.Object `tfsdk:"source"`
 }
-
-// Struct corresponding to Model.Flavor
-// type sourceModel struct {
-// 	Type types.String `tfsdk:"type"`
-// 	Id   types.String `tfsdk:"id"`
-// }
-
-// Types corresponding to flavorModel
-// var sourceTypes = map[string]attr.Type{
-// 	"type": basetypes.StringType{},
-// 	"id":   basetypes.StringType{},
-// }
 
 // NewVolumeResource is a helper function to simplify the provider implementation.
 func NewVolumeResource() resource.Resource {
@@ -87,7 +74,6 @@ func (r *volumeResource) Metadata(_ context.Context, req resource.MetadataReques
 func (r *volumeResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		resourcevalidator.AtLeastOneOf(
-			// path.MatchRoot("source"),
 			path.MatchRoot("size"),
 		),
 	}
@@ -244,29 +230,6 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: "The size of the volume in GB. It can only be updated to a larger value than the current size",
 				Optional:    true,
 			},
-			// "source": schema.SingleNestedAttribute{
-			// 	Description: "The source of the volume. It can be either a volume, an image, a snapshot or a backup",
-			// 	Optional:    true,
-			// 	PlanModifiers: []planmodifier.Object{
-			// 		objectplanmodifier.RequiresReplace(),
-			// 	},
-			// 	Attributes: map[string]schema.Attribute{
-			// 		"type": schema.StringAttribute{
-			// 			Description: "The type of the source. It can be `volume`, `image`, `snapshot` or `backup`",
-			// 			Required:    true,
-			// 			PlanModifiers: []planmodifier.String{
-			// 				stringplanmodifier.RequiresReplace(),
-			// 			},
-			// 		},
-			// 		"id": schema.StringAttribute{
-			// 			Description: "The id of the source, e.g. image ID",
-			// 			Required:    true,
-			// 			PlanModifiers: []planmodifier.String{
-			// 				stringplanmodifier.RequiresReplace(),
-			// 			},
-			// 		},
-			// 	},
-			// },
 		},
 	}
 }
@@ -283,15 +246,6 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-
-	// var source = &sourceModel{}
-	// if !(model.Source.IsNull() || model.Source.IsUnknown()) {
-	// 	diags = model.Source.As(ctx, source, basetypes.ObjectAsOptions{})
-	// 	resp.Diagnostics.Append(diags...)
-	// 	if resp.Diagnostics.HasError() {
-	// 		return
-	// 	}
-	// }
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
@@ -356,15 +310,6 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	// var source = &sourceModel{}
-	// if !(model.Source.IsNull() || model.Source.IsUnknown()) {
-	// 	diags = model.Source.As(ctx, source, basetypes.ObjectAsOptions{})
-	// 	resp.Diagnostics.Append(diags...)
-	// 	if resp.Diagnostics.HasError() {
-	// 		return
-	// 	}
-	// }
-
 	// Map response body to schema
 	err = mapFields(ctx, volumeResp, &model)
 	if err != nil {
@@ -393,15 +338,6 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 	volumeId := model.VolumeId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
-
-	// var source = &sourceModel{}
-	// if !(model.Source.IsNull() || model.Source.IsUnknown()) {
-	// 	diags = model.Source.As(ctx, source, basetypes.ObjectAsOptions{})
-	// 	resp.Diagnostics.Append(diags...)
-	// 	if resp.Diagnostics.HasError() {
-	// 		return
-	// 	}
-	// }
 
 	// Retrieve values from state
 	var stateModel Model
@@ -544,25 +480,6 @@ func mapFields(ctx context.Context, volumeResp *iaasalpha.Volume, model *Model) 
 		labels = types.MapNull(types.StringType)
 	}
 
-	// var sourceValues map[string]attr.Value
-
-	// TO-DO: Uncomment after IaaS change to source object
-	// if volumeResp.Source == nil {
-	// 	sourceValues = map[string]attr.Value{
-	// 		"type": source.Type,
-	// 		"id":   source.Id,
-	// 	}
-	// } else {
-	// 	sourceValues = map[string]attr.Value{
-	// 		"type": types.StringValue(*volumeResp.Source.Type),
-	// 		"id":   types.Int64PointerValue(*volumeResp.Source.Id),
-	// 	}
-	// }
-	// sourceObject, diags := types.ObjectValue(sourceTypes, sourceValues)
-	// if diags.HasError() {
-	// 	return fmt.Errorf("creating source: %w", core.DiagsToError(diags))
-	// }
-
 	model.VolumeId = types.StringValue(volumeId)
 	model.AvailabilityZone = types.StringPointerValue(volumeResp.AvailabilityZone)
 	model.Description = types.StringPointerValue(volumeResp.Description)
@@ -571,7 +488,6 @@ func mapFields(ctx context.Context, volumeResp *iaasalpha.Volume, model *Model) 
 	model.PerformanceClass = types.StringPointerValue(volumeResp.PerformanceClass)
 	model.ServerId = types.StringPointerValue(volumeResp.ServerId)
 	model.Size = types.Int64PointerValue(volumeResp.Size)
-	// model.Source = sourceObject
 	return nil
 }
 
@@ -592,8 +508,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateVolume
 		Name:             conversion.StringValueToPointer(model.Name),
 		PerformanceClass: conversion.StringValueToPointer(model.PerformanceClass),
 		Size:             conversion.Int64ValueToPointer(model.Size),
-		// TO-DO: after IaaS change to source field, map type and id fields here
-		// Source:           &iaasalpha.CreateVolumePayloadSource{},
 	}, nil
 }
 
