@@ -90,6 +90,35 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
+			"empty_labels",
+			Model{
+				ProjectId: types.StringValue("pid"),
+				VolumeId:  types.StringValue("nid"),
+			},
+			// &sourceModel{},
+			&iaasalpha.Volume{
+				Id:     utils.Ptr("nid"),
+				Labels: &map[string]interface{}{},
+			},
+			Model{
+				Id:               types.StringValue("pid,nid"),
+				ProjectId:        types.StringValue("pid"),
+				VolumeId:         types.StringValue("nid"),
+				Name:             types.StringNull(),
+				AvailabilityZone: types.StringNull(),
+				Labels:           types.MapNull(types.StringType),
+				Description:      types.StringNull(),
+				PerformanceClass: types.StringNull(),
+				ServerId:         types.StringNull(),
+				Size:             types.Int64Null(),
+				// Source: types.ObjectValueMust(sourceTypes, map[string]attr.Value{
+				// 	"type": types.StringNull(),
+				// 	"id":   types.StringNull(),
+				// }),
+			},
+			true,
+		},
+		{
 			"response_nil_fail",
 			Model{},
 			// &sourceModel{},
@@ -216,7 +245,7 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(context.Background(), tt.input)
+			output, err := toUpdatePayload(context.Background(), tt.input, types.MapNull(types.StringType))
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

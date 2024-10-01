@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -27,6 +26,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -223,18 +223,6 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: "Labels are key-value string pairs which can be attached to a resource container",
 				ElementType: types.StringType,
 				Optional:    true,
-				Validators: []validator.Map{
-					mapvalidator.KeysAre(
-						stringvalidator.RegexMatches(
-							regexp.MustCompile(`[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`),
-							"must match expression"),
-					),
-					mapvalidator.ValueStringsAre(
-						stringvalidator.RegexMatches(
-							regexp.MustCompile(`^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`),
-							"must match expression"),
-					),
-				},
 			},
 			"performance_class": schema.StringAttribute{
 				Description: "The performance class of the volume.",
@@ -415,8 +403,16 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 	// 	}
 	// }
 
+	// Retrieve values from state
+	var stateModel Model
+	diags = req.State.Get(ctx, &stateModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Generate API request body from model
-	payload, err := toUpdatePayload(ctx, &model)
+	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -601,12 +597,12 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateVolume
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model) (*iaasalpha.UpdateVolumePayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.UpdateVolumePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	labels, err := conversion.ToStringInterfaceMap(ctx, model.Labels)
+	labels, err := utils.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
