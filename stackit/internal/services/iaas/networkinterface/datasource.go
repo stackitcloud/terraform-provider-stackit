@@ -146,7 +146,7 @@ func (d *networkInterfaceDataSource) Schema(_ context.Context, _ datasource.Sche
 				Computed:    true,
 			},
 			"labels": schema.MapAttribute{
-				Description: "Labels are key-value string pairs which can be attached to a network interface. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}",
+				Description: "Labels are key-value string pairs which can be attached to a network interface.",
 				ElementType: types.StringType,
 				Computed:    true,
 			},

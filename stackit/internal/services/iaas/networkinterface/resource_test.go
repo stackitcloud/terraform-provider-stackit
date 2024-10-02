@@ -269,7 +269,7 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(context.Background(), tt.input)
+			output, err := toUpdatePayload(context.Background(), tt.input, types.MapNull(types.StringType))
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

@@ -220,7 +220,7 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"labels": schema.MapAttribute{
-				Description: "Labels are key-value string pairs which can be attached to a network interface. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}",
+				Description: "Labels are key-value string pairs which can be attached to a network interface.",
 				ElementType: types.StringType,
 				Optional:    true,
 			},
@@ -364,8 +364,16 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
+	// Retrieve values from state
+	var stateModel Model
+	diags = req.State.Get(ctx, &stateModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Generate API request body from model
-	payload, err := toUpdatePayload(ctx, &model)
+	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network interface", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -619,7 +627,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateNICPay
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model) (*iaasalpha.UpdateNICPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.UpdateNICPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -653,7 +661,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*iaasalpha.UpdateNICPay
 	}
 
 	if !model.Labels.IsNull() && !model.Labels.IsUnknown() {
-		labelMap, err := conversion.ToStringInterfaceMap(ctx, model.Labels)
+		labelMap, err := utils.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
 		if err != nil {
 			return nil, fmt.Errorf("mapping labels: %w", err)
 		}
