@@ -18,11 +18,11 @@ description: |-
       }
   }
   provider "openstack" {
-      user_domain_name = "{OpenStack user domain name}"
-      user_name        = "{OpenStack username}"
+      userdomainname = "{OpenStack user domain name}"
+      username        = "{OpenStack username}"
       password         = "{OpenStack password}"
       region           = "RegionOne"
-      auth_url         = "https://keystone.api.iaas.eu01.stackit.cloud/v3"
+      authurl         = "https://keystone.api.iaas.eu01.stackit.cloud/v3"
   }
   ```
   Configuring the supporting infrastructure
