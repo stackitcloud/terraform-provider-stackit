@@ -468,7 +468,7 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaasalpha.NIC, model *
 	if model.NetworkInterfaceId.ValueString() != "" {
 		networkInterfaceId = model.NetworkInterfaceId.ValueString()
 	} else if networkInterfaceResp.NetworkId != nil {
-		networkInterfaceId = *networkInterfaceResp.NetworkId
+		networkInterfaceId = *networkInterfaceResp.Id
 	} else {
 		return fmt.Errorf("network interface id not present")
 	}
