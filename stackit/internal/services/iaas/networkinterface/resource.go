@@ -194,12 +194,10 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 			"allowed_addresses": schema.ListNestedAttribute{
 				Description: "The list of CIDR (Classless Inter-Domain Routing) notations.",
 				Optional:    true,
-				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"string": schema.StringAttribute{
 							Optional: true,
-							Computed: true,
 							Validators: []validator.String{
 								validate.CIDR(),
 							},
@@ -613,7 +611,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateNICPay
 
 	allowedAddressesPayload := []iaasalpha.AllowedAddressesInner{}
 
-	if !(model.AllowedAddresses.IsNull() && model.AllowedAddresses.IsUnknown()) {
+	if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
 		allowedAddressesModel := []allowedAddresses{}
 		diags := model.AllowedAddresses.ElementsAs(ctx, &allowedAddressesModel, false)
 		if diags.HasError() {
@@ -668,7 +666,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 
 	allowedAddressesPayload := []iaasalpha.AllowedAddressesInner{}
 
-	if !(model.AllowedAddresses.IsNull() && model.AllowedAddresses.IsUnknown()) {
+	if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
 		allowedAddressesModel := []allowedAddresses{}
 		diags := model.AllowedAddresses.ElementsAs(ctx, &allowedAddressesModel, false)
 		if diags.HasError() {
