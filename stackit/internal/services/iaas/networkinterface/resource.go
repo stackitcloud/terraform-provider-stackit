@@ -118,7 +118,7 @@ func (r *networkInterfaceResource) Configure(ctx context.Context, req resource.C
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "IaaS client configured")
+	tflog.Info(ctx, "IaaSalpha client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -183,7 +183,7 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"allowed_addresses": schema.ListNestedAttribute{
-				Description: "The list of IPs or CIDR (Classless Inter-Domain Routing) notations.",
+				Description: "The list of CIDR (Classless Inter-Domain Routing) notations.",
 				Optional:    true,
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
@@ -191,6 +191,9 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 						"string": schema.StringAttribute{
 							Optional: true,
 							Computed: true,
+							Validators: []validator.String{
+								validate.CIDR(),
+							},
 						},
 					},
 				},
@@ -379,9 +382,20 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 	// Update existing network
-	nicResp, err := r.client.UpdateNIC(ctx, projectId, networkId, networkInterfaceId).UpdateNICPayload(*payload).Execute()
+	_, err = r.client.UpdateNIC(ctx, projectId, networkId, networkInterfaceId).UpdateNICPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network interface", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	nicResp, err := r.client.GetNIC(ctx, projectId, networkId, networkInterfaceId).Execute()
+	if err != nil {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
@@ -426,14 +440,14 @@ func (r *networkInterfaceResource) Delete(ctx context.Context, req resource.Dele
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,network_id
+// The expected format of the resource import identifier is: project_id,network_id,network_interface_id
 func (r *networkInterfaceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing network interface",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[network_id],[network_interface_id] Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[network_id],[network_interface_id]  Got: %q", req.ID),
 		)
 		return
 	}

@@ -123,7 +123,7 @@ func (d *networkInterfaceDataSource) Schema(_ context.Context, _ datasource.Sche
 				Computed:    true,
 			},
 			"allowed_addresses": schema.ListNestedAttribute{
-				Description: "The list of IPs or CIDR (Classless Inter-Domain Routing) notations.",
+				Description: "The list of CIDR (Classless Inter-Domain Routing) notations.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
