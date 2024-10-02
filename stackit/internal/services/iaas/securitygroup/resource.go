@@ -54,18 +54,18 @@ type Model struct {
 }
 
 // Struct corresponding to Model.Rules[i]
-type rule struct {
-	Description           types.String `tfsdk:"description"`
-	Direction             types.String `tfsdk:"direction"`
-	EtherType             types.String `tfsdk:"ether_type"`
-	IcmpParameters        types.Object `tfsdk:"icmp_parameters"`
-	Id                    types.String `tfsdk:"id"`
-	IpRange               types.String `tfsdk:"ip_range"`
-	PortRange             types.Object `tfsdk:"port_range"`
-	Protocol              types.Object `tfsdk:"protocol"`
-	RemoteSecurityGroupId types.String `tfsdk:"remote_security_group_id"`
-	SecurityGroupId       types.String `tfsdk:"security_group_id"`
-}
+// type rule struct {
+//	Description           types.String `tfsdk:"description"`
+//	Direction             types.String `tfsdk:"direction"`
+//	EtherType             types.String `tfsdk:"ether_type"`
+//	IcmpParameters        types.Object `tfsdk:"icmp_parameters"`
+//	Id                    types.String `tfsdk:"id"`
+//	IpRange               types.String `tfsdk:"ip_range"`
+//	PortRange             types.Object `tfsdk:"port_range"`
+//	Protocol              types.Object `tfsdk:"protocol"`
+//	RemoteSecurityGroupId types.String `tfsdk:"remote_security_group_id"`
+//	SecurityGroupId       types.String `tfsdk:"security_group_id"`
+// }
 
 // Types corresponding to rule
 var ruleTypes = map[string]attr.Type{
@@ -81,10 +81,10 @@ var ruleTypes = map[string]attr.Type{
 	"security_group_id":        basetypes.StringType{},
 }
 
-type icmpParameters struct {
-	Code types.Int64 `tfsdk:"code"`
-	Type types.Int64 `tfsdk:"type"`
-}
+// type icmpParameters struct {
+//	Code types.Int64 `tfsdk:"code"`
+//	Type types.Int64 `tfsdk:"type"`
+// }
 
 // Types corresponding to icmpParameters
 var icmpParametersTypes = map[string]attr.Type{
@@ -92,10 +92,10 @@ var icmpParametersTypes = map[string]attr.Type{
 	"type": basetypes.Int64Type{},
 }
 
-type portRange struct {
-	Max types.Int64 `tfsdk:"max"`
-	Min types.Int64 `tfsdk:"min"`
-}
+// type portRange struct {
+//	Max types.Int64 `tfsdk:"max"`
+//	Min types.Int64 `tfsdk:"min"`
+// }
 
 // Types corresponding to portRange
 var portRangeTypes = map[string]attr.Type{
@@ -103,10 +103,10 @@ var portRangeTypes = map[string]attr.Type{
 	"min": basetypes.Int64Type{},
 }
 
-type protocolParameters struct {
-	Name     types.String `tfsdk:"name"`
-	Protocol types.Int64  `tfsdk:"protocol"`
-}
+// type protocolParameters struct {
+//	Name     types.String `tfsdk:"name"`
+//	Protocol types.Int64  `tfsdk:"protocol"`
+// }
 
 // Types corresponding to protocol
 var protocolTypes = map[string]attr.Type{

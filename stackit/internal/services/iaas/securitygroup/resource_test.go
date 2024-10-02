@@ -11,7 +11,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 )
 
-//func fixtureRulesModel() basetypes.ListValue {
+// func fixtureRulesModel() basetypes.ListValue {
 //	return types.ListValueMust(types.ObjectType{AttrTypes: ruleTypes}, []attr.Value{
 //		types.ObjectValueMust(ruleTypes, map[string]attr.Value{
 //			"description":              types.StringValue("desc"),
@@ -35,9 +35,9 @@ import (
 //			}),
 //		}),
 //	})
-//}
+// }
 //
-//func fixtureRulesResponse() iaasalpha.SecurityGroupRule {
+// func fixtureRulesResponse() iaasalpha.SecurityGroupRule {
 //	return iaasalpha.SecurityGroupRule{
 //		Description:           utils.Ptr("desc"),
 //		Direction:             utils.Ptr("direction"),
@@ -59,7 +59,7 @@ import (
 //			Protocol: utils.Ptr(int64(2)),
 //		},
 //	}
-//}
+// }
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
@@ -142,7 +142,7 @@ func TestMapFields(t *testing.T) {
 			},
 			true,
 		},
-		//{
+		// {
 		//	"with rules",
 		//	Model{
 		//		ProjectId:       types.StringValue("pid"),
@@ -167,7 +167,7 @@ func TestMapFields(t *testing.T) {
 		//		}),
 		//	},
 		//	true,
-		//},
+		// },
 		{
 			"response_nil_fail",
 			Model{},
