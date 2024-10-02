@@ -41,10 +41,7 @@ func TestMapFields(t *testing.T) {
 				PerformanceClass: types.StringNull(),
 				ServerId:         types.StringNull(),
 				Size:             types.Int64Null(),
-				Source: types.ObjectValueMust(sourceTypes, map[string]attr.Value{
-					"type": types.StringNull(),
-					"id":   types.StringNull(),
-				}),
+				Source:           types.ObjectNull(sourceTypes),
 			},
 			true,
 		},
@@ -93,11 +90,11 @@ func TestMapFields(t *testing.T) {
 			Model{
 				ProjectId: types.StringValue("pid"),
 				VolumeId:  types.StringValue("nid"),
+				Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			},
 			&sourceModel{},
 			&iaasalpha.Volume{
-				Id:     utils.Ptr("nid"),
-				Labels: &map[string]interface{}{},
+				Id: utils.Ptr("nid"),
 			},
 			Model{
 				Id:               types.StringValue("pid,nid"),
@@ -105,15 +102,12 @@ func TestMapFields(t *testing.T) {
 				VolumeId:         types.StringValue("nid"),
 				Name:             types.StringNull(),
 				AvailabilityZone: types.StringNull(),
-				Labels:           types.MapNull(types.StringType),
+				Labels:           types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				Description:      types.StringNull(),
 				PerformanceClass: types.StringNull(),
 				ServerId:         types.StringNull(),
 				Size:             types.Int64Null(),
-				Source: types.ObjectValueMust(sourceTypes, map[string]attr.Value{
-					"type": types.StringNull(),
-					"id":   types.StringNull(),
-				}),
+				Source:           types.ObjectNull(sourceTypes),
 			},
 			true,
 		},

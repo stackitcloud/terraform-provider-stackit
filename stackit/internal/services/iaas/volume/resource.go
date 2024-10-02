@@ -89,7 +89,7 @@ func (r *volumeResource) Metadata(_ context.Context, req resource.MetadataReques
 func (r *volumeResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		resourcevalidator.AtLeastOneOf(
-			// path.MatchRoot("source"),
+			path.MatchRoot("source"),
 			path.MatchRoot("size"),
 		),
 	}
@@ -535,33 +535,35 @@ func mapFields(ctx context.Context, volumeResp *iaasalpha.Volume, model *Model, 
 		strings.Join(idParts, core.Separator),
 	)
 
-	var labels basetypes.MapValue
+	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
+	if diags.HasError() {
+		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
+	}
 	if volumeResp.Labels != nil && len(*volumeResp.Labels) != 0 {
 		var diags diag.Diagnostics
 		labels, diags = types.MapValueFrom(ctx, types.StringType, *volumeResp.Labels)
 		if diags.HasError() {
 			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
 		}
-	} else {
+	} else if model.Labels.IsNull() {
 		labels = types.MapNull(types.StringType)
 	}
 
 	var sourceValues map[string]attr.Value
+	var sourceObject basetypes.ObjectValue
 	if volumeResp.Source == nil {
-		sourceValues = map[string]attr.Value{
-			"type": source.Type,
-			"id":   source.Id,
-		}
+		sourceObject = types.ObjectNull(sourceTypes)
 	} else {
 		sourceValues = map[string]attr.Value{
 			"type": types.StringPointerValue(volumeResp.Source.Type),
 			"id":   types.StringPointerValue(volumeResp.Source.Id),
 		}
+		sourceObject, diags = types.ObjectValue(sourceTypes, sourceValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating source: %w", core.DiagsToError(diags))
+		}
 	}
-	sourceObject, diags := types.ObjectValue(sourceTypes, sourceValues)
-	if diags.HasError() {
-		return fmt.Errorf("creating source: %w", core.DiagsToError(diags))
-	}
+
 	model.VolumeId = types.StringValue(volumeId)
 	model.AvailabilityZone = types.StringPointerValue(volumeResp.AvailabilityZone)
 	model.Description = types.StringPointerValue(volumeResp.Description)
@@ -584,6 +586,15 @@ func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*i
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
+	var sourcePayload *iaasalpha.VolumeSource
+
+	if !source.Id.IsNull() && !source.Type.IsNull() {
+		sourcePayload = &iaasalpha.VolumeSource{
+			Id:   conversion.StringValueToPointer(source.Id),
+			Type: conversion.StringValueToPointer(source.Type),
+		}
+	}
+
 	return &iaasalpha.CreateVolumePayload{
 		AvailabilityZone: conversion.StringValueToPointer(model.AvailabilityZone),
 		Description:      conversion.StringValueToPointer(model.Description),
@@ -591,10 +602,7 @@ func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*i
 		Name:             conversion.StringValueToPointer(model.Name),
 		PerformanceClass: conversion.StringValueToPointer(model.PerformanceClass),
 		Size:             conversion.Int64ValueToPointer(model.Size),
-		Source: &iaasalpha.VolumeSource{
-			Id:   conversion.StringValueToPointer(source.Id),
-			Type: conversion.StringValueToPointer(source.Type),
-		},
+		Source:           sourcePayload,
 	}, nil
 }
 
