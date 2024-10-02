@@ -384,20 +384,9 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 	// Update existing network
-	_, err = r.client.UpdateNIC(ctx, projectId, networkId, networkInterfaceId).UpdateNICPayload(*payload).Execute()
+	nicResp, err := r.client.UpdateNIC(ctx, projectId, networkId, networkInterfaceId).UpdateNICPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network interface", fmt.Sprintf("Calling API: %v", err))
-		return
-	}
-
-	nicResp, err := r.client.GetNIC(ctx, projectId, networkId, networkInterfaceId).Execute()
-	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
