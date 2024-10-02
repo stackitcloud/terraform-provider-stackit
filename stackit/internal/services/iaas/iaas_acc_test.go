@@ -12,6 +12,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -37,6 +38,17 @@ var networkAreaRouteResource = map[string]string{
 	"network_area_id": networkAreaResource["network_area_id"],
 	"prefix":          "1.1.1.0/24",
 	"next_hop":        "1.1.1.1",
+}
+
+// Volume resource data
+var volumeResource = map[string]string{
+	"project_id":        testutil.ProjectId,
+	"availability_zone": "eu01-1",
+	"name":              "name",
+	"description":       "description",
+	"size":              "1",
+	"label1":            "value",
+	"performance_class": "storage_premium_perf1",
 }
 
 func networkResourceConfig(name, nameservers string) string {
@@ -87,12 +99,43 @@ func networkAreaRouteResourceConfig() string {
 	)
 }
 
+func volumeResourceConfig(name, size string) string {
+	return fmt.Sprintf(`
+				resource "stackit_volume" "volume" {
+					project_id = "%s"
+					availability_zone = "%s"
+					name = "%s"
+					description = "%s"
+					size = %s
+					labels = {
+						"label1" = "%s"
+					}
+					performance_class = "%s"
+				}
+				`,
+		volumeResource["project_id"],
+		volumeResource["availability_zone"],
+		name,
+		volumeResource["description"],
+		size,
+		volumeResource["label1"],
+		volumeResource["performance_class"],
+	)
+}
+
 func resourceConfig(name, nameservers, areaname, networkranges string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		networkResourceConfig(name, nameservers),
 		networkAreaResourceConfig(areaname, networkranges),
 		networkAreaRouteResourceConfig(),
+	)
+}
+
+func resourceConfigVolume(name, size string) string {
+	return fmt.Sprintf("%s\n\n%s",
+		testutil.IaaSProviderConfig(),
+		volumeResourceConfig(name, size),
 	)
 }
 
@@ -296,6 +339,95 @@ func TestAccIaaS(t *testing.T) {
 	})
 }
 
+func TestAccIaaSVolume(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckIaaSVolumeDestroy,
+		Steps: []resource.TestStep{
+
+			// Creation
+			{
+				Config: resourceConfigVolume(volumeResource["name"], volumeResource["size"]),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_volume.volume", "project_id", volumeResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume", "volume_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "name", volumeResource["name"]),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "availability_zone", volumeResource["availability_zone"]),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "availability_zone", volumeResource["availability_zone"]),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "labels.label1", volumeResource["label1"]),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "description", volumeResource["description"]),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "performance_class", volumeResource["performance_class"]),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "size", volumeResource["size"]),
+				),
+			},
+			// Data source
+			{
+				Config: fmt.Sprintf(`
+					%s
+			
+					data "stackit_volume" "volume" {
+						project_id  = stackit_volume.volume.project_id
+						volume_id = stackit_volume.volume.volume_id
+					}
+					`,
+					resourceConfigVolume(volumeResource["name"], volumeResource["size"]),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "project_id", networkResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_volume.volume", "volume_id",
+						"data.stackit_volume.volume", "volume_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "name", volumeResource["name"]),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "availability_zone", volumeResource["availability_zone"]),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "availability_zone", volumeResource["availability_zone"]),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "labels.label1", volumeResource["label1"]),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "description", volumeResource["description"]),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "performance_class", volumeResource["performance_class"]),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "size", volumeResource["size"]),
+				),
+			},
+			// Import
+			{
+				ResourceName: "stackit_volume.volume",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_volume.volume"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_volume.volume")
+					}
+					volumeId, ok := r.Primary.Attributes["volume_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute volume_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, volumeId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				Config: resourceConfigVolume(
+					fmt.Sprintf("%s-updated", volumeResource["name"]),
+					"10",
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_volume.volume", "project_id", volumeResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume", "volume_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "name", fmt.Sprintf("%s-updated", volumeResource["name"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "availability_zone", volumeResource["availability_zone"]),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "availability_zone", volumeResource["availability_zone"]),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "labels.label1", volumeResource["label1"]),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "description", volumeResource["description"]),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "performance_class", volumeResource["performance_class"]),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "size", "10"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
 func testAccCheckIaaSDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *iaas.APIClient
@@ -365,6 +497,53 @@ func testAccCheckIaaSDestroy(s *terraform.State) error {
 			err := client.DeleteNetworkAreaExecute(ctx, testutil.OrganizationId, *networkAreas[i].AreaId)
 			if err != nil {
 				return fmt.Errorf("destroying network area %s during CheckDestroy: %w", *networkAreas[i].AreaId, err)
+			}
+		}
+	}
+	return nil
+}
+
+func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var client *iaasalpha.APIClient
+	var err error
+	if testutil.IaaSCustomEndpoint == "" {
+		client, err = iaasalpha.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
+	} else {
+		client, err = iaasalpha.NewAPIClient(
+			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	volumesToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_volume" {
+			continue
+		}
+		// volume terraform ID: "[project_id],[volume_id]"
+		volumeId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		volumesToDestroy = append(volumesToDestroy, volumeId)
+	}
+
+	volumesResp, err := client.ListVolumesExecute(ctx, testutil.ProjectId)
+	if err != nil {
+		return fmt.Errorf("getting volumesResp: %w", err)
+	}
+
+	volumes := *volumesResp.Items
+	for i := range volumes {
+		if volumes[i].Id == nil {
+			continue
+		}
+		if utils.Contains(volumesToDestroy, *volumes[i].Id) {
+			err := client.DeleteVolumeExecute(ctx, testutil.ProjectId, *volumes[i].Id)
+			if err != nil {
+				return fmt.Errorf("destroying volume %s during CheckDestroy: %w", *volumes[i].Id, err)
 			}
 		}
 	}
