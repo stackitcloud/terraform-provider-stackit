@@ -92,7 +92,7 @@ func (d *networkInterfaceDataSource) Schema(_ context.Context, _ datasource.Sche
 		Description: "Network interface datasource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`network_id`,`network_interface_id`\".",
+				Description: "Terraform's internal data source ID. It is structured as \"`project_id`,`network_id`,`network_interface_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
