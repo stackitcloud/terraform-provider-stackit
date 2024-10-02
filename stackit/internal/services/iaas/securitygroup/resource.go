@@ -243,6 +243,7 @@ func (r *securityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 			"stateful": schema.BoolAttribute{
 				Description: "Shows if a security group is stateful or stateless. There can only be one security groups per network interface/server.",
 				Optional:    true,
+				Computed:    true,
 			},
 			"rules": schema.ListNestedAttribute{
 				Description: "The rules of the security group.",
@@ -515,8 +516,8 @@ func (r *securityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 
-	// Delete existing volume
-	err := r.client.DeleteVolume(ctx, projectId, securityGroupId).Execute()
+	// Delete existing security group
+	err := r.client.DeleteSecurityGroup(ctx, projectId, securityGroupId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting security group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -526,7 +527,7 @@ func (r *securityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,volume_id
+// The expected format of the resource import identifier is: project_id,security_group_id
 func (r *securityGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
