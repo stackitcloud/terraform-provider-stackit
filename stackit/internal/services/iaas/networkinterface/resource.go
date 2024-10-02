@@ -469,7 +469,7 @@ func (r *networkInterfaceResource) ImportState(ctx context.Context, req resource
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_id"), networkId)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_interface_id"), networkInterfaceId)...)
-	tflog.Info(ctx, "Network state imported")
+	tflog.Info(ctx, "Network interface state imported")
 }
 
 func mapFields(ctx context.Context, networkInterfaceResp *iaasalpha.NIC, model *Model) error {
