@@ -9,10 +9,12 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -53,6 +55,19 @@ type Model struct {
 	PerformanceClass types.String `tfsdk:"performance_class"`
 	Size             types.Int64  `tfsdk:"size"`
 	ServerId         types.String `tfsdk:"server_id"`
+	Source           types.Object `tfsdk:"source"`
+}
+
+// Struct corresponding to Model.Flavor
+type sourceModel struct {
+	Type types.String `tfsdk:"type"`
+	Id   types.String `tfsdk:"id"`
+}
+
+// Types corresponding to flavorModel
+var sourceTypes = map[string]attr.Type{
+	"type": basetypes.StringType{},
+	"id":   basetypes.StringType{},
 }
 
 // NewVolumeResource is a helper function to simplify the provider implementation.
@@ -74,6 +89,7 @@ func (r *volumeResource) Metadata(_ context.Context, req resource.MetadataReques
 func (r *volumeResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		resourcevalidator.AtLeastOneOf(
+			// path.MatchRoot("source"),
 			path.MatchRoot("size"),
 		),
 	}
@@ -230,6 +246,29 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: "The size of the volume in GB. It can only be updated to a larger value than the current size",
 				Optional:    true,
 			},
+			"source": schema.SingleNestedAttribute{
+				Description: "The source of the volume. It can be either a volume, an image, a snapshot or a backup",
+				Optional:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						Description: "The type of the source. It can be `volume`, `image`, `snapshot` or `backup`",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"id": schema.StringAttribute{
+						Description: "The id of the source, e.g. image ID",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -247,8 +286,17 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
+	var source = &sourceModel{}
+	if !(model.Source.IsNull() || model.Source.IsUnknown()) {
+		diags = model.Source.As(ctx, source, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	// Generate API request body from model
-	payload, err := toCreatePayload(ctx, &model)
+	payload, err := toCreatePayload(ctx, &model, source)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -272,7 +320,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
 	// Map response body to schema
-	err = mapFields(ctx, volume, &model)
+	err = mapFields(ctx, volume, &model, source)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -310,8 +358,17 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
+	var source = &sourceModel{}
+	if !(model.Source.IsNull() || model.Source.IsUnknown()) {
+		diags = model.Source.As(ctx, source, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	// Map response body to schema
-	err = mapFields(ctx, volumeResp, &model)
+	err = mapFields(ctx, volumeResp, &model, source)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -338,6 +395,15 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 	volumeId := model.VolumeId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
+
+	var source = &sourceModel{}
+	if !(model.Source.IsNull() || model.Source.IsUnknown()) {
+		diags = model.Source.As(ctx, source, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 
 	// Retrieve values from state
 	var stateModel Model
@@ -378,7 +444,7 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 			updatedVolume.Size = modelSize
 		}
 	}
-	err = mapFields(ctx, updatedVolume, &model)
+	err = mapFields(ctx, updatedVolume, &model, source)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -444,7 +510,7 @@ func (r *volumeResource) ImportState(ctx context.Context, req resource.ImportSta
 	tflog.Info(ctx, "volume state imported")
 }
 
-func mapFields(ctx context.Context, volumeResp *iaasalpha.Volume, model *Model) error {
+func mapFields(ctx context.Context, volumeResp *iaasalpha.Volume, model *Model, source *sourceModel) error {
 	if volumeResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -480,6 +546,22 @@ func mapFields(ctx context.Context, volumeResp *iaasalpha.Volume, model *Model) 
 		labels = types.MapNull(types.StringType)
 	}
 
+	var sourceValues map[string]attr.Value
+	if volumeResp.Source == nil {
+		sourceValues = map[string]attr.Value{
+			"type": source.Type,
+			"id":   source.Id,
+		}
+	} else {
+		sourceValues = map[string]attr.Value{
+			"type": types.StringPointerValue(volumeResp.Source.Type),
+			"id":   types.StringPointerValue(volumeResp.Source.Id),
+		}
+	}
+	sourceObject, diags := types.ObjectValue(sourceTypes, sourceValues)
+	if diags.HasError() {
+		return fmt.Errorf("creating source: %w", core.DiagsToError(diags))
+	}
 	model.VolumeId = types.StringValue(volumeId)
 	model.AvailabilityZone = types.StringPointerValue(volumeResp.AvailabilityZone)
 	model.Description = types.StringPointerValue(volumeResp.Description)
@@ -488,10 +570,11 @@ func mapFields(ctx context.Context, volumeResp *iaasalpha.Volume, model *Model) 
 	model.PerformanceClass = types.StringPointerValue(volumeResp.PerformanceClass)
 	model.ServerId = types.StringPointerValue(volumeResp.ServerId)
 	model.Size = types.Int64PointerValue(volumeResp.Size)
+	model.Source = sourceObject
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateVolumePayload, error) {
+func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*iaasalpha.CreateVolumePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -508,6 +591,10 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateVolume
 		Name:             conversion.StringValueToPointer(model.Name),
 		PerformanceClass: conversion.StringValueToPointer(model.PerformanceClass),
 		Size:             conversion.Int64ValueToPointer(model.Size),
+		Source: &iaasalpha.VolumeSource{
+			Id:   conversion.StringValueToPointer(source.Id),
+			Type: conversion.StringValueToPointer(source.Type),
+		},
 	}, nil
 }
 
