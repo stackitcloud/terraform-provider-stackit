@@ -3,12 +3,12 @@
 page_title: "stackit_network_interface Data Source - stackit"
 subcategory: ""
 description: |-
-  Network interface resource schema. Must have a region specified in the provider configuration.
+  Network interface datasource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_network_interface (Data Source)
 
-Network interface resource schema. Must have a `region` specified in the provider configuration.
+Network interface datasource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
@@ -33,7 +33,7 @@ data "stackit_network_interface" "example" {
 
 - `allowed_addresses` (Attributes List) The list of CIDR (Classless Inter-Domain Routing) notations. (see [below for nested schema](#nestedatt--allowed_addresses))
 - `device` (String) The device UUID of the network interface.
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`network_id`,`network_interface_id`".
+- `id` (String) Terraform's internal data source ID. It is structured as "`project_id`,`network_id`,`network_interface_id`".
 - `ipv4` (String) The IPv4 address.
 - `ipv6` (String) The IPv6 address.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a network interface.

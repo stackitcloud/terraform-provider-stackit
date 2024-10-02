@@ -56,7 +56,6 @@ type Model struct {
 	SecurityGroups     types.List   `tfsdk:"security_groups"`
 	Device             types.String `tfsdk:"device"`
 	Mac                types.String `tfsdk:"mac"`
-	Status             types.String `tfsdk:"status"`
 	Type               types.String `tfsdk:"type"`
 }
 
@@ -255,10 +254,6 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 							"must match expression"),
 					),
 				},
-			},
-			"status": schema.StringAttribute{
-				Description: "The status of network interface.",
-				Computed:    true,
 			},
 			"type": schema.StringAttribute{
 				Description: "Type of network interface. Some of the possible values are: [`server`, `metadata`, `gateway`]",
@@ -584,7 +579,6 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaasalpha.NIC, model *
 	model.NicSecurity = types.BoolPointerValue(networkInterfaceResp.NicSecurity)
 	model.Device = types.StringPointerValue(networkInterfaceResp.Device)
 	model.Mac = types.StringPointerValue(networkInterfaceResp.Mac)
-	model.Status = types.StringPointerValue(networkInterfaceResp.Status)
 	model.Type = types.StringPointerValue(networkInterfaceResp.Type)
 	model.Labels = labels
 
@@ -643,7 +637,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateNICPay
 		Ipv4:             conversion.StringValueToPointer(model.IPv4),
 		Ipv6:             conversion.StringValueToPointer(model.IPv6),
 		Mac:              conversion.StringValueToPointer(model.Mac),
-		Status:           conversion.StringValueToPointer(model.Status),
 		Type:             conversion.StringValueToPointer(model.Type),
 	}, nil
 }
@@ -698,7 +691,6 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		Ipv4:             conversion.StringValueToPointer(model.IPv4),
 		Ipv6:             conversion.StringValueToPointer(model.IPv6),
 		Mac:              conversion.StringValueToPointer(model.Mac),
-		Status:           conversion.StringValueToPointer(model.Status),
 		Type:             conversion.StringValueToPointer(model.Type),
 	}, nil
 }
