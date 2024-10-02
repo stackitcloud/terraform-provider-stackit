@@ -15,7 +15,6 @@ func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		source      *sourceModel
 		input       *iaasalpha.Volume
 		expected    Model
 		isValid     bool
@@ -26,7 +25,6 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				VolumeId:  types.StringValue("nid"),
 			},
-			&sourceModel{},
 			&iaasalpha.Volume{
 				Id: utils.Ptr("nid"),
 			},
@@ -51,7 +49,6 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				VolumeId:  types.StringValue("nid"),
 			},
-			&sourceModel{},
 			&iaasalpha.Volume{
 				Id:               utils.Ptr("nid"),
 				Name:             utils.Ptr("name"),
@@ -92,7 +89,6 @@ func TestMapFields(t *testing.T) {
 				VolumeId:  types.StringValue("nid"),
 				Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			},
-			&sourceModel{},
 			&iaasalpha.Volume{
 				Id: utils.Ptr("nid"),
 			},
@@ -114,7 +110,6 @@ func TestMapFields(t *testing.T) {
 		{
 			"response_nil_fail",
 			Model{},
-			&sourceModel{},
 			nil,
 			Model{},
 			false,
@@ -124,7 +119,6 @@ func TestMapFields(t *testing.T) {
 			Model{
 				ProjectId: types.StringValue("pid"),
 			},
-			&sourceModel{},
 			&iaasalpha.Volume{},
 			Model{},
 			false,
@@ -132,7 +126,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, &tt.state, tt.source)
+			err := mapFields(context.Background(), tt.input, &tt.state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

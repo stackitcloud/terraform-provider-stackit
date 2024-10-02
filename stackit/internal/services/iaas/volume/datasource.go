@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -188,16 +187,7 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	var source = &sourceModel{}
-	if !(model.Source.IsNull() || model.Source.IsUnknown()) {
-		diags = model.Source.As(ctx, source, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	err = mapFields(ctx, volumeResp, &model, source)
+	err = mapFields(ctx, volumeResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume", fmt.Sprintf("Processing API payload: %v", err))
 		return

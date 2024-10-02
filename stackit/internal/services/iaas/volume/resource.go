@@ -320,7 +320,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
 	// Map response body to schema
-	err = mapFields(ctx, volume, &model, source)
+	err = mapFields(ctx, volume, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -358,17 +358,8 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	var source = &sourceModel{}
-	if !(model.Source.IsNull() || model.Source.IsUnknown()) {
-		diags = model.Source.As(ctx, source, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
 	// Map response body to schema
-	err = mapFields(ctx, volumeResp, &model, source)
+	err = mapFields(ctx, volumeResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -395,15 +386,6 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 	volumeId := model.VolumeId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
-
-	var source = &sourceModel{}
-	if !(model.Source.IsNull() || model.Source.IsUnknown()) {
-		diags = model.Source.As(ctx, source, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
 
 	// Retrieve values from state
 	var stateModel Model
@@ -444,7 +426,7 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 			updatedVolume.Size = modelSize
 		}
 	}
-	err = mapFields(ctx, updatedVolume, &model, source)
+	err = mapFields(ctx, updatedVolume, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -510,7 +492,7 @@ func (r *volumeResource) ImportState(ctx context.Context, req resource.ImportSta
 	tflog.Info(ctx, "volume state imported")
 }
 
-func mapFields(ctx context.Context, volumeResp *iaasalpha.Volume, model *Model, source *sourceModel) error {
+func mapFields(ctx context.Context, volumeResp *iaasalpha.Volume, model *Model) error {
 	if volumeResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
