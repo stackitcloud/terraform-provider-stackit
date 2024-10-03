@@ -57,7 +57,7 @@ type Model struct {
 	Source           types.Object `tfsdk:"source"`
 }
 
-// Struct corresponding to Model.Flavor
+// Struct corresponding to Model.Source
 type sourceModel struct {
 	Type types.String `tfsdk:"type"`
 	Id   types.String `tfsdk:"id"`
