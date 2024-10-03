@@ -155,7 +155,7 @@ func (r *volumeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 						Computed:    true,
 					},
 					"id": schema.StringAttribute{
-						Description: "The id of the source, e.g. image ID",
+						Description: "The ID of the source, e.g. image ID",
 						Computed:    true,
 					},
 				},

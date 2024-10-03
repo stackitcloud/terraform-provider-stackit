@@ -60,13 +60,13 @@ type Model struct {
 	Source           types.Object `tfsdk:"source"`
 }
 
-// Struct corresponding to Model.Flavor
+// Struct corresponding to Model.Source
 type sourceModel struct {
 	Type types.String `tfsdk:"type"`
 	Id   types.String `tfsdk:"id"`
 }
 
-// Types corresponding to flavorModel
+// Types corresponding to sourceModel
 var sourceTypes = map[string]attr.Type{
 	"type": basetypes.StringType{},
 	"id":   basetypes.StringType{},
@@ -263,7 +263,7 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						},
 					},
 					"id": schema.StringAttribute{
-						Description: "The id of the source, e.g. image ID",
+						Description: "The ID of the source, e.g. image ID",
 						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
