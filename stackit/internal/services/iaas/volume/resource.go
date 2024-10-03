@@ -28,6 +28,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -41,6 +42,8 @@ var (
 	_ resource.Resource                = &volumeResource{}
 	_ resource.ResourceWithConfigure   = &volumeResource{}
 	_ resource.ResourceWithImportState = &volumeResource{}
+
+	SupportedSourceTypes = []string{"volume", "image", "snapshot", "backup"}
 )
 
 type Model struct {
@@ -242,18 +245,18 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 			},
 			"size": schema.Int64Attribute{
-				Description: "The size of the volume in GB. It can only be updated to a larger value than the current size",
+				Description: "The size of the volume in GB. It can only be updated to a larger value than the current size. Either `size` or `source` must be provided",
 				Optional:    true,
 			},
 			"source": schema.SingleNestedAttribute{
-				Description: "The source of the volume. It can be either a volume, an image, a snapshot or a backup",
+				Description: "The source of the volume. It can be either a volume, an image, a snapshot or a backup. Either `size` or `source` must be provided",
 				Optional:    true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.RequiresReplace(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						Description: "The type of the source. It can be `volume`, `image`, `snapshot` or `backup`",
+						Description: "The type of the source" + utils.SupportedValuesDocumentation(SupportedSourceTypes),
 						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),

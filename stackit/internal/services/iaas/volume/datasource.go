@@ -15,6 +15,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -150,7 +151,7 @@ func (r *volumeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						Description: "The type of the source. It can be `volume`, `image`, `snapshot` or `backup`",
+						Description: "The type of the source" + utils.SupportedValuesDocumentation(SupportedSourceTypes),
 						Computed:    true,
 					},
 					"id": schema.StringAttribute{
