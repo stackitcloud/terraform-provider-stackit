@@ -2,6 +2,7 @@ package validate
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"regexp"
@@ -266,6 +267,23 @@ func Rrule() *Validator {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
 					description,
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
+
+func Base64() *Validator {
+	description := "value must be base64 encoded"
+	return &Validator{
+		description: description,
+		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			_, err := base64.StdEncoding.DecodeString(req.ConfigValue.ValueString())
+			if err != nil {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					"decoding base64 value: invalid base64 encoded value",
 					req.ConfigValue.ValueString(),
 				))
 			}
