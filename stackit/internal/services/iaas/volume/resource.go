@@ -63,7 +63,7 @@ type sourceModel struct {
 	Id   types.String `tfsdk:"id"`
 }
 
-// Types corresponding to flavorModel
+// Types corresponding to sourceModel
 var sourceTypes = map[string]attr.Type{
 	"type": basetypes.StringType{},
 	"id":   basetypes.StringType{},
