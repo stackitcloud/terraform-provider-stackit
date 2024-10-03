@@ -40,5 +40,5 @@ Volume resource schema. Must have a `region` specified in the provider configura
 
 Read-Only:
 
-- `id` (String) The id of the source, e.g. image ID
-- `type` (String) The type of the source. It can be `volume`, `image`, `snapshot` or `backup`
+- `id` (String) The ID of the source, e.g. image ID
+- `type` (String) The type of the source. Supported values are: `volume`, `image`, `snapshot`, `backup`.
