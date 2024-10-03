@@ -28,7 +28,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -517,20 +516,12 @@ func mapFields(ctx context.Context, volumeResp *iaasalpha.Volume, model *Model) 
 		strings.Join(idParts, core.Separator),
 	)
 
-	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
-	if diags.HasError() {
-		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-	}
-	if volumeResp.Labels != nil && len(*volumeResp.Labels) != 0 {
-		var diags diag.Diagnostics
-		labels, diags = types.MapValueFrom(ctx, types.StringType, *volumeResp.Labels)
-		if diags.HasError() {
-			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-		}
-	} else if model.Labels.IsNull() {
-		labels = types.MapNull(types.StringType)
+	labels, err := conversion.ToTerraformStringInterfaceMap(ctx, model.Labels, volumeResp.Labels)
+	if err != nil {
+		return fmt.Errorf("map labels to terraform map: %w", err)
 	}
 
+	var diags diag.Diagnostics
 	var sourceValues map[string]attr.Value
 	var sourceObject basetypes.ObjectValue
 	if volumeResp.Source == nil {
@@ -593,7 +584,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("nil model")
 	}
 
-	labels, err := utils.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
+	labels, err := conversion.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}

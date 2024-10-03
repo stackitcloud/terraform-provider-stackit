@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -75,6 +76,24 @@ func ToStringInterfaceMap(ctx context.Context, m basetypes.MapValue) (map[string
 	return interfaceMap, nil
 }
 
+func ToTerraformStringInterfaceMap(ctx context.Context, currentMap basetypes.MapValue, returnedMap *map[string]interface{}) (basetypes.MapValue, error) {
+	tfMap, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
+	if diags.HasError() {
+		return types.MapNull(types.StringType), fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
+	}
+	if returnedMap != nil && len(*returnedMap) != 0 {
+		var diags diag.Diagnostics
+		tfMap, diags = types.MapValueFrom(ctx, types.StringType, *returnedMap)
+		if diags.HasError() {
+			return types.MapNull(types.StringType), fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
+		}
+	} else if currentMap.IsNull() {
+		tfMap = types.MapNull(types.StringType)
+	}
+
+	return tfMap, nil
+}
+
 // StringValueToPointer converts basetypes.StringValue to a pointer to string.
 // It returns nil if the value is null or unknown.
 func StringValueToPointer(s basetypes.StringValue) *string {
@@ -132,4 +151,38 @@ func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
 	}
 
 	return &listStr, nil
+}
+
+// ToJSONMApPartialUpdatePayload returns a map[string]interface{} to be used in a PATCH request payload.
+// It takes a current map as it is in the terraform state and a desired map as it is in the user configuratiom
+// and builds a map which sets to null keys that should be removed, updates the values of existing keys and adds new keys
+// This method is needed because in partial updates, e.g. if the key is not provided it is ignored and not removed
+func ToJSONMapPartialUpdatePayload(ctx context.Context, current, desired types.Map) (map[string]interface{}, error) {
+	currentMap, err := ToStringInterfaceMap(ctx, current)
+	if err != nil {
+		return nil, fmt.Errorf("converting to Go map: %w", err)
+	}
+
+	desiredMap, err := ToStringInterfaceMap(ctx, desired)
+	if err != nil {
+		return nil, fmt.Errorf("converting to Go map: %w", err)
+	}
+
+	mapPayload := map[string]interface{}{}
+	// Update and remove existing keys
+	for k := range currentMap {
+		if desiredValue, ok := desiredMap[k]; ok {
+			mapPayload[k] = desiredValue
+		} else {
+			mapPayload[k] = nil
+		}
+	}
+
+	// Add new keys
+	for k, desiredValue := range desiredMap {
+		if _, ok := mapPayload[k]; !ok {
+			mapPayload[k] = desiredValue
+		}
+	}
+	return mapPayload, nil
 }
