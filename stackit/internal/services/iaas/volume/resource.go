@@ -260,7 +260,7 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						},
 					},
 					"id": schema.StringAttribute{
-						Description: "The id of the source, e.g. image ID",
+						Description: "The ID of the source, e.g. image ID",
 						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
