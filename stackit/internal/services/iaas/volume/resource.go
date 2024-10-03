@@ -516,12 +516,20 @@ func mapFields(ctx context.Context, volumeResp *iaasalpha.Volume, model *Model) 
 		strings.Join(idParts, core.Separator),
 	)
 
-	labels, err := conversion.ToTerraformStringInterfaceMap(ctx, model.Labels, volumeResp.Labels)
-	if err != nil {
-		return fmt.Errorf("map labels to terraform map: %w", err)
+	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
+	if diags.HasError() {
+		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
+	}
+	if volumeResp.Labels != nil && len(*volumeResp.Labels) != 0 {
+		var diags diag.Diagnostics
+		labels, diags = types.MapValueFrom(ctx, types.StringType, *volumeResp.Labels)
+		if diags.HasError() {
+			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
+		}
+	} else if model.Labels.IsNull() {
+		labels = types.MapNull(types.StringType)
 	}
 
-	var diags diag.Diagnostics
 	var sourceValues map[string]attr.Value
 	var sourceObject basetypes.ObjectValue
 	if volumeResp.Source == nil {

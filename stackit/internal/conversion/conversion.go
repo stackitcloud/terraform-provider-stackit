@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -74,24 +73,6 @@ func ToStringInterfaceMap(ctx context.Context, m basetypes.MapValue) (map[string
 	}
 
 	return interfaceMap, nil
-}
-
-func ToTerraformStringInterfaceMap(ctx context.Context, currentMap basetypes.MapValue, returnedMap *map[string]interface{}) (basetypes.MapValue, error) {
-	tfMap, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
-	if diags.HasError() {
-		return types.MapNull(types.StringType), fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-	}
-	if returnedMap != nil && len(*returnedMap) != 0 {
-		var diags diag.Diagnostics
-		tfMap, diags = types.MapValueFrom(ctx, types.StringType, *returnedMap)
-		if diags.HasError() {
-			return types.MapNull(types.StringType), fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-		}
-	} else if currentMap.IsNull() {
-		tfMap = types.MapNull(types.StringType)
-	}
-
-	return tfMap, nil
 }
 
 // StringValueToPointer converts basetypes.StringValue to a pointer to string.
