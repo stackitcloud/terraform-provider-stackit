@@ -273,6 +273,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: "The availability zone of the server.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 				Optional: true,
 				Computed: true,
