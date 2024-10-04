@@ -244,11 +244,12 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						},
 						Validators: []validator.String{
 							stringvalidator.ConflictsWith(
-								path.MatchRoot("initial_networking.network_interface_ids"),
+								path.MatchRoot("initial_network").AtName("network_interface_ids"),
 							),
 						},
 					},
 					"network_interface_ids": schema.ListAttribute{
+						ElementType: types.StringType,
 						Description: "List of network interface IDs",
 						Optional:    true,
 						PlanModifiers: []planmodifier.List{
@@ -256,15 +257,15 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						},
 						Validators: []validator.List{
 							listvalidator.ConflictsWith(
-								path.MatchRoot("initial_networking.network_id"),
+								path.MatchRoot("initial_network").AtName("network_id"),
 							),
 						},
 					},
 				},
 				Validators: []validator.Object{
 					objectvalidator.AtLeastOneOf(
-						path.MatchRoot("initial_networking.network_id"),
-						path.MatchRoot("initial_networking.network_interface_ids"),
+						path.MatchRoot("initial_network").AtName("network_id"),
+						path.MatchRoot("initial_network").AtName("network_interface_ids"),
 					),
 				},
 			},

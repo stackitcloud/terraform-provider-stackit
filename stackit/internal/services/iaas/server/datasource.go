@@ -130,6 +130,7 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 						Computed:    true,
 					},
 					"network_interface_ids": schema.ListAttribute{
+						ElementType: types.StringType,
 						Description: "List of network interface IDs",
 						Computed:    true,
 					},
