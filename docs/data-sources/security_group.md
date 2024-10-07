@@ -37,7 +37,6 @@ resource "stackit_security_group" "example" {
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `name` (String) The name of the security group.
 - `rules` (Attributes List) The rules of the security group. (see [below for nested schema](#nestedatt--rules))
-- `server_id` (String) The server ID of the server to which the volume is attached to.
 - `stateful` (Boolean) Shows if a security group is stateful or stateless. There can only be one security groups per network interface/server.
 
 <a id="nestedatt--rules"></a>
