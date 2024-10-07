@@ -112,14 +112,6 @@ func (r *securityGroupDataSource) Schema(_ context.Context, _ datasource.SchemaR
 					validate.NoSeparator(),
 				},
 			},
-			"server_id": schema.StringAttribute{
-				Description: "The server ID of the server to which the volume is attached to.",
-				Computed:    true,
-				Validators: []validator.String{
-					validate.UUID(),
-					validate.NoSeparator(),
-				},
-			},
 			"name": schema.StringAttribute{
 				Description: "The name of the security group.",
 				Computed:    true,
