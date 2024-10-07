@@ -4,11 +4,14 @@ page_title: "stackit_network_interface Resource - stackit"
 subcategory: ""
 description: |-
   Network interface resource schema. Must have a region specified in the provider configuration.
+  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_network_interface (Resource)
 
 Network interface resource schema. Must have a `region` specified in the provider configuration.
+
+~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 
@@ -40,7 +43,7 @@ resource "stackit_network_interface" "example" {
 - `ipv6` (String) The IPv6 address.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a network interface.
 - `name` (String) The name of the network interface.
-- `nic_security` (Boolean) The Network Interface Security. If set to false, then no security groups will apply to this network interface.
+- `security` (Boolean) The Network Interface Security. If set to false, then no security groups will apply to this network interface.
 - `security_groups` (List of String) The list of security group UUIDs.
 
 ### Read-Only
