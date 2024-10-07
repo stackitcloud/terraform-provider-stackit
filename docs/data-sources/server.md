@@ -38,7 +38,7 @@ Server datasource schema. Must have a `region` specified in the provider configu
 - `name` (String) The name of the server.
 - `server_group` (String) The server group the server is assigned to.
 - `updated_at` (String) Date-time when the server was updated
-- `user_data` (String) User data that is provided to the server. Must be base64 encoded and is passed via cloud-init to the server.
+- `user_data` (String) User data that is passed via cloud-init to the server.
 
 <a id="nestedatt--boot_volume"></a>
 ### Nested Schema for `boot_volume`

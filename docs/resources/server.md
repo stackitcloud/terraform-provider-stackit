@@ -17,23 +17,23 @@ Server resource schema. Must have a `region` specified in the provider configura
 
 ```terraform
 resource "stackit_server" "example" {
-    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name = "my_server"
-    boot_volume = {
-        size = 64
-        source_type = "image"
-        source_id = "IMAGE_ID"
-    }
-    initial_networking = {
-        network_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-        security_group_ids = ["xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"]
-    }
-    availability_zone = "eu01-1"
-    labels = {
-        "key" = "value"
-    }
-    machine_type = "t1.1"
-    keypair_name = "my_key_pair_name"
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "my_server"
+  boot_volume = {
+    size        = 64
+    source_type = "image"
+    source_id   = "IMAGE_ID"
+  }
+  initial_networking = {
+    network_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    security_group_ids = ["xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"]
+  }
+  availability_zone = "eu01-1"
+  labels = {
+    "key" = "value"
+  }
+  machine_type = "t1.1"
+  keypair_name = "my_key_pair_name"
 }
 ```
 
@@ -55,7 +55,7 @@ resource "stackit_server" "example" {
 - `keypair_name` (String) The name of the keypair used during server creation.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `server_group` (String) The server group the server is assigned to.
-- `user_data` (String) User data that is provided to the server. Must be base64 encoded and is passed via cloud-init to the server.
+- `user_data` (String) User data that is passed via cloud-init to the server.
 
 ### Read-Only
 
