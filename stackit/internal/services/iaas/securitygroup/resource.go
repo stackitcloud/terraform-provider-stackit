@@ -212,9 +212,6 @@ func (r *securityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 			"name": schema.StringAttribute{
 				Description: "The name of the security group.",
 				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 					stringvalidator.LengthAtMost(63),
