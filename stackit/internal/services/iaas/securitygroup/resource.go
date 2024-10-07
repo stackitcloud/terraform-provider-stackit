@@ -571,14 +571,17 @@ func mapFields(ctx context.Context, securityGroupResp *iaasalpha.SecurityGroup, 
 		strings.Join(idParts, core.Separator),
 	)
 
-	var labels basetypes.MapValue
+	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
+	if diags.HasError() {
+		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
+	}
 	if securityGroupResp.Labels != nil && len(*securityGroupResp.Labels) != 0 {
 		var diags diag.Diagnostics
 		labels, diags = types.MapValueFrom(ctx, types.StringType, *securityGroupResp.Labels)
 		if diags.HasError() {
 			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
 		}
-	} else {
+	} else if model.Labels.IsNull() {
 		labels = types.MapNull(types.StringType)
 	}
 
