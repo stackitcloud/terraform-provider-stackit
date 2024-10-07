@@ -51,6 +51,14 @@ var volumeResource = map[string]string{
 	"performance_class": "storage_premium_perf1",
 }
 
+// Security Group resource data
+var securityGroupResource = map[string]string{
+	"project_id":  testutil.ProjectId,
+	"name":        "name",
+	"description": "description",
+	"label1":      "value",
+}
+
 func networkResourceConfig(name, nameservers string) string {
 	return fmt.Sprintf(`
 				resource "stackit_network" "network" {
@@ -123,6 +131,24 @@ func volumeResourceConfig(name, size string) string {
 	)
 }
 
+func securityGroupResourceConfig(name string) string {
+	return fmt.Sprintf(`
+				resource "stackit_security_group" "security_group" {
+					project_id = "%s"
+					name = "%s"
+					description = "%s"
+					labels = {
+						"label1" = "%s"
+					}
+				}
+				`,
+		volumeResource["project_id"],
+		name,
+		volumeResource["description"],
+		volumeResource["label1"],
+	)
+}
+
 func resourceConfig(name, nameservers, areaname, networkranges string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
@@ -136,6 +162,13 @@ func resourceConfigVolume(name, size string) string {
 	return fmt.Sprintf("%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		volumeResourceConfig(name, size),
+	)
+}
+
+func resourceConfigSecurityGroup(name string) string {
+	return fmt.Sprintf("%s\n\n%s",
+		testutil.IaaSProviderConfig(),
+		securityGroupResourceConfig(name),
 	)
 }
 
@@ -428,6 +461,82 @@ func TestAccIaaSVolume(t *testing.T) {
 	})
 }
 
+func TestAccIaaSSecurityGroup(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckIaaSSecurityGroupDestroy,
+		Steps: []resource.TestStep{
+
+			// Creation
+			{
+				Config: resourceConfigSecurityGroup(securityGroupResource["name"]),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "project_id", securityGroupResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_security_group.security_group", "security_group_id"),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "name", securityGroupResource["name"]),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "labels.label1", securityGroupResource["label1"]),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "description", securityGroupResource["description"]),
+				),
+			},
+			// Data source
+			{
+				Config: fmt.Sprintf(`
+					%s
+			
+					data "stackit_security_group" "security_group" {
+						project_id  = stackit_security_group.security_group.project_id
+						security_group_id = stackit_security_group.security_group.security_group_id
+					}
+					`,
+					resourceConfigSecurityGroup(securityGroupResource["name"]),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "project_id", securityGroupResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group.security_group", "security_group_id",
+						"data.stackit_security_group.security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "name", securityGroupResource["name"]),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "labels.label1", securityGroupResource["label1"]),
+					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "description", securityGroupResource["description"]),
+				),
+			},
+			// Import
+			{
+				ResourceName: "stackit_security_group.security_group",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_security_group.security_group"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_security_group.security_group")
+					}
+					securityGroupId, ok := r.Primary.Attributes["security_group_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute security_group_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, securityGroupId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				Config: resourceConfigSecurityGroup(
+					fmt.Sprintf("%s-updated", securityGroupResource["name"]),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "project_id", securityGroupResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_security_group.security_group", "security_group_id"),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "name", fmt.Sprintf("%s-updated", securityGroupResource["name"])),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "labels.label1", securityGroupResource["label1"]),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "description", securityGroupResource["description"]),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
 func testAccCheckIaaSDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *iaas.APIClient
@@ -544,6 +653,53 @@ func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 			err := client.DeleteVolumeExecute(ctx, testutil.ProjectId, *volumes[i].Id)
 			if err != nil {
 				return fmt.Errorf("destroying volume %s during CheckDestroy: %w", *volumes[i].Id, err)
+			}
+		}
+	}
+	return nil
+}
+
+func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var client *iaasalpha.APIClient
+	var err error
+	if testutil.IaaSCustomEndpoint == "" {
+		client, err = iaasalpha.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
+	} else {
+		client, err = iaasalpha.NewAPIClient(
+			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	securityGroupsToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_security_group" {
+			continue
+		}
+		// security group terraform ID: "[project_id],[security_group_id]"
+		securityGroupId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		securityGroupsToDestroy = append(securityGroupsToDestroy, securityGroupId)
+	}
+
+	securityGroupsResp, err := client.ListSecurityGroupsExecute(ctx, testutil.ProjectId)
+	if err != nil {
+		return fmt.Errorf("getting securityGroupsResp: %w", err)
+	}
+
+	securityGroups := *securityGroupsResp.Items
+	for i := range securityGroups {
+		if securityGroups[i].Id == nil {
+			continue
+		}
+		if utils.Contains(securityGroupsToDestroy, *securityGroups[i].Id) {
+			err := client.DeleteSecurityGroupExecute(ctx, testutil.ProjectId, *securityGroups[i].Id)
+			if err != nil {
+				return fmt.Errorf("destroying security group %s during CheckDestroy: %w", *securityGroups[i].Id, err)
 			}
 		}
 	}
