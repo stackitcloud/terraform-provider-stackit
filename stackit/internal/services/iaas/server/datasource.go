@@ -157,7 +157,7 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 						Computed:    true,
 					},
 					"type": schema.StringAttribute{
-						Description: "The type of the source. " + utils.SupportedValuesDocumentation(SupportedSourceTypes),
+						Description: "The type of the source. " + utils.SupportedValuesDocumentation(supportedSourceTypes),
 						Computed:    true,
 					},
 					"id": schema.StringAttribute{

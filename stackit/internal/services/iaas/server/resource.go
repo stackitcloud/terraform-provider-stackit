@@ -50,7 +50,7 @@ var (
 	_ resource.ResourceWithConfigure   = &serverResource{}
 	_ resource.ResourceWithImportState = &serverResource{}
 
-	SupportedSourceTypes = []string{"volume", "image"}
+	supportedSourceTypes = []string{"volume", "image"}
 )
 
 type Model struct {
@@ -314,7 +314,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						},
 					},
 					"source_type": schema.StringAttribute{
-						Description: "The type of the source. " + utils.SupportedValuesDocumentation(SupportedSourceTypes),
+						Description: "The type of the source. " + utils.SupportedValuesDocumentation(supportedSourceTypes),
 						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
