@@ -181,7 +181,7 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 				InitialNetworking: types.ObjectValueMust(initialNetworkTypes, map[string]attr.Value{
 					"network_id": types.StringValue("nid"),
-					"security_groups": types.ListValueMust(types.StringType, []attr.Value{
+					"security_group_ids": types.ListValueMust(types.StringType, []attr.Value{
 						types.StringValue("group1"),
 						types.StringValue("group2"),
 					}),
@@ -228,8 +228,8 @@ func TestToCreatePayload(t *testing.T) {
 					"key": types.StringValue("value"),
 				}),
 				InitialNetworking: types.ObjectValueMust(initialNetworkTypes, map[string]attr.Value{
-					"network_id":      types.StringNull(),
-					"security_groups": types.ListNull(types.StringType),
+					"network_id":         types.StringNull(),
+					"security_group_ids": types.ListNull(types.StringType),
 					"network_interface_ids": types.ListValueMust(types.StringType, []attr.Value{
 						types.StringValue("nic1"),
 						types.StringValue("nic2"),
