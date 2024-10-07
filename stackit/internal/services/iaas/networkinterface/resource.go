@@ -131,6 +131,8 @@ func (r *networkInterfaceResource) Configure(ctx context.Context, req resource.C
 
 // Schema defines the schema for the resource.
 func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	typeOptions := []string{"server", "metadata", "gateway"}
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("Network interface resource schema. Must have a `region` specified in the provider configuration."),
 		Description:         "Network interface resource schema. Must have a `region` specified in the provider configuration.",
@@ -253,7 +255,7 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"type": schema.StringAttribute{
-				Description: "Type of network interface. Some of the possible values are: [`server`, `metadata`, `gateway`]",
+				Description: "Type of network interface. Some of the possible values are: " + utils.SupportedValuesDocumentation(typeOptions),
 				Computed:    true,
 			},
 		},
