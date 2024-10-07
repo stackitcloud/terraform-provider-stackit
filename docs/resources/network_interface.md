@@ -40,7 +40,7 @@ resource "stackit_network_interface" "example" {
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a network interface.
 - `name` (String) The name of the network interface.
 - `security` (Boolean) The Network Interface Security. If set to false, then no security groups will apply to this network interface.
-- `security_groups` (List of String) The list of security group UUIDs.
+- `security_group_ids` (List of String) The list of security group UUIDs.
 
 ### Read-Only
 

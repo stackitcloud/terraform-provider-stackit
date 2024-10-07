@@ -154,7 +154,7 @@ func (d *networkInterfaceDataSource) Schema(_ context.Context, _ datasource.Sche
 				Description: "The Network Interface Security. If set to false, then no security groups will apply to this network interface.",
 				Computed:    true,
 			},
-			"security_groups": schema.ListAttribute{
+			"security_group_ids": schema.ListAttribute{
 				Description: "The list of security group UUIDs.",
 				Computed:    true,
 				ElementType: types.StringType,

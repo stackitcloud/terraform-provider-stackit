@@ -51,7 +51,7 @@ type Model struct {
 	IPv6               types.String `tfsdk:"ipv6"`
 	Labels             types.Map    `tfsdk:"labels"`
 	Security           types.Bool   `tfsdk:"security"`
-	SecurityGroups     types.List   `tfsdk:"security_groups"`
+	SecurityGroupIds   types.List   `tfsdk:"security_group_ids"`
 	Device             types.String `tfsdk:"device"`
 	Mac                types.String `tfsdk:"mac"`
 	Type               types.String `tfsdk:"type"`
@@ -221,7 +221,7 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 				Computed:    true,
 				Optional:    true,
 			},
-			"security_groups": schema.ListAttribute{
+			"security_group_ids": schema.ListAttribute{
 				Description: "The list of security group UUIDs.",
 				Optional:    true,
 				Computed:    true,
@@ -485,10 +485,10 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaasalpha.NIC, model *
 	}
 
 	if networkInterfaceResp.SecurityGroups == nil {
-		model.SecurityGroups = types.ListNull(types.StringType)
+		model.SecurityGroupIds = types.ListNull(types.StringType)
 	} else {
 		respSecurityGroups := *networkInterfaceResp.SecurityGroups
-		modelSecurityGroups, err := utils.ListValuetoStringSlice(model.SecurityGroups)
+		modelSecurityGroups, err := utils.ListValuetoStringSlice(model.SecurityGroupIds)
 		if err != nil {
 			return fmt.Errorf("get current network interface security groups from model: %w", err)
 		}
@@ -500,7 +500,7 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaasalpha.NIC, model *
 			return fmt.Errorf("map network interface security groups: %w", core.DiagsToError(diags))
 		}
 
-		model.SecurityGroups = securityGroupsTF
+		model.SecurityGroupIds = securityGroupsTF
 	}
 
 	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
@@ -538,8 +538,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateNICPay
 	var labelPayload *map[string]interface{}
 
 	modelSecurityGroups := []string{}
-	if !(model.SecurityGroups.IsNull() || model.SecurityGroups.IsUnknown()) {
-		for _, ns := range model.SecurityGroups.Elements() {
+	if !(model.SecurityGroupIds.IsNull() || model.SecurityGroupIds.IsUnknown()) {
+		for _, ns := range model.SecurityGroupIds.Elements() {
 			securityGroupString, ok := ns.(types.String)
 			if !ok {
 				return nil, fmt.Errorf("type assertion failed")
@@ -592,7 +592,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	var labelPayload *map[string]interface{}
 
 	modelSecurityGroups := []string{}
-	for _, ns := range model.SecurityGroups.Elements() {
+	for _, ns := range model.SecurityGroupIds.Elements() {
 		securityGroupString, ok := ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")

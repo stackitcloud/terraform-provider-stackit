@@ -36,7 +36,7 @@ func TestMapFields(t *testing.T) {
 				NetworkInterfaceId: types.StringValue("nicid"),
 				Name:               types.StringNull(),
 				AllowedAddresses:   types.ListNull(types.StringType),
-				SecurityGroups:     types.ListNull(types.StringType),
+				SecurityGroupIds:   types.ListNull(types.StringType),
 				IPv4:               types.StringNull(),
 				IPv6:               types.StringNull(),
 				Security:           types.BoolNull(),
@@ -86,7 +86,7 @@ func TestMapFields(t *testing.T) {
 				AllowedAddresses: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("aa1"),
 				}),
-				SecurityGroups: types.ListValueMust(types.StringType, []attr.Value{
+				SecurityGroupIds: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("prefix1"),
 					types.StringValue("prefix2"),
 				}),
@@ -124,7 +124,7 @@ func TestMapFields(t *testing.T) {
 				NetworkId:          types.StringValue("nid"),
 				NetworkInterfaceId: types.StringValue("nicid"),
 				Name:               types.StringNull(),
-				SecurityGroups:     types.ListNull(types.StringType),
+				SecurityGroupIds:   types.ListNull(types.StringType),
 				AllowedAddresses: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("aa2"),
 				}),
@@ -179,7 +179,7 @@ func TestToCreatePayload(t *testing.T) {
 			"default_ok",
 			&Model{
 				Name: types.StringValue("name"),
-				SecurityGroups: types.ListValueMust(types.StringType, []attr.Value{
+				SecurityGroupIds: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("sg1"),
 					types.StringValue("sg2"),
 				}),
@@ -232,7 +232,7 @@ func TestToUpdatePayload(t *testing.T) {
 			"default_ok",
 			&Model{
 				Name: types.StringValue("name"),
-				SecurityGroups: types.ListValueMust(types.StringType, []attr.Value{
+				SecurityGroupIds: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("sg1"),
 					types.StringValue("sg2"),
 				}),
