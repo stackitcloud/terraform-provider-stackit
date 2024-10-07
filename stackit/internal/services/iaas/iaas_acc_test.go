@@ -40,6 +40,12 @@ var networkAreaRouteResource = map[string]string{
 	"next_hop":        "1.1.1.1",
 }
 
+var networkInterfaceResource = map[string]string{
+	"project_id": testutil.ProjectId,
+	"network_id": networkResource["network_id"],
+	"name":       "name",
+}
+
 // Volume resource data
 var volumeResource = map[string]string{
 	"project_id":        testutil.ProjectId,
@@ -99,6 +105,18 @@ func networkAreaRouteResourceConfig() string {
 	)
 }
 
+func networkInterfaceResourceConfig(name string) string {
+	return fmt.Sprintf(`
+				resource "stackit_network_interface" "network_interface" {
+					project_id = stackit_network.network.project_id
+					network_id = stackit_network.network.network_id
+					name       = "%s"
+				}
+				`,
+		name,
+	)
+}
+
 func volumeResourceConfig(name, size string) string {
 	return fmt.Sprintf(`
 				resource "stackit_volume" "volume" {
@@ -123,12 +141,13 @@ func volumeResourceConfig(name, size string) string {
 	)
 }
 
-func resourceConfig(name, nameservers, areaname, networkranges string) string {
-	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
+func resourceConfig(name, nameservers, areaname, networkranges, interfacename string) string {
+	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		networkResourceConfig(name, nameservers),
 		networkAreaResourceConfig(areaname, networkranges),
 		networkAreaRouteResourceConfig(),
+		networkInterfaceResourceConfig(interfacename),
 	)
 }
 
@@ -155,6 +174,7 @@ func TestAccIaaS(t *testing.T) {
 					),
 					networkAreaResource["name"],
 					networkAreaResource["networkrange0"],
+					networkInterfaceResource["name"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -184,6 +204,18 @@ func TestAccIaaS(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_network_area_route.network_area_route", "network_area_route_id"),
 					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "prefix", networkAreaRouteResource["prefix"]),
 					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop", networkAreaRouteResource["next_hop"]),
+
+					// Network Interface
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface", "project_id",
+						"stackit_network.network", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface", "network_id",
+						"stackit_network.network", "network_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_interface_id"),
+					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "name", networkInterfaceResource["name"]),
 				),
 			},
 			// Data source
@@ -200,11 +232,17 @@ func TestAccIaaS(t *testing.T) {
 						organization_id  = stackit_network_area.network_area.organization_id
 						network_area_id  = stackit_network_area.network_area.network_area_id
 					}
-			
+					
 					data "stackit_network_area_route" "network_area_route" {
 						organization_id  	  = stackit_network_area.network_area.organization_id
 						network_area_id  	  = stackit_network_area.network_area.network_area_id
 						network_area_route_id = stackit_network_area_route.network_area_route.network_area_route_id
+					}
+
+					data "stackit_network_interface" "network_interface" {
+						project_id  	     = stackit_network.network.project_id
+						network_id  	     = stackit_network.network.network_id
+						network_interface_id = stackit_network_interface.network_interface.network_interface_id
 					}
 					`,
 					resourceConfig(
@@ -215,6 +253,7 @@ func TestAccIaaS(t *testing.T) {
 						),
 						networkAreaResource["name"],
 						networkAreaResource["networkrange0"],
+						networkInterfaceResource["name"],
 					),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -249,6 +288,18 @@ func TestAccIaaS(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_network_area_route.network_area_route", "network_area_route_id"),
 					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "prefix", networkAreaRouteResource["prefix"]),
 					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop", networkAreaRouteResource["next_hop"]),
+
+					// Network Interface
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface", "project_id",
+						"stackit_network.network", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface", "network_id",
+						"stackit_network.network", "network_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_interface_id"),
+					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "name", networkInterfaceResource["name"]),
 				),
 			},
 			// Import
@@ -305,6 +356,26 @@ func TestAccIaaS(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
+			{
+				ResourceName: "stackit_network_interface.network_interface",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_network_interface.network_interface"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_network_interface.network_interface")
+					}
+					networkId, ok := r.Primary.Attributes["network_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_id")
+					}
+					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_interface_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, networkId, networkInterfaceId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 			// Update
 			{
 				Config: resourceConfig(
@@ -316,6 +387,7 @@ func TestAccIaaS(t *testing.T) {
 					),
 					fmt.Sprintf("%s-updated", networkAreaResource["name"]),
 					networkAreaResource["networkrange0"],
+					fmt.Sprintf("%s-updated", networkInterfaceResource["name"]),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -332,6 +404,18 @@ func TestAccIaaS(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "name", fmt.Sprintf("%s-updated", networkAreaResource["name"])),
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.#", "1"),
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.0.prefix", networkAreaResource["networkrange0"]),
+
+					// Network interface
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface", "project_id",
+						"stackit_network.network", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface", "network_id",
+						"stackit_network.network", "network_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_interface_id"),
+					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "name", fmt.Sprintf("%s-updated", networkInterfaceResource["name"])),
 				),
 			},
 			// Deletion is done by the framework implicitly

@@ -150,7 +150,7 @@ func (d *networkInterfaceDataSource) Schema(_ context.Context, _ datasource.Sche
 				Description: "The MAC address of network interface.",
 				Computed:    true,
 			},
-			"nic_security": schema.BoolAttribute{
+			"security": schema.BoolAttribute{
 				Description: "The Network Interface Security. If set to false, then no security groups will apply to this network interface.",
 				Computed:    true,
 			},
@@ -158,10 +158,6 @@ func (d *networkInterfaceDataSource) Schema(_ context.Context, _ datasource.Sche
 				Description: "The list of security group UUIDs.",
 				Computed:    true,
 				ElementType: types.StringType,
-			},
-			"status": schema.StringAttribute{
-				Description: "The status of network interface.",
-				Computed:    true,
 			},
 			"type": schema.StringAttribute{
 				Description: "Type of network interface. Some of the possible values are: [`server`, `metadata`, `gateway`]",
