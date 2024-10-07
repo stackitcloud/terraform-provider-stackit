@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -549,14 +548,17 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaasalpha.NIC, model *
 		model.SecurityGroups = securityGroupsTF
 	}
 
-	var labels basetypes.MapValue
+	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
+	if diags.HasError() {
+		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
+	}
 	if networkInterfaceResp.Labels != nil && len(*networkInterfaceResp.Labels) != 0 {
 		var diags diag.Diagnostics
 		labels, diags = types.MapValueFrom(ctx, types.StringType, *networkInterfaceResp.Labels)
 		if diags.HasError() {
 			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
 		}
-	} else {
+	} else if model.Labels.IsNull() {
 		labels = types.MapNull(types.StringType)
 	}
 
