@@ -52,7 +52,7 @@ type Model struct {
 	IPv4               types.String `tfsdk:"ipv4"`
 	IPv6               types.String `tfsdk:"ipv6"`
 	Labels             types.Map    `tfsdk:"labels"`
-	NicSecurity        types.Bool   `tfsdk:"nic_security"`
+	Security        types.Bool   `tfsdk:"security"`
 	SecurityGroups     types.List   `tfsdk:"security_groups"`
 	Device             types.String `tfsdk:"device"`
 	Mac                types.String `tfsdk:"mac"`
