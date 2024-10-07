@@ -3,6 +3,7 @@ package securitygroup
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"net/http"
 	"regexp"
 	"strings"
@@ -175,6 +176,10 @@ func (r *securityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 				Description: "Shows if a security group is stateful or stateless. There can only be one security group per network interface/server.",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
