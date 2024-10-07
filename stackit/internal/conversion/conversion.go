@@ -133,3 +133,37 @@ func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
 
 	return &listStr, nil
 }
+
+// ToJSONMApPartialUpdatePayload returns a map[string]interface{} to be used in a PATCH request payload.
+// It takes a current map as it is in the terraform state and a desired map as it is in the user configuratiom
+// and builds a map which sets to null keys that should be removed, updates the values of existing keys and adds new keys
+// This method is needed because in partial updates, e.g. if the key is not provided it is ignored and not removed
+func ToJSONMapPartialUpdatePayload(ctx context.Context, current, desired types.Map) (map[string]interface{}, error) {
+	currentMap, err := ToStringInterfaceMap(ctx, current)
+	if err != nil {
+		return nil, fmt.Errorf("converting to Go map: %w", err)
+	}
+
+	desiredMap, err := ToStringInterfaceMap(ctx, desired)
+	if err != nil {
+		return nil, fmt.Errorf("converting to Go map: %w", err)
+	}
+
+	mapPayload := map[string]interface{}{}
+	// Update and remove existing keys
+	for k := range currentMap {
+		if desiredValue, ok := desiredMap[k]; ok {
+			mapPayload[k] = desiredValue
+		} else {
+			mapPayload[k] = nil
+		}
+	}
+
+	// Add new keys
+	for k, desiredValue := range desiredMap {
+		if _, ok := mapPayload[k]; !ok {
+			mapPayload[k] = desiredValue
+		}
+	}
+	return mapPayload, nil
+}

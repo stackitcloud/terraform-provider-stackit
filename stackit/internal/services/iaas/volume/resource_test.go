@@ -39,6 +39,7 @@ func TestMapFields(t *testing.T) {
 				PerformanceClass: types.StringNull(),
 				ServerId:         types.StringNull(),
 				Size:             types.Int64Null(),
+				Source:           types.ObjectNull(sourceTypes),
 			},
 			true,
 		},
@@ -48,7 +49,6 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				VolumeId:  types.StringValue("nid"),
 			},
-			// &sourceModel{},
 			&iaasalpha.Volume{
 				Id:               utils.Ptr("nid"),
 				Name:             utils.Ptr("name"),
@@ -60,6 +60,7 @@ func TestMapFields(t *testing.T) {
 				PerformanceClass: utils.Ptr("class"),
 				ServerId:         utils.Ptr("sid"),
 				Size:             utils.Ptr(int64(1)),
+				Source:           &iaasalpha.VolumeSource{},
 			},
 			Model{
 				Id:               types.StringValue("pid,nid"),
@@ -74,6 +75,10 @@ func TestMapFields(t *testing.T) {
 				PerformanceClass: types.StringValue("class"),
 				ServerId:         types.StringValue("sid"),
 				Size:             types.Int64Value(1),
+				Source: types.ObjectValueMust(sourceTypes, map[string]attr.Value{
+					"type": types.StringNull(),
+					"id":   types.StringNull(),
+				}),
 			},
 			true,
 		},
@@ -82,10 +87,10 @@ func TestMapFields(t *testing.T) {
 			Model{
 				ProjectId: types.StringValue("pid"),
 				VolumeId:  types.StringValue("nid"),
+				Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			},
 			&iaasalpha.Volume{
-				Id:     utils.Ptr("nid"),
-				Labels: &map[string]interface{}{},
+				Id: utils.Ptr("nid"),
 			},
 			Model{
 				Id:               types.StringValue("pid,nid"),
@@ -93,11 +98,12 @@ func TestMapFields(t *testing.T) {
 				VolumeId:         types.StringValue("nid"),
 				Name:             types.StringNull(),
 				AvailabilityZone: types.StringNull(),
-				Labels:           types.MapNull(types.StringType),
+				Labels:           types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				Description:      types.StringNull(),
 				PerformanceClass: types.StringNull(),
 				ServerId:         types.StringNull(),
 				Size:             types.Int64Null(),
+				Source:           types.ObjectNull(sourceTypes),
 			},
 			true,
 		},
@@ -141,6 +147,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
+		source      *sourceModel
 		expected    *iaasalpha.CreateVolumePayload
 		isValid     bool
 	}{
@@ -155,6 +162,14 @@ func TestToCreatePayload(t *testing.T) {
 				Description:      types.StringValue("desc"),
 				PerformanceClass: types.StringValue("class"),
 				Size:             types.Int64Value(1),
+				Source: types.ObjectValueMust(sourceTypes, map[string]attr.Value{
+					"type": types.StringNull(),
+					"id":   types.StringNull(),
+				}),
+			},
+			&sourceModel{
+				Type: types.StringValue("volume"),
+				Id:   types.StringValue("id"),
 			},
 			&iaasalpha.CreateVolumePayload{
 				Name:             utils.Ptr("name"),
@@ -165,13 +180,17 @@ func TestToCreatePayload(t *testing.T) {
 				Description:      utils.Ptr("desc"),
 				PerformanceClass: utils.Ptr("class"),
 				Size:             utils.Ptr(int64(1)),
+				Source: &iaasalpha.VolumeSource{
+					Type: utils.Ptr("volume"),
+					Id:   utils.Ptr("id"),
+				},
 			},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(context.Background(), tt.input)
+			output, err := toCreatePayload(context.Background(), tt.input, tt.source)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
