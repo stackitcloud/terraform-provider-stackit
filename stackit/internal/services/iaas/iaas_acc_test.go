@@ -167,8 +167,8 @@ func securityGroupResourceConfig(name string) string {
 	)
 }
 
-func resourceConfig(name, nameservers, areaname, networkranges string) string {
-	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
+func resourceConfig(name, nameservers, areaname, networkranges, interfacename string) string {
+	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		networkResourceConfig(name, nameservers),
 		networkAreaResourceConfig(areaname, networkranges),
