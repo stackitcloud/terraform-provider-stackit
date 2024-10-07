@@ -174,11 +174,10 @@ func TestToCreatePayload(t *testing.T) {
 					"key": types.StringValue("value"),
 				}),
 				BootVolume: types.ObjectValueMust(bootVolumeTypes, map[string]attr.Value{
-					"delete_on_termination": types.BoolValue(false),
-					"performance_class":     types.StringValue("class"),
-					"size":                  types.Int64Value(1),
-					"source_type":           types.StringValue("type"),
-					"source_id":             types.StringValue("id"),
+					"performance_class": types.StringValue("class"),
+					"size":              types.Int64Value(1),
+					"source_type":       types.StringValue("type"),
+					"source_id":         types.StringValue("id"),
 				}),
 				InitialNetwork: types.ObjectValueMust(initialNetworkTypes, map[string]attr.Value{
 					"network_id":            types.StringValue("nid"),
@@ -201,9 +200,8 @@ func TestToCreatePayload(t *testing.T) {
 					},
 				},
 				BootVolume: &iaasalpha.CreateServerPayloadBootVolume{
-					DeleteOnTermination: utils.Ptr(false),
-					PerformanceClass:    utils.Ptr("class"),
-					Size:                utils.Ptr(int64(1)),
+					PerformanceClass: utils.Ptr("class"),
+					Size:             utils.Ptr(int64(1)),
 					Source: &iaasalpha.BootVolumeSource{
 						Type: utils.Ptr("type"),
 						Id:   utils.Ptr("id"),

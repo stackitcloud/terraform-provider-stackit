@@ -118,8 +118,8 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Computed:    true,
 			},
 			"machine_type": schema.StringAttribute{
-				Description: "Name of the machine type the server will belong to.",
-				Computed:    true,
+				MarkdownDescription: "Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/stackit/en/virtual-machine-flavors-75137231.html)",
+				Computed:            true,
 			},
 			"initial_network": schema.SingleNestedAttribute{
 				Description: "The initial networking setup for the server. A network ID or a list of network interfaces IDs can be provided",
@@ -144,10 +144,6 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Description: "The boot volume for the server",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
-					"delete_on_termination": schema.BoolAttribute{
-						Description: "Delete the volume during the termination of the server. Defaults to `false`.",
-						Computed:    true,
-					},
 					"performance_class": schema.StringAttribute{
 						Description: "The performance class of the server.",
 						Computed:    true,

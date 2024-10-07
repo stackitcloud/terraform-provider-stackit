@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
@@ -86,20 +85,18 @@ var initialNetworkTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.BootVolume
 type bootVolumeModel struct {
-	DeleteOnTermination types.Bool   `tfsdk:"delete_on_termination"`
-	PerformanceClass    types.String `tfsdk:"performance_class"`
-	Size                types.Int64  `tfsdk:"size"`
-	SourceType          types.String `tfsdk:"source_type"`
-	SourceId            types.String `tfsdk:"source_id"`
+	PerformanceClass types.String `tfsdk:"performance_class"`
+	Size             types.Int64  `tfsdk:"size"`
+	SourceType       types.String `tfsdk:"source_type"`
+	SourceId         types.String `tfsdk:"source_id"`
 }
 
 // Types corresponding to bootVolumeModel
 var bootVolumeTypes = map[string]attr.Type{
-	"delete_on_termination": basetypes.BoolType{},
-	"performance_class":     basetypes.StringType{},
-	"size":                  basetypes.Int64Type{},
-	"source_type":           basetypes.StringType{},
-	"source_id":             basetypes.StringType{},
+	"performance_class": basetypes.StringType{},
+	"size":              basetypes.Int64Type{},
+	"source_type":       basetypes.StringType{},
+	"source_id":         basetypes.StringType{},
 }
 
 // NewServerResource is a helper function to simplify the provider implementation.
@@ -219,8 +216,8 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 			},
 			"machine_type": schema.StringAttribute{
-				Description: "Name of the machine type the server will belong to.",
-				Required:    true,
+				MarkdownDescription: "Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/stackit/en/virtual-machine-flavors-75137231.html)",
+				Required:            true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 					stringvalidator.LengthAtMost(63),
@@ -285,13 +282,6 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					objectplanmodifier.RequiresReplace(),
 				},
 				Attributes: map[string]schema.Attribute{
-					"delete_on_termination": schema.BoolAttribute{
-						Description: "Delete the volume during the termination of the server. Defaults to `false`.",
-						Optional:    true,
-						PlanModifiers: []planmodifier.Bool{
-							boolplanmodifier.RequiresReplace(),
-						},
-					},
 					"performance_class": schema.StringAttribute{
 						Description: "The performance class of the server.",
 						Optional:    true,
@@ -705,9 +695,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServer
 	var bootVolumePayload *iaasalpha.CreateServerPayloadBootVolume
 	if !bootVolume.SourceId.IsNull() && !bootVolume.SourceType.IsNull() {
 		bootVolumePayload = &iaasalpha.CreateServerPayloadBootVolume{
-			DeleteOnTermination: conversion.BoolValueToPointer(bootVolume.DeleteOnTermination),
-			PerformanceClass:    conversion.StringValueToPointer(bootVolume.PerformanceClass),
-			Size:                conversion.Int64ValueToPointer(bootVolume.Size),
+			PerformanceClass: conversion.StringValueToPointer(bootVolume.PerformanceClass),
+			Size:             conversion.Int64ValueToPointer(bootVolume.Size),
 			Source: &iaasalpha.BootVolumeSource{
 				Id:   conversion.StringValueToPointer(bootVolume.SourceId),
 				Type: conversion.StringValueToPointer(bootVolume.SourceType),
