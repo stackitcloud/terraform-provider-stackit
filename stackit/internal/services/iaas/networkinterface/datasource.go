@@ -15,6 +15,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -88,6 +89,8 @@ func (d *networkInterfaceDataSource) Configure(ctx context.Context, req datasour
 
 // Schema defines the schema for the data source.
 func (d *networkInterfaceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	typeOptions := []string{"server", "metadata", "gateway"}
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("Network interface datasource schema. Must have a `region` specified in the provider configuration."),
 		Description:         "Network interface datasource schema. Must have a `region` specified in the provider configuration.",
@@ -155,12 +158,12 @@ func (d *networkInterfaceDataSource) Schema(_ context.Context, _ datasource.Sche
 				Computed:    true,
 			},
 			"security_group_ids": schema.ListAttribute{
-				Description: "The list of security group UUIDs.",
+				Description: "The list of security group UUIDs. If security is set to false, setting this field will lead to an error.",
 				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"type": schema.StringAttribute{
-				Description: "Type of network interface. Some of the possible values are: [`server`, `metadata`, `gateway`]",
+				Description: "Type of network interface. Some of the possible values are: " + utils.SupportedValuesDocumentation(typeOptions),
 				Computed:    true,
 			},
 		},

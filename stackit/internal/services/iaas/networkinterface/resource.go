@@ -222,7 +222,7 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 				Optional:    true,
 			},
 			"security_group_ids": schema.ListAttribute{
-				Description: "The list of security group UUIDs.",
+				Description: "The list of security group UUIDs. If security is set to false, setting this field will lead to an error.",
 				Optional:    true,
 				Computed:    true,
 				ElementType: types.StringType,
