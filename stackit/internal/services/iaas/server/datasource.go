@@ -121,7 +121,7 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				MarkdownDescription: "Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/stackit/en/virtual-machine-flavors-75137231.html)",
 				Computed:            true,
 			},
-			"initial_network": schema.SingleNestedAttribute{
+			"initial_networking": schema.SingleNestedAttribute{
 				Description: "The initial networking setup for the server. A network ID or a list of network interfaces IDs can be provided",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{

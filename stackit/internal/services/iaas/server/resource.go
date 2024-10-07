@@ -53,34 +53,36 @@ var (
 )
 
 type Model struct {
-	Id               types.String `tfsdk:"id"` // needed by TF
-	ProjectId        types.String `tfsdk:"project_id"`
-	ServerId         types.String `tfsdk:"server_id"`
-	MachineType      types.String `tfsdk:"machine_type"`
-	Name             types.String `tfsdk:"name"`
-	InitialNetwork   types.Object `tfsdk:"initial_network"`
-	AvailabilityZone types.String `tfsdk:"availability_zone"`
-	BootVolume       types.Object `tfsdk:"boot_volume"`
-	ImageId          types.String `tfsdk:"image_id"`
-	KeypairName      types.String `tfsdk:"keypair_name"`
-	Labels           types.Map    `tfsdk:"labels"`
-	ServerGroup      types.String `tfsdk:"server_group"`
-	UserData         types.String `tfsdk:"user_data"`
-	CreatedAt        types.String `tfsdk:"created_at"`
-	LaunchedAt       types.String `tfsdk:"launched_at"`
-	UpdatedAt        types.String `tfsdk:"updated_at"`
+	Id                types.String `tfsdk:"id"` // needed by TF
+	ProjectId         types.String `tfsdk:"project_id"`
+	ServerId          types.String `tfsdk:"server_id"`
+	MachineType       types.String `tfsdk:"machine_type"`
+	Name              types.String `tfsdk:"name"`
+	InitialNetworking types.Object `tfsdk:"initial_networking"`
+	AvailabilityZone  types.String `tfsdk:"availability_zone"`
+	BootVolume        types.Object `tfsdk:"boot_volume"`
+	ImageId           types.String `tfsdk:"image_id"`
+	KeypairName       types.String `tfsdk:"keypair_name"`
+	Labels            types.Map    `tfsdk:"labels"`
+	ServerGroup       types.String `tfsdk:"server_group"`
+	UserData          types.String `tfsdk:"user_data"`
+	CreatedAt         types.String `tfsdk:"created_at"`
+	LaunchedAt        types.String `tfsdk:"launched_at"`
+	UpdatedAt         types.String `tfsdk:"updated_at"`
 }
 
 // Struct corresponding to Model.InitialNetwork
 type initialNetworkModel struct {
 	NetworkId           types.String `tfsdk:"network_id"`
 	NetworkInterfaceIds types.List   `tfsdk:"network_interface_ids"`
+	SecurityGroups      types.List   `tfsdk:"security_groups"`
 }
 
 // Types corresponding to initialNetworkModel
 var initialNetworkTypes = map[string]attr.Type{
 	"network_id":            basetypes.StringType{},
 	"network_interface_ids": basetypes.ListType{ElemType: types.StringType},
+	"security_groups":       basetypes.ListType{ElemType: types.StringType},
 }
 
 // Struct corresponding to Model.BootVolume
@@ -226,7 +228,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						"must match expression"),
 				},
 			},
-			"initial_network": schema.SingleNestedAttribute{
+			"initial_networking": schema.SingleNestedAttribute{
 				Description: "The initial networking setup for the server. A network ID or a list of network interfaces IDs can be provided",
 				Optional:    true,
 				PlanModifiers: []planmodifier.Object{
@@ -241,7 +243,23 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						},
 						Validators: []validator.String{
 							stringvalidator.ConflictsWith(
-								path.MatchRoot("initial_network").AtName("network_interface_ids"),
+								path.MatchRoot("initial_networking").AtName("network_interface_ids"),
+							),
+						},
+					},
+					"security_groups": schema.ListAttribute{
+						ElementType: types.StringType,
+						Description: "List of security groups the initial network is assigned to",
+						Optional:    true,
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.List{
+							listvalidator.ConflictsWith(
+								path.MatchRoot("initial_networking").AtName("network_interface_ids"),
+							),
+							listvalidator.AlsoRequires(
+								path.MatchRoot("initial_networking").AtName("network_id"),
 							),
 						},
 					},
@@ -254,15 +272,15 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						},
 						Validators: []validator.List{
 							listvalidator.ConflictsWith(
-								path.MatchRoot("initial_network").AtName("network_id"),
+								path.MatchRoot("initial_networking").AtName("network_id"),
 							),
 						},
 					},
 				},
 				Validators: []validator.Object{
 					objectvalidator.AtLeastOneOf(
-						path.MatchRoot("initial_network").AtName("network_id"),
-						path.MatchRoot("initial_network").AtName("network_interface_ids"),
+						path.MatchRoot("initial_networking").AtName("network_id"),
+						path.MatchRoot("initial_networking").AtName("network_interface_ids"),
 					),
 				},
 			},
@@ -680,8 +698,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServer
 	}
 
 	var initialNetwork = &initialNetworkModel{}
-	if !(model.InitialNetwork.IsNull() || model.InitialNetwork.IsUnknown()) {
-		diags := model.InitialNetwork.As(ctx, initialNetwork, basetypes.ObjectAsOptions{})
+	if !(model.InitialNetworking.IsNull() || model.InitialNetworking.IsUnknown()) {
+		diags := model.InitialNetworking.As(ctx, initialNetwork, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, fmt.Errorf("convert initial network object to struct: %w", core.DiagsToError(diags))
 		}
@@ -705,12 +723,19 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServer
 	}
 
 	var initialNetworkPayload *iaasalpha.CreateServerPayloadNetworking
+	var securityGroups *[]string
 	if !initialNetwork.NetworkId.IsNull() {
 		initialNetworkPayload = &iaasalpha.CreateServerPayloadNetworking{
 			CreateServerNetworking: &iaasalpha.CreateServerNetworking{
 				NetworkId: conversion.StringValueToPointer(initialNetwork.NetworkId),
 			},
 		}
+
+		securityGroups, err = conversion.StringListToPointer(initialNetwork.SecurityGroups)
+		if err != nil {
+			return nil, fmt.Errorf("converting list of security groups to string list pointer: %w", err)
+		}
+
 	} else if !initialNetwork.NetworkInterfaceIds.IsNull() {
 		nicIds, err := conversion.StringListToPointer(initialNetwork.NetworkInterfaceIds)
 		if err != nil {
@@ -735,6 +760,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServer
 		Image:            conversion.StringValueToPointer(model.ImageId),
 		Keypair:          conversion.StringValueToPointer(model.KeypairName),
 		Networking:       initialNetworkPayload,
+		SecurityGroups:   securityGroups,
 		Labels:           &labels,
 		Name:             conversion.StringValueToPointer(model.Name),
 		MachineType:      conversion.StringValueToPointer(model.MachineType),
