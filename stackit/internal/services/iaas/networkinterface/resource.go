@@ -52,7 +52,7 @@ type Model struct {
 	IPv4               types.String `tfsdk:"ipv4"`
 	IPv6               types.String `tfsdk:"ipv6"`
 	Labels             types.Map    `tfsdk:"labels"`
-	Security        types.Bool   `tfsdk:"security"`
+	Security           types.Bool   `tfsdk:"security"`
 	SecurityGroups     types.List   `tfsdk:"security_groups"`
 	Device             types.String `tfsdk:"device"`
 	Mac                types.String `tfsdk:"mac"`
@@ -237,7 +237,7 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 				Description: "The MAC address of network interface.",
 				Computed:    true,
 			},
-			"nic_security": schema.BoolAttribute{
+			"security": schema.BoolAttribute{
 				Description: "The Network Interface Security. If set to false, then no security groups will apply to this network interface.",
 				Computed:    true,
 				Optional:    true,
@@ -565,7 +565,7 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaasalpha.NIC, model *
 	model.Name = types.StringPointerValue(networkInterfaceResp.Name)
 	model.IPv4 = types.StringPointerValue(networkInterfaceResp.Ipv4)
 	model.IPv6 = types.StringPointerValue(networkInterfaceResp.Ipv6)
-	model.NicSecurity = types.BoolPointerValue(networkInterfaceResp.NicSecurity)
+	model.Security = types.BoolPointerValue(networkInterfaceResp.NicSecurity)
 	model.Device = types.StringPointerValue(networkInterfaceResp.Device)
 	model.Mac = types.StringPointerValue(networkInterfaceResp.Mac)
 	model.Type = types.StringPointerValue(networkInterfaceResp.Type)
