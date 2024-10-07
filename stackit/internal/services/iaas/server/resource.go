@@ -393,7 +393,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 			},
 			"user_data": schema.StringAttribute{
-				Description: "User data that is provided to the server. Must be base64 encoded and is passed via cloud-init to the server.",
+				Description: "User data that is passed via cloud-init to the server.",
 				Optional:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
