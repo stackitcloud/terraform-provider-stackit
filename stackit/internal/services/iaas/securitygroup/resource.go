@@ -7,9 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -18,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -49,68 +46,6 @@ type Model struct {
 	Description     types.String `tfsdk:"description"`
 	Labels          types.Map    `tfsdk:"labels"`
 	Stateful        types.Bool   `tfsdk:"stateful"`
-	Rules           types.List   `tfsdk:"rules"`
-}
-
-// Struct corresponding to Model.Rules[i]
-// type rule struct {
-//	Description           types.String `tfsdk:"description"`
-//	Direction             types.String `tfsdk:"direction"`
-//	EtherType             types.String `tfsdk:"ether_type"`
-//	IcmpParameters        types.Object `tfsdk:"icmp_parameters"`
-//	Id                    types.String `tfsdk:"id"`
-//	IpRange               types.String `tfsdk:"ip_range"`
-//	PortRange             types.Object `tfsdk:"port_range"`
-//	Protocol              types.Object `tfsdk:"protocol"`
-//	RemoteSecurityGroupId types.String `tfsdk:"remote_security_group_id"`
-//	SecurityGroupId       types.String `tfsdk:"security_group_id"`
-// }
-
-// Types corresponding to rule
-var ruleTypes = map[string]attr.Type{
-	"description":              basetypes.StringType{},
-	"direction":                basetypes.StringType{},
-	"ether_type":               basetypes.StringType{},
-	"icmp_parameters":          basetypes.ObjectType{AttrTypes: icmpParametersTypes},
-	"id":                       basetypes.StringType{},
-	"ip_range":                 basetypes.StringType{},
-	"port_range":               basetypes.ObjectType{AttrTypes: portRangeTypes},
-	"protocol":                 basetypes.ObjectType{AttrTypes: protocolTypes},
-	"remote_security_group_id": basetypes.StringType{},
-	"security_group_id":        basetypes.StringType{},
-}
-
-// type icmpParameters struct {
-//	Code types.Int64 `tfsdk:"code"`
-//	Type types.Int64 `tfsdk:"type"`
-// }
-
-// Types corresponding to icmpParameters
-var icmpParametersTypes = map[string]attr.Type{
-	"code": basetypes.Int64Type{},
-	"type": basetypes.Int64Type{},
-}
-
-// type portRange struct {
-//	Max types.Int64 `tfsdk:"max"`
-//	Min types.Int64 `tfsdk:"min"`
-// }
-
-// Types corresponding to portRange
-var portRangeTypes = map[string]attr.Type{
-	"max": basetypes.Int64Type{},
-	"min": basetypes.Int64Type{},
-}
-
-// type protocolParameters struct {
-//	Name     types.String `tfsdk:"name"`
-//	Protocol types.Int64  `tfsdk:"protocol"`
-// }
-
-// Types corresponding to protocol
-var protocolTypes = map[string]attr.Type{
-	"name":     basetypes.StringType{},
-	"protocol": basetypes.Int64Type{},
 }
 
 // NewSecurityGroupResource is a helper function to simplify the provider implementation.
@@ -240,124 +175,6 @@ func (r *securityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 				Description: "Shows if a security group is stateful or stateless. There can only be one security group per network interface/server.",
 				Optional:    true,
 				Computed:    true,
-			},
-			"rules": schema.ListNestedAttribute{
-				Description: "The rules of the security group.",
-				Computed:    true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"description": schema.StringAttribute{
-							Description: "The rule description.",
-							Computed:    true,
-							Validators: []validator.String{
-								stringvalidator.LengthAtMost(127),
-							},
-						},
-						"direction": schema.StringAttribute{
-							Description: "The direction of the traffic which the rule should match.",
-							Computed:    true,
-						},
-						"ether_type": schema.StringAttribute{
-							Description: "The ethertype which the rule should match.",
-							Computed:    true,
-						},
-						"icmp_parameters": schema.SingleNestedAttribute{
-							Description: "ICMP Parameters.",
-							Computed:    true,
-							Attributes: map[string]schema.Attribute{
-								"code": schema.Int64Attribute{
-									Description: "ICMP code. Can be set if the protocol is ICMP.",
-									Computed:    true,
-									Validators: []validator.Int64{
-										int64validator.AtLeast(0),
-										int64validator.AtMost(255),
-									},
-								},
-								"type": schema.Int64Attribute{
-									Description: "ICMP type. Can be set if the protocol is ICMP.",
-									Computed:    true,
-									Validators: []validator.Int64{
-										int64validator.AtLeast(0),
-										int64validator.AtMost(255),
-									},
-								},
-							},
-						},
-						"id": schema.StringAttribute{
-							Description: "UUID",
-							Computed:    true,
-							Validators: []validator.String{
-								validate.UUID(),
-								validate.NoSeparator(),
-							},
-						},
-						"ip_range": schema.StringAttribute{
-							Description: "The remote IP range which the rule should match.",
-							Computed:    true,
-							Validators: []validator.String{
-								stringvalidator.RegexMatches(
-									regexp.MustCompile(`^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\/(3[0-2]|2[0-9]|1[0-9]|[0-9]))$|^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))(\/((1(1[0-9]|2[0-8]))|([0-9][0-9])|([0-9])))?$`),
-									"must match expression"),
-							},
-						},
-						"port_range": schema.SingleNestedAttribute{
-							Description: "The range of ports.",
-							Computed:    true,
-							Attributes: map[string]schema.Attribute{
-								"max": schema.Int64Attribute{
-									Description: "The maximum port number. Should be greater or equal to the minimum.",
-									Computed:    true,
-									Validators: []validator.Int64{
-										int64validator.AtLeast(0),
-										int64validator.AtMost(65535),
-									},
-								},
-								"min": schema.Int64Attribute{
-									Description: "The minimum port number. Should be less or equal to the minimum.",
-									Computed:    true,
-									Validators: []validator.Int64{
-										int64validator.AtLeast(0),
-										int64validator.AtMost(65535),
-									},
-								},
-							},
-						},
-						"protocol": schema.SingleNestedAttribute{
-							Description: "The internet protocol which the rule should match.",
-							Computed:    true,
-							Attributes: map[string]schema.Attribute{
-								"name": schema.StringAttribute{
-									Description: "The protocol name which the rule should match.",
-									Computed:    true,
-								},
-								"protocol": schema.Int64Attribute{
-									Description: "The protocol number which the rule should match.",
-									Computed:    true,
-									Validators: []validator.Int64{
-										int64validator.AtLeast(0),
-										int64validator.AtMost(255),
-									},
-								},
-							},
-						},
-						"remote_security_group_id": schema.StringAttribute{
-							Description: "The remote security group which the rule should match.",
-							Computed:    true,
-							Validators: []validator.String{
-								validate.UUID(),
-								validate.NoSeparator(),
-							},
-						},
-						"security_group_id": schema.StringAttribute{
-							Description: "UUID",
-							Computed:    true,
-							Validators: []validator.String{
-								validate.UUID(),
-								validate.NoSeparator(),
-							},
-						},
-					},
-				},
 			},
 		},
 	}
@@ -590,84 +407,6 @@ func mapFields(ctx context.Context, securityGroupResp *iaasalpha.SecurityGroup, 
 	model.Stateful = types.BoolPointerValue(securityGroupResp.Stateful)
 	model.Labels = labels
 
-	err := mapRules(securityGroupResp, model)
-	if err != nil {
-		return fmt.Errorf("map node_pools: %w", err)
-	}
-
-	return nil
-}
-
-func mapRules(securityGroup *iaasalpha.SecurityGroup, model *Model) error {
-	if securityGroup.Rules == nil || len(*securityGroup.Rules) == 0 {
-		model.Rules = types.ListNull(types.ObjectType{AttrTypes: ruleTypes})
-		return nil
-	}
-	var diags diag.Diagnostics
-	rules := []attr.Value{}
-
-	for i, ruleResp := range *securityGroup.Rules {
-		ruleIcmpParameters := types.ObjectNull(icmpParametersTypes)
-		if ruleResp.IcmpParameters != nil {
-			ruleIcmpParametersValues := map[string]attr.Value{
-				"code": types.Int64PointerValue(ruleResp.IcmpParameters.Code),
-				"type": types.Int64PointerValue(ruleResp.IcmpParameters.Type),
-			}
-			ruleIcmpParameters, diags = types.ObjectValue(icmpParametersTypes, ruleIcmpParametersValues)
-			if diags.HasError() {
-				return fmt.Errorf("mapping rule icmp parameters: %w", core.DiagsToError(diags))
-			}
-		}
-
-		rulePortRange := types.ObjectNull(portRangeTypes)
-		if ruleResp.PortRange != nil {
-			rulePortRangeValues := map[string]attr.Value{
-				"max": types.Int64PointerValue(ruleResp.PortRange.Max),
-				"min": types.Int64PointerValue(ruleResp.PortRange.Min),
-			}
-			rulePortRange, diags = types.ObjectValue(portRangeTypes, rulePortRangeValues)
-			if diags.HasError() {
-				return fmt.Errorf("mapping rule port range: %w", core.DiagsToError(diags))
-			}
-		}
-
-		ruleProtocol := types.ObjectNull(protocolTypes)
-		if ruleResp.Protocol != nil {
-			ruleProtocolValues := map[string]attr.Value{
-				"name":     types.StringPointerValue(ruleResp.Protocol.Name),
-				"protocol": types.Int64PointerValue(ruleResp.Protocol.Protocol),
-			}
-			ruleProtocol, diags = types.ObjectValue(protocolTypes, ruleProtocolValues)
-			if diags.HasError() {
-				return fmt.Errorf("mapping rule protocol: %w", core.DiagsToError(diags))
-			}
-		}
-
-		rule := map[string]attr.Value{
-			"description":              types.StringPointerValue(ruleResp.Description),
-			"direction":                types.StringPointerValue(ruleResp.Direction),
-			"ether_type":               types.StringPointerValue(ruleResp.Ethertype),
-			"id":                       types.StringPointerValue(ruleResp.Id),
-			"ip_range":                 types.StringPointerValue(ruleResp.IpRange),
-			"remote_security_group_id": types.StringPointerValue(ruleResp.RemoteSecurityGroupId),
-			"security_group_id":        types.StringPointerValue(ruleResp.SecurityGroupId),
-			"icmp_parameters":          ruleIcmpParameters,
-			"port_range":               rulePortRange,
-			"protocol":                 ruleProtocol,
-		}
-		ruleTF, diags := basetypes.NewObjectValue(ruleTypes, rule)
-		if diags.HasError() {
-			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
-		}
-		rules = append(rules, ruleTF)
-	}
-
-	rulesTF, diags := basetypes.NewListValue(types.ObjectType{AttrTypes: ruleTypes}, rules)
-	if diags.HasError() {
-		return core.DiagsToError(diags)
-	}
-
-	model.Rules = rulesTF
 	return nil
 }
 

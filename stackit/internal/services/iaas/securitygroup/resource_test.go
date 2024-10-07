@@ -11,56 +11,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 )
 
-// func fixtureRulesModel() basetypes.ListValue {
-//	return types.ListValueMust(types.ObjectType{AttrTypes: ruleTypes}, []attr.Value{
-//		types.ObjectValueMust(ruleTypes, map[string]attr.Value{
-//			"description":              types.StringValue("desc"),
-//			"direction":                types.StringValue("direction"),
-//			"ether_type":               types.StringValue("ether"),
-//			"id":                       types.StringValue("id"),
-//			"ip_range":                 types.StringValue("range"),
-//			"remote_security_group_id": types.StringValue("rsgid"),
-//			"security_group_id":        types.StringValue("sgid"),
-//			"icmp_parameters": types.ObjectValueMust(icmpParametersTypes, map[string]attr.Value{
-//				"code": types.Int64Value(1),
-//				"type": types.Int64Value(2),
-//			}),
-//			"port_range": types.ObjectValueMust(portRangeTypes, map[string]attr.Value{
-//				"max": types.Int64Value(3),
-//				"min": types.Int64Value(2),
-//			}),
-//			"protocol": types.ObjectValueMust(protocolTypes, map[string]attr.Value{
-//				"name":     types.StringValue("name"),
-//				"protocol": types.Int64Value(2),
-//			}),
-//		}),
-//	})
-// }
-//
-// func fixtureRulesResponse() iaasalpha.SecurityGroupRule {
-//	return iaasalpha.SecurityGroupRule{
-//		Description:           utils.Ptr("desc"),
-//		Direction:             utils.Ptr("direction"),
-//		Ethertype:             utils.Ptr("ether"),
-//		Id:                    utils.Ptr("id"),
-//		IpRange:               utils.Ptr("range"),
-//		RemoteSecurityGroupId: utils.Ptr("rsgid"),
-//		SecurityGroupId:       utils.Ptr("sgid"),
-//		IcmpParameters: &iaasalpha.ICMPParameters{
-//			Code: utils.Ptr(int64(1)),
-//			Type: utils.Ptr(int64(2)),
-//		},
-//		PortRange: &iaasalpha.PortRange{
-//			Max: utils.Ptr(int64(3)),
-//			Min: utils.Ptr(int64(2)),
-//		},
-//		Protocol: &iaasalpha.V1SecurityGroupRuleProtocol{
-//			Name:     utils.Ptr("name"),
-//			Protocol: utils.Ptr(int64(2)),
-//		},
-//	}
-// }
-
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
@@ -86,7 +36,6 @@ func TestMapFields(t *testing.T) {
 				Labels:          types.MapNull(types.StringType),
 				Description:     types.StringNull(),
 				Stateful:        types.BoolNull(),
-				Rules:           types.ListNull(types.ObjectType{AttrTypes: ruleTypes}),
 			},
 			true,
 		},
@@ -116,7 +65,6 @@ func TestMapFields(t *testing.T) {
 				}),
 				Description: types.StringValue("desc"),
 				Stateful:    types.BoolValue(true),
-				Rules:       types.ListNull(types.ObjectType{AttrTypes: ruleTypes}),
 			},
 			true,
 		},
@@ -138,36 +86,9 @@ func TestMapFields(t *testing.T) {
 				Labels:          types.MapNull(types.StringType),
 				Description:     types.StringNull(),
 				Stateful:        types.BoolNull(),
-				Rules:           types.ListNull(types.ObjectType{AttrTypes: ruleTypes}),
 			},
 			true,
 		},
-		// {
-		//	"with rules",
-		//	Model{
-		//		ProjectId:       types.StringValue("pid"),
-		//		SecurityGroupId: types.StringValue("sgid"),
-		//	},
-		//	&iaasalpha.SecurityGroup{
-		//		Id: utils.Ptr("sgid"),
-		//		Rules: &[]iaasalpha.SecurityGroupRule{
-		//			fixtureRulesResponse(),
-		//		},
-		//	},
-		//	Model{
-		//		Id:              types.StringValue("pid,sgid"),
-		//		ProjectId:       types.StringValue("pid"),
-		//		SecurityGroupId: types.StringValue("sgid"),
-		//		Name:            types.StringNull(),
-		//		Labels:          types.MapNull(types.StringType),
-		//		Description:     types.StringNull(),
-		//		Stateful:        types.BoolNull(),
-		//		Rules: types.ListValueMust(types.ObjectType{AttrTypes: ruleTypes}, []attr.Value{
-		//			fixtureRulesModel(),
-		//		}),
-		//	},
-		//	true,
-		// },
 		{
 			"response_nil_fail",
 			Model{},
