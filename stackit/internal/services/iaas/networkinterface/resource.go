@@ -665,7 +665,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	}
 
 	if !model.Labels.IsNull() && !model.Labels.IsUnknown() {
-		labelMap, err := utils.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
+		labelMap, err := conversion.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
 		if err != nil {
 			return nil, fmt.Errorf("mapping labels: %w", err)
 		}
