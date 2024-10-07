@@ -17,6 +17,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	serverMachineType        = "t1.1"
+	updatedServerMachineType = "t1.2"
+)
+
 // Network resource data
 var networkResource = map[string]string{
 	"project_id":         testutil.ProjectId,
@@ -44,11 +49,24 @@ var networkAreaRouteResource = map[string]string{
 var volumeResource = map[string]string{
 	"project_id":        testutil.ProjectId,
 	"availability_zone": "eu01-1",
-	"name":              "name",
+	"name":              fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha)),
 	"description":       "description",
 	"size":              "1",
 	"label1":            "value",
 	"performance_class": "storage_premium_perf1",
+}
+
+// Server resource data
+var serverResource = map[string]string{
+	"project_id":        testutil.ProjectId,
+	"availability_zone": "eu01-1",
+	"size":              "64",
+	"source_type":       "image",
+	"source_id":         testutil.IaaSImageId,
+	"name":              fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha)),
+	"machine_type":      serverMachineType,
+	"label1":            "value",
+	"user_data":         "#!/bin/bash",
 }
 
 // Security Group resource data
@@ -131,6 +149,39 @@ func volumeResourceConfig(name, size string) string {
 	)
 }
 
+func serverResourceConfig(name, machineType string) string {
+	return fmt.Sprintf(`
+				resource "stackit_server" "server" {
+					project_id = "%s"
+					availability_zone = "%s"
+					name = "%s"
+					machine_type = "%s"
+					boot_volume = {
+						size = %s
+						source_type = "%s"
+						source_id = "%s"
+					}
+					initial_networking = {
+						network_id = stackit_network.network.network_id
+					}
+					labels = {
+						"label1" = "%s"
+					}
+					user_data = "%s"
+				}
+				`,
+		serverResource["project_id"],
+		serverResource["availability_zone"],
+		name,
+		machineType,
+		serverResource["size"],
+		serverResource["source_type"],
+		serverResource["source_id"],
+		serverResource["label1"],
+		serverResource["user_data"],
+	)
+}
+
 func securityGroupResourceConfig(name string) string {
 	return fmt.Sprintf(`
 				resource "stackit_security_group" "security_group" {
@@ -149,19 +200,26 @@ func securityGroupResourceConfig(name string) string {
 	)
 }
 
-func resourceConfig(name, nameservers, areaname, networkranges string) string {
-	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
+func testAccNetworkAreaConfig(areaname, networkranges string) string {
+	return fmt.Sprintf("%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
-		networkResourceConfig(name, nameservers),
 		networkAreaResourceConfig(areaname, networkranges),
 		networkAreaRouteResourceConfig(),
 	)
 }
 
-func resourceConfigVolume(name, size string) string {
+func testAccVolumeConfig(name, size string) string {
 	return fmt.Sprintf("%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		volumeResourceConfig(name, size),
+	)
+}
+
+func testAccServerConfig(name, nameservers, serverName, machineType string) string {
+	return fmt.Sprintf("%s\n\n%s\n\n%s",
+		testutil.IaaSProviderConfig(),
+		networkResourceConfig(name, nameservers),
+		serverResourceConfig(serverName, machineType),
 	)
 }
 
@@ -172,31 +230,19 @@ func resourceConfigSecurityGroup(name string) string {
 	)
 }
 
-func TestAccIaaS(t *testing.T) {
+func TestAccNetworkArea(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckIaaSDestroy,
+		CheckDestroy:             testAccCheckNetworkAreaDestroy,
 		Steps: []resource.TestStep{
 
 			// Creation
 			{
-				Config: resourceConfig(
-					networkResource["name"],
-					fmt.Sprintf(
-						"[%q]",
-						networkResource["nameserver0"],
-					),
+				Config: testAccNetworkAreaConfig(
 					networkAreaResource["name"],
 					networkAreaResource["networkrange0"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Instance
-					resource.TestCheckResourceAttr("stackit_network.network", "project_id", networkResource["project_id"]),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
-					resource.TestCheckResourceAttr("stackit_network.network", "name", networkResource["name"]),
-					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.#", "1"),
-					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
-
 					// Network Area
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "organization_id", networkAreaResource["organization_id"]),
 					resource.TestCheckResourceAttrSet("stackit_network_area.network_area", "network_area_id"),
@@ -223,12 +269,7 @@ func TestAccIaaS(t *testing.T) {
 			{
 				Config: fmt.Sprintf(`
 					%s
-			
-					data "stackit_network" "network" {
-						project_id  = stackit_network.network.project_id
-						network_id = stackit_network.network.network_id
-					}
-			
+						
 					data "stackit_network_area" "network_area" {
 						organization_id  = stackit_network_area.network_area.organization_id
 						network_area_id  = stackit_network_area.network_area.network_area_id
@@ -240,25 +281,12 @@ func TestAccIaaS(t *testing.T) {
 						network_area_route_id = stackit_network_area_route.network_area_route.network_area_route_id
 					}
 					`,
-					resourceConfig(
-						networkResource["name"],
-						fmt.Sprintf(
-							"[%q]",
-							networkResource["nameserver0"],
-						),
+					testAccNetworkAreaConfig(
 						networkAreaResource["name"],
 						networkAreaResource["networkrange0"],
 					),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Instance
-					resource.TestCheckResourceAttr("data.stackit_network.network", "project_id", networkResource["project_id"]),
-					resource.TestCheckResourceAttrPair(
-						"stackit_network.network", "network_id",
-						"data.stackit_network.network", "network_id",
-					),
-					resource.TestCheckResourceAttr("data.stackit_network.network", "name", networkResource["name"]),
-					resource.TestCheckResourceAttr("data.stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
 
 					// Network area
 					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "organization_id", networkAreaResource["organization_id"]),
@@ -285,23 +313,6 @@ func TestAccIaaS(t *testing.T) {
 				),
 			},
 			// Import
-			{
-				ResourceName: "stackit_network.network",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_network.network"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_network.network")
-					}
-					networkId, ok := r.Primary.Attributes["network_id"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find attribute network_id")
-					}
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, networkId), nil
-				},
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"ipv4_prefix_length"}, // Field is not returned by the API
-			},
 			{
 				ResourceName: "stackit_network_area.network_area",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
@@ -340,25 +351,11 @@ func TestAccIaaS(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfig(
-					fmt.Sprintf("%s-updated", networkResource["name"]),
-					fmt.Sprintf(
-						"[%q, %q]",
-						networkResource["nameserver0"],
-						networkResource["nameserver1"],
-					),
+				Config: testAccNetworkAreaConfig(
 					fmt.Sprintf("%s-updated", networkAreaResource["name"]),
 					networkAreaResource["networkrange0"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Instance
-					resource.TestCheckResourceAttr("stackit_network.network", "project_id", networkResource["project_id"]),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
-					resource.TestCheckResourceAttr("stackit_network.network", "name", fmt.Sprintf("%s-updated", networkResource["name"])),
-					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.#", "2"),
-					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
-					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.1", networkResource["nameserver1"]),
-
 					// Network area
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "organization_id", networkAreaResource["organization_id"]),
 					resource.TestCheckResourceAttrSet("stackit_network_area.network_area", "network_area_id"),
@@ -372,7 +369,7 @@ func TestAccIaaS(t *testing.T) {
 	})
 }
 
-func TestAccIaaSVolume(t *testing.T) {
+func TestAccVolume(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckIaaSVolumeDestroy,
@@ -380,12 +377,11 @@ func TestAccIaaSVolume(t *testing.T) {
 
 			// Creation
 			{
-				Config: resourceConfigVolume(volumeResource["name"], volumeResource["size"]),
+				Config: testAccVolumeConfig(volumeResource["name"], volumeResource["size"]),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_volume.volume", "project_id", volumeResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_volume.volume", "volume_id"),
 					resource.TestCheckResourceAttr("stackit_volume.volume", "name", volumeResource["name"]),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "availability_zone", volumeResource["availability_zone"]),
 					resource.TestCheckResourceAttr("stackit_volume.volume", "availability_zone", volumeResource["availability_zone"]),
 					resource.TestCheckResourceAttr("stackit_volume.volume", "labels.label1", volumeResource["label1"]),
 					resource.TestCheckResourceAttr("stackit_volume.volume", "description", volumeResource["description"]),
@@ -403,7 +399,7 @@ func TestAccIaaSVolume(t *testing.T) {
 						volume_id = stackit_volume.volume.volume_id
 					}
 					`,
-					resourceConfigVolume(volumeResource["name"], volumeResource["size"]),
+					testAccVolumeConfig(volumeResource["name"], volumeResource["size"]),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -440,7 +436,7 @@ func TestAccIaaSVolume(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfigVolume(
+				Config: testAccVolumeConfig(
 					fmt.Sprintf("%s-updated", volumeResource["name"]),
 					"10",
 				),
@@ -449,11 +445,164 @@ func TestAccIaaSVolume(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_volume.volume", "volume_id"),
 					resource.TestCheckResourceAttr("stackit_volume.volume", "name", fmt.Sprintf("%s-updated", volumeResource["name"])),
 					resource.TestCheckResourceAttr("stackit_volume.volume", "availability_zone", volumeResource["availability_zone"]),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "availability_zone", volumeResource["availability_zone"]),
 					resource.TestCheckResourceAttr("stackit_volume.volume", "labels.label1", volumeResource["label1"]),
 					resource.TestCheckResourceAttr("stackit_volume.volume", "description", volumeResource["description"]),
 					resource.TestCheckResourceAttr("stackit_volume.volume", "performance_class", volumeResource["performance_class"]),
 					resource.TestCheckResourceAttr("stackit_volume.volume", "size", "10"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccServer(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckServerDestroy,
+		Steps: []resource.TestStep{
+
+			// Creation
+			{
+				Config: testAccServerConfig(
+					networkResource["name"],
+					fmt.Sprintf(
+						"[%q]",
+						networkResource["nameserver0"],
+					),
+					serverResource["name"],
+					serverResource["machine_type"],
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+
+					// Network
+					resource.TestCheckResourceAttr("stackit_network.network", "project_id", networkResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
+					resource.TestCheckResourceAttr("stackit_network.network", "name", networkResource["name"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.#", "1"),
+					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
+
+					// Server
+					resource.TestCheckResourceAttr("stackit_server.server", "project_id", serverResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server.server", "name", serverResource["name"]),
+					resource.TestCheckResourceAttr("stackit_server.server", "availability_zone", serverResource["availability_zone"]),
+					resource.TestCheckResourceAttr("stackit_server.server", "machine_type", serverResource["machine_type"]),
+					resource.TestCheckResourceAttr("stackit_server.server", "labels.label1", serverResource["label1"]),
+					resource.TestCheckResourceAttr("stackit_server.server", "user_data", serverResource["user_data"]),
+				),
+			},
+			// Data source
+			{
+				Config: fmt.Sprintf(`
+					%s
+
+					data "stackit_network" "network" {
+						project_id  = stackit_network.network.project_id
+						network_id = stackit_network.network.network_id
+					}
+			
+					data "stackit_server" "server" {
+						project_id  = stackit_server.server.project_id
+						server_id = stackit_server.server.server_id
+					}
+					`,
+					testAccServerConfig(
+						networkResource["name"],
+						fmt.Sprintf(
+							"[%q]",
+							networkResource["nameserver0"],
+						),
+						serverResource["name"],
+						serverResource["machine_type"],
+					),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("data.stackit_network.network", "project_id", networkResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network", "network_id",
+						"data.stackit_network.network", "network_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "name", networkResource["name"]),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
+
+					// Server
+					resource.TestCheckResourceAttr("data.stackit_server.server", "project_id", serverResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server.server", "server_id",
+						"data.stackit_server.server", "server_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "name", serverResource["name"]),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "availability_zone", serverResource["availability_zone"]),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "machine_type", serverResource["machine_type"]),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "labels.label1", serverResource["label1"]),
+				),
+			},
+			// Import
+			{
+				ResourceName: "stackit_network.network",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_network.network"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_network.network")
+					}
+					networkId, ok := r.Primary.Attributes["network_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, networkId), nil
+				},
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"ipv4_prefix_length"}, // Field is not returned by the API
+			},
+			{
+				ResourceName: "stackit_server.server",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_server.server"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_server.server")
+					}
+					serverId, ok := r.Primary.Attributes["server_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute server_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, serverId), nil
+				},
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"initial_networking", "boot_volume", "user_data"}, // Field is not mapped as it is only relevant on creation
+			},
+			// Update
+			{
+				Config: testAccServerConfig(
+					fmt.Sprintf("%s-updated", networkResource["name"]),
+					fmt.Sprintf(
+						"[%q, %q]",
+						networkResource["nameserver0"],
+						networkResource["nameserver1"],
+					),
+					fmt.Sprintf("%s-updated", serverResource["name"]),
+					updatedServerMachineType,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Network
+					resource.TestCheckResourceAttr("stackit_network.network", "project_id", networkResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
+					resource.TestCheckResourceAttr("stackit_network.network", "name", fmt.Sprintf("%s-updated", networkResource["name"])),
+					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.#", "2"),
+					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.1", networkResource["nameserver1"]),
+
+					// Server
+					resource.TestCheckResourceAttr("stackit_server.server", "project_id", serverResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server.server", "name", fmt.Sprintf("%s-updated", serverResource["name"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "availability_zone", serverResource["availability_zone"]),
+					resource.TestCheckResourceAttr("stackit_server.server", "machine_type", updatedServerMachineType),
+					resource.TestCheckResourceAttr("stackit_server.server", "labels.label1", serverResource["label1"]),
+					resource.TestCheckResourceAttr("stackit_server.server", "user_data", serverResource["user_data"]),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -537,7 +686,7 @@ func TestAccIaaSSecurityGroup(t *testing.T) {
 	})
 }
 
-func testAccCheckIaaSDestroy(s *terraform.State) error {
+func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *iaas.APIClient
 	var err error
@@ -552,34 +701,6 @@ func testAccCheckIaaSDestroy(s *terraform.State) error {
 	}
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
-	}
-
-	networksToDestroy := []string{}
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "stackit_network" {
-			continue
-		}
-		// network terraform ID: "[project_id],[network_id]"
-		networkId := strings.Split(rs.Primary.ID, core.Separator)[1]
-		networksToDestroy = append(networksToDestroy, networkId)
-	}
-
-	networksResp, err := client.ListNetworksExecute(ctx, testutil.ProjectId)
-	if err != nil {
-		return fmt.Errorf("getting networksResp: %w", err)
-	}
-
-	networks := *networksResp.Items
-	for i := range networks {
-		if networks[i].NetworkId == nil {
-			continue
-		}
-		if utils.Contains(networksToDestroy, *networks[i].NetworkId) {
-			err := client.DeleteNetworkExecute(ctx, testutil.ProjectId, *networks[i].NetworkId)
-			if err != nil {
-				return fmt.Errorf("destroying network %s during CheckDestroy: %w", *networks[i].NetworkId, err)
-			}
-		}
 	}
 
 	// network areas
@@ -656,6 +777,94 @@ func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 			}
 		}
 	}
+	return nil
+}
+
+func testAccCheckServerDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var alphaClient *iaasalpha.APIClient
+	var client *iaas.APIClient
+	var err error
+	var alphaErr error
+	if testutil.IaaSCustomEndpoint == "" {
+		alphaClient, alphaErr = iaasalpha.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
+		client, err = iaas.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
+	} else {
+		alphaClient, alphaErr = iaasalpha.NewAPIClient(
+			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+		)
+		client, err = iaas.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
+	}
+	if err != nil || alphaErr != nil {
+		return fmt.Errorf("creating client: %w, %w", err, alphaErr)
+	}
+
+	// Servers
+
+	serversToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_server" {
+			continue
+		}
+		// server terraform ID: "[project_id],[server_id]"
+		serverId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		serversToDestroy = append(serversToDestroy, serverId)
+	}
+
+	serversResp, err := alphaClient.ListServersExecute(ctx, testutil.ProjectId)
+	if err != nil {
+		return fmt.Errorf("getting serversResp: %w", err)
+	}
+
+	servers := *serversResp.Items
+	for i := range servers {
+		if servers[i].Id == nil {
+			continue
+		}
+		if utils.Contains(serversToDestroy, *servers[i].Id) {
+			err := alphaClient.DeleteServerExecute(ctx, testutil.ProjectId, *servers[i].Id)
+			if err != nil {
+				return fmt.Errorf("destroying server %s during CheckDestroy: %w", *servers[i].Id, err)
+			}
+		}
+	}
+
+	// Networks
+
+	networksToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_network" {
+			continue
+		}
+		// network terraform ID: "[project_id],[network_id]"
+		networkId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		networksToDestroy = append(networksToDestroy, networkId)
+	}
+
+	networksResp, err := client.ListNetworksExecute(ctx, testutil.ProjectId)
+	if err != nil {
+		return fmt.Errorf("getting networksResp: %w", err)
+	}
+
+	networks := *networksResp.Items
+	for i := range networks {
+		if networks[i].NetworkId == nil {
+			continue
+		}
+		if utils.Contains(networksToDestroy, *networks[i].NetworkId) {
+			err := client.DeleteNetworkExecute(ctx, testutil.ProjectId, *networks[i].NetworkId)
+			if err != nil {
+				return fmt.Errorf("destroying network %s during CheckDestroy: %w", *networks[i].NetworkId, err)
+			}
+		}
+	}
+
 	return nil
 }
 

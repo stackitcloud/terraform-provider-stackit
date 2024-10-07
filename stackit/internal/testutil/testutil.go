@@ -34,6 +34,8 @@ var (
 	ProjectId = os.Getenv("TF_ACC_PROJECT_ID")
 	// ServerId is the id of a server used for some tests
 	ServerId = getenv("TF_ACC_SERVER_ID", "")
+	// IaaSImageId is the id of an image used for IaaS acceptance tests. Once the stackit_image resource is implemented, we can remove this
+	IaaSImageId = getenv("TF_ACC_IMAGE_ID", "")
 	// TestProjectParentContainerID is the container id of the parent resource under which projects are created as part of the resource-manager acceptance tests
 	TestProjectParentContainerID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID")
 	// TestProjectParentContainerID is the uuid of the parent resource under which projects are created as part of the resource-manager acceptance tests
