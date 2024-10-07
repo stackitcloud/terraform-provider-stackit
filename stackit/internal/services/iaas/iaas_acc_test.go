@@ -49,7 +49,7 @@ var networkAreaRouteResource = map[string]string{
 var volumeResource = map[string]string{
 	"project_id":        testutil.ProjectId,
 	"availability_zone": "eu01-1",
-	"name":              "name",
+	"name":              fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha)),
 	"description":       "description",
 	"size":              "1",
 	"label1":            "value",
@@ -63,7 +63,7 @@ var serverResource = map[string]string{
 	"size":              "64",
 	"source_type":       "image",
 	"source_id":         testutil.IaaSImageId,
-	"name":              "name",
+	"name":              fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha)),
 	"machine_type":      serverMachineType,
 	"label1":            "value",
 	"user_data":         "#!/bin/bash",

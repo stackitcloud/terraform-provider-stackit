@@ -746,7 +746,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServer
 		if err != nil {
 			return nil, fmt.Errorf("converting list of security groups to string list pointer: %w", err)
 		}
-
 	} else if !initialNetwork.NetworkInterfaceIds.IsNull() {
 		nicIds, err := conversion.StringListToPointer(initialNetwork.NetworkInterfaceIds)
 		if err != nil {
