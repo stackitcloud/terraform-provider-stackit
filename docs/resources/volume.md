@@ -17,13 +17,13 @@ Volume resource schema. Must have a `region` specified in the provider configura
 
 ```terraform
 resource "stackit_volume" "example" {
-    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name = "my_volume"
-    availability_zone = "eu01-m"
-    size = 64
-    labels = {
-        "key" = "value"
-    }
+  project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name              = "my_volume"
+  availability_zone = "eu01-m"
+  size              = 64
+  labels = {
+    "key" = "value"
+  }
 }
 ```
 
@@ -42,9 +42,18 @@ resource "stackit_volume" "example" {
 - `name` (String) The name of the volume.
 - `performance_class` (String) The performance class of the volume.
 - `server_id` (String) The server ID of the server to which the volume is attached to.
-- `size` (Number) The size of the volume in GB. It can only be updated to a larger value than the current size
+- `size` (Number) The size of the volume in GB. It can only be updated to a larger value than the current size. Either `size` or `source` must be provided
+- `source` (Attributes) The source of the volume. It can be either a volume, an image, a snapshot or a backup. Either `size` or `source` must be provided (see [below for nested schema](#nestedatt--source))
 
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`volume_id`".
 - `volume_id` (String) The volume ID.
+
+<a id="nestedatt--source"></a>
+### Nested Schema for `source`
+
+Required:
+
+- `id` (String) The ID of the source, e.g. image ID
+- `type` (String) The type of the source. Supported values are: `volume`, `image`, `snapshot`, `backup`.

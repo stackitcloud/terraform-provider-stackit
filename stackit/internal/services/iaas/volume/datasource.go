@@ -15,6 +15,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -144,6 +145,20 @@ func (r *volumeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			"size": schema.Int64Attribute{
 				Description: "The size of the volume in GB. It can only be updated to a larger value than the current size",
 				Computed:    true,
+			},
+			"source": schema.SingleNestedAttribute{
+				Description: "The source of the volume. It can be either a volume, an image, a snapshot or a backup",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						Description: "The type of the source. " + utils.SupportedValuesDocumentation(SupportedSourceTypes),
+						Computed:    true,
+					},
+					"id": schema.StringAttribute{
+						Description: "The ID of the source, e.g. image ID",
+						Computed:    true,
+					},
+				},
 			},
 		},
 	}
