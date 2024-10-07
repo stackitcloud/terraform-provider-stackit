@@ -180,7 +180,11 @@ func TestToCreatePayload(t *testing.T) {
 					"source_id":         types.StringValue("id"),
 				}),
 				InitialNetworking: types.ObjectValueMust(initialNetworkTypes, map[string]attr.Value{
-					"network_id":            types.StringValue("nid"),
+					"network_id": types.StringValue("nid"),
+					"security_groups": types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("group1"),
+						types.StringValue("group2"),
+					}),
 					"network_interface_ids": types.ListNull(types.StringType),
 				}),
 				ImageId:     types.StringValue("image"),
@@ -199,6 +203,7 @@ func TestToCreatePayload(t *testing.T) {
 						NetworkId: utils.Ptr("nid"),
 					},
 				},
+				SecurityGroups: utils.Ptr([]string{"group1", "group2"}),
 				BootVolume: &iaasalpha.CreateServerPayloadBootVolume{
 					PerformanceClass: utils.Ptr("class"),
 					Size:             utils.Ptr(int64(1)),
@@ -223,7 +228,8 @@ func TestToCreatePayload(t *testing.T) {
 					"key": types.StringValue("value"),
 				}),
 				InitialNetworking: types.ObjectValueMust(initialNetworkTypes, map[string]attr.Value{
-					"network_id": types.StringNull(),
+					"network_id":      types.StringNull(),
+					"security_groups": types.ListNull(types.StringType),
 					"network_interface_ids": types.ListValueMust(types.StringType, []attr.Value{
 						types.StringValue("nic1"),
 						types.StringValue("nic2"),

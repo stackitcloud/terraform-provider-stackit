@@ -75,14 +75,14 @@ type Model struct {
 type initialNetworkModel struct {
 	NetworkId           types.String `tfsdk:"network_id"`
 	NetworkInterfaceIds types.List   `tfsdk:"network_interface_ids"`
-	SecurityGroups      types.List   `tfsdk:"security_groups"`
+	SecurityGroupIds    types.List   `tfsdk:"security_group_ids"`
 }
 
 // Types corresponding to initialNetworkModel
 var initialNetworkTypes = map[string]attr.Type{
 	"network_id":            basetypes.StringType{},
 	"network_interface_ids": basetypes.ListType{ElemType: types.StringType},
-	"security_groups":       basetypes.ListType{ElemType: types.StringType},
+	"security_group_ids":    basetypes.ListType{ElemType: types.StringType},
 }
 
 // Struct corresponding to Model.BootVolume
@@ -245,9 +245,10 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 							stringvalidator.ConflictsWith(
 								path.MatchRoot("initial_networking").AtName("network_interface_ids"),
 							),
+							validate.UUID(),
 						},
 					},
-					"security_groups": schema.ListAttribute{
+					"security_group_ids": schema.ListAttribute{
 						ElementType: types.StringType,
 						Description: "List of security groups the initial network is assigned to",
 						Optional:    true,
@@ -255,6 +256,13 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 							listplanmodifier.RequiresReplace(),
 						},
 						Validators: []validator.List{
+							listvalidator.ValueStringsAre(
+								stringvalidator.LengthAtLeast(1),
+								stringvalidator.LengthAtMost(63),
+								stringvalidator.RegexMatches(
+									regexp.MustCompile(`^[A-Za-z0-9]+((-|_|\s|\.)[A-Za-z0-9]+)*$`),
+									"must match expression"),
+							),
 							listvalidator.ConflictsWith(
 								path.MatchRoot("initial_networking").AtName("network_interface_ids"),
 							),
@@ -273,6 +281,9 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						Validators: []validator.List{
 							listvalidator.ConflictsWith(
 								path.MatchRoot("initial_networking").AtName("network_id"),
+							),
+							listvalidator.ValueStringsAre(
+								validate.UUID(),
 							),
 						},
 					},
@@ -731,7 +742,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServer
 			},
 		}
 
-		securityGroups, err = conversion.StringListToPointer(initialNetwork.SecurityGroups)
+		securityGroups, err = conversion.StringListToPointer(initialNetwork.SecurityGroupIds)
 		if err != nil {
 			return nil, fmt.Errorf("converting list of security groups to string list pointer: %w", err)
 		}

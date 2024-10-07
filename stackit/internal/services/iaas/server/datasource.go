@@ -134,6 +134,11 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 						Description: "List of network interface IDs",
 						Computed:    true,
 					},
+					"security_group_ids": schema.ListAttribute{
+						ElementType: types.StringType,
+						Description: "List of security groups the server is associated to",
+						Computed:    true,
+					},
 				},
 			},
 			"availability_zone": schema.StringAttribute{
