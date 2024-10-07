@@ -17,14 +17,10 @@ Network interface resource schema. Must have a `region` specified in the provide
 
 ```terraform
 resource "stackit_network_interface" "example" {
-  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  network_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  allowed_addresses = [
-    {
-      string = "1.2.3.4"
-    }
-  ]
-  security_groups = ["xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"]
+  project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  network_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  allowed_addresses = ["1.2.3.4"]
+  security_groups   = ["xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"]
 }
 ```
 
@@ -38,7 +34,7 @@ resource "stackit_network_interface" "example" {
 
 ### Optional
 
-- `allowed_addresses` (Attributes List) The list of CIDR (Classless Inter-Domain Routing) notations. (see [below for nested schema](#nestedatt--allowed_addresses))
+- `allowed_addresses` (List of String) The list of CIDR (Classless Inter-Domain Routing) notations.
 - `ipv4` (String) The IPv4 address.
 - `ipv6` (String) The IPv6 address.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a network interface.
@@ -53,10 +49,3 @@ resource "stackit_network_interface" "example" {
 - `mac` (String) The MAC address of network interface.
 - `network_interface_id` (String) The network interface ID.
 - `type` (String) Type of network interface. Some of the possible values are: Supported values are: `server`, `metadata`, `gateway`.
-
-<a id="nestedatt--allowed_addresses"></a>
-### Nested Schema for `allowed_addresses`
-
-Optional:
-
-- `string` (String)

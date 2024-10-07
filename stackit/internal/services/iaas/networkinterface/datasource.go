@@ -124,16 +124,10 @@ func (d *networkInterfaceDataSource) Schema(_ context.Context, _ datasource.Sche
 				Description: "The name of the network interface.",
 				Computed:    true,
 			},
-			"allowed_addresses": schema.ListNestedAttribute{
+			"allowed_addresses": schema.ListAttribute{
 				Description: "The list of CIDR (Classless Inter-Domain Routing) notations.",
 				Computed:    true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"string": schema.StringAttribute{
-							Computed: true,
-						},
-					},
-				},
+				ElementType: types.StringType,
 			},
 			"device": schema.StringAttribute{
 				Description: "The device UUID of the network interface.",

@@ -35,7 +35,7 @@ func TestMapFields(t *testing.T) {
 				NetworkId:          types.StringValue("nid"),
 				NetworkInterfaceId: types.StringValue("nicid"),
 				Name:               types.StringNull(),
-				AllowedAddresses:   types.ListNull(types.ObjectType{AttrTypes: allowedAddressesTypes}),
+				AllowedAddresses:   types.ListNull(types.StringType),
 				SecurityGroups:     types.ListNull(types.StringType),
 				IPv4:               types.StringNull(),
 				IPv6:               types.StringNull(),
@@ -83,10 +83,8 @@ func TestMapFields(t *testing.T) {
 				NetworkId:          types.StringValue("nid"),
 				NetworkInterfaceId: types.StringValue("nicid"),
 				Name:               types.StringValue("name"),
-				AllowedAddresses: types.ListValueMust(types.ObjectType{AttrTypes: allowedAddressesTypes}, []attr.Value{
-					types.ObjectValueMust(allowedAddressesTypes, map[string]attr.Value{
-						"string": types.StringValue("aa1"),
-					}),
+				AllowedAddresses: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("aa1"),
 				}),
 				SecurityGroups: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("prefix1"),
@@ -108,10 +106,8 @@ func TestMapFields(t *testing.T) {
 				ProjectId:          types.StringValue("pid"),
 				NetworkId:          types.StringValue("nid"),
 				NetworkInterfaceId: types.StringValue("nicid"),
-				AllowedAddresses: types.ListValueMust(types.ObjectType{AttrTypes: allowedAddressesTypes}, []attr.Value{
-					types.ObjectValueMust(allowedAddressesTypes, map[string]attr.Value{
-						"string": types.StringValue("aa1"),
-					}),
+				AllowedAddresses: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("aa1"),
 				}),
 			},
 			&iaasalpha.NIC{
@@ -129,10 +125,8 @@ func TestMapFields(t *testing.T) {
 				NetworkInterfaceId: types.StringValue("nicid"),
 				Name:               types.StringNull(),
 				SecurityGroups:     types.ListNull(types.StringType),
-				AllowedAddresses: types.ListValueMust(types.ObjectType{AttrTypes: allowedAddressesTypes}, []attr.Value{
-					types.ObjectValueMust(allowedAddressesTypes, map[string]attr.Value{
-						"string": types.StringValue("aa2"),
-					}),
+				AllowedAddresses: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("aa2"),
 				}),
 				Labels: types.MapNull(types.StringType),
 			},
@@ -189,10 +183,8 @@ func TestToCreatePayload(t *testing.T) {
 					types.StringValue("sg1"),
 					types.StringValue("sg2"),
 				}),
-				AllowedAddresses: types.ListValueMust(types.ObjectType{AttrTypes: allowedAddressesTypes}, []attr.Value{
-					types.ObjectValueMust(allowedAddressesTypes, map[string]attr.Value{
-						"string": types.StringValue("aa1"),
-					}),
+				AllowedAddresses: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("aa1"),
 				}),
 			},
 			&iaasalpha.CreateNICPayload{
@@ -244,10 +236,8 @@ func TestToUpdatePayload(t *testing.T) {
 					types.StringValue("sg1"),
 					types.StringValue("sg2"),
 				}),
-				AllowedAddresses: types.ListValueMust(types.ObjectType{AttrTypes: allowedAddressesTypes}, []attr.Value{
-					types.ObjectValueMust(allowedAddressesTypes, map[string]attr.Value{
-						"string": types.StringValue("aa1"),
-					}),
+				AllowedAddresses: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("aa1"),
 				}),
 			},
 			&iaasalpha.UpdateNICPayload{

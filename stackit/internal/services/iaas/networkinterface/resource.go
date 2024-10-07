@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -56,16 +55,6 @@ type Model struct {
 	Device             types.String `tfsdk:"device"`
 	Mac                types.String `tfsdk:"mac"`
 	Type               types.String `tfsdk:"type"`
-}
-
-// Struct corresponding to Model.AllowedAddresses[i]
-type allowedAddresses struct {
-	String types.String `tfsdk:"string"`
-}
-
-// Types corresponding to allowedAddresses
-var allowedAddressesTypes = map[string]attr.Type{
-	"string": types.StringType,
 }
 
 // NewNetworkInterfaceResource is a helper function to simplify the provider implementation.
@@ -192,19 +181,11 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 						"must match expression"),
 				},
 			},
-			"allowed_addresses": schema.ListNestedAttribute{
+			"allowed_addresses": schema.ListAttribute{
 				Description: "The list of CIDR (Classless Inter-Domain Routing) notations.",
 				Optional:    true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"string": schema.StringAttribute{
-							Optional: true,
-							Validators: []validator.String{
-								validate.CIDR(),
-							},
-						},
-					},
-				},
+				Computed:    true,
+				ElementType: types.StringType,
 			},
 			"device": schema.StringAttribute{
 				Description: "The device UUID of the network interface.",
@@ -284,7 +265,6 @@ func (r *networkInterfaceResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Create new network interface
-
 	networkInterface, err := r.client.CreateNIC(ctx, projectId, networkId).CreateNICPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network interface", fmt.Sprintf("Calling API: %v", err))
@@ -480,50 +460,25 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaasalpha.NIC, model *
 		strings.Join(idParts, core.Separator),
 	)
 
-	respAllowedAddresses := []allowedAddresses{}
+	respAllowedAddresses := []string{}
 	var diags diag.Diagnostics
 	if networkInterfaceResp.AllowedAddresses == nil {
-		model.AllowedAddresses = types.ListNull(types.ObjectType{AttrTypes: allowedAddressesTypes})
+		model.AllowedAddresses = types.ListNull(types.StringType)
 	} else {
-		if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
-			diags = model.AllowedAddresses.ElementsAs(ctx, &respAllowedAddresses, false)
-			if diags.HasError() {
-				return fmt.Errorf("map allowed addresses: %w", core.DiagsToError(diags))
-			}
-		}
-
-		modelAllowedAddressesStrings := []string{}
-		for _, m := range respAllowedAddresses {
-			modelAllowedAddressesStrings = append(modelAllowedAddressesStrings, m.String.ValueString())
-		}
-
-		apiAllowedAddressesStrings := []string{}
 		for _, n := range *networkInterfaceResp.AllowedAddresses {
-			apiAllowedAddressesStrings = append(apiAllowedAddressesStrings, *n.String)
+			respAllowedAddresses = append(respAllowedAddresses, *n.String)
 		}
 
-		reconciledAllowedAddresses := utils.ReconcileStringSlices(modelAllowedAddressesStrings, apiAllowedAddressesStrings)
-
-		allowedAddressList := []attr.Value{}
-		for i, allowedAddress := range reconciledAllowedAddresses {
-			allowedAddressMap := map[string]attr.Value{
-				"string": types.StringValue(allowedAddress),
-			}
-
-			reconciledAllowedAddressesTF, diags := types.ObjectValue(allowedAddressesTypes, allowedAddressMap)
-			if diags.HasError() {
-				return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
-			}
-
-			allowedAddressList = append(allowedAddressList, reconciledAllowedAddressesTF)
+		modelAllowedAddresses, err := utils.ListValuetoStringSlice(model.AllowedAddresses)
+		if err != nil {
+			return fmt.Errorf("get current network interface allowed addresses from model: %w", err)
 		}
 
-		allowedAddressesTF, diags := types.ListValue(
-			types.ObjectType{AttrTypes: allowedAddressesTypes},
-			allowedAddressList,
-		)
+		reconciledAllowedAddresses := utils.ReconcileStringSlices(modelAllowedAddresses, respAllowedAddresses)
+
+		allowedAddressesTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledAllowedAddresses)
 		if diags.HasError() {
-			return fmt.Errorf("failed to map allowed addresses: %w", core.DiagsToError(diags))
+			return fmt.Errorf("map network interface allowed addresses: %w", core.DiagsToError(diags))
 		}
 
 		model.AllowedAddresses = allowedAddressesTF
@@ -596,16 +551,14 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateNICPay
 	allowedAddressesPayload := []iaasalpha.AllowedAddressesInner{}
 
 	if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
-		allowedAddressesModel := []allowedAddresses{}
-		diags := model.AllowedAddresses.ElementsAs(ctx, &allowedAddressesModel, false)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping allowed addresses: %w", core.DiagsToError(diags))
-		}
+		for _, allowedAddressModel := range model.AllowedAddresses.Elements() {
+			allowedAddressString, ok := allowedAddressModel.(types.String)
+			if !ok {
+				return nil, fmt.Errorf("type assertion failed")
+			}
 
-		for i := range allowedAddressesModel {
-			allowedAddressModel := allowedAddressesModel[i]
 			allowedAddressesPayload = append(allowedAddressesPayload, iaasalpha.AllowedAddressesInner{
-				String: conversion.StringValueToPointer(allowedAddressModel.String),
+				String: conversion.StringValueToPointer(allowedAddressString),
 			})
 		}
 	}
@@ -650,16 +603,14 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	allowedAddressesPayload := []iaasalpha.AllowedAddressesInner{}
 
 	if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
-		allowedAddressesModel := []allowedAddresses{}
-		diags := model.AllowedAddresses.ElementsAs(ctx, &allowedAddressesModel, false)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping allowed addresses: %w", core.DiagsToError(diags))
-		}
+		for _, allowedAddressModel := range model.AllowedAddresses.Elements() {
+			allowedAddressString, ok := allowedAddressModel.(types.String)
+			if !ok {
+				return nil, fmt.Errorf("type assertion failed")
+			}
 
-		for i := range allowedAddressesModel {
-			allowedAddressModel := allowedAddressesModel[i]
 			allowedAddressesPayload = append(allowedAddressesPayload, iaasalpha.AllowedAddressesInner{
-				String: conversion.StringValueToPointer(allowedAddressModel.String),
+				String: conversion.StringValueToPointer(allowedAddressString),
 			})
 		}
 	}

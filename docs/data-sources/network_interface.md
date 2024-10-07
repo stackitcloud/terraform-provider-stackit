@@ -34,7 +34,7 @@ data "stackit_network_interface" "example" {
 
 ### Read-Only
 
-- `allowed_addresses` (Attributes List) The list of CIDR (Classless Inter-Domain Routing) notations. (see [below for nested schema](#nestedatt--allowed_addresses))
+- `allowed_addresses` (List of String) The list of CIDR (Classless Inter-Domain Routing) notations.
 - `device` (String) The device UUID of the network interface.
 - `id` (String) Terraform's internal data source ID. It is structured as "`project_id`,`network_id`,`network_interface_id`".
 - `ipv4` (String) The IPv4 address.
@@ -46,10 +46,3 @@ data "stackit_network_interface" "example" {
 - `security_groups` (List of String) The list of security group UUIDs.
 - `status` (String) The status of network interface.
 - `type` (String) Type of network interface. Some of the possible values are: [`server`, `metadata`, `gateway`]
-
-<a id="nestedatt--allowed_addresses"></a>
-### Nested Schema for `allowed_addresses`
-
-Read-Only:
-
-- `string` (String)
