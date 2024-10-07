@@ -17,8 +17,8 @@ Security group resource schema. Must have a `region` specified in the provider c
 
 ```terraform
 resource "stackit_security_group" "example" {
-  project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name              = "my_volume"
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "my_security_group"
   labels = {
     "key" = "value"
   }
@@ -37,7 +37,7 @@ resource "stackit_security_group" "example" {
 
 - `description` (String) The description of the security group.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
-- `stateful` (Boolean) Shows if a security group is stateful or stateless. There can only be one security groups per network interface/server.
+- `stateful` (Boolean) Shows if a security group is stateful or stateless. There can only be one security group per network interface/server.
 
 ### Read-Only
 
