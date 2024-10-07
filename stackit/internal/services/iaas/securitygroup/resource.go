@@ -173,7 +173,7 @@ func (r *securityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 				Optional:    true,
 			},
 			"stateful": schema.BoolAttribute{
-				Description: "Shows if a security group is stateful or stateless. There can only be one security group per network interface/server.",
+				Description: "Configures if a security group is stateful or stateless. There can only be one type of security groups per network interface/server.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Bool{

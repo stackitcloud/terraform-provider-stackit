@@ -37,7 +37,7 @@ resource "stackit_security_group" "example" {
 
 - `description` (String) The description of the security group.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
-- `stateful` (Boolean) Shows if a security group is stateful or stateless. There can only be one security group per network interface/server.
+- `stateful` (Boolean) Configures if a security group is stateful or stateless. There can only be one type of security groups per network interface/server.
 
 ### Read-Only
 
