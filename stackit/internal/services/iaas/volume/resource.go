@@ -247,6 +247,9 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"size": schema.Int64Attribute{
 				Description: "The size of the volume in GB. It can only be updated to a larger value than the current size. Either `size` or `source` must be provided",
 				Optional:    true,
+				Validators: []validator.Int64{
+					validate.OnlyUpdateToLargerValue(),
+				},
 			},
 			"source": schema.SingleNestedAttribute{
 				Description: "The source of the volume. It can be either a volume, an image, a snapshot or a backup. Either `size` or `source` must be provided",

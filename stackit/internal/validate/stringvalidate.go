@@ -24,35 +24,35 @@ const (
 	FullVersionRegex       = `^\d+\.\d+.\d+?$`
 )
 
-type Validator struct {
+type StringValidator struct {
 	description         string
 	markdownDescription string
-	validate            ValidationFn
+	validate            StringValidationFn
 }
 
-type ValidationFn func(context.Context, validator.StringRequest, *validator.StringResponse)
+type StringValidationFn func(context.Context, validator.StringRequest, *validator.StringResponse)
 
-var _ = validator.String(&Validator{})
+var _ = validator.String(&StringValidator{})
 
-func (v *Validator) Description(_ context.Context) string {
+func (v *StringValidator) Description(_ context.Context) string {
 	return v.description
 }
 
-func (v *Validator) MarkdownDescription(_ context.Context) string {
+func (v *StringValidator) MarkdownDescription(_ context.Context) string {
 	return v.markdownDescription
 }
 
-func (v *Validator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) { // nolint:gocritic // function signature required by Terraform
+func (v *StringValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) { // nolint:gocritic // function signature required by Terraform
 	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
 	v.validate(ctx, req, resp)
 }
 
-func UUID() *Validator {
+func UUID() *StringValidator {
 	description := "value must be an UUID"
 
-	return &Validator{
+	return &StringValidator{
 		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			if _, err := uuid.Parse(req.ConfigValue.ValueString()); err != nil {
@@ -66,10 +66,10 @@ func UUID() *Validator {
 	}
 }
 
-func IP() *Validator {
+func IP() *StringValidator {
 	description := "value must be an IP address"
 
-	return &Validator{
+	return &StringValidator{
 		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			if net.ParseIP(req.ConfigValue.ValueString()) == nil {
@@ -83,9 +83,9 @@ func IP() *Validator {
 	}
 }
 
-func RecordSet() *Validator {
+func RecordSet() *StringValidator {
 	const typePath = "type"
-	return &Validator{
+	return &StringValidator{
 		description: "value must be a valid record set",
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			recordType := basetypes.StringValue{}
@@ -122,10 +122,10 @@ func RecordSet() *Validator {
 	}
 }
 
-func NoSeparator() *Validator {
+func NoSeparator() *StringValidator {
 	description := fmt.Sprintf("value must not contain identifier separator '%s'", core.Separator)
 
-	return &Validator{
+	return &StringValidator{
 		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			if strings.Contains(req.ConfigValue.ValueString(), core.Separator) {
@@ -139,10 +139,10 @@ func NoSeparator() *Validator {
 	}
 }
 
-func NonLegacyProjectRole() *Validator {
+func NonLegacyProjectRole() *StringValidator {
 	description := "legacy roles are not supported"
 
-	return &Validator{
+	return &StringValidator{
 		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			if utils.IsLegacyProjectRole(req.ConfigValue.ValueString()) {
@@ -156,10 +156,10 @@ func NonLegacyProjectRole() *Validator {
 	}
 }
 
-func MinorVersionNumber() *Validator {
+func MinorVersionNumber() *StringValidator {
 	description := "value must be a minor version number, without a leading 'v': '[MAJOR].[MINOR]'"
 
-	return &Validator{
+	return &StringValidator{
 		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			exp := MajorMinorVersionRegex
@@ -176,10 +176,10 @@ func MinorVersionNumber() *Validator {
 	}
 }
 
-func VersionNumber() *Validator {
+func VersionNumber() *StringValidator {
 	description := "value must be a version number, without a leading 'v': '[MAJOR].[MINOR]' or '[MAJOR].[MINOR].[PATCH]'"
 
-	return &Validator{
+	return &StringValidator{
 		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			minorVersionExp := MajorMinorVersionRegex
@@ -200,10 +200,10 @@ func VersionNumber() *Validator {
 	}
 }
 
-func RFC3339SecondsOnly() *Validator {
+func RFC3339SecondsOnly() *StringValidator {
 	description := "value must be in RFC339 format (seconds only)"
 
-	return &Validator{
+	return &StringValidator{
 		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			t, err := time.Parse(time.RFC3339, req.ConfigValue.ValueString())
@@ -228,10 +228,10 @@ func RFC3339SecondsOnly() *Validator {
 	}
 }
 
-func CIDR() *Validator {
+func CIDR() *StringValidator {
 	description := "value must be in CIDR notation"
 
-	return &Validator{
+	return &StringValidator{
 		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			_, _, err := net.ParseCIDR(req.ConfigValue.ValueString())
@@ -246,10 +246,10 @@ func CIDR() *Validator {
 	}
 }
 
-func Rrule() *Validator {
+func Rrule() *StringValidator {
 	description := "value must be in a valid RRULE format"
 
-	return &Validator{
+	return &StringValidator{
 		description: description,
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			// The go library rrule-go expects \n before RRULE (to be a newline and not a space)
