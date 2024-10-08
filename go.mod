@@ -1,6 +1,8 @@
 module github.com/stackitcloud/terraform-provider-stackit
 
-go 1.22
+go 1.22.0
+
+toolchain go1.23.2
 
 require (
 	github.com/google/go-cmp v0.6.0
@@ -32,7 +34,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/ske v0.19.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.7.0
 	github.com/teambition/rrule-go v1.8.2
-	golang.org/x/mod v0.20.0
+	golang.org/x/mod v0.21.0
 )
 
 require github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
