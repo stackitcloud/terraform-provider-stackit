@@ -1,0 +1,61 @@
+// package validate
+
+// import (
+// 	"context"
+// 	"testing"
+
+// 	"github.com/hashicorp/terraform-plugin-framework/path"
+// 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+// 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+// 	"github.com/hashicorp/terraform-plugin-framework/types"
+// )
+
+// func TestOnlyUpdateToLargerValue(t *testing.T) {
+// 	tests := []struct {
+// 		description  string
+// 		input        int64
+// 		currentValue int64
+// 		isValid      bool
+// 	}{
+// 		// {
+// 		// 	"ok",
+// 		// 	"cae27bba-c43d-498a-861e-d11d241c4ff8",
+// 		// 	true,
+// 		// },
+// 		// {
+// 		// 	"too short",
+// 		// 	"a-b-c-d",
+// 		// 	false,
+// 		// },
+// 		// {
+// 		// 	"Empty",
+// 		// 	"",
+// 		// 	false,
+// 		// },
+// 		// {
+// 		// 	"not UUID",
+// 		// 	"www-541-%",
+// 		// 	false,
+// 		// },
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.description, func(t *testing.T) {
+// 			r := validator.Int64Response{}
+// 			path := path.Root("test")
+// 			OnlyUpdateToLargerValue().ValidateInt64(context.Background(), validator.Int64Request{
+// 				Path:        path,
+// 				ConfigValue: types.Int64Value(tt.input),
+// 				Config: tfsdk.Config{
+// 					Schema: ,
+// 				},
+// 			}, &r)
+
+// 			if !tt.isValid && !r.Diagnostics.HasError() {
+// 				t.Fatalf("Should have failed")
+// 			}
+// 			if tt.isValid && r.Diagnostics.HasError() {
+// 				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
+// 			}
+// 		})
+// 	}
+// }
