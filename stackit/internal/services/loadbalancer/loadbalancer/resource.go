@@ -252,7 +252,7 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 		"unhealthy_threshold":         "Unhealthy threshold of the health checking.",
 		"target_pools.name":           "Target pool name.",
 		"target_port":                 "Identical port number where each target listens for traffic.",
-		"targets":                     "List of all targets which will be used in the pool. Limited to 250.",
+		"targets":                     "List of all targets which will be used in the pool. Limited to 1000.",
 		"targets.display_name":        "Target display name",
 		"ip":                          "Target IP",
 	}
@@ -267,7 +267,6 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 To automate the creation of load balancers, OpenStack can be used to setup the supporting infrastructure.
 To set up the OpenStack provider, you can create a token through the STACKIT Portal, in your project's Infrastructure API page.
 There, the OpenStack user domain name, username, and password are generated and can be obtained. The provider can then be configured as follows:` + "\n" +
-
 			"```terraform" + `
 terraform {
 	required_providers {
@@ -536,7 +535,7 @@ The example below uses OpenStack to create the network, router, a public IP addr
 							Description: descriptions["targets"],
 							Required:    true,
 							Validators: []validator.List{
-								listvalidator.SizeBetween(1, 250),
+								listvalidator.SizeBetween(1, 1000),
 							},
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
