@@ -123,6 +123,10 @@ func (r *serverResource) ConfigValidators(_ context.Context) []resource.ConfigVa
 			path.MatchRoot("image_id"),
 			path.MatchRoot("boot_volume"),
 		),
+		resourcevalidator.Conflicting(
+			path.MatchRoot("image_id"),
+			path.MatchRoot("boot_volume"),
+		),
 	}
 }
 
@@ -402,6 +406,9 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"created_at": schema.StringAttribute{
 				Description: "Date-time when the server was created",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"launched_at": schema.StringAttribute{
 				Description: "Date-time when the server was launched",
