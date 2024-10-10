@@ -142,6 +142,9 @@ func (r *publicIpResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"ip": schema.StringAttribute{
 				Description: "The IP address.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 				Validators: []validator.String{
 					validate.IP(),
 				},

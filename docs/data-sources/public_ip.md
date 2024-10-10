@@ -16,7 +16,7 @@ Volume resource schema. Must have a `region` specified in the provider configura
 ## Example Usage
 
 ```terraform
-resource "stackit_public_ip" "example" {
+data "stackit_public_ip" "example" {
   project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   public_ip_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
