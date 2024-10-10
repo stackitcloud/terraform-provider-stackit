@@ -1,10 +1,10 @@
 resource "stackit_server" "example" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name       = "my_server"
+  name       = "my-server"
   boot_volume = {
     size        = 64
     source_type = "image"
-    source_id   = "IMAGE_ID"
+    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   }
   initial_networking = {
     network_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -15,5 +15,5 @@ resource "stackit_server" "example" {
     "key" = "value"
   }
   machine_type = "t1.1"
-  keypair_name = "my_key_pair_name"
+  keypair_name = "my-key-pair-name"
 }
