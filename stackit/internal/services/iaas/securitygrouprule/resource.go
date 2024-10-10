@@ -281,6 +281,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 					"protocol": schema.Int64Attribute{
 						Description: "The protocol number which the rule should match.",
 						Optional:    true,
+						Computed:    true,
 						Validators: []validator.Int64{
 							int64validator.AtLeast(0),
 							int64validator.AtMost(255),
@@ -595,12 +596,12 @@ func toCreatePayload(model *Model, icmpParameters *icmpParametersModel, portRang
 
 	payloadPortRange, err := toPortRangePayload(portRange)
 	if err != nil {
-		return nil, fmt.Errorf("converting icmp parameters: %w", err)
+		return nil, fmt.Errorf("converting port range: %w", err)
 	}
 
 	payloadProtocol, err := toProtocolPayload(protocol)
 	if err != nil {
-		return nil, fmt.Errorf("converting icmp parameters: %w", err)
+		return nil, fmt.Errorf("converting protocol: %w", err)
 	}
 
 	return &iaasalpha.CreateSecurityGroupRulePayload{

@@ -83,6 +83,14 @@ var securityGroupResource = map[string]string{
 	"label1":      "value",
 }
 
+// Security Group rule resource data
+var securityGroupRuleResource = map[string]string{
+	"project_id":        testutil.ProjectId,
+	"security_group_id": securityGroupResource["security_group_id"],
+	"direction":         "ingress",
+	"description":       "description",
+}
+
 func networkResourceConfig(name, nameservers string) string {
 	return fmt.Sprintf(`
 				resource "stackit_network" "network" {
@@ -218,6 +226,21 @@ func securityGroupResourceConfig(name string) string {
 	)
 }
 
+func securityGroupRuleResourceConfig(direction string) string {
+	return fmt.Sprintf(`
+				resource "stackit_security_group_rule" "security_group_rule" {
+					project_id 		  = "%s"
+					security_group_id = stackit_security_group.security_group.security_group_id
+					direction 		  = "%s"
+					description 	  = "%s"
+				}
+				`,
+		securityGroupRuleResource["project_id"],
+		direction,
+		securityGroupRuleResource["description"],
+	)
+}
+
 func testAccNetworkAreaConfig(areaname, networkranges string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
@@ -242,10 +265,11 @@ func testAccServerConfig(name, nameservers, serverName, machineType, interfacena
 	)
 }
 
-func resourceConfigSecurityGroup(name string) string {
-	return fmt.Sprintf("%s\n\n%s",
+func resourceConfigSecurityGroup(name, direction string) string {
+	return fmt.Sprintf("%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		securityGroupResourceConfig(name),
+		securityGroupRuleResourceConfig(direction),
 	)
 }
 
@@ -702,13 +726,30 @@ func TestAccIaaSSecurityGroup(t *testing.T) {
 
 			// Creation
 			{
-				Config: resourceConfigSecurityGroup(securityGroupResource["name"]),
+				Config: resourceConfigSecurityGroup(
+					securityGroupResource["name"],
+					securityGroupRuleResource["direction"],
+				),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					// Security Group
 					resource.TestCheckResourceAttr("stackit_security_group.security_group", "project_id", securityGroupResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_security_group.security_group", "security_group_id"),
 					resource.TestCheckResourceAttr("stackit_security_group.security_group", "name", securityGroupResource["name"]),
 					resource.TestCheckResourceAttr("stackit_security_group.security_group", "labels.label1", securityGroupResource["label1"]),
 					resource.TestCheckResourceAttr("stackit_security_group.security_group", "description", securityGroupResource["description"]),
+
+					// Security Group Rule
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule", "project_id",
+						"stackit_security_group.security_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule", "security_group_id",
+						"stackit_security_group.security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "direction", securityGroupRuleResource["direction"]),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "description", securityGroupRuleResource["description"]),
 				),
 			},
 			// Data source
@@ -720,8 +761,17 @@ func TestAccIaaSSecurityGroup(t *testing.T) {
 						project_id  = stackit_security_group.security_group.project_id
 						security_group_id = stackit_security_group.security_group.security_group_id
 					}
+
+					data "stackit_security_group_rule" "security_group_rule" {
+						project_id             = stackit_security_group.security_group.project_id
+						security_group_id      = stackit_security_group.security_group.security_group_id
+						security_group_rule_id = stackit_security_group_rule.security_group_rule.security_group_rule_id
+					}
 					`,
-					resourceConfigSecurityGroup(securityGroupResource["name"]),
+					resourceConfigSecurityGroup(
+						securityGroupResource["name"],
+						securityGroupRuleResource["direction"],
+					),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -733,6 +783,19 @@ func TestAccIaaSSecurityGroup(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "name", securityGroupResource["name"]),
 					resource.TestCheckResourceAttr("stackit_security_group.security_group", "labels.label1", securityGroupResource["label1"]),
 					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "description", securityGroupResource["description"]),
+
+					// Security Group Rule
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule", "project_id",
+						"stackit_security_group.security_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule", "security_group_id",
+						"stackit_security_group.security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "direction", securityGroupRuleResource["direction"]),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "description", securityGroupRuleResource["description"]),
 				),
 			},
 			// Import
@@ -752,10 +815,31 @@ func TestAccIaaSSecurityGroup(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
+			{
+				ResourceName: "stackit_security_group_rule.security_group_rule",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_security_group_rule.security_group_rule"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_security_group_rule.security_group_rule")
+					}
+					securityGroupId, ok := r.Primary.Attributes["security_group_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute security_group_id")
+					}
+					securityGroupRuleId, ok := r.Primary.Attributes["security_group_rule_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute security_group_rule_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, securityGroupId, securityGroupRuleId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 			// Update
 			{
 				Config: resourceConfigSecurityGroup(
 					fmt.Sprintf("%s-updated", securityGroupResource["name"]),
+					securityGroupRuleResource["direction"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_security_group.security_group", "project_id", securityGroupResource["project_id"]),
