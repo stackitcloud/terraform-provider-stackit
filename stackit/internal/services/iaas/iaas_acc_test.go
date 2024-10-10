@@ -85,10 +85,9 @@ var securityGroupResource = map[string]string{
 
 // Security Group rule resource data
 var securityGroupRuleResource = map[string]string{
-	"project_id":        testutil.ProjectId,
-	"security_group_id": securityGroupResource["security_group_id"],
-	"direction":         "ingress",
-	"description":       "description",
+	"project_id":  testutil.ProjectId,
+	"direction":   "ingress",
+	"description": "description",
 }
 
 func networkResourceConfig(name, nameservers string) string {
