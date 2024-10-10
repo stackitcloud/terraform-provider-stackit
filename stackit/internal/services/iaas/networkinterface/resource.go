@@ -198,6 +198,9 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 				Validators: []validator.String{
 					validate.IP(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"ipv6": schema.StringAttribute{
 				Description: "The IPv6 address.",
@@ -205,6 +208,9 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 				Computed:    true,
 				Validators: []validator.String{
 					validate.IP(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"labels": schema.MapAttribute{
