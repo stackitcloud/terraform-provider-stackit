@@ -16,7 +16,7 @@ Security group datasource schema. Must have a `region` specified in the provider
 ## Example Usage
 
 ```terraform
-resource "stackit_security_group" "example" {
+data "stackit_security_group" "example" {
   project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   security_group_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
