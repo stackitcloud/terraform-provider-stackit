@@ -272,6 +272,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 			"protocol": schema.SingleNestedAttribute{
 				Description: "The internet protocol which the rule should match.",
 				Optional:    true,
+				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
 						Description: "The protocol name which the rule should match.",
@@ -571,11 +572,15 @@ func mapProtocol(securityGroupRuleResp *iaasalpha.SecurityGroupRule, m *Model) e
 		return nil
 	}
 
-	protocolValues := map[string]attr.Value{
-		"protocol": types.Int64Value(*securityGroupRuleResp.Protocol.Protocol),
-		"name":     types.StringValue(*securityGroupRuleResp.Protocol.Name),
+	protocolValue := types.Int64Null()
+	if securityGroupRuleResp.Protocol.Protocol != nil {
+		protocolValue = types.Int64Value(*securityGroupRuleResp.Protocol.Protocol)
 	}
 
+	protocolValues := map[string]attr.Value{
+		"name":     types.StringValue(*securityGroupRuleResp.Protocol.Name),
+		"protocol": protocolValue,
+	}
 	protocolObject, diags := types.ObjectValue(protocolTypes, protocolValues)
 	if diags.HasError() {
 		return fmt.Errorf("create protocol object: %w", core.DiagsToError(diags))
