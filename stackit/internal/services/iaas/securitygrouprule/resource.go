@@ -307,10 +307,6 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 			"remote_security_group_id": schema.StringAttribute{
 				Description: "The remote security group which the rule should match.",
 				Optional:    true,
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
