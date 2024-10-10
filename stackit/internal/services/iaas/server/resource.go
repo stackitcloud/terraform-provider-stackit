@@ -413,16 +413,10 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"launched_at": schema.StringAttribute{
 				Description: "Date-time when the server was launched",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"updated_at": schema.StringAttribute{
 				Description: "Date-time when the server was updated",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 	}
