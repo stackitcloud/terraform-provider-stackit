@@ -90,7 +90,7 @@ Read-Only:
 - `active_health_check` (Attributes) (see [below for nested schema](#nestedatt--target_pools--active_health_check))
 - `name` (String) Target pool name.
 - `target_port` (Number) Identical port number where each target listens for traffic.
-- `targets` (Attributes List) List of all targets which will be used in the pool. Limited to 250. (see [below for nested schema](#nestedatt--target_pools--targets))
+- `targets` (Attributes List) List of all targets which will be used in the pool. Limited to 1000. (see [below for nested schema](#nestedatt--target_pools--targets))
 
 <a id="nestedatt--target_pools--session_persistence"></a>
 ### Nested Schema for `target_pools.session_persistence`
