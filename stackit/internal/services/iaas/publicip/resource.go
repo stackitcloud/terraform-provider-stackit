@@ -37,12 +37,11 @@ var (
 )
 
 type Model struct {
-	Id               types.String `tfsdk:"id"` // needed by TF
-	ProjectId        types.String `tfsdk:"project_id"`
-	PublicIpId       types.String `tfsdk:"public_ip_id"`
-	Ip               types.String `tfsdk:"ip"`
-	NetworkInterface types.String `tfsdk:"network_interface"`
-	Labels           types.Map    `tfsdk:"labels"`
+	Id         types.String `tfsdk:"id"` // needed by TF
+	ProjectId  types.String `tfsdk:"project_id"`
+	PublicIpId types.String `tfsdk:"public_ip_id"`
+	Ip         types.String `tfsdk:"ip"`
+	Labels     types.Map    `tfsdk:"labels"`
 }
 
 // NewPublicIpResource is a helper function to simplify the provider implementation.
@@ -57,7 +56,7 @@ type publicIpResource struct {
 
 // Metadata returns the resource type name.
 func (r *publicIpResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_oublic_ip"
+	resp.TypeName = req.ProviderTypeName + "_public_ip"
 }
 
 // Configure adds the provider configured client to the resource.
@@ -142,18 +141,9 @@ func (r *publicIpResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"ip": schema.StringAttribute{
 				Description: "The IP address.",
-				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{
 					validate.IP(),
-				},
-			},
-			"network_interface": schema.StringAttribute{
-				Description: "Associates the public IP with a network interface or a virtual IP.",
-				Optional:    true,
-				Validators: []validator.String{
-					validate.UUID(),
-					validate.NoSeparator(),
 				},
 			},
 			"labels": schema.MapAttribute{

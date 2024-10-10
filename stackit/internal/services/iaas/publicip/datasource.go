@@ -116,14 +116,6 @@ func (r *publicIpDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: "The IP address.",
 				Computed:    true,
 			},
-			"network_interface": schema.StringAttribute{
-				Description: "Associates the public IP with a network interface or a virtual IP.",
-				Computed:    true,
-				Validators: []validator.String{
-					validate.UUID(),
-					validate.NoSeparator(),
-				},
-			},
 			"labels": schema.MapAttribute{
 				Description: "Labels are key-value string pairs which can be attached to a resource container",
 				ElementType: types.StringType,
