@@ -177,9 +177,6 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 			"security_group_id": schema.StringAttribute{
 				Description: "The security group ID.",
 				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
