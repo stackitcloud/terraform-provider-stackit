@@ -62,7 +62,7 @@ resource "stackit_security_group_rule" "example" {
 <a id="nestedatt--icmp_parameters"></a>
 ### Nested Schema for `icmp_parameters`
 
-Required:
+Optional:
 
 - `code` (Number) ICMP code. Can be set if the protocol is ICMP.
 - `type` (Number) ICMP type. Can be set if the protocol is ICMP.
