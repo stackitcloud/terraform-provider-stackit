@@ -162,6 +162,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"project_id": schema.StringAttribute{
@@ -178,6 +179,9 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 			"security_group_id": schema.StringAttribute{
 				Description: "The security group ID.",
 				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
@@ -188,6 +192,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
 					validate.UUID(),
@@ -200,6 +205,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtMost(127),
@@ -208,6 +214,9 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 			"direction": schema.StringAttribute{
 				Description: "The direction of the traffic which the rule should match. Some of the possible values are: " + utils.SupportedValuesDocumentation(directionOptions),
 				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"ether_type": schema.StringAttribute{
 				Description: "The ethertype which the rule should match.",
@@ -215,6 +224,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"icmp_parameters": schema.SingleNestedAttribute{
@@ -224,6 +234,9 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 					"code": schema.Int64Attribute{
 						Description: "ICMP code. Can be set if the protocol is ICMP.",
 						Optional:    true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.RequiresReplace(),
+						},
 						Validators: []validator.Int64{
 							int64validator.AtLeast(0),
 							int64validator.AtMost(255),
@@ -232,6 +245,9 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 					"type": schema.Int64Attribute{
 						Description: "ICMP type. Can be set if the protocol is ICMP.",
 						Optional:    true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.RequiresReplace(),
+						},
 						Validators: []validator.Int64{
 							int64validator.AtLeast(0),
 							int64validator.AtMost(255),
@@ -245,6 +261,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
 					validate.IP(),
@@ -261,6 +278,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 						Computed:    true,
 						PlanModifiers: []planmodifier.Int64{
 							int64planmodifier.UseStateForUnknown(),
+							int64planmodifier.RequiresReplace(),
 						},
 						Validators: []validator.Int64{
 							int64validator.AtLeast(0),
@@ -273,6 +291,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 						Computed:    true,
 						PlanModifiers: []planmodifier.Int64{
 							int64planmodifier.UseStateForUnknown(),
+							int64planmodifier.RequiresReplace(),
 						},
 						Validators: []validator.Int64{
 							int64validator.AtLeast(0),
@@ -292,11 +311,15 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 						Computed:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.UseStateForUnknown(),
+							stringplanmodifier.RequiresReplace(),
 						},
 					},
 					"protocol": schema.Int64Attribute{
 						Description: "The protocol number which the rule should match.",
 						Optional:    true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.RequiresReplace(),
+						},
 						Validators: []validator.Int64{
 							int64validator.AtLeast(0),
 							int64validator.AtMost(255),
@@ -307,6 +330,9 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 			"remote_security_group_id": schema.StringAttribute{
 				Description: "The remote security group which the rule should match.",
 				Optional:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
