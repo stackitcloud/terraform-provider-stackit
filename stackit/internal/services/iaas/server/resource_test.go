@@ -70,8 +70,8 @@ func TestMapFields(t *testing.T) {
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
-				Image:       utils.Ptr("image_id"),
-				Keypair:     utils.Ptr("keypair_name"),
+				ImageId:     utils.Ptr("image_id"),
+				KeypairName: utils.Ptr("keypair_name"),
 				ServerGroup: utils.Ptr("group_id"),
 				CreatedAt:   utils.Ptr(testTimestamp()),
 				UpdatedAt:   utils.Ptr(testTimestamp()),
@@ -212,8 +212,8 @@ func TestToCreatePayload(t *testing.T) {
 						Id:   utils.Ptr("id"),
 					},
 				},
-				Image:       utils.Ptr("image"),
-				Keypair:     utils.Ptr("keypair"),
+				ImageId:     utils.Ptr("image"),
+				KeypairName: utils.Ptr("keypair"),
 				MachineType: utils.Ptr("machine_type"),
 				UserData:    utils.Ptr(base64EncodedUserData),
 			},
@@ -251,8 +251,8 @@ func TestToCreatePayload(t *testing.T) {
 						NicIds: utils.Ptr([]string{"nic1", "nic2"}),
 					},
 				},
-				Image:       utils.Ptr("image"),
-				Keypair:     utils.Ptr("keypair"),
+				ImageId:     utils.Ptr("image"),
+				KeypairName: utils.Ptr("keypair"),
 				MachineType: utils.Ptr("machine_type"),
 				UserData:    utils.Ptr(base64EncodedUserData),
 			},
@@ -282,7 +282,7 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.V1alpha1UpdateServerPayload
+		expected    *iaasalpha.UpdateServerPayload
 		isValid     bool
 	}{
 		{
@@ -293,7 +293,7 @@ func TestToUpdatePayload(t *testing.T) {
 					"key": types.StringValue("value"),
 				}),
 			},
-			&iaasalpha.V1alpha1UpdateServerPayload{
+			&iaasalpha.UpdateServerPayload{
 				Name: utils.Ptr("name"),
 				Labels: &map[string]interface{}{
 					"key": "value",

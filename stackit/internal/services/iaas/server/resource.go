@@ -542,7 +542,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 	// Update existing server
-	updatedServer, err := r.client.V1alpha1UpdateServer(ctx, projectId, serverId).V1alpha1UpdateServerPayload(*payload).Execute()
+	updatedServer, err := r.client.UpdateServer(ctx, projectId, serverId).UpdateServerPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -693,8 +693,8 @@ func mapFields(ctx context.Context, serverResp *iaasalpha.Server, model *Model) 
 	model.AvailabilityZone = types.StringPointerValue(serverResp.AvailabilityZone)
 	model.Name = types.StringPointerValue(serverResp.Name)
 	model.Labels = labels
-	model.ImageId = types.StringPointerValue(serverResp.Image)
-	model.KeypairName = types.StringPointerValue(serverResp.Keypair)
+	model.ImageId = types.StringPointerValue(serverResp.ImageId)
+	model.KeypairName = types.StringPointerValue(serverResp.KeypairName)
 	model.ServerGroup = types.StringPointerValue(serverResp.ServerGroup)
 	model.CreatedAt = createdAt
 	model.UpdatedAt = updatedAt
@@ -774,8 +774,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServer
 	return &iaasalpha.CreateServerPayload{
 		AvailabilityZone: conversion.StringValueToPointer(model.AvailabilityZone),
 		BootVolume:       bootVolumePayload,
-		Image:            conversion.StringValueToPointer(model.ImageId),
-		Keypair:          conversion.StringValueToPointer(model.KeypairName),
+		ImageId:          conversion.StringValueToPointer(model.ImageId),
+		KeypairName:      conversion.StringValueToPointer(model.KeypairName),
 		Networking:       initialNetworkPayload,
 		SecurityGroups:   securityGroups,
 		Labels:           &labels,
@@ -785,7 +785,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServer
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.V1alpha1UpdateServerPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.UpdateServerPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -795,7 +795,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.V1alpha1UpdateServerPayload{
+	return &iaasalpha.UpdateServerPayload{
 		Name:   conversion.StringValueToPointer(model.Name),
 		Labels: &labels,
 	}, nil

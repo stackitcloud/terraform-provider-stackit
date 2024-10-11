@@ -176,7 +176,7 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.V1alpha1UpdateSecurityGroupPayload
+		expected    *iaasalpha.UpdateSecurityGroupPayload
 		isValid     bool
 	}{
 		{
@@ -188,7 +188,7 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				Description: types.StringValue("desc"),
 			},
-			&iaasalpha.V1alpha1UpdateSecurityGroupPayload{
+			&iaasalpha.UpdateSecurityGroupPayload{
 				Name: utils.Ptr("name"),
 				Labels: &map[string]interface{}{
 					"key": "value",
