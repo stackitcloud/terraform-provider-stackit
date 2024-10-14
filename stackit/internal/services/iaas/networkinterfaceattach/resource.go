@@ -225,27 +225,26 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 	}
 
 	for _, nic := range *nics.Items {
-		if nic.Id != nil && *nic.Id == networkInterfaceId {
-			// Set refreshed state
-			diags = resp.State.Set(ctx, model)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			tflog.Info(ctx, "Network interface attachment read")
+		if nic.Id == nil || (nic.Id != nil && *nic.Id != networkInterfaceId) {
+			continue
+		}
+		// Set refreshed state
+		diags = resp.State.Set(ctx, model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
 			return
 		}
+		tflog.Info(ctx, "Network interface attachment read")
+		return
 	}
 
 	// no matching network interface was found, the attachment no longer exists
 	resp.State.RemoveResource(ctx)
-	return
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *networkInterfaceAttachResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkInterfaceAttachResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update is not supported, all fields require replace
-	return
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
