@@ -179,9 +179,6 @@ func serverResourceConfig(name, machineType string) string {
 						source_type = "%s"
 						source_id = "%s"
 					}
-					initial_networking = {
-						network_id = stackit_network.network.network_id
-					}
 					labels = {
 						"label1" = "%s"
 					}
@@ -623,7 +620,7 @@ func TestAccServer(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"initial_networking", "boot_volume", "user_data"}, // Field is not mapped as it is only relevant on creation
+				ImportStateVerifyIgnore: []string{"boot_volume", "user_data"}, // Field is not mapped as it is only relevant on creation
 			},
 			{
 				ResourceName: "stackit_network_interface.network_interface",
