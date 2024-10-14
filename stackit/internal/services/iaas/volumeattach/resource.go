@@ -241,7 +241,7 @@ func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadReques
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *volumeAttachResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *volumeAttachResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update is not supported, all fields require replace
 }
 
