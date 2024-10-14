@@ -166,7 +166,7 @@ func TestToCreatePayload(t *testing.T) {
 		isValid     bool
 	}{
 		{
-			"create_with_network",
+			"ok",
 			&Model{
 				Name:             types.StringValue("name"),
 				AvailabilityZone: types.StringValue("zone"),
@@ -179,14 +179,6 @@ func TestToCreatePayload(t *testing.T) {
 					"source_type":       types.StringValue("type"),
 					"source_id":         types.StringValue("id"),
 				}),
-				InitialNetworking: types.ObjectValueMust(initialNetworkTypes, map[string]attr.Value{
-					"network_id": types.StringValue("nid"),
-					"security_group_ids": types.ListValueMust(types.StringType, []attr.Value{
-						types.StringValue("group1"),
-						types.StringValue("group2"),
-					}),
-					"network_interface_ids": types.ListNull(types.StringType),
-				}),
 				ImageId:     types.StringValue("image"),
 				KeypairName: types.StringValue("keypair"),
 				MachineType: types.StringValue("machine_type"),
@@ -198,57 +190,12 @@ func TestToCreatePayload(t *testing.T) {
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
-				Networking: &iaasalpha.CreateServerPayloadNetworking{
-					CreateServerNetworking: &iaasalpha.CreateServerNetworking{
-						NetworkId: utils.Ptr("nid"),
-					},
-				},
-				SecurityGroups: utils.Ptr([]string{"group1", "group2"}),
 				BootVolume: &iaasalpha.CreateServerPayloadBootVolume{
 					PerformanceClass: utils.Ptr("class"),
 					Size:             utils.Ptr(int64(1)),
 					Source: &iaasalpha.BootVolumeSource{
 						Type: utils.Ptr("type"),
 						Id:   utils.Ptr("id"),
-					},
-				},
-				ImageId:     utils.Ptr("image"),
-				KeypairName: utils.Ptr("keypair"),
-				MachineType: utils.Ptr("machine_type"),
-				UserData:    utils.Ptr(base64EncodedUserData),
-			},
-			true,
-		},
-		{
-			"create_with_network_interface_ids",
-			&Model{
-				Name:             types.StringValue("name"),
-				AvailabilityZone: types.StringValue("zone"),
-				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
-					"key": types.StringValue("value"),
-				}),
-				InitialNetworking: types.ObjectValueMust(initialNetworkTypes, map[string]attr.Value{
-					"network_id":         types.StringNull(),
-					"security_group_ids": types.ListNull(types.StringType),
-					"network_interface_ids": types.ListValueMust(types.StringType, []attr.Value{
-						types.StringValue("nic1"),
-						types.StringValue("nic2"),
-					}),
-				}),
-				ImageId:     types.StringValue("image"),
-				KeypairName: types.StringValue("keypair"),
-				MachineType: types.StringValue("machine_type"),
-				UserData:    types.StringValue(userData),
-			},
-			&iaasalpha.CreateServerPayload{
-				Name:             utils.Ptr("name"),
-				AvailabilityZone: utils.Ptr("zone"),
-				Labels: &map[string]interface{}{
-					"key": "value",
-				},
-				Networking: &iaasalpha.CreateServerPayloadNetworking{
-					CreateServerNetworkingWithNics: &iaasalpha.CreateServerNetworkingWithNics{
-						NicIds: utils.Ptr([]string{"nic1", "nic2"}),
 					},
 				},
 				ImageId:     utils.Ptr("image"),

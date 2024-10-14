@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -19,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -53,36 +50,21 @@ var (
 )
 
 type Model struct {
-	Id                types.String `tfsdk:"id"` // needed by TF
-	ProjectId         types.String `tfsdk:"project_id"`
-	ServerId          types.String `tfsdk:"server_id"`
-	MachineType       types.String `tfsdk:"machine_type"`
-	Name              types.String `tfsdk:"name"`
-	InitialNetworking types.Object `tfsdk:"initial_networking"`
-	AvailabilityZone  types.String `tfsdk:"availability_zone"`
-	BootVolume        types.Object `tfsdk:"boot_volume"`
-	ImageId           types.String `tfsdk:"image_id"`
-	KeypairName       types.String `tfsdk:"keypair_name"`
-	Labels            types.Map    `tfsdk:"labels"`
-	ServerGroup       types.String `tfsdk:"server_group"`
-	UserData          types.String `tfsdk:"user_data"`
-	CreatedAt         types.String `tfsdk:"created_at"`
-	LaunchedAt        types.String `tfsdk:"launched_at"`
-	UpdatedAt         types.String `tfsdk:"updated_at"`
-}
-
-// Struct corresponding to Model.InitialNetwork
-type initialNetworkModel struct {
-	NetworkId           types.String `tfsdk:"network_id"`
-	NetworkInterfaceIds types.List   `tfsdk:"network_interface_ids"`
-	SecurityGroupIds    types.List   `tfsdk:"security_group_ids"`
-}
-
-// Types corresponding to initialNetworkModel
-var initialNetworkTypes = map[string]attr.Type{
-	"network_id":            basetypes.StringType{},
-	"network_interface_ids": basetypes.ListType{ElemType: types.StringType},
-	"security_group_ids":    basetypes.ListType{ElemType: types.StringType},
+	Id               types.String `tfsdk:"id"` // needed by TF
+	ProjectId        types.String `tfsdk:"project_id"`
+	ServerId         types.String `tfsdk:"server_id"`
+	MachineType      types.String `tfsdk:"machine_type"`
+	Name             types.String `tfsdk:"name"`
+	AvailabilityZone types.String `tfsdk:"availability_zone"`
+	BootVolume       types.Object `tfsdk:"boot_volume"`
+	ImageId          types.String `tfsdk:"image_id"`
+	KeypairName      types.String `tfsdk:"keypair_name"`
+	Labels           types.Map    `tfsdk:"labels"`
+	ServerGroup      types.String `tfsdk:"server_group"`
+	UserData         types.String `tfsdk:"user_data"`
+	CreatedAt        types.String `tfsdk:"created_at"`
+	LaunchedAt       types.String `tfsdk:"launched_at"`
+	UpdatedAt        types.String `tfsdk:"updated_at"`
 }
 
 // Struct corresponding to Model.BootVolume
@@ -230,73 +212,6 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[A-Za-z0-9]+((-|_|\s|\.)[A-Za-z0-9]+)*$`),
 						"must match expression"),
-				},
-			},
-			"initial_networking": schema.SingleNestedAttribute{
-				Description: "The initial networking setup for the server. A network ID or a list of network interfaces IDs can be provided",
-				Optional:    true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.RequiresReplace(),
-				},
-				Attributes: map[string]schema.Attribute{
-					"network_id": schema.StringAttribute{
-						Description: "The network ID",
-						Optional:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-						Validators: []validator.String{
-							stringvalidator.ConflictsWith(
-								path.MatchRoot("initial_networking").AtName("network_interface_ids"),
-							),
-							validate.UUID(),
-						},
-					},
-					"security_group_ids": schema.ListAttribute{
-						ElementType: types.StringType,
-						Description: "List of security groups the initial network is assigned to",
-						Optional:    true,
-						PlanModifiers: []planmodifier.List{
-							listplanmodifier.RequiresReplace(),
-						},
-						Validators: []validator.List{
-							listvalidator.ValueStringsAre(
-								stringvalidator.LengthAtLeast(1),
-								stringvalidator.LengthAtMost(63),
-								stringvalidator.RegexMatches(
-									regexp.MustCompile(`^[A-Za-z0-9]+((-|_|\s|\.)[A-Za-z0-9]+)*$`),
-									"must match expression"),
-							),
-							listvalidator.ConflictsWith(
-								path.MatchRoot("initial_networking").AtName("network_interface_ids"),
-							),
-							listvalidator.AlsoRequires(
-								path.MatchRoot("initial_networking").AtName("network_id"),
-							),
-						},
-					},
-					"network_interface_ids": schema.ListAttribute{
-						ElementType: types.StringType,
-						Description: "List of network interface IDs",
-						Optional:    true,
-						PlanModifiers: []planmodifier.List{
-							listplanmodifier.RequiresReplace(),
-						},
-						Validators: []validator.List{
-							listvalidator.ConflictsWith(
-								path.MatchRoot("initial_networking").AtName("network_id"),
-							),
-							listvalidator.ValueStringsAre(
-								validate.UUID(),
-							),
-						},
-					},
-				},
-				Validators: []validator.Object{
-					objectvalidator.AtLeastOneOf(
-						path.MatchRoot("initial_networking").AtName("network_id"),
-						path.MatchRoot("initial_networking").AtName("network_interface_ids"),
-					),
 				},
 			},
 			"availability_zone": schema.StringAttribute{
@@ -715,14 +630,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServer
 		}
 	}
 
-	var initialNetwork = &initialNetworkModel{}
-	if !(model.InitialNetworking.IsNull() || model.InitialNetworking.IsUnknown()) {
-		diags := model.InitialNetworking.As(ctx, initialNetwork, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return nil, fmt.Errorf("convert initial network object to struct: %w", core.DiagsToError(diags))
-		}
-	}
-
 	labels, err := conversion.ToStringInterfaceMap(ctx, model.Labels)
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)
@@ -740,31 +647,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServer
 		}
 	}
 
-	var initialNetworkPayload *iaasalpha.CreateServerPayloadNetworking
-	var securityGroups *[]string
-	if !initialNetwork.NetworkId.IsNull() {
-		initialNetworkPayload = &iaasalpha.CreateServerPayloadNetworking{
-			CreateServerNetworking: &iaasalpha.CreateServerNetworking{
-				NetworkId: conversion.StringValueToPointer(initialNetwork.NetworkId),
-			},
-		}
-
-		securityGroups, err = conversion.StringListToPointer(initialNetwork.SecurityGroupIds)
-		if err != nil {
-			return nil, fmt.Errorf("converting list of security groups to string list pointer: %w", err)
-		}
-	} else if !initialNetwork.NetworkInterfaceIds.IsNull() {
-		nicIds, err := conversion.StringListToPointer(initialNetwork.NetworkInterfaceIds)
-		if err != nil {
-			return nil, fmt.Errorf("converting list of network interface IDs to string list pointer: %w", err)
-		}
-		initialNetworkPayload = &iaasalpha.CreateServerPayloadNetworking{
-			CreateServerNetworkingWithNics: &iaasalpha.CreateServerNetworkingWithNics{
-				NicIds: nicIds,
-			},
-		}
-	}
-
 	var userData *string
 	if !model.UserData.IsNull() && !model.UserData.IsUnknown() {
 		encodedUserData := base64.StdEncoding.EncodeToString([]byte(model.UserData.ValueString()))
@@ -776,8 +658,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServer
 		BootVolume:       bootVolumePayload,
 		ImageId:          conversion.StringValueToPointer(model.ImageId),
 		KeypairName:      conversion.StringValueToPointer(model.KeypairName),
-		Networking:       initialNetworkPayload,
-		SecurityGroups:   securityGroups,
 		Labels:           &labels,
 		Name:             conversion.StringValueToPointer(model.Name),
 		MachineType:      conversion.StringValueToPointer(model.MachineType),
