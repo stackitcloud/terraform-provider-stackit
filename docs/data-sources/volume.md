@@ -16,7 +16,7 @@ Volume resource schema. Must have a `region` specified in the provider configura
 ## Example Usage
 
 ```terraform
-resource "stackit_volume" "example" {
+data "stackit_volume" "example" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   volume_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
