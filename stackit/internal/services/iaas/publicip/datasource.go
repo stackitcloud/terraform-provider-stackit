@@ -116,8 +116,8 @@ func (r *publicIpDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: "The IP address.",
 				Computed:    true,
 			},
-			"network_interface": schema.StringAttribute{
-				Description: "Associates the public IP with a network interface or a virtual IP.",
+			"network_interface_id": schema.StringAttribute{
+				Description: "Associates the public IP with a network interface or a virtual IP (ID).",
 				Computed:    true,
 				Validators: []validator.String{
 					validate.UUID(),

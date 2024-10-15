@@ -37,12 +37,12 @@ var (
 )
 
 type Model struct {
-	Id               types.String `tfsdk:"id"` // needed by TF
-	ProjectId        types.String `tfsdk:"project_id"`
-	PublicIpId       types.String `tfsdk:"public_ip_id"`
-	Ip               types.String `tfsdk:"ip"`
-	NetworkInterface types.String `tfsdk:"network_interface"`
-	Labels           types.Map    `tfsdk:"labels"`
+	Id                 types.String `tfsdk:"id"` // needed by TF
+	ProjectId          types.String `tfsdk:"project_id"`
+	PublicIpId         types.String `tfsdk:"public_ip_id"`
+	Ip                 types.String `tfsdk:"ip"`
+	NetworkInterfaceId types.String `tfsdk:"network_interface_id"`
+	Labels             types.Map    `tfsdk:"labels"`
 }
 
 // NewPublicIpResource is a helper function to simplify the provider implementation.
@@ -150,8 +150,8 @@ func (r *publicIpResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					validate.IP(),
 				},
 			},
-			"network_interface": schema.StringAttribute{
-				Description: "Associates the public IP with a network interface or a virtual IP.",
+			"network_interface_id": schema.StringAttribute{
+				Description: "Associates the public IP with a network interface or a virtual IP (ID).",
 				Optional:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -388,7 +388,7 @@ func mapFields(ctx context.Context, publicIpResp *iaasalpha.PublicIp, model *Mod
 
 	model.PublicIpId = types.StringValue(publicIpId)
 	model.Ip = types.StringPointerValue(publicIpResp.Ip)
-	model.NetworkInterface = types.StringPointerValue(publicIpResp.GetNetworkInterface())
+	model.NetworkInterfaceId = types.StringPointerValue(publicIpResp.GetNetworkInterface())
 	model.Labels = labels
 	return nil
 }
@@ -409,8 +409,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreatePublic
 		NetworkInterface: iaasalpha.NewNullableString(nil),
 	}
 
-	if !model.NetworkInterface.IsNull() {
-		createPayload.NetworkInterface.Set(conversion.StringValueToPointer(model.NetworkInterface))
+	if !model.NetworkInterfaceId.IsNull() {
+		createPayload.NetworkInterface.Set(conversion.StringValueToPointer(model.NetworkInterfaceId))
 	}
 
 	return &createPayload, nil
@@ -432,8 +432,8 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		NetworkInterface: iaasalpha.NewNullableString(nil),
 	}
 
-	if !model.NetworkInterface.IsNull() {
-		updatePayload.NetworkInterface.Set(conversion.StringValueToPointer(model.NetworkInterface))
+	if !model.NetworkInterfaceId.IsNull() {
+		updatePayload.NetworkInterface.Set(conversion.StringValueToPointer(model.NetworkInterfaceId))
 	}
 
 	return &updatePayload, nil
