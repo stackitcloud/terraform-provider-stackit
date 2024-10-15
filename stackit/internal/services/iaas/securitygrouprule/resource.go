@@ -237,7 +237,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Attributes: map[string]schema.Attribute{
 					"code": schema.Int64Attribute{
 						Description: "ICMP code. Can be set if the protocol is ICMP.",
-						Optional:    true,
+						Required:    true,
 						PlanModifiers: []planmodifier.Int64{
 							int64planmodifier.RequiresReplace(),
 						},
@@ -248,7 +248,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 					},
 					"type": schema.Int64Attribute{
 						Description: "ICMP type. Can be set if the protocol is ICMP.",
-						Optional:    true,
+						Required:    true,
 						PlanModifiers: []planmodifier.Int64{
 							int64planmodifier.RequiresReplace(),
 						},
