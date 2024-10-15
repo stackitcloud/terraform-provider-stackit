@@ -300,7 +300,7 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 	// Update existing security group
-	updatedSecurityGroup, err := r.client.V1alpha1UpdateSecurityGroup(ctx, projectId, securityGroupId).V1alpha1UpdateSecurityGroupPayload(*payload).Execute()
+	updatedSecurityGroup, err := r.client.UpdateSecurityGroup(ctx, projectId, securityGroupId).UpdateSecurityGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating security group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -433,7 +433,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateSecuri
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.V1alpha1UpdateSecurityGroupPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.UpdateSecurityGroupPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -443,7 +443,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.V1alpha1UpdateSecurityGroupPayload{
+	return &iaasalpha.UpdateSecurityGroupPayload{
 		Description: conversion.StringValueToPointer(model.Description),
 		Name:        conversion.StringValueToPointer(model.Name),
 		Labels:      &labels,
