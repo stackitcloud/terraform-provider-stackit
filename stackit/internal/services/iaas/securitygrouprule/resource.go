@@ -228,7 +228,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				},
 			},
 			"icmp_parameters": schema.SingleNestedAttribute{
-				Description: "ICMP Parameters.",
+				Description: "ICMP Parameters. These parameters should only be provided if the protocol is ICMP.",
 				Optional:    true,
 				Attributes: map[string]schema.Attribute{
 					"code": schema.Int64Attribute{
@@ -268,7 +268,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				},
 			},
 			"port_range": schema.SingleNestedAttribute{
-				Description: "The range of ports.",
+				Description: "The range of ports. This should only be provided if the protocol is not ICMP.",
 				Optional:    true,
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
