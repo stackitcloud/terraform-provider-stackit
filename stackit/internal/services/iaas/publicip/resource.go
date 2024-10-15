@@ -37,11 +37,12 @@ var (
 )
 
 type Model struct {
-	Id         types.String `tfsdk:"id"` // needed by TF
-	ProjectId  types.String `tfsdk:"project_id"`
-	PublicIpId types.String `tfsdk:"public_ip_id"`
-	Ip         types.String `tfsdk:"ip"`
-	Labels     types.Map    `tfsdk:"labels"`
+	Id               types.String `tfsdk:"id"` // needed by TF
+	ProjectId        types.String `tfsdk:"project_id"`
+	PublicIpId       types.String `tfsdk:"public_ip_id"`
+	Ip               types.String `tfsdk:"ip"`
+	NetworkInterface types.String `tfsdk:"network_interface"`
+	Labels           types.Map    `tfsdk:"labels"`
 }
 
 // NewPublicIpResource is a helper function to simplify the provider implementation.
@@ -147,6 +148,14 @@ func (r *publicIpResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 				Validators: []validator.String{
 					validate.IP(),
+				},
+			},
+			"network_interface": schema.StringAttribute{
+				Description: "Associates the public IP with a network interface or a virtual IP.",
+				Optional:    true,
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
 				},
 			},
 			"labels": schema.MapAttribute{
@@ -379,6 +388,7 @@ func mapFields(ctx context.Context, publicIpResp *iaasalpha.PublicIp, model *Mod
 
 	model.PublicIpId = types.StringValue(publicIpId)
 	model.Ip = types.StringPointerValue(publicIpResp.Ip)
+	model.NetworkInterface = types.StringPointerValue(publicIpResp.GetNetworkInterface())
 	model.Labels = labels
 	return nil
 }
@@ -393,10 +403,17 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreatePublic
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.CreatePublicIPPayload{
-		Labels: &labels,
-		Ip:     conversion.StringValueToPointer(model.Ip),
-	}, nil
+	createPayload := iaasalpha.CreatePublicIPPayload{
+		Labels:           &labels,
+		Ip:               conversion.StringValueToPointer(model.Ip),
+		NetworkInterface: iaasalpha.NewNullableString(nil),
+	}
+
+	if !model.NetworkInterface.IsNull() {
+		createPayload.NetworkInterface.Set(conversion.StringValueToPointer(model.NetworkInterface))
+	}
+
+	return &createPayload, nil
 }
 
 func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.UpdatePublicIPPayload, error) {
@@ -409,8 +426,15 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.UpdatePublicIPPayload{
-		Labels: &labels,
-		Ip:     conversion.StringValueToPointer(model.Ip),
-	}, nil
+	updatePayload := iaasalpha.UpdatePublicIPPayload{
+		Labels:           &labels,
+		Ip:               conversion.StringValueToPointer(model.Ip),
+		NetworkInterface: iaasalpha.NewNullableString(nil),
+	}
+
+	if !model.NetworkInterface.IsNull() {
+		updatePayload.NetworkInterface.Set(conversion.StringValueToPointer(model.NetworkInterface))
+	}
+
+	return &updatePayload, nil
 }

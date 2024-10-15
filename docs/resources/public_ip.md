@@ -34,6 +34,7 @@ resource "stackit_public_ip" "example" {
 ### Optional
 
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
+- `network_interface` (String) Associates the public IP with a network interface or a virtual IP.
 
 ### Read-Only
 

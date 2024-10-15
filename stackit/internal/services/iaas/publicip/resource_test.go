@@ -26,14 +26,16 @@ func TestMapFields(t *testing.T) {
 				PublicIpId: types.StringValue("pipid"),
 			},
 			&iaasalpha.PublicIp{
-				Id: utils.Ptr("pipid"),
+				Id:               utils.Ptr("pipid"),
+				NetworkInterface: iaasalpha.NewNullableString(nil),
 			},
 			Model{
-				Id:         types.StringValue("pid,pipid"),
-				ProjectId:  types.StringValue("pid"),
-				PublicIpId: types.StringValue("pipid"),
-				Ip:         types.StringNull(),
-				Labels:     types.MapNull(types.StringType),
+				Id:               types.StringValue("pid,pipid"),
+				ProjectId:        types.StringValue("pid"),
+				PublicIpId:       types.StringValue("pipid"),
+				Ip:               types.StringNull(),
+				Labels:           types.MapNull(types.StringType),
+				NetworkInterface: types.StringNull(),
 			},
 			true,
 		},
@@ -49,6 +51,7 @@ func TestMapFields(t *testing.T) {
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
+				NetworkInterface: iaasalpha.NewNullableString(utils.Ptr("interface")),
 			},
 			Model{
 				Id:         types.StringValue("pid,pipid"),
@@ -58,6 +61,7 @@ func TestMapFields(t *testing.T) {
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 					"key": types.StringValue("value"),
 				}),
+				NetworkInterface: types.StringValue("interface"),
 			},
 			true,
 		},
@@ -69,14 +73,16 @@ func TestMapFields(t *testing.T) {
 				Labels:     types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			},
 			&iaasalpha.PublicIp{
-				Id: utils.Ptr("pipid"),
+				Id:               utils.Ptr("pipid"),
+				NetworkInterface: iaasalpha.NewNullableString(utils.Ptr("interface")),
 			},
 			Model{
-				Id:         types.StringValue("pid,pipid"),
-				ProjectId:  types.StringValue("pid"),
-				PublicIpId: types.StringValue("pipid"),
-				Ip:         types.StringNull(),
-				Labels:     types.MapValueMust(types.StringType, map[string]attr.Value{}),
+				Id:               types.StringValue("pid,pipid"),
+				ProjectId:        types.StringValue("pid"),
+				PublicIpId:       types.StringValue("pipid"),
+				Ip:               types.StringNull(),
+				Labels:           types.MapValueMust(types.StringType, map[string]attr.Value{}),
+				NetworkInterface: types.StringValue("interface"),
 			},
 			true,
 		},
@@ -130,12 +136,14 @@ func TestToCreatePayload(t *testing.T) {
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 					"key": types.StringValue("value"),
 				}),
+				NetworkInterface: types.StringValue("interface"),
 			},
 			&iaasalpha.CreatePublicIPPayload{
 				Ip: utils.Ptr("ip"),
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
+				NetworkInterface: iaasalpha.NewNullableString(utils.Ptr("interface")),
 			},
 			true,
 		},
@@ -150,7 +158,7 @@ func TestToCreatePayload(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(output, tt.expected)
+				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaasalpha.NullableString{}))
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
@@ -179,6 +187,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
+				NetworkInterface: iaasalpha.NewNullableString(nil),
 			},
 			true,
 		},
@@ -193,7 +202,7 @@ func TestToUpdatePayload(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(output, tt.expected)
+				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaasalpha.NullableString{}))
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
