@@ -18,10 +18,13 @@ import (
 	iaasNetworkArea "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarea"
 	iaasNetworkAreaRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearoute"
 	iaasNetworkInterface "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterface"
+	iaasNetworkInterfaceAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterfaceattach"
 	iaasSecurityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/securitygroup"
 	iaasSecurityGroupRule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/securitygrouprule"
 	iaasServer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/server"
+	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
 	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
+	iaasVolumeAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volumeattach"
 	loadBalancerCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/credential"
 	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
@@ -456,6 +459,9 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasNetworkAreaRoute.NewNetworkAreaRouteResource,
 		iaasNetworkInterface.NewNetworkInterfaceResource,
 		iaasVolume.NewVolumeResource,
+		iaasVolumeAttach.NewVolumeAttachResource,
+		iaasNetworkInterfaceAttach.NewNetworkInterfaceAttachResource,
+		iaasServiceAccountAttach.NewServiceAccountAttachResource,
 		iaasServer.NewServerResource,
 		iaasSecurityGroup.NewSecurityGroupResource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleResource,

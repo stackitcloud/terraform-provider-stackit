@@ -634,10 +634,5 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		SecurityGroups:   &modelSecurityGroups,
 		Labels:           labelPayload,
 		Name:             conversion.StringValueToPointer(model.Name),
-		Device:           conversion.StringValueToPointer(model.Device),
-		Ipv4:             conversion.StringValueToPointer(model.IPv4),
-		Ipv6:             conversion.StringValueToPointer(model.IPv6),
-		Mac:              conversion.StringValueToPointer(model.Mac),
-		Type:             conversion.StringValueToPointer(model.Type),
 	}, nil
 }
