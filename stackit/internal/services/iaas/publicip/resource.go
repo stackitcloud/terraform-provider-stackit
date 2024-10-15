@@ -361,7 +361,7 @@ func mapFields(ctx context.Context, publicIpResp *iaasalpha.PublicIp, model *Mod
 	} else if publicIpResp.Id != nil {
 		publicIpId = *publicIpResp.Id
 	} else {
-		return fmt.Errorf("Public IP id not present")
+		return fmt.Errorf("public IP id not present")
 	}
 
 	idParts := []string{
@@ -388,7 +388,11 @@ func mapFields(ctx context.Context, publicIpResp *iaasalpha.PublicIp, model *Mod
 
 	model.PublicIpId = types.StringValue(publicIpId)
 	model.Ip = types.StringPointerValue(publicIpResp.Ip)
-	model.NetworkInterfaceId = types.StringPointerValue(publicIpResp.GetNetworkInterface())
+	if publicIpResp.NetworkInterface != nil {
+		model.NetworkInterfaceId = types.StringPointerValue(publicIpResp.GetNetworkInterface())
+	} else {
+		model.NetworkInterfaceId = types.StringNull()
+	}
 	model.Labels = labels
 	return nil
 }
@@ -422,7 +426,6 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 
 	return &iaasalpha.UpdatePublicIPPayload{
 		Labels:           &labels,
-		Ip:               conversion.StringValueToPointer(model.Ip),
 		NetworkInterface: iaasalpha.NewNullableString(conversion.StringValueToPointer(model.NetworkInterfaceId)),
 	}, nil
 }

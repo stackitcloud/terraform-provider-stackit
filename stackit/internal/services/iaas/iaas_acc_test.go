@@ -85,8 +85,9 @@ var securityGroupResource = map[string]string{
 
 // Public IP resource data
 var publicIpResource = map[string]string{
-	"project_id": testutil.ProjectId,
-	"label1":     "value",
+	"project_id":           testutil.ProjectId,
+	"label1":               "value",
+	"network_interface_id": testutil.IaaSNetworkInterfaceId,
 }
 
 func networkResourceConfig(name, nameservers string) string {
@@ -221,20 +222,6 @@ func securityGroupResourceConfig(name string) string {
 	)
 }
 
-func publicIpResourceConfig() string {
-	return fmt.Sprintf(`
-				resource "stackit_public_ip" "public_ip" {
-					project_id = "%s"
-					labels = {
-						"label1" = "%s"
-					}
-				}
-				`,
-		publicIpResource["project_id"],
-		publicIpResource["label1"],
-	)
-}
-
 func testAccNetworkAreaConfig(areaname, networkranges string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
@@ -266,10 +253,10 @@ func resourceConfigSecurityGroup(name string) string {
 	)
 }
 
-func testAccPublicIpConfig() string {
+func testAccPublicIpConfig(publicIpResourceConfig string) string {
 	return fmt.Sprintf("%s\n\n%s",
 		testutil.IaaSProviderConfig(),
-		publicIpResourceConfig(),
+		publicIpResourceConfig,
 	)
 }
 
@@ -802,11 +789,26 @@ func TestAccPublicIp(t *testing.T) {
 
 			// Creation
 			{
-				Config: testAccPublicIpConfig(),
+				Config: testAccPublicIpConfig(
+					fmt.Sprintf(`
+						resource "stackit_public_ip" "public_ip" {
+							project_id = "%s"
+							labels = {
+								"label1" = "%s"
+							}
+							network_interface_id = "%s"
+						}
+					`,
+						publicIpResource["project_id"],
+						publicIpResource["label1"],
+						publicIpResource["network_interface_id"],
+					),
+				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "project_id", publicIpResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip", "public_ip_id"),
 					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.label1", publicIpResource["label1"]),
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "network_interface_id", publicIpResource["network_interface_id"]),
 				),
 			},
 			// Data source
@@ -815,11 +817,25 @@ func TestAccPublicIp(t *testing.T) {
 					%s
 			
 					data "stackit_public_ip" "public_ip" {
-						project_id   = stackit_public_ip.public_ip.project_id
-						public_ip_id = stackit_public_ip.public_ip.public_ip_id
+						project_id   		 = stackit_public_ip.public_ip.project_id
+						public_ip_id 		 = stackit_public_ip.public_ip.public_ip_id
 					}
 					`,
-					testAccPublicIpConfig(),
+					testAccPublicIpConfig(
+						fmt.Sprintf(`
+							resource "stackit_public_ip" "public_ip" {
+								project_id = "%s"
+								labels = {
+									"label1" = "%s"
+								}
+								network_interface_id = "%s"
+							}
+						`,
+							publicIpResource["project_id"],
+							publicIpResource["label1"],
+							publicIpResource["network_interface_id"],
+						),
+					),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -829,6 +845,7 @@ func TestAccPublicIp(t *testing.T) {
 						"data.stackit_public_ip.public_ip", "public_ip_id",
 					),
 					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.label1", publicIpResource["label1"]),
+					resource.TestCheckResourceAttr("data.stackit_public_ip.public_ip", "network_interface_id", publicIpResource["network_interface_id"]),
 				),
 			},
 			// Import
@@ -850,11 +867,24 @@ func TestAccPublicIp(t *testing.T) {
 			},
 			// Update
 			{
-				Config: testAccPublicIpConfig(),
+				Config: testAccPublicIpConfig(
+					fmt.Sprintf(`
+							resource "stackit_public_ip" "public_ip" {
+								project_id = "%s"
+								labels = {
+									"label1" = "%s"
+								}
+							}
+						`,
+						publicIpResource["project_id"],
+						publicIpResource["label1"],
+					),
+				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "project_id", publicIpResource["project_id"]),
 					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip", "public_ip_id"),
 					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.label1", publicIpResource["label1"]),
+					resource.TestCheckNoResourceAttr("stackit_public_ip.public_ip", "network_interface_id"),
 				),
 			},
 			// Deletion is done by the framework implicitly
