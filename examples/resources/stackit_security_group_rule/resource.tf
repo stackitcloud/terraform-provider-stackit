@@ -7,8 +7,8 @@ resource "stackit_security_group_rule" "example" {
     type = 8
   }
   protocol = {
-    name     = "name"
-    protocol = 1
+    name   = "name"
+    number = 1
   }
   port_range = {
     max = 22

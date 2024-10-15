@@ -33,8 +33,8 @@ var fixturePortRange = iaasalpha.PortRange{
 }
 
 var fixtureModelProtocol = types.ObjectValueMust(protocolTypes, map[string]attr.Value{
-	"name":     types.StringValue("name"),
-	"protocol": types.Int64Value(1),
+	"name":   types.StringValue("name"),
+	"number": types.Int64Value(1),
 })
 
 var fixtureProtocol = iaasalpha.V1SecurityGroupRuleProtocol{

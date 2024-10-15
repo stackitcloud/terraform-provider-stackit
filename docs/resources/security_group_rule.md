@@ -25,8 +25,8 @@ resource "stackit_security_group_rule" "example" {
     type = 8
   }
   protocol = {
-    name     = "name"
-    protocol = 1
+    name   = "name"
+    number = 1
   }
   port_range = {
     max = 22
@@ -48,9 +48,9 @@ resource "stackit_security_group_rule" "example" {
 
 - `description` (String) The rule description.
 - `ether_type` (String) The ethertype which the rule should match.
-- `icmp_parameters` (Attributes) ICMP Parameters. (see [below for nested schema](#nestedatt--icmp_parameters))
+- `icmp_parameters` (Attributes) ICMP Parameters. These parameters should only be provided if the protocol is ICMP. (see [below for nested schema](#nestedatt--icmp_parameters))
 - `ip_range` (String) The remote IP range which the rule should match.
-- `port_range` (Attributes) The range of ports. (see [below for nested schema](#nestedatt--port_range))
+- `port_range` (Attributes) The range of ports. This should only be provided if the protocol is not ICMP. (see [below for nested schema](#nestedatt--port_range))
 - `protocol` (Attributes) The internet protocol which the rule should match. (see [below for nested schema](#nestedatt--protocol))
 - `remote_security_group_id` (String) The remote security group which the rule should match.
 
@@ -83,4 +83,4 @@ Optional:
 Optional:
 
 - `name` (String) The protocol name which the rule should match.
-- `protocol` (Number) The protocol number which the rule should match.
+- `number` (Number) The protocol number which the rule should match.

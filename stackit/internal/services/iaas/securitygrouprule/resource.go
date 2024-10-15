@@ -79,14 +79,14 @@ var portRangeTypes = map[string]attr.Type{
 }
 
 type protocolModel struct {
-	Name     types.String `tfsdk:"name"`
-	Protocol types.Int64  `tfsdk:"protocol"`
+	Name   types.String `tfsdk:"name"`
+	Number types.Int64  `tfsdk:"number"`
 }
 
 // Types corresponding to protocol
 var protocolTypes = map[string]attr.Type{
-	"name":     basetypes.StringType{},
-	"protocol": basetypes.Int64Type{},
+	"name":   basetypes.StringType{},
+	"number": basetypes.Int64Type{},
 }
 
 // NewSecurityGroupRuleResource is a helper function to simplify the provider implementation.
@@ -314,7 +314,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
-					"protocol": schema.Int64Attribute{
+					"number": schema.Int64Attribute{
 						Description: "The protocol number which the rule should match.",
 						Optional:    true,
 						PlanModifiers: []planmodifier.Int64{
@@ -611,14 +611,14 @@ func mapProtocol(securityGroupRuleResp *iaasalpha.SecurityGroupRule, m *Model) e
 		return nil
 	}
 
-	protocolValue := types.Int64Null()
+	protocolNumberValue := types.Int64Null()
 	if securityGroupRuleResp.Protocol.Protocol != nil {
-		protocolValue = types.Int64Value(*securityGroupRuleResp.Protocol.Protocol)
+		protocolNumberValue = types.Int64Value(*securityGroupRuleResp.Protocol.Protocol)
 	}
 
 	protocolValues := map[string]attr.Value{
-		"name":     types.StringValue(*securityGroupRuleResp.Protocol.Name),
-		"protocol": protocolValue,
+		"name":   types.StringValue(*securityGroupRuleResp.Protocol.Name),
+		"number": protocolNumberValue,
 	}
 	protocolObject, diags := types.ObjectValue(protocolTypes, protocolValues)
 	if diags.HasError() {
@@ -691,7 +691,7 @@ func toProtocolPayload(protocol *protocolModel) (*iaasalpha.V1SecurityGroupRuleP
 	payloadProtocol := &iaasalpha.V1SecurityGroupRuleProtocol{}
 
 	payloadProtocol.Name = conversion.StringValueToPointer(protocol.Name)
-	payloadProtocol.Protocol = conversion.Int64ValueToPointer(protocol.Protocol)
+	payloadProtocol.Protocol = conversion.Int64ValueToPointer(protocol.Number)
 
 	return payloadProtocol, nil
 }

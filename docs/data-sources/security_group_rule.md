@@ -68,4 +68,4 @@ Read-Only:
 Read-Only:
 
 - `name` (String) The protocol name which the rule should match.
-- `protocol` (Number) The protocol number which the rule should match.
+- `number` (Number) The protocol number which the rule should match.

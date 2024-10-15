@@ -174,7 +174,7 @@ func (r *securityGroupRuleDataSource) Schema(_ context.Context, _ datasource.Sch
 						Description: "The protocol name which the rule should match.",
 						Computed:    true,
 					},
-					"protocol": schema.Int64Attribute{
+					"number": schema.Int64Attribute{
 						Description: "The protocol number which the rule should match.",
 						Computed:    true,
 					},
