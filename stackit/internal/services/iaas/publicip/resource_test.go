@@ -87,6 +87,25 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
+			"network_interface_id_nil",
+			Model{
+				ProjectId:  types.StringValue("pid"),
+				PublicIpId: types.StringValue("pipid"),
+			},
+			&iaasalpha.PublicIp{
+				Id: utils.Ptr("pipid"),
+			},
+			Model{
+				Id:                 types.StringValue("pid,pipid"),
+				ProjectId:          types.StringValue("pid"),
+				PublicIpId:         types.StringValue("pipid"),
+				Ip:                 types.StringNull(),
+				Labels:             types.MapNull(types.StringType),
+				NetworkInterfaceId: types.StringNull(),
+			},
+			true,
+		},
+		{
 			"response_nil_fail",
 			Model{},
 			nil,
@@ -201,7 +220,6 @@ func TestToUpdatePayload(t *testing.T) {
 				NetworkInterfaceId: types.StringValue("interface"),
 			},
 			&iaasalpha.UpdatePublicIPPayload{
-				Ip: utils.Ptr("ip"),
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
@@ -218,7 +236,6 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 			},
 			&iaasalpha.UpdatePublicIPPayload{
-				Ip: utils.Ptr("ip"),
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
