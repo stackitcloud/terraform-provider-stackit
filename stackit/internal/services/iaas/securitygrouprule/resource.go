@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -230,6 +231,9 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 			"icmp_parameters": schema.SingleNestedAttribute{
 				Description: "ICMP Parameters. These parameters should only be provided if the protocol is ICMP.",
 				Optional:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"code": schema.Int64Attribute{
 						Description: "ICMP code. Can be set if the protocol is ICMP.",
@@ -271,6 +275,9 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Description: "The range of ports. This should only be provided if the protocol is not ICMP.",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"max": schema.Int64Attribute{
 						Description: "The maximum port number. Should be greater or equal to the minimum.",
@@ -304,6 +311,9 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Description: "The internet protocol which the rule should match.",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
 						Description: "The protocol name which the rule should match.",
