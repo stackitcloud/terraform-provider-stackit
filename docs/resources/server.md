@@ -51,7 +51,6 @@ resource "stackit_server" "example" {
 - `availability_zone` (String) The availability zone of the server.
 - `boot_volume` (Attributes) The boot volume for the server (see [below for nested schema](#nestedatt--boot_volume))
 - `image_id` (String) The image ID to be used for an ephemeral disk on the server.
-- `initial_networking` (Attributes) The initial networking setup for the server. A network ID or a list of network interfaces IDs can be provided (see [below for nested schema](#nestedatt--initial_networking))
 - `keypair_name` (String) The name of the keypair used during server creation.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `server_group` (String) The server group the server is assigned to.
@@ -77,13 +76,3 @@ Optional:
 
 - `performance_class` (String) The performance class of the server.
 - `size` (Number) The size of the boot volume in GB. Must be provided when `source_type` is `image`.
-
-
-<a id="nestedatt--initial_networking"></a>
-### Nested Schema for `initial_networking`
-
-Optional:
-
-- `network_id` (String) The network ID
-- `network_interface_ids` (List of String) List of network interface IDs
-- `security_group_ids` (List of String) List of security groups the initial network is assigned to

@@ -19,9 +19,12 @@ import (
 	iaasNetworkAreaRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearoute"
 	iaasNetworkInterface "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterface"
 	iaasPublicIp "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicip"
+	iaasNetworkInterfaceAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterfaceattach"
 	iaasSecurityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/securitygroup"
 	iaasServer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/server"
+	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
 	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
+	iaasVolumeAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volumeattach"
 	loadBalancerCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/credential"
 	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
@@ -457,6 +460,9 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasNetworkInterface.NewNetworkInterfaceResource,
 		iaasVolume.NewVolumeResource,
 		iaasPublicIp.NewPublicIpResource,
+		iaasVolumeAttach.NewVolumeAttachResource,
+		iaasNetworkInterfaceAttach.NewNetworkInterfaceAttachResource,
+		iaasServiceAccountAttach.NewServiceAccountAttachResource,
 		iaasServer.NewServerResource,
 		iaasSecurityGroup.NewSecurityGroupResource,
 		loadBalancer.NewLoadBalancerResource,

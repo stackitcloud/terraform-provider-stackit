@@ -108,7 +108,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		"unhealthy_threshold":         "Unhealthy threshold of the health checking.",
 		"target_pools.name":           "Target pool name.",
 		"target_port":                 "Identical port number where each target listens for traffic.",
-		"targets":                     "List of all targets which will be used in the pool. Limited to 250.",
+		"targets":                     "List of all targets which will be used in the pool. Limited to 1000.",
 		"targets.display_name":        "Target display name",
 		"ip":                          "Target IP",
 	}
@@ -284,7 +284,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							Description: descriptions["targets"],
 							Computed:    true,
 							Validators: []validator.List{
-								listvalidator.SizeBetween(1, 250),
+								listvalidator.SizeBetween(1, 1000),
 							},
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
