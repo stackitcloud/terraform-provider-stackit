@@ -147,6 +147,23 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			true,
 		},
+		{
+			"network_interface_nil",
+			&Model{
+				Ip: types.StringValue("ip"),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
+			},
+			&iaasalpha.CreatePublicIPPayload{
+				Ip: utils.Ptr("ip"),
+				Labels: &map[string]interface{}{
+					"key": "value",
+				},
+				NetworkInterface: iaasalpha.NewNullableString(nil),
+			},
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -176,6 +193,24 @@ func TestToUpdatePayload(t *testing.T) {
 	}{
 		{
 			"default_ok",
+			&Model{
+				Ip: types.StringValue("ip"),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
+				NetworkInterfaceId: types.StringValue("interface"),
+			},
+			&iaasalpha.UpdatePublicIPPayload{
+				Ip: utils.Ptr("ip"),
+				Labels: &map[string]interface{}{
+					"key": "value",
+				},
+				NetworkInterface: iaasalpha.NewNullableString(utils.Ptr("interface")),
+			},
+			true,
+		},
+		{
+			"network_interface_nil",
 			&Model{
 				Ip: types.StringValue("ip"),
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
