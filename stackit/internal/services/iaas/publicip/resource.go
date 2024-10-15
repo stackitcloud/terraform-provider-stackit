@@ -403,17 +403,11 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreatePublic
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	createPayload := iaasalpha.CreatePublicIPPayload{
+	return &iaasalpha.CreatePublicIPPayload{
 		Labels:           &labels,
 		Ip:               conversion.StringValueToPointer(model.Ip),
-		NetworkInterface: iaasalpha.NewNullableString(nil),
-	}
-
-	if !model.NetworkInterfaceId.IsNull() {
-		createPayload.NetworkInterface.Set(conversion.StringValueToPointer(model.NetworkInterfaceId))
-	}
-
-	return &createPayload, nil
+		NetworkInterface: iaasalpha.NewNullableString(conversion.StringValueToPointer(model.NetworkInterfaceId)),
+	}, nil
 }
 
 func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.UpdatePublicIPPayload, error) {
@@ -426,15 +420,9 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	updatePayload := iaasalpha.UpdatePublicIPPayload{
+	return &iaasalpha.UpdatePublicIPPayload{
 		Labels:           &labels,
 		Ip:               conversion.StringValueToPointer(model.Ip),
-		NetworkInterface: iaasalpha.NewNullableString(nil),
-	}
-
-	if !model.NetworkInterfaceId.IsNull() {
-		updatePayload.NetworkInterface.Set(conversion.StringValueToPointer(model.NetworkInterfaceId))
-	}
-
-	return &updatePayload, nil
+		NetworkInterface: iaasalpha.NewNullableString(conversion.StringValueToPointer(model.NetworkInterfaceId)),
+	}, nil
 }
