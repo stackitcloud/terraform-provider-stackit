@@ -71,7 +71,7 @@ Required:
 <a id="nestedatt--port_range"></a>
 ### Nested Schema for `port_range`
 
-Optional:
+Required:
 
 - `max` (Number) The maximum port number. Should be greater or equal to the minimum.
 - `min` (Number) The minimum port number. Should be less or equal to the minimum.

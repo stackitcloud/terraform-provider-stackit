@@ -281,10 +281,8 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Attributes: map[string]schema.Attribute{
 					"max": schema.Int64Attribute{
 						Description: "The maximum port number. Should be greater or equal to the minimum.",
-						Optional:    true,
-						Computed:    true,
+						Required:    true,
 						PlanModifiers: []planmodifier.Int64{
-							int64planmodifier.UseStateForUnknown(),
 							int64planmodifier.RequiresReplace(),
 						},
 						Validators: []validator.Int64{
@@ -294,10 +292,8 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 					},
 					"min": schema.Int64Attribute{
 						Description: "The minimum port number. Should be less or equal to the minimum.",
-						Optional:    true,
-						Computed:    true,
+						Required:    true,
 						PlanModifiers: []planmodifier.Int64{
-							int64planmodifier.UseStateForUnknown(),
 							int64planmodifier.RequiresReplace(),
 						},
 						Validators: []validator.Int64{
