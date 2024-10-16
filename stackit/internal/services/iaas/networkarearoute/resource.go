@@ -107,12 +107,12 @@ func (r *networkAreaRouteResource) Configure(ctx context.Context, req resource.C
 // Schema defines the schema for the resource.
 func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Network area route resource schema. Must have a `region` specified in the provider configuration.",
+		Description:         "Network area route resource schema. Must have a `region` specified in the provider configuration.",
+		MarkdownDescription: features.AddBetaDescription("Network area route resource schema. Must have a `region` specified in the provider configuration."),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description:         "Terraform's internal resource ID. It is structured as \"`organization_id`,`network_area_id`,`network_area_route_id`\".",
-				MarkdownDescription: features.AddBetaDescription("Network area route resource schema. Must have a `region` specified in the provider configuration."),
-				Computed:            true,
+				Description: "Terraform's internal resource ID. It is structured as \"`organization_id`,`network_area_id`,`network_area_route_id`\".",
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
