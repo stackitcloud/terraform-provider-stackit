@@ -312,16 +312,21 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				},
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						Description: "The protocol name which the rule should match.",
+						Description: "The protocol name which the rule should match. Either `name` or `number` must be provided.",
 						Optional:    true,
 						Computed:    true,
+						Validators: []validator.String{
+							stringvalidator.AtLeastOneOf(
+								path.MatchRelative().AtParent().AtName("number"),
+							),
+						},
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.UseStateForUnknown(),
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
 					"number": schema.Int64Attribute{
-						Description: "The protocol number which the rule should match.",
+						Description: "The protocol number which the rule should match. Either `name` or `number` must be provided.",
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.Int64{
@@ -625,14 +630,8 @@ func mapPortRange(securityGroupRuleResp *iaasalpha.SecurityGroupRule, m *Model) 
 }
 
 func mapProtocol(securityGroupRuleResp *iaasalpha.SecurityGroupRule, m *Model) error {
-	if securityGroupRuleResp.Protocol == nil && m.Protocol.IsNull() {
+	if securityGroupRuleResp.Protocol == nil {
 		m.Protocol = types.ObjectNull(protocolTypes)
-		return nil
-	} else if securityGroupRuleResp.Protocol == nil && !m.Protocol.IsNull() {
-		m.Protocol = types.ObjectValueMust(protocolTypes, map[string]attr.Value{
-			"name":   types.StringNull(),
-			"number": types.Int64Null(),
-		})
 		return nil
 	}
 

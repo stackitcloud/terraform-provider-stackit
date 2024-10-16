@@ -82,5 +82,5 @@ Required:
 
 Optional:
 
-- `name` (String) The protocol name which the rule should match.
-- `number` (Number) The protocol number which the rule should match.
+- `name` (String) The protocol name which the rule should match. Either `name` or `number` must be provided.
+- `number` (Number) The protocol number which the rule should match. Either `name` or `number` must be provided.

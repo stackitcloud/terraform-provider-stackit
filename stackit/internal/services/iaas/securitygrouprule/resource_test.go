@@ -111,18 +111,19 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
-			"empty_protocol",
+			"protocol_only_with_name",
 			Model{
 				ProjectId:           types.StringValue("pid"),
 				SecurityGroupId:     types.StringValue("sgid"),
 				SecurityGroupRuleId: types.StringValue("sgrid"),
 				Protocol: types.ObjectValueMust(protocolTypes, map[string]attr.Value{
-					"name":   types.StringNull(),
+					"name":   types.StringValue("name"),
 					"number": types.Int64Null(),
 				}),
 			},
 			&iaasalpha.SecurityGroupRule{
-				Id: utils.Ptr("sgrid"),
+				Id:       utils.Ptr("sgrid"),
+				Protocol: &fixtureProtocol,
 			},
 			Model{
 				Id:                    types.StringValue("pid,sgid,sgrid"),
@@ -136,10 +137,38 @@ func TestMapFields(t *testing.T) {
 				RemoteSecurityGroupId: types.StringNull(),
 				IcmpParameters:        types.ObjectNull(icmpParametersTypes),
 				PortRange:             types.ObjectNull(portRangeTypes),
+				Protocol:              fixtureModelProtocol,
+			},
+			true,
+		},
+		{
+			"protocol_only_with_number",
+			Model{
+				ProjectId:           types.StringValue("pid"),
+				SecurityGroupId:     types.StringValue("sgid"),
+				SecurityGroupRuleId: types.StringValue("sgrid"),
 				Protocol: types.ObjectValueMust(protocolTypes, map[string]attr.Value{
 					"name":   types.StringNull(),
-					"number": types.Int64Null(),
+					"number": types.Int64Value(1),
 				}),
+			},
+			&iaasalpha.SecurityGroupRule{
+				Id:       utils.Ptr("sgrid"),
+				Protocol: &fixtureProtocol,
+			},
+			Model{
+				Id:                    types.StringValue("pid,sgid,sgrid"),
+				ProjectId:             types.StringValue("pid"),
+				SecurityGroupId:       types.StringValue("sgid"),
+				SecurityGroupRuleId:   types.StringValue("sgrid"),
+				Direction:             types.StringNull(),
+				Description:           types.StringNull(),
+				EtherType:             types.StringNull(),
+				IpRange:               types.StringNull(),
+				RemoteSecurityGroupId: types.StringNull(),
+				IcmpParameters:        types.ObjectNull(icmpParametersTypes),
+				PortRange:             types.ObjectNull(portRangeTypes),
+				Protocol:              fixtureModelProtocol,
 			},
 			true,
 		},
