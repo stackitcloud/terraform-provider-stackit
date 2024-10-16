@@ -166,8 +166,7 @@ func (r securityGroupRuleResource) ValidateConfig(ctx context.Context, req resou
 		return
 	}
 
-	var protocol *protocolModel
-	protocol = &protocolModel{}
+	protocol := &protocolModel{}
 	diags := model.Protocol.As(ctx, protocol, basetypes.ObjectAsOptions{})
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
