@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -37,9 +38,10 @@ var resourceBetaCheckDone bool
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &securityGroupRuleResource{}
-	_ resource.ResourceWithConfigure   = &securityGroupRuleResource{}
-	_ resource.ResourceWithImportState = &securityGroupRuleResource{}
+	_             resource.Resource                = &securityGroupRuleResource{}
+	_             resource.ResourceWithConfigure   = &securityGroupRuleResource{}
+	_             resource.ResourceWithImportState = &securityGroupRuleResource{}
+	icmpProtocols                                  = []string{"icmp", "ipv6-icmp"}
 )
 
 type Model struct {
@@ -148,6 +150,53 @@ func (r *securityGroupRuleResource) Configure(ctx context.Context, req resource.
 
 	r.client = apiClient
 	tflog.Info(ctx, "iaasalpha client configured")
+}
+
+func (r securityGroupRuleResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var model Model
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// If protocol is not configured, return without error.
+	if model.Protocol.IsNull() || model.Protocol.IsUnknown() {
+		return
+	}
+
+	var protocol *protocolModel
+	protocol = &protocolModel{}
+	diags := model.Protocol.As(ctx, protocol, basetypes.ObjectAsOptions{})
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	protocolName := conversion.StringValueToPointer(protocol.Name)
+
+	if protocolName == nil {
+		return
+	}
+
+	if slices.Contains(icmpProtocols, *protocolName) {
+		if !(model.PortRange.IsNull() || model.PortRange.IsUnknown()) {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("port_range"),
+				"Conflicting attribute configuration",
+				"`port_range` attribute can't be provided if `protocol.name` is set to `ipv6` or `ipv6-icmp`",
+			)
+		}
+	} else {
+		if !(model.IcmpParameters.IsNull() || model.IcmpParameters.IsUnknown()) {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("icmp_parameters"),
+				"Conflicting attribute configuration",
+				"`icmp_parameters` attribute can't be provided if `protocol.name` is not `ipv6` or `ipv6-icmp`",
+			)
+		}
+	}
 }
 
 // Schema defines the schema for the resource.
@@ -277,6 +326,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Computed:    true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.RequiresReplace(),
+					objectplanmodifier.UseStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"max": schema.Int64Attribute{
@@ -309,6 +359,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Computed:    true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.RequiresReplace(),
+					objectplanmodifier.UseStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
