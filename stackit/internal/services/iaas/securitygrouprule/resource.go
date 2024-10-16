@@ -325,6 +325,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
 							int64planmodifier.RequiresReplace(),
 						},
 						Validators: []validator.Int64{
