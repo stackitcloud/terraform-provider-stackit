@@ -89,7 +89,7 @@ var securityGroupRuleResource = map[string]string{
 	"direction":   "ingress",
 	"description": "description",
 }
-  
+
 // Public IP resource data
 var publicIpResource = map[string]string{
 	"project_id":           testutil.ProjectId,
