@@ -18,6 +18,9 @@ resource "stackit_network_area" "example" {
   network_area_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   prefix          = "1.2.3.4/5"
   next_hop        = "6.7.8.9"
+  labels = {
+    "key" = "value"
+  }
 }
 ```
 
@@ -30,6 +33,10 @@ resource "stackit_network_area" "example" {
 - `next_hop` (String) The IP address of the routing system, that will route the prefix configured. Should be a valid IPv4 address.
 - `organization_id` (String) STACKIT organization ID to which the network area is associated.
 - `prefix` (String) The network, that is reachable though the Next Hop. Should use CIDR notation.
+
+### Optional
+
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 
 ### Read-Only
 

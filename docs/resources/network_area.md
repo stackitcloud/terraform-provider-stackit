@@ -22,6 +22,9 @@ resource "stackit_network_area" "example" {
     }
   ]
   transfer_network = "1.2.3.4/5"
+  labels = {
+    "key" = "value"
+  }
 }
 ```
 
@@ -39,6 +42,7 @@ resource "stackit_network_area" "example" {
 
 - `default_nameservers` (List of String) List of DNS Servers/Nameservers.
 - `default_prefix_length` (Number) The default prefix length for networks in the network area.
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `max_prefix_length` (Number) The maximal prefix length for networks in the network area.
 - `min_prefix_length` (Number) The minimal prefix length for networks in the network area.
 

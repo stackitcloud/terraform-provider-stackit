@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -42,6 +44,7 @@ type Model struct {
 	NetworkAreaRouteId types.String `tfsdk:"network_area_route_id"`
 	NextHop            types.String `tfsdk:"next_hop"`
 	Prefix             types.String `tfsdk:"prefix"`
+	Labels             types.Map    `tfsdk:"labels"`
 }
 
 // NewNetworkAreaRouteResource is a helper function to simplify the provider implementation.
@@ -172,6 +175,14 @@ func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRe
 					validate.CIDR(),
 				},
 			},
+			"labels": schema.MapAttribute{
+				Description: "Labels are key-value string pairs which can be attached to a resource container",
+				ElementType: types.StringType,
+				Optional:    true,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -192,7 +203,7 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
 	// Generate API request body from model
-	payload, err := toCreatePayload(&model)
+	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -222,7 +233,7 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	ctx = tflog.SetField(ctx, "network_area_route_id", routeId)
 
 	// Map response body to schema
-	err = mapFields(&route, &model)
+	err = mapFields(ctx, &route, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -263,7 +274,7 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 	}
 
 	// Map response body to schema
-	err = mapFields(networkAreaRouteResp, &model)
+	err = mapFields(ctx, networkAreaRouteResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area route", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -335,7 +346,7 @@ func (r *networkAreaRouteResource) ImportState(ctx context.Context, req resource
 	tflog.Info(ctx, "Network area route state imported")
 }
 
-func mapFields(networkAreaRoute *iaas.Route, model *Model) error {
+func mapFields(ctx context.Context, networkAreaRoute *iaas.Route, model *Model) error {
 	if networkAreaRoute == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -361,15 +372,35 @@ func mapFields(networkAreaRoute *iaas.Route, model *Model) error {
 		strings.Join(idParts, core.Separator),
 	)
 
+	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
+	if diags.HasError() {
+		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
+	}
+	if networkAreaRoute.Labels != nil && len(*networkAreaRoute.Labels) != 0 {
+		var diags diag.Diagnostics
+		labels, diags = types.MapValueFrom(ctx, types.StringType, *networkAreaRoute.Labels)
+		if diags.HasError() {
+			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
+		}
+	} else if model.Labels.IsNull() {
+		labels = types.MapNull(types.StringType)
+	}
+
 	model.NetworkAreaRouteId = types.StringValue(networkAreaRouteId)
 	model.NextHop = types.StringPointerValue(networkAreaRoute.Nexthop)
 	model.Prefix = types.StringPointerValue(networkAreaRoute.Prefix)
+	model.Labels = labels
 	return nil
 }
 
-func toCreatePayload(model *Model) (*iaas.CreateNetworkAreaRoutePayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkAreaRoutePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
+	}
+
+	labels, err := conversion.ToStringInterfaceMap(ctx, model.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
 	return &iaas.CreateNetworkAreaRoutePayload{
@@ -377,6 +408,7 @@ func toCreatePayload(model *Model) (*iaas.CreateNetworkAreaRoutePayload, error) 
 			{
 				Prefix:  conversion.StringValueToPointer(model.Prefix),
 				Nexthop: conversion.StringValueToPointer(model.NextHop),
+				Labels:  &labels,
 			},
 		},
 	}, nil
