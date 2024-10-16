@@ -445,8 +445,19 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
+	projects, err := r.client.ListNetworkAreaProjects(ctx, organizationId, networkAreaId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintf("Calling API to get the list of projects: %v", err))
+		return
+	}
+
+	if projects != nil && len(*projects.Items) > 0 {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintln("You still have projects attached to the network area. Please delete or remove them from the network area before deleting the network area."))
+		return
+	}
+
 	// Delete existing network
-	err := r.client.DeleteNetworkArea(ctx, organizationId, networkAreaId).Execute()
+	err = r.client.DeleteNetworkArea(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintf("Calling API: %v", err))
 		return
