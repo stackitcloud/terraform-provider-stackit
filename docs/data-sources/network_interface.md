@@ -38,7 +38,6 @@ data "stackit_network_interface" "example" {
 - `device` (String) The device UUID of the network interface.
 - `id` (String) Terraform's internal data source ID. It is structured as "`project_id`,`network_id`,`network_interface_id`".
 - `ipv4` (String) The IPv4 address.
-- `ipv6` (String) The IPv6 address.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a network interface.
 - `mac` (String) The MAC address of network interface.
 - `name` (String) The name of the network interface.

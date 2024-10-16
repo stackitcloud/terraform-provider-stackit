@@ -140,10 +140,6 @@ func (d *networkInterfaceDataSource) Schema(_ context.Context, _ datasource.Sche
 				Description: "The IPv4 address.",
 				Computed:    true,
 			},
-			"ipv6": schema.StringAttribute{
-				Description: "The IPv6 address.",
-				Computed:    true,
-			},
 			"labels": schema.MapAttribute{
 				Description: "Labels are key-value string pairs which can be attached to a network interface.",
 				ElementType: types.StringType,
