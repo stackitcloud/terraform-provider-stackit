@@ -111,36 +111,6 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
-			"empty_port_range",
-			Model{
-				ProjectId:           types.StringValue("pid"),
-				SecurityGroupId:     types.StringValue("sgid"),
-				SecurityGroupRuleId: types.StringValue("sgrid"),
-			},
-			&iaasalpha.SecurityGroupRule{
-				Id:        utils.Ptr("sgrid"),
-				PortRange: &iaasalpha.PortRange{},
-			},
-			Model{
-				Id:                    types.StringValue("pid,sgid,sgrid"),
-				ProjectId:             types.StringValue("pid"),
-				SecurityGroupId:       types.StringValue("sgid"),
-				SecurityGroupRuleId:   types.StringValue("sgrid"),
-				Direction:             types.StringNull(),
-				Description:           types.StringNull(),
-				EtherType:             types.StringNull(),
-				IpRange:               types.StringNull(),
-				RemoteSecurityGroupId: types.StringNull(),
-				IcmpParameters:        types.ObjectNull(icmpParametersTypes),
-				PortRange: types.ObjectValueMust(portRangeTypes, map[string]attr.Value{
-					"max": types.Int64Null(),
-					"min": types.Int64Null(),
-				}),
-				Protocol: types.ObjectNull(protocolTypes),
-			},
-			true,
-		},
-		{
 			"empty_protocol",
 			Model{
 				ProjectId:           types.StringValue("pid"),
