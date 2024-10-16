@@ -48,7 +48,6 @@ type Model struct {
 	Name               types.String `tfsdk:"name"`
 	AllowedAddresses   types.List   `tfsdk:"allowed_addresses"`
 	IPv4               types.String `tfsdk:"ipv4"`
-	IPv6               types.String `tfsdk:"ipv6"`
 	Labels             types.Map    `tfsdk:"labels"`
 	Security           types.Bool   `tfsdk:"security"`
 	SecurityGroupIds   types.List   `tfsdk:"security_group_ids"`
@@ -200,17 +199,7 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"ipv6": schema.StringAttribute{
-				Description: "The IPv6 address.",
-				Optional:    true,
-				Computed:    true,
-				Validators: []validator.String{
-					validate.IP(),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"labels": schema.MapAttribute{
@@ -221,6 +210,9 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 			"mac": schema.StringAttribute{
 				Description: "The MAC address of network interface.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"security": schema.BoolAttribute{
 				Description: "The Network Interface Security. If set to false, then no security groups will apply to this network interface.",
@@ -243,6 +235,9 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 			"type": schema.StringAttribute{
 				Description: "Type of network interface. Some of the possible values are: " + utils.SupportedValuesDocumentation(typeOptions),
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -526,7 +521,6 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaasalpha.NIC, model *
 	model.NetworkInterfaceId = types.StringValue(networkInterfaceId)
 	model.Name = types.StringPointerValue(networkInterfaceResp.Name)
 	model.IPv4 = types.StringPointerValue(networkInterfaceResp.Ipv4)
-	model.IPv6 = types.StringPointerValue(networkInterfaceResp.Ipv6)
 	model.Security = types.BoolPointerValue(networkInterfaceResp.NicSecurity)
 	model.Device = types.StringPointerValue(networkInterfaceResp.Device)
 	model.Mac = types.StringPointerValue(networkInterfaceResp.Mac)
@@ -584,7 +578,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateNICPay
 		Name:             conversion.StringValueToPointer(model.Name),
 		Device:           conversion.StringValueToPointer(model.Device),
 		Ipv4:             conversion.StringValueToPointer(model.IPv4),
-		Ipv6:             conversion.StringValueToPointer(model.IPv6),
 		Mac:              conversion.StringValueToPointer(model.Mac),
 		Type:             conversion.StringValueToPointer(model.Type),
 	}, nil

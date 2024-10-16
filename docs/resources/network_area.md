@@ -4,11 +4,14 @@ page_title: "stackit_network_area Resource - stackit"
 subcategory: ""
 description: |-
   Network area resource schema. Must have a region specified in the provider configuration.
+  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_network_area (Resource)
 
 Network area resource schema. Must have a `region` specified in the provider configuration.
+
+~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 
@@ -48,9 +51,7 @@ resource "stackit_network_area" "example" {
 
 ### Read-Only
 
-- `id` (String) Network area resource schema. Must have a `region` specified in the provider configuration.
-
-~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
+- `id` (String) Terraform's internal resource ID. It is structured as "`organization_id`,`network_area_id`".
 - `network_area_id` (String) The network area ID.
 - `project_count` (Number) The amount of projects currently referencing this area.
 
