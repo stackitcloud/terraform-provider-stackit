@@ -89,6 +89,13 @@ var securityGroupRuleResource = map[string]string{
 	"direction":   "ingress",
 	"description": "description",
 }
+  
+// Public IP resource data
+var publicIpResource = map[string]string{
+	"project_id":           testutil.ProjectId,
+	"label1":               "value",
+	"network_interface_id": testutil.IaaSNetworkInterfaceId,
+}
 
 func networkResourceConfig(name, nameservers string) string {
 	return fmt.Sprintf(`
@@ -266,6 +273,13 @@ func resourceConfigSecurityGroup(name, direction string) string {
 		testutil.IaaSProviderConfig(),
 		securityGroupResourceConfig(name),
 		securityGroupRuleResourceConfig(direction),
+	)
+}
+
+func testAccPublicIpConfig(publicIpResourceConfig string) string {
+	return fmt.Sprintf("%s\n\n%s",
+		testutil.IaaSProviderConfig(),
+		publicIpResourceConfig,
 	)
 }
 
@@ -850,6 +864,117 @@ func TestAccIaaSSecurityGroup(t *testing.T) {
 	})
 }
 
+func TestAccPublicIp(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckIaaSPublicIpDestroy,
+		Steps: []resource.TestStep{
+
+			// Creation
+			{
+				Config: testAccPublicIpConfig(
+					fmt.Sprintf(`
+						resource "stackit_public_ip" "public_ip" {
+							project_id = "%s"
+							labels = {
+								"label1" = "%s"
+							}
+							network_interface_id = "%s"
+						}
+					`,
+						publicIpResource["project_id"],
+						publicIpResource["label1"],
+						publicIpResource["network_interface_id"],
+					),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "project_id", publicIpResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip", "public_ip_id"),
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.label1", publicIpResource["label1"]),
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "network_interface_id", publicIpResource["network_interface_id"]),
+				),
+			},
+			// Data source
+			{
+				Config: fmt.Sprintf(`
+					%s
+			
+					data "stackit_public_ip" "public_ip" {
+						project_id   		 = stackit_public_ip.public_ip.project_id
+						public_ip_id 		 = stackit_public_ip.public_ip.public_ip_id
+					}
+					`,
+					testAccPublicIpConfig(
+						fmt.Sprintf(`
+							resource "stackit_public_ip" "public_ip" {
+								project_id = "%s"
+								labels = {
+									"label1" = "%s"
+								}
+								network_interface_id = "%s"
+							}
+						`,
+							publicIpResource["project_id"],
+							publicIpResource["label1"],
+							publicIpResource["network_interface_id"],
+						),
+					),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("data.stackit_public_ip.public_ip", "project_id", publicIpResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_public_ip.public_ip", "public_ip_id",
+						"data.stackit_public_ip.public_ip", "public_ip_id",
+					),
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.label1", publicIpResource["label1"]),
+					resource.TestCheckResourceAttr("data.stackit_public_ip.public_ip", "network_interface_id", publicIpResource["network_interface_id"]),
+				),
+			},
+			// Import
+			{
+				ResourceName: "stackit_public_ip.public_ip",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_public_ip.public_ip"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_public_ip.public_ip")
+					}
+					publicIpId, ok := r.Primary.Attributes["public_ip_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute public_ip_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, publicIpId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				Config: testAccPublicIpConfig(
+					fmt.Sprintf(`
+							resource "stackit_public_ip" "public_ip" {
+								project_id = "%s"
+								labels = {
+									"label1" = "%s"
+								}
+							}
+						`,
+						publicIpResource["project_id"],
+						publicIpResource["label1"],
+					),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "project_id", publicIpResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip", "public_ip_id"),
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.label1", publicIpResource["label1"]),
+					resource.TestCheckNoResourceAttr("stackit_public_ip.public_ip", "network_interface_id"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
 func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *iaas.APIClient
@@ -1073,6 +1198,53 @@ func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
 			err := client.DeleteSecurityGroupExecute(ctx, testutil.ProjectId, *securityGroups[i].Id)
 			if err != nil {
 				return fmt.Errorf("destroying security group %s during CheckDestroy: %w", *securityGroups[i].Id, err)
+			}
+		}
+	}
+	return nil
+}
+
+func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var client *iaasalpha.APIClient
+	var err error
+	if testutil.IaaSCustomEndpoint == "" {
+		client, err = iaasalpha.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
+	} else {
+		client, err = iaasalpha.NewAPIClient(
+			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	publicIpsToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_public_ip" {
+			continue
+		}
+		// public IP terraform ID: "[project_id],[public_ip_id]"
+		publicIpId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		publicIpsToDestroy = append(publicIpsToDestroy, publicIpId)
+	}
+
+	publicIpsResp, err := client.ListPublicIPsExecute(ctx, testutil.ProjectId)
+	if err != nil {
+		return fmt.Errorf("getting publicIpsResp: %w", err)
+	}
+
+	publicIps := *publicIpsResp.Items
+	for i := range publicIps {
+		if publicIps[i].Id == nil {
+			continue
+		}
+		if utils.Contains(publicIpsToDestroy, *publicIps[i].Id) {
+			err := client.DeletePublicIPExecute(ctx, testutil.ProjectId, *publicIps[i].Id)
+			if err != nil {
+				return fmt.Errorf("destroying public IP %s during CheckDestroy: %w", *publicIps[i].Id, err)
 			}
 		}
 	}
