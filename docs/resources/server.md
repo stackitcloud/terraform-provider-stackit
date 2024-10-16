@@ -6,160 +6,166 @@ description: |-
   Server resource schema. Must have a region specified in the provider configuration.
   ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
   Example Usage
-  Basic server
-  
-  resource "stackit_server" "basic" {
-      project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      name = "example-server"
-      image_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      availability_zone = "eu01-1"
-      machine_type = "g1.1"
-      keypair_name = "example-keypair"
-  }
   
   
-  Boot from volume
-  
+  ### Boot from volume
+  ```terraform
   resource "stackit_server" "boot-from-volume" {
-      project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      name = "example-server"
-      boot_volume = {
-          size = 64
-          source_type = "image"
-          source_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      }
-      availability_zone = "eu01-1"
-      machine_type = "g1.1"
-      keypair_name = "example-keypair"
+    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    name       = "example-server"
+    boot_volume = {
+      size        = 64
+      source_type = "image"
+      source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    }
+    availability_zone = "eu01-1"
+    machine_type      = "g1.1"
+    keypair_name      = "example-keypair"
   }
   
   
   Boot from existing volume
   
   resource "stackit_volume" "example-volume" {
-      project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      size = 12
-      source = {
-          type = "image"
-          id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      }
-      name = "example-volume"
-      availability_zone = "eu01-1"
+    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    size       = 12
+    source = {
+      type = "image"
+      id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    }
+    name              = "example-volume"
+    availability_zone = "eu01-1"
   }
   
   resource "stackit_server" "boot-from-volume" {
-      project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      name = "example-server"
-      boot_volume = {
-          size = 64
-          source_type = "volume"
-          source_id = stackit_volume.example-volume.volume_id
-      }
-      availability_zone = "eu01-1"
-      machine_type = "g1.1"
-      keypair_name = "example-keypair"
+    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    name       = "example-server"
+    boot_volume = {
+      size        = 64
+      source_type = "volume"
+      source_id   = stackit_volume.example-volume.volume_id
+    }
+    availability_zone = "eu01-1"
+    machine_type      = "g1.1"
+    keypair_name      = "example-keypair"
   }
   
   
   Network setup
   
   resource "stackit_server" "server-with-network" {
-      project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      name            = "example-server"
-  	image_id 		= "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      machine_type    = "g1.1"
-      keypair_name    = "example-keypair"
+    project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    name         = "example-server"
+    boot_volume = {
+      size        = 64
+      source_type = "image"
+      source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    }
+    machine_type = "g1.1"
+    keypair_name = "example-keypair"
   }
   
   resource "stackit_network" "network" {
-      project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      name               = "example-network"
-      nameservers        = ["192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24"]
-      ipv4_prefix_length = 24
+    project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    name               = "example-network"
+    nameservers        = ["192.0.2.0", "198.51.100.0", "203.0.113.0"]
+    ipv4_prefix_length = 24
   }
   
   resource "stackit_security_group" "sec-group" {
-      project_id              = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      name = "example-security-group"
-      stateful = true
+    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    name       = "example-security-group"
+    stateful   = true
   }
   
   resource "stackit_security_group_rule" "rule" {
-      project_id              = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      security_group_id = stackit_security_group.sec-group.security_group_id
-      direction = "ingress"
-      ethertype = "IPv4"
-      icmp_parameters = {
-          code = 0
-          type = 8
-      }
+    project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    security_group_id = stackit_security_group.sec-group.security_group_id
+    direction         = "ingress"
+    ethertype         = "IPv4"
+    icmp_parameters = {
+      code = 0
+      type = 8
+    }
   }
   
   resource "stackit_network_interface" "nic" {
-      project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      network_id  = stackit_network.network.network_id
-  	security_group_ids = [stackit_security_group.sec-group.security_group_id]
+    project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    network_id         = stackit_network.network.network_id
+    security_group_ids = [stackit_security_group.sec-group.security_group_id]
   }
   
   resource "stackit_public_ip" "public-ip" {
-      project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      network_interface_id  = stackit_network_interface.nic.network_interface_id
+    project_id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    network_interface_id = stackit_network_interface.nic.network_interface_id
   }
   
   resource "stackit_server_network_interface_attach" "nic-attachment" {
-      project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  	server_id = stackit_server.server-with-network.server_id
-      network_interface_id  = stackit_network_interface.nic.network_interface_id
+    project_id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    server_id            = stackit_server.server-with-network.server_id
+    network_interface_id = stackit_network_interface.nic.network_interface_id
   }
   
   
   Server with attached volume
   
   resource "stackit_volume" "example-volume" {
-      project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      size = 12
-      source = {
-          type = "image"
-          id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      }
-      name = "example-volume"
-      availability_zone = "eu01-1"
+    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    size       = 12
+    source = {
+      type = "image"
+      id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    }
+    name              = "example-volume"
+    availability_zone = "eu01-1"
   }
   
   resource "stackit_server" "server-with-volume" {
-      project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      name = "example-server"
-      image_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      availability_zone = "eu01-1"
-      machine_type = "g1.1"
-      keypair_name = "example-keypair"
+    project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    name              = "example-server"
+    boot_volume = {
+      size        = 64
+      source_type = "image"
+      source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    }
+    availability_zone = "eu01-1"
+    machine_type      = "g1.1"
+    keypair_name      = "example-keypair"
   }
   
   resource "stackit_server_volume_attach" "attach_volume" {
-      project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      server_id   = stackit_server.server-with-volume.server_id
-      volume_id   = stackit_volume.example-volume.volume_id
+    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    server_id  = stackit_server.server-with-volume.server_id
+    volume_id  = stackit_volume.example-volume.volume_id
   }
   
   
   Server with user data (cloud-init)
   
   resource "stackit_server" "user-data" {
-      project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  	image_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      name            = "example-server"
-      machine_type       = "g1.1"
-      keypair_name        = "example-keypair"
-      user_data = "#!/bin/bash\n/bin/su"
+    project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    boot_volume = {
+      size        = 64
+      source_type = "image"
+      source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    }
+    name         = "example-server"
+    machine_type = "g1.1"
+    keypair_name = "example-keypair"
+    user_data    = "#!/bin/bash\n/bin/su"
   }
   
   resource "stackit_server" "user-data-from-file" {
-      project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  	image_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      name            = "example-server"
-      machine_type       = "g1.1"
-      keypair_name        = "example-keypair"
-      user_data = file("${path.module}/cloud-init.yaml")
+    project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    boot_volume = {
+      size        = 64
+      source_type = "image"
+      source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    }
+    name         = "example-server"
+    machine_type = "g1.1"
+    keypair_name = "example-keypair"
+    user_data    = file("${path.module}/cloud-init.yaml")
   }
 ---
 
@@ -171,32 +177,22 @@ Server resource schema. Must have a region specified in the provider configurati
 ## Example Usage
 
 
-### Basic server
-```terraform
-resource "stackit_server" "basic" {
-    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name = "example-server"
-    image_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    availability_zone = "eu01-1"
-    machine_type = "g1.1"
-    keypair_name = "example-keypair"
-}
 
 ```
 
 ### Boot from volume
 ```terraform
 resource "stackit_server" "boot-from-volume" {
-    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name = "example-server"
-    boot_volume = {
-        size = 64
-        source_type = "image"
-        source_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    }
-    availability_zone = "eu01-1"
-    machine_type = "g1.1"
-    keypair_name = "example-keypair"
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "example-server"
+  boot_volume = {
+    size        = 64
+    source_type = "image"
+    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+  availability_zone = "eu01-1"
+  machine_type      = "g1.1"
+  keypair_name      = "example-keypair"
 }
 
 ```
@@ -204,27 +200,27 @@ resource "stackit_server" "boot-from-volume" {
 ### Boot from existing volume
 ```terraform
 resource "stackit_volume" "example-volume" {
-    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    size = 12
-    source = {
-        type = "image"
-        id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    }
-    name = "example-volume"
-    availability_zone = "eu01-1"
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  size       = 12
+  source = {
+    type = "image"
+    id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+  name              = "example-volume"
+  availability_zone = "eu01-1"
 }
 
 resource "stackit_server" "boot-from-volume" {
-    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name = "example-server"
-    boot_volume = {
-        size = 64
-        source_type = "volume"
-        source_id = stackit_volume.example-volume.volume_id
-    }
-    availability_zone = "eu01-1"
-    machine_type = "g1.1"
-    keypair_name = "example-keypair"
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "example-server"
+  boot_volume = {
+    size        = 64
+    source_type = "volume"
+    source_id   = stackit_volume.example-volume.volume_id
+  }
+  availability_zone = "eu01-1"
+  machine_type      = "g1.1"
+  keypair_name      = "example-keypair"
 }
 
 ```
@@ -232,52 +228,56 @@ resource "stackit_server" "boot-from-volume" {
 ### Network setup
 ```terraform
 resource "stackit_server" "server-with-network" {
-    project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name            = "example-server"
-	image_id 		= "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    machine_type    = "g1.1"
-    keypair_name    = "example-keypair"
+  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name         = "example-server"
+  boot_volume = {
+    size        = 64
+    source_type = "image"
+    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+  machine_type = "g1.1"
+  keypair_name = "example-keypair"
 }
 
 resource "stackit_network" "network" {
-    project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name               = "example-network"
-    nameservers        = ["192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24"]
-    ipv4_prefix_length = 24
+  project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name               = "example-network"
+  nameservers        = ["192.0.2.0", "198.51.100.0", "203.0.113.0"]
+  ipv4_prefix_length = 24
 }
 
 resource "stackit_security_group" "sec-group" {
-    project_id              = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name = "example-security-group"
-    stateful = true
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "example-security-group"
+  stateful   = true
 }
 
 resource "stackit_security_group_rule" "rule" {
-    project_id              = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    security_group_id = stackit_security_group.sec-group.security_group_id
-    direction = "ingress"
-    ethertype = "IPv4"
-    icmp_parameters = {
-        code = 0
-        type = 8
-    }
+  project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  security_group_id = stackit_security_group.sec-group.security_group_id
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  icmp_parameters = {
+    code = 0
+    type = 8
+  }
 }
 
 resource "stackit_network_interface" "nic" {
-    project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    network_id  = stackit_network.network.network_id
-	security_group_ids = [stackit_security_group.sec-group.security_group_id]
+  project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  network_id         = stackit_network.network.network_id
+  security_group_ids = [stackit_security_group.sec-group.security_group_id]
 }
 
 resource "stackit_public_ip" "public-ip" {
-    project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    network_interface_id  = stackit_network_interface.nic.network_interface_id
+  project_id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  network_interface_id = stackit_network_interface.nic.network_interface_id
 }
 
 resource "stackit_server_network_interface_attach" "nic-attachment" {
-    project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-	server_id = stackit_server.server-with-network.server_id
-    network_interface_id  = stackit_network_interface.nic.network_interface_id
+  project_id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  server_id            = stackit_server.server-with-network.server_id
+  network_interface_id = stackit_network_interface.nic.network_interface_id
 }
 
 ```
@@ -285,29 +285,33 @@ resource "stackit_server_network_interface_attach" "nic-attachment" {
 ### Server with attached volume
 ```terraform
 resource "stackit_volume" "example-volume" {
-    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    size = 12
-    source = {
-        type = "image"
-        id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    }
-    name = "example-volume"
-    availability_zone = "eu01-1"
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  size       = 12
+  source = {
+    type = "image"
+    id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+  name              = "example-volume"
+  availability_zone = "eu01-1"
 }
 
 resource "stackit_server" "server-with-volume" {
-    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name = "example-server"
-    image_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    availability_zone = "eu01-1"
-    machine_type = "g1.1"
-    keypair_name = "example-keypair"
+  project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name              = "example-server"
+  boot_volume = {
+    size        = 64
+    source_type = "image"
+    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+  availability_zone = "eu01-1"
+  machine_type      = "g1.1"
+  keypair_name      = "example-keypair"
 }
 
 resource "stackit_server_volume_attach" "attach_volume" {
-    project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    server_id   = stackit_server.server-with-volume.server_id
-    volume_id   = stackit_volume.example-volume.volume_id
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  server_id  = stackit_server.server-with-volume.server_id
+  volume_id  = stackit_volume.example-volume.volume_id
 }
 
 ```
@@ -315,21 +319,29 @@ resource "stackit_server_volume_attach" "attach_volume" {
 ### Server with user data (cloud-init)
 ```terraform
 resource "stackit_server" "user-data" {
-    project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-	image_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name            = "example-server"
-    machine_type       = "g1.1"
-    keypair_name        = "example-keypair"
-    user_data = "#!/bin/bash\n/bin/su"
+  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  boot_volume = {
+    size        = 64
+    source_type = "image"
+    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+  name         = "example-server"
+  machine_type = "g1.1"
+  keypair_name = "example-keypair"
+  user_data    = "#!/bin/bash\n/bin/su"
 }
 
 resource "stackit_server" "user-data-from-file" {
-    project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-	image_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name            = "example-server"
-    machine_type       = "g1.1"
-    keypair_name        = "example-keypair"
-    user_data = file("${path.module}/cloud-init.yaml")
+  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  boot_volume = {
+    size        = 64
+    source_type = "image"
+    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+  name         = "example-server"
+  machine_type = "g1.1"
+  keypair_name = "example-keypair"
+  user_data    = file("${path.module}/cloud-init.yaml")
 }
 
 ```

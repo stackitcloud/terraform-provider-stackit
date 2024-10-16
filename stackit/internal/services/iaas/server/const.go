@@ -70,7 +70,7 @@ resource "stackit_server" "server-with-network" {
 resource "stackit_network" "network" {
   project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name               = "example-network"
-  nameservers        = ["192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24"]
+  nameservers        = ["192.0.2.0", "198.51.100.0", "203.0.113.0"]
   ipv4_prefix_length = 24
 }
 
@@ -161,7 +161,11 @@ resource "stackit_server" "user-data" {
 
 resource "stackit_server" "user-data-from-file" {
   project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  image_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  boot_volume = {
+    size        = 64
+    source_type = "image"
+    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
   name         = "example-server"
   machine_type = "g1.1"
   keypair_name = "example-keypair"
