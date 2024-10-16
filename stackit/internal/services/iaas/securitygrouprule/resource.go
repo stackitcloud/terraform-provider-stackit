@@ -317,7 +317,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 						Computed:    true,
 						Validators: []validator.String{
 							stringvalidator.AtLeastOneOf(
-								path.MatchRelative().AtParent().AtName("number"),
+								path.MatchRoot("protocol").AtName("number"),
 							),
 						},
 						PlanModifiers: []planmodifier.String{
