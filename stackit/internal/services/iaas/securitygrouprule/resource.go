@@ -323,6 +323,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 					"number": schema.Int64Attribute{
 						Description: "The protocol number which the rule should match.",
 						Optional:    true,
+						Computed:    true,
 						PlanModifiers: []planmodifier.Int64{
 							int64planmodifier.RequiresReplace(),
 						},
