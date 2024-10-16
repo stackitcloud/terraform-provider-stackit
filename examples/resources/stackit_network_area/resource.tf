@@ -7,4 +7,7 @@ resource "stackit_network_area" "example" {
     }
   ]
   transfer_network = "1.2.3.4/5"
+  labels = {
+    "key" = "value"
+  }
 }
