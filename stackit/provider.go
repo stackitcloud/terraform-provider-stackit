@@ -21,6 +21,7 @@ import (
 	iaasNetworkInterfaceAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterfaceattach"
 	iaasPublicIp "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicip"
 	iaasSecurityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/securitygroup"
+	iaasSecurityGroupRule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/securitygrouprule"
 	iaasServer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/server"
 	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
 	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
@@ -413,6 +414,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasPublicIp.NewPublicIpDataSource,
 		iaasServer.NewServerDataSource,
 		iaasSecurityGroup.NewSecurityGroupDataSource,
+		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
 		loadBalancer.NewLoadBalancerDataSource,
 		logMeInstance.NewInstanceDataSource,
 		logMeCredential.NewCredentialDataSource,
@@ -465,6 +467,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasServiceAccountAttach.NewServiceAccountAttachResource,
 		iaasServer.NewServerResource,
 		iaasSecurityGroup.NewSecurityGroupResource,
+		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
 		loadBalancer.NewLoadBalancerResource,
 		loadBalancerCredential.NewCredentialResource,
 		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
