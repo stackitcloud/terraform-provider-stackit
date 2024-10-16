@@ -452,7 +452,7 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 
 	if projects != nil && len(*projects.Items) > 0 {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintln("You still have projects in the network area. Please delete them before deleting the network area."))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintln("You still have projects attached to the network area. Please delete or remove them from the network area before deleting the network area."))
 		return
 	}
 
