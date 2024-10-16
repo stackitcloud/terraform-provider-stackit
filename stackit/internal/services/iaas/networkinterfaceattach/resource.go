@@ -224,18 +224,20 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 		return
 	}
 
-	for _, nic := range *nics.Items {
-		if nic.Id == nil || (nic.Id != nil && *nic.Id != networkInterfaceId) {
-			continue
-		}
-		// Set refreshed state
-		diags = resp.State.Set(ctx, model)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
+	if nics.Items != nil {
+		for _, nic := range *nics.Items {
+			if nic.Id == nil || (nic.Id != nil && *nic.Id != networkInterfaceId) {
+				continue
+			}
+			// Set refreshed state
+			diags = resp.State.Set(ctx, model)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			tflog.Info(ctx, "Network interface attachment read")
 			return
 		}
-		tflog.Info(ctx, "Network interface attachment read")
-		return
 	}
 
 	// no matching network interface was found, the attachment no longer exists

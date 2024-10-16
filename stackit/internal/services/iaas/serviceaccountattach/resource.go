@@ -220,18 +220,20 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 		return
 	}
 
-	for _, mail := range *serviceAccounts.Items {
-		if mail != serviceAccountEmail {
-			continue
-		}
-		// Set refreshed state
-		diags = resp.State.Set(ctx, model)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
+	if serviceAccounts.Items != nil {
+		for _, mail := range *serviceAccounts.Items {
+			if mail != serviceAccountEmail {
+				continue
+			}
+			// Set refreshed state
+			diags = resp.State.Set(ctx, model)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			tflog.Info(ctx, "Service account attachment read")
 			return
 		}
-		tflog.Info(ctx, "Service account attachment read")
-		return
 	}
 
 	// no matching service account was found, the attachment no longer exists
