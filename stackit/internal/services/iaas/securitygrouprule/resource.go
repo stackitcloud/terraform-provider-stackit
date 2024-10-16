@@ -625,8 +625,14 @@ func mapPortRange(securityGroupRuleResp *iaasalpha.SecurityGroupRule, m *Model) 
 }
 
 func mapProtocol(securityGroupRuleResp *iaasalpha.SecurityGroupRule, m *Model) error {
-	if securityGroupRuleResp.Protocol == nil {
+	if securityGroupRuleResp.Protocol == nil && m.Protocol.IsNull() {
 		m.Protocol = types.ObjectNull(protocolTypes)
+		return nil
+	} else if securityGroupRuleResp.Protocol == nil && !m.Protocol.IsNull() {
+		m.Protocol = types.ObjectValueMust(protocolTypes, map[string]attr.Value{
+			"name":   types.StringNull(),
+			"number": types.Int64Null(),
+		})
 		return nil
 	}
 

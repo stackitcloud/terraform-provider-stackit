@@ -116,10 +116,13 @@ func TestMapFields(t *testing.T) {
 				ProjectId:           types.StringValue("pid"),
 				SecurityGroupId:     types.StringValue("sgid"),
 				SecurityGroupRuleId: types.StringValue("sgrid"),
+				Protocol: types.ObjectValueMust(protocolTypes, map[string]attr.Value{
+					"name":   types.StringNull(),
+					"number": types.Int64Null(),
+				}),
 			},
 			&iaasalpha.SecurityGroupRule{
-				Id:       utils.Ptr("sgrid"),
-				Protocol: &iaasalpha.V1SecurityGroupRuleProtocol{},
+				Id: utils.Ptr("sgrid"),
 			},
 			Model{
 				Id:                    types.StringValue("pid,sgid,sgrid"),
