@@ -41,7 +41,6 @@ description: |-
     project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     name       = "example-server"
     boot_volume = {
-      size        = 64
       source_type = "volume"
       source_id   = stackit_volume.example-volume.volume_id
     }
@@ -214,7 +213,6 @@ resource "stackit_server" "boot-from-volume" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name       = "example-server"
   boot_volume = {
-    size        = 64
     source_type = "volume"
     source_id   = stackit_volume.example-volume.volume_id
   }
