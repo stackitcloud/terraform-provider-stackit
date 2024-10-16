@@ -5,17 +5,6 @@ Server resource schema. Must have a region specified in the provider configurati
 ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 ## Example Usage` + "\n" + `
 
-### Basic server` + "\n" +
-
-	"```terraform" + `
-resource "stackit_server" "basic" {
-  project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name              = "example-server"
-  image_id          = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  availability_zone = "eu01-1"
-  machine_type      = "g1.1"
-  keypair_name      = "example-keypair"
-}
 ` + "\n```" + `
 
 ### Boot from volume` + "\n" +
@@ -69,7 +58,11 @@ resource "stackit_server" "boot-from-volume" {
 resource "stackit_server" "server-with-network" {
   project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name         = "example-server"
-  image_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  boot_volume = {
+    size        = 64
+    source_type = "image"
+    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
   machine_type = "g1.1"
   keypair_name = "example-keypair"
 }
@@ -133,7 +126,11 @@ resource "stackit_volume" "example-volume" {
 resource "stackit_server" "server-with-volume" {
   project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name              = "example-server"
-  image_id          = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  boot_volume = {
+    size        = 64
+    source_type = "image"
+    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
   availability_zone = "eu01-1"
   machine_type      = "g1.1"
   keypair_name      = "example-keypair"
@@ -151,7 +148,11 @@ resource "stackit_server_volume_attach" "attach_volume" {
 	"```terraform" + `
 resource "stackit_server" "user-data" {
   project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  image_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  boot_volume = {
+    size        = 64
+    source_type = "image"
+    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
   name         = "example-server"
   machine_type = "g1.1"
   keypair_name = "example-keypair"
