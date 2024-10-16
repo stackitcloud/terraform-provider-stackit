@@ -602,9 +602,20 @@ func mapPortRange(securityGroupRuleResp *iaasalpha.SecurityGroupRule, m *Model) 
 		return nil
 	}
 
+	portRangeMax := types.Int64Null()
+	portRangeMin := types.Int64Null()
+
+	if securityGroupRuleResp.PortRange.Max != nil {
+		portRangeMax = types.Int64Value(*securityGroupRuleResp.PortRange.Max)
+	}
+
+	if securityGroupRuleResp.PortRange.Min != nil {
+		portRangeMin = types.Int64Value(*securityGroupRuleResp.PortRange.Min)
+	}
+
 	portRangeValues := map[string]attr.Value{
-		"max": types.Int64Value(*securityGroupRuleResp.PortRange.Max),
-		"min": types.Int64Value(*securityGroupRuleResp.PortRange.Min),
+		"max": portRangeMax,
+		"min": portRangeMin,
 	}
 
 	portRangeObject, diags := types.ObjectValue(portRangeTypes, portRangeValues)
@@ -626,8 +637,13 @@ func mapProtocol(securityGroupRuleResp *iaasalpha.SecurityGroupRule, m *Model) e
 		protocolNumberValue = types.Int64Value(*securityGroupRuleResp.Protocol.Protocol)
 	}
 
+	protocolNameValue := types.StringNull()
+	if securityGroupRuleResp.Protocol.Name != nil {
+		protocolNameValue = types.StringValue(*securityGroupRuleResp.Protocol.Name)
+	}
+
 	protocolValues := map[string]attr.Value{
-		"name":   types.StringValue(*securityGroupRuleResp.Protocol.Name),
+		"name":   protocolNameValue,
 		"number": protocolNumberValue,
 	}
 	protocolObject, diags := types.ObjectValue(protocolTypes, protocolValues)
