@@ -3,12 +3,12 @@
 page_title: "stackit_sqlserverflex_user Resource - stackit"
 subcategory: ""
 description: |-
-  [Warning: BETA] SQLServer Flex user resource schema. Must have a region specified in the provider configuration.
+  SQLServer Flex user resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_sqlserverflex_user (Resource)
 
-[Warning: BETA] SQLServer Flex user resource schema. Must have a `region` specified in the provider configuration.
+SQLServer Flex user resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

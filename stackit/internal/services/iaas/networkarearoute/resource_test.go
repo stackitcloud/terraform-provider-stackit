@@ -1,9 +1,11 @@
 package networkarearoute
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
@@ -32,6 +34,7 @@ func TestMapFields(t *testing.T) {
 				NetworkAreaRouteId: types.StringValue("narid"),
 				Prefix:             types.StringNull(),
 				NextHop:            types.StringNull(),
+				Labels:             types.MapNull(types.StringType),
 			},
 			true,
 		},
@@ -45,6 +48,9 @@ func TestMapFields(t *testing.T) {
 			&iaas.Route{
 				Prefix:  utils.Ptr("prefix"),
 				Nexthop: utils.Ptr("hop"),
+				Labels: &map[string]interface{}{
+					"key": "value",
+				},
 			},
 			Model{
 				Id:                 types.StringValue("oid,naid,narid"),
@@ -53,6 +59,9 @@ func TestMapFields(t *testing.T) {
 				NetworkAreaRouteId: types.StringValue("narid"),
 				Prefix:             types.StringValue("prefix"),
 				NextHop:            types.StringValue("hop"),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
 			},
 			true,
 		},
@@ -86,7 +95,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(tt.input, &tt.state)
+			err := mapFields(context.Background(), tt.input, &tt.state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -115,12 +124,18 @@ func TestToCreatePayload(t *testing.T) {
 			input: &Model{
 				Prefix:  types.StringValue("prefix"),
 				NextHop: types.StringValue("hop"),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
 			},
 			expected: &iaas.CreateNetworkAreaRoutePayload{
 				Ipv4: &[]iaas.Route{
 					{
 						Prefix:  utils.Ptr("prefix"),
 						Nexthop: utils.Ptr("hop"),
+						Labels: &map[string]interface{}{
+							"key": "value",
+						},
 					},
 				},
 			},
@@ -129,7 +144,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(tt.input)
+			output, err := toCreatePayload(context.Background(), tt.input)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

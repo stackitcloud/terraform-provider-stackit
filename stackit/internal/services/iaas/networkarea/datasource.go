@@ -185,6 +185,11 @@ func (d *networkAreaDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 					int64validator.AtMost(29),
 				},
 			},
+			"labels": schema.MapAttribute{
+				Description: "Labels are key-value string pairs which can be attached to a resource container",
+				ElementType: types.StringType,
+				Computed:    true,
+			},
 		},
 	}
 }

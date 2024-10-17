@@ -4,11 +4,14 @@ page_title: "stackit_network_area Resource - stackit"
 subcategory: ""
 description: |-
   Network area resource schema. Must have a region specified in the provider configuration.
+  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_network_area (Resource)
 
 Network area resource schema. Must have a `region` specified in the provider configuration.
+
+~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 
@@ -18,10 +21,13 @@ resource "stackit_network_area" "example" {
   name            = "example-network-area"
   network_ranges = [
     {
-      prefix = "1.2.3.4"
+      prefix = "192.168.0.0/24"
     }
   ]
-  transfer_network = "1.2.3.4/5"
+  transfer_network = "192.168.0.0/24"
+  labels = {
+    "key" = "value"
+  }
 }
 ```
 
@@ -39,14 +45,13 @@ resource "stackit_network_area" "example" {
 
 - `default_nameservers` (List of String) List of DNS Servers/Nameservers.
 - `default_prefix_length` (Number) The default prefix length for networks in the network area.
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `max_prefix_length` (Number) The maximal prefix length for networks in the network area.
 - `min_prefix_length` (Number) The minimal prefix length for networks in the network area.
 
 ### Read-Only
 
-- `id` (String) Network area resource schema. Must have a `region` specified in the provider configuration.
-
-~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
+- `id` (String) Terraform's internal resource ID. It is structured as "`organization_id`,`network_area_id`".
 - `network_area_id` (String) The network area ID.
 - `project_count` (Number) The amount of projects currently referencing this area.
 

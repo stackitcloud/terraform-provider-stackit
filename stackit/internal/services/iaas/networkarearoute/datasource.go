@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -127,6 +128,11 @@ func (d *networkAreaRouteDataSource) Schema(_ context.Context, _ datasource.Sche
 				Description: "The network, that is reachable though the Next Hop. Should use CIDR notation.",
 				Computed:    true,
 			},
+			"labels": schema.MapAttribute{
+				Description: "Labels are key-value string pairs which can be attached to a resource container",
+				ElementType: types.StringType,
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -157,7 +163,7 @@ func (d *networkAreaRouteDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	err = mapFields(networkAreaRouteResp, &model)
+	err = mapFields(ctx, networkAreaRouteResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area route", fmt.Sprintf("Processing API payload: %v", err))
 		return

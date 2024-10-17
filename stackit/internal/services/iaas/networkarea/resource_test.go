@@ -86,6 +86,7 @@ func TestMapFields(t *testing.T) {
 						"prefix":           types.StringValue("prefix-2"),
 					}),
 				}),
+				Labels: types.MapNull(types.StringType),
 			},
 			true,
 		},
@@ -118,6 +119,9 @@ func TestMapFields(t *testing.T) {
 					MinPrefixLen:     utils.Ptr(int64(18)),
 				},
 				Name: utils.Ptr("name"),
+				Labels: &map[string]interface{}{
+					"key": "value",
+				},
 			},
 			&[]iaas.NetworkRange{
 				{
@@ -151,6 +155,9 @@ func TestMapFields(t *testing.T) {
 						"network_range_id": types.StringValue(testRangeId2),
 						"prefix":           types.StringValue("prefix-2"),
 					}),
+				}),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
 				}),
 			},
 			true,
@@ -226,6 +233,7 @@ func TestMapFields(t *testing.T) {
 						"prefix":           types.StringValue("prefix-3"),
 					}),
 				}),
+				Labels: types.MapNull(types.StringType),
 			},
 			true,
 		},
@@ -286,6 +294,7 @@ func TestMapFields(t *testing.T) {
 						"prefix":           types.StringValue("prefix-2"),
 					}),
 				}),
+				Labels: types.MapNull(types.StringType),
 			},
 			true,
 		},
@@ -334,6 +343,7 @@ func TestMapFields(t *testing.T) {
 						"prefix":           types.StringValue("prefix-3"),
 					}),
 				}),
+				Labels: types.MapNull(types.StringType),
 			},
 			true,
 		},
@@ -412,6 +422,9 @@ func TestToCreatePayload(t *testing.T) {
 				DefaultPrefixLength: types.Int64Value(20),
 				MaxPrefixLength:     types.Int64Value(22),
 				MinPrefixLength:     types.Int64Value(18),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
 			},
 			&iaas.CreateNetworkAreaPayload{
 				Name: utils.Ptr("name"),
@@ -434,6 +447,9 @@ func TestToCreatePayload(t *testing.T) {
 						MaxPrefixLen:     utils.Ptr(int64(22)),
 						MinPrefixLen:     utils.Ptr(int64(18)),
 					},
+				},
+				Labels: &map[string]interface{}{
+					"key": "value",
 				},
 			},
 			true,
@@ -476,6 +492,9 @@ func TestToUpdatePayload(t *testing.T) {
 				DefaultPrefixLength: types.Int64Value(22),
 				MaxPrefixLength:     types.Int64Value(24),
 				MinPrefixLength:     types.Int64Value(20),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
 			},
 			&iaas.PartialUpdateNetworkAreaPayload{
 				Name: utils.Ptr("name"),
@@ -490,13 +509,16 @@ func TestToUpdatePayload(t *testing.T) {
 						MinPrefixLen:     utils.Ptr(int64(20)),
 					},
 				},
+				Labels: &map[string]interface{}{
+					"key": "value",
+				},
 			},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(tt.input)
+			output, err := toUpdatePayload(context.Background(), tt.input, types.MapNull(types.StringType))
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

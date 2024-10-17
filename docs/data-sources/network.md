@@ -31,6 +31,7 @@ data "stackit_network" "example" {
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`network_id`".
 - `ipv4_prefix_length` (Number) The IPv4 prefix length of the network.
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `name` (String) The name of the network.
 - `nameservers` (List of String) The nameservers of the network.
 - `prefixes` (List of String) The prefixes of the network.

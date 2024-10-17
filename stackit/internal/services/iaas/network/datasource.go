@@ -124,6 +124,11 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Description: "The public IP of the network.",
 				Computed:    true,
 			},
+			"labels": schema.MapAttribute{
+				Description: "Labels are key-value string pairs which can be attached to a resource container",
+				ElementType: types.StringType,
+				Computed:    true,
+			},
 		},
 	}
 }
