@@ -372,20 +372,8 @@ func toCreatePayload(model *Model) (*iaasalpha.CreateServerGroupPayload, error) 
 		return nil, fmt.Errorf("nil model")
 	}
 
-	modelServerGroups := []string{}
-	if !(model.MemberIds.IsNull() || model.MemberIds.IsUnknown()) {
-		for _, ns := range model.MemberIds.Elements() {
-			memberString, ok := ns.(types.String)
-			if !ok {
-				return nil, fmt.Errorf("type assertion failed")
-			}
-			modelServerGroups = append(modelServerGroups, memberString.ValueString())
-		}
-	}
-
 	return &iaasalpha.CreateServerGroupPayload{
-		Name:    conversion.StringValueToPointer(model.Name),
-		Members: &modelServerGroups,
-		Policy:  conversion.StringValueToPointer(model.Policy),
+		Name:   conversion.StringValueToPointer(model.Name),
+		Policy: conversion.StringValueToPointer(model.Policy),
 	}, nil
 }

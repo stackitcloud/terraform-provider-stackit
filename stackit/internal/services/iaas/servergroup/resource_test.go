@@ -114,18 +114,10 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{
 				Name:   types.StringValue("name"),
 				Policy: types.StringValue("policy"),
-				MemberIds: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("member1"),
-					types.StringValue("member2"),
-				}),
 			},
 			&iaasalpha.CreateServerGroupPayload{
 				Name:   utils.Ptr("name"),
 				Policy: utils.Ptr("policy"),
-				Members: &[]string{
-					"member1",
-					"member2",
-				},
 			},
 			true,
 		},
