@@ -79,11 +79,7 @@ description: |-
     project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     security_group_id = stackit_security_group.sec-group.security_group_id
     direction         = "ingress"
-    ethertype         = "IPv4"
-    icmp_parameters = {
-      code = 0
-      type = 8
-    }
+    ether_type         = "IPv4"
   }
   
   resource "stackit_network_interface" "nic" {
@@ -249,11 +245,7 @@ resource "stackit_security_group_rule" "rule" {
   project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   security_group_id = stackit_security_group.sec-group.security_group_id
   direction         = "ingress"
-  ethertype         = "IPv4"
-  icmp_parameters = {
-    code = 0
-    type = 8
-  }
+  ether_type         = "IPv4"
 }
 
 resource "stackit_network_interface" "nic" {
