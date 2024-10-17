@@ -47,8 +47,7 @@ type Model struct {
 	ServerGroupId types.String `tfsdk:"server_group_id"`
 	Name          types.String `tfsdk:"name"`
 	Policy        types.String `tfsdk:"policy"`
-	// Labels        types.Map    `tfsdk:"labels"`
-	MemberIds types.List `tfsdk:"member_ids"`
+	MemberIds     types.List   `tfsdk:"member_ids"`
 }
 
 // NewServerGroupResource is a helper function to simplify the provider implementation.
@@ -167,11 +166,6 @@ func (r *serverGroupResource) Schema(_ context.Context, _ resource.SchemaRequest
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			// "labels": schema.MapAttribute{
-			//	Description: "Labels are key-value string pairs which can be attached to a resource container",
-			//	ElementType: types.StringType,
-			//	Optional:    true,
-			// },
 			"member_ids": schema.ListAttribute{
 				Description: "The UUIDs of servers that are part of the server group.",
 				Computed:    true,
@@ -274,54 +268,6 @@ func (r *serverGroupResource) Update(ctx context.Context, _ resource.UpdateReque
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server group", "Server group can't be updated")
 }
 
-//// Update updates the resource and sets the updated Terraform state on success.
-//func (r *serverGroupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-//	// Retrieve values from plan
-//	var model Model
-//	diags := req.Plan.Get(ctx, &model)
-//	resp.Diagnostics.Append(diags...)
-//	if resp.Diagnostics.HasError() {
-//		return
-//	}
-//	projectId := model.ProjectId.ValueString()
-//	serverGroupId := model.ServerGroupId.ValueString()
-//	ctx = tflog.SetField(ctx, "project_id", projectId)
-//	ctx = tflog.SetField(ctx, "server_group_id", serverGroupId)
-//
-//	// Retrieve values from state
-//	var stateModel Model
-//	diags = req.State.Get(ctx, &stateModel)
-//	resp.Diagnostics.Append(diags...)
-//	if resp.Diagnostics.HasError() {
-//		return
-//	}
-//
-//	// Generate API request body from model
-//	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
-//	if err != nil {
-//		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server group", fmt.Sprintf("Creating API payload: %v", err))
-//		return
-//	}
-//	// Update existing server group
-//	updatedServerGroup, err := r.client.UpdateServerGroup(ctx, projectId, serverGroupId).UpdateServerGroupPayload(*payload).Execute()
-//	if err != nil {
-//		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server group", fmt.Sprintf("Calling API: %v", err))
-//		return
-//	}
-//
-//	err = mapFields(ctx, updatedServerGroup, &model)
-//	if err != nil {
-//		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server group", fmt.Sprintf("Processing API payload: %v", err))
-//		return
-//	}
-//	diags = resp.State.Set(ctx, model)
-//	resp.Diagnostics.Append(diags...)
-//	if resp.Diagnostics.HasError() {
-//		return
-//	}
-//	tflog.Info(ctx, "server group updated")
-// }
-
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *serverGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
@@ -395,20 +341,6 @@ func mapFields(ctx context.Context, serverGroupResp *iaasalpha.ServerGroup, mode
 		strings.Join(idParts, core.Separator),
 	)
 
-	// labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
-	// if diags.HasError() {
-	//	return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-	// }
-	// if serverGroupResp.Labels != nil && len(*serverGroupResp.Labels) != 0 {
-	//	var diags diag.Diagnostics
-	//	labels, diags = types.MapValueFrom(ctx, types.StringType, *serverGroupResp.Labels)
-	//	if diags.HasError() {
-	//		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-	//	}
-	// } else if model.Labels.IsNull() {
-	//	labels = types.MapNull(types.StringType)
-	// }
-
 	if serverGroupResp.Members == nil {
 		model.MemberIds = types.ListNull(types.StringType)
 	} else {
@@ -430,7 +362,6 @@ func mapFields(ctx context.Context, serverGroupResp *iaasalpha.ServerGroup, mode
 
 	model.ServerGroupId = types.StringValue(serverGroupId)
 	model.Name = types.StringPointerValue(serverGroupResp.Name)
-	// model.Labels = labels
 	model.Policy = types.StringPointerValue(serverGroupResp.Policy)
 
 	return nil
@@ -458,18 +389,3 @@ func toCreatePayload(model *Model) (*iaasalpha.CreateServerGroupPayload, error) 
 		Policy:  conversion.StringValueToPointer(model.Policy),
 	}, nil
 }
-
-// func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.UpdateServerGroupPayload, error) {
-//	if model == nil {
-//		return nil, fmt.Errorf("nil model")
-//	}
-//
-//	labels, err := conversion.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
-//	if err != nil {
-//		return nil, fmt.Errorf("converting to Go map: %w", err)
-//	}
-//
-//	return &iaasalpha.UpdateServerGroupPayload{
-//		Labels: &labels,
-//	}, nil
-// }

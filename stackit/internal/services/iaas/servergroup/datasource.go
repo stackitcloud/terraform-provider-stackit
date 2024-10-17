@@ -121,11 +121,6 @@ func (r *serverGroupDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Description: "The server group policy. " + utils.SupportedValuesDocumentation(SupportedPolicyTypes),
 				Computed:    true,
 			},
-			// "labels": schema.MapAttribute{
-			//	Description: "Labels are key-value string pairs which can be attached to a resource container",
-			//	ElementType: types.StringType,
-			//	Computed:    true,
-			// },
 			"member_ids": schema.ListAttribute{
 				Description: "The UUIDs of servers that are part of the server group.",
 				Computed:    true,
