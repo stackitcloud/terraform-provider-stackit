@@ -184,7 +184,7 @@ func (r securityGroupRuleResource) ValidateConfig(ctx context.Context, req resou
 			resp.Diagnostics.AddAttributeError(
 				path.Root("port_range"),
 				"Conflicting attribute configuration",
-				"`port_range` attribute can't be provided if `protocol.name` is set to `ipv6` or `ipv6-icmp`",
+				"`port_range` attribute can't be provided if `protocol.name` is set to `icmp` or `ipv6-icmp`",
 			)
 		}
 	} else {
@@ -192,7 +192,7 @@ func (r securityGroupRuleResource) ValidateConfig(ctx context.Context, req resou
 			resp.Diagnostics.AddAttributeError(
 				path.Root("icmp_parameters"),
 				"Conflicting attribute configuration",
-				"`icmp_parameters` attribute can't be provided if `protocol.name` is not `ipv6` or `ipv6-icmp`",
+				"`icmp_parameters` attribute can't be provided if `protocol.name` is not `icmp` or `ipv6-icmp`",
 			)
 		}
 	}
