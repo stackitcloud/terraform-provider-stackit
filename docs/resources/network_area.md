@@ -21,10 +21,10 @@ resource "stackit_network_area" "example" {
   name            = "example-network-area"
   network_ranges = [
     {
-      prefix = "1.2.3.4"
+      prefix = "192.168.0.0/24"
     }
   ]
-  transfer_network = "1.2.3.4/5"
+  transfer_network = "192.168.0.0/24"
   labels = {
     "key" = "value"
   }

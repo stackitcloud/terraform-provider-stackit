@@ -7,11 +7,7 @@ resource "stackit_security_group_rule" "example" {
     type = 8
   }
   protocol = {
-    name   = "name"
+    name   = "icmp"
     number = 1
-  }
-  port_range = {
-    max = 22
-    min = 22
   }
 }
