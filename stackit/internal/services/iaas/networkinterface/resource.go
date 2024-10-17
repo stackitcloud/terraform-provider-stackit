@@ -185,6 +185,11 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 				Optional:    true,
 				Computed:    true,
 				ElementType: types.StringType,
+				Validators: []validator.List{
+					listvalidator.ValueStringsAre(
+						validate.CIDR(),
+					),
+				},
 			},
 			"device": schema.StringAttribute{
 				Description: "The device UUID of the network interface.",
