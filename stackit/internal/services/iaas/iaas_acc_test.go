@@ -62,6 +62,13 @@ var volumeResource = map[string]string{
 	"performance_class": "storage_premium_perf1",
 }
 
+// Server group resource data
+var serverGroupResource = map[string]string{
+	"project_id": testutil.ProjectId,
+	"policy":     "anti-affinity",
+	"name":       fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha)),
+}
+
 // Server resource data
 var serverResource = map[string]string{
 	"project_id":        testutil.ProjectId,
@@ -181,6 +188,20 @@ func volumeResourceConfig(name, size string) string {
 	)
 }
 
+func serverGroupResourceConfig(name string) string {
+	return fmt.Sprintf(`
+				resource "stackit_server_group" "server_group" {
+					project_id = "%s"
+					policy = "%s"
+					name = "%s"
+				}
+				`,
+		serverGroupResource["project_id"],
+		serverGroupResource["policy"],
+		name,
+	)
+}
+
 func serverResourceConfig(name, machineType string) string {
 	return fmt.Sprintf(`
 				resource "stackit_server" "server" {
@@ -256,6 +277,13 @@ func testAccVolumeConfig(name, size string) string {
 	return fmt.Sprintf("%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		volumeResourceConfig(name, size),
+	)
+}
+
+func testAccServerGroupConfig(name string) string {
+	return fmt.Sprintf("%s\n\n%s",
+		testutil.IaaSProviderConfig(),
+		serverGroupResourceConfig(name),
 	)
 }
 
@@ -503,6 +531,67 @@ func TestAccVolume(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_volume.volume", "performance_class", volumeResource["performance_class"]),
 					resource.TestCheckResourceAttr("stackit_volume.volume", "size", "10"),
 				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccServerGroup(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckIaaSServerGroupDestroy,
+		Steps: []resource.TestStep{
+
+			// Creation
+			{
+				Config: testAccServerGroupConfig(serverGroupResource["name"]),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_server_group.server_group", "project_id", serverGroupResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_server_group.server_group", "server_group_id"),
+					resource.TestCheckResourceAttr("stackit_server_group.server_group", "name", serverGroupResource["name"]),
+					resource.TestCheckResourceAttr("stackit_server_group.server_group", "policy", serverGroupResource["policy"]),
+				),
+			},
+			// Data source
+			{
+				Config: fmt.Sprintf(`
+					%s
+			
+					data "stackit_server_group" "server_group" {
+						project_id  = stackit_server_group.server_group.project_id
+						server_group_id = stackit_server_group.server_group.server_group_id
+					}
+					`,
+					testAccServerGroupConfig(serverGroupResource["name"]),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("data.stackit_server_group.server_group", "project_id", serverGroupResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_group.server_group", "server_group_id",
+						"data.stackit_server_group.server_group", "server_group_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_server_group.server_group", "name", serverGroupResource["name"]),
+					resource.TestCheckResourceAttr("data.stackit_server_group.server_group", "policy", serverGroupResource["policy"]),
+				),
+			},
+			// Import
+			{
+				ResourceName: "stackit_server_group.server_group",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_server_group.server_group"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_server_group.server_group")
+					}
+					serverGroupId, ok := r.Primary.Attributes["server_group_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute server_group_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, serverGroupId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			// Deletion is done by the framework implicitly
 		},
@@ -1063,6 +1152,53 @@ func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 			err := client.DeleteVolumeExecute(ctx, testutil.ProjectId, *volumes[i].Id)
 			if err != nil {
 				return fmt.Errorf("destroying volume %s during CheckDestroy: %w", *volumes[i].Id, err)
+			}
+		}
+	}
+	return nil
+}
+
+func testAccCheckIaaSServerGroupDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var client *iaasalpha.APIClient
+	var err error
+	if testutil.IaaSCustomEndpoint == "" {
+		client, err = iaasalpha.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
+	} else {
+		client, err = iaasalpha.NewAPIClient(
+			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	serverGroupsToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_server_group" {
+			continue
+		}
+		// server group terraform ID: "[project_id],[server_group_id]"
+		serverGroupId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		serverGroupsToDestroy = append(serverGroupsToDestroy, serverGroupId)
+	}
+
+	serverGroupsResp, err := client.ListServerGroupsExecute(ctx, testutil.ProjectId)
+	if err != nil {
+		return fmt.Errorf("getting serverGroupsResp: %w", err)
+	}
+
+	serverGroups := *serverGroupsResp.Items
+	for i := range serverGroups {
+		if serverGroups[i].Id == nil {
+			continue
+		}
+		if utils.Contains(serverGroupsToDestroy, *serverGroups[i].Id) {
+			err := client.DeleteServerGroupExecute(ctx, testutil.ProjectId, *serverGroups[i].Id)
+			if err != nil {
+				return fmt.Errorf("destroying server group %s during CheckDestroy: %w", *serverGroups[i].Id, err)
 			}
 		}
 	}
