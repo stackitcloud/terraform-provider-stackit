@@ -69,7 +69,7 @@ Required:
 Required:
 
 - `max` (Number) The maximum port number. Should be greater or equal to the minimum.
-- `min` (Number) The minimum port number. Should be less or equal to the minimum.
+- `min` (Number) The minimum port number. Should be less or equal to the maximum.
 
 
 <a id="nestedatt--protocol"></a>

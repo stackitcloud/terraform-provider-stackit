@@ -338,7 +338,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 						},
 					},
 					"min": schema.Int64Attribute{
-						Description: "The minimum port number. Should be less or equal to the minimum.",
+						Description: "The minimum port number. Should be less or equal to the maximum.",
 						Required:    true,
 						PlanModifiers: []planmodifier.Int64{
 							int64planmodifier.RequiresReplace(),
