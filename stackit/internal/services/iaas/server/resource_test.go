@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
 const (
@@ -27,7 +27,7 @@ func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		input       *iaasalpha.Server
+		input       *iaas.Server
 		expected    Model
 		isValid     bool
 	}{
@@ -37,7 +37,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				ServerId:  types.StringValue("sid"),
 			},
-			&iaasalpha.Server{
+			&iaas.Server{
 				Id: utils.Ptr("sid"),
 			},
 			Model{
@@ -49,7 +49,7 @@ func TestMapFields(t *testing.T) {
 				Labels:           types.MapNull(types.StringType),
 				ImageId:          types.StringNull(),
 				KeypairName:      types.StringNull(),
-				ServerGroup:      types.StringNull(),
+				AffinityGroup:    types.StringNull(),
 				UserData:         types.StringNull(),
 				CreatedAt:        types.StringNull(),
 				UpdatedAt:        types.StringNull(),
@@ -63,7 +63,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				ServerId:  types.StringValue("sid"),
 			},
-			&iaasalpha.Server{
+			&iaas.Server{
 				Id:               utils.Ptr("sid"),
 				Name:             utils.Ptr("name"),
 				AvailabilityZone: utils.Ptr("zone"),
@@ -72,7 +72,7 @@ func TestMapFields(t *testing.T) {
 				},
 				ImageId:     utils.Ptr("image_id"),
 				KeypairName: utils.Ptr("keypair_name"),
-				ServerGroup: utils.Ptr("group_id"),
+				AffinityGroup: utils.Ptr("group_id"),
 				CreatedAt:   utils.Ptr(testTimestamp()),
 				UpdatedAt:   utils.Ptr(testTimestamp()),
 				LaunchedAt:  utils.Ptr(testTimestamp()),
@@ -86,12 +86,12 @@ func TestMapFields(t *testing.T) {
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 					"key": types.StringValue("value"),
 				}),
-				ImageId:     types.StringValue("image_id"),
-				KeypairName: types.StringValue("keypair_name"),
-				ServerGroup: types.StringValue("group_id"),
-				CreatedAt:   types.StringValue(testTimestampValue),
-				UpdatedAt:   types.StringValue(testTimestampValue),
-				LaunchedAt:  types.StringValue(testTimestampValue),
+				ImageId:       types.StringValue("image_id"),
+				KeypairName:   types.StringValue("keypair_name"),
+				AffinityGroup: types.StringValue("group_id"),
+				CreatedAt:     types.StringValue(testTimestampValue),
+				UpdatedAt:     types.StringValue(testTimestampValue),
+				LaunchedAt:    types.StringValue(testTimestampValue),
 			},
 			true,
 		},
@@ -102,7 +102,7 @@ func TestMapFields(t *testing.T) {
 				ServerId:  types.StringValue("sid"),
 				Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			},
-			&iaasalpha.Server{
+			&iaas.Server{
 				Id: utils.Ptr("sid"),
 			},
 			Model{
@@ -114,7 +114,7 @@ func TestMapFields(t *testing.T) {
 				Labels:           types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				ImageId:          types.StringNull(),
 				KeypairName:      types.StringNull(),
-				ServerGroup:      types.StringNull(),
+				AffinityGroup:    types.StringNull(),
 				UserData:         types.StringNull(),
 				CreatedAt:        types.StringNull(),
 				UpdatedAt:        types.StringNull(),
@@ -134,7 +134,7 @@ func TestMapFields(t *testing.T) {
 			Model{
 				ProjectId: types.StringValue("pid"),
 			},
-			&iaasalpha.Server{},
+			&iaas.Server{},
 			Model{},
 			false,
 		},
@@ -162,7 +162,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.CreateServerPayload
+		expected    *iaas.CreateServerPayload
 		isValid     bool
 	}{
 		{
@@ -184,16 +184,16 @@ func TestToCreatePayload(t *testing.T) {
 				MachineType: types.StringValue("machine_type"),
 				UserData:    types.StringValue(userData),
 			},
-			&iaasalpha.CreateServerPayload{
+			&iaas.CreateServerPayload{
 				Name:             utils.Ptr("name"),
 				AvailabilityZone: utils.Ptr("zone"),
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
-				BootVolume: &iaasalpha.CreateServerPayloadBootVolume{
+				BootVolume: &iaas.CreateServerPayloadBootVolume{
 					PerformanceClass: utils.Ptr("class"),
 					Size:             utils.Ptr(int64(1)),
-					Source: &iaasalpha.BootVolumeSource{
+					Source: &iaas.BootVolumeSource{
 						Type: utils.Ptr("type"),
 						Id:   utils.Ptr("id"),
 					},
@@ -229,7 +229,7 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.UpdateServerPayload
+		expected    *iaas.UpdateServerPayload
 		isValid     bool
 	}{
 		{
@@ -240,7 +240,7 @@ func TestToUpdatePayload(t *testing.T) {
 					"key": types.StringValue("value"),
 				}),
 			},
-			&iaasalpha.UpdateServerPayload{
+			&iaas.UpdateServerPayload{
 				Name: utils.Ptr("name"),
 				Labels: &map[string]interface{}{
 					"key": "value",

@@ -8,14 +8,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		input       *iaasalpha.PublicIp
+		input       *iaas.PublicIp
 		expected    Model
 		isValid     bool
 	}{
@@ -25,9 +25,9 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 				PublicIpId: types.StringValue("pipid"),
 			},
-			&iaasalpha.PublicIp{
+			&iaas.PublicIp{
 				Id:               utils.Ptr("pipid"),
-				NetworkInterface: iaasalpha.NewNullableString(nil),
+				NetworkInterface: iaas.NewNullableString(nil),
 			},
 			Model{
 				Id:                 types.StringValue("pid,pipid"),
@@ -45,13 +45,13 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 				PublicIpId: types.StringValue("pipid"),
 			},
-			&iaasalpha.PublicIp{
+			&iaas.PublicIp{
 				Id: utils.Ptr("pipid"),
 				Ip: utils.Ptr("ip"),
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
-				NetworkInterface: iaasalpha.NewNullableString(utils.Ptr("interface")),
+				NetworkInterface: iaas.NewNullableString(utils.Ptr("interface")),
 			},
 			Model{
 				Id:         types.StringValue("pid,pipid"),
@@ -72,9 +72,9 @@ func TestMapFields(t *testing.T) {
 				PublicIpId: types.StringValue("pipid"),
 				Labels:     types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			},
-			&iaasalpha.PublicIp{
+			&iaas.PublicIp{
 				Id:               utils.Ptr("pipid"),
-				NetworkInterface: iaasalpha.NewNullableString(utils.Ptr("interface")),
+				NetworkInterface: iaas.NewNullableString(utils.Ptr("interface")),
 			},
 			Model{
 				Id:                 types.StringValue("pid,pipid"),
@@ -92,7 +92,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 				PublicIpId: types.StringValue("pipid"),
 			},
-			&iaasalpha.PublicIp{
+			&iaas.PublicIp{
 				Id: utils.Ptr("pipid"),
 			},
 			Model{
@@ -117,7 +117,7 @@ func TestMapFields(t *testing.T) {
 			Model{
 				ProjectId: types.StringValue("pid"),
 			},
-			&iaasalpha.PublicIp{},
+			&iaas.PublicIp{},
 			Model{},
 			false,
 		},
@@ -145,7 +145,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.CreatePublicIPPayload
+		expected    *iaas.CreatePublicIPPayload
 		isValid     bool
 	}{
 		{
@@ -157,12 +157,12 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 				NetworkInterfaceId: types.StringValue("interface"),
 			},
-			&iaasalpha.CreatePublicIPPayload{
+			&iaas.CreatePublicIPPayload{
 				Ip: utils.Ptr("ip"),
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
-				NetworkInterface: iaasalpha.NewNullableString(utils.Ptr("interface")),
+				NetworkInterface: iaas.NewNullableString(utils.Ptr("interface")),
 			},
 			true,
 		},
@@ -174,12 +174,12 @@ func TestToCreatePayload(t *testing.T) {
 					"key": types.StringValue("value"),
 				}),
 			},
-			&iaasalpha.CreatePublicIPPayload{
+			&iaas.CreatePublicIPPayload{
 				Ip: utils.Ptr("ip"),
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
-				NetworkInterface: iaasalpha.NewNullableString(nil),
+				NetworkInterface: iaas.NewNullableString(nil),
 			},
 			true,
 		},
@@ -194,7 +194,7 @@ func TestToCreatePayload(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaasalpha.NullableString{}))
+				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaas.NullableString{}))
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
@@ -207,7 +207,7 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.UpdatePublicIPPayload
+		expected    *iaas.UpdatePublicIPPayload
 		isValid     bool
 	}{
 		{
@@ -219,11 +219,11 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				NetworkInterfaceId: types.StringValue("interface"),
 			},
-			&iaasalpha.UpdatePublicIPPayload{
+			&iaas.UpdatePublicIPPayload{
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
-				NetworkInterface: iaasalpha.NewNullableString(utils.Ptr("interface")),
+				NetworkInterface: iaas.NewNullableString(utils.Ptr("interface")),
 			},
 			true,
 		},
@@ -235,11 +235,11 @@ func TestToUpdatePayload(t *testing.T) {
 					"key": types.StringValue("value"),
 				}),
 			},
-			&iaasalpha.UpdatePublicIPPayload{
+			&iaas.UpdatePublicIPPayload{
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
-				NetworkInterface: iaasalpha.NewNullableString(nil),
+				NetworkInterface: iaas.NewNullableString(nil),
 			},
 			true,
 		},
@@ -254,7 +254,7 @@ func TestToUpdatePayload(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaasalpha.NullableString{}))
+				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaas.NullableString{}))
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

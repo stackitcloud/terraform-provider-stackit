@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -63,7 +63,7 @@ func NewNetworkInterfaceResource() resource.Resource {
 
 // networkResource is the resource implementation.
 type networkInterfaceResource struct {
-	client *iaasalpha.APIClient
+	client *iaas.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -92,16 +92,16 @@ func (r *networkInterfaceResource) Configure(ctx context.Context, req resource.C
 		resourceBetaCheckDone = true
 	}
 
-	var apiClient *iaasalpha.APIClient
+	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
 		ctx = tflog.SetField(ctx, "iaas_custom_endpoint", providerData.IaaSCustomEndpoint)
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.IaaSCustomEndpoint),
 		)
 	} else {
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -113,7 +113,7 @@ func (r *networkInterfaceResource) Configure(ctx context.Context, req resource.C
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "IaaSalpha client configured")
+	tflog.Info(ctx, "iaas client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -440,7 +440,7 @@ func (r *networkInterfaceResource) ImportState(ctx context.Context, req resource
 	tflog.Info(ctx, "Network interface state imported")
 }
 
-func mapFields(ctx context.Context, networkInterfaceResp *iaasalpha.NIC, model *Model) error {
+func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model) error {
 	if networkInterfaceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -535,7 +535,7 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaasalpha.NIC, model *
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateNICPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNICPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -553,7 +553,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateNICPay
 		}
 	}
 
-	allowedAddressesPayload := []iaasalpha.AllowedAddressesInner{}
+	allowedAddressesPayload := []iaas.AllowedAddressesInner{}
 
 	if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
 		for _, allowedAddressModel := range model.AllowedAddresses.Elements() {
@@ -562,7 +562,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateNICPay
 				return nil, fmt.Errorf("type assertion failed")
 			}
 
-			allowedAddressesPayload = append(allowedAddressesPayload, iaasalpha.AllowedAddressesInner{
+			allowedAddressesPayload = append(allowedAddressesPayload, iaas.AllowedAddressesInner{
 				String: conversion.StringValueToPointer(allowedAddressString),
 			})
 		}
@@ -576,7 +576,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateNICPay
 		labelPayload = &labelMap
 	}
 
-	return &iaasalpha.CreateNICPayload{
+	return &iaas.CreateNICPayload{
 		AllowedAddresses: &allowedAddressesPayload,
 		SecurityGroups:   &modelSecurityGroups,
 		Labels:           labelPayload,
@@ -588,7 +588,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateNICPay
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.UpdateNICPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.UpdateNICPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -604,7 +604,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		modelSecurityGroups = append(modelSecurityGroups, securityGroupString.ValueString())
 	}
 
-	allowedAddressesPayload := []iaasalpha.AllowedAddressesInner{}
+	allowedAddressesPayload := []iaas.AllowedAddressesInner{}
 
 	if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
 		for _, allowedAddressModel := range model.AllowedAddresses.Elements() {
@@ -613,7 +613,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 				return nil, fmt.Errorf("type assertion failed")
 			}
 
-			allowedAddressesPayload = append(allowedAddressesPayload, iaasalpha.AllowedAddressesInner{
+			allowedAddressesPayload = append(allowedAddressesPayload, iaas.AllowedAddressesInner{
 				String: conversion.StringValueToPointer(allowedAddressString),
 			})
 		}
@@ -627,7 +627,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		labelPayload = &labelMap
 	}
 
-	return &iaasalpha.UpdateNICPayload{
+	return &iaas.UpdateNICPayload{
 		AllowedAddresses: &allowedAddressesPayload,
 		SecurityGroups:   &modelSecurityGroups,
 		Labels:           labelPayload,

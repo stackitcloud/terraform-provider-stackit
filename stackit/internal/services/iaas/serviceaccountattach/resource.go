@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -48,7 +48,7 @@ func NewServiceAccountAttachResource() resource.Resource {
 
 // networkInterfaceAttachResource is the resource implementation.
 type networkInterfaceAttachResource struct {
-	client *iaasalpha.APIClient
+	client *iaas.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -77,16 +77,16 @@ func (r *networkInterfaceAttachResource) Configure(ctx context.Context, req reso
 		resourceBetaCheckDone = true
 	}
 
-	var apiClient *iaasalpha.APIClient
+	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
 		ctx = tflog.SetField(ctx, "iaas_custom_endpoint", providerData.IaaSCustomEndpoint)
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.IaaSCustomEndpoint),
 		)
 	} else {
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -98,7 +98,7 @@ func (r *networkInterfaceAttachResource) Configure(ctx context.Context, req reso
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "iaasalpha client configured")
+	tflog.Info(ctx, "iaas client configured")
 }
 
 // Schema defines the schema for the resource.

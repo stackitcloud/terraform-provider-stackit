@@ -344,12 +344,12 @@ resource "stackit_server" "user-data-from-file" {
 
 ### Optional
 
+- `affinity_group` (String) The affinity group the server is assigned to.
 - `availability_zone` (String) The availability zone of the server.
 - `boot_volume` (Attributes) The boot volume for the server (see [below for nested schema](#nestedatt--boot_volume))
 - `image_id` (String) The image ID to be used for an ephemeral disk on the server.
 - `keypair_name` (String) The name of the keypair used during server creation.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
-- `server_group` (String) The server group the server is assigned to.
 - `user_data` (String) User data that is passed via cloud-init to the server.
 
 ### Read-Only
