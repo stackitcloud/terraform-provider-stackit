@@ -251,10 +251,8 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 			"description": schema.StringAttribute{
 				Description: "The rule description.",
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtMost(127),
@@ -273,7 +271,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"icmp_parameters": schema.SingleNestedAttribute{
@@ -281,8 +279,8 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-					objectplanmodifier.RequiresReplace(),
+					UseNullForUnknownBasedOnProtocolModifier(),
+					objectplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"code": schema.Int64Attribute{
@@ -312,9 +310,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 			"ip_range": schema.StringAttribute{
 				Description: "The remote IP range which the rule should match.",
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
@@ -326,8 +322,8 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.RequiresReplace(),
-					objectplanmodifier.UseStateForUnknown(),
+					objectplanmodifier.RequiresReplaceIfConfigured(),
+					UseNullForUnknownBasedOnProtocolModifier(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"max": schema.Int64Attribute{
@@ -359,7 +355,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.RequiresReplace(),
+					objectplanmodifier.RequiresReplaceIfConfigured(),
 					objectplanmodifier.UseStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
@@ -377,7 +373,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 						},
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.UseStateForUnknown(),
-							stringplanmodifier.RequiresReplace(),
+							stringplanmodifier.RequiresReplaceIfConfigured(),
 						},
 					},
 					"number": schema.Int64Attribute{
@@ -386,7 +382,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 						Computed:    true,
 						PlanModifiers: []planmodifier.Int64{
 							int64planmodifier.UseStateForUnknown(),
-							int64planmodifier.RequiresReplace(),
+							int64planmodifier.RequiresReplaceIfConfigured(),
 						},
 						Validators: []validator.Int64{
 							int64validator.AtLeast(0),
