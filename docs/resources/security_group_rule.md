@@ -26,7 +26,6 @@ resource "stackit_security_group_rule" "example" {
   }
   protocol = {
     name   = "icmp"
-    number = 1
   }
 }
 ```

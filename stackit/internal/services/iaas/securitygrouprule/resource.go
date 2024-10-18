@@ -251,9 +251,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 			"description": schema.StringAttribute{
 				Description: "The rule description.",
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
