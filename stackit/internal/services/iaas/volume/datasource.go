@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -36,7 +36,7 @@ func NewVolumeDataSource() datasource.DataSource {
 
 // volumeDataSource is the data source implementation.
 type volumeDataSource struct {
-	client *iaasalpha.APIClient
+	client *iaas.APIClient
 }
 
 // Metadata returns the data source type name.
@@ -50,7 +50,7 @@ func (d *volumeDataSource) Configure(ctx context.Context, req datasource.Configu
 		return
 	}
 
-	var apiClient *iaasalpha.APIClient
+	var apiClient *iaas.APIClient
 	var err error
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
@@ -68,12 +68,12 @@ func (d *volumeDataSource) Configure(ctx context.Context, req datasource.Configu
 	}
 
 	if providerData.IaaSCustomEndpoint != "" {
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.IaaSCustomEndpoint),
 		)
 	} else {
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -84,7 +84,7 @@ func (d *volumeDataSource) Configure(ctx context.Context, req datasource.Configu
 	}
 
 	d.client = apiClient
-	tflog.Info(ctx, "iaasalpha client configured")
+	tflog.Info(ctx, "iaas client configured")
 }
 
 // Schema defines the schema for the resource.

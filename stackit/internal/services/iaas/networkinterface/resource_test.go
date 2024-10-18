@@ -8,14 +8,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		input       *iaasalpha.NIC
+		input       *iaas.NIC
 		expected    Model
 		isValid     bool
 	}{
@@ -26,7 +26,7 @@ func TestMapFields(t *testing.T) {
 				NetworkId:          types.StringValue("nid"),
 				NetworkInterfaceId: types.StringValue("nicid"),
 			},
-			&iaasalpha.NIC{
+			&iaas.NIC{
 				Id: utils.Ptr("nicid"),
 			},
 			Model{
@@ -53,10 +53,10 @@ func TestMapFields(t *testing.T) {
 				NetworkId:          types.StringValue("nid"),
 				NetworkInterfaceId: types.StringValue("nicid"),
 			},
-			&iaasalpha.NIC{
+			&iaas.NIC{
 				Id:   utils.Ptr("nicid"),
 				Name: utils.Ptr("name"),
-				AllowedAddresses: &[]iaasalpha.AllowedAddressesInner{
+				AllowedAddresses: &[]iaas.AllowedAddressesInner{
 					{
 						String: utils.Ptr("aa1"),
 					},
@@ -108,9 +108,9 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("aa1"),
 				}),
 			},
-			&iaasalpha.NIC{
+			&iaas.NIC{
 				Id: utils.Ptr("nicid"),
-				AllowedAddresses: &[]iaasalpha.AllowedAddressesInner{
+				AllowedAddresses: &[]iaas.AllowedAddressesInner{
 					{
 						String: utils.Ptr("aa2"),
 					},
@@ -142,7 +142,7 @@ func TestMapFields(t *testing.T) {
 			Model{
 				ProjectId: types.StringValue("pid"),
 			},
-			&iaasalpha.NIC{},
+			&iaas.NIC{},
 			Model{},
 			false,
 		},
@@ -170,7 +170,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.CreateNICPayload
+		expected    *iaas.CreateNICPayload
 		isValid     bool
 	}{
 		{
@@ -185,13 +185,13 @@ func TestToCreatePayload(t *testing.T) {
 					types.StringValue("aa1"),
 				}),
 			},
-			&iaasalpha.CreateNICPayload{
+			&iaas.CreateNICPayload{
 				Name: utils.Ptr("name"),
 				SecurityGroups: &[]string{
 					"sg1",
 					"sg2",
 				},
-				AllowedAddresses: &[]iaasalpha.AllowedAddressesInner{
+				AllowedAddresses: &[]iaas.AllowedAddressesInner{
 					{
 						String: utils.Ptr("aa1"),
 					},
@@ -223,7 +223,7 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.UpdateNICPayload
+		expected    *iaas.UpdateNICPayload
 		isValid     bool
 	}{
 		{
@@ -238,13 +238,13 @@ func TestToUpdatePayload(t *testing.T) {
 					types.StringValue("aa1"),
 				}),
 			},
-			&iaasalpha.UpdateNICPayload{
+			&iaas.UpdateNICPayload{
 				Name: utils.Ptr("name"),
 				SecurityGroups: &[]string{
 					"sg1",
 					"sg2",
 				},
-				AllowedAddresses: &[]iaasalpha.AllowedAddressesInner{
+				AllowedAddresses: &[]iaas.AllowedAddressesInner{
 					{
 						String: utils.Ptr("aa1"),
 					},

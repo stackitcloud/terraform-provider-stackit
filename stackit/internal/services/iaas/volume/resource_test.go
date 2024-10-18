@@ -8,14 +8,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		input       *iaasalpha.Volume
+		input       *iaas.Volume
 		expected    Model
 		isValid     bool
 	}{
@@ -25,7 +25,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				VolumeId:  types.StringValue("nid"),
 			},
-			&iaasalpha.Volume{
+			&iaas.Volume{
 				Id: utils.Ptr("nid"),
 			},
 			Model{
@@ -49,7 +49,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				VolumeId:  types.StringValue("nid"),
 			},
-			&iaasalpha.Volume{
+			&iaas.Volume{
 				Id:               utils.Ptr("nid"),
 				Name:             utils.Ptr("name"),
 				AvailabilityZone: utils.Ptr("zone"),
@@ -60,7 +60,7 @@ func TestMapFields(t *testing.T) {
 				PerformanceClass: utils.Ptr("class"),
 				ServerId:         utils.Ptr("sid"),
 				Size:             utils.Ptr(int64(1)),
-				Source:           &iaasalpha.VolumeSource{},
+				Source:           &iaas.VolumeSource{},
 			},
 			Model{
 				Id:               types.StringValue("pid,nid"),
@@ -89,7 +89,7 @@ func TestMapFields(t *testing.T) {
 				VolumeId:  types.StringValue("nid"),
 				Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			},
-			&iaasalpha.Volume{
+			&iaas.Volume{
 				Id: utils.Ptr("nid"),
 			},
 			Model{
@@ -119,7 +119,7 @@ func TestMapFields(t *testing.T) {
 			Model{
 				ProjectId: types.StringValue("pid"),
 			},
-			&iaasalpha.Volume{},
+			&iaas.Volume{},
 			Model{},
 			false,
 		},
@@ -148,7 +148,7 @@ func TestToCreatePayload(t *testing.T) {
 		description string
 		input       *Model
 		source      *sourceModel
-		expected    *iaasalpha.CreateVolumePayload
+		expected    *iaas.CreateVolumePayload
 		isValid     bool
 	}{
 		{
@@ -171,7 +171,7 @@ func TestToCreatePayload(t *testing.T) {
 				Type: types.StringValue("volume"),
 				Id:   types.StringValue("id"),
 			},
-			&iaasalpha.CreateVolumePayload{
+			&iaas.CreateVolumePayload{
 				Name:             utils.Ptr("name"),
 				AvailabilityZone: utils.Ptr("zone"),
 				Labels: &map[string]interface{}{
@@ -180,7 +180,7 @@ func TestToCreatePayload(t *testing.T) {
 				Description:      utils.Ptr("desc"),
 				PerformanceClass: utils.Ptr("class"),
 				Size:             utils.Ptr(int64(1)),
-				Source: &iaasalpha.VolumeSource{
+				Source: &iaas.VolumeSource{
 					Type: utils.Ptr("volume"),
 					Id:   utils.Ptr("id"),
 				},
@@ -211,7 +211,7 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.UpdateVolumePayload
+		expected    *iaas.UpdateVolumePayload
 		isValid     bool
 	}{
 		{
@@ -223,7 +223,7 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				Description: types.StringValue("desc"),
 			},
-			&iaasalpha.UpdateVolumePayload{
+			&iaas.UpdateVolumePayload{
 				Name: utils.Ptr("name"),
 				Labels: &map[string]interface{}{
 					"key": "value",

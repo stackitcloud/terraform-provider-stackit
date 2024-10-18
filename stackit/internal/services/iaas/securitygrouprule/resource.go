@@ -23,7 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -99,7 +99,7 @@ func NewSecurityGroupRuleResource() resource.Resource {
 
 // securityGroupRuleResource is the resource implementation.
 type securityGroupRuleResource struct {
-	client *iaasalpha.APIClient
+	client *iaas.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -128,16 +128,16 @@ func (r *securityGroupRuleResource) Configure(ctx context.Context, req resource.
 		resourceBetaCheckDone = true
 	}
 
-	var apiClient *iaasalpha.APIClient
+	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
 		ctx = tflog.SetField(ctx, "iaas_custom_endpoint", providerData.IaaSCustomEndpoint)
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.IaaSCustomEndpoint),
 		)
 	} else {
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -149,7 +149,7 @@ func (r *securityGroupRuleResource) Configure(ctx context.Context, req resource.
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "iaasalpha client configured")
+	tflog.Info(ctx, "iaas client configured")
 }
 
 func (r securityGroupRuleResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
@@ -279,7 +279,9 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 			"icmp_parameters": schema.SingleNestedAttribute{
 				Description: "ICMP Parameters. These parameters should only be provided if the protocol is ICMP.",
 				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
 					objectplanmodifier.RequiresReplace(),
 				},
 				Attributes: map[string]schema.Attribute{
@@ -367,6 +369,9 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 						Computed:    true,
 						Validators: []validator.String{
 							stringvalidator.AtLeastOneOf(
+								path.MatchRoot("protocol").AtName("number"),
+							),
+							stringvalidator.ConflictsWith(
 								path.MatchRoot("protocol").AtName("number"),
 							),
 						},
@@ -581,7 +586,7 @@ func (r *securityGroupRuleResource) ImportState(ctx context.Context, req resourc
 	tflog.Info(ctx, "security group rule state imported")
 }
 
-func mapFields(securityGroupRuleResp *iaasalpha.SecurityGroupRule, model *Model) error {
+func mapFields(securityGroupRuleResp *iaas.SecurityGroupRule, model *Model) error {
 	if securityGroupRuleResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -630,7 +635,7 @@ func mapFields(securityGroupRuleResp *iaasalpha.SecurityGroupRule, model *Model)
 	return nil
 }
 
-func mapIcmpParameters(securityGroupRuleResp *iaasalpha.SecurityGroupRule, m *Model) error {
+func mapIcmpParameters(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) error {
 	if securityGroupRuleResp.IcmpParameters == nil {
 		m.IcmpParameters = types.ObjectNull(icmpParametersTypes)
 		return nil
@@ -649,7 +654,7 @@ func mapIcmpParameters(securityGroupRuleResp *iaasalpha.SecurityGroupRule, m *Mo
 	return nil
 }
 
-func mapPortRange(securityGroupRuleResp *iaasalpha.SecurityGroupRule, m *Model) error {
+func mapPortRange(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) error {
 	if securityGroupRuleResp.PortRange == nil {
 		m.PortRange = types.ObjectNull(portRangeTypes)
 		return nil
@@ -679,15 +684,15 @@ func mapPortRange(securityGroupRuleResp *iaasalpha.SecurityGroupRule, m *Model) 
 	return nil
 }
 
-func mapProtocol(securityGroupRuleResp *iaasalpha.SecurityGroupRule, m *Model) error {
+func mapProtocol(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) error {
 	if securityGroupRuleResp.Protocol == nil {
 		m.Protocol = types.ObjectNull(protocolTypes)
 		return nil
 	}
 
 	protocolNumberValue := types.Int64Null()
-	if securityGroupRuleResp.Protocol.Protocol != nil {
-		protocolNumberValue = types.Int64Value(*securityGroupRuleResp.Protocol.Protocol)
+	if securityGroupRuleResp.Protocol.Number != nil {
+		protocolNumberValue = types.Int64Value(*securityGroupRuleResp.Protocol.Number)
 	}
 
 	protocolNameValue := types.StringNull()
@@ -707,7 +712,7 @@ func mapProtocol(securityGroupRuleResp *iaasalpha.SecurityGroupRule, m *Model) e
 	return nil
 }
 
-func toCreatePayload(model *Model, icmpParameters *icmpParametersModel, portRange *portRangeModel, protocol *protocolModel) (*iaasalpha.CreateSecurityGroupRulePayload, error) {
+func toCreatePayload(model *Model, icmpParameters *icmpParametersModel, portRange *portRangeModel, protocol *protocolModel) (*iaas.CreateSecurityGroupRulePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -727,7 +732,7 @@ func toCreatePayload(model *Model, icmpParameters *icmpParametersModel, portRang
 		return nil, fmt.Errorf("converting protocol: %w", err)
 	}
 
-	return &iaasalpha.CreateSecurityGroupRulePayload{
+	return &iaas.CreateSecurityGroupRulePayload{
 		Description:           conversion.StringValueToPointer(model.Description),
 		Direction:             conversion.StringValueToPointer(model.Direction),
 		Ethertype:             conversion.StringValueToPointer(model.EtherType),
@@ -739,11 +744,11 @@ func toCreatePayload(model *Model, icmpParameters *icmpParametersModel, portRang
 	}, nil
 }
 
-func toIcmpParametersPayload(icmpParameters *icmpParametersModel) (*iaasalpha.ICMPParameters, error) {
+func toIcmpParametersPayload(icmpParameters *icmpParametersModel) (*iaas.ICMPParameters, error) {
 	if icmpParameters == nil {
 		return nil, nil
 	}
-	payloadParams := &iaasalpha.ICMPParameters{}
+	payloadParams := &iaas.ICMPParameters{}
 
 	payloadParams.Code = conversion.Int64ValueToPointer(icmpParameters.Code)
 	payloadParams.Type = conversion.Int64ValueToPointer(icmpParameters.Type)
@@ -751,11 +756,11 @@ func toIcmpParametersPayload(icmpParameters *icmpParametersModel) (*iaasalpha.IC
 	return payloadParams, nil
 }
 
-func toPortRangePayload(portRange *portRangeModel) (*iaasalpha.PortRange, error) {
+func toPortRangePayload(portRange *portRangeModel) (*iaas.PortRange, error) {
 	if portRange == nil {
 		return nil, nil
 	}
-	payloadPortRange := &iaasalpha.PortRange{}
+	payloadPortRange := &iaas.PortRange{}
 
 	payloadPortRange.Max = conversion.Int64ValueToPointer(portRange.Max)
 	payloadPortRange.Min = conversion.Int64ValueToPointer(portRange.Min)
@@ -763,14 +768,14 @@ func toPortRangePayload(portRange *portRangeModel) (*iaasalpha.PortRange, error)
 	return payloadPortRange, nil
 }
 
-func toProtocolPayload(protocol *protocolModel) (*iaasalpha.V1SecurityGroupRuleProtocol, error) {
+func toProtocolPayload(protocol *protocolModel) (*iaas.CreateProtocol, error) {
 	if protocol == nil {
 		return nil, nil
 	}
-	payloadProtocol := &iaasalpha.V1SecurityGroupRuleProtocol{}
+	payloadProtocol := &iaas.CreateProtocol{}
 
-	payloadProtocol.Name = conversion.StringValueToPointer(protocol.Name)
-	payloadProtocol.Protocol = conversion.Int64ValueToPointer(protocol.Number)
+	payloadProtocol.String = conversion.StringValueToPointer(protocol.Name)
+	payloadProtocol.Int64 = conversion.Int64ValueToPointer(protocol.Number)
 
 	return payloadProtocol, nil
 }

@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -56,7 +56,7 @@ func NewSecurityGroupResource() resource.Resource {
 
 // securityGroupResource is the resource implementation.
 type securityGroupResource struct {
-	client *iaasalpha.APIClient
+	client *iaas.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -85,16 +85,16 @@ func (r *securityGroupResource) Configure(ctx context.Context, req resource.Conf
 		resourceBetaCheckDone = true
 	}
 
-	var apiClient *iaasalpha.APIClient
+	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
 		ctx = tflog.SetField(ctx, "iaas_custom_endpoint", providerData.IaaSCustomEndpoint)
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.IaaSCustomEndpoint),
 		)
 	} else {
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -106,7 +106,7 @@ func (r *securityGroupResource) Configure(ctx context.Context, req resource.Conf
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "iaasalpha client configured")
+	tflog.Info(ctx, "iaas client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -367,7 +367,7 @@ func (r *securityGroupResource) ImportState(ctx context.Context, req resource.Im
 	tflog.Info(ctx, "security group state imported")
 }
 
-func mapFields(ctx context.Context, securityGroupResp *iaasalpha.SecurityGroup, model *Model) error {
+func mapFields(ctx context.Context, securityGroupResp *iaas.SecurityGroup, model *Model) error {
 	if securityGroupResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -415,7 +415,7 @@ func mapFields(ctx context.Context, securityGroupResp *iaasalpha.SecurityGroup, 
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateSecurityGroupPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateSecurityGroupPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -425,7 +425,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateSecuri
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.CreateSecurityGroupPayload{
+	return &iaas.CreateSecurityGroupPayload{
 		Stateful:    conversion.BoolValueToPointer(model.Stateful),
 		Description: conversion.StringValueToPointer(model.Description),
 		Labels:      &labels,
@@ -433,7 +433,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateSecuri
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.UpdateSecurityGroupPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.UpdateSecurityGroupPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -443,7 +443,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.UpdateSecurityGroupPayload{
+	return &iaas.UpdateSecurityGroupPayload{
 		Description: conversion.StringValueToPointer(model.Description),
 		Name:        conversion.StringValueToPointer(model.Name),
 		Labels:      &labels,

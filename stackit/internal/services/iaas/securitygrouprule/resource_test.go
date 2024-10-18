@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
 var fixtureModelIcmpParameters = types.ObjectValueMust(icmpParametersTypes, map[string]attr.Value{
@@ -17,7 +17,7 @@ var fixtureModelIcmpParameters = types.ObjectValueMust(icmpParametersTypes, map[
 	"type": types.Int64Value(2),
 })
 
-var fixtureIcmpParameters = iaasalpha.ICMPParameters{
+var fixtureIcmpParameters = iaas.ICMPParameters{
 	Code: utils.Ptr(int64(1)),
 	Type: utils.Ptr(int64(2)),
 }
@@ -27,7 +27,7 @@ var fixtureModelPortRange = types.ObjectValueMust(portRangeTypes, map[string]att
 	"min": types.Int64Value(1),
 })
 
-var fixturePortRange = iaasalpha.PortRange{
+var fixturePortRange = iaas.PortRange{
 	Max: utils.Ptr(int64(2)),
 	Min: utils.Ptr(int64(1)),
 }
@@ -37,16 +37,25 @@ var fixtureModelProtocol = types.ObjectValueMust(protocolTypes, map[string]attr.
 	"number": types.Int64Value(1),
 })
 
-var fixtureProtocol = iaasalpha.V1SecurityGroupRuleProtocol{
-	Name:     utils.Ptr("name"),
-	Protocol: utils.Ptr(int64(1)),
+var fixtureProtocol = iaas.Protocol{
+	Name:   utils.Ptr("name"),
+	Number: utils.Ptr(int64(1)),
+}
+
+var fixtureModelCreateProtocol = types.ObjectValueMust(protocolTypes, map[string]attr.Value{
+	"name":   types.StringValue("name"),
+	"number": types.Int64Null(),
+})
+
+var fixtureCreateProtocol = iaas.CreateProtocol{
+	String: utils.Ptr("name"),
 }
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		input       *iaasalpha.SecurityGroupRule
+		input       *iaas.SecurityGroupRule
 		expected    Model
 		isValid     bool
 	}{
@@ -57,7 +66,7 @@ func TestMapFields(t *testing.T) {
 				SecurityGroupId:     types.StringValue("sgid"),
 				SecurityGroupRuleId: types.StringValue("sgrid"),
 			},
-			&iaasalpha.SecurityGroupRule{
+			&iaas.SecurityGroupRule{
 				Id: utils.Ptr("sgrid"),
 			},
 			Model{
@@ -83,7 +92,7 @@ func TestMapFields(t *testing.T) {
 				SecurityGroupId:     types.StringValue("sgid"),
 				SecurityGroupRuleId: types.StringValue("sgrid"),
 			},
-			&iaasalpha.SecurityGroupRule{
+			&iaas.SecurityGroupRule{
 				Id:                    utils.Ptr("sgrid"),
 				Description:           utils.Ptr("desc"),
 				Direction:             utils.Ptr("ingress"),
@@ -121,7 +130,7 @@ func TestMapFields(t *testing.T) {
 					"number": types.Int64Null(),
 				}),
 			},
-			&iaasalpha.SecurityGroupRule{
+			&iaas.SecurityGroupRule{
 				Id:       utils.Ptr("sgrid"),
 				Protocol: &fixtureProtocol,
 			},
@@ -152,7 +161,7 @@ func TestMapFields(t *testing.T) {
 					"number": types.Int64Value(1),
 				}),
 			},
-			&iaasalpha.SecurityGroupRule{
+			&iaas.SecurityGroupRule{
 				Id:       utils.Ptr("sgrid"),
 				Protocol: &fixtureProtocol,
 			},
@@ -185,7 +194,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:       types.StringValue("pid"),
 				SecurityGroupId: types.StringValue("sgid"),
 			},
-			&iaasalpha.SecurityGroupRule{},
+			&iaas.SecurityGroupRule{},
 			Model{},
 			false,
 		},
@@ -213,13 +222,13 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.CreateSecurityGroupRulePayload
+		expected    *iaas.CreateSecurityGroupRulePayload
 		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
-			&iaasalpha.CreateSecurityGroupRulePayload{},
+			&iaas.CreateSecurityGroupRulePayload{},
 			true,
 		},
 		{
@@ -229,14 +238,14 @@ func TestToCreatePayload(t *testing.T) {
 				Direction:      types.StringValue("ingress"),
 				IcmpParameters: fixtureModelIcmpParameters,
 				PortRange:      fixtureModelPortRange,
-				Protocol:       fixtureModelProtocol,
+				Protocol:       fixtureModelCreateProtocol,
 			},
-			&iaasalpha.CreateSecurityGroupRulePayload{
+			&iaas.CreateSecurityGroupRulePayload{
 				Description:    utils.Ptr("desc"),
 				Direction:      utils.Ptr("ingress"),
 				IcmpParameters: &fixtureIcmpParameters,
 				PortRange:      &fixturePortRange,
-				Protocol:       &fixtureProtocol,
+				Protocol:       &fixtureCreateProtocol,
 			},
 			true,
 		},

@@ -26,8 +26,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -60,7 +60,7 @@ type Model struct {
 	ImageId          types.String `tfsdk:"image_id"`
 	KeypairName      types.String `tfsdk:"keypair_name"`
 	Labels           types.Map    `tfsdk:"labels"`
-	ServerGroup      types.String `tfsdk:"server_group"`
+	AffinityGroup    types.String `tfsdk:"affinity_group"`
 	UserData         types.String `tfsdk:"user_data"`
 	CreatedAt        types.String `tfsdk:"created_at"`
 	LaunchedAt       types.String `tfsdk:"launched_at"`
@@ -90,7 +90,7 @@ func NewServerResource() resource.Resource {
 
 // serverResource is the resource implementation.
 type serverResource struct {
-	client *iaasalpha.APIClient
+	client *iaas.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -133,16 +133,16 @@ func (r *serverResource) Configure(ctx context.Context, req resource.ConfigureRe
 		resourceBetaCheckDone = true
 	}
 
-	var apiClient *iaasalpha.APIClient
+	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
 		ctx = tflog.SetField(ctx, "iaas_custom_endpoint", providerData.IaaSCustomEndpoint)
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.IaaSCustomEndpoint),
 		)
 	} else {
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -154,7 +154,7 @@ func (r *serverResource) Configure(ctx context.Context, req resource.ConfigureRe
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "iaasalpha client configured")
+	tflog.Info(ctx, "iaas client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -297,8 +297,8 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				ElementType: types.StringType,
 				Optional:    true,
 			},
-			"server_group": schema.StringAttribute{
-				Description: "The server group the server is assigned to.",
+			"affinity_group": schema.StringAttribute{
+				Description: "The affinity group the server is assigned to.",
 				Optional:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -466,7 +466,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 	// Update machine type
 	modelMachineType := conversion.StringValueToPointer(model.MachineType)
 	if modelMachineType != nil && updatedServer.MachineType != nil && *modelMachineType != *updatedServer.MachineType {
-		payload := iaasalpha.ResizeServerPayload{
+		payload := iaas.ResizeServerPayload{
 			MachineType: modelMachineType,
 		}
 		err := r.client.ResizeServer(ctx, projectId, serverId).ResizeServerPayload(payload).Execute()
@@ -549,7 +549,7 @@ func (r *serverResource) ImportState(ctx context.Context, req resource.ImportSta
 	tflog.Info(ctx, "server state imported")
 }
 
-func mapFields(ctx context.Context, serverResp *iaasalpha.Server, model *Model) error {
+func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error {
 	if serverResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -610,14 +610,14 @@ func mapFields(ctx context.Context, serverResp *iaasalpha.Server, model *Model) 
 	model.Labels = labels
 	model.ImageId = types.StringPointerValue(serverResp.ImageId)
 	model.KeypairName = types.StringPointerValue(serverResp.KeypairName)
-	model.ServerGroup = types.StringPointerValue(serverResp.ServerGroup)
+	model.AffinityGroup = types.StringPointerValue(serverResp.AffinityGroup)
 	model.CreatedAt = createdAt
 	model.UpdatedAt = updatedAt
 	model.LaunchedAt = launchedAt
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServerPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -635,12 +635,12 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServer
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	var bootVolumePayload *iaasalpha.CreateServerPayloadBootVolume
+	var bootVolumePayload *iaas.CreateServerPayloadBootVolume
 	if !bootVolume.SourceId.IsNull() && !bootVolume.SourceType.IsNull() {
-		bootVolumePayload = &iaasalpha.CreateServerPayloadBootVolume{
+		bootVolumePayload = &iaas.CreateServerPayloadBootVolume{
 			PerformanceClass: conversion.StringValueToPointer(bootVolume.PerformanceClass),
 			Size:             conversion.Int64ValueToPointer(bootVolume.Size),
-			Source: &iaasalpha.BootVolumeSource{
+			Source: &iaas.BootVolumeSource{
 				Id:   conversion.StringValueToPointer(bootVolume.SourceId),
 				Type: conversion.StringValueToPointer(bootVolume.SourceType),
 			},
@@ -653,7 +653,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServer
 		userData = &encodedUserData
 	}
 
-	return &iaasalpha.CreateServerPayload{
+	return &iaas.CreateServerPayload{
 		AvailabilityZone: conversion.StringValueToPointer(model.AvailabilityZone),
 		BootVolume:       bootVolumePayload,
 		ImageId:          conversion.StringValueToPointer(model.ImageId),
@@ -665,7 +665,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateServer
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.UpdateServerPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.UpdateServerPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -675,7 +675,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.UpdateServerPayload{
+	return &iaas.UpdateServerPayload{
 		Name:   conversion.StringValueToPointer(model.Name),
 		Labels: &labels,
 	}, nil

@@ -8,14 +8,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		input       *iaasalpha.SecurityGroup
+		input       *iaas.SecurityGroup
 		expected    Model
 		isValid     bool
 	}{
@@ -25,7 +25,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:       types.StringValue("pid"),
 				SecurityGroupId: types.StringValue("sgid"),
 			},
-			&iaasalpha.SecurityGroup{
+			&iaas.SecurityGroup{
 				Id: utils.Ptr("sgid"),
 			},
 			Model{
@@ -46,7 +46,7 @@ func TestMapFields(t *testing.T) {
 				SecurityGroupId: types.StringValue("sgid"),
 			},
 			// &sourceModel{},
-			&iaasalpha.SecurityGroup{
+			&iaas.SecurityGroup{
 				Id:       utils.Ptr("sgid"),
 				Name:     utils.Ptr("name"),
 				Stateful: utils.Ptr(true),
@@ -74,7 +74,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:       types.StringValue("pid"),
 				SecurityGroupId: types.StringValue("sgid"),
 			},
-			&iaasalpha.SecurityGroup{
+			&iaas.SecurityGroup{
 				Id:     utils.Ptr("sgid"),
 				Labels: &map[string]interface{}{},
 			},
@@ -101,7 +101,7 @@ func TestMapFields(t *testing.T) {
 			Model{
 				ProjectId: types.StringValue("pid"),
 			},
-			&iaasalpha.SecurityGroup{},
+			&iaas.SecurityGroup{},
 			Model{},
 			false,
 		},
@@ -129,7 +129,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.CreateSecurityGroupPayload
+		expected    *iaas.CreateSecurityGroupPayload
 		isValid     bool
 	}{
 		{
@@ -142,7 +142,7 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 				Description: types.StringValue("desc"),
 			},
-			&iaasalpha.CreateSecurityGroupPayload{
+			&iaas.CreateSecurityGroupPayload{
 				Name:     utils.Ptr("name"),
 				Stateful: utils.Ptr(true),
 				Labels: &map[string]interface{}{
@@ -176,7 +176,7 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.UpdateSecurityGroupPayload
+		expected    *iaas.UpdateSecurityGroupPayload
 		isValid     bool
 	}{
 		{
@@ -188,7 +188,7 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				Description: types.StringValue("desc"),
 			},
-			&iaasalpha.UpdateSecurityGroupPayload{
+			&iaas.UpdateSecurityGroupPayload{
 				Name: utils.Ptr("name"),
 				Labels: &map[string]interface{}{
 					"key": "value",

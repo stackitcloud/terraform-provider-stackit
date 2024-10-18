@@ -1,8 +1,8 @@
 resource "stackit_network_area_route" "example" {
   organization_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   network_area_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  prefix          = "1.2.3.4/5"
-  next_hop        = "6.7.8.9"
+  prefix          = "192.168.0.0/24"
+  next_hop        = "192.168.0.0"
   labels = {
     "key" = "value"
   }

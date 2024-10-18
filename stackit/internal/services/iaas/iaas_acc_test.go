@@ -12,7 +12,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -1024,14 +1023,14 @@ func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaasalpha.APIClient
+	var client *iaas.APIClient
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaasalpha.NewAPIClient(
+		client, err = iaas.NewAPIClient(
 			config.WithRegion("eu01"),
 		)
 	} else {
-		client, err = iaasalpha.NewAPIClient(
+		client, err = iaas.NewAPIClient(
 			config.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
@@ -1071,19 +1070,19 @@ func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 
 func testAccCheckServerDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var alphaClient *iaasalpha.APIClient
+	var alphaClient *iaas.APIClient
 	var client *iaas.APIClient
 	var err error
 	var alphaErr error
 	if testutil.IaaSCustomEndpoint == "" {
-		alphaClient, alphaErr = iaasalpha.NewAPIClient(
+		alphaClient, alphaErr = iaas.NewAPIClient(
 			config.WithRegion("eu01"),
 		)
 		client, err = iaas.NewAPIClient(
 			config.WithRegion("eu01"),
 		)
 	} else {
-		alphaClient, alphaErr = iaasalpha.NewAPIClient(
+		alphaClient, alphaErr = iaas.NewAPIClient(
 			config.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 		client, err = iaas.NewAPIClient(
@@ -1159,14 +1158,14 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaasalpha.APIClient
+	var client *iaas.APIClient
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaasalpha.NewAPIClient(
+		client, err = iaas.NewAPIClient(
 			config.WithRegion("eu01"),
 		)
 	} else {
-		client, err = iaasalpha.NewAPIClient(
+		client, err = iaas.NewAPIClient(
 			config.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
@@ -1206,14 +1205,14 @@ func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaasalpha.APIClient
+	var client *iaas.APIClient
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaasalpha.NewAPIClient(
+		client, err = iaas.NewAPIClient(
 			config.WithRegion("eu01"),
 		)
 	} else {
-		client, err = iaasalpha.NewAPIClient(
+		client, err = iaas.NewAPIClient(
 			config.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}

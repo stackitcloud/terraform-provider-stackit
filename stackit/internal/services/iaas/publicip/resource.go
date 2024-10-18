@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -52,7 +52,7 @@ func NewPublicIpResource() resource.Resource {
 
 // publicIpResource is the resource implementation.
 type publicIpResource struct {
-	client *iaasalpha.APIClient
+	client *iaas.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -81,16 +81,16 @@ func (r *publicIpResource) Configure(ctx context.Context, req resource.Configure
 		resourceBetaCheckDone = true
 	}
 
-	var apiClient *iaasalpha.APIClient
+	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
 		ctx = tflog.SetField(ctx, "iaas_custom_endpoint", providerData.IaaSCustomEndpoint)
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.IaaSCustomEndpoint),
 		)
 	} else {
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -102,7 +102,7 @@ func (r *publicIpResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "iaasalpha client configured")
+	tflog.Info(ctx, "iaas client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -347,7 +347,7 @@ func (r *publicIpResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "public IP state imported")
 }
 
-func mapFields(ctx context.Context, publicIpResp *iaasalpha.PublicIp, model *Model) error {
+func mapFields(ctx context.Context, publicIpResp *iaas.PublicIp, model *Model) error {
 	if publicIpResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -397,7 +397,7 @@ func mapFields(ctx context.Context, publicIpResp *iaasalpha.PublicIp, model *Mod
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreatePublicIPPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreatePublicIPPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -407,14 +407,14 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreatePublic
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.CreatePublicIPPayload{
+	return &iaas.CreatePublicIPPayload{
 		Labels:           &labels,
 		Ip:               conversion.StringValueToPointer(model.Ip),
-		NetworkInterface: iaasalpha.NewNullableString(conversion.StringValueToPointer(model.NetworkInterfaceId)),
+		NetworkInterface: iaas.NewNullableString(conversion.StringValueToPointer(model.NetworkInterfaceId)),
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.UpdatePublicIPPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.UpdatePublicIPPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -424,8 +424,8 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.UpdatePublicIPPayload{
+	return &iaas.UpdatePublicIPPayload{
 		Labels:           &labels,
-		NetworkInterface: iaasalpha.NewNullableString(conversion.StringValueToPointer(model.NetworkInterfaceId)),
+		NetworkInterface: iaas.NewNullableString(conversion.StringValueToPointer(model.NetworkInterfaceId)),
 	}, nil
 }
