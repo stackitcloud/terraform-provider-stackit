@@ -7,6 +7,6 @@ resource "stackit_security_group_rule" "example" {
     type = 8
   }
   protocol = {
-    name   = "icmp"
+    name = "icmp"
   }
 }
