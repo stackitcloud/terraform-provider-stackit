@@ -37,6 +37,7 @@ func TestMapFields(t *testing.T) {
 				IPv4PrefixLength: types.Int64Null(),
 				Prefixes:         types.ListNull(types.StringType),
 				PublicIP:         types.StringNull(),
+				Labels:           types.MapNull(types.StringType),
 			},
 			true,
 		},
@@ -58,6 +59,9 @@ func TestMapFields(t *testing.T) {
 					"prefix2",
 				},
 				PublicIp: utils.Ptr("publicIp"),
+				Labels: &map[string]interface{}{
+					"key": "value",
+				},
 			},
 			Model{
 				Id:        types.StringValue("pid,nid"),
@@ -74,6 +78,9 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("prefix2"),
 				}),
 				PublicIP: types.StringValue("publicIp"),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
 			},
 			true,
 		},
@@ -104,6 +111,7 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("ns2"),
 					types.StringValue("ns3"),
 				}),
+				Labels: types.MapNull(types.StringType),
 			},
 			true,
 		},
@@ -135,6 +143,7 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("prefix2"),
 					types.StringValue("prefix3"),
 				}),
+				Labels: types.MapNull(types.StringType),
 			},
 			true,
 		},
@@ -190,6 +199,9 @@ func TestToCreatePayload(t *testing.T) {
 					types.StringValue("ns2"),
 				}),
 				IPv4PrefixLength: types.Int64Value(24),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
 			},
 			&iaas.CreateNetworkPayload{
 				Name: utils.Ptr("name"),
@@ -202,13 +214,16 @@ func TestToCreatePayload(t *testing.T) {
 						PrefixLength: utils.Ptr(int64(24)),
 					},
 				},
+				Labels: &map[string]interface{}{
+					"key": "value",
+				},
 			},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(tt.input)
+			output, err := toCreatePayload(context.Background(), tt.input)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -240,6 +255,9 @@ func TestToUpdatePayload(t *testing.T) {
 					types.StringValue("ns1"),
 					types.StringValue("ns2"),
 				}),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
 			},
 			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
@@ -251,13 +269,16 @@ func TestToUpdatePayload(t *testing.T) {
 						},
 					},
 				},
+				Labels: &map[string]interface{}{
+					"key": "value",
+				},
 			},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(tt.input)
+			output, err := toUpdatePayload(context.Background(), tt.input, types.MapNull(types.StringType))
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

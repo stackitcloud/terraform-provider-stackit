@@ -56,6 +56,7 @@ type Model struct {
 	DefaultPrefixLength types.Int64  `tfsdk:"default_prefix_length"`
 	MaxPrefixLength     types.Int64  `tfsdk:"max_prefix_length"`
 	MinPrefixLength     types.Int64  `tfsdk:"min_prefix_length"`
+	Labels              types.Map    `tfsdk:"labels"`
 }
 
 // Struct corresponding to Model.NetworkRanges[i]
@@ -133,12 +134,12 @@ func (r *networkAreaResource) Configure(ctx context.Context, req resource.Config
 // Schema defines the schema for the resource.
 func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Network area resource schema. Must have a `region` specified in the provider configuration.",
+		Description:         "Network area resource schema. Must have a `region` specified in the provider configuration.",
+		MarkdownDescription: features.AddBetaDescription("Network area resource schema. Must have a `region` specified in the provider configuration."),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description:         "Terraform's internal resource ID. It is structured as \"`organization_id`,`network_area_id`\".",
-				MarkdownDescription: features.AddBetaDescription("Network area resource schema. Must have a `region` specified in the provider configuration."),
-				Computed:            true,
+				Description: "Terraform's internal resource ID. It is structured as \"`organization_id`,`network_area_id`\".",
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -244,6 +245,11 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 					int64validator.AtMost(29),
 				},
 				Default: int64default.StaticInt64(24),
+			},
+			"labels": schema.MapAttribute{
+				Description: "Labels are key-value string pairs which can be attached to a resource container",
+				ElementType: types.StringType,
+				Optional:    true,
 			},
 		},
 	}
@@ -365,8 +371,16 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 		}
 	}
 
+	// Retrieve values from state
+	var stateModel Model
+	diags = req.State.Get(ctx, &stateModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Generate API request body from model
-	payload, err := toUpdatePayload(&model)
+	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -431,8 +445,19 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
+	projects, err := r.client.ListNetworkAreaProjects(ctx, organizationId, networkAreaId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintf("Calling API to get the list of projects: %v", err))
+		return
+	}
+
+	if projects != nil && len(*projects.Items) > 0 {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintln("You still have projects attached to the network area. Please delete or remove them from the network area before deleting the network area."))
+		return
+	}
+
 	// Delete existing network
-	err := r.client.DeleteNetworkArea(ctx, organizationId, networkAreaId).Execute()
+	err = r.client.DeleteNetworkArea(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -518,9 +543,24 @@ func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, networkAr
 		return fmt.Errorf("mapping network ranges: %w", err)
 	}
 
+	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
+	if diags.HasError() {
+		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
+	}
+	if networkAreaResp.Labels != nil && len(*networkAreaResp.Labels) != 0 {
+		var diags diag.Diagnostics
+		labels, diags = types.MapValueFrom(ctx, types.StringType, *networkAreaResp.Labels)
+		if diags.HasError() {
+			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
+		}
+	} else if model.Labels.IsNull() {
+		labels = types.MapNull(types.StringType)
+	}
+
 	model.NetworkAreaId = types.StringValue(networkAreaId)
 	model.Name = types.StringPointerValue(networkAreaResp.Name)
 	model.ProjectCount = types.Int64PointerValue(networkAreaResp.ProjectCount)
+	model.Labels = labels
 
 	if networkAreaResp.Ipv4 != nil {
 		model.TransferNetwork = types.StringPointerValue(networkAreaResp.Ipv4.TransferNetwork)
@@ -616,6 +656,11 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkArea
 		return nil, fmt.Errorf("converting network ranges: %w", err)
 	}
 
+	labels, err := conversion.ToStringInterfaceMap(ctx, model.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("converting to Go map: %w", err)
+	}
+
 	return &iaas.CreateNetworkAreaPayload{
 		Name: conversion.StringValueToPointer(model.Name),
 		AddressFamily: &iaas.CreateAreaAddressFamily{
@@ -628,10 +673,11 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkArea
 				MinPrefixLen:       conversion.Int64ValueToPointer(model.MinPrefixLength),
 			},
 		},
+		Labels: &labels,
 	}, nil
 }
 
-func toUpdatePayload(model *Model) (*iaas.PartialUpdateNetworkAreaPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.PartialUpdateNetworkAreaPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -645,6 +691,11 @@ func toUpdatePayload(model *Model) (*iaas.PartialUpdateNetworkAreaPayload, error
 		modelDefaultNameservers = append(modelDefaultNameservers, nameserverString.ValueString())
 	}
 
+	labels, err := conversion.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("converting to Go map: %w", err)
+	}
+
 	return &iaas.PartialUpdateNetworkAreaPayload{
 		Name: conversion.StringValueToPointer(model.Name),
 		AddressFamily: &iaas.UpdateAreaAddressFamily{
@@ -655,6 +706,7 @@ func toUpdatePayload(model *Model) (*iaas.PartialUpdateNetworkAreaPayload, error
 				MinPrefixLen:       conversion.Int64ValueToPointer(model.MinPrefixLength),
 			},
 		},
+		Labels: &labels,
 	}, nil
 }
 

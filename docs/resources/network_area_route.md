@@ -4,20 +4,26 @@ page_title: "stackit_network_area_route Resource - stackit"
 subcategory: ""
 description: |-
   Network area route resource schema. Must have a region specified in the provider configuration.
+  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_network_area_route (Resource)
 
 Network area route resource schema. Must have a `region` specified in the provider configuration.
 
+~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
+
 ## Example Usage
 
 ```terraform
-resource "stackit_network_area" "example" {
+resource "stackit_network_area_route" "example" {
   organization_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   network_area_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  prefix          = "1.2.3.4/5"
-  next_hop        = "6.7.8.9"
+  prefix          = "192.168.0.0/24"
+  next_hop        = "192.168.0.0"
+  labels = {
+    "key" = "value"
+  }
 }
 ```
 
@@ -31,9 +37,11 @@ resource "stackit_network_area" "example" {
 - `organization_id` (String) STACKIT organization ID to which the network area is associated.
 - `prefix` (String) The network, that is reachable though the Next Hop. Should use CIDR notation.
 
+### Optional
+
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
+
 ### Read-Only
 
-- `id` (String) Network area route resource schema. Must have a `region` specified in the provider configuration.
-
-~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
+- `id` (String) Terraform's internal resource ID. It is structured as "`organization_id`,`network_area_id`,`network_area_route_id`".
 - `network_area_route_id` (String) The network area route ID.
