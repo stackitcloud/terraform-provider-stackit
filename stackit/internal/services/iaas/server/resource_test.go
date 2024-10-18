@@ -70,12 +70,12 @@ func TestMapFields(t *testing.T) {
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
-				ImageId:     utils.Ptr("image_id"),
-				KeypairName: utils.Ptr("keypair_name"),
+				ImageId:       utils.Ptr("image_id"),
+				KeypairName:   utils.Ptr("keypair_name"),
 				AffinityGroup: utils.Ptr("group_id"),
-				CreatedAt:   utils.Ptr(testTimestamp()),
-				UpdatedAt:   utils.Ptr(testTimestamp()),
-				LaunchedAt:  utils.Ptr(testTimestamp()),
+				CreatedAt:     utils.Ptr(testTimestamp()),
+				UpdatedAt:     utils.Ptr(testTimestamp()),
+				LaunchedAt:    utils.Ptr(testTimestamp()),
 			},
 			Model{
 				Id:               types.StringValue("pid,sid"),
