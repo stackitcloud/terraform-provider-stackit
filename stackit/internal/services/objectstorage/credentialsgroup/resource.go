@@ -3,6 +3,7 @@ package objectstorage
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
 )
@@ -198,9 +200,14 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 
-	found, err := readCredentialsGroups(ctx, &model, r.client)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentialsGroup", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
+	found, formattedErr, err := readCredentialsGroups(ctx, &model, r.client)
+	if formattedErr != nil {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentialsGroup", fmt.Sprintf("getting credential group from list of credentials groups: %v", formattedErr))
 		return
 	}
 	if !found {
@@ -324,20 +331,20 @@ func enableProject(ctx context.Context, model *Model, client objectStorageClient
 // readCredentialsGroups gets all the existing credentials groups for the specified project,
 // finds the credentials group that is being read and updates the state.
 // Returns True if the credential was found, False otherwise.
-func readCredentialsGroups(ctx context.Context, model *Model, client objectStorageClient) (bool, error) {
+func readCredentialsGroups(ctx context.Context, model *Model, client objectStorageClient) (bool, error, error) {
 	found := false
 
 	if model.CredentialsGroupId.ValueString() == "" && model.Name.ValueString() == "" {
-		return found, fmt.Errorf("missing configuration: either name or credentials group id must be provided")
+		return found, fmt.Errorf("missing configuration: either name or credentials group id must be provided"), nil
 	}
 
 	credentialsGroupsResp, err := client.ListCredentialsGroupsExecute(ctx, model.ProjectId.ValueString())
 	if err != nil {
-		return found, fmt.Errorf("getting credentials groups: %w", err)
+		return found, fmt.Errorf("getting credentials groups: %w", err), err
 	}
 
 	if credentialsGroupsResp == nil {
-		return found, fmt.Errorf("nil response from GET credentials groups")
+		return found, fmt.Errorf("nil response from GET credentials groups"), nil
 	}
 
 	for _, credentialsGroup := range *credentialsGroupsResp.CredentialsGroups {
@@ -347,10 +354,10 @@ func readCredentialsGroups(ctx context.Context, model *Model, client objectStora
 		found = true
 		err = mapCredentialsGroup(credentialsGroup, model)
 		if err != nil {
-			return found, err
+			return found, err, nil
 		}
 		break
 	}
 
-	return found, nil
+	return found, nil, nil
 }

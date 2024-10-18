@@ -3,6 +3,7 @@ package objectstorage
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
 )
 
@@ -240,9 +242,14 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	found, err := readCredentials(ctx, &model, r.client)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Finding credential: %v", err))
+	found, formattedErr, err := readCredentials(ctx, &model, r.client)
+	if formattedErr != nil {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Finding credential: %v", formattedErr))
 		return
 	}
 	if !found {
@@ -393,17 +400,17 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 // readCredentials gets all the existing credentials for the specified credentials group,
 // finds the credential that is being read and updates the state.
 // Returns True if the credential was found, False otherwise.
-func readCredentials(ctx context.Context, model *Model, client *objectstorage.APIClient) (bool, error) {
+func readCredentials(ctx context.Context, model *Model, client *objectstorage.APIClient) (bool, error, error) {
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	credentialId := model.CredentialId.ValueString()
 
 	credentialsGroupResp, err := client.ListAccessKeys(ctx, projectId).CredentialsGroup(credentialsGroupId).Execute()
 	if err != nil {
-		return false, fmt.Errorf("getting credentials groups: %w", err)
+		return false, fmt.Errorf("getting credentials groups: %w", err), err
 	}
 	if credentialsGroupResp == nil {
-		return false, fmt.Errorf("getting credentials groups: nil response")
+		return false, fmt.Errorf("getting credentials groups: nil response"), nil
 	}
 
 	foundCredential := false
@@ -431,12 +438,12 @@ func readCredentials(ctx context.Context, model *Model, client *objectstorage.AP
 			// Eg. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
 			expirationTimestamp, err := time.Parse(time.RFC3339, *credential.Expires)
 			if err != nil {
-				return foundCredential, fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credential.Expires, err)
+				return foundCredential, fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credential.Expires, err), err
 			}
 			model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
 		}
 		break
 	}
 
-	return foundCredential, nil
+	return foundCredential, nil, nil
 }
