@@ -131,9 +131,9 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	found, formattedErr, _ := readCredentials(ctx, &model, r.client)
-	if formattedErr != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Finding credential: %v", formattedErr))
+	found, err := readCredentials(ctx, &model, r.client)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Finding credential: %v", err))
 		return
 	}
 	if !found {

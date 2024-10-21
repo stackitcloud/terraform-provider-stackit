@@ -288,12 +288,12 @@ func TestReadCredentialsGroups(t *testing.T) {
 				ProjectId:          tt.expectedModel.ProjectId,
 				CredentialsGroupId: tt.expectedModel.CredentialsGroupId,
 			}
-			found, formattedErr, _ := readCredentialsGroups(context.Background(), model, client)
-			if !tt.isValid && formattedErr == nil {
+			found, err := readCredentialsGroups(context.Background(), model, client)
+			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
-			if tt.isValid && formattedErr != nil {
-				t.Fatalf("Should not have failed: %v", formattedErr)
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
 				diff := cmp.Diff(model, &tt.expectedModel)

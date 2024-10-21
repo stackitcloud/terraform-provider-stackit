@@ -413,12 +413,12 @@ func TestReadCredentials(t *testing.T) {
 				CredentialsGroupId: tt.expectedModel.CredentialsGroupId,
 				CredentialId:       tt.expectedModel.CredentialId,
 			}
-			found, formattedErr, _ := readCredentials(context.Background(), model, client)
-			if !tt.isValid && formattedErr == nil {
+			found, err := readCredentials(context.Background(), model, client)
+			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
-			if tt.isValid && formattedErr != nil {
-				t.Fatalf("Should not have failed: %v", formattedErr)
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
 				diff := cmp.Diff(model, &tt.expectedModel)
