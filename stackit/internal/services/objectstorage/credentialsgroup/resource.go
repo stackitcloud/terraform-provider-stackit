@@ -3,6 +3,7 @@ package objectstorage
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
 )
@@ -333,6 +335,10 @@ func readCredentialsGroups(ctx context.Context, model *Model, client objectStora
 
 	credentialsGroupsResp, err := client.ListCredentialsGroupsExecute(ctx, model.ProjectId.ValueString())
 	if err != nil {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			return found, nil
+		}
 		return found, fmt.Errorf("getting credentials groups: %w", err)
 	}
 
