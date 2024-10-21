@@ -221,10 +221,10 @@ func securityGroupResourceConfig(name string) string {
 					}
 				}
 				`,
-		volumeResource["project_id"],
+		securityGroupResource["project_id"],
 		name,
-		volumeResource["description"],
-		volumeResource["label1"],
+		securityGroupResource["description"],
+		securityGroupResource["label1"],
 	)
 }
 
@@ -240,6 +240,43 @@ func securityGroupRuleResourceConfig(direction string) string {
 		securityGroupRuleResource["project_id"],
 		direction,
 		securityGroupRuleResource["description"],
+	)
+}
+
+func volumeAttachmentResourceConfig() string {
+	return fmt.Sprintf(`
+				resource "stackit_server_volume_attach" "attach_volume" {
+					project_id 		  = "%s"
+					server_id = stackit_server.server.server_id
+					volume_id = stackit_volume.volume.volume_id
+				}
+				`,
+		testutil.ProjectId,
+	)
+}
+
+func nicAttachmentResourceConfig() string {
+	return fmt.Sprintf(`
+				resource "stackit_server_network_interface_attach" "attach_nic" {
+					project_id 		  = "%s"
+					server_id = stackit_server.server.server_id
+					network_interface_id = stackit_network_interface.network_interface.network_interface_id
+				}
+				`,
+		testutil.ProjectId,
+	)
+}
+
+func serviceAccountAttachmentResourceConfig() string {
+	return fmt.Sprintf(`
+				resource "stackit_server_service_account_attach" "attach_sa" {
+					project_id 		  = "%s"
+					server_id = stackit_server.server.server_id
+					service_account_email = "%s"
+				}
+				`,
+		testutil.ProjectId,
+		testutil.TestProjectServiceAccountEmail,
 	)
 }
 
@@ -259,11 +296,15 @@ func testAccVolumeConfig(name, size string) string {
 }
 
 func testAccServerConfig(name, nameservers, serverName, machineType, interfacename string) string {
-	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
+	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		networkResourceConfig(name, nameservers),
 		serverResourceConfig(serverName, machineType),
+		volumeResourceConfig(volumeResource["name"], volumeResource["size"]),
 		networkInterfaceResourceConfig(interfacename),
+		volumeAttachmentResourceConfig(),
+		nicAttachmentResourceConfig(),
+		serviceAccountAttachmentResourceConfig(),
 	)
 }
 
@@ -555,6 +596,44 @@ func TestAccServer(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_interface_id"),
 					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "name", networkInterfaceResource["name"]),
+
+					// Volume attachment
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_volume_attach.attach_volume", "project_id",
+						"stackit_server.server", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_volume_attach.attach_volume", "server_id",
+						"stackit_server.server", "server_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_volume_attach.attach_volume", "volume_id",
+						"stackit_volume.volume", "volume_id",
+					),
+
+					// Nic attachment
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_network_interface_attach.attach_nic", "project_id",
+						"stackit_server.server", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_network_interface_attach.attach_nic", "server_id",
+						"stackit_server.server", "server_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_network_interface_attach.attach_nic", "network_interface_id",
+						"stackit_network_interface.network_interface", "network_interface_id",
+					),
+
+					// Service account attachment
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_service_account_attach.attach_sa", "project_id",
+						"stackit_server.server", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_service_account_attach.attach_sa", "server_id",
+						"stackit_server.server", "server_id",
+					),
 				),
 			},
 			// Data source
@@ -677,6 +756,66 @@ func TestAccServer(t *testing.T) {
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+			{
+				ResourceName: "stackit_server_volume_attach.attach_volume",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_server_volume_attach.attach_volume"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_server_volume_attach.attach_volume")
+					}
+					serverId, ok := r.Primary.Attributes["server_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute server_id")
+					}
+					volumeId, ok := r.Primary.Attributes["volume_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute volume_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, serverId, volumeId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: false,
+			},
+			{
+				ResourceName: "stackit_server_service_account_attach.attach_sa",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_server_service_account_attach.attach_sa"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_server_service_account_attach.attach_sa")
+					}
+					serverId, ok := r.Primary.Attributes["server_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute server_id")
+					}
+					serviceAccountEmail, ok := r.Primary.Attributes["service_account_email"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute volume_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, serverId, serviceAccountEmail), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: false,
+			},
+			{
+				ResourceName: "stackit_server_network_interface_attach.attach_nic",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_server_network_interface_attach.attach_nic"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_server_network_interface_attach.attach_nic")
+					}
+					serverId, ok := r.Primary.Attributes["server_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute server_id")
+					}
+					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_interface_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, serverId, networkInterfaceId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: false,
 			},
 			// Update
 			{
