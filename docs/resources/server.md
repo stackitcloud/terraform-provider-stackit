@@ -105,10 +105,7 @@ description: |-
   resource "stackit_volume" "example-volume" {
     project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     size       = 12
-    source = {
-      type = "image"
-      id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    }
+    performance_class = "storage_premium_perf6"
     name              = "example-volume"
     availability_zone = "eu01-1"
   }
@@ -272,10 +269,7 @@ resource "stackit_server_network_interface_attach" "nic-attachment" {
 resource "stackit_volume" "example-volume" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   size       = 12
-  source = {
-    type = "image"
-    id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  }
+  performance_class = "storage_premium_perf6"
   name              = "example-volume"
   availability_zone = "eu01-1"
 }
