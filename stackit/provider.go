@@ -17,6 +17,15 @@ import (
 	iaasNetwork "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network"
 	iaasNetworkArea "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarea"
 	iaasNetworkAreaRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearoute"
+	iaasNetworkInterface "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterface"
+	iaasNetworkInterfaceAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterfaceattach"
+	iaasPublicIp "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicip"
+	iaasSecurityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/securitygroup"
+	iaasSecurityGroupRule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/securitygrouprule"
+	iaasServer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/server"
+	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
+	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
+	iaasVolumeAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volumeattach"
 	loadBalancerCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/credential"
 	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
@@ -37,8 +46,6 @@ import (
 	postgresFlexDatabase "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/database"
 	postgresFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/instance"
 	postgresFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/user"
-	postgresCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresql/credential"
-	postgresInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresql/instance"
 	rabbitMQCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/credential"
 	rabbitMQInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/instance"
 	redisCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/credential"
@@ -95,7 +102,6 @@ type providerModel struct {
 	ArgusCustomEndpoint             types.String `tfsdk:"argus_custom_endpoint"`
 	DNSCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
-	PostgreSQLCustomEndpoint        types.String `tfsdk:"postgresql_custom_endpoint"`
 	PostgresFlexCustomEndpoint      types.String `tfsdk:"postgresflex_custom_endpoint"`
 	MongoDBFlexCustomEndpoint       types.String `tfsdk:"mongodbflex_custom_endpoint"`
 	LoadBalancerCustomEndpoint      types.String `tfsdk:"loadbalancer_custom_endpoint"`
@@ -113,7 +119,6 @@ type providerModel struct {
 	ServerBackupCustomEndpoint      types.String `tfsdk:"server_backup_custom_endpoint"`
 	ResourceManagerCustomEndpoint   types.String `tfsdk:"resourcemanager_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
-	JWKSCustomEndpoint              types.String `tfsdk:"jwks_custom_endpoint"`
 	EnableBetaResources             types.Bool   `tfsdk:"enable_beta_resources"`
 	ServiceEnablementCustomEndpoint types.String `tfsdk:"service_enablement_custom_endpoint"`
 }
@@ -141,7 +146,6 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"objectstorage_custom_endpoint":      "Custom endpoint for the Object Storage service",
 		"observability_custom_endpoint":      "Custom endpoint for the Observability service",
 		"opensearch_custom_endpoint":         "Custom endpoint for the OpenSearch service",
-		"postgresql_custom_endpoint":         "Custom endpoint for the PostgreSQL service",
 		"postgresflex_custom_endpoint":       "Custom endpoint for the PostgresFlex service",
 		"redis_custom_endpoint":              "Custom endpoint for the Redis service",
 		"server_backup_custom_endpoint":      "Custom endpoint for the Server Backup service",
@@ -151,7 +155,6 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"ske_custom_endpoint":                "Custom endpoint for the Kubernetes Engine (SKE) service",
 		"service_enablement_custom_endpoint": "Custom endpoint for the Service Enablement API",
 		"token_custom_endpoint":              "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
-		"jwks_custom_endpoint":               "Custom endpoint for the jwks API, which is used to get the json web key sets (jwks) to validate tokens when using the key flow",
 		"enable_beta_resources":              "Enable beta resources. Default is false.",
 	}
 
@@ -201,10 +204,6 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"iaas_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["iaas_custom_endpoint"],
-			},
-			"postgresql_custom_endpoint": schema.StringAttribute{
-				Optional:    true,
-				Description: descriptions["postgresql_custom_endpoint"],
 			},
 			"postgresflex_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -278,11 +277,6 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["token_custom_endpoint"],
 			},
-			"jwks_custom_endpoint": schema.StringAttribute{
-				Optional:           true,
-				Description:        descriptions["jwks_custom_endpoint"],
-				DeprecationMessage: "Validation using JWKS was removed, for being redundant with token validation done in the APIs. This field has no effect, and will be removed in a later update",
-			},
 			"enable_beta_resources": schema.BoolAttribute{
 				Optional:    true,
 				Description: descriptions["enable_beta_resources"],
@@ -337,9 +331,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	}
 	if !(providerConfig.IaaSCustomEndpoint.IsUnknown() || providerConfig.IaaSCustomEndpoint.IsNull()) {
 		providerData.IaaSCustomEndpoint = providerConfig.IaaSCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.PostgreSQLCustomEndpoint.IsUnknown() || providerConfig.PostgreSQLCustomEndpoint.IsNull()) {
-		providerData.PostgreSQLCustomEndpoint = providerConfig.PostgreSQLCustomEndpoint.ValueString()
 	}
 	if !(providerConfig.PostgresFlexCustomEndpoint.IsUnknown() || providerConfig.PostgresFlexCustomEndpoint.IsNull()) {
 		providerData.PostgresFlexCustomEndpoint = providerConfig.PostgresFlexCustomEndpoint.ValueString()
@@ -418,6 +409,12 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasNetwork.NewNetworkDataSource,
 		iaasNetworkArea.NewNetworkAreaDataSource,
 		iaasNetworkAreaRoute.NewNetworkAreaRouteDataSource,
+		iaasNetworkInterface.NewNetworkInterfaceDataSource,
+		iaasVolume.NewVolumeDataSource,
+		iaasPublicIp.NewPublicIpDataSource,
+		iaasServer.NewServerDataSource,
+		iaasSecurityGroup.NewSecurityGroupDataSource,
+		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
 		loadBalancer.NewLoadBalancerDataSource,
 		logMeInstance.NewInstanceDataSource,
 		logMeCredential.NewCredentialDataSource,
@@ -435,8 +432,6 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		postgresFlexDatabase.NewDatabaseDataSource,
 		postgresFlexInstance.NewInstanceDataSource,
 		postgresFlexUser.NewUserDataSource,
-		postgresInstance.NewInstanceDataSource,
-		postgresCredential.NewCredentialDataSource,
 		rabbitMQInstance.NewInstanceDataSource,
 		rabbitMQCredential.NewCredentialDataSource,
 		redisInstance.NewInstanceDataSource,
@@ -464,6 +459,15 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasNetwork.NewNetworkResource,
 		iaasNetworkArea.NewNetworkAreaResource,
 		iaasNetworkAreaRoute.NewNetworkAreaRouteResource,
+		iaasNetworkInterface.NewNetworkInterfaceResource,
+		iaasVolume.NewVolumeResource,
+		iaasPublicIp.NewPublicIpResource,
+		iaasVolumeAttach.NewVolumeAttachResource,
+		iaasNetworkInterfaceAttach.NewNetworkInterfaceAttachResource,
+		iaasServiceAccountAttach.NewServiceAccountAttachResource,
+		iaasServer.NewServerResource,
+		iaasSecurityGroup.NewSecurityGroupResource,
+		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
 		loadBalancer.NewLoadBalancerResource,
 		loadBalancerCredential.NewCredentialResource,
 		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
@@ -484,8 +488,6 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		postgresFlexDatabase.NewDatabaseResource,
 		postgresFlexInstance.NewInstanceResource,
 		postgresFlexUser.NewUserResource,
-		postgresInstance.NewInstanceResource,
-		postgresCredential.NewCredentialResource,
 		rabbitMQInstance.NewInstanceResource,
 		rabbitMQCredential.NewCredentialResource,
 		redisInstance.NewInstanceResource,

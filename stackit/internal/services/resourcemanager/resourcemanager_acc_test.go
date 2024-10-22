@@ -56,6 +56,7 @@ func resourceConfig(name string, label *string, members string) string {
 					members = [
 						%[7]s
 					]
+					owner_email = "%[8]s"
 				}
 
 				resource "stackit_resourcemanager_project" "parent_by_uuid" {
@@ -64,6 +65,7 @@ func resourceConfig(name string, label *string, members string) string {
 					members = [
 						%[7]s
 					]
+                    owner_email = "%[8]s"
 				}
 				`,
 		testutil.ResourceManagerProviderConfig(),
@@ -73,6 +75,7 @@ func resourceConfig(name string, label *string, members string) string {
 		labelConfig,
 		projectResource["parent_uuid"],
 		members,
+		testutil.TestProjectServiceAccountEmail,
 	)
 }
 
@@ -81,17 +84,6 @@ func TestAccResourceManagerResource(t *testing.T) {
 		{
 			Subject: &testutil.TestProjectUserEmail,
 			Role:    utils.Ptr("owner"),
-		},
-	})
-
-	updatedMembersConfig := membersConfig([]authorization.Member{
-		{
-			Subject: &testutil.TestProjectUserEmail,
-			Role:    utils.Ptr("owner"),
-		},
-		{
-			Subject: &testutil.TestProjectUserEmail,
-			Role:    utils.Ptr("reader"),
 		},
 	})
 
@@ -190,7 +182,7 @@ func TestAccResourceManagerResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfig(fmt.Sprintf("%s-new", projectResource["name"]), utils.Ptr("a-label"), updatedMembersConfig),
+				Config: resourceConfig(fmt.Sprintf("%s-new", projectResource["name"]), utils.Ptr("a-label"), initialMembersConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Project data
 					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.parent_by_container", "container_id"),

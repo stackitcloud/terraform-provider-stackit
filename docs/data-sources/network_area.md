@@ -35,6 +35,7 @@ data "stackit_network_area" "example" {
 - `default_nameservers` (List of String) List of DNS Servers/Nameservers.
 - `default_prefix_length` (Number) The default prefix length for networks in the network area.
 - `id` (String) Terraform's internal resource ID. It is structured as "`organization_id`,`network_area_id`".
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `max_prefix_length` (Number) The maximal prefix length for networks in the network area.
 - `min_prefix_length` (Number) The minimal prefix length for networks in the network area.
 - `name` (String) The name of the network area.

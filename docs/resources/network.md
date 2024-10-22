@@ -18,6 +18,9 @@ resource "stackit_network" "example" {
   name               = "example-network"
   nameservers        = ["1.2.3.4", "5.6.7.8"]
   ipv4_prefix_length = 24
+  labels = {
+    "key" = "value"
+  }
 }
 ```
 
@@ -27,12 +30,13 @@ resource "stackit_network" "example" {
 ### Required
 
 - `name` (String) The name of the network.
-- `nameservers` (List of String) The nameservers of the network.
 - `project_id` (String) STACKIT project ID to which the network is associated.
 
 ### Optional
 
 - `ipv4_prefix_length` (Number) The IPv4 prefix length of the network.
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
+- `nameservers` (List of String) The nameservers of the network.
 
 ### Read-Only
 

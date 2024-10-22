@@ -35,5 +35,6 @@ data "stackit_network_area_route" "example" {
 ### Read-Only
 
 - `id` (String) Terraform's internal data source ID. It is structured as "`organization_id`,`network_area_id`,`network_area_route_id`".
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `next_hop` (String) The IP address of the routing system, that will route the prefix configured. Should be a valid IPv4 address.
 - `prefix` (String) The network, that is reachable though the Next Hop. Should use CIDR notation.

@@ -33,20 +33,23 @@ When setting up authentication, the provider will always try to use the key flow
 
 ### Key flow
 
-To use the key flow, you need to have a service account key and an RSA key-pair.
-To configure it, follow this steps:
+    The following instructions assume that you have created a service account and assigned the necessary permissions to it, e.g. `project.owner`.
 
-    The following instructions assume that you have created a service account and assigned it the necessary permissions, e.g. project.owner.
+To use the key flow, you need to have a service account key, which must have an RSA key-pair attached to it.
 
-1.  In the Portal, go to the `Service Accounts` tab, choose a `Service Account` and go to `Service Account Keys` to create a key.
+When creating the service account key, a new pair can be created automatically, which will be included in the service account key. This will make it much easier to configure the key flow authentication in the [STACKIT Terraform Provider](https://github.com/stackitcloud/terraform-provider-stackit), by just providing the service account key.
 
-- You can create your own RSA key-pair or have the Portal generate one for you.
+**Optionally**, you can provide your own private key when creating the service account key, which will then require you to also provide it explicitly to the [STACKIT Terraform Provider](https://github.com/stackitcloud/terraform-provider-stackit), additionally to the service account key. Check the STACKIT Knowledge Base for an [example of how to create your own key-pair](https://docs.stackit.cloud/stackit/en/usage-of-the-service-account-keys-in-stackit-175112464.html#UsageoftheserviceaccountkeysinSTACKIT-CreatinganRSAkey-pair).
 
-2.  Save the content of the service account key and the corresponding private key by copying them or saving them in a file.
+To configure the key flow, follow this steps:
 
-    **Hint:** If you have generated the RSA key-pair using the Portal, you can save the private key in a PEM encoded file by downloading the service account key as a PEM file and using `openssl storeutl -keys <path/to/sa_key_pem_file> > private.key` to extract the private key from the service account key.
+1.  Create a service account key:
 
-The expected format of the service account key is a **json** with the following structure:
+- Use the [STACKIT Portal](https://portal.stackit.cloud/): go to the `Service Accounts` tab, choose a `Service Account` and go to `Service Account Keys` to create a key. For more details, see [Create a service account key](https://docs.stackit.cloud/stackit/en/create-a-service-account-key-175112456.html)
+
+2.  Save the content of the service account key by copying it and saving it in a JSON file.
+
+    The expected format of the service account key is a **JSON** with the following structure:
 
 ```json
 {
@@ -68,10 +71,18 @@ The expected format of the service account key is a **json** with the following 
 }
 ```
 
-3. Configure the service account key and private key for authentication in the provider by following one of the alternatives below:
-   - setting the fiels in the provider block: `service_account_key` or `service_account_key_path`, `private_key` or `private_key_path`
-   - setting environment variables: `STACKIT_SERVICE_ACCOUNT_KEY_PATH` and `STACKIT_PRIVATE_KEY_PATH`
-   - setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH` and `STACKIT_PRIVATE_KEY_PATH` in the credentials file (see above)
+3. Configure the service account key for authentication in the provider by following one of the alternatives below:
+
+   - setting the fields in the provider block: `service_account_key` or `service_account_key_path`
+   - setting the environment variable: `STACKIT_SERVICE_ACCOUNT_KEY_PATH`
+   - setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH` in the credentials file (see above)
+
+> **Optionally, only if you have provided your own RSA key-pair when creating the service account key**, you also need to configure your private key (takes precedence over the one included in the service account key, if present). **The private key must be PEM encoded** and can be provided using one of the options below:
+>
+> - setting the field in the provider block: `private_key` or `private_key_path`
+> - setting the environment variable: `STACKIT_PRIVATE_KEY_PATH`
+> - setting `STACKIT_PRIVATE_KEY_PATH` in the credentials file (see above)
+
 
 ### Token flow
 

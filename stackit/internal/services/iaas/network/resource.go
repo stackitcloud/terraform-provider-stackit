@@ -7,9 +7,11 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -41,6 +43,7 @@ type Model struct {
 	IPv4PrefixLength types.Int64  `tfsdk:"ipv4_prefix_length"`
 	Prefixes         types.List   `tfsdk:"prefixes"`
 	PublicIP         types.String `tfsdk:"public_ip"`
+	Labels           types.Map    `tfsdk:"labels"`
 }
 
 // NewNetworkResource is a helper function to simplify the provider implementation.
@@ -139,7 +142,11 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"nameservers": schema.ListAttribute{
 				Description: "The nameservers of the network.",
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 				ElementType: types.StringType,
 			},
 			"ipv4_prefix_length": schema.Int64Attribute{
@@ -154,6 +161,11 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"public_ip": schema.StringAttribute{
 				Description: "The public IP of the network.",
 				Computed:    true,
+			},
+			"labels": schema.MapAttribute{
+				Description: "Labels are key-value string pairs which can be attached to a resource container",
+				ElementType: types.StringType,
+				Optional:    true,
 			},
 		},
 	}
@@ -173,7 +185,7 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	// Generate API request body from model
-	payload, err := toCreatePayload(&model)
+	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -264,8 +276,16 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 
+	// Retrieve values from state
+	var stateModel Model
+	diags = req.State.Get(ctx, &stateModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Generate API request body from model
-	payload, err := toUpdatePayload(&model)
+	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -373,6 +393,20 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model) err
 		strings.Join(idParts, core.Separator),
 	)
 
+	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
+	if diags.HasError() {
+		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
+	}
+	if networkResp.Labels != nil && len(*networkResp.Labels) != 0 {
+		var diags diag.Diagnostics
+		labels, diags = types.MapValueFrom(ctx, types.StringType, *networkResp.Labels)
+		if diags.HasError() {
+			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
+		}
+	} else if model.Labels.IsNull() {
+		labels = types.MapNull(types.StringType)
+	}
+
 	if networkResp.Nameservers == nil {
 		model.Nameservers = types.ListNull(types.StringType)
 	} else {
@@ -407,11 +441,12 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model) err
 	model.NetworkId = types.StringValue(networkId)
 	model.Name = types.StringPointerValue(networkResp.Name)
 	model.PublicIP = types.StringPointerValue(networkResp.PublicIp)
+	model.Labels = labels
 
 	return nil
 }
 
-func toCreatePayload(model *Model) (*iaas.CreateNetworkPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -423,6 +458,11 @@ func toCreatePayload(model *Model) (*iaas.CreateNetworkPayload, error) {
 			return nil, fmt.Errorf("type assertion failed")
 		}
 		modelNameservers = append(modelNameservers, nameserverString.ValueString())
+	}
+
+	labels, err := conversion.ToStringInterfaceMap(ctx, model.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
 	return &iaas.CreateNetworkPayload{
@@ -433,10 +473,11 @@ func toCreatePayload(model *Model) (*iaas.CreateNetworkPayload, error) {
 				Nameservers:  &modelNameservers,
 			},
 		},
+		Labels: &labels,
 	}, nil
 }
 
-func toUpdatePayload(model *Model) (*iaas.PartialUpdateNetworkPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.PartialUpdateNetworkPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -450,6 +491,11 @@ func toUpdatePayload(model *Model) (*iaas.PartialUpdateNetworkPayload, error) {
 		modelNameservers = append(modelNameservers, nameserverString.ValueString())
 	}
 
+	labels, err := conversion.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("converting to Go map: %w", err)
+	}
+
 	return &iaas.PartialUpdateNetworkPayload{
 		Name: conversion.StringValueToPointer(model.Name),
 		AddressFamily: &iaas.UpdateNetworkAddressFamily{
@@ -457,5 +503,6 @@ func toUpdatePayload(model *Model) (*iaas.PartialUpdateNetworkPayload, error) {
 				Nameservers: &modelNameservers,
 			},
 		},
+		Labels: &labels,
 	}, nil
 }

@@ -29,7 +29,6 @@ type ProviderData struct {
 	ObservabilityCustomEndpoint     string
 	OpenSearchCustomEndpoint        string
 	PostgresFlexCustomEndpoint      string
-	PostgreSQLCustomEndpoint        string
 	RabbitMQCustomEndpoint          string
 	RedisCustomEndpoint             string
 	ResourceManagerCustomEndpoint   string
