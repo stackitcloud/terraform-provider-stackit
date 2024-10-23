@@ -141,9 +141,9 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"nameservers": schema.ListAttribute{
-				Description: "The nameservers of the network.",
-				Optional:    true,
-				Computed:    true,
+				Description:        "This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for the IPv4 networks.",
+				DeprecationMessage: "Use `ipv4_nameservers` to configure the nameservers for the IPv4 networks.",
+				Optional:           true,
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.UseStateForUnknown(),
 				},
