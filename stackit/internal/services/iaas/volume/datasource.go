@@ -139,8 +139,8 @@ func (r *volumeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Computed:    true,
 			},
 			"performance_class": schema.StringAttribute{
-				Description: "The performance class of the volume.",
-				Computed:    true,
+				MarkdownDescription: "The performance class of the volume. Possible values are documented in [Service plans BlockStorage](https://docs.stackit.cloud/stackit/en/service-plans-blockstorage-75137974.html#ServiceplansBlockStorage-CurrentlyavailableServicePlans%28performanceclasses%29)",
+				Computed:            true,
 			},
 			"size": schema.Int64Attribute{
 				Description: "The size of the volume in GB. It can only be updated to a larger value than the current size",

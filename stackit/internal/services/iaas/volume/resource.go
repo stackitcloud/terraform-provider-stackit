@@ -229,9 +229,9 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Optional:    true,
 			},
 			"performance_class": schema.StringAttribute{
-				Description: "The performance class of the volume.",
-				Optional:    true,
-				Computed:    true,
+				MarkdownDescription: "The performance class of the volume. Possible values are documented in [Service plans BlockStorage](https://docs.stackit.cloud/stackit/en/service-plans-blockstorage-75137974.html#ServiceplansBlockStorage-CurrentlyavailableServicePlans%28performanceclasses%29)",
+				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 					stringplanmodifier.UseStateForUnknown(),
