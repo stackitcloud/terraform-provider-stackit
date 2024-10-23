@@ -36,3 +36,4 @@ data "stackit_network" "example" {
 - `nameservers` (List of String, Deprecated) This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for the IPv4 networks.
 - `prefixes` (List of String) The prefixes of the network.
 - `public_ip` (String) The public IP of the network.
+- `routed` (Boolean) Shows if the network is routed and therefore accessible from other networks.

@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -44,6 +45,7 @@ type Model struct {
 	Prefixes         types.List   `tfsdk:"prefixes"`
 	PublicIP         types.String `tfsdk:"public_ip"`
 	Labels           types.Map    `tfsdk:"labels"`
+	Routed           types.Bool   `tfsdk:"routed"`
 }
 
 // NewNetworkResource is a helper function to simplify the provider implementation.
@@ -166,6 +168,14 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "Labels are key-value string pairs which can be attached to a resource container",
 				ElementType: types.StringType,
 				Optional:    true,
+			},
+			"routed": schema.BoolAttribute{
+				Description: "Shows if the network is routed and therefore accessible from other networks.",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -442,6 +452,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model) err
 	model.Name = types.StringPointerValue(networkResp.Name)
 	model.PublicIP = types.StringPointerValue(networkResp.PublicIp)
 	model.Labels = labels
+	model.Routed = types.BoolPointerValue(networkResp.Routed)
 
 	return nil
 }
@@ -474,6 +485,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 			},
 		},
 		Labels: &labels,
+		Routed: conversion.BoolValueToPointer(model.Routed),
 	}, nil
 }
 
@@ -504,5 +516,6 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 			},
 		},
 		Labels: &labels,
+		Routed: conversion.BoolValueToPointer(model.Routed),
 	}, nil
 }

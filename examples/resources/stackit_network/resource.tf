@@ -6,4 +6,5 @@ resource "stackit_network" "example" {
   labels = {
     "key" = "value"
   }
+  routed = true
 }

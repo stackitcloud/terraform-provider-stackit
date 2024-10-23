@@ -38,6 +38,7 @@ func TestMapFields(t *testing.T) {
 				Prefixes:         types.ListNull(types.StringType),
 				PublicIP:         types.StringNull(),
 				Labels:           types.MapNull(types.StringType),
+				Routed:           types.BoolNull(),
 			},
 			true,
 		},
@@ -62,6 +63,7 @@ func TestMapFields(t *testing.T) {
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
+				Routed: utils.Ptr(true),
 			},
 			Model{
 				Id:        types.StringValue("pid,nid"),
@@ -81,6 +83,7 @@ func TestMapFields(t *testing.T) {
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 					"key": types.StringValue("value"),
 				}),
+				Routed: types.BoolValue(true),
 			},
 			true,
 		},
@@ -116,7 +119,7 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
-			"prefixes_changed_outisde_tf",
+			"prefixes_changed_outside_tf",
 			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
@@ -202,6 +205,7 @@ func TestToCreatePayload(t *testing.T) {
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 					"key": types.StringValue("value"),
 				}),
+				Routed: types.BoolValue(false),
 			},
 			&iaas.CreateNetworkPayload{
 				Name: utils.Ptr("name"),
@@ -217,6 +221,7 @@ func TestToCreatePayload(t *testing.T) {
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
+				Routed: utils.Ptr(false),
 			},
 			true,
 		},
@@ -258,6 +263,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 					"key": types.StringValue("value"),
 				}),
+				Routed: types.BoolValue(true),
 			},
 			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
@@ -272,6 +278,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
+				Routed: utils.Ptr(true),
 			},
 			true,
 		},

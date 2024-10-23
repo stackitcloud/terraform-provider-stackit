@@ -21,6 +21,7 @@ resource "stackit_network" "example" {
   labels = {
     "key" = "value"
   }
+  routed = true
 }
 ```
 
@@ -37,6 +38,7 @@ resource "stackit_network" "example" {
 - `ipv4_prefix_length` (Number) The IPv4 prefix length of the network.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `nameservers` (List of String, Deprecated) This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for the IPv4 networks.
+- `routed` (Boolean) Shows if the network is routed and therefore accessible from other networks.
 
 ### Read-Only
 

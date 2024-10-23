@@ -130,6 +130,10 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				ElementType: types.StringType,
 				Computed:    true,
 			},
+			"routed": schema.BoolAttribute{
+				Description: "Shows if the network is routed and therefore accessible from other networks.",
+				Computed:    true,
+			},
 		},
 	}
 }
