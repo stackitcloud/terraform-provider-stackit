@@ -117,7 +117,7 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed:    true,
 			},
 			"ipv4_nameservers": schema.ListAttribute{
-				Description: "The IPv4 prefix length of the network.",
+				Description: "The IPv4 nameservers of the network.",
 				Computed:    true,
 				ElementType: types.StringType,
 			},
@@ -130,7 +130,29 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed:    true,
 			},
 			"prefixes": schema.ListAttribute{
-				Description: "The prefixes of the network.",
+				Description: "The IPv4 prefixes of the network.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
+			"ipv6_gateway": schema.StringAttribute{
+				Description: "The IPv6 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
+				Computed:    true,
+			},
+			"ipv6_nameservers": schema.ListAttribute{
+				Description: "The IPv6 nameservers of the network.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
+			"ipv6_prefix": schema.StringAttribute{
+				Description: "The IPv6 prefix of the network (CIDR).",
+				Computed:    true,
+			},
+			"ipv6_prefix_length": schema.Int64Attribute{
+				Description: "The IPv6 prefix length of the network.",
+				Computed:    true,
+			},
+			"ipv6_prefixes": schema.ListAttribute{
+				Description: "The IPv6 prefixes of the network.",
 				Computed:    true,
 				ElementType: types.StringType,
 			},

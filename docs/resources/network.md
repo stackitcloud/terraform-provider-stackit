@@ -20,6 +20,10 @@ resource "stackit_network" "example" {
   ipv4_prefix_length = 24
   ipv4_gateway       = "10.1.2.1"
   ipv4_prefix        = "10.1.2.0/24"
+  ipv6_nameservers   = ["2001:4860:4860::8888", "2001:4860:4860::8844"]
+  ipv6_prefix_length = 56
+  ipv6_gateway       = "10.1.2.1"
+  ipv6_prefix        = "10.1.2.0/24"
   labels = {
     "key" = "value"
   }
@@ -41,6 +45,10 @@ resource "stackit_network" "example" {
 - `ipv4_nameservers` (List of String) The IPv4 prefix length of the network.
 - `ipv4_prefix` (String) The IPv4 prefix of the network (CIDR).
 - `ipv4_prefix_length` (Number) The IPv4 prefix length of the network.
+- `ipv6_gateway` (String) The IPv6 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.
+- `ipv6_nameservers` (List of String) The IPv6 prefix length of the network.
+- `ipv6_prefix` (String) The IPv6 prefix of the network (CIDR).
+- `ipv6_prefix_length` (Number) The IPv6 prefix length of the network.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `nameservers` (List of String, Deprecated) This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for the IPv4 networks.
 - `routed` (Boolean) Shows if the network is routed and therefore accessible from other networks.
@@ -48,6 +56,7 @@ resource "stackit_network" "example" {
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`network_id`".
+- `ipv6_prefixes` (List of String) The IPv6 prefixes of the network.
 - `network_id` (String) The network ID.
-- `prefixes` (List of String) The prefixes of the network.
+- `prefixes` (List of String) The IPv4 prefixes of the network.
 - `public_ip` (String) The public IP of the network.

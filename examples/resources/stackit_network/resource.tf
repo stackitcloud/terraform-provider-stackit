@@ -5,6 +5,10 @@ resource "stackit_network" "example" {
   ipv4_prefix_length = 24
   ipv4_gateway       = "10.1.2.1"
   ipv4_prefix        = "10.1.2.0/24"
+  ipv6_nameservers   = ["2001:4860:4860::8888", "2001:4860:4860::8844"]
+  ipv6_prefix_length = 56
+  ipv6_gateway       = "10.1.2.1"
+  ipv6_prefix        = "10.1.2.0/24"
   labels = {
     "key" = "value"
   }
