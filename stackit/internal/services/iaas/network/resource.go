@@ -163,6 +163,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"ipv4_gateway": schema.StringAttribute{
 				Description: "The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
 				Optional:    true,
+				Computed:    true,
 				Validators: []validator.String{
 					validate.IP(),
 				},
@@ -195,6 +196,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"ipv6_gateway": schema.StringAttribute{
 				Description: "The IPv6 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
 				Optional:    true,
+				Computed:    true,
 				Validators: []validator.String{
 					validate.IP(),
 				},
@@ -644,7 +646,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		modelIPv6Nameservers = append(modelIPv6Nameservers, ipv6NameserverString.ValueString())
 	}
 
-	if !model.IPv6Nameservers.IsNull() {
+	if !model.IPv6Nameservers.IsNull() && len(model.IPv6Nameservers.Elements()) > 0 {
 		addressFamily.Ipv6 = &iaas.UpdateNetworkIPv6Body{
 			Nameservers: &modelIPv6Nameservers,
 			Gateway:     iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway)),
@@ -660,7 +662,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
 	}
 
-	if !model.IPv4Nameservers.IsNull() {
+	if !model.IPv4Nameservers.IsNull() && len(model.IPv4Nameservers.Elements()) > 0 {
 		addressFamily.Ipv4 = &iaas.UpdateNetworkIPv4Body{
 			Nameservers: &modelIPv4Nameservers,
 			Gateway:     iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway)),
