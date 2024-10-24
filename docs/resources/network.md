@@ -16,8 +16,10 @@ Network resource schema. Must have a `region` specified in the provider configur
 resource "stackit_network" "example" {
   project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name               = "example-network"
-  nameservers        = ["1.2.3.4", "5.6.7.8"]
+  ipv4_nameservers   = ["1.2.3.4", "5.6.7.8"]
   ipv4_prefix_length = 24
+  ipv4_gateway       = "10.1.2.1"
+  ipv4_prefix        = "10.1.2.0/24"
   labels = {
     "key" = "value"
   }
@@ -35,6 +37,9 @@ resource "stackit_network" "example" {
 
 ### Optional
 
+- `ipv4_gateway` (String) The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.
+- `ipv4_nameservers` (List of String) The IPv4 prefix length of the network.
+- `ipv4_prefix` (String) The IPv4 prefix of the network (CIDR).
 - `ipv4_prefix_length` (Number) The IPv4 prefix length of the network.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `nameservers` (List of String, Deprecated) This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for the IPv4 networks.

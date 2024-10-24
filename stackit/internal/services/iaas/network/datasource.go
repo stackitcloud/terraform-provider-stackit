@@ -112,6 +112,19 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed:           true,
 				ElementType:        types.StringType,
 			},
+			"ipv4_gateway": schema.StringAttribute{
+				Description: "The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
+				Computed:    true,
+			},
+			"ipv4_nameservers": schema.ListAttribute{
+				Description: "The IPv4 prefix length of the network.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
+			"ipv4_prefix": schema.StringAttribute{
+				Description: "The IPv4 prefix of the network (CIDR).",
+				Computed:    true,
+			},
 			"ipv4_prefix_length": schema.Int64Attribute{
 				Description: "The IPv4 prefix length of the network.",
 				Computed:    true,

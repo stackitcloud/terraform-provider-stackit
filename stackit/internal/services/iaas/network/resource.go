@@ -41,6 +41,9 @@ type Model struct {
 	NetworkId        types.String `tfsdk:"network_id"`
 	Name             types.String `tfsdk:"name"`
 	Nameservers      types.List   `tfsdk:"nameservers"`
+	IPv4Gateway      types.String `tfsdk:"ipv4_gateway"`
+	IPv4Nameservers  types.List   `tfsdk:"ipv4_nameservers"`
+	IPv4Prefix       types.String `tfsdk:"ipv4_prefix"`
 	IPv4PrefixLength types.Int64  `tfsdk:"ipv4_prefix_length"`
 	Prefixes         types.List   `tfsdk:"prefixes"`
 	PublicIP         types.String `tfsdk:"public_ip"`
@@ -146,10 +149,34 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description:        "This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for the IPv4 networks.",
 				DeprecationMessage: "Use `ipv4_nameservers` to configure the nameservers for the IPv4 networks.",
 				Optional:           true,
+				Computed:           true,
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.UseStateForUnknown(),
 				},
 				ElementType: types.StringType,
+			},
+			"ipv4_gateway": schema.StringAttribute{
+				Description: "The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
+				Optional:    true,
+				Validators: []validator.String{
+					validate.IP(),
+				},
+			},
+			"ipv4_nameservers": schema.ListAttribute{
+				Description: "The IPv4 prefix length of the network.",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
+				ElementType: types.StringType,
+			},
+			"ipv4_prefix": schema.StringAttribute{
+				Description: "The IPv4 prefix of the network (CIDR).",
+				Optional:    true,
+				Validators: []validator.String{
+					validate.CIDR(),
+				},
 			},
 			"ipv4_prefix_length": schema.Int64Attribute{
 				Description: "The IPv4 prefix length of the network.",
@@ -419,21 +446,32 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model) err
 
 	if networkResp.Nameservers == nil {
 		model.Nameservers = types.ListNull(types.StringType)
+		model.IPv4Nameservers = types.ListNull(types.StringType)
 	} else {
 		respNameservers := *networkResp.Nameservers
 		modelNameservers, err := utils.ListValuetoStringSlice(model.Nameservers)
+		modelIPv4Nameservers, errIpv4 := utils.ListValuetoStringSlice(model.IPv4Nameservers)
 		if err != nil {
 			return fmt.Errorf("get current network nameservers from model: %w", err)
 		}
+		if errIpv4 != nil {
+			return fmt.Errorf("get current IPv4 network nameservers from model: %w", errIpv4)
+		}
 
 		reconciledNameservers := utils.ReconcileStringSlices(modelNameservers, respNameservers)
+		reconciledIPv4Nameservers := utils.ReconcileStringSlices(modelIPv4Nameservers, respNameservers)
 
 		nameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledNameservers)
+		ipv4NameserversTF, ipv4Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv4Nameservers)
 		if diags.HasError() {
 			return fmt.Errorf("map network nameservers: %w", core.DiagsToError(diags))
 		}
+		if ipv4Diags.HasError() {
+			return fmt.Errorf("map IPv4 network nameservers: %w", core.DiagsToError(ipv4Diags))
+		}
 
 		model.Nameservers = nameserversTF
+		model.IPv4Nameservers = ipv4NameserversTF
 	}
 
 	if networkResp.Prefixes == nil {
@@ -446,6 +484,12 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model) err
 		}
 
 		model.Prefixes = prefixesTF
+	}
+
+	if networkResp.Gateway != nil {
+		model.IPv4Gateway = types.StringPointerValue(networkResp.GetGateway())
+	} else {
+		model.IPv4Gateway = types.StringNull()
 	}
 
 	model.NetworkId = types.StringValue(networkId)
@@ -462,13 +506,13 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 		return nil, fmt.Errorf("nil model")
 	}
 
-	modelNameservers := []string{}
-	for _, ns := range model.Nameservers.Elements() {
-		nameserverString, ok := ns.(types.String)
+	modelIPv4Nameservers := []string{}
+	for _, ipv4ns := range model.IPv4Nameservers.Elements() {
+		ipv4NameserverString, ok := ipv4ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
-		modelNameservers = append(modelNameservers, nameserverString.ValueString())
+		modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
 	}
 
 	labels, err := conversion.ToStringInterfaceMap(ctx, model.Labels)
@@ -481,7 +525,9 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 		AddressFamily: &iaas.CreateNetworkAddressFamily{
 			Ipv4: &iaas.CreateNetworkIPv4Body{
 				PrefixLength: conversion.Int64ValueToPointer(model.IPv4PrefixLength),
-				Nameservers:  &modelNameservers,
+				Nameservers:  &modelIPv4Nameservers,
+				Gateway:      iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway)),
+				Prefix:       conversion.StringValueToPointer(model.IPv4Prefix),
 			},
 		},
 		Labels: &labels,
@@ -494,13 +540,13 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("nil model")
 	}
 
-	modelNameservers := []string{}
-	for _, ns := range model.Nameservers.Elements() {
-		nameserverString, ok := ns.(types.String)
+	modelIPv4Nameservers := []string{}
+	for _, ipv4ns := range model.IPv4Nameservers.Elements() {
+		ipv4NameserverString, ok := ipv4ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
-		modelNameservers = append(modelNameservers, nameserverString.ValueString())
+		modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
 	}
 
 	labels, err := conversion.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
@@ -512,7 +558,8 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		Name: conversion.StringValueToPointer(model.Name),
 		AddressFamily: &iaas.UpdateNetworkAddressFamily{
 			Ipv4: &iaas.UpdateNetworkIPv4Body{
-				Nameservers: &modelNameservers,
+				Nameservers: &modelIPv4Nameservers,
+				Gateway:     iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway)),
 			},
 		},
 		Labels: &labels,
