@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -40,10 +41,19 @@ type Model struct {
 	NetworkId        types.String `tfsdk:"network_id"`
 	Name             types.String `tfsdk:"name"`
 	Nameservers      types.List   `tfsdk:"nameservers"`
+	IPv4Gateway      types.String `tfsdk:"ipv4_gateway"`
+	IPv4Nameservers  types.List   `tfsdk:"ipv4_nameservers"`
+	IPv4Prefix       types.String `tfsdk:"ipv4_prefix"`
 	IPv4PrefixLength types.Int64  `tfsdk:"ipv4_prefix_length"`
 	Prefixes         types.List   `tfsdk:"prefixes"`
+	IPv6Gateway      types.String `tfsdk:"ipv6_gateway"`
+	IPv6Nameservers  types.List   `tfsdk:"ipv6_nameservers"`
+	IPv6Prefix       types.String `tfsdk:"ipv6_prefix"`
+	IPv6PrefixLength types.Int64  `tfsdk:"ipv6_prefix_length"`
+	IPv6Prefixes     types.List   `tfsdk:"ipv6_prefixes"`
 	PublicIP         types.String `tfsdk:"public_ip"`
 	Labels           types.Map    `tfsdk:"labels"`
+	Routed           types.Bool   `tfsdk:"routed"`
 }
 
 // NewNetworkResource is a helper function to simplify the provider implementation.
@@ -141,7 +151,25 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"nameservers": schema.ListAttribute{
-				Description: "The nameservers of the network.",
+				Description:        "This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for the IPv4 networks.",
+				DeprecationMessage: "Use `ipv4_nameservers` to configure the nameservers for the IPv4 networks.",
+				Optional:           true,
+				Computed:           true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
+				ElementType: types.StringType,
+			},
+			"ipv4_gateway": schema.StringAttribute{
+				Description: "The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
+				Optional:    true,
+				Computed:    true,
+				Validators: []validator.String{
+					validate.IP(),
+				},
+			},
+			"ipv4_nameservers": schema.ListAttribute{
+				Description: "The IPv4 prefix length of the network.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.List{
@@ -149,12 +177,52 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 				ElementType: types.StringType,
 			},
+			"ipv4_prefix": schema.StringAttribute{
+				Description: "The IPv4 prefix of the network (CIDR).",
+				Optional:    true,
+				Validators: []validator.String{
+					validate.CIDR(),
+				},
+			},
 			"ipv4_prefix_length": schema.Int64Attribute{
 				Description: "The IPv4 prefix length of the network.",
 				Optional:    true,
 			},
 			"prefixes": schema.ListAttribute{
-				Description: "The prefixes of the network.",
+				Description: "The IPv4 prefixes of the network.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
+			"ipv6_gateway": schema.StringAttribute{
+				Description: "The IPv6 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
+				Optional:    true,
+				Computed:    true,
+				Validators: []validator.String{
+					validate.IP(),
+				},
+			},
+			"ipv6_nameservers": schema.ListAttribute{
+				Description: "The IPv6 prefix length of the network.",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
+				ElementType: types.StringType,
+			},
+			"ipv6_prefix": schema.StringAttribute{
+				Description: "The IPv6 prefix of the network (CIDR).",
+				Optional:    true,
+				Validators: []validator.String{
+					validate.CIDR(),
+				},
+			},
+			"ipv6_prefix_length": schema.Int64Attribute{
+				Description: "The IPv6 prefix length of the network.",
+				Optional:    true,
+			},
+			"ipv6_prefixes": schema.ListAttribute{
+				Description: "The IPv6 prefixes of the network.",
 				Computed:    true,
 				ElementType: types.StringType,
 			},
@@ -166,6 +234,14 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "Labels are key-value string pairs which can be attached to a resource container",
 				ElementType: types.StringType,
 				Optional:    true,
+			},
+			"routed": schema.BoolAttribute{
+				Description: "Shows if the network is routed and therefore accessible from other networks.",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -407,23 +483,36 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model) err
 		labels = types.MapNull(types.StringType)
 	}
 
+	// IPv4
+
 	if networkResp.Nameservers == nil {
 		model.Nameservers = types.ListNull(types.StringType)
+		model.IPv4Nameservers = types.ListNull(types.StringType)
 	} else {
 		respNameservers := *networkResp.Nameservers
 		modelNameservers, err := utils.ListValuetoStringSlice(model.Nameservers)
+		modelIPv4Nameservers, errIpv4 := utils.ListValuetoStringSlice(model.IPv4Nameservers)
 		if err != nil {
 			return fmt.Errorf("get current network nameservers from model: %w", err)
 		}
+		if errIpv4 != nil {
+			return fmt.Errorf("get current IPv4 network nameservers from model: %w", errIpv4)
+		}
 
 		reconciledNameservers := utils.ReconcileStringSlices(modelNameservers, respNameservers)
+		reconciledIPv4Nameservers := utils.ReconcileStringSlices(modelIPv4Nameservers, respNameservers)
 
 		nameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledNameservers)
+		ipv4NameserversTF, ipv4Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv4Nameservers)
 		if diags.HasError() {
 			return fmt.Errorf("map network nameservers: %w", core.DiagsToError(diags))
 		}
+		if ipv4Diags.HasError() {
+			return fmt.Errorf("map IPv4 network nameservers: %w", core.DiagsToError(ipv4Diags))
+		}
 
 		model.Nameservers = nameserversTF
+		model.IPv4Nameservers = ipv4NameserversTF
 	}
 
 	if networkResp.Prefixes == nil {
@@ -438,10 +527,56 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model) err
 		model.Prefixes = prefixesTF
 	}
 
+	if networkResp.Gateway != nil {
+		model.IPv4Gateway = types.StringPointerValue(networkResp.GetGateway())
+	} else {
+		model.IPv4Gateway = types.StringNull()
+	}
+
+	// IPv6
+
+	if networkResp.NameserversV6 == nil {
+		model.IPv6Nameservers = types.ListNull(types.StringType)
+	} else {
+		respIPv6Nameservers := *networkResp.NameserversV6
+		modelIPv6Nameservers, errIpv6 := utils.ListValuetoStringSlice(model.IPv6Nameservers)
+		if errIpv6 != nil {
+			return fmt.Errorf("get current IPv6 network nameservers from model: %w", errIpv6)
+		}
+
+		reconciledIPv6Nameservers := utils.ReconcileStringSlices(modelIPv6Nameservers, respIPv6Nameservers)
+
+		ipv6NameserversTF, ipv6Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv6Nameservers)
+		if ipv6Diags.HasError() {
+			return fmt.Errorf("map IPv6 network nameservers: %w", core.DiagsToError(ipv6Diags))
+		}
+
+		model.IPv6Nameservers = ipv6NameserversTF
+	}
+
+	if networkResp.PrefixesV6 == nil {
+		model.IPv6Prefixes = types.ListNull(types.StringType)
+	} else {
+		respPrefixesV6 := *networkResp.PrefixesV6
+		prefixesV6TF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixesV6)
+		if diags.HasError() {
+			return fmt.Errorf("map network IPv6 prefixes: %w", core.DiagsToError(diags))
+		}
+
+		model.IPv6Prefixes = prefixesV6TF
+	}
+
+	if networkResp.Gatewayv6 != nil {
+		model.IPv6Gateway = types.StringPointerValue(networkResp.GetGatewayv6())
+	} else {
+		model.IPv6Gateway = types.StringNull()
+	}
+
 	model.NetworkId = types.StringValue(networkId)
 	model.Name = types.StringPointerValue(networkResp.Name)
 	model.PublicIP = types.StringPointerValue(networkResp.PublicIp)
 	model.Labels = labels
+	model.Routed = types.BoolPointerValue(networkResp.Routed)
 
 	return nil
 }
@@ -450,14 +585,42 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+	addressFamily := &iaas.CreateNetworkAddressFamily{}
 
-	modelNameservers := []string{}
-	for _, ns := range model.Nameservers.Elements() {
-		nameserverString, ok := ns.(types.String)
+	modelIPv6Nameservers := []string{}
+	for _, ipv6ns := range model.IPv6Nameservers.Elements() {
+		ipv6NameserverString, ok := ipv6ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
-		modelNameservers = append(modelNameservers, nameserverString.ValueString())
+		modelIPv6Nameservers = append(modelIPv6Nameservers, ipv6NameserverString.ValueString())
+	}
+
+	if !(model.IPv6Prefix.IsNull() || model.IPv6PrefixLength.IsNull() || model.IPv6Nameservers.IsNull()) {
+		addressFamily.Ipv6 = &iaas.CreateNetworkIPv6Body{
+			Nameservers:  &modelIPv6Nameservers,
+			Gateway:      iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway)),
+			Prefix:       conversion.StringValueToPointer(model.IPv6Prefix),
+			PrefixLength: conversion.Int64ValueToPointer(model.IPv6PrefixLength),
+		}
+	}
+
+	modelIPv4Nameservers := []string{}
+	for _, ipv4ns := range model.IPv4Nameservers.Elements() {
+		ipv4NameserverString, ok := ipv4ns.(types.String)
+		if !ok {
+			return nil, fmt.Errorf("type assertion failed")
+		}
+		modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
+	}
+
+	if !(model.IPv4Prefix.IsNull() || model.IPv4PrefixLength.IsNull() || model.IPv4Nameservers.IsNull()) {
+		addressFamily.Ipv4 = &iaas.CreateNetworkIPv4Body{
+			Nameservers:  &modelIPv4Nameservers,
+			Gateway:      iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway)),
+			Prefix:       conversion.StringValueToPointer(model.IPv4Prefix),
+			PrefixLength: conversion.Int64ValueToPointer(model.IPv4PrefixLength),
+		}
 	}
 
 	labels, err := conversion.ToStringInterfaceMap(ctx, model.Labels)
@@ -465,30 +628,55 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaas.CreateNetworkPayload{
-		Name: conversion.StringValueToPointer(model.Name),
-		AddressFamily: &iaas.CreateNetworkAddressFamily{
-			Ipv4: &iaas.CreateNetworkIPv4Body{
-				PrefixLength: conversion.Int64ValueToPointer(model.IPv4PrefixLength),
-				Nameservers:  &modelNameservers,
-			},
-		},
+	payload := iaas.CreateNetworkPayload{
+		Name:   conversion.StringValueToPointer(model.Name),
 		Labels: &labels,
-	}, nil
+		Routed: conversion.BoolValueToPointer(model.Routed),
+	}
+
+	if addressFamily.Ipv6 != nil || addressFamily.Ipv4 != nil {
+		payload.AddressFamily = addressFamily
+	}
+
+	return &payload, nil
 }
 
 func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.PartialUpdateNetworkPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+	addressFamily := &iaas.UpdateNetworkAddressFamily{}
 
-	modelNameservers := []string{}
-	for _, ns := range model.Nameservers.Elements() {
-		nameserverString, ok := ns.(types.String)
+	modelIPv6Nameservers := []string{}
+	for _, ipv6ns := range model.IPv6Nameservers.Elements() {
+		ipv6NameserverString, ok := ipv6ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
-		modelNameservers = append(modelNameservers, nameserverString.ValueString())
+		modelIPv6Nameservers = append(modelIPv6Nameservers, ipv6NameserverString.ValueString())
+	}
+
+	if !model.IPv6Nameservers.IsNull() && len(model.IPv6Nameservers.Elements()) > 0 {
+		addressFamily.Ipv6 = &iaas.UpdateNetworkIPv6Body{
+			Nameservers: &modelIPv6Nameservers,
+			Gateway:     iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway)),
+		}
+	}
+
+	modelIPv4Nameservers := []string{}
+	for _, ipv4ns := range model.IPv4Nameservers.Elements() {
+		ipv4NameserverString, ok := ipv4ns.(types.String)
+		if !ok {
+			return nil, fmt.Errorf("type assertion failed")
+		}
+		modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
+	}
+
+	if !model.IPv4Nameservers.IsNull() && len(model.IPv4Nameservers.Elements()) > 0 {
+		addressFamily.Ipv4 = &iaas.UpdateNetworkIPv4Body{
+			Nameservers: &modelIPv4Nameservers,
+			Gateway:     iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway)),
+		}
 	}
 
 	labels, err := conversion.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
@@ -496,13 +684,14 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaas.PartialUpdateNetworkPayload{
-		Name: conversion.StringValueToPointer(model.Name),
-		AddressFamily: &iaas.UpdateNetworkAddressFamily{
-			Ipv4: &iaas.UpdateNetworkIPv4Body{
-				Nameservers: &modelNameservers,
-			},
-		},
+	payload := iaas.PartialUpdateNetworkPayload{
+		Name:   conversion.StringValueToPointer(model.Name),
 		Labels: &labels,
-	}, nil
+	}
+
+	if addressFamily.Ipv6 != nil || addressFamily.Ipv4 != nil {
+		payload.AddressFamily = addressFamily
+	}
+
+	return &payload, nil
 }
