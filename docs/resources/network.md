@@ -23,7 +23,7 @@ resource "stackit_network" "example" {
   labels = {
     "key" = "value"
   }
-  routed = true
+  routed = false
 }
 resource "stackit_network" "example_ipv6" {
   project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -35,7 +35,7 @@ resource "stackit_network" "example_ipv6" {
   labels = {
     "key" = "value"
   }
-  routed = true
+  routed = false
 }
 ```
 
