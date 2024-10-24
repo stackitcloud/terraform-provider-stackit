@@ -490,18 +490,28 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model) err
 		model.IPv4Nameservers = types.ListNull(types.StringType)
 	} else {
 		respNameservers := *networkResp.Nameservers
+		modelNameservers, err := utils.ListValuetoStringSlice(model.Nameservers)
 		modelIPv4Nameservers, errIpv4 := utils.ListValuetoStringSlice(model.IPv4Nameservers)
+		if err != nil {
+			return fmt.Errorf("get current network nameservers from model: %w", err)
+		}
 		if errIpv4 != nil {
 			return fmt.Errorf("get current IPv4 network nameservers from model: %w", errIpv4)
 		}
 
+		reconciledNameservers := utils.ReconcileStringSlices(modelNameservers, respNameservers)
 		reconciledIPv4Nameservers := utils.ReconcileStringSlices(modelIPv4Nameservers, respNameservers)
 
+		nameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledNameservers)
 		ipv4NameserversTF, ipv4Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv4Nameservers)
+		if diags.HasError() {
+			return fmt.Errorf("map network nameservers: %w", core.DiagsToError(diags))
+		}
 		if ipv4Diags.HasError() {
 			return fmt.Errorf("map IPv4 network nameservers: %w", core.DiagsToError(ipv4Diags))
 		}
 
+		model.Nameservers = nameserversTF
 		model.IPv4Nameservers = ipv4NameserversTF
 	}
 
