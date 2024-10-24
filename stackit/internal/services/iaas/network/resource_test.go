@@ -467,7 +467,6 @@ func TestToUpdatePayload(t *testing.T) {
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
-				Routed: utils.Ptr(true),
 			},
 			true,
 		},
@@ -498,7 +497,6 @@ func TestToUpdatePayload(t *testing.T) {
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
-				Routed: utils.Ptr(true),
 			},
 			true,
 		},
@@ -530,7 +528,6 @@ func TestToUpdatePayload(t *testing.T) {
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
-				Routed: utils.Ptr(true),
 			},
 			true,
 		},
@@ -561,7 +558,6 @@ func TestToUpdatePayload(t *testing.T) {
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
-				Routed: utils.Ptr(true),
 			},
 			true,
 		},

@@ -687,7 +687,6 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	payload := iaas.PartialUpdateNetworkPayload{
 		Name:   conversion.StringValueToPointer(model.Name),
 		Labels: &labels,
-		Routed: conversion.BoolValueToPointer(model.Routed),
 	}
 
 	if addressFamily.Ipv6 != nil || addressFamily.Ipv4 != nil {
