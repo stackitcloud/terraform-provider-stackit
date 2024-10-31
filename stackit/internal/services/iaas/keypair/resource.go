@@ -324,7 +324,7 @@ func (r *keyPairResource) Delete(ctx context.Context, req resource.DeleteRequest
 func (r *keyPairResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 1 || idParts[0] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing key pair",
 			fmt.Sprintf("Expected import identifier with format: [name]  Got: %q", req.ID),
@@ -335,7 +335,7 @@ func (r *keyPairResource) ImportState(ctx context.Context, req resource.ImportSt
 	name := idParts[0]
 	ctx = tflog.SetField(ctx, "name", name)
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), name)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), name)...)
 	tflog.Info(ctx, "Key pair state imported")
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -94,6 +95,14 @@ var publicIpResource = map[string]string{
 	"project_id":           testutil.ProjectId,
 	"label1":               "value",
 	"network_interface_id": testutil.IaaSNetworkInterfaceId,
+}
+
+// Key pair resource data
+var keyPairResource = map[string]string{
+	"name":           "key-pair-name",
+	"public_key":     `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIDsPd27M449akqCtdFg2+AmRVJz6eWio0oMP9dVg7XZ`,
+	"label1":         "value1",
+	"label1-updated": "value1-updated",
 }
 
 func networkResourceConfig(name, nameservers string) string {
@@ -320,6 +329,13 @@ func testAccPublicIpConfig(publicIpResourceConfig string) string {
 	return fmt.Sprintf("%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		publicIpResourceConfig,
+	)
+}
+
+func testAccKeyPairConfig(keyPairResourceConfig string) string {
+	return fmt.Sprintf("%s\n\n%s",
+		testutil.IaaSProviderConfig(),
+		keyPairResourceConfig,
 	)
 }
 
@@ -1113,6 +1129,117 @@ func TestAccPublicIp(t *testing.T) {
 	})
 }
 
+func TestAccKeyPair(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckIaaSPublicIpDestroy,
+		Steps: []resource.TestStep{
+
+			// Creation
+			{
+				Config: testAccKeyPairConfig(
+					fmt.Sprintf(`
+						resource "stackit_key_pair" "key_pair" {
+							name = "%s"
+							public_key = "%s"
+							labels = {
+								"label1" = "%s"
+							}
+						}
+					`,
+						keyPairResource["name"],
+						keyPairResource["public_key"],
+						keyPairResource["label1"],
+					),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "name", keyPairResource["name"]),
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "labels.label1", keyPairResource["label1"]),
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "public_key", keyPairResource["public_key"]),
+					resource.TestCheckResourceAttrSet("stackit_key_pair.key_pair", "fingerprint"),
+				),
+			},
+			// Data source
+			{
+				Config: fmt.Sprintf(`
+					%s
+
+					data "stackit_key_pair" "key_pair" {
+						name = stackit_key_pair.key_pair.name
+					}
+					`,
+					testAccKeyPairConfig(
+						fmt.Sprintf(`
+							resource "stackit_key_pair" "key_pair" {
+								name = "%s"
+								public_key = "%s"
+								labels = {
+									"label1" = "%s"
+								}
+						}
+						`,
+							keyPairResource["name"],
+							keyPairResource["public_key"],
+							keyPairResource["label1"],
+						),
+					),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("data.stackit_key_pair.key_pair", "name", keyPairResource["name"]),
+					resource.TestCheckResourceAttr("data.stackit_key_pair.key_pair", "public_key", keyPairResource["public_key"]),
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "labels.label1", keyPairResource["label1"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_key_pair.key_pair", "fingerprint",
+						"data.stackit_key_pair.key_pair", "fingerprint",
+					),
+				),
+			},
+			// Import
+			{
+				ResourceName: "stackit_key_pair.key_pair",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_key_pair.key_pair"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_key_pair.key_pair")
+					}
+					keyPairName, ok := r.Primary.Attributes["name"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return keyPairName, nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				Config: testAccKeyPairConfig(
+					fmt.Sprintf(`
+							resource "stackit_key_pair" "key_pair" {
+								name = "%s"
+								public_key = "%s"
+								labels = {
+									"label1" = "%s"
+								}
+						}
+						`,
+						keyPairResource["name"],
+						keyPairResource["public_key"],
+						keyPairResource["label1-updated"],
+					),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "name", keyPairResource["name"]),
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "labels.label1", keyPairResource["label1-updated"]),
+					resource.TestCheckResourceAttrSet("stackit_key_pair.key_pair", "fingerprint"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
 func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *iaas.APIClient
@@ -1383,6 +1510,52 @@ func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 			err := client.DeletePublicIPExecute(ctx, testutil.ProjectId, *publicIps[i].Id)
 			if err != nil {
 				return fmt.Errorf("destroying public IP %s during CheckDestroy: %w", *publicIps[i].Id, err)
+			}
+		}
+	}
+	return nil
+}
+
+func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var client *iaasalpha.APIClient
+	var err error
+	if testutil.IaaSCustomEndpoint == "" {
+		client, err = iaasalpha.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
+	} else {
+		client, err = iaasalpha.NewAPIClient(
+			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	keyPairsToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_key_pair" {
+			continue
+		}
+		// Key pair terraform ID: "[name]"
+		keyPairsToDestroy = append(keyPairsToDestroy, rs.Primary.ID)
+	}
+
+	keyPairsResp, err := client.ListKeyPairsExecute(ctx)
+	if err != nil {
+		return fmt.Errorf("getting key pairs: %w", err)
+	}
+
+	keyPairs := *keyPairsResp.Items
+	for i := range keyPairs {
+		if keyPairs[i].Name == nil {
+			continue
+		}
+		if utils.Contains(keyPairsToDestroy, *keyPairs[i].Name) {
+			err := client.DeleteKeyPairExecute(ctx, *keyPairs[i].Name)
+			if err != nil {
+				return fmt.Errorf("destroying key pair %s during CheckDestroy: %w", *keyPairs[i].Name, err)
 			}
 		}
 	}
