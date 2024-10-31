@@ -132,7 +132,7 @@ func (r *keyPairResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"fingerprint": schema.StringAttribute{
-				Description: "The fingerprint of the public SSH key. In the form of `ssh-rsa <key_data>` or `ssh-ed25519 <key-data>`.",
+				Description: "The fingerprint of the public SSH key. E.g., `ssh-rsa <key_data>` or `ssh-ed25519 <key-data>`.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
