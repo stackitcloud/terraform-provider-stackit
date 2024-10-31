@@ -1132,7 +1132,7 @@ func TestAccPublicIp(t *testing.T) {
 func TestAccKeyPair(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckIaaSPublicIpDestroy,
+		CheckDestroy:             testAccCheckIaaSKeyPairDestroy,
 		Steps: []resource.TestStep{
 
 			// Creation

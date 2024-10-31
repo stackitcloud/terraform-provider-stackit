@@ -107,7 +107,7 @@ func (r *keyPairResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 	description := "Key pair resource schema. Must have a `region` specified in the provider configuration. Allows uploading an SSH public key to be used for server authentication."
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription(strings.Join([]string{description, exampleUsageWithServer}, "\n\n")),
+		MarkdownDescription: features.AddBetaDescription(description + "\n\n" + exampleUsageWithServer),
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
