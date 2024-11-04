@@ -67,7 +67,7 @@ resource "stackit_server" "boot-from-volume" {
   }
   availability_zone = "eu01-1"
   machine_type      = "g1.1"
-  keypair_name      = "example-keypair"
+  keypair_name = stackit_key_pair.keypair.name
 }
 ` + "\n```" + `
 
@@ -83,7 +83,7 @@ resource "stackit_server" "server-with-network" {
     source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   }
   machine_type = "g1.1"
-  keypair_name = "example-keypair"
+  keypair_name = stackit_key_pair.keypair.name
 }
 
 resource "stackit_network" "network" {
@@ -145,7 +145,7 @@ resource "stackit_server" "server-with-volume" {
   }
   availability_zone = "eu01-1"
   machine_type      = "g1.1"
-  keypair_name      = "example-keypair"
+  keypair_name = stackit_key_pair.keypair.name
 }
 
 resource "stackit_server_volume_attach" "attach_volume" {
@@ -167,7 +167,7 @@ resource "stackit_server" "user-data" {
   }
   name         = "example-server"
   machine_type = "g1.1"
-  keypair_name = "example-keypair"
+  keypair_name = stackit_key_pair.keypair.name
   user_data    = "#!/bin/bash\n/bin/su"
 }
 
@@ -180,7 +180,7 @@ resource "stackit_server" "user-data-from-file" {
   }
   name         = "example-server"
   machine_type = "g1.1"
-  keypair_name = "example-keypair"
+  keypair_name = stackit_key_pair.keypair.name
   user_data    = file("${path.module}/cloud-init.yaml")
 }
 ` + "\n```"
