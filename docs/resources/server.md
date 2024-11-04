@@ -21,7 +21,7 @@ description: |-
     }
     name         = "example-server"
     machinetype = "g1.1"
-    keypairname = "example-key-pair"
+    keypairname = stackitkeypair.keypair.name
     userdata    = file("${path.module}/cloud-init.yaml")
   }
   ```
@@ -189,7 +189,7 @@ resource "stackit_server" "user-data-from-file" {
   }
   name         = "example-server"
   machine_type = "g1.1"
-  keypair_name = "example-key-pair"
+  keypair_name = stackit_key_pair.keypair.name
   user_data    = file("${path.module}/cloud-init.yaml")
 }
 
