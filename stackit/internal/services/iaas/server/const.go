@@ -22,7 +22,7 @@ resource "stackit_server" "user-data-from-file" {
   }
   name         = "example-server"
   machine_type = "g1.1"
-  keypair_name = "example-keypair"
+  keypair_name = "example-key-pair"
   user_data    = file("${path.module}/cloud-init.yaml")
 }
 ` + "\n```" + `
