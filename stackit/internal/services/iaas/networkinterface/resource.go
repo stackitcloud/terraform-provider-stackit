@@ -469,7 +469,16 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 	respAllowedAddresses := []string{}
 	var diags diag.Diagnostics
 	if networkInterfaceResp.AllowedAddresses == nil {
-		model.AllowedAddresses = types.ListNull(types.StringType)
+		// If we send an empty list, the API will send null in the response
+		// We should handle this case and set the value to an empty list
+		if !model.AllowedAddresses.IsNull() {
+			model.AllowedAddresses, diags = types.ListValueFrom(ctx, types.StringType, []string{})
+			if diags.HasError() {
+				return fmt.Errorf("map network interface allowed addresses: %w", core.DiagsToError(diags))
+			}
+		} else {
+			model.AllowedAddresses = types.ListNull(types.StringType)
+		}
 	} else {
 		for _, n := range *networkInterfaceResp.AllowedAddresses {
 			respAllowedAddresses = append(respAllowedAddresses, *n.String)
@@ -553,19 +562,22 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNICPayload,
 		}
 	}
 
-	allowedAddressesPayload := []iaas.AllowedAddressesInner{}
-
+	var allowedAddressesPayload *[]iaas.AllowedAddressesInner
 	if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
+		allowedAddresses := []iaas.AllowedAddressesInner{}
 		for _, allowedAddressModel := range model.AllowedAddresses.Elements() {
 			allowedAddressString, ok := allowedAddressModel.(types.String)
 			if !ok {
 				return nil, fmt.Errorf("type assertion failed")
 			}
 
-			allowedAddressesPayload = append(allowedAddressesPayload, iaas.AllowedAddressesInner{
+			allowedAddresses = append(allowedAddresses, iaas.AllowedAddressesInner{
 				String: conversion.StringValueToPointer(allowedAddressString),
 			})
 		}
+		allowedAddressesPayload = &allowedAddresses
+	} else {
+		allowedAddressesPayload = nil
 	}
 
 	if !model.Labels.IsNull() && !model.Labels.IsUnknown() {
@@ -577,7 +589,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNICPayload,
 	}
 
 	return &iaas.CreateNICPayload{
-		AllowedAddresses: &allowedAddressesPayload,
+		AllowedAddresses: allowedAddressesPayload,
 		SecurityGroups:   &modelSecurityGroups,
 		Labels:           labelPayload,
 		Name:             conversion.StringValueToPointer(model.Name),
@@ -585,6 +597,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNICPayload,
 		Ipv4:             conversion.StringValueToPointer(model.IPv4),
 		Mac:              conversion.StringValueToPointer(model.Mac),
 		Type:             conversion.StringValueToPointer(model.Type),
+		NicSecurity:      conversion.BoolValueToPointer(model.Security),
 	}, nil
 }
 
@@ -604,8 +617,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		modelSecurityGroups = append(modelSecurityGroups, securityGroupString.ValueString())
 	}
 
-	allowedAddressesPayload := []iaas.AllowedAddressesInner{}
-
+	allowedAddressesPayload := []iaas.AllowedAddressesInner{} // Even if null in the model, we need to send an empty list to the API since it's a PATCH endpoint
 	if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
 		for _, allowedAddressModel := range model.AllowedAddresses.Elements() {
 			allowedAddressString, ok := allowedAddressModel.(types.String)
@@ -632,5 +644,6 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		SecurityGroups:   &modelSecurityGroups,
 		Labels:           labelPayload,
 		Name:             conversion.StringValueToPointer(model.Name),
+		NicSecurity:      conversion.BoolValueToPointer(model.Security),
 	}, nil
 }
