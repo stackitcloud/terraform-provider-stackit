@@ -62,7 +62,7 @@ resource "stackit_server" "example-server" {
 ### Required
 
 - `name` (String) The name of the SSH key pair.
-- `public_key` (String) A string representation of the public SSH key.
+- `public_key` (String) A string representation of the public SSH key. E.g., `ssh-rsa <key_data>` or `ssh-ed25519 <key-data>`.
 
 ### Optional
 
@@ -70,5 +70,5 @@ resource "stackit_server" "example-server" {
 
 ### Read-Only
 
-- `fingerprint` (String) The fingerprint of the public SSH key. In the form of `ssh-rsa <key_data>` or `ssh-ed25519 <key-data>`.
+- `fingerprint` (String) The fingerprint of the public SSH key.
 - `id` (String) Terraform's internal resource ID. It takes the value of the key pair "`name`".

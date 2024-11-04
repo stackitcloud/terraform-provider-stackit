@@ -101,11 +101,11 @@ func (r *keyPairDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Required:    true,
 			},
 			"public_key": schema.StringAttribute{
-				Description: "A string representation of the public SSH key.",
+				Description: "A string representation of the public SSH key. E.g., `ssh-rsa <key_data>` or `ssh-ed25519 <key-data>`.",
 				Computed:    true,
 			},
 			"fingerprint": schema.StringAttribute{
-				Description: "The fingerprint of the public SSH key. In the form of `ssh-rsa <key_data>` or `ssh-ed25519 <key-data>`.",
+				Description: "The fingerprint of the public SSH key.",
 				Computed:    true,
 			},
 			"labels": schema.MapAttribute{
