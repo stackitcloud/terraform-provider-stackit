@@ -7,7 +7,7 @@ const exampleUsageWithServer = `
 	"```terraform" + `
 resource "stackit_key_pair" "keypair" {
   name       = "example-key-pair"
-  public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIDsPd27M449akqCtdFg2+AmRVJz6eWio0oMP9dVg7Xe"
+  public_key = chomp(file("path/to/id_rsa.pub"))
 }
 
 resource "stackit_server" "example-server" {
