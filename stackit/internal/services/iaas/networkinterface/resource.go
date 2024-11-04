@@ -562,20 +562,18 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNICPayload,
 		}
 	}
 
-	var allowedAddressesPayload *[]iaas.AllowedAddressesInner
+	allowedAddressesPayload := &[]iaas.AllowedAddressesInner{}
 	if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
-		allowedAddresses := []iaas.AllowedAddressesInner{}
 		for _, allowedAddressModel := range model.AllowedAddresses.Elements() {
 			allowedAddressString, ok := allowedAddressModel.(types.String)
 			if !ok {
 				return nil, fmt.Errorf("type assertion failed")
 			}
 
-			allowedAddresses = append(allowedAddresses, iaas.AllowedAddressesInner{
+			*allowedAddressesPayload = append(*allowedAddressesPayload, iaas.AllowedAddressesInner{
 				String: conversion.StringValueToPointer(allowedAddressString),
 			})
 		}
-		allowedAddressesPayload = &allowedAddresses
 	} else {
 		allowedAddressesPayload = nil
 	}
