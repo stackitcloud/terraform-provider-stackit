@@ -131,6 +131,30 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
+			"empty_list_allowed_addresses",
+			Model{
+				ProjectId:          types.StringValue("pid"),
+				NetworkId:          types.StringValue("nid"),
+				NetworkInterfaceId: types.StringValue("nicid"),
+				AllowedAddresses:   types.ListValueMust(types.StringType, []attr.Value{}),
+			},
+			&iaas.NIC{
+				Id:               utils.Ptr("nicid"),
+				AllowedAddresses: nil,
+			},
+			Model{
+				Id:                 types.StringValue("pid,nid,nicid"),
+				ProjectId:          types.StringValue("pid"),
+				NetworkId:          types.StringValue("nid"),
+				NetworkInterfaceId: types.StringValue("nicid"),
+				Name:               types.StringNull(),
+				SecurityGroupIds:   types.ListNull(types.StringType),
+				AllowedAddresses:   types.ListValueMust(types.StringType, []attr.Value{}),
+				Labels:             types.MapNull(types.StringType),
+			},
+			true,
+		},
+		{
 			"response_nil_fail",
 			Model{},
 			nil,
@@ -184,6 +208,7 @@ func TestToCreatePayload(t *testing.T) {
 				AllowedAddresses: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("aa1"),
 				}),
+				Security: types.BoolValue(true),
 			},
 			&iaas.CreateNICPayload{
 				Name: utils.Ptr("name"),
@@ -196,6 +221,28 @@ func TestToCreatePayload(t *testing.T) {
 						String: utils.Ptr("aa1"),
 					},
 				},
+				NicSecurity: utils.Ptr(true),
+			},
+			true,
+		},
+		{
+			"empty_allowed_addresses",
+			&Model{
+				Name: types.StringValue("name"),
+				SecurityGroupIds: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("sg1"),
+					types.StringValue("sg2"),
+				}),
+
+				AllowedAddresses: types.ListNull(types.StringType),
+			},
+			&iaas.CreateNICPayload{
+				Name: utils.Ptr("name"),
+				SecurityGroups: &[]string{
+					"sg1",
+					"sg2",
+				},
+				AllowedAddresses: nil,
 			},
 			true,
 		},
@@ -237,6 +284,7 @@ func TestToUpdatePayload(t *testing.T) {
 				AllowedAddresses: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("aa1"),
 				}),
+				Security: types.BoolValue(true),
 			},
 			&iaas.UpdateNICPayload{
 				Name: utils.Ptr("name"),
@@ -249,6 +297,28 @@ func TestToUpdatePayload(t *testing.T) {
 						String: utils.Ptr("aa1"),
 					},
 				},
+				NicSecurity: utils.Ptr(true),
+			},
+			true,
+		},
+		{
+			"empty_allowed_addresses",
+			&Model{
+				Name: types.StringValue("name"),
+				SecurityGroupIds: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("sg1"),
+					types.StringValue("sg2"),
+				}),
+
+				AllowedAddresses: types.ListNull(types.StringType),
+			},
+			&iaas.UpdateNICPayload{
+				Name: utils.Ptr("name"),
+				SecurityGroups: &[]string{
+					"sg1",
+					"sg2",
+				},
+				AllowedAddresses: utils.Ptr([]iaas.AllowedAddressesInner{}),
 			},
 			true,
 		},
