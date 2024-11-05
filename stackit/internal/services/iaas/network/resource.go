@@ -236,7 +236,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:    true,
 			},
 			"routed": schema.BoolAttribute{
-				Description: "Shows if the network is routed and therefore accessible from other networks.",
+				Description: "If set to `true`, the network is routed and therefore accessible from other networks.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Bool{
