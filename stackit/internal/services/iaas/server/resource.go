@@ -563,7 +563,7 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 	} else if serverResp.Id != nil {
 		serverId = *serverResp.Id
 	} else {
-		return fmt.Errorf("Server id not present")
+		return fmt.Errorf("server id not present")
 	}
 
 	idParts := []string{
