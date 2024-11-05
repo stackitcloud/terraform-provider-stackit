@@ -25,6 +25,7 @@ resource "stackit_network" "example" {
   }
   routed = false
 }
+
 resource "stackit_network" "example_ipv6" {
   project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name               = "example-network"
