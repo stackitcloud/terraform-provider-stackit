@@ -169,7 +169,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"ipv4_nameservers": schema.ListAttribute{
-				Description: "The IPv4 prefix length of the network.",
+				Description: "The IPv4 nameservers of the network.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.List{
@@ -202,7 +202,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"ipv6_nameservers": schema.ListAttribute{
-				Description: "The IPv6 prefix length of the network.",
+				Description: "The IPv6 nameservers of the network.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.List{
