@@ -34,6 +34,7 @@ var (
 	_ resource.Resource                = &networkResource{}
 	_ resource.ResourceWithConfigure   = &networkResource{}
 	_ resource.ResourceWithImportState = &networkResource{}
+	_ resource.ResourceWithModifyPlan  = &networkResource{}
 )
 
 type Model struct {
@@ -248,6 +249,21 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 	}
 }
 
+// ModifyPlan will be called in the Plan phase and will check if the plan is a creation of the resource
+// and if nameserver and ipv4_nameserver have been provided at the same time.
+// If so, it will show an error
+func (r *networkResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	if req.State.Raw.IsNull() {
+		// Planned to create a network resource
+		var plan Model
+		_ = req.Plan.Get(ctx, &plan)
+
+		if !plan.Nameservers.IsUnknown() && !plan.IPv4Nameservers.IsUnknown() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Planned to create network resource", "You have provided nameservers and ipv4_nameservers field at the same time. Nameservers field has been deprecated. Please remove this field and try again.")
+		}
+	}
+}
+
 // Create creates the resource and sets the initial Terraform state.
 func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
@@ -358,6 +374,11 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !model.Nameservers.IsUnknown() && !model.IPv4Nameservers.IsUnknown() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Planned to update network resource", "You have provided nameservers and ipv4_nameservers field at the same time. Nameservers field has been deprecated. Please remove this field and try again.")
 		return
 	}
 
