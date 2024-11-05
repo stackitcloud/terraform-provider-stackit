@@ -377,6 +377,42 @@ func TestToCreatePayload(t *testing.T) {
 			true,
 		},
 		{
+			"ipv4_nameservers_okay",
+			&Model{
+				Name: types.StringValue("name"),
+				Nameservers: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("ns1"),
+					types.StringValue("ns2"),
+				}),
+				IPv4PrefixLength: types.Int64Value(24),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
+				Routed:      types.BoolValue(false),
+				IPv4Gateway: types.StringValue("gateway"),
+				IPv4Prefix:  types.StringValue("prefix"),
+			},
+			&iaas.CreateNetworkPayload{
+				Name: utils.Ptr("name"),
+				AddressFamily: &iaas.CreateNetworkAddressFamily{
+					Ipv4: &iaas.CreateNetworkIPv4Body{
+						Nameservers: &[]string{
+							"ns1",
+							"ns2",
+						},
+						PrefixLength: utils.Ptr(int64(24)),
+						Gateway:      iaas.NewNullableString(utils.Ptr("gateway")),
+						Prefix:       utils.Ptr("prefix"),
+					},
+				},
+				Labels: &map[string]interface{}{
+					"key": "value",
+				},
+				Routed: utils.Ptr(false),
+			},
+			true,
+		},
+		{
 			"ipv6_default_ok",
 			&Model{
 				Name: types.StringValue("name"),
@@ -444,6 +480,37 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{
 				Name: types.StringValue("name"),
 				IPv4Nameservers: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("ns1"),
+					types.StringValue("ns2"),
+				}),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
+				Routed:      types.BoolValue(true),
+				IPv4Gateway: types.StringValue("gateway"),
+			},
+			&iaas.PartialUpdateNetworkPayload{
+				Name: utils.Ptr("name"),
+				AddressFamily: &iaas.UpdateNetworkAddressFamily{
+					Ipv4: &iaas.UpdateNetworkIPv4Body{
+						Nameservers: &[]string{
+							"ns1",
+							"ns2",
+						},
+						Gateway: iaas.NewNullableString(utils.Ptr("gateway")),
+					},
+				},
+				Labels: &map[string]interface{}{
+					"key": "value",
+				},
+			},
+			true,
+		},
+		{
+			"ipv4_nameservers_okay",
+			&Model{
+				Name: types.StringValue("name"),
+				Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
 					types.StringValue("ns2"),
 				}),

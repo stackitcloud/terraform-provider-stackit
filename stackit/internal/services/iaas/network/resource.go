@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -606,7 +607,15 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	}
 
 	modelIPv4Nameservers := []string{}
-	for _, ipv4ns := range model.IPv4Nameservers.Elements() {
+	var modelIPv4List []attr.Value
+
+	if !model.IPv4Nameservers.IsNull() {
+		modelIPv4List = model.IPv4Nameservers.Elements()
+	} else {
+		modelIPv4List = model.Nameservers.Elements()
+	}
+
+	for _, ipv4ns := range modelIPv4List {
 		ipv4NameserverString, ok := ipv4ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
@@ -614,7 +623,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 		modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
 	}
 
-	if !(model.IPv4Prefix.IsNull() || model.IPv4PrefixLength.IsNull() || model.IPv4Nameservers.IsNull()) {
+	if !(model.IPv4Prefix.IsNull() || model.IPv4PrefixLength.IsNull() || modelIPv4Nameservers == nil) {
 		addressFamily.Ipv4 = &iaas.CreateNetworkIPv4Body{
 			Nameservers:  &modelIPv4Nameservers,
 			Gateway:      iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway)),
@@ -664,7 +673,14 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	}
 
 	modelIPv4Nameservers := []string{}
-	for _, ipv4ns := range model.IPv4Nameservers.Elements() {
+	var modelIPv4List []attr.Value
+
+	if !model.IPv4Nameservers.IsNull() {
+		modelIPv4List = model.IPv4Nameservers.Elements()
+	} else {
+		modelIPv4List = model.Nameservers.Elements()
+	}
+	for _, ipv4ns := range modelIPv4List {
 		ipv4NameserverString, ok := ipv4ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
@@ -672,7 +688,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
 	}
 
-	if !model.IPv4Nameservers.IsNull() && len(model.IPv4Nameservers.Elements()) > 0 {
+	if (!model.IPv4Nameservers.IsNull() && len(model.IPv4Nameservers.Elements()) > 0) || (!model.Nameservers.IsNull() && len(model.Nameservers.Elements()) > 0) {
 		addressFamily.Ipv4 = &iaas.UpdateNetworkIPv4Body{
 			Nameservers: &modelIPv4Nameservers,
 			Gateway:     iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway)),
