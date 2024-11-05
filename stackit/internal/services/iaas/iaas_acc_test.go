@@ -28,6 +28,8 @@ var networkResource = map[string]string{
 	"ipv4_prefix_length": "24",
 	"nameserver0":        "1.2.3.4",
 	"nameserver1":        "5.6.7.8",
+	"ipv4_gateway":       "10.1.2.1",
+	"routed":             "true",
 }
 
 var networkAreaResource = map[string]string{
@@ -102,13 +104,17 @@ func networkResourceConfig(name, nameservers string) string {
 					project_id = "%s"
 					name       = "%s"
 					ipv4_prefix_length = "%s"
-					nameservers = %s
+					ipv4_nameservers = %s
+					ipv4_gateway = "%s"
+					routed = "%s"
 				}
 				`,
 		networkResource["project_id"],
 		name,
 		networkResource["ipv4_prefix_length"],
 		nameservers,
+		networkResource["ipv4_gateway"],
+		networkResource["routed"],
 	)
 }
 
