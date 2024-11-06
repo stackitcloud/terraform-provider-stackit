@@ -52,7 +52,8 @@ resource "stackit_network" "example" {
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`network_id`".
+- `ipv4_prefixes` (List of String) The IPv4 prefixes of the network.
 - `ipv6_prefixes` (List of String) The IPv6 prefixes of the network.
 - `network_id` (String) The network ID.
-- `prefixes` (List of String) The IPv4 prefixes of the network.
+- `prefixes` (List of String, Deprecated) This field is deprecated and will be removed after April 28th 2025, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.
 - `public_ip` (String) The public IP of the network.

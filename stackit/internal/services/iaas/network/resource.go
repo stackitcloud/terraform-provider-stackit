@@ -48,6 +48,7 @@ type Model struct {
 	IPv4Prefix       types.String `tfsdk:"ipv4_prefix"`
 	IPv4PrefixLength types.Int64  `tfsdk:"ipv4_prefix_length"`
 	Prefixes         types.List   `tfsdk:"prefixes"`
+	IPv4Prefixes     types.List   `tfsdk:"ipv4_prefixes"`
 	IPv6Gateway      types.String `tfsdk:"ipv6_gateway"`
 	IPv6Nameservers  types.List   `tfsdk:"ipv6_nameservers"`
 	IPv6Prefix       types.String `tfsdk:"ipv6_prefix"`
@@ -191,6 +192,12 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:    true,
 			},
 			"prefixes": schema.ListAttribute{
+				Description:        "This field is deprecated and will be removed after April 28th 2025, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
+				DeprecationMessage: "Use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
+				Computed:           true,
+				ElementType:        types.StringType,
+			},
+			"ipv4_prefixes": schema.ListAttribute{
 				Description: "The IPv4 prefixes of the network.",
 				Computed:    true,
 				ElementType: types.StringType,
@@ -533,6 +540,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model) err
 
 	if networkResp.Prefixes == nil {
 		model.Prefixes = types.ListNull(types.StringType)
+		model.IPv4Prefixes = types.ListNull(types.StringType)
 	} else {
 		respPrefixes := *networkResp.Prefixes
 		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
@@ -541,6 +549,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model) err
 		}
 
 		model.Prefixes = prefixesTF
+		model.IPv4Prefixes = prefixesTF
 	}
 
 	if networkResp.Gateway != nil {
