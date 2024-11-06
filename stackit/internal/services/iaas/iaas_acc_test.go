@@ -29,7 +29,7 @@ var networkResource = map[string]string{
 	"nameserver0":        "1.2.3.4",
 	"nameserver1":        "5.6.7.8",
 	"ipv4_gateway":       "10.1.2.1",
-	"routed":             "true",
+	"routed":             "false",
 }
 
 var networkAreaResource = map[string]string{
@@ -581,6 +581,8 @@ func TestAccServer(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network", "name", networkResource["name"]),
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.#", "1"),
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "routed", networkResource["routed"]),
 
 					// Server
 					resource.TestCheckResourceAttr("stackit_server.server", "project_id", serverResource["project_id"]),
@@ -683,6 +685,8 @@ func TestAccServer(t *testing.T) {
 					),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "name", networkResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "routed", networkResource["routed"]),
 
 					// Server
 					resource.TestCheckResourceAttr("data.stackit_server.server", "project_id", serverResource["project_id"]),
@@ -844,6 +848,7 @@ func TestAccServer(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.#", "2"),
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.1", networkResource["nameserver1"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
 
 					// Server
 					resource.TestCheckResourceAttr("stackit_server.server", "project_id", serverResource["project_id"]),
