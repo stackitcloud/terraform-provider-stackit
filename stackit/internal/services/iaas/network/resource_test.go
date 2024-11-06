@@ -40,6 +40,7 @@ func TestMapFields(t *testing.T) {
 				IPv4Gateway:      types.StringNull(),
 				IPv4Prefix:       types.StringNull(),
 				Prefixes:         types.ListNull(types.StringType),
+				IPv4Prefixes:     types.ListNull(types.StringType),
 				IPv6Nameservers:  types.ListNull(types.StringType),
 				IPv6PrefixLength: types.Int64Null(),
 				IPv6Gateway:      types.StringNull(),
@@ -102,6 +103,10 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("prefix1"),
 					types.StringValue("prefix2"),
 				}),
+				IPv4Prefixes: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("prefix1"),
+					types.StringValue("prefix2"),
+				}),
 				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
 					types.StringValue("ns2"),
@@ -150,6 +155,7 @@ func TestMapFields(t *testing.T) {
 				IPv6Prefixes:    types.ListNull(types.StringType),
 				IPv6Nameservers: types.ListNull(types.StringType),
 				Prefixes:        types.ListNull(types.StringType),
+				IPv4Prefixes:    types.ListNull(types.StringType),
 				Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns2"),
 					types.StringValue("ns3"),
@@ -187,6 +193,7 @@ func TestMapFields(t *testing.T) {
 				IPv6Prefixes:    types.ListNull(types.StringType),
 				IPv4Nameservers: types.ListNull(types.StringType),
 				Prefixes:        types.ListNull(types.StringType),
+				IPv4Prefixes:    types.ListNull(types.StringType),
 				Nameservers:     types.ListNull(types.StringType),
 				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns2"),
@@ -229,6 +236,10 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("prefix2"),
 					types.StringValue("prefix3"),
 				}),
+				IPv4Prefixes: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("prefix2"),
+					types.StringValue("prefix3"),
+				}),
 			},
 			true,
 		},
@@ -257,6 +268,7 @@ func TestMapFields(t *testing.T) {
 				IPv4Nameservers:  types.ListNull(types.StringType),
 				IPv4PrefixLength: types.Int64Null(),
 				Prefixes:         types.ListNull(types.StringType),
+				IPv4Prefixes:     types.ListNull(types.StringType),
 				Labels:           types.MapNull(types.StringType),
 				Nameservers:      types.ListNull(types.StringType),
 				IPv6Nameservers:  types.ListNull(types.StringType),
@@ -287,6 +299,7 @@ func TestMapFields(t *testing.T) {
 				IPv4PrefixLength: types.Int64Null(),
 				IPv4Gateway:      types.StringNull(),
 				Prefixes:         types.ListNull(types.StringType),
+				IPv4Prefixes:     types.ListNull(types.StringType),
 				IPv6Nameservers:  types.ListNull(types.StringType),
 				IPv6PrefixLength: types.Int64Null(),
 				IPv6Gateway:      types.StringNull(),
