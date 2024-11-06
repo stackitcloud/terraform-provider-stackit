@@ -630,7 +630,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	modelIPv4Nameservers := []string{}
 	var modelIPv4List []attr.Value
 
-	if !model.IPv4Nameservers.IsNull() {
+	if !(model.IPv4Nameservers.IsNull() || model.IPv4Nameservers.IsUnknown()) {
 		modelIPv4List = model.IPv4Nameservers.Elements()
 	} else {
 		modelIPv4List = model.Nameservers.Elements()
@@ -644,7 +644,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 		modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
 	}
 
-	if !(model.IPv4Prefix.IsNull() || model.IPv4PrefixLength.IsNull() || modelIPv4Nameservers == nil) {
+	if !model.IPv4Prefix.IsNull() || !model.IPv4PrefixLength.IsNull() || (!model.IPv4Nameservers.IsNull() && len(model.IPv4Nameservers.Elements()) > 0) || (!model.Nameservers.IsNull() && len(model.Nameservers.Elements()) > 0) {
 		addressFamily.Ipv4 = &iaas.CreateNetworkIPv4Body{
 			Nameservers:  &modelIPv4Nameservers,
 			Gateway:      iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway)),
