@@ -89,8 +89,8 @@ func (d *publicIpDataSource) Configure(ctx context.Context, req datasource.Confi
 // Schema defines the schema for the resource.
 func (r *publicIpDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Public IP resource schema. Must have a `region` specified in the provider configuration."),
-		Description:         "Public IP resource schema. Must have a `region` specified in the provider configuration.",
+		MarkdownDescription: features.AddBetaDescription("Volume resource schema. Must have a `region` specified in the provider configuration."),
+		Description:         "Volume resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal datasource ID. It is structured as \"`project_id`,`public_ip_id`\".",
