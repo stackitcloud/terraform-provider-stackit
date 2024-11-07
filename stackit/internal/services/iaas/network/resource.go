@@ -158,10 +158,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				DeprecationMessage: "Use `ipv4_nameservers` to configure the nameservers for the IPv4 networks.",
 				Optional:           true,
 				Computed:           true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
-				},
-				ElementType: types.StringType,
+				ElementType:        types.StringType,
 			},
 			"ipv4_gateway": schema.StringAttribute{
 				Description: "The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
@@ -175,9 +172,6 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "The IPv4 nameservers of the network.",
 				Optional:    true,
 				Computed:    true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
-				},
 				ElementType: types.StringType,
 			},
 			"ipv4_prefix": schema.StringAttribute{
@@ -265,7 +259,7 @@ func (r *networkResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 	_ = req.Plan.Get(ctx, &plan)
 	_ = req.State.Get(ctx, &state)
 
-	if !plan.Nameservers.IsUnknown() && !plan.IPv4Nameservers.IsUnknown() && !plan.Nameservers.IsNull() && !plan.IPv4Nameservers.IsNull() && !(state.Nameservers.Equal(plan.Nameservers) || state.IPv4Nameservers.Equal(plan.IPv4Nameservers)) {
+	if !plan.Nameservers.IsUnknown() && !plan.IPv4Nameservers.IsUnknown() && !plan.Nameservers.IsNull() && !plan.IPv4Nameservers.IsNull() {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Planned to modify network resource", "You have provided nameservers and ipv4_nameservers field at the same time. Nameservers field has been deprecated. Please remove this field and try again.")
 	}
 }
@@ -384,7 +378,7 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	// Generate API request body from model
-	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
+	payload, err := toUpdatePayload(ctx, &model, &stateModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -674,7 +668,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	return &payload, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.PartialUpdateNetworkPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, stateModel *Model) (*iaas.PartialUpdateNetworkPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -699,7 +693,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	modelIPv4Nameservers := []string{}
 	var modelIPv4List []attr.Value
 
-	if !model.IPv4Nameservers.IsNull() {
+	if !(model.IPv4Nameservers.IsNull() || model.IPv4Nameservers.IsUnknown() || (model.IPv4Nameservers.Equal(stateModel.IPv4Nameservers) && !model.Nameservers.Equal(stateModel.Nameservers))) {
 		modelIPv4List = model.IPv4Nameservers.Elements()
 	} else {
 		modelIPv4List = model.Nameservers.Elements()
@@ -719,6 +713,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		}
 	}
 
+	currentLabels := stateModel.Labels
 	labels, err := conversion.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)

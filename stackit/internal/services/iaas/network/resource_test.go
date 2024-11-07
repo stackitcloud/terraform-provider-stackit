@@ -485,6 +485,7 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
+		state       Model
 		expected    *iaas.PartialUpdateNetworkPayload
 		isValid     bool
 	}{
@@ -501,6 +502,11 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				Routed:      types.BoolValue(true),
 				IPv4Gateway: types.StringValue("gateway"),
+			},
+			Model{
+				ProjectId: types.StringValue("pid"),
+				NetworkId: types.StringValue("nid"),
+				Labels:    types.MapNull(types.StringType),
 			},
 			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
@@ -533,6 +539,11 @@ func TestToUpdatePayload(t *testing.T) {
 				Routed:      types.BoolValue(true),
 				IPv4Gateway: types.StringValue("gateway"),
 			},
+			Model{
+				ProjectId: types.StringValue("pid"),
+				NetworkId: types.StringValue("nid"),
+				Labels:    types.MapNull(types.StringType),
+			},
 			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
 				AddressFamily: &iaas.UpdateNetworkAddressFamily{
@@ -562,6 +573,11 @@ func TestToUpdatePayload(t *testing.T) {
 					"key": types.StringValue("value"),
 				}),
 				Routed: types.BoolValue(true),
+			},
+			Model{
+				ProjectId: types.StringValue("pid"),
+				NetworkId: types.StringValue("nid"),
+				Labels:    types.MapNull(types.StringType),
 			},
 			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
@@ -594,6 +610,11 @@ func TestToUpdatePayload(t *testing.T) {
 				Routed:      types.BoolValue(true),
 				IPv6Gateway: types.StringValue("gateway"),
 			},
+			Model{
+				ProjectId: types.StringValue("pid"),
+				NetworkId: types.StringValue("nid"),
+				Labels:    types.MapNull(types.StringType),
+			},
 			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
 				AddressFamily: &iaas.UpdateNetworkAddressFamily{
@@ -624,6 +645,11 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				Routed: types.BoolValue(true),
 			},
+			Model{
+				ProjectId: types.StringValue("pid"),
+				NetworkId: types.StringValue("nid"),
+				Labels:    types.MapNull(types.StringType),
+			},
 			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
 				AddressFamily: &iaas.UpdateNetworkAddressFamily{
@@ -644,7 +670,7 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(context.Background(), tt.input, types.MapNull(types.StringType))
+			output, err := toUpdatePayload(context.Background(), tt.input, &tt.state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
