@@ -259,7 +259,7 @@ func (r *networkResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 	_ = req.Plan.Get(ctx, &plan)
 	_ = req.State.Get(ctx, &state)
 
-	if !plan.Nameservers.IsUnknown() && !plan.IPv4Nameservers.IsUnknown() && !plan.Nameservers.IsNull() && !plan.IPv4Nameservers.IsNull() {
+	if !plan.Nameservers.IsUnknown() && !plan.IPv4Nameservers.IsUnknown() && !plan.Nameservers.IsNull() && !plan.IPv4Nameservers.IsNull() && !(plan.Nameservers.Equal(state.Nameservers) && plan.IPv4Nameservers.Equal(state.IPv4Nameservers)) {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Planned to modify network resource", "You have provided nameservers and ipv4_nameservers field at the same time. Nameservers field has been deprecated. Please remove this field and try again.")
 	}
 }
