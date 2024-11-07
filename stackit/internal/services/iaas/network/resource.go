@@ -34,7 +34,6 @@ var (
 	_ resource.Resource                = &networkResource{}
 	_ resource.ResourceWithConfigure   = &networkResource{}
 	_ resource.ResourceWithImportState = &networkResource{}
-	_ resource.ResourceWithModifyPlan  = &networkResource{}
 )
 
 type Model struct {
@@ -109,6 +108,18 @@ func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureR
 
 	r.client = apiClient
 	tflog.Info(ctx, "IaaS client configured")
+}
+
+func (r networkResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var model Model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !model.Nameservers.IsUnknown() && !model.IPv4Nameservers.IsUnknown() && !model.Nameservers.IsNull() && !model.IPv4Nameservers.IsNull() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Planned to modify network resource", "You have provided nameservers and ipv4_nameservers field at the same time. Nameservers field has been deprecated. Please remove this field and try again.")
+	}
 }
 
 // Schema defines the schema for the resource.
@@ -247,20 +258,6 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 		},
-	}
-}
-
-// ModifyPlan will be called in the Plan phase and will check if the plan is a creation of the resource
-// and if nameserver and ipv4_nameserver have been provided at the same time.
-// If so, it will show an error
-func (r *networkResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
-	var plan Model
-	var state Model
-	_ = req.Plan.Get(ctx, &plan)
-	_ = req.State.Get(ctx, &state)
-
-	if !plan.Nameservers.IsUnknown() && !plan.IPv4Nameservers.IsUnknown() && !plan.Nameservers.IsNull() && !plan.IPv4Nameservers.IsNull() && !(plan.Nameservers.Equal(state.Nameservers) && plan.IPv4Nameservers.Equal(state.IPv4Nameservers)) {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Planned to modify network resource", "You have provided nameservers and ipv4_nameservers field at the same time. Nameservers field has been deprecated. Please remove this field and try again.")
 	}
 }
 
