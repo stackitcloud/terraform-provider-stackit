@@ -668,7 +668,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	return &payload, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, stateModel *Model) (*iaas.PartialUpdateNetworkPayload, error) {
+func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.PartialUpdateNetworkPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
