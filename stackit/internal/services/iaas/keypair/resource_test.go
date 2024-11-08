@@ -8,14 +8,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		input       *iaasalpha.Keypair
+		input       *iaas.Keypair
 		expected    Model
 		isValid     bool
 	}{
@@ -24,7 +24,7 @@ func TestMapFields(t *testing.T) {
 			Model{
 				Name: types.StringValue("name"),
 			},
-			&iaasalpha.Keypair{
+			&iaas.Keypair{
 				Name: utils.Ptr("name"),
 			},
 			Model{
@@ -41,7 +41,7 @@ func TestMapFields(t *testing.T) {
 			Model{
 				Name: types.StringValue("name"),
 			},
-			&iaasalpha.Keypair{
+			&iaas.Keypair{
 				Name:        utils.Ptr("name"),
 				PublicKey:   utils.Ptr("public_key"),
 				Fingerprint: utils.Ptr("fingerprint"),
@@ -65,7 +65,7 @@ func TestMapFields(t *testing.T) {
 			Model{
 				Name: types.StringValue("name"),
 			},
-			&iaasalpha.Keypair{
+			&iaas.Keypair{
 				Name:        utils.Ptr("name"),
 				PublicKey:   utils.Ptr("public_key"),
 				Fingerprint: utils.Ptr("fingerprint"),
@@ -90,7 +90,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_resource_id",
 			Model{},
-			&iaasalpha.Keypair{
+			&iaas.Keypair{
 				PublicKey:   utils.Ptr("public_key"),
 				Fingerprint: utils.Ptr("fingerprint"),
 				Labels:      &map[string]interface{}{},
@@ -122,7 +122,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.CreateKeyPairPayload
+		expected    *iaas.CreateKeyPairPayload
 		isValid     bool
 	}{
 		{
@@ -135,7 +135,7 @@ func TestToCreatePayload(t *testing.T) {
 					"key2": types.StringValue("value2"),
 				}),
 			},
-			&iaasalpha.CreateKeyPairPayload{
+			&iaas.CreateKeyPairPayload{
 				Name:      utils.Ptr("name"),
 				PublicKey: utils.Ptr("public_key"),
 				Labels: &map[string]interface{}{
@@ -156,7 +156,7 @@ func TestToCreatePayload(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaasalpha.NullableString{}))
+				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaas.NullableString{}))
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
@@ -169,7 +169,7 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.UpdateKeyPairPayload
+		expected    *iaas.UpdateKeyPairPayload
 		isValid     bool
 	}{
 		{
@@ -182,7 +182,7 @@ func TestToUpdatePayload(t *testing.T) {
 					"key2": types.StringValue("value2"),
 				}),
 			},
-			&iaasalpha.UpdateKeyPairPayload{
+			&iaas.UpdateKeyPairPayload{
 				Labels: &map[string]interface{}{
 					"key1": "value1",
 					"key2": "value2",
@@ -201,7 +201,7 @@ func TestToUpdatePayload(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaasalpha.NullableString{}))
+				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaas.NullableString{}))
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

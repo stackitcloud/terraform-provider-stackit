@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -49,7 +49,7 @@ func NewKeyPairResource() resource.Resource {
 
 // keyPairResource is the resource implementation.
 type keyPairResource struct {
-	client *iaasalpha.APIClient
+	client *iaas.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -78,16 +78,16 @@ func (r *keyPairResource) Configure(ctx context.Context, req resource.ConfigureR
 		resourceBetaCheckDone = true
 	}
 
-	var apiClient *iaasalpha.APIClient
+	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "iaasalpha_custom_endpoint", providerData.IaaSCustomEndpoint)
-		apiClient, err = iaasalpha.NewAPIClient(
+		ctx = tflog.SetField(ctx, "iaas_custom_endpoint", providerData.IaaSCustomEndpoint)
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.IaaSCustomEndpoint),
 		)
 	} else {
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -99,7 +99,7 @@ func (r *keyPairResource) Configure(ctx context.Context, req resource.ConfigureR
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "iaasalpha client configured")
+	tflog.Info(ctx, "iaas client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -339,7 +339,7 @@ func (r *keyPairResource) ImportState(ctx context.Context, req resource.ImportSt
 	tflog.Info(ctx, "Key pair state imported")
 }
 
-func mapFields(ctx context.Context, keyPairResp *iaasalpha.Keypair, model *Model) error {
+func mapFields(ctx context.Context, keyPairResp *iaas.Keypair, model *Model) error {
 	if keyPairResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -378,7 +378,7 @@ func mapFields(ctx context.Context, keyPairResp *iaasalpha.Keypair, model *Model
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateKeyPairPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateKeyPairPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -388,14 +388,14 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateKeyPai
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.CreateKeyPairPayload{
+	return &iaas.CreateKeyPairPayload{
 		Name:      conversion.StringValueToPointer(model.Name),
 		PublicKey: conversion.StringValueToPointer(model.PublicKey),
 		Labels:    &labels,
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.UpdateKeyPairPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.UpdateKeyPairPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -405,7 +405,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.UpdateKeyPairPayload{
+	return &iaas.UpdateKeyPairPayload{
 		Labels: &labels,
 	}, nil
 }
