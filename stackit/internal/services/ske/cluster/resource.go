@@ -564,6 +564,10 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						"timezone": schema.StringAttribute{
 							Description: "Timezone name corresponding to a file in the IANA Time Zone database. i.e. `Europe/Berlin`.",
 							Optional:    true,
+							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 					},
 				},
