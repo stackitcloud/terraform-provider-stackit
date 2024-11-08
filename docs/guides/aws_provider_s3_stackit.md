@@ -1,11 +1,11 @@
 ---
-page_title: "Using AWS Provider for STACKIT S3"
+page_title: "Using AWS Provider for STACKIT Object Storage (S3 compatible)"
 ---
-# Using AWS Provider for STACKIT S3
+# Using AWS Provider for STACKIT Object Storage (S3 compatible)
 
 ## Overview
 
-This guide outlines the process of utilizing the [AWS Terraform Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs) alongside the STACKIT provider to create and manage STACKIT S3 ressources.
+This guide outlines the process of utilizing the [AWS Terraform Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs) alongside the STACKIT provider to create and manage STACKIT Object Storage (S3 compatible) ressources.
 
 ## Steps
 
@@ -19,23 +19,23 @@ This guide outlines the process of utilizing the [AWS Terraform Provider](https:
     }
     ```
 
-2. **Define STACKIT S3 Bucket**
+2. **Define STACKIT Object Storage Bucket**
 
-    Create a STACKIT S3 Bucket and obtain credentials for the AWS provider.
+    Create a STACKIT Object Storage Bucket and obtain credentials for the AWS provider.
 
     ```hcl
     resource "stackit_objectstorage_bucket" "example" {
-      project_id = ""
+      project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       name       = "example"
     }
 
     resource "stackit_objectstorage_credentials_group" "example" {
-      project_id = ""
+      project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       name       = "example-credentials-group"
    }
 
    resource "stackit_objectstorage_credential" "example" {
-      project_id           = ""
+      project_id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       credentials_group_id = stackit_objectstorage_credentials_group.example.credentials_group_id
       expiration_timestamp = "2027-01-02T03:04:05Z"
    }
@@ -43,7 +43,7 @@ This guide outlines the process of utilizing the [AWS Terraform Provider](https:
 
 3. **Configure AWS Provider**
 
-   Configure the AWS Provider to connect to the STACKIT S3 bucket.
+   Configure the AWS Provider to connect to the STACKIT Object Storage bucket.
 
     ```hcl
     provider "aws" {
