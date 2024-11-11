@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -224,11 +225,17 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				DeprecationMessage: "Use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
 				Computed:           true,
 				ElementType:        types.StringType,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv4_prefixes": schema.ListAttribute{
 				Description: "The IPv4 prefixes of the network.",
 				Computed:    true,
 				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"no_ipv6_gateway": schema.BoolAttribute{
 				Description: "If set to `true`, the network doesn't have a gateway.",
@@ -266,10 +273,16 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "The IPv6 prefixes of the network.",
 				Computed:    true,
 				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"public_ip": schema.StringAttribute{
 				Description: "The public IP of the network.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"labels": schema.MapAttribute{
 				Description: "Labels are key-value string pairs which can be attached to a resource container",
