@@ -42,7 +42,7 @@ data "stackit_network" "example" {
 - `ipv6_prefixes` (List of String) The IPv6 prefixes of the network.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `name` (String) The name of the network.
-- `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for IPv4.
-- `prefixes` (List of String, Deprecated) The prefixes of the network. This field is deprecated and will be removed after April 28th 2025, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.
+- `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed soon, use `ipv4_nameservers` to configure the nameservers for IPv4.
+- `prefixes` (List of String, Deprecated) The prefixes of the network. This field is deprecated and will be removed soon, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.
 - `public_ip` (String) The public IP of the network.
 - `routed` (Boolean) Shows if the network is routed and therefore accessible from other networks.

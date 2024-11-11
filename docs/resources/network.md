@@ -15,21 +15,21 @@ Network resource schema. Must have a `region` specified in the provider configur
 ```terraform
 resource "stackit_network" "example_with_name" {
   project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name               = "example-network"
+  name               = "example-with-name"
 }
 
 resource "stackit_network" "example_routed_network" {
   project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name               = "example-network"
+  name               = "example-routed-network"
   labels = {
     "key" = "value"
   }
   routed = true
 }
 
-resource "stackit_network" "example" {
+resource "stackit_network" "example_non_routed_network" {
   project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name               = "example-network"
+  name               = "example-non-routed-network"
   ipv4_nameservers   = ["1.2.3.4", "5.6.7.8"]
   ipv4_prefix_length = 24
   ipv4_gateway       = "10.1.2.3"
@@ -60,7 +60,7 @@ resource "stackit_network" "example" {
 - `ipv6_prefix` (String) The IPv6 prefix of the network (CIDR).
 - `ipv6_prefix_length` (Number) The IPv6 prefix length of the network.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
-- `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for IPv4.
+- `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed soon, use `ipv4_nameservers` to configure the nameservers for IPv4.
 - `no_ipv4_gateway` (Boolean) If set to `true`, the first IP of the network will be assigned as the IPv4 gateway.
 - `no_ipv6_gateway` (Boolean) If set to `true`, the first IP of the network will be assigned as the IPv6 gateway.
 - `routed` (Boolean) If set to `true`, the network is routed and therefore accessible from other networks.
@@ -71,5 +71,5 @@ resource "stackit_network" "example" {
 - `ipv4_prefixes` (List of String) The IPv4 prefixes of the network.
 - `ipv6_prefixes` (List of String) The IPv6 prefixes of the network.
 - `network_id` (String) The network ID.
-- `prefixes` (List of String, Deprecated) The prefixes of the network. This field is deprecated and will be removed after April 28th 2025, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.
+- `prefixes` (List of String, Deprecated) The prefixes of the network. This field is deprecated and will be removed soon, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.
 - `public_ip` (String) The public IP of the network.

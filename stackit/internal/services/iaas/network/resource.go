@@ -182,7 +182,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"nameservers": schema.ListAttribute{
-				Description:        "The nameservers of the network. This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for IPv4.",
+				Description:        "The nameservers of the network. This field is deprecated and will be removed soon, use `ipv4_nameservers` to configure the nameservers for IPv4.",
 				DeprecationMessage: "Use `ipv4_nameservers` to configure the nameservers for IPv4.",
 				Optional:           true,
 				Computed:           true,
@@ -221,7 +221,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:    true,
 			},
 			"prefixes": schema.ListAttribute{
-				Description:        "The prefixes of the network. This field is deprecated and will be removed after April 28th 2025, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
+				Description:        "The prefixes of the network. This field is deprecated and will be removed soon, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
 				DeprecationMessage: "Use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
 				Computed:           true,
 				ElementType:        types.StringType,
@@ -649,12 +649,12 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 			Prefix:       conversion.StringValueToPointer(model.IPv6Prefix),
 			PrefixLength: conversion.Int64ValueToPointer(model.IPv6PrefixLength),
 		}
-	}
 
-	if model.NoIPv6Gateway.ValueBool() {
-		addressFamily.Ipv6.Gateway = iaas.NewNullableString(nil)
-	} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
-		addressFamily.Ipv6.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
+		if model.NoIPv6Gateway.ValueBool() {
+			addressFamily.Ipv6.Gateway = iaas.NewNullableString(nil)
+		} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
+			addressFamily.Ipv6.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
+		}
 	}
 
 	modelIPv4Nameservers := []string{}
@@ -721,22 +721,22 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 		modelIPv6Nameservers = append(modelIPv6Nameservers, ipv6NameserverString.ValueString())
 	}
 
-	if !model.IPv6Nameservers.IsNull() {
+	if !model.IPv6Nameservers.IsNull() && len(model.IPv6Nameservers.Elements()) > 0 {
 		addressFamily.Ipv6 = &iaas.UpdateNetworkIPv6Body{
 			Nameservers: &modelIPv6Nameservers,
 		}
-	}
 
-	if model.NoIPv6Gateway.ValueBool() {
-		addressFamily.Ipv6.Gateway = iaas.NewNullableString(nil)
-	} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
-		addressFamily.Ipv6.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
+		if model.NoIPv6Gateway.ValueBool() {
+			addressFamily.Ipv6.Gateway = iaas.NewNullableString(nil)
+		} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
+			addressFamily.Ipv6.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
+		}
 	}
 
 	modelIPv4Nameservers := []string{}
 	var modelIPv4List []attr.Value
 
-	if !(model.IPv4Nameservers.IsNull() || model.IPv4Nameservers.IsUnknown() || (model.IPv4Nameservers.Equal(stateModel.IPv4Nameservers) && !model.Nameservers.Equal(stateModel.Nameservers))) {
+	if !(model.IPv4Nameservers.IsNull() || model.IPv4Nameservers.IsUnknown()) {
 		modelIPv4List = model.IPv4Nameservers.Elements()
 	} else {
 		modelIPv4List = model.Nameservers.Elements()
