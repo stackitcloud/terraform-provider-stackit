@@ -657,7 +657,6 @@ func TestToUpdatePayload(t *testing.T) {
 							"ns1",
 							"ns2",
 						},
-						Gateway: iaas.NewNullableString(nil),
 					},
 				},
 				Labels: &map[string]interface{}{

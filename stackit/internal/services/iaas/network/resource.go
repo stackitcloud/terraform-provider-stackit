@@ -57,7 +57,8 @@ type Model struct {
 	PublicIP         types.String `tfsdk:"public_ip"`
 	Labels           types.Map    `tfsdk:"labels"`
 	Routed           types.Bool   `tfsdk:"routed"`
-	NoGateway        types.Bool   `tfsdk:"no_gateway"`
+	NoIPv4Gateway    types.Bool   `tfsdk:"no_ipv4_gateway"`
+	NoIPv6Gateway    types.Bool   `tfsdk:"no_ipv6_gateway"`
 }
 
 // NewNetworkResource is a helper function to simplify the provider implementation.
@@ -128,8 +129,12 @@ func (r networkResource) ValidateConfig(ctx context.Context, req resource.Valida
 func (r *networkResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		resourcevalidator.Conflicting(
-			path.MatchRoot("no_gateway"),
+			path.MatchRoot("no_ipv4_gateway"),
 			path.MatchRoot("ipv4_gateway"),
+		),
+		resourcevalidator.Conflicting(
+			path.MatchRoot("no_ipv6_gateway"),
+			path.MatchRoot("ipv6_gateway"),
 		),
 	}
 }
@@ -183,8 +188,8 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Computed:           true,
 				ElementType:        types.StringType,
 			},
-			"no_gateway": schema.BoolAttribute{
-				Description: "If set to `true`, the first IP of the network will be assigned as the gateway.",
+			"no_ipv4_gateway": schema.BoolAttribute{
+				Description: "If set to `true`, the first IP of the network will be assigned as the IPv4 gateway.",
 				Optional:    true,
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
@@ -225,6 +230,13 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "The IPv4 prefixes of the network.",
 				Computed:    true,
 				ElementType: types.StringType,
+			},
+			"no_ipv6_gateway": schema.BoolAttribute{
+				Description: "If set to `true`, the first IP of the network will be assigned as the IPv6 gateway.",
+				Optional:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv6_gateway": schema.StringAttribute{
 				Description: "The IPv6 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
@@ -634,10 +646,15 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	if !(model.IPv6Prefix.IsNull() || model.IPv6PrefixLength.IsNull() || model.IPv6Nameservers.IsNull()) {
 		addressFamily.Ipv6 = &iaas.CreateNetworkIPv6Body{
 			Nameservers:  &modelIPv6Nameservers,
-			Gateway:      iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway)),
 			Prefix:       conversion.StringValueToPointer(model.IPv6Prefix),
 			PrefixLength: conversion.Int64ValueToPointer(model.IPv6PrefixLength),
 		}
+	}
+
+	if model.NoIPv6Gateway.ValueBool() {
+		addressFamily.Ipv6.Gateway = iaas.NewNullableString(nil)
+	} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
+		addressFamily.Ipv6.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
 	}
 
 	modelIPv4Nameservers := []string{}
@@ -665,7 +682,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 		}
 	}
 
-	if model.NoGateway.ValueBool() {
+	if model.NoIPv4Gateway.ValueBool() {
 		addressFamily.Ipv4.Gateway = iaas.NewNullableString(nil)
 	} else if !(model.IPv4Gateway.IsUnknown() || model.IPv4Gateway.IsNull()) {
 		addressFamily.Ipv4.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway))
@@ -704,11 +721,16 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 		modelIPv6Nameservers = append(modelIPv6Nameservers, ipv6NameserverString.ValueString())
 	}
 
-	if !model.IPv6Nameservers.IsNull() && len(model.IPv6Nameservers.Elements()) > 0 {
+	if !model.IPv6Nameservers.IsNull() {
 		addressFamily.Ipv6 = &iaas.UpdateNetworkIPv6Body{
 			Nameservers: &modelIPv6Nameservers,
-			Gateway:     iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway)),
 		}
+	}
+
+	if model.NoIPv6Gateway.ValueBool() {
+		addressFamily.Ipv6.Gateway = iaas.NewNullableString(nil)
+	} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
+		addressFamily.Ipv6.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
 	}
 
 	modelIPv4Nameservers := []string{}
@@ -733,7 +755,7 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 		}
 	}
 
-	if model.NoGateway.ValueBool() {
+	if model.NoIPv4Gateway.ValueBool() {
 		addressFamily.Ipv4.Gateway = iaas.NewNullableString(nil)
 	} else if !(model.IPv4Gateway.IsUnknown() || model.IPv4Gateway.IsNull()) {
 		addressFamily.Ipv4.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway))
