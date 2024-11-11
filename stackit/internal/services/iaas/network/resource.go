@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -250,9 +249,6 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "The IPv6 nameservers of the network.",
 				Optional:    true,
 				Computed:    true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
-				},
 				ElementType: types.StringType,
 			},
 			"ipv6_prefix": schema.StringAttribute{
@@ -286,6 +282,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Computed:    true,
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
+					boolplanmodifier.RequiresReplace(),
 				},
 			},
 		},
@@ -649,12 +646,12 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 			Prefix:       conversion.StringValueToPointer(model.IPv6Prefix),
 			PrefixLength: conversion.Int64ValueToPointer(model.IPv6PrefixLength),
 		}
+	}
 
-		if model.NoIPv6Gateway.ValueBool() {
-			addressFamily.Ipv6.Gateway = iaas.NewNullableString(nil)
-		} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
-			addressFamily.Ipv6.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
-		}
+	if model.NoIPv6Gateway.ValueBool() {
+		addressFamily.Ipv6.Gateway = iaas.NewNullableString(nil)
+	} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
+		addressFamily.Ipv6.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
 	}
 
 	modelIPv4Nameservers := []string{}
@@ -721,16 +718,16 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 		modelIPv6Nameservers = append(modelIPv6Nameservers, ipv6NameserverString.ValueString())
 	}
 
-	if !model.IPv6Nameservers.IsNull() && len(model.IPv6Nameservers.Elements()) > 0 {
+	if !(model.IPv6Nameservers.IsNull() || model.IPv6Nameservers.IsUnknown()) {
 		addressFamily.Ipv6 = &iaas.UpdateNetworkIPv6Body{
 			Nameservers: &modelIPv6Nameservers,
 		}
+	}
 
-		if model.NoIPv6Gateway.ValueBool() {
-			addressFamily.Ipv6.Gateway = iaas.NewNullableString(nil)
-		} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
-			addressFamily.Ipv6.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
-		}
+	if model.NoIPv6Gateway.ValueBool() {
+		addressFamily.Ipv6.Gateway = iaas.NewNullableString(nil)
+	} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
+		addressFamily.Ipv6.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
 	}
 
 	modelIPv4Nameservers := []string{}
