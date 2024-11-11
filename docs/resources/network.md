@@ -61,8 +61,8 @@ resource "stackit_network" "example_non_routed_network" {
 - `ipv6_prefix_length` (Number) The IPv6 prefix length of the network.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed soon, use `ipv4_nameservers` to configure the nameservers for IPv4.
-- `no_ipv4_gateway` (Boolean) If set to `true`, the first IP of the network will be assigned as the IPv4 gateway.
-- `no_ipv6_gateway` (Boolean) If set to `true`, the first IP of the network will be assigned as the IPv6 gateway.
+- `no_ipv4_gateway` (Boolean) If set to `true`, the network doesn't have a gateway.
+- `no_ipv6_gateway` (Boolean) If set to `true`, the network doesn't have a gateway.
 - `routed` (Boolean) If set to `true`, the network is routed and therefore accessible from other networks.
 
 ### Read-Only
