@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -56,6 +57,7 @@ type Model struct {
 	PublicIP         types.String `tfsdk:"public_ip"`
 	Labels           types.Map    `tfsdk:"labels"`
 	Routed           types.Bool   `tfsdk:"routed"`
+	NoGateway        types.Bool   `tfsdk:"no_gateway"`
 }
 
 // NewNetworkResource is a helper function to simplify the provider implementation.
@@ -122,6 +124,16 @@ func (r networkResource) ValidateConfig(ctx context.Context, req resource.Valida
 	}
 }
 
+// ConfigValidators validates the resource configuration
+func (r *networkResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		resourcevalidator.Conflicting(
+			path.MatchRoot("no_gateway"),
+			path.MatchRoot("ipv4_gateway"),
+		),
+	}
+}
+
 // Schema defines the schema for the resource.
 func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
@@ -170,6 +182,13 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:           true,
 				Computed:           true,
 				ElementType:        types.StringType,
+			},
+			"no_gateway": schema.BoolAttribute{
+				Description: "If set to `true`, the first IP of the network will be assigned as the gateway.",
+				Optional:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv4_gateway": schema.StringAttribute{
 				Description: "The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
@@ -641,10 +660,15 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	if !model.IPv4Prefix.IsNull() || !model.IPv4PrefixLength.IsNull() || !model.IPv4Nameservers.IsNull() || !model.Nameservers.IsNull() {
 		addressFamily.Ipv4 = &iaas.CreateNetworkIPv4Body{
 			Nameservers:  &modelIPv4Nameservers,
-			Gateway:      iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway)),
 			Prefix:       conversion.StringValueToPointer(model.IPv4Prefix),
 			PrefixLength: conversion.Int64ValueToPointer(model.IPv4PrefixLength),
 		}
+	}
+
+	if model.NoGateway.ValueBool() {
+		addressFamily.Ipv4.Gateway = iaas.NewNullableString(nil)
+	} else if !(model.IPv4Gateway.IsUnknown() || model.IPv4Gateway.IsNull()) {
+		addressFamily.Ipv4.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway))
 	}
 
 	labels, err := conversion.ToStringInterfaceMap(ctx, model.Labels)
@@ -706,8 +730,13 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 	if !model.IPv4Nameservers.IsNull() || !model.Nameservers.IsNull() {
 		addressFamily.Ipv4 = &iaas.UpdateNetworkIPv4Body{
 			Nameservers: &modelIPv4Nameservers,
-			Gateway:     iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway)),
 		}
+	}
+
+	if model.NoGateway.ValueBool() {
+		addressFamily.Ipv4.Gateway = iaas.NewNullableString(nil)
+	} else if !(model.IPv4Gateway.IsUnknown() || model.IPv4Gateway.IsNull()) {
+		addressFamily.Ipv4.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway))
 	}
 
 	currentLabels := stateModel.Labels

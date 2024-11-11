@@ -47,6 +47,7 @@ resource "stackit_network" "example" {
 - `ipv6_prefix_length` (Number) The IPv6 prefix length of the network.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for IPv4.
+- `no_gateway` (Boolean) If set to `true`, the first IP of the network will be assigned as the gateway.
 - `routed` (Boolean) If set to `true`, the network is routed and therefore accessible from other networks.
 
 ### Read-Only
