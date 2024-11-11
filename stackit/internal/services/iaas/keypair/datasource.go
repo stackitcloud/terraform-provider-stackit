@@ -1,4 +1,4 @@
-package publicip
+package keypair
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
@@ -15,35 +14,34 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
-// publicIpDataSourceBetaCheckDone is used to prevent multiple checks for beta resources.
+// keyPairDataSourceBetaCheckDone is used to prevent multiple checks for beta resources.
 // This is a workaround for the lack of a global state in the provider and
 // needs to exist because the Configure method is called twice.
-var publicIpDataSourceBetaCheckDone bool
+var keyPairDataSourceBetaCheckDone bool
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ datasource.DataSource = &publicIpDataSource{}
+	_ datasource.DataSource = &keyPairDataSource{}
 )
 
 // NewVolumeDataSource is a helper function to simplify the provider implementation.
-func NewPublicIpDataSource() datasource.DataSource {
-	return &publicIpDataSource{}
+func NewKeyPairDataSource() datasource.DataSource {
+	return &keyPairDataSource{}
 }
 
-// publicIpDataSource is the data source implementation.
-type publicIpDataSource struct {
+// keyPairDataSource is the data source implementation.
+type keyPairDataSource struct {
 	client *iaas.APIClient
 }
 
 // Metadata returns the data source type name.
-func (d *publicIpDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_public_ip"
+func (d *keyPairDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_key_pair"
 }
 
-func (d *publicIpDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *keyPairDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -58,12 +56,12 @@ func (d *publicIpDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 
-	if !publicIpDataSourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_public_ip", "data source")
+	if !keyPairDataSourceBetaCheckDone {
+		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_key_pair", "data source")
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		publicIpDataSourceBetaCheckDone = true
+		keyPairDataSourceBetaCheckDone = true
 	}
 
 	if providerData.IaaSCustomEndpoint != "" {
@@ -87,45 +85,31 @@ func (d *publicIpDataSource) Configure(ctx context.Context, req datasource.Confi
 }
 
 // Schema defines the schema for the resource.
-func (r *publicIpDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (r *keyPairDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	description := "Key pair resource schema. Must have a `region` specified in the provider configuration."
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Public IP resource schema. Must have a `region` specified in the provider configuration."),
-		Description:         "Public IP resource schema. Must have a `region` specified in the provider configuration.",
+		MarkdownDescription: features.AddBetaDescription(description),
+		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal datasource ID. It is structured as \"`project_id`,`public_ip_id`\".",
+				Description: "Terraform's internal resource ID. It takes the value of the key pair \"`name`\".",
 				Computed:    true,
 			},
-			"project_id": schema.StringAttribute{
-				Description: "STACKIT project ID to which the public IP is associated.",
+			"name": schema.StringAttribute{
+				Description: "The name of the SSH key pair.",
 				Required:    true,
-				Validators: []validator.String{
-					validate.UUID(),
-					validate.NoSeparator(),
-				},
 			},
-			"public_ip_id": schema.StringAttribute{
-				Description: "The public IP ID.",
-				Required:    true,
-				Validators: []validator.String{
-					validate.UUID(),
-					validate.NoSeparator(),
-				},
-			},
-			"ip": schema.StringAttribute{
-				Description: "The IP address.",
+			"public_key": schema.StringAttribute{
+				Description: "A string representation of the public SSH key. E.g., `ssh-rsa <key_data>` or `ssh-ed25519 <key-data>`.",
 				Computed:    true,
 			},
-			"network_interface_id": schema.StringAttribute{
-				Description: "Associates the public IP with a network interface or a virtual IP (ID).",
+			"fingerprint": schema.StringAttribute{
+				Description: "The fingerprint of the public SSH key.",
 				Computed:    true,
-				Validators: []validator.String{
-					validate.UUID(),
-					validate.NoSeparator(),
-				},
 			},
 			"labels": schema.MapAttribute{
-				Description: "Labels are key-value string pairs which can be attached to a resource container",
+				Description: "Labels are key-value string pairs which can be attached to a resource container.",
 				ElementType: types.StringType,
 				Computed:    true,
 			},
@@ -134,38 +118,38 @@ func (r *publicIpDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *publicIpDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	projectId := model.ProjectId.ValueString()
-	publicIpId := model.PublicIpId.ValueString()
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
+	name := model.Name.ValueString()
+	ctx = tflog.SetField(ctx, "name", name)
 
-	publicIpResp, err := d.client.GetPublicIP(ctx, projectId, publicIpId).Execute()
+	keypairResp, err := r.client.GetKeyPair(ctx, name).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading key pair", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	err = mapFields(ctx, publicIpResp, &model)
+	// Map response body to schema
+	err = mapFields(ctx, keypairResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading key pair", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "public IP read")
+	tflog.Info(ctx, "Key pair read")
 }
