@@ -189,7 +189,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				ElementType:        types.StringType,
 			},
 			"no_ipv4_gateway": schema.BoolAttribute{
-				Description: "If set to `true`, the first IP of the network will be assigned as the IPv4 gateway.",
+				Description: "If set to `true`, the network doesn't have a gateway.",
 				Optional:    true,
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
