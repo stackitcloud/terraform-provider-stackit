@@ -118,7 +118,7 @@ func (r networkResource) ValidateConfig(ctx context.Context, req resource.Valida
 	}
 
 	if !model.Nameservers.IsUnknown() && !model.IPv4Nameservers.IsUnknown() && !model.Nameservers.IsNull() && !model.IPv4Nameservers.IsNull() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Planned to modify network resource", "You have provided nameservers and ipv4_nameservers field at the same time. Nameservers field has been deprecated. Please remove this field and try again.")
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring network", "You cannot provide both the `nameservers` and `ipv4_nameservers` fields simultaneously. Please remove the deprecated `nameservers` field, and use `ipv4_nameservers` to configure nameservers for IPv4.")
 	}
 }
 
