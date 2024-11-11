@@ -34,6 +34,7 @@ data "stackit_network" "example" {
 - `ipv4_nameservers` (List of String) The IPv4 nameservers of the network.
 - `ipv4_prefix` (String) The IPv4 prefix of the network (CIDR).
 - `ipv4_prefix_length` (Number) The IPv4 prefix length of the network.
+- `ipv4_prefixes` (List of String) The IPv4 prefixes of the network.
 - `ipv6_gateway` (String) The IPv6 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.
 - `ipv6_nameservers` (List of String) The IPv6 nameservers of the network.
 - `ipv6_prefix` (String) The IPv6 prefix of the network (CIDR).
@@ -41,7 +42,7 @@ data "stackit_network" "example" {
 - `ipv6_prefixes` (List of String) The IPv6 prefixes of the network.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `name` (String) The name of the network.
-- `nameservers` (List of String, Deprecated) This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for the IPv4 networks.
-- `prefixes` (List of String) The IPv4 prefixes of the network.
+- `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for IPv4.
+- `prefixes` (List of String, Deprecated) The prefixes of the network. This field is deprecated and will be removed after April 28th 2025, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.
 - `public_ip` (String) The public IP of the network.
 - `routed` (Boolean) Shows if the network is routed and therefore accessible from other networks.

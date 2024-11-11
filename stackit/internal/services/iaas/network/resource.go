@@ -197,7 +197,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:    true,
 			},
 			"prefixes": schema.ListAttribute{
-				Description:        "This field is deprecated and will be removed after April 28th 2025, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
+				Description:        "The prefixes of the network. This field is deprecated and will be removed after April 28th 2025, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
 				DeprecationMessage: "Use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
 				Computed:           true,
 				ElementType:        types.StringType,

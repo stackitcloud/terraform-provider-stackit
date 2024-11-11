@@ -107,8 +107,8 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				},
 			},
 			"nameservers": schema.ListAttribute{
-				Description:        "This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for the IPv4 networks.",
-				DeprecationMessage: "Use `ipv4_nameservers` to configure the nameservers for the IPv4 networks.",
+				Description:        "The nameservers of the network. This field is deprecated and will be removed after April 28th 2025, use `ipv4_nameservers` to configure the nameservers for IPv4.",
+				DeprecationMessage: "Use `ipv4_nameservers` to configure the nameservers for IPv4.",
 				Computed:           true,
 				ElementType:        types.StringType,
 			},
@@ -130,6 +130,12 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed:    true,
 			},
 			"prefixes": schema.ListAttribute{
+				Description:        "The prefixes of the network. This field is deprecated and will be removed after April 28th 2025, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
+				DeprecationMessage: "Use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
+				Computed:           true,
+				ElementType:        types.StringType,
+			},
+			"ipv4_prefixes": schema.ListAttribute{
 				Description: "The IPv4 prefixes of the network.",
 				Computed:    true,
 				ElementType: types.StringType,
