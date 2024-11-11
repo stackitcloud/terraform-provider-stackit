@@ -703,7 +703,7 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 		modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
 	}
 
-	if (!model.IPv4Nameservers.IsNull() && len(model.IPv4Nameservers.Elements()) > 0) || (!model.Nameservers.IsNull() && len(model.Nameservers.Elements()) > 0) {
+	if !model.IPv4Nameservers.IsNull() || !model.Nameservers.IsNull() {
 		addressFamily.Ipv4 = &iaas.UpdateNetworkIPv4Body{
 			Nameservers: &modelIPv4Nameservers,
 			Gateway:     iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway)),
