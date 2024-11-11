@@ -14,13 +14,13 @@ Network resource schema. Must have a `region` specified in the provider configur
 
 ```terraform
 resource "stackit_network" "example_with_name" {
-  project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name               = "example-with-name"
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "example-with-name"
 }
 
 resource "stackit_network" "example_routed_network" {
-  project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name               = "example-routed-network"
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "example-routed-network"
   labels = {
     "key" = "value"
   }
