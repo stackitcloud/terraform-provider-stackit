@@ -105,9 +105,16 @@ func (r *publicIpAssociateResource) Configure(ctx context.Context, req resource.
 
 // Schema defines the schema for the resource.
 func (r *publicIpAssociateResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	descriptions := map[string]string{
+		"main": "Associates an existing public IP to a network interface. " +
+			"This is useful for situations where you have a pre-allocated public IP or unable to use the `stackit_public_ip` resource to create a new public IP." +
+			"Must have a `region` specified in the provider configuration.",
+		"warning_message": "The `stackit_public_ip_associate` resource should never be used together with the `stackit_public_ip` resource." +
+			"Both resources have control of the network_interface association. If used together, this will lead to conflicts.",
+	}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Public IP associate resource schema. Must have a `region` specified in the provider configuration."),
-		Description:         "Public IP associate resource schema. Must have a `region` specified in the provider configuration.",
+		MarkdownDescription: features.AddBetaDescription(fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["warning_message"])),
+		Description:         fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["warning_message"]),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`public_ip_id`,`network_interface_id`\".",
@@ -175,6 +182,9 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
+
+	warnDetails := fmt.Sprintf(`Both resources have control of the network_interface association. If used together, this will lead to conflicts.`)
+	core.LogAndAddWarning(ctx, &resp.Diagnostics, "stackit_public_ip_associate resource should never be used together with the stackit_public_ip resource.", warnDetails)
 
 	// Generate API request body from model
 	payload, err := toUpdatePayload(&model)
