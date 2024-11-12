@@ -114,6 +114,7 @@ Read-Only:
 
 Read-Only:
 
+- `allow_system_components` (Boolean) Allow system components to run on this node pool.
 - `availability_zones` (List of String) Specify a list of availability zones.
 - `cri` (String) Specifies the container runtime.
 - `labels` (Map of String) Labels to add to each node.
