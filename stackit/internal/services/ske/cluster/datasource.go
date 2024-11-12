@@ -202,6 +202,10 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							ElementType: types.StringType,
 							Computed:    true,
 						},
+						"allow_system_components": schema.BoolAttribute{
+							Description: "Allow system components to run on this node pool.",
+							Computed:    true,
+						},
 					},
 				},
 			},

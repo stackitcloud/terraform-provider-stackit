@@ -3,6 +3,8 @@ package ske
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -106,7 +108,8 @@ func TestMapFields(t *testing.T) {
 				Name: utils.Ptr("name"),
 				Nodepools: &[]ske.Nodepool{
 					{
-						AvailabilityZones: &[]string{"z1", "z2"},
+						AllowSystemComponents: utils.Ptr(true),
+						AvailabilityZones:     &[]string{"z1", "z2"},
 						Cri: &ske.CRI{
 							Name: utils.Ptr("cri"),
 						},
@@ -195,6 +198,7 @@ func TestMapFields(t *testing.T) {
 										types.StringValue("z2"),
 									},
 								),
+								"allow_system_components": types.BoolValue(true),
 							},
 						),
 					},
@@ -481,6 +485,7 @@ func TestMapFields(t *testing.T) {
 									types.StringValue("z2"),
 								},
 							),
+							"allow_system_components": types.BoolValue(true),
 						},
 					),
 				},
@@ -599,6 +604,7 @@ func TestMapFields(t *testing.T) {
 										types.StringValue("z2"),
 									},
 								),
+								"allow_system_components": types.BoolNull(),
 							},
 						),
 					},
@@ -2280,6 +2286,60 @@ func TestToNetworkPayload(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
+			}
+		})
+	}
+}
+
+func TestVerifySystemComponentNodepools(t *testing.T) {
+	tests := []struct {
+		description string
+		nodePools   []ske.Nodepool
+		isValid     bool
+	}{
+		{
+			description: "all pools allow system components",
+			nodePools: []ske.Nodepool{
+				{
+					AllowSystemComponents: conversion.BoolValueToPointer(basetypes.NewBoolValue(true)),
+				},
+				{
+					AllowSystemComponents: conversion.BoolValueToPointer(basetypes.NewBoolValue(true)),
+				},
+			},
+			isValid: true,
+		},
+		{
+			description: "one pool allows system components",
+			nodePools: []ske.Nodepool{
+				{
+					AllowSystemComponents: conversion.BoolValueToPointer(basetypes.NewBoolValue(true)),
+				},
+				{
+					AllowSystemComponents: conversion.BoolValueToPointer(basetypes.NewBoolValue(false)),
+				},
+			},
+			isValid: true,
+		},
+		{
+			description: "no pool allows system components",
+			nodePools: []ske.Nodepool{
+				{
+					AllowSystemComponents: conversion.BoolValueToPointer(basetypes.NewBoolValue(false)),
+				},
+				{
+					AllowSystemComponents: conversion.BoolValueToPointer(basetypes.NewBoolValue(false)),
+				},
+			},
+			isValid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			err := verifySystemComponentsInNodePools(tt.nodePools)
+			if (err == nil) != tt.isValid {
+				t.Errorf("expected validity to be %v, but got error: %v", tt.isValid, err)
 			}
 		})
 	}

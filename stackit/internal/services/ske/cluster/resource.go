@@ -82,42 +82,44 @@ type Model struct {
 
 // Struct corresponding to Model.NodePools[i]
 type nodePool struct {
-	Name              types.String `tfsdk:"name"`
-	MachineType       types.String `tfsdk:"machine_type"`
-	OSName            types.String `tfsdk:"os_name"`
-	OSVersionMin      types.String `tfsdk:"os_version_min"`
-	OSVersion         types.String `tfsdk:"os_version"`
-	OSVersionUsed     types.String `tfsdk:"os_version_used"`
-	Minimum           types.Int64  `tfsdk:"minimum"`
-	Maximum           types.Int64  `tfsdk:"maximum"`
-	MaxSurge          types.Int64  `tfsdk:"max_surge"`
-	MaxUnavailable    types.Int64  `tfsdk:"max_unavailable"`
-	VolumeType        types.String `tfsdk:"volume_type"`
-	VolumeSize        types.Int64  `tfsdk:"volume_size"`
-	Labels            types.Map    `tfsdk:"labels"`
-	Taints            types.List   `tfsdk:"taints"`
-	CRI               types.String `tfsdk:"cri"`
-	AvailabilityZones types.List   `tfsdk:"availability_zones"`
+	Name                  types.String `tfsdk:"name"`
+	MachineType           types.String `tfsdk:"machine_type"`
+	OSName                types.String `tfsdk:"os_name"`
+	OSVersionMin          types.String `tfsdk:"os_version_min"`
+	OSVersion             types.String `tfsdk:"os_version"`
+	OSVersionUsed         types.String `tfsdk:"os_version_used"`
+	Minimum               types.Int64  `tfsdk:"minimum"`
+	Maximum               types.Int64  `tfsdk:"maximum"`
+	MaxSurge              types.Int64  `tfsdk:"max_surge"`
+	MaxUnavailable        types.Int64  `tfsdk:"max_unavailable"`
+	VolumeType            types.String `tfsdk:"volume_type"`
+	VolumeSize            types.Int64  `tfsdk:"volume_size"`
+	Labels                types.Map    `tfsdk:"labels"`
+	Taints                types.List   `tfsdk:"taints"`
+	CRI                   types.String `tfsdk:"cri"`
+	AvailabilityZones     types.List   `tfsdk:"availability_zones"`
+	AllowSystemComponents types.Bool   `tfsdk:"allow_system_components"`
 }
 
 // Types corresponding to nodePool
 var nodePoolTypes = map[string]attr.Type{
-	"name":               basetypes.StringType{},
-	"machine_type":       basetypes.StringType{},
-	"os_name":            basetypes.StringType{},
-	"os_version_min":     basetypes.StringType{},
-	"os_version":         basetypes.StringType{},
-	"os_version_used":    basetypes.StringType{},
-	"minimum":            basetypes.Int64Type{},
-	"maximum":            basetypes.Int64Type{},
-	"max_surge":          basetypes.Int64Type{},
-	"max_unavailable":    basetypes.Int64Type{},
-	"volume_type":        basetypes.StringType{},
-	"volume_size":        basetypes.Int64Type{},
-	"labels":             basetypes.MapType{ElemType: types.StringType},
-	"taints":             basetypes.ListType{ElemType: types.ObjectType{AttrTypes: taintTypes}},
-	"cri":                basetypes.StringType{},
-	"availability_zones": basetypes.ListType{ElemType: types.StringType},
+	"name":                    basetypes.StringType{},
+	"machine_type":            basetypes.StringType{},
+	"os_name":                 basetypes.StringType{},
+	"os_version_min":          basetypes.StringType{},
+	"os_version":              basetypes.StringType{},
+	"os_version_used":         basetypes.StringType{},
+	"minimum":                 basetypes.Int64Type{},
+	"maximum":                 basetypes.Int64Type{},
+	"max_surge":               basetypes.Int64Type{},
+	"max_unavailable":         basetypes.Int64Type{},
+	"volume_type":             basetypes.StringType{},
+	"volume_size":             basetypes.Int64Type{},
+	"labels":                  basetypes.MapType{ElemType: types.StringType},
+	"taints":                  basetypes.ListType{ElemType: types.ObjectType{AttrTypes: taintTypes}},
+	"cri":                     basetypes.StringType{},
+	"availability_zones":      basetypes.ListType{ElemType: types.StringType},
+	"allow_system_components": basetypes.BoolType{},
 }
 
 // Struct corresponding to nodePool.Taints[i]
@@ -390,6 +392,12 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Description: "Specify a list of availability zones. E.g. `eu01-m`",
 							Required:    true,
 							ElementType: types.StringType,
+						},
+						"allow_system_components": schema.BoolAttribute{
+							Description: "Allow system components to run on this node pool.",
+							Optional:    true,
+							Computed:    true,
+							Default:     booldefault.StaticBool(true),
 						},
 						"minimum": schema.Int64Attribute{
 							Description: "Minimum number of nodes in the pool.",
@@ -990,14 +998,30 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 				Type: conversion.StringValueToPointer(nodePool.VolumeType),
 				Size: conversion.Int64ValueToPointer(nodePool.VolumeSize),
 			},
-			Taints:            &ts,
-			Cri:               &cn,
-			Labels:            ls,
-			AvailabilityZones: &zs,
+			Taints:                &ts,
+			Cri:                   &cn,
+			Labels:                ls,
+			AvailabilityZones:     &zs,
+			AllowSystemComponents: conversion.BoolValueToPointer(nodePool.AllowSystemComponents),
 		}
 		cnps = append(cnps, cnp)
 	}
+
+	if err := verifySystemComponentsInNodePools(cnps); err != nil {
+		return nil, nil, err
+	}
+
 	return cnps, deprecatedVersionsUsed, nil
+}
+
+// verifySystemComponentsInNodePools checks if at least one node pool has the allow_system_components attribute set to true.
+func verifySystemComponentsInNodePools(nodePools []ske.Nodepool) error {
+	for _, nodePool := range nodePools {
+		if nodePool.AllowSystemComponents != nil && *nodePool.AllowSystemComponents {
+			return nil // A node pool allowing system components was found
+		}
+	}
+	return fmt.Errorf("at least one node_pool must allow system components")
 }
 
 // latestMatchingMachineVersion determines the latest machine image version for the create/update payload.
@@ -1370,20 +1394,21 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	nodePools := []attr.Value{}
 	for i, nodePoolResp := range *cl.Nodepools {
 		nodePool := map[string]attr.Value{
-			"name":               types.StringPointerValue(nodePoolResp.Name),
-			"machine_type":       types.StringPointerValue(nodePoolResp.Machine.Type),
-			"os_name":            types.StringNull(),
-			"os_version_min":     modelNodePoolOSVersionMin[*nodePoolResp.Name],
-			"os_version":         modelNodePoolOSVersion[*nodePoolResp.Name],
-			"minimum":            types.Int64PointerValue(nodePoolResp.Minimum),
-			"maximum":            types.Int64PointerValue(nodePoolResp.Maximum),
-			"max_surge":          types.Int64PointerValue(nodePoolResp.MaxSurge),
-			"max_unavailable":    types.Int64PointerValue(nodePoolResp.MaxUnavailable),
-			"volume_type":        types.StringNull(),
-			"volume_size":        types.Int64PointerValue(nodePoolResp.Volume.Size),
-			"labels":             types.MapNull(types.StringType),
-			"cri":                types.StringNull(),
-			"availability_zones": types.ListNull(types.StringType),
+			"name":                    types.StringPointerValue(nodePoolResp.Name),
+			"machine_type":            types.StringPointerValue(nodePoolResp.Machine.Type),
+			"os_name":                 types.StringNull(),
+			"os_version_min":          modelNodePoolOSVersionMin[*nodePoolResp.Name],
+			"os_version":              modelNodePoolOSVersion[*nodePoolResp.Name],
+			"minimum":                 types.Int64PointerValue(nodePoolResp.Minimum),
+			"maximum":                 types.Int64PointerValue(nodePoolResp.Maximum),
+			"max_surge":               types.Int64PointerValue(nodePoolResp.MaxSurge),
+			"max_unavailable":         types.Int64PointerValue(nodePoolResp.MaxUnavailable),
+			"volume_type":             types.StringNull(),
+			"volume_size":             types.Int64PointerValue(nodePoolResp.Volume.Size),
+			"labels":                  types.MapNull(types.StringType),
+			"cri":                     types.StringNull(),
+			"availability_zones":      types.ListNull(types.StringType),
+			"allow_system_components": types.BoolPointerValue(nodePoolResp.AllowSystemComponents),
 		}
 
 		if nodePoolResp.Machine != nil && nodePoolResp.Machine.Image != nil {
