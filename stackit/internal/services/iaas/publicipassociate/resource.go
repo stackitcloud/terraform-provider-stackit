@@ -241,7 +241,7 @@ func (r *publicIpAssociateResource) Read(ctx context.Context, req resource.ReadR
 	// Map response body to schema
 	err = mapFields(publicIpResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP associate", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP association", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	// Set refreshed state
