@@ -195,7 +195,7 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 	// Update existing public IP
 	updatedPublicIp, err := r.client.UpdatePublicIP(ctx, projectId, publicIpId).UpdatePublicIPPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error associating public IP", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error associating public IP to network interface", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
