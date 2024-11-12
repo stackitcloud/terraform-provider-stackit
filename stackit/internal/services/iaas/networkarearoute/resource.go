@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -179,9 +178,6 @@ func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRe
 				Description: "Labels are key-value string pairs which can be attached to a resource container",
 				ElementType: types.StringType,
 				Optional:    true,
-				PlanModifiers: []planmodifier.Map{
-					mapplanmodifier.RequiresReplace(),
-				},
 			},
 		},
 	}
@@ -315,9 +311,55 @@ func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.Dele
 	tflog.Info(ctx, "Network area route deleted")
 }
 
-func (r *networkAreaRouteResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Update shouldn't be called
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area route", "Network area route can't be updated")
+// Update updates the resource and sets the updated Terraform state on success.
+func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	// Retrieve values from plan
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	organizationId := model.OrganizationId.ValueString()
+	networkAreaId := model.NetworkAreaId.ValueString()
+	networkAreaRouteId := model.NetworkAreaRouteId.ValueString()
+	ctx = tflog.SetField(ctx, "organization_id", organizationId)
+	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
+	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
+
+	// Retrieve values from state
+	var stateModel Model
+	diags = req.State.Get(ctx, &stateModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Generate API request body from model
+	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area route", fmt.Sprintf("Creating API payload: %v", err))
+		return
+	}
+	// Update existing network area route
+	networkAreaRouteResp, err := r.client.UpdateNetworkAreaRoute(ctx, organizationId, networkAreaId, networkAreaRouteId).UpdateNetworkAreaRoutePayload(*payload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area route", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	err = mapFields(ctx, networkAreaRouteResp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area route", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Network area route updated")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -411,5 +453,20 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkArea
 				Labels:  &labels,
 			},
 		},
+	}, nil
+}
+
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.UpdateNetworkAreaRoutePayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
+
+	labels, err := conversion.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("converting to Go map: %w", err)
+	}
+
+	return &iaas.UpdateNetworkAreaRoutePayload{
+		Labels: &labels,
 	}, nil
 }

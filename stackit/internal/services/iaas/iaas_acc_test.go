@@ -43,6 +43,8 @@ var networkAreaRouteResource = map[string]string{
 	"network_area_id": networkAreaResource["network_area_id"],
 	"prefix":          "1.1.1.0/24",
 	"next_hop":        "1.1.1.1",
+	"label1":          "value1",
+	"label1-updated":  "value1-updated",
 }
 
 var networkInterfaceResource = map[string]string{
@@ -139,17 +141,21 @@ func networkAreaResourceConfig(areaname, networkranges string) string {
 	)
 }
 
-func networkAreaRouteResourceConfig() string {
+func networkAreaRouteResourceConfig(labelValue string) string {
 	return fmt.Sprintf(`
 				resource "stackit_network_area_route" "network_area_route" {
 					organization_id = stackit_network_area.network_area.organization_id
 					network_area_id = stackit_network_area.network_area.network_area_id
 					prefix          = "%s"
 					next_hop        = "%s"
+					labels = {
+						"label1" = "%s"
+					}
 				}
 				`,
 		networkAreaRouteResource["prefix"],
 		networkAreaRouteResource["next_hop"],
+		labelValue,
 	)
 }
 
@@ -289,11 +295,11 @@ func serviceAccountAttachmentResourceConfig() string {
 	)
 }
 
-func testAccNetworkAreaConfig(areaname, networkranges string) string {
+func testAccNetworkAreaConfig(areaname, networkranges, routeLabelValue string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		networkAreaResourceConfig(areaname, networkranges),
-		networkAreaRouteResourceConfig(),
+		networkAreaRouteResourceConfig(routeLabelValue),
 	)
 }
 
@@ -350,6 +356,7 @@ func TestAccNetworkArea(t *testing.T) {
 				Config: testAccNetworkAreaConfig(
 					networkAreaResource["name"],
 					networkAreaResource["networkrange0"],
+					networkAreaRouteResource["label1"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network Area
@@ -372,6 +379,7 @@ func TestAccNetworkArea(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_network_area_route.network_area_route", "network_area_route_id"),
 					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "prefix", networkAreaRouteResource["prefix"]),
 					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop", networkAreaRouteResource["next_hop"]),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "labels.label1", networkAreaRouteResource["label1"]),
 				),
 			},
 			// Data source
@@ -393,6 +401,7 @@ func TestAccNetworkArea(t *testing.T) {
 					testAccNetworkAreaConfig(
 						networkAreaResource["name"],
 						networkAreaResource["networkrange0"],
+						networkAreaRouteResource["label1"],
 					),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -419,6 +428,7 @@ func TestAccNetworkArea(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_network_area_route.network_area_route", "network_area_route_id"),
 					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "prefix", networkAreaRouteResource["prefix"]),
 					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop", networkAreaRouteResource["next_hop"]),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "labels.label1", networkAreaRouteResource["label1"]),
 				),
 			},
 			// Import
@@ -463,6 +473,7 @@ func TestAccNetworkArea(t *testing.T) {
 				Config: testAccNetworkAreaConfig(
 					fmt.Sprintf("%s-updated", networkAreaResource["name"]),
 					networkAreaResource["networkrange0"],
+					networkAreaRouteResource["label1-updated"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network area
@@ -471,6 +482,20 @@ func TestAccNetworkArea(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "name", fmt.Sprintf("%s-updated", networkAreaResource["name"])),
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.#", "1"),
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.0.prefix", networkAreaResource["networkrange0"]),
+
+					// Network area route
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area_route.network_area_route", "organization_id",
+						"stackit_network_area.network_area", "organization_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area_route.network_area_route", "network_area_id",
+						"stackit_network_area.network_area", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_network_area_route.network_area_route", "network_area_route_id"),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "prefix", networkAreaRouteResource["prefix"]),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop", networkAreaRouteResource["next_hop"]),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "labels.label1", networkAreaRouteResource["label1-updated"]),
 				),
 			},
 			// Deletion is done by the framework implicitly

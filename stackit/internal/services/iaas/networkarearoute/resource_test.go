@@ -160,3 +160,46 @@ func TestToCreatePayload(t *testing.T) {
 		})
 	}
 }
+
+func TestToUpdatePayload(t *testing.T) {
+	tests := []struct {
+		description string
+		input       *Model
+		expected    *iaas.UpdateNetworkAreaRoutePayload
+		isValid     bool
+	}{
+		{
+			"default_ok",
+			&Model{
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key1": types.StringValue("value1"),
+					"key2": types.StringValue("value2"),
+				}),
+			},
+			&iaas.UpdateNetworkAreaRoutePayload{
+				Labels: &map[string]interface{}{
+					"key1": "value1",
+					"key2": "value2",
+				},
+			},
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output, err := toUpdatePayload(context.Background(), tt.input, types.MapNull(types.StringType))
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaas.NullableString{}))
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
