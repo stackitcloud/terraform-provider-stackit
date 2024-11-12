@@ -156,7 +156,7 @@ func (r *publicIpAssociateResource) Schema(_ context.Context, _ resource.SchemaR
 				},
 			},
 			"network_interface_id": schema.StringAttribute{
-				Description: "Associates the public IP with a network interface or a virtual IP (ID).",
+				Description: "The ID of the network interface (or virtual IP) to which the public IP should be attached to.",
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
