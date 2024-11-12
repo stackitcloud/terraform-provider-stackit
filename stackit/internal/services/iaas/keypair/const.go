@@ -22,4 +22,4 @@ resource "stackit_server" "example-server" {
   machine_type      = "g1.1"
   keypair_name      = "example-key-pair"
 }
-`
+` + "\n```"
