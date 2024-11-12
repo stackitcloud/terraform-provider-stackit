@@ -201,7 +201,7 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 
 	err = mapFields(updatedPublicIp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error associating public IP", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error associating public IP to network interface", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
