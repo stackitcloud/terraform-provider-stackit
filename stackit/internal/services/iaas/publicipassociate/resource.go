@@ -190,7 +190,7 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 		`Both resources have control of the stackit_network_interface association. If used together, this will lead to conflicts.`)
 
 	// Generate API request body from model
-	payload, err := toUpdatePayload(&model)
+	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error associating public IP to network interface", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -281,7 +281,7 @@ func (r *publicIpAssociateResource) Delete(ctx context.Context, req resource.Del
 	// Delete existing publicIp
 	err := r.client.DeletePublicIP(ctx, projectId, publicIpId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting public IP associate", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting public IP association", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
@@ -352,7 +352,7 @@ func mapFields(publicIpResp *iaas.PublicIp, model *Model) error {
 	return nil
 }
 
-func toUpdatePayload(model *Model) (*iaas.UpdatePublicIPPayload, error) {
+func toCreatePayload(model *Model) (*iaas.UpdatePublicIPPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
