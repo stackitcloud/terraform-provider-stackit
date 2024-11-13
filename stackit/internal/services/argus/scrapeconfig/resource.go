@@ -149,14 +149,13 @@ func (r *scrapeConfigResource) Configure(ctx context.Context, req resource.Confi
 	tflog.Info(ctx, "Argus scrape config client configured")
 }
 
-// Schema defines the schema for the resource.
-func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
+var (
+	descriptions = map[string]string{
 		"main": "Argus scrape config resource schema. Must have a `region` specified in the provider configuration.",
 		"deprecation_message": "The `stackit_argus_scrapeconfig` resource has been deprecated and will be removed after February 26th 2025. " +
 			"Please use `stackit_observability_scrapeconfig` instead, which offers the exact same functionality.",
 	}
-	resp.Schema = schema.Schema{
+	Schema = schema.Schema{
 		Description:         fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["deprecation_message"]),
 		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
 		DeprecationMessage:  descriptions["deprecation_message"],
@@ -317,6 +316,11 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 			},
 		},
 	}
+)
+
+// Schema defines the schema for the resource.
+func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = Schema
 }
 
 // Create creates the resource and sets the initial Terraform state.
