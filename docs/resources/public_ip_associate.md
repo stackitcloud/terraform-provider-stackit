@@ -3,15 +3,15 @@
 page_title: "stackit_public_ip_associate Resource - stackit"
 subcategory: ""
 description: |-
-  Associates an existing public IP to a network interface. This is useful for situations where you have a pre-allocated public IP or unable to use the stackit_public_ip resource to create a new public IP.Must have a region specified in the provider configuration.
-  The stackit_public_ip_associate resource should never be used together with the stackit_public_ip resource.Both resources have control of the network_interface association. If used together, this will lead to conflicts.
+  Associates an existing public IP to a network interface. This is useful for situations where you have a pre-allocated public IP or unable to use the stackit_public_ip resource to create a new public IP. Must have a region specified in the provider configuration.
+  The stackit_public_ip_associate resource should never be used together with the stackit_public_ip resource.Both resources have control of the stackit_network_interface association. If used together, this will lead to conflicts.
   ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_public_ip_associate (Resource)
 
-Associates an existing public IP to a network interface. This is useful for situations where you have a pre-allocated public IP or unable to use the `stackit_public_ip` resource to create a new public IP.Must have a `region` specified in the provider configuration.
-The `stackit_public_ip_associate` resource should never be used together with the `stackit_public_ip` resource.Both resources have control of the network_interface association. If used together, this will lead to conflicts.
+Associates an existing public IP to a network interface. This is useful for situations where you have a pre-allocated public IP or unable to use the `stackit_public_ip` resource to create a new public IP. Must have a `region` specified in the provider configuration.
+The `stackit_public_ip_associate` resource should never be used together with the `stackit_public_ip` resource.Both resources have control of the `stackit_network_interface` association. If used together, this will lead to conflicts.
 
 ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
@@ -30,7 +30,7 @@ resource "stackit_public_ip_associate" "example" {
 
 ### Required
 
-- `network_interface_id` (String) Associates the public IP with a network interface or a virtual IP (ID).
+- `network_interface_id` (String) The ID of the network interface (or virtual IP) to which the public IP should be attached to.
 - `project_id` (String) STACKIT project ID to which the public IP is associated.
 - `public_ip_id` (String) The public IP ID.
 
