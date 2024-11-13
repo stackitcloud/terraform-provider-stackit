@@ -79,6 +79,7 @@ Required:
 
 Optional:
 
+- `allow_system_components` (Boolean) Allow system components to run on this node pool.
 - `cri` (String) Specifies the container runtime. Defaults to `containerd`
 - `labels` (Map of String) Labels to add to each node.
 - `max_surge` (Number) Maximum number of additional VMs that are created during an update. If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. The `max_surge` and `max_unavailable` fields cannot both be unset at the same time.

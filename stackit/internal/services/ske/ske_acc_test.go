@@ -21,17 +21,17 @@ var clusterResource = map[string]string{
 	"project_id":                                       testutil.ProjectId,
 	"name":                                             fmt.Sprintf("cl-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 	"name_min":                                         fmt.Sprintf("cl-min-%s", acctest.RandStringFromCharSet(3, acctest.CharSetAlphaNum)),
-	"kubernetes_version_min":                           "1.28",
-	"kubernetes_version_used":                          "1.28.11",
-	"kubernetes_version_min_new":                       "1.29",
-	"kubernetes_version_used_new":                      "1.29.6",
+	"kubernetes_version_min":                           "1.29",
+	"kubernetes_version_used":                          "1.29.10",
+	"kubernetes_version_min_new":                       "1.30",
+	"kubernetes_version_used_new":                      "1.30.6",
 	"nodepool_name":                                    "np-acc-test",
 	"nodepool_name_min":                                "np-acc-min-test",
 	"nodepool_machine_type":                            "b1.2",
-	"nodepool_os_version_min":                          "3815.2",
-	"nodepool_os_version_used":                         "3815.2.3",
-	"nodepool_os_version_min_new":                      "3815.2.3",
-	"nodepool_os_version_used_new":                     "3815.2.3",
+	"nodepool_os_version_min":                          "3975.2",
+	"nodepool_os_version_used":                         "3975.2.0",
+	"nodepool_os_version_min_new":                      "3975.2.1",
+	"nodepool_os_version_used_new":                     "3975.2.1",
 	"nodepool_os_name":                                 "flatcar",
 	"nodepool_minimum":                                 "2",
 	"nodepool_maximum":                                 "3",
@@ -46,6 +46,7 @@ var clusterResource = map[string]string{
 	"nodepool_taints_effect":                           "PreferNoSchedule",
 	"nodepool_taints_key":                              "tkey",
 	"nodepool_taints_value":                            "tvalue",
+	"nodepool_allow_system_components":                 "true",
 	"extensions_acl_enabled":                           "true",
 	"extensions_acl_cidrs":                             "192.168.0.0/24",
 	"extensions_argus_enabled":                         "false",
@@ -96,6 +97,7 @@ func getConfig(kubernetesVersion, nodePoolMachineOSVersion string, maintenanceEn
 					key    = "%s"
 					value  = "%s"
 				}]
+				allow_system_components = %s
 			}]
 			extensions = {
 				acl = {
@@ -169,6 +171,7 @@ func getConfig(kubernetesVersion, nodePoolMachineOSVersion string, maintenanceEn
 		clusterResource["nodepool_taints_effect"],
 		clusterResource["nodepool_taints_key"],
 		clusterResource["nodepool_taints_value"],
+		clusterResource["nodepool_allow_system_components"],
 		clusterResource["extensions_acl_enabled"],
 		clusterResource["extensions_acl_cidrs"],
 		clusterResource["extensions_argus_enabled"],
@@ -233,6 +236,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.taints.0.effect", clusterResource["nodepool_taints_effect"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.taints.0.key", clusterResource["nodepool_taints_key"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.taints.0.value", clusterResource["nodepool_taints_value"]),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.allow_system_components", clusterResource["nodepool_allow_system_components"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.cri", clusterResource["nodepool_cri"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.enabled", clusterResource["extensions_acl_enabled"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.#", "1"),
@@ -343,6 +347,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.taints.0.effect", clusterResource["nodepool_taints_effect"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.taints.0.key", clusterResource["nodepool_taints_key"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.taints.0.value", clusterResource["nodepool_taints_value"]),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.allow_system_components", clusterResource["nodepool_allow_system_components"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.cri", clusterResource["nodepool_cri"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.acl.enabled", clusterResource["extensions_acl_enabled"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.#", "1"),
