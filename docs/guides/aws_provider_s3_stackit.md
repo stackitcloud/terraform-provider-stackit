@@ -39,7 +39,7 @@ This guide outlines the process of utilizing the [AWS Terraform Provider](https:
       credentials_group_id = stackit_objectstorage_credentials_group.example.credentials_group_id
       expiration_timestamp = "2027-01-02T03:04:05Z"
    }
-    ```
+   ```
 
 3. **Configure AWS Provider**
 
@@ -59,33 +59,33 @@ This guide outlines the process of utilizing the [AWS Terraform Provider](https:
          s3 = "https://object.storage.eu01.onstackit.cloud"
       }
    }
-    ```
+   ```
 
 4. **Use the provider to manage objects or policies**
 
     ```hcl
-      resource "aws_s3_object" "test_file" {
-         bucket = stackit_objectstorage_bucket.example.name
-         key    = "hello_world.txt"
-         source = "files/hello_world.txt"
-         content_type = "text/plain"
-         etag = filemd5("files/hello_world.txt")
-      }
+    resource "aws_s3_object" "test_file" {
+     bucket = stackit_objectstorage_bucket.example.name
+     key    = "hello_world.txt"
+     source = "files/hello_world.txt"
+     content_type = "text/plain"
+     etag = filemd5("files/hello_world.txt")
+    }
 
-      resource "aws_s3_bucket_policy" "allow_public_read_access" {
-         bucket = stackit_objectstorage_bucket.test20.name
-         policy = <<EOF
-         {
-            "Statement":[
-               {
-               "Sid": "Public GET",
-               "Effect":"Allow",
-               "Principal":"*",
-               "Action":"s3:GetObject",
-               "Resource":"urn:sgws:s3:::example/*"
-               }
-            ]
-         }
-         EOF
-      }
+    resource "aws_s3_bucket_policy" "allow_public_read_access" {
+     bucket = stackit_objectstorage_bucket.test20.name
+     policy = <<EOF
+     {
+        "Statement":[
+           {
+           "Sid": "Public GET",
+           "Effect":"Allow",
+           "Principal":"*",
+           "Action":"s3:GetObject",
+           "Resource":"urn:sgws:s3:::example/*"
+           }
+        ]
+     }
+     EOF
+    }
     ```
