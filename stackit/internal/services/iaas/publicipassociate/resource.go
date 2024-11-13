@@ -278,14 +278,17 @@ func (r *publicIpAssociateResource) Delete(ctx context.Context, req resource.Del
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	// Delete existing publicIp
-	err := r.client.DeletePublicIP(ctx, projectId, publicIpId).Execute()
+	payload := &iaas.UpdatePublicIPPayload{
+		NetworkInterface: iaas.NewNullableString(nil),
+	}
+
+	_, err := r.client.UpdatePublicIP(ctx, projectId, publicIpId).UpdatePublicIPPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting public IP association", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "public IP associate deleted")
+	tflog.Info(ctx, "public IP association deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
