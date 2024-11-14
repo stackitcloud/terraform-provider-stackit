@@ -215,6 +215,9 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Validators: []validator.String{
 					validate.CIDR(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"ipv4_prefix_length": schema.Int64Attribute{
 				Description: "The IPv4 prefix length of the network.",
@@ -263,6 +266,9 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:    true,
 				Validators: []validator.String{
 					validate.CIDR(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"ipv6_prefix_length": schema.Int64Attribute{
