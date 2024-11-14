@@ -64,7 +64,9 @@ provider "openstack" {
 
 ### Configuring the supporting infrastructure
 
-The example below uses OpenStack to create the network, router, a public IP address and a compute instance.
+The example below uses OpenStack to create the network, router, a public IP address and a compute instance.  
+The STACKIT Loadbalancer Service automatically adjust necessary Security Groups to its targets,  
+to avoid unnecessary changes in the terraform plan utilising the lifecycle function of terraform can be used.
 
 ## Example Usage
 
@@ -115,6 +117,11 @@ resource "openstack_compute_instance_v2" "example" {
 
   network {
     name = openstack_networking_network_v2.example.name
+  }
+  
+  lifecycle {
+    # Security groups are modified by the STACKIT LoadBalancer Service, so terraform should ignore changes here
+    ignore_changes        = [security_groups]
   }
 }
 

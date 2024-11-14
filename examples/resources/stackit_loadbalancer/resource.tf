@@ -45,6 +45,11 @@ resource "openstack_compute_instance_v2" "example" {
   network {
     name = openstack_networking_network_v2.example.name
   }
+
+  lifecycle {
+    # Security groups are modified by the STACKIT LoadBalancer Service, so terraform should ignore changes here
+    ignore_changes        = [security_groups]
+  }
 }
 
 # Create a router and attach it to the public network
