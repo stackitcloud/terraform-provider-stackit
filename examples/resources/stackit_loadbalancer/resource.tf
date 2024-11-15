@@ -48,7 +48,7 @@ resource "openstack_compute_instance_v2" "example" {
 
   lifecycle {
     # Security groups are modified by the STACKIT LoadBalancer Service, so terraform should ignore changes here
-    ignore_changes        = [security_groups]
+    ignore_changes = [security_groups]
   }
 }
 
