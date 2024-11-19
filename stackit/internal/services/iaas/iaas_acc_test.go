@@ -29,6 +29,9 @@ var networkResource = map[string]string{
 	"ipv4_prefix_length": "24",
 	"nameserver0":        "1.2.3.4",
 	"nameserver1":        "5.6.7.8",
+	"ipv4_gateway":       "10.1.2.1",
+	"ipv4_prefix":        "10.1.2.1/24",
+	"routed":             "false",
 }
 
 var networkAreaResource = map[string]string{
@@ -113,13 +116,19 @@ func networkResourceConfig(name, nameservers string) string {
 					project_id = "%s"
 					name       = "%s"
 					ipv4_prefix_length = "%s"
-					nameservers = %s
+					ipv4_nameservers = %s
+					ipv4_gateway = "%s"
+					ipv4_prefix = "%s"
+					routed = "%s"
 				}
 				`,
 		networkResource["project_id"],
 		name,
 		networkResource["ipv4_prefix_length"],
 		nameservers,
+		networkResource["ipv4_gateway"],
+		networkResource["ipv4_prefix"],
+		networkResource["routed"],
 	)
 }
 
@@ -616,6 +625,9 @@ func TestAccServer(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network", "name", networkResource["name"]),
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.#", "1"),
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_prefix", networkResource["ipv4_prefix"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "routed", networkResource["routed"]),
 
 					// Server
 					resource.TestCheckResourceAttr("stackit_server.server", "project_id", serverResource["project_id"]),
@@ -718,6 +730,9 @@ func TestAccServer(t *testing.T) {
 					),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "name", networkResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_prefix", networkResource["ipv4_prefix"]),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "routed", networkResource["routed"]),
 
 					// Server
 					resource.TestCheckResourceAttr("data.stackit_server.server", "project_id", serverResource["project_id"]),
@@ -879,6 +894,8 @@ func TestAccServer(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.#", "2"),
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.1", networkResource["nameserver1"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_prefix", networkResource["ipv4_prefix"]),
 
 					// Server
 					resource.TestCheckResourceAttr("stackit_server.server", "project_id", serverResource["project_id"]),

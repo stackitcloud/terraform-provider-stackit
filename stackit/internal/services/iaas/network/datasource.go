@@ -107,16 +107,58 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				},
 			},
 			"nameservers": schema.ListAttribute{
-				Description: "The nameservers of the network.",
+				Description:        "The nameservers of the network. This field is deprecated and will be removed soon, use `ipv4_nameservers` to configure the nameservers for IPv4.",
+				DeprecationMessage: "Use `ipv4_nameservers` to configure the nameservers for IPv4.",
+				Computed:           true,
+				ElementType:        types.StringType,
+			},
+			"ipv4_gateway": schema.StringAttribute{
+				Description: "The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
+				Computed:    true,
+			},
+			"ipv4_nameservers": schema.ListAttribute{
+				Description: "The IPv4 nameservers of the network.",
 				Computed:    true,
 				ElementType: types.StringType,
+			},
+			"ipv4_prefix": schema.StringAttribute{
+				Description: "The IPv4 prefix of the network (CIDR).",
+				Computed:    true,
 			},
 			"ipv4_prefix_length": schema.Int64Attribute{
 				Description: "The IPv4 prefix length of the network.",
 				Computed:    true,
 			},
 			"prefixes": schema.ListAttribute{
-				Description: "The prefixes of the network.",
+				Description:        "The prefixes of the network. This field is deprecated and will be removed soon, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
+				DeprecationMessage: "Use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
+				Computed:           true,
+				ElementType:        types.StringType,
+			},
+			"ipv4_prefixes": schema.ListAttribute{
+				Description: "The IPv4 prefixes of the network.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
+			"ipv6_gateway": schema.StringAttribute{
+				Description: "The IPv6 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
+				Computed:    true,
+			},
+			"ipv6_nameservers": schema.ListAttribute{
+				Description: "The IPv6 nameservers of the network.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
+			"ipv6_prefix": schema.StringAttribute{
+				Description: "The IPv6 prefix of the network (CIDR).",
+				Computed:    true,
+			},
+			"ipv6_prefix_length": schema.Int64Attribute{
+				Description: "The IPv6 prefix length of the network.",
+				Computed:    true,
+			},
+			"ipv6_prefixes": schema.ListAttribute{
+				Description: "The IPv6 prefixes of the network.",
 				Computed:    true,
 				ElementType: types.StringType,
 			},
@@ -127,6 +169,10 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			"labels": schema.MapAttribute{
 				Description: "Labels are key-value string pairs which can be attached to a resource container",
 				ElementType: types.StringType,
+				Computed:    true,
+			},
+			"routed": schema.BoolAttribute{
+				Description: "Shows if the network is routed and therefore accessible from other networks.",
 				Computed:    true,
 			},
 		},
