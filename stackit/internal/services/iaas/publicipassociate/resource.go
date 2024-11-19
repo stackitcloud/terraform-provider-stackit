@@ -109,7 +109,7 @@ func (r *publicIpAssociateResource) Schema(_ context.Context, _ resource.SchemaR
 		"main": "Associates an existing public IP to a network interface. " +
 			"This is useful for situations where you have a pre-allocated public IP or unable to use the `stackit_public_ip` resource to create a new public IP. " +
 			"Must have a `region` specified in the provider configuration.",
-		"warning_message": "The `stackit_public_ip_associate` resource should never be used together with the `stackit_public_ip` resource." +
+		"warning_message": "The `stackit_public_ip_associate` resource should never be used together with the `stackit_public_ip` resource. " +
 			"Both resources have control of the `stackit_network_interface` association. If used together, this will lead to conflicts.",
 	}
 	resp.Schema = schema.Schema{
