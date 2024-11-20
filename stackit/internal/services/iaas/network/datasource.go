@@ -112,6 +112,10 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed:           true,
 				ElementType:        types.StringType,
 			},
+			"no_ipv4_gateway": schema.BoolAttribute{
+				Description: "If set to `true`, the network doesn't have an IPv4 gateway.",
+				Computed:    true,
+			},
 			"ipv4_gateway": schema.StringAttribute{
 				Description: "The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
 				Computed:    true,
@@ -139,6 +143,10 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Description: "The IPv4 prefixes of the network.",
 				Computed:    true,
 				ElementType: types.StringType,
+			},
+			"no_ipv6_gateway": schema.BoolAttribute{
+				Description: "If set to `true`, the network doesn't have an IPv6 gateway.",
+				Computed:    true,
 			},
 			"ipv6_gateway": schema.StringAttribute{
 				Description: "The IPv6 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
