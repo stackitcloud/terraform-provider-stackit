@@ -153,8 +153,8 @@ github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0 h1:JVEx/ouHB6PlwGz
 github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0/go.mod h1:nVllQfYODhX1q3bgwVTLO7wHOp+8NMLiKbn3u/Dg5nU=
 github.com/stackitcloud/stackit-sdk-go/services/authorization v0.4.0 h1:WXSIE4KfdHzaiiD0MF8CsoIv8I+Two/Bf/r28tYhRCU=
 github.com/stackitcloud/stackit-sdk-go/services/authorization v0.4.0/go.mod h1:8spVqlPqZrvQQ63Qodbydk3qsZx7lr963ECft+sqFhY=
-github.com/stackitcloud/stackit-sdk-go/services/dns v0.11.0 h1:+OZ82DwFy4JIJThadVjvll5kUWjHPSLbUIF65njsNBk=
-github.com/stackitcloud/stackit-sdk-go/services/dns v0.11.0/go.mod h1:mv8U7kuclXo+0VpDHtBCkve/3i9h1yT+RAId/MUi+C8=
+github.com/stackitcloud/stackit-sdk-go/services/dns v0.12.0 h1:NypnmRbvjCX7ANJej1epwmopBEjkMzklJT3SY5iVwWg=
+github.com/stackitcloud/stackit-sdk-go/services/dns v0.12.0/go.mod h1:mv8U7kuclXo+0VpDHtBCkve/3i9h1yT+RAId/MUi+C8=
 github.com/stackitcloud/stackit-sdk-go/services/iaas v0.16.0 h1:geyW780gqNxzSsPvmlxy3kUUJaRA4eiF9V3b2Ibcdjs=
 github.com/stackitcloud/stackit-sdk-go/services/iaas v0.16.0/go.mod h1:YfuN+eXuqr846xeRyW2Vf1JM2jU0ikeQa76dDI66RsM=
 github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.12-alpha h1:jwpif4t2gthmKmCXsQ84rmtDdcZkw4QQTFiCd7nTW8M=
@@ -183,8 +183,8 @@ github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.11.0 h1:AScII
 github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.11.0/go.mod h1:9Om4A5FI/wXZE/8zu5wF8eRBb70VddyPfnj/nlYXHX0=
 github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.10.0 h1:HrnEgRPt3eD/tEHyzDWyCRxNFzb9g/FLYfwIEEQZ+Rg=
 github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.10.0/go.mod h1:268uoY2gKCa5xcDL169TGVjLUNTcZ2En77YdfYOcR1w=
-github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.2.0 h1:6IUrNIBEIpmrlfEK3QENQZB35KHEmeyc7w1owFOfGpc=
-github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.2.0/go.mod h1:+807U5ZLXns+CEbyIg483wNEwV10vaN6GjMnSZhw/64=
+github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.3.0 h1:Tlps8vBQmQ1mx2YFbzOzMIyWtXGJy7X3N9Qk3qk88Cc=
+github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.3.0/go.mod h1:+807U5ZLXns+CEbyIg483wNEwV10vaN6GjMnSZhw/64=
 github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v0.3.0 h1:6IZBX9fyza9Eln3FHGHquvLNXQslk+dtkQp41G9+7+Y=
 github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v0.3.0/go.mod h1:zyg0hpiNdZLRbelkJb2KDf9OHQKLqqcTpePQ1qHL5dE=
 github.com/stackitcloud/stackit-sdk-go/services/ske v0.20.0 h1:ssEywzCS8IdRtzyxweLUKBG5GFbgwjNWJh++wGqigJM=
