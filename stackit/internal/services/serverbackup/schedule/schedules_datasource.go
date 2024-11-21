@@ -214,7 +214,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	tflog.Info(ctx, "Server backup schedules read")
 }
 
-func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverbackup.ListBackupSchedules200Response, model *schedulesDataSourceModel) error {
+func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverbackup.GetBackupSchedulesResponse, model *schedulesDataSourceModel) error {
 	if schedules == nil {
 		return fmt.Errorf("response input is nil")
 	}
