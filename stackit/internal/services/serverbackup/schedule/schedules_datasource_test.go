@@ -19,13 +19,13 @@ func listValueFrom(items []string) basetypes.ListValue {
 func TestMapSchedulesDataSourceFields(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *sdk.ListBackupSchedules200Response
+		input       *sdk.GetBackupSchedulesResponse
 		expected    schedulesDataSourceModel
 		isValid     bool
 	}{
 		{
 			"empty response",
-			&sdk.ListBackupSchedules200Response{
+			&sdk.GetBackupSchedulesResponse{
 				Items: &[]sdk.BackupSchedule{},
 			},
 			schedulesDataSourceModel{
@@ -38,7 +38,7 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 		},
 		{
 			"simple_values",
-			&sdk.ListBackupSchedules200Response{
+			&sdk.GetBackupSchedulesResponse{
 				Items: &[]sdk.BackupSchedule{
 					{
 						Id:      utils.Ptr(int64(5)),
