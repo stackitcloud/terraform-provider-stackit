@@ -186,8 +186,8 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	core.LogAndAddWarning(ctx, &resp.Diagnostics, "The stackit_public_ip_associate resource should never be used together with the stackit_public_ip resource.",
-		`Both resources have control of the stackit_network_interface association. If used together, this will lead to conflicts.`)
+	core.LogAndAddWarning(ctx, &resp.Diagnostics, "The stackit_public_ip_associate resource should not be used together with the stackit_public_ip resource if both of them are declaring the network_interface_id. ",
+		`If both resources declare the same network_interface_id, they have control of the stackit_network_interface association simultaneously and this might lead to conflicts.`)
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
