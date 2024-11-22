@@ -109,12 +109,11 @@ func (r *publicIpAssociateResource) Schema(_ context.Context, _ resource.SchemaR
 		"main": "Associates an existing public IP to a network interface. " +
 			"This is useful for situations where you have a pre-allocated public IP or unable to use the `stackit_public_ip` resource to create a new public IP. " +
 			"Must have a `region` specified in the provider configuration.",
-		"warning_message": "The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource if both of them are declaring the network_interface_id. " +
-			"If both resources declare the same network_interface_id, they have control of the `stackit_network_interface` association simultaneously and this might lead to conflicts.",
+		"warning_message": "The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same network interface, as they both have control of the network interface association and this will lead to conflicts.",
 	}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription(fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["warning_message"])),
-		Description:         fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["warning_message"]),
+		MarkdownDescription: features.AddBetaDescription(fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["warning_message"])),
+		Description:         fmt.Sprintf("%s\n\n%s", descriptions["main"], descriptions["warning_message"]),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`public_ip_id`,`network_interface_id`\".",
@@ -186,8 +185,8 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	core.LogAndAddWarning(ctx, &resp.Diagnostics, "The stackit_public_ip_associate resource should not be used together with the stackit_public_ip resource if both of them are declaring the network_interface_id. ",
-		`If both resources declare the same network_interface_id, they have control of the stackit_network_interface association simultaneously and this might lead to conflicts.`)
+	core.LogAndAddWarning(ctx, &resp.Diagnostics, "The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same network interface.",
+		"The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same network interface, as they both have control of the network interface association and this will lead to conflicts.")
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
