@@ -99,8 +99,9 @@ func (r *publicIpAssociateResource) Configure(ctx context.Context, req resource.
 		return
 	}
 
-	core.LogAndAddWarning(ctx, &resp.Diagnostics, "The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same network interface.",
-		"The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same network interface, as they both have control of the network interface association and this will lead to conflicts.")
+	core.LogAndAddWarning(ctx, &resp.Diagnostics, "The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same public IP or for the same network interface.",
+		"Using both resources together for the same Public IP WILL lead to conflicts! \n"+
+			"Also, these resources should not be used together for the same network interface, as they both have control of the network interface association and this will also lead to conflicts.")
 
 	r.client = apiClient
 	tflog.Info(ctx, "iaas client configured")
@@ -112,7 +113,9 @@ func (r *publicIpAssociateResource) Schema(_ context.Context, _ resource.SchemaR
 		"main": "Associates an existing public IP to a network interface. " +
 			"This is useful for situations where you have a pre-allocated public IP or unable to use the `stackit_public_ip` resource to create a new public IP. " +
 			"Must have a `region` specified in the provider configuration.",
-		"warning_message": "The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same network interface, as they both have control of the network interface association and this will lead to conflicts.",
+		"warning_message": "The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same public IP. \n" +
+			"Using both resources together for the same Public IP WILL lead to conflicts! \n" +
+			"Also, these resources should not be used together for the same network interface, as they both have control of the network interface association and this will also lead to conflicts.",
 	}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription(fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["warning_message"])),
