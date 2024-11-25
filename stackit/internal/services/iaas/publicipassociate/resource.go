@@ -100,8 +100,7 @@ func (r *publicIpAssociateResource) Configure(ctx context.Context, req resource.
 	}
 
 	core.LogAndAddWarning(ctx, &resp.Diagnostics, "The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same public IP or for the same network interface.",
-		"Using both resources together for the same Public IP WILL lead to conflicts! \n"+
-			"Also, these resources should not be used together for the same network interface, as they both have control of the network interface association and this will also lead to conflicts.")
+		"Using both resources together for the same public IP or network interface WILL lead to conflicts, as they both have control of the public IP and network interface association.")
 
 	r.client = apiClient
 	tflog.Info(ctx, "iaas client configured")
