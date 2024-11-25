@@ -99,6 +99,9 @@ func (r *publicIpAssociateResource) Configure(ctx context.Context, req resource.
 		return
 	}
 
+	core.LogAndAddWarning(ctx, &resp.Diagnostics, "The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same network interface.",
+		"The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same network interface, as they both have control of the network interface association and this will lead to conflicts.")
+
 	r.client = apiClient
 	tflog.Info(ctx, "iaas client configured")
 }
@@ -184,9 +187,6 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
-
-	core.LogAndAddWarning(ctx, &resp.Diagnostics, "The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same network interface.",
-		"The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same network interface, as they both have control of the network interface association and this will lead to conflicts.")
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
