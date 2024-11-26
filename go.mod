@@ -7,7 +7,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/terraform-plugin-framework v1.13.0
-	github.com/hashicorp/terraform-plugin-framework-validators v0.13.0
+	github.com/hashicorp/terraform-plugin-framework-validators v0.15.0
 	github.com/hashicorp/terraform-plugin-go v0.25.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.11.0
