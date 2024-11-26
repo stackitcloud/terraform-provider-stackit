@@ -12,7 +12,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -53,7 +52,7 @@ var networkAreaRouteResource = map[string]string{
 var networkInterfaceResource = map[string]string{
 	"project_id": testutil.ProjectId,
 	"network_id": networkResource["network_id"],
-	"name":       "name",
+	"name":       fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha)),
 }
 
 // Volume resource data
@@ -106,6 +105,14 @@ var publicIpResource = map[string]string{
 var keyPairResource = map[string]string{
 	"name":           "key-pair-name",
 	"public_key":     `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIDsPd27M449akqCtdFg2+AmRVJz6eWio0oMP9dVg7XZ`,
+	"label1":         "value1",
+	"label1-updated": "value1-updated",
+}
+
+// Virtual IP resource data
+var virtualIpResource = map[string]string{
+	"project_id":     testutil.ProjectId,
+	"name":           fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 	"label1":         "value1",
 	"label1-updated": "value1-updated",
 }
@@ -304,6 +311,37 @@ func serviceAccountAttachmentResourceConfig() string {
 	)
 }
 
+func virtualIPResourceConfig(labelValue string) string {
+	// Network resource name must match the one from "networkResourceConfig"
+	return fmt.Sprintf(`
+				resource "stackit_virtual_ip" "virtual_ip" {
+					project_id = "%s"
+					network_id = stackit_network.network.network_id
+					name = "%s"
+					labels = {
+						"label1" = "%s"
+					}
+				}
+				`,
+		testutil.ProjectId,
+		virtualIpResource["name"],
+		labelValue,
+	)
+}
+
+func virtualIPMemberResourceConfig() string {
+	return fmt.Sprintf(`
+				resource "stackit_virtual_ip_member" "virtual_ip_member" {
+					project_id = "%s"
+					network_id = stackit_network.network.network_id
+					virtual_ip_id = stackit_virtual_ip.virtual_ip.virtual_ip_id
+					network_interface_id = stackit_network_interface.network_interface.network_interface_id
+				}
+				`,
+		testutil.ProjectId,
+	)
+}
+
 func testAccNetworkAreaConfig(areaname, networkranges, routeLabelValue string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
@@ -351,6 +389,16 @@ func testAccKeyPairConfig(keyPairResourceConfig string) string {
 	return fmt.Sprintf("%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		keyPairResourceConfig,
+	)
+}
+
+func testAccVirtualIPConfig(labelValue string) string {
+	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s\n\n%s",
+		testutil.IaaSProviderConfig(),
+		networkResourceConfig(networkResource["name"], fmt.Sprintf(`["%s", "%s"]`, networkResource["nameserver0"], networkResource["nameserver1"])),
+		networkInterfaceResourceConfig(networkInterfaceResource["name"]),
+		virtualIPResourceConfig(labelValue),
+		virtualIPMemberResourceConfig(),
 	)
 }
 
@@ -1282,6 +1330,105 @@ func TestAccKeyPair(t *testing.T) {
 	})
 }
 
+func TestAccVirtualIP(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckIaaSNetworkDestroy, // Virtual IP is deleted with the network
+		Steps: []resource.TestStep{
+
+			// Creation
+			{
+				Config: testAccVirtualIPConfig(virtualIpResource["label1"]),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Virtual IP
+					resource.TestCheckResourceAttr("stackit_virtual_ip.virtual_ip", "project_id", virtualIpResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_virtual_ip.virtual_ip", "labels.label1", virtualIpResource["label1"]),
+					resource.TestCheckResourceAttr("stackit_virtual_ip.virtual_ip", "name", virtualIpResource["name"]),
+					resource.TestCheckResourceAttrSet("stackit_virtual_ip.virtual_ip", "virtual_ip_id"),
+					resource.TestCheckResourceAttrSet("stackit_virtual_ip.virtual_ip", "ip"),
+					resource.TestCheckResourceAttrPair("stackit_virtual_ip.virtual_ip", "network_id", "stackit_network.network", "network_id"),
+
+					// Virtual IP member
+					resource.TestCheckResourceAttrPair(
+						"stackit_virtual_ip_member.virtual_ip_member", "project_id",
+						"stackit_virtual_ip.virtual_ip", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_virtual_ip_member.virtual_ip_member", "network_id",
+						"stackit_virtual_ip.virtual_ip", "network_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_virtual_ip_member.virtual_ip_member", "virtual_ip_id",
+						"stackit_virtual_ip.virtual_ip", "virtual_ip_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_virtual_ip_member.virtual_ip_member", "network_interface_id",
+						"stackit_network_interface.network_interface", "network_interface_id",
+					),
+				),
+			},
+			// Data source
+			{
+				Config: fmt.Sprintf(`
+					%s
+
+					data "stackit_virtual_ip" "virtual_ip" {
+						project_id   = stackit_virtual_ip.virtual_ip.project_id
+						network_id   = stackit_virtual_ip.virtual_ip.network_id
+						virtual_ip_id = stackit_virtual_ip.virtual_ip.virtual_ip_id
+					}
+					`,
+					testAccVirtualIPConfig(virtualIpResource["label1"]),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("data.stackit_virtual_ip.virtual_ip", "project_id", virtualIpResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_virtual_ip.virtual_ip", "virtual_ip_id",
+						"data.stackit_virtual_ip.virtual_ip", "virtual_ip_id",
+					),
+					resource.TestCheckResourceAttr("stackit_virtual_ip.virtual_ip", "labels.label1", virtualIpResource["label1"]),
+					resource.TestCheckResourceAttr("stackit_virtual_ip.virtual_ip", "name", virtualIpResource["name"]),
+					resource.TestCheckResourceAttrPair("stackit_virtual_ip.virtual_ip", "ip", "data.stackit_virtual_ip.virtual_ip", "ip"),
+					resource.TestCheckResourceAttrPair("stackit_virtual_ip.virtual_ip", "network_id", "data.stackit_virtual_ip.virtual_ip", "network_id"),
+				),
+			},
+			// Import
+			{
+				ResourceName: "stackit_virtual_ip.virtual_ip",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_virtual_ip.virtual_ip"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_virtual_ip.virtual_ip")
+					}
+					networkId, ok := r.Primary.Attributes["network_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_id")
+					}
+					virtualIpId, ok := r.Primary.Attributes["virtual_ip_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute virtual_ip_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, networkId, virtualIpId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				Config: testAccVirtualIPConfig(virtualIpResource["label1-updated"]),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_virtual_ip.virtual_ip", "project_id", virtualIpResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_virtual_ip.virtual_ip", "labels.label1", virtualIpResource["label1-updated"]),
+					resource.TestCheckResourceAttr("stackit_virtual_ip.virtual_ip", "name", virtualIpResource["name"]),
+					resource.TestCheckResourceAttrSet("stackit_virtual_ip.virtual_ip", "virtual_ip_id"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
 func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *iaas.APIClient
@@ -1378,27 +1525,19 @@ func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 
 func testAccCheckServerDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var alphaClient *iaas.APIClient
 	var client *iaas.APIClient
 	var err error
-	var alphaErr error
 	if testutil.IaaSCustomEndpoint == "" {
-		alphaClient, alphaErr = iaas.NewAPIClient(
-			config.WithRegion("eu01"),
-		)
 		client, err = iaas.NewAPIClient(
 			config.WithRegion("eu01"),
 		)
 	} else {
-		alphaClient, alphaErr = iaas.NewAPIClient(
-			config.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
 		client, err = iaas.NewAPIClient(
 			config.WithRegion("eu01"),
 		)
 	}
-	if err != nil || alphaErr != nil {
-		return fmt.Errorf("creating client: %w, %w", err, alphaErr)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
 	}
 
 	// Servers
@@ -1413,7 +1552,7 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		serversToDestroy = append(serversToDestroy, serverId)
 	}
 
-	serversResp, err := alphaClient.ListServersExecute(ctx, testutil.ProjectId)
+	serversResp, err := client.ListServersExecute(ctx, testutil.ProjectId)
 	if err != nil {
 		return fmt.Errorf("getting serversResp: %w", err)
 	}
@@ -1424,7 +1563,7 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 			continue
 		}
 		if utils.Contains(serversToDestroy, *servers[i].Id) {
-			err := alphaClient.DeleteServerExecute(ctx, testutil.ProjectId, *servers[i].Id)
+			err := client.DeleteServerExecute(ctx, testutil.ProjectId, *servers[i].Id)
 			if err != nil {
 				return fmt.Errorf("destroying server %s during CheckDestroy: %w", *servers[i].Id, err)
 			}
@@ -1560,14 +1699,14 @@ func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaasalpha.APIClient
+	var client *iaas.APIClient
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaasalpha.NewAPIClient(
+		client, err = iaas.NewAPIClient(
 			config.WithRegion("eu01"),
 		)
 	} else {
-		client, err = iaasalpha.NewAPIClient(
+		client, err = iaas.NewAPIClient(
 			config.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
@@ -1601,5 +1740,53 @@ func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 			}
 		}
 	}
+	return nil
+}
+
+func testAccCheckIaaSNetworkDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var client *iaas.APIClient
+	var err error
+	if testutil.IaaSCustomEndpoint == "" {
+		client, err = iaas.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
+	} else {
+		client, err = iaas.NewAPIClient(
+			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	networksToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_network" {
+			continue
+		}
+		// network terraform ID: "[project_id],[network_id]"
+		networkId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		networksToDestroy = append(networksToDestroy, networkId)
+	}
+
+	networksResp, err := client.ListNetworksExecute(ctx, testutil.ProjectId)
+	if err != nil {
+		return fmt.Errorf("getting networksResp: %w", err)
+	}
+
+	networks := *networksResp.Items
+	for i := range networks {
+		if networks[i].NetworkId == nil {
+			continue
+		}
+		if utils.Contains(networksToDestroy, *networks[i].NetworkId) {
+			err := client.DeleteNetworkExecute(ctx, testutil.ProjectId, *networks[i].NetworkId)
+			if err != nil {
+				return fmt.Errorf("destroying network %s during CheckDestroy: %w", *networks[i].NetworkId, err)
+			}
+		}
+	}
+
 	return nil
 }
