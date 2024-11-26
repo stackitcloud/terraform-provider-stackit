@@ -271,7 +271,7 @@ func (r *virtualIPResource) Delete(ctx context.Context, req resource.DeleteReque
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *virtualIPResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *virtualIPResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update is not supported, all fields require replace
 }
 

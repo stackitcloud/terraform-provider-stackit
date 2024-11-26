@@ -395,7 +395,7 @@ func testAccKeyPairConfig(keyPairResourceConfig string) string {
 func testAccVirtualIPConfig(labelValue string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
-		networkResourceConfig(networkResource["name"], fmt.Sprintf(`["%s", "%s"]`, networkResource["nameserver0"], networkResource["nameserver1"])),
+		networkResourceConfig(networkResource["name"], fmt.Sprintf(`[%q, %q]`, networkResource["nameserver0"], networkResource["nameserver1"])),
 		networkInterfaceResourceConfig(networkInterfaceResource["name"]),
 		virtualIPResourceConfig(labelValue),
 		virtualIPMemberResourceConfig(),
@@ -1533,7 +1533,7 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		)
 	} else {
 		client, err = iaas.NewAPIClient(
-			config.WithRegion("eu01"),
+			config.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
 	if err != nil {
