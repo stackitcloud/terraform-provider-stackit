@@ -14,13 +14,12 @@ linters-settings:
     # it's a comma-separated list of prefixes
     local-prefixes: github.com/freiheit-com/nmww
   depguard:
-    list-type: blacklist
-    include-go-root: false
-    packages:
-      - github.com/stretchr/testify
-    packages-with-error-message:
-      # specify an error message to output when a blacklisted package is used
-      - github.com/stretchr/testify: "do not use a testing framework"
+    rules:
+      main:
+        list-mode: lax # Everything is allowed unless it is denied
+        deny:
+          - pkg: "github.com/stretchr/testify"
+            desc: Do not use a testing framework
   misspell:
     # Correct spellings using locale preferences for US or UK.
     # Default is to use a neutral variety of English.
@@ -75,7 +74,6 @@ linters:
     - unused
     # additional linters
     - errorlint
-    - exportloopref
     - gochecknoinits
     - gocritic
     - gofmt
@@ -91,9 +89,6 @@ linters:
     - forcetypeassert
     - errcheck
   disable:
-    - structcheck # deprecated
-    - deadcode # deprecated
-    - varcheck # deprecated
     - noctx # false positive: finds errors with http.NewRequest that dont make sense
     - unparam # false positives
 issues:

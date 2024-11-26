@@ -854,7 +854,7 @@ func TestUpdateNetworkRanges(t *testing.T) {
 			networkRangesStates["pr-3"] = true
 
 			// Handler for getting all network ranges
-			getAllNetworkRangesHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			getAllNetworkRangesHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				if tt.getAllNetworkRangesFails {
 					w.WriteHeader(http.StatusInternalServerError)

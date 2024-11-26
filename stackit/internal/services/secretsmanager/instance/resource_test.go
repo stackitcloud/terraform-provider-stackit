@@ -345,7 +345,7 @@ func TestUpdateACLs(t *testing.T) {
 			aclsStates["acl-3"] = true
 
 			// Handler for getting all ACLs
-			getAllACLsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			getAllACLsHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				if tt.getAllACLsFails {
 					w.WriteHeader(http.StatusInternalServerError)
