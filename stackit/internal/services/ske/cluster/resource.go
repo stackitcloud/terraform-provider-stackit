@@ -485,6 +485,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 									"value": schema.StringAttribute{
 										Description: "Taint value corresponding to the taint key.",
 										Optional:    true,
+										Computed:    true,
 									},
 								},
 							},
