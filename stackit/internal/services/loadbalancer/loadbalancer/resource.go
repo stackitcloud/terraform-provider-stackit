@@ -262,33 +262,7 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 		MarkdownDescription: `
 ## Setting up supporting infrastructure` + "\n" + `
 
-### Configuring an OpenStack provider` + "\n" + `
-
-To automate the creation of load balancers, OpenStack can be used to setup the supporting infrastructure.
-To set up the OpenStack provider, you can create a token through the STACKIT Portal, in your project's Infrastructure API page.
-There, the OpenStack user domain name, username, and password are generated and can be obtained. The provider can then be configured as follows:` + "\n" +
-			"```terraform" + `
-terraform {
-	required_providers {
-		(...)
-		openstack = {
-			source = "terraform-provider-openstack/openstack"
-		}
-	}
-}
-
-provider "openstack" {
-	user_domain_name = "{OpenStack user domain name}"
-	user_name        = "{OpenStack username}"
-	password         = "{OpenStack password}"
-	region           = "RegionOne"
-	auth_url         = "https://keystone.api.iaas.eu01.stackit.cloud/v3"
-}
-` + "\n```" + `
-
-### Configuring the supporting infrastructure
-
-The example below uses OpenStack to create the network, router, a public IP address and a compute instance.
+The example below creates the supporting infrastructure using the STACKIT Terraform provider, including the network, network interface, a public IP address and server resources.
 `,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
