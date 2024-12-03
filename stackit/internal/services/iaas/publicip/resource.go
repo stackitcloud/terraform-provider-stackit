@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -42,6 +43,7 @@ type Model struct {
 	PublicIpId         types.String `tfsdk:"public_ip_id"`
 	Ip                 types.String `tfsdk:"ip"`
 	NetworkInterfaceId types.String `tfsdk:"network_interface_id"`
+	DisableAssociation types.Bool   `tfsdk:"disable_association"`
 	Labels             types.Map    `tfsdk:"labels"`
 }
 
@@ -153,9 +155,19 @@ func (r *publicIpResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"network_interface_id": schema.StringAttribute{
 				Description: "Associates the public IP with a network interface or a virtual IP (ID).",
 				Optional:    true,
+				Computed:    true,
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"disable_association": schema.BoolAttribute{
+				Description: "Disables the association of the public IP with a network interface or a virtual IP.",
+				Optional:    true,
+				Validators: []validator.Bool{
+					boolvalidator.ConflictsWith(
+						path.MatchRoot("network_interface_id"),
+					),
 				},
 			},
 			"labels": schema.MapAttribute{
@@ -188,7 +200,6 @@ func (r *publicIpResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Create new public IP
-
 	publicIp, err := r.client.CreatePublicIP(ctx, projectId).CreatePublicIPPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating public IP", fmt.Sprintf("Calling API: %v", err))
@@ -424,8 +435,19 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaas.UpdatePublicIPPayload{
-		Labels:           &labels,
-		NetworkInterface: iaas.NewNullableString(conversion.StringValueToPointer(model.NetworkInterfaceId)),
-	}, nil
+	payload := &iaas.UpdatePublicIPPayload{
+		Labels: &labels,
+	}
+
+	if !model.NetworkInterfaceId.IsUnknown() {
+		payload.NetworkInterface = iaas.NewNullableString(conversion.StringValueToPointer(model.NetworkInterfaceId))
+	}
+
+	if model.DisableAssociation.ValueBool() {
+		payload.NetworkInterface = iaas.NewNullableString(nil)
+	}
+
+	tflog.Warn(ctx, fmt.Sprintf("payload.NetworkInterface: %v", payload.NetworkInterface))
+
+	return payload, nil
 }
