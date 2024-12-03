@@ -187,6 +187,12 @@ github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.3.0 h1:Tlps8vBQm
 github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.3.0/go.mod h1:+807U5ZLXns+CEbyIg483wNEwV10vaN6GjMnSZhw/64=
 github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v0.4.0 h1:K5fVTcJxjOVwJBa3kiWRsYNAq+I3jAYdU1U+f6no5lE=
 github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v0.4.0/go.mod h1:zyg0hpiNdZLRbelkJb2KDf9OHQKLqqcTpePQ1qHL5dE=
+github.com/stackitcloud/stackit-sdk-go/services/serverupdate v0.1.0 h1:jTGCE71TX/Hafp6FqM/wIiHcTWreAktnmqEi4g97SGk=
+github.com/stackitcloud/stackit-sdk-go/services/serverupdate v0.1.0/go.mod h1:etidTptNDvvCPA1FGC7T9DXHxXA4bYW3qIUzWG8wVcc=
+github.com/stackitcloud/stackit-sdk-go/services/serverupdate v0.2.1 h1:fzYC2JifJUJ37mAKjGOEbNFjgK+DQRwjkoJ7NDXaQvQ=
+github.com/stackitcloud/stackit-sdk-go/services/serverupdate v0.2.1/go.mod h1:etidTptNDvvCPA1FGC7T9DXHxXA4bYW3qIUzWG8wVcc=
+github.com/stackitcloud/stackit-sdk-go/services/serverupdate v0.2.2 h1:HXZ/hjO3shFPLrrmSb1G9eXDCSYrMeYveklm6rEUd0Y=
+github.com/stackitcloud/stackit-sdk-go/services/serverupdate v0.2.2/go.mod h1:etidTptNDvvCPA1FGC7T9DXHxXA4bYW3qIUzWG8wVcc=
 github.com/stackitcloud/stackit-sdk-go/services/ske v0.20.0 h1:ssEywzCS8IdRtzyxweLUKBG5GFbgwjNWJh++wGqigJM=
 github.com/stackitcloud/stackit-sdk-go/services/ske v0.20.0/go.mod h1:A4+9KslxCA31JvxnT+O/GC67eAOdw+iqhBzewZZaCD0=
 github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.8.0 h1:1ByAgO10fxWF+UZ+RkJeAiv+h5AgqrzYz6r86Pn/BWE=
