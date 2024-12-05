@@ -26,6 +26,8 @@ import (
 	iaasSecurityGroupRule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/securitygrouprule"
 	iaasServer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/server"
 	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
+	iaasVirtualIP "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/virtualip"
+	iaasVirtualIPMember "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/virtualipmember"
 	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
 	iaasVolumeAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volumeattach"
 	loadBalancerCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/credential"
@@ -415,6 +417,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasVolume.NewVolumeDataSource,
 		iaasPublicIp.NewPublicIpDataSource,
 		iaasKeyPair.NewKeyPairDataSource,
+		iaasVirtualIP.NewVirtualIPDataSource,
 		iaasServer.NewServerDataSource,
 		iaasSecurityGroup.NewSecurityGroupDataSource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
@@ -469,6 +472,8 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasVolumeAttach.NewVolumeAttachResource,
 		iaasNetworkInterfaceAttach.NewNetworkInterfaceAttachResource,
 		iaasServiceAccountAttach.NewServiceAccountAttachResource,
+		iaasVirtualIP.NewVirtualIPResource,
+		iaasVirtualIPMember.NewVirtualIPMemberResource,
 		iaasPublicIpAssociate.NewPublicIpAssociateResource,
 		iaasServer.NewServerResource,
 		iaasSecurityGroup.NewSecurityGroupResource,
