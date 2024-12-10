@@ -63,7 +63,6 @@ Deprecated as of Kubernetes 1.25 and later
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`name`".
-- `kube_config` (String, Sensitive, Deprecated) Static token kubeconfig used for connecting to the cluster. This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see [How to rotate SKE credentials](https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).
 - `kubernetes_version_used` (String) Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html).
 
 <a id="nestedatt--node_pools"></a>
