@@ -14,6 +14,7 @@ import (
 	argusScrapeConfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/scrapeconfig"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
+	iaasImage "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/image"
 	iaasKeyPair "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/keypair"
 	iaasNetwork "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network"
 	iaasNetworkArea "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarea"
@@ -408,6 +409,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		argusScrapeConfig.NewScrapeConfigDataSource,
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
+		iaasImage.NewImageDataSource,
 		iaasNetwork.NewNetworkDataSource,
 		iaasNetworkArea.NewNetworkAreaDataSource,
 		iaasNetworkAreaRoute.NewNetworkAreaRouteDataSource,
@@ -459,6 +461,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		argusScrapeConfig.NewScrapeConfigResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
+		iaasImage.NewImageResource,
 		iaasNetwork.NewNetworkResource,
 		iaasNetworkArea.NewNetworkAreaResource,
 		iaasNetworkAreaRoute.NewNetworkAreaRouteResource,

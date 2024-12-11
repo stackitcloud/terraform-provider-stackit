@@ -110,6 +110,19 @@ var keyPairResource = map[string]string{
 	"label1-updated": "value1-updated",
 }
 
+// Volume resource data
+var imageResource = map[string]string{
+	"project_id":      testutil.ProjectId,
+	"name":            fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha)),
+	"disk_format":     "qcow2",
+	"local_file_path": testutil.TestImageLocalFilePath,
+	"min_disk_size":   "1",
+	"min_ram":         "1",
+	"protected":       "true",
+	"label1":          "value1",
+	"boot_menu":       "true",
+}
+
 func networkResourceConfig(name, nameservers string) string {
 	return fmt.Sprintf(`
 				resource "stackit_network" "network" {
@@ -304,6 +317,36 @@ func serviceAccountAttachmentResourceConfig() string {
 	)
 }
 
+func imageResourceConfig(name string) string {
+	return fmt.Sprintf(`
+				resource "stackit_image" "image" {
+					project_id = "%s"
+					name = "%s"
+					disk_format = "%s"
+					local_file_path = "%s"
+					min_disk_size = %s
+					min_ram = %s
+					protected = %s
+					labels = {
+						"label1" = "%s"
+					}
+					config = {
+						boot_menu = %s
+					}
+				}
+				`,
+		imageResource["project_id"],
+		name,
+		imageResource["disk_format"],
+		imageResource["local_file_path"],
+		imageResource["min_disk_size"],
+		imageResource["min_ram"],
+		imageResource["protected"],
+		imageResource["label1"],
+		imageResource["boot_menu"],
+	)
+}
+
 func testAccNetworkAreaConfig(areaname, networkranges, routeLabelValue string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
@@ -351,6 +394,13 @@ func testAccKeyPairConfig(keyPairResourceConfig string) string {
 	return fmt.Sprintf("%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		keyPairResourceConfig,
+	)
+}
+
+func testAccImageConfig(name string) string {
+	return fmt.Sprintf("%s\n\n%s",
+		testutil.IaaSProviderConfig(),
+		imageResourceConfig(name),
 	)
 }
 
@@ -1282,6 +1332,96 @@ func TestAccKeyPair(t *testing.T) {
 	})
 }
 
+func TestAccImage(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckIaaSImageDestroy,
+		Steps: []resource.TestStep{
+
+			// Creation
+			{
+				Config: testAccImageConfig(imageResource["name"]),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_image.image", "project_id", imageResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
+					resource.TestCheckResourceAttr("stackit_image.image", "name", imageResource["name"]),
+					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", imageResource["disk_format"]),
+					resource.TestCheckResourceAttr("stackit_image.image", "min_disk_size", imageResource["min_disk_size"]),
+					resource.TestCheckResourceAttr("stackit_image.image", "min_ram", imageResource["min_ram"]),
+					resource.TestCheckResourceAttr("stackit_image.image", "protected", imageResource["protected"]),
+					resource.TestCheckResourceAttr("stackit_image.image", "labels.label1", imageResource["label1"]),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.boot_menu", imageResource["boot_menu"]),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
+				),
+			},
+			// Data source
+			{
+				Config: fmt.Sprintf(`
+					%s
+
+					data "stackit_image" "image" {
+						project_id = stackit_image.image.project_id
+						image_id = stackit_image.image.image_id
+					}
+					`,
+					testAccImageConfig(
+						fmt.Sprintf(`
+							resource "stackit_image" "image" {
+								project_id = "%s"
+								labels = {
+									"label1" = "%s"
+								}
+						}
+						`,
+							imageResource["project_id"],
+							imageResource["label1"],
+						),
+					),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("data.stackit_image.image", "project_id", imageResource["project_id"]),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "image_id", "stackit_image.image", "image_id"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "name", "stackit_image.image", "name"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "disk_format", "stackit_image.image", "disk_format"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "min_disk_size", "stackit_image.image", "min_disk_size"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "min_ram", "stackit_image.image", "min_ram"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "protected", "stackit_image.image", "protected"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "labels.label1", "stackit_image.image", "labels.label1"),
+				),
+			},
+			// Import
+			{
+				ResourceName: "stackit_image.image",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_image.image"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_image.image")
+					}
+					imageId, ok := r.Primary.Attributes["image_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute image_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, imageId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				Config: testAccImageConfig(fmt.Sprintf("%s-updated", imageResource["name"])),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_image.image", "name", fmt.Sprintf("%s-updated", imageResource["name"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "project_id", imageResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_image.image", "labels.label1", imageResource["label1"]),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
 func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *iaas.APIClient
@@ -1560,14 +1700,14 @@ func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaasalpha.APIClient
+	var client *iaas.APIClient
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaasalpha.NewAPIClient(
+		client, err = iaas.NewAPIClient(
 			config.WithRegion("eu01"),
 		)
 	} else {
-		client, err = iaasalpha.NewAPIClient(
+		client, err = iaas.NewAPIClient(
 			config.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
@@ -1598,6 +1738,53 @@ func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 			err := client.DeleteKeyPairExecute(ctx, *keyPairs[i].Name)
 			if err != nil {
 				return fmt.Errorf("destroying key pair %s during CheckDestroy: %w", *keyPairs[i].Name, err)
+			}
+		}
+	}
+	return nil
+}
+
+func testAccCheckIaaSImageDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var client *iaasalpha.APIClient
+	var err error
+	if testutil.IaaSCustomEndpoint == "" {
+		client, err = iaasalpha.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
+	} else {
+		client, err = iaasalpha.NewAPIClient(
+			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	imagesToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_image" {
+			continue
+		}
+		// Image terraform ID: "[project_id],[image_id]"
+		imageId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		imagesToDestroy = append(imagesToDestroy, imageId)
+	}
+
+	imagesResp, err := client.ListImagesExecute(ctx, testutil.ProjectId)
+	if err != nil {
+		return fmt.Errorf("getting images: %w", err)
+	}
+
+	images := *imagesResp.Items
+	for i := range images {
+		if images[i].Id == nil {
+			continue
+		}
+		if utils.Contains(imagesToDestroy, *images[i].Id) {
+			err := client.DeleteImageExecute(ctx, testutil.ProjectId, *images[i].Id)
+			if err != nil {
+				return fmt.Errorf("destroying image %s during CheckDestroy: %w", *images[i].Id, err)
 			}
 		}
 	}

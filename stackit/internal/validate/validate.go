@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -263,6 +264,24 @@ func Rrule() *Validator {
 			value = strings.ReplaceAll(value, " ", "\n")
 
 			if _, err := rrule.StrToRRuleSet(value); err != nil {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
+
+func FileExists() *Validator {
+	description := "file must exist"
+
+	return &Validator{
+		description: description,
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			_, err := os.Stat(req.ConfigValue.ValueString())
+			if err != nil {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
 					description,
