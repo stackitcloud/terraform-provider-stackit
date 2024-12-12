@@ -15,7 +15,7 @@ const Separator = ","
 
 type ProviderData struct {
 	RoundTripper                    http.RoundTripper
-	ServiceAccountEmail             string // Deprecated: ServiceAccountEmail is not required and will be removed after 12th July 2025.
+	ServiceAccountEmail             string // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025.
 	Region                          string
 	ArgusCustomEndpoint             string
 	AuthorizationCustomEndpoint     string
