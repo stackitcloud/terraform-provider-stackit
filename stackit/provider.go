@@ -94,7 +94,7 @@ func (p *Provider) Metadata(_ context.Context, _ provider.MetadataRequest, resp 
 
 type providerModel struct {
 	CredentialsFilePath             types.String `tfsdk:"credentials_path"`
-	ServiceAccountEmail             types.String `tfsdk:"service_account_email"`
+	ServiceAccountEmail             types.String `tfsdk:"service_account_email"` // Deprecated: ServiceAccountEmail is not required and will be removed after 12th July 2025
 	ServiceAccountKey               types.String `tfsdk:"service_account_key"`
 	ServiceAccountKeyPath           types.String `tfsdk:"service_account_key_path"`
 	PrivateKey                      types.String `tfsdk:"private_key"`
@@ -167,8 +167,9 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Description: descriptions["credentials_path"],
 			},
 			"service_account_email": schema.StringAttribute{
-				Optional:    true,
-				Description: descriptions["service_account_email"],
+				Optional:           true,
+				Description:        descriptions["service_account_email"],
+				DeprecationMessage: "service_account_email has been deprecated because it is not required. Will be removed after July 12th 2025.",
 			},
 			"service_account_token": schema.StringAttribute{
 				Optional:    true,
@@ -302,10 +303,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	var providerData core.ProviderData
 	if !(providerConfig.CredentialsFilePath.IsUnknown() || providerConfig.CredentialsFilePath.IsNull()) {
 		sdkConfig.CredentialsFilePath = providerConfig.CredentialsFilePath.ValueString()
-	}
-	if !(providerConfig.ServiceAccountEmail.IsUnknown() || providerConfig.ServiceAccountEmail.IsNull()) {
-		providerData.ServiceAccountEmail = providerConfig.ServiceAccountEmail.ValueString()
-		sdkConfig.ServiceAccountEmail = providerConfig.ServiceAccountEmail.ValueString()
 	}
 	if !(providerConfig.ServiceAccountKey.IsUnknown() || providerConfig.ServiceAccountKey.IsNull()) {
 		sdkConfig.ServiceAccountKey = providerConfig.ServiceAccountKey.ValueString()
