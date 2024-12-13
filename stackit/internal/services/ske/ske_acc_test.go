@@ -254,7 +254,6 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", clusterResource["maintenance_enable_machine_image_version_updates"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end"]),
-					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster", "kube_config"),
 
 					// Kubeconfig
 
@@ -267,7 +266,6 @@ func TestAccSKE(t *testing.T) {
 						"stackit_ske_cluster.cluster", "name",
 					),
 					resource.TestCheckResourceAttr("stackit_ske_kubeconfig.kubeconfig", "expiration", clusterResource["kubeconfig_expiration"]),
-					resource.TestCheckResourceAttrSet("stackit_ske_kubeconfig.kubeconfig", "kube_config"),
 					resource.TestCheckResourceAttrSet("stackit_ske_kubeconfig.kubeconfig", "expires_at"),
 
 					// Minimal cluster
@@ -295,7 +293,6 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "maintenance.enable_machine_image_version_updates"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "maintenance.start"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster_min", "maintenance.end"),
-					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster_min", "kube_config"),
 				),
 			},
 			// 2) Data source
@@ -362,7 +359,6 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end"]),
 
-					resource.TestCheckNoResourceAttr("data.stackit_ske_cluster.cluster", "kube_config"), // when using the kubeconfig resource, the kubeconfig field becomes null
 
 					// Minimal cluster
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "name", clusterResource["name_min"]),
@@ -388,7 +384,6 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "maintenance.enable_machine_image_version_updates"),
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "maintenance.start"),
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "maintenance.end"),
-					resource.TestCheckNoResourceAttr("data.stackit_ske_cluster.cluster_min", "kube_config"),
 				),
 			},
 			// 3) Import cluster
@@ -412,7 +407,7 @@ func TestAccSKE(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				// The fields are not provided in the SKE API when disabled, although set actively.
-				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config", "node_pools.0.os_version_min", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%", "extensions.dns.enabled", "extensions.dns.zones", "extensions.dns.zones.#", "extensions.dns.zones.%"},
+				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "node_pools.0.os_version_min", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled", "extensions.acl.enabled", "extensions.acl.allowed_cidrs", "extensions.acl.allowed_cidrs.#", "extensions.acl.%", "extensions.dns.enabled", "extensions.dns.zones", "extensions.dns.zones.#", "extensions.dns.zones.%"},
 			},
 			// 4) Import minimal cluster
 			{
@@ -434,7 +429,7 @@ func TestAccSKE(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "kube_config", "node_pools.0.os_version_min"},
+				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "node_pools.0.os_version_min"},
 			},
 			// 5) Update kubernetes version, OS version and maintenance end
 			{
@@ -480,8 +475,6 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", clusterResource["maintenance_enable_machine_image_version_updates"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end_new"]),
-
-					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster", "kube_config"), // when using the kubeconfig resource, the kubeconfig field becomes null
 				),
 			},
 			// 6) Downgrade kubernetes and nodepool machine OS version
