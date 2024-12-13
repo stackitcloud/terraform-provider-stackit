@@ -169,7 +169,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"service_account_email": schema.StringAttribute{
 				Optional:           true,
 				Description:        descriptions["service_account_email"],
-				DeprecationMessage: "service_account_email has been deprecated because it is not required. Will be removed after June 12th 2025.",
+				DeprecationMessage: "The `service_account_email` field has been deprecated because it is not required. Will be removed after June 12th 2025.",
 			},
 			"service_account_token": schema.StringAttribute{
 				Optional:    true,
