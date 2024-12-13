@@ -359,7 +359,6 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end"]),
 
-
 					// Minimal cluster
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster_min", "name", clusterResource["name_min"]),
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster_min", "kubernetes_version_used"),
