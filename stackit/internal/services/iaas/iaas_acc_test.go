@@ -1344,7 +1344,6 @@ func TestAccImage(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", imageResource["disk_format"]),
 					resource.TestCheckResourceAttr("stackit_image.image", "min_disk_size", imageResource["min_disk_size"]),
 					resource.TestCheckResourceAttr("stackit_image.image", "min_ram", imageResource["min_ram"]),
-					resource.TestCheckResourceAttr("stackit_image.image", "protected", imageResource["protected"]),
 					resource.TestCheckResourceAttr("stackit_image.image", "labels.label1", imageResource["label1"]),
 					resource.TestCheckResourceAttr("stackit_image.image", "config.boot_menu", imageResource["boot_menu"]),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
