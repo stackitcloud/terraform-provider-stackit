@@ -241,7 +241,6 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			},
 			"protected": schema.BoolAttribute{
 				Description: "Whether the image is protected.",
-				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
