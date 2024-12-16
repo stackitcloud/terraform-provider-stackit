@@ -55,6 +55,17 @@ Optional:
 
 - `boot_menu` (Boolean) Enables the BIOS bootmenu.
 - `cdrom_bus` (String) Sets CDROM bus controller type.
+- `disk_bus` (String) Sets Disk bus controller type.
+- `nic_model` (String) Sets virtual network interface model.
+- `operating_system` (String) Enables operating system specific optimizations.
+- `operating_system_distro` (String) Operating system distribution.
+- `operating_system_version` (String) Version of the operating system.
+- `rescue_bus` (String) Sets the device bus when the image is used as a rescue image.
+- `rescue_device` (String) Sets the device when the image is used as a rescue image.
+- `secure_boot` (Boolean) Enables Secure Boot.
+- `uefi` (Boolean) Enables UEFI boot.
+- `video_model` (String) Sets Graphic device model.
+- `virtio_scsi` (Boolean) Enables the use of VirtIO SCSI to provide block device access. By default instances use VirtIO Block.
 
 
 <a id="nestedatt--checksum"></a>

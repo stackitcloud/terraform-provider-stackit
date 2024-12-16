@@ -167,6 +167,50 @@ func (r *imageDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 						Description: "Sets CDROM bus controller type.",
 						Computed:    true,
 					},
+					"disk_bus": schema.StringAttribute{
+						Description: "Sets Disk bus controller type.",
+						Computed:    true,
+					},
+					"nic_model": schema.StringAttribute{
+						Description: "Sets virtual network interface model.",
+						Computed:    true,
+					},
+					"operating_system": schema.StringAttribute{
+						Description: "Enables operating system specific optimizations.",
+						Computed:    true,
+					},
+					"operating_system_distro": schema.StringAttribute{
+						Description: "Operating system distribution.",
+						Computed:    true,
+					},
+					"operating_system_version": schema.StringAttribute{
+						Description: "Version of the operating system.",
+						Computed:    true,
+					},
+					"rescue_bus": schema.StringAttribute{
+						Description: "Sets the device bus when the image is used as a rescue image.",
+						Computed:    true,
+					},
+					"rescue_device": schema.StringAttribute{
+						Description: "Sets the device when the image is used as a rescue image.",
+						Computed:    true,
+					},
+					"secure_boot": schema.BoolAttribute{
+						Description: "Enables Secure Boot.",
+						Computed:    true,
+					},
+					"uefi": schema.BoolAttribute{
+						Description: "Enables UEFI boot.",
+						Computed:    true,
+					},
+					"video_model": schema.StringAttribute{
+						Description: "Sets Graphic device model.",
+						Computed:    true,
+					},
+					"virtio_scsi": schema.BoolAttribute{
+						Description: "Enables the use of VirtIO SCSI to provide block device access. By default instances use VirtIO Block.",
+						Computed:    true,
+					},
 				},
 			},
 			"checksum": schema.SingleNestedAttribute{
@@ -262,17 +306,17 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaasalpha.Image, model 
 	diags := diag.Diagnostics{}
 	if imageResp.Config != nil {
 		configModel.BootMenu = types.BoolPointerValue(imageResp.Config.BootMenu)
-		// configModel.CDROMBus = types.StringPointerValue(imageResp.Config.GetCdromBus()) // TODO: Wait for null pointer exception fix in SDK
-		// configModel.DiskBus = types.StringPointerValue(imageResp.Config.GetDiskBus()) // TODO: Wait for null pointer exception fix in SDK
-		// configModel.NICModel = types.StringPointerValue(imageResp.Config.GetNicModel()) // TODO: Wait for null pointer exception fix in SDK
+		configModel.CDROMBus = types.StringPointerValue(imageResp.Config.GetCdromBus())
+		configModel.DiskBus = types.StringPointerValue(imageResp.Config.GetDiskBus())
+		configModel.NICModel = types.StringPointerValue(imageResp.Config.GetNicModel())
 		configModel.OperatingSystem = types.StringPointerValue(imageResp.Config.OperatingSystem)
-		// configModel.OperatingSystemDistro = types.StringPointerValue(imageResp.Config.GetOperatingSystemDistro()) // TODO: Wait for null pointer exception fix in SDK
-		// configModel.OperatingSystemVersion = types.StringPointerValue(imageResp.Config.GetOperatingSystemVersion()) // TODO: Wait for null pointer exception fix in SDK
-		// configModel.RescueBus = types.StringPointerValue(imageResp.Config.GetRescueBus()) // TODO: Wait for null pointer exception fix in SDK
-		// configModel.RescueDevice = types.StringPointerValue(imageResp.Config.GetRescueDevice()) // TODO: Wait for null pointer exception fix in SDK
+		configModel.OperatingSystemDistro = types.StringPointerValue(imageResp.Config.GetOperatingSystemDistro())
+		configModel.OperatingSystemVersion = types.StringPointerValue(imageResp.Config.GetOperatingSystemVersion())
+		configModel.RescueBus = types.StringPointerValue(imageResp.Config.GetRescueBus())
+		configModel.RescueDevice = types.StringPointerValue(imageResp.Config.GetRescueDevice())
 		configModel.SecureBoot = types.BoolPointerValue(imageResp.Config.SecureBoot)
 		configModel.UEFI = types.BoolPointerValue(imageResp.Config.Uefi)
-		// configModel.VideoModel = types.StringPointerValue(imageResp.Config.GetVideoModel()) // TODO: Wait for null pointer exception fix in SDK
+		configModel.VideoModel = types.StringPointerValue(imageResp.Config.GetVideoModel())
 		configModel.VirtioScsi = types.BoolPointerValue(imageResp.Config.VirtioScsi)
 
 		configObject, diags = types.ObjectValue(configTypes, map[string]attr.Value{

@@ -258,6 +258,9 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Description: "Properties to set hardware and scheduling settings for an image.",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"boot_menu": schema.BoolAttribute{
 						Description: "Enables the BIOS bootmenu.",
@@ -276,7 +279,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						},
 					},
 					"disk_bus": schema.StringAttribute{
-						Description: "TODO.",
+						Description: "Sets Disk bus controller type.",
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.String{
@@ -284,7 +287,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						},
 					},
 					"nic_model": schema.StringAttribute{
-						Description: "TODO.",
+						Description: "Sets virtual network interface model.",
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.String{
@@ -292,7 +295,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						},
 					},
 					"operating_system": schema.StringAttribute{
-						Description: "TODO.",
+						Description: "Enables operating system specific optimizations.",
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.String{
@@ -300,7 +303,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						},
 					},
 					"operating_system_distro": schema.StringAttribute{
-						Description: "TODO.",
+						Description: "Operating system distribution.",
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.String{
@@ -308,7 +311,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						},
 					},
 					"operating_system_version": schema.StringAttribute{
-						Description: "TODO.",
+						Description: "Version of the operating system.",
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.String{
@@ -316,7 +319,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						},
 					},
 					"rescue_bus": schema.StringAttribute{
-						Description: "TODO.",
+						Description: "Sets the device bus when the image is used as a rescue image.",
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.String{
@@ -324,7 +327,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						},
 					},
 					"rescue_device": schema.StringAttribute{
-						Description: "TODO.",
+						Description: "Sets the device when the image is used as a rescue image.",
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.String{
@@ -332,7 +335,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						},
 					},
 					"secure_boot": schema.BoolAttribute{
-						Description: "TODO.",
+						Description: "Enables Secure Boot.",
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.Bool{
@@ -340,7 +343,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						},
 					},
 					"uefi": schema.BoolAttribute{
-						Description: "TODO.",
+						Description: "Enables UEFI boot.",
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.Bool{
@@ -348,7 +351,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						},
 					},
 					"video_model": schema.StringAttribute{
-						Description: "TODO.",
+						Description: "Sets Graphic device model.",
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.String{
@@ -356,7 +359,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						},
 					},
 					"virtio_scsi": schema.BoolAttribute{
-						Description: "TODO.",
+						Description: "Enables the use of VirtIO SCSI to provide block device access. By default instances use VirtIO Block.",
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.Bool{
@@ -641,17 +644,17 @@ func mapFields(ctx context.Context, imageResp *iaasalpha.Image, model *Model) er
 	diags := diag.Diagnostics{}
 	if imageResp.Config != nil {
 		configModel.BootMenu = types.BoolPointerValue(imageResp.Config.BootMenu)
-		// configModel.CDROMBus = types.StringPointerValue(imageResp.Config.GetCdromBus()) // TODO: Wait for null pointer exception fix in SDK
-		// configModel.DiskBus = types.StringPointerValue(imageResp.Config.GetDiskBus()) // TODO: Wait for null pointer exception fix in SDK
-		// configModel.NICModel = types.StringPointerValue(imageResp.Config.GetNicModel()) // TODO: Wait for null pointer exception fix in SDK
+		configModel.CDROMBus = types.StringPointerValue(imageResp.Config.GetCdromBus())
+		configModel.DiskBus = types.StringPointerValue(imageResp.Config.GetDiskBus())
+		configModel.NICModel = types.StringPointerValue(imageResp.Config.GetNicModel())
 		configModel.OperatingSystem = types.StringPointerValue(imageResp.Config.OperatingSystem)
-		// configModel.OperatingSystemDistro = types.StringPointerValue(imageResp.Config.GetOperatingSystemDistro()) // TODO: Wait for null pointer exception fix in SDK
-		// configModel.OperatingSystemVersion = types.StringPointerValue(imageResp.Config.GetOperatingSystemVersion()) // TODO: Wait for null pointer exception fix in SDK
-		// configModel.RescueBus = types.StringPointerValue(imageResp.Config.GetRescueBus()) // TODO: Wait for null pointer exception fix in SDK
-		// configModel.RescueDevice = types.StringPointerValue(imageResp.Config.GetRescueDevice()) // TODO: Wait for null pointer exception fix in SDK
+		configModel.OperatingSystemDistro = types.StringPointerValue(imageResp.Config.GetOperatingSystemDistro())
+		configModel.OperatingSystemVersion = types.StringPointerValue(imageResp.Config.GetOperatingSystemVersion())
+		configModel.RescueBus = types.StringPointerValue(imageResp.Config.GetRescueBus())
+		configModel.RescueDevice = types.StringPointerValue(imageResp.Config.GetRescueDevice())
 		configModel.SecureBoot = types.BoolPointerValue(imageResp.Config.SecureBoot)
 		configModel.UEFI = types.BoolPointerValue(imageResp.Config.Uefi)
-		// configModel.VideoModel = types.StringPointerValue(imageResp.Config.GetVideoModel()) // TODO: Wait for null pointer exception fix in SDK
+		configModel.VideoModel = types.StringPointerValue(imageResp.Config.GetVideoModel())
 		configModel.VirtioScsi = types.BoolPointerValue(imageResp.Config.VirtioScsi)
 
 		configObject, diags = types.ObjectValue(configTypes, map[string]attr.Value{

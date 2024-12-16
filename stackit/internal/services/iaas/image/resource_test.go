@@ -57,14 +57,14 @@ func TestMapFields(t *testing.T) {
 				Scope:       utils.Ptr("scope"),
 				Config: &iaasalpha.ImageConfig{
 					BootMenu:               utils.Ptr(true),
-					CdromBus:               iaasalpha.NewNullableString(utils.Ptr("bus")),
-					DiskBus:                iaasalpha.NewNullableString(utils.Ptr("bus")),
+					CdromBus:               iaasalpha.NewNullableString(utils.Ptr("cdrom_bus")),
+					DiskBus:                iaasalpha.NewNullableString(utils.Ptr("disk_bus")),
 					NicModel:               iaasalpha.NewNullableString(utils.Ptr("model")),
 					OperatingSystem:        utils.Ptr("os"),
-					OperatingSystemDistro:  iaasalpha.NewNullableString(utils.Ptr("distro")),
-					OperatingSystemVersion: iaasalpha.NewNullableString(utils.Ptr("version")),
-					RescueBus:              iaasalpha.NewNullableString(utils.Ptr("bus")),
-					RescueDevice:           iaasalpha.NewNullableString(utils.Ptr("device")),
+					OperatingSystemDistro:  iaasalpha.NewNullableString(utils.Ptr("os_distro")),
+					OperatingSystemVersion: iaasalpha.NewNullableString(utils.Ptr("os_version")),
+					RescueBus:              iaasalpha.NewNullableString(utils.Ptr("rescue_bus")),
+					RescueDevice:           iaasalpha.NewNullableString(utils.Ptr("rescue_device")),
 					SecureBoot:             utils.Ptr(true),
 					Uefi:                   utils.Ptr(true),
 					VideoModel:             iaasalpha.NewNullableString(utils.Ptr("model")),
@@ -90,17 +90,17 @@ func TestMapFields(t *testing.T) {
 				Scope:       types.StringValue("scope"),
 				Config: types.ObjectValueMust(configTypes, map[string]attr.Value{
 					"boot_menu":                types.BoolValue(true),
-					"cdrom_bus":                types.StringNull(), // TODO: Should take value after SDK util fix
-					"disk_bus":                 types.StringNull(), // TODO: Should take value after SDK util fix
-					"nic_model":                types.StringNull(), // TODO: Should take value after SDK util fix
+					"cdrom_bus":                types.StringValue("cdrom_bus"),
+					"disk_bus":                 types.StringValue("disk_bus"),
+					"nic_model":                types.StringValue("model"),
 					"operating_system":         types.StringValue("os"),
-					"operating_system_distro":  types.StringNull(), // TODO: Should take value after SDK util fix
-					"operating_system_version": types.StringNull(), // TODO: Should take value after SDK util fix
-					"rescue_bus":               types.StringNull(), // TODO: Should take value after SDK util fix
-					"rescue_device":            types.StringNull(), // TODO: Should take value after SDK util fix
+					"operating_system_distro":  types.StringValue("os_distro"),
+					"operating_system_version": types.StringValue("os_version"),
+					"rescue_bus":               types.StringValue("rescue_bus"),
+					"rescue_device":            types.StringValue("rescue_device"),
 					"secure_boot":              types.BoolValue(true),
 					"uefi":                     types.BoolValue(true),
-					"video_model":              types.StringNull(), // TODO: Should take value after SDK util fix
+					"video_model":              types.StringValue("model"),
 					"virtio_scsi":              types.BoolValue(true),
 				}),
 				Checksum: types.ObjectValueMust(checksumTypes, map[string]attr.Value{
@@ -187,17 +187,17 @@ func TestToCreatePayload(t *testing.T) {
 				Protected:   types.BoolValue(true),
 				Config: types.ObjectValueMust(configTypes, map[string]attr.Value{
 					"boot_menu":                types.BoolValue(true),
-					"cdrom_bus":                types.StringNull(), // TODO: Should take value after SDK util fix
-					"disk_bus":                 types.StringNull(), // TODO: Should take value after SDK util fix
-					"nic_model":                types.StringNull(), // TODO: Should take value after SDK util fix
+					"cdrom_bus":                types.StringValue("cdrom_bus"),
+					"disk_bus":                 types.StringValue("disk_bus"),
+					"nic_model":                types.StringValue("nic_model"),
 					"operating_system":         types.StringValue("os"),
-					"operating_system_distro":  types.StringNull(), // TODO: Should take value after SDK util fix
-					"operating_system_version": types.StringNull(), // TODO: Should take value after SDK util fix
-					"rescue_bus":               types.StringNull(), // TODO: Should take value after SDK util fix
-					"rescue_device":            types.StringNull(), // TODO: Should take value after SDK util fix
+					"operating_system_distro":  types.StringValue("os_distro"),
+					"operating_system_version": types.StringValue("os_version"),
+					"rescue_bus":               types.StringValue("rescue_bus"),
+					"rescue_device":            types.StringValue("rescue_device"),
 					"secure_boot":              types.BoolValue(true),
 					"uefi":                     types.BoolValue(true),
-					"video_model":              types.StringNull(), // TODO: Should take value after SDK util fix
+					"video_model":              types.StringValue("video_model"),
 					"virtio_scsi":              types.BoolValue(true),
 				}),
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
@@ -212,17 +212,17 @@ func TestToCreatePayload(t *testing.T) {
 				Protected:   utils.Ptr(true),
 				Config: &iaasalpha.ImageConfig{
 					BootMenu:               utils.Ptr(true),
-					CdromBus:               iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
-					DiskBus:                iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
-					NicModel:               iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
+					CdromBus:               iaasalpha.NewNullableString(utils.Ptr("cdrom_bus")),
+					DiskBus:                iaasalpha.NewNullableString(utils.Ptr("disk_bus")),
+					NicModel:               iaasalpha.NewNullableString(utils.Ptr("nic_model")),
 					OperatingSystem:        utils.Ptr("os"),
-					OperatingSystemDistro:  iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
-					OperatingSystemVersion: iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
-					RescueBus:              iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
-					RescueDevice:           iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
+					OperatingSystemDistro:  iaasalpha.NewNullableString(utils.Ptr("os_distro")),
+					OperatingSystemVersion: iaasalpha.NewNullableString(utils.Ptr("os_version")),
+					RescueBus:              iaasalpha.NewNullableString(utils.Ptr("rescue_bus")),
+					RescueDevice:           iaasalpha.NewNullableString(utils.Ptr("rescue_device")),
 					SecureBoot:             utils.Ptr(true),
 					Uefi:                   utils.Ptr(true),
-					VideoModel:             iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
+					VideoModel:             iaasalpha.NewNullableString(utils.Ptr("video_model")),
 					VirtioScsi:             utils.Ptr(true),
 				},
 				Labels: &map[string]interface{}{
@@ -271,17 +271,17 @@ func TestToUpdatePayload(t *testing.T) {
 				Protected:   types.BoolValue(true),
 				Config: types.ObjectValueMust(configTypes, map[string]attr.Value{
 					"boot_menu":                types.BoolValue(true),
-					"cdrom_bus":                types.StringNull(), // TODO: Should take value after SDK util fix
-					"disk_bus":                 types.StringNull(), // TODO: Should take value after SDK util fix
-					"nic_model":                types.StringNull(), // TODO: Should take value after SDK util fix
+					"cdrom_bus":                types.StringValue("cdrom_bus"),
+					"disk_bus":                 types.StringValue("disk_bus"),
+					"nic_model":                types.StringValue("nic_model"),
 					"operating_system":         types.StringValue("os"),
-					"operating_system_distro":  types.StringNull(), // TODO: Should take value after SDK util fix
-					"operating_system_version": types.StringNull(), // TODO: Should take value after SDK util fix
-					"rescue_bus":               types.StringNull(), // TODO: Should take value after SDK util fix
-					"rescue_device":            types.StringNull(), // TODO: Should take value after SDK util fix
+					"operating_system_distro":  types.StringValue("os_distro"),
+					"operating_system_version": types.StringValue("os_version"),
+					"rescue_bus":               types.StringValue("rescue_bus"),
+					"rescue_device":            types.StringValue("rescue_device"),
 					"secure_boot":              types.BoolValue(true),
 					"uefi":                     types.BoolValue(true),
-					"video_model":              types.StringNull(), // TODO: Should take value after SDK util fix
+					"video_model":              types.StringValue("video_model"),
 					"virtio_scsi":              types.BoolValue(true),
 				}),
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
@@ -295,17 +295,17 @@ func TestToUpdatePayload(t *testing.T) {
 				Protected:   utils.Ptr(true),
 				Config: &iaasalpha.ImageConfig{
 					BootMenu:               utils.Ptr(true),
-					CdromBus:               iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
-					DiskBus:                iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
-					NicModel:               iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
+					CdromBus:               iaasalpha.NewNullableString(utils.Ptr("cdrom_bus")),
+					DiskBus:                iaasalpha.NewNullableString(utils.Ptr("disk_bus")),
+					NicModel:               iaasalpha.NewNullableString(utils.Ptr("nic_model")),
 					OperatingSystem:        utils.Ptr("os"),
-					OperatingSystemDistro:  iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
-					OperatingSystemVersion: iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
-					RescueBus:              iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
-					RescueDevice:           iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
+					OperatingSystemDistro:  iaasalpha.NewNullableString(utils.Ptr("os_distro")),
+					OperatingSystemVersion: iaasalpha.NewNullableString(utils.Ptr("os_version")),
+					RescueBus:              iaasalpha.NewNullableString(utils.Ptr("rescue_bus")),
+					RescueDevice:           iaasalpha.NewNullableString(utils.Ptr("rescue_device")),
 					SecureBoot:             utils.Ptr(true),
 					Uefi:                   utils.Ptr(true),
-					VideoModel:             iaasalpha.NewNullableString(nil), // TODO: Should take value after SDK util fix
+					VideoModel:             iaasalpha.NewNullableString(utils.Ptr("video_model")),
 					VirtioScsi:             utils.Ptr(true),
 				},
 				Labels: &map[string]interface{}{
