@@ -13,14 +13,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		input       *iaasalpha.Image
+		input       *iaas.Image
 		expected    Model
 		isValid     bool
 	}{
@@ -30,7 +30,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				ImageId:   types.StringValue("iid"),
 			},
-			&iaasalpha.Image{
+			&iaas.Image{
 				Id: utils.Ptr("iid"),
 			},
 			Model{
@@ -47,7 +47,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				ImageId:   types.StringValue("iid"),
 			},
-			&iaasalpha.Image{
+			&iaas.Image{
 				Id:          utils.Ptr("iid"),
 				Name:        utils.Ptr("name"),
 				DiskFormat:  utils.Ptr("format"),
@@ -55,22 +55,22 @@ func TestMapFields(t *testing.T) {
 				MinRam:      utils.Ptr(int64(1)),
 				Protected:   utils.Ptr(true),
 				Scope:       utils.Ptr("scope"),
-				Config: &iaasalpha.ImageConfig{
+				Config: &iaas.ImageConfig{
 					BootMenu:               utils.Ptr(true),
-					CdromBus:               iaasalpha.NewNullableString(utils.Ptr("cdrom_bus")),
-					DiskBus:                iaasalpha.NewNullableString(utils.Ptr("disk_bus")),
-					NicModel:               iaasalpha.NewNullableString(utils.Ptr("model")),
+					CdromBus:               iaas.NewNullableString(utils.Ptr("cdrom_bus")),
+					DiskBus:                iaas.NewNullableString(utils.Ptr("disk_bus")),
+					NicModel:               iaas.NewNullableString(utils.Ptr("model")),
 					OperatingSystem:        utils.Ptr("os"),
-					OperatingSystemDistro:  iaasalpha.NewNullableString(utils.Ptr("os_distro")),
-					OperatingSystemVersion: iaasalpha.NewNullableString(utils.Ptr("os_version")),
-					RescueBus:              iaasalpha.NewNullableString(utils.Ptr("rescue_bus")),
-					RescueDevice:           iaasalpha.NewNullableString(utils.Ptr("rescue_device")),
+					OperatingSystemDistro:  iaas.NewNullableString(utils.Ptr("os_distro")),
+					OperatingSystemVersion: iaas.NewNullableString(utils.Ptr("os_version")),
+					RescueBus:              iaas.NewNullableString(utils.Ptr("rescue_bus")),
+					RescueDevice:           iaas.NewNullableString(utils.Ptr("rescue_device")),
 					SecureBoot:             utils.Ptr(true),
 					Uefi:                   utils.Ptr(true),
-					VideoModel:             iaasalpha.NewNullableString(utils.Ptr("model")),
+					VideoModel:             iaas.NewNullableString(utils.Ptr("model")),
 					VirtioScsi:             utils.Ptr(true),
 				},
-				Checksum: &iaasalpha.ImageChecksum{
+				Checksum: &iaas.ImageChecksum{
 					Algorithm: utils.Ptr("algorithm"),
 					Digest:    utils.Ptr("digest"),
 				},
@@ -120,7 +120,7 @@ func TestMapFields(t *testing.T) {
 				ImageId:   types.StringValue("iid"),
 				Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			},
-			&iaasalpha.Image{
+			&iaas.Image{
 				Id: utils.Ptr("iid"),
 			},
 			Model{
@@ -143,7 +143,7 @@ func TestMapFields(t *testing.T) {
 			Model{
 				ProjectId: types.StringValue("pid"),
 			},
-			&iaasalpha.Image{},
+			&iaas.Image{},
 			Model{},
 			false,
 		},
@@ -171,7 +171,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.CreateImagePayload
+		expected    *iaas.CreateImagePayload
 		isValid     bool
 	}{
 		{
@@ -204,25 +204,25 @@ func TestToCreatePayload(t *testing.T) {
 					"key": types.StringValue("value"),
 				}),
 			},
-			&iaasalpha.CreateImagePayload{
+			&iaas.CreateImagePayload{
 				Name:        utils.Ptr("name"),
 				DiskFormat:  utils.Ptr("format"),
 				MinDiskSize: utils.Ptr(int64(1)),
 				MinRam:      utils.Ptr(int64(1)),
 				Protected:   utils.Ptr(true),
-				Config: &iaasalpha.ImageConfig{
+				Config: &iaas.ImageConfig{
 					BootMenu:               utils.Ptr(true),
-					CdromBus:               iaasalpha.NewNullableString(utils.Ptr("cdrom_bus")),
-					DiskBus:                iaasalpha.NewNullableString(utils.Ptr("disk_bus")),
-					NicModel:               iaasalpha.NewNullableString(utils.Ptr("nic_model")),
+					CdromBus:               iaas.NewNullableString(utils.Ptr("cdrom_bus")),
+					DiskBus:                iaas.NewNullableString(utils.Ptr("disk_bus")),
+					NicModel:               iaas.NewNullableString(utils.Ptr("nic_model")),
 					OperatingSystem:        utils.Ptr("os"),
-					OperatingSystemDistro:  iaasalpha.NewNullableString(utils.Ptr("os_distro")),
-					OperatingSystemVersion: iaasalpha.NewNullableString(utils.Ptr("os_version")),
-					RescueBus:              iaasalpha.NewNullableString(utils.Ptr("rescue_bus")),
-					RescueDevice:           iaasalpha.NewNullableString(utils.Ptr("rescue_device")),
+					OperatingSystemDistro:  iaas.NewNullableString(utils.Ptr("os_distro")),
+					OperatingSystemVersion: iaas.NewNullableString(utils.Ptr("os_version")),
+					RescueBus:              iaas.NewNullableString(utils.Ptr("rescue_bus")),
+					RescueDevice:           iaas.NewNullableString(utils.Ptr("rescue_device")),
 					SecureBoot:             utils.Ptr(true),
 					Uefi:                   utils.Ptr(true),
-					VideoModel:             iaasalpha.NewNullableString(utils.Ptr("video_model")),
+					VideoModel:             iaas.NewNullableString(utils.Ptr("video_model")),
 					VirtioScsi:             utils.Ptr(true),
 				},
 				Labels: &map[string]interface{}{
@@ -242,7 +242,7 @@ func TestToCreatePayload(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaasalpha.NullableString{}))
+				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaas.NullableString{}))
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
@@ -255,7 +255,7 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.UpdateImagePayload
+		expected    *iaas.UpdateImagePayload
 		isValid     bool
 	}{
 		{
@@ -288,24 +288,24 @@ func TestToUpdatePayload(t *testing.T) {
 					"key": types.StringValue("value"),
 				}),
 			},
-			&iaasalpha.UpdateImagePayload{
+			&iaas.UpdateImagePayload{
 				Name:        utils.Ptr("name"),
 				MinDiskSize: utils.Ptr(int64(1)),
 				MinRam:      utils.Ptr(int64(1)),
 				Protected:   utils.Ptr(true),
-				Config: &iaasalpha.ImageConfig{
+				Config: &iaas.ImageConfig{
 					BootMenu:               utils.Ptr(true),
-					CdromBus:               iaasalpha.NewNullableString(utils.Ptr("cdrom_bus")),
-					DiskBus:                iaasalpha.NewNullableString(utils.Ptr("disk_bus")),
-					NicModel:               iaasalpha.NewNullableString(utils.Ptr("nic_model")),
+					CdromBus:               iaas.NewNullableString(utils.Ptr("cdrom_bus")),
+					DiskBus:                iaas.NewNullableString(utils.Ptr("disk_bus")),
+					NicModel:               iaas.NewNullableString(utils.Ptr("nic_model")),
 					OperatingSystem:        utils.Ptr("os"),
-					OperatingSystemDistro:  iaasalpha.NewNullableString(utils.Ptr("os_distro")),
-					OperatingSystemVersion: iaasalpha.NewNullableString(utils.Ptr("os_version")),
-					RescueBus:              iaasalpha.NewNullableString(utils.Ptr("rescue_bus")),
-					RescueDevice:           iaasalpha.NewNullableString(utils.Ptr("rescue_device")),
+					OperatingSystemDistro:  iaas.NewNullableString(utils.Ptr("os_distro")),
+					OperatingSystemVersion: iaas.NewNullableString(utils.Ptr("os_version")),
+					RescueBus:              iaas.NewNullableString(utils.Ptr("rescue_bus")),
+					RescueDevice:           iaas.NewNullableString(utils.Ptr("rescue_device")),
 					SecureBoot:             utils.Ptr(true),
 					Uefi:                   utils.Ptr(true),
-					VideoModel:             iaasalpha.NewNullableString(utils.Ptr("video_model")),
+					VideoModel:             iaas.NewNullableString(utils.Ptr("video_model")),
 					VirtioScsi:             utils.Ptr(true),
 				},
 				Labels: &map[string]interface{}{
@@ -325,7 +325,7 @@ func TestToUpdatePayload(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaasalpha.NullableString{}))
+				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaas.NullableString{}))
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

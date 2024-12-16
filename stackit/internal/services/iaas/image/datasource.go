@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -54,7 +54,7 @@ func NewImageDataSource() datasource.DataSource {
 
 // imageDataSource is the data source implementation.
 type imageDataSource struct {
-	client *iaasalpha.APIClient
+	client *iaas.APIClient
 }
 
 // Metadata returns the data source type name.
@@ -68,7 +68,7 @@ func (d *imageDataSource) Configure(ctx context.Context, req datasource.Configur
 		return
 	}
 
-	var apiClient *iaasalpha.APIClient
+	var apiClient *iaas.APIClient
 	var err error
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
@@ -86,12 +86,12 @@ func (d *imageDataSource) Configure(ctx context.Context, req datasource.Configur
 	}
 
 	if providerData.IaaSCustomEndpoint != "" {
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.IaaSCustomEndpoint),
 		)
 	} else {
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -275,7 +275,7 @@ func (r *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	tflog.Info(ctx, "image read")
 }
 
-func mapDataSourceFields(ctx context.Context, imageResp *iaasalpha.Image, model *DataSourceModel) error {
+func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *DataSourceModel) error {
 	if imageResp == nil {
 		return fmt.Errorf("response input is nil")
 	}

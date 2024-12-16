@@ -12,7 +12,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -110,7 +109,7 @@ var keyPairResource = map[string]string{
 	"label1-updated": "value1-updated",
 }
 
-// Volume resource data
+// Image resource data
 var imageResource = map[string]string{
 	"project_id":      testutil.ProjectId,
 	"name":            fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha)),
@@ -118,7 +117,6 @@ var imageResource = map[string]string{
 	"local_file_path": testutil.TestImageLocalFilePath,
 	"min_disk_size":   "1",
 	"min_ram":         "1",
-	"protected":       "true",
 	"label1":          "value1",
 	"boot_menu":       "true",
 }
@@ -326,7 +324,6 @@ func imageResourceConfig(name string) string {
 					local_file_path = "%s"
 					min_disk_size = %s
 					min_ram = %s
-					protected = %s
 					labels = {
 						"label1" = "%s"
 					}
@@ -341,7 +338,6 @@ func imageResourceConfig(name string) string {
 		imageResource["local_file_path"],
 		imageResource["min_disk_size"],
 		imageResource["min_ram"],
-		imageResource["protected"],
 		imageResource["label1"],
 		imageResource["boot_menu"],
 	)
@@ -1746,14 +1742,14 @@ func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaasalpha.APIClient
+	var client *iaas.APIClient
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaasalpha.NewAPIClient(
+		client, err = iaas.NewAPIClient(
 			config.WithRegion("eu01"),
 		)
 	} else {
-		client, err = iaasalpha.NewAPIClient(
+		client, err = iaas.NewAPIClient(
 			config.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}

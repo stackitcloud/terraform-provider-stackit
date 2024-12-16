@@ -24,8 +24,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -113,7 +113,7 @@ func NewImageResource() resource.Resource {
 
 // imageResource is the resource implementation.
 type imageResource struct {
-	client *iaasalpha.APIClient
+	client *iaas.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -142,16 +142,16 @@ func (r *imageResource) Configure(ctx context.Context, req resource.ConfigureReq
 		resourceBetaCheckDone = true
 	}
 
-	var apiClient *iaasalpha.APIClient
+	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
 		ctx = tflog.SetField(ctx, "iaas_custom_endpoint", providerData.IaaSCustomEndpoint)
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.IaaSCustomEndpoint),
 		)
 	} else {
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -370,18 +370,24 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"checksum": schema.SingleNestedAttribute{
 				Description: "Representation of an image checksum.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"algorithm": schema.StringAttribute{
 						Description: "Algorithm for the checksum of the image data.",
 						Computed:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"digest": schema.StringAttribute{
 						Description: "Hexdigest of the checksum of the image data.",
 						Computed:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
-				},
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"labels": schema.MapAttribute{
@@ -612,7 +618,7 @@ func (r *imageResource) ImportState(ctx context.Context, req resource.ImportStat
 	tflog.Info(ctx, "Image state imported")
 }
 
-func mapFields(ctx context.Context, imageResp *iaasalpha.Image, model *Model) error {
+func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model) error {
 	if imageResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -723,7 +729,7 @@ func mapFields(ctx context.Context, imageResp *iaasalpha.Image, model *Model) er
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateImagePayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateImagePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -736,19 +742,19 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateImageP
 		}
 	}
 
-	configPayload := &iaasalpha.ImageConfig{
+	configPayload := &iaas.ImageConfig{
 		BootMenu:               conversion.BoolValueToPointer(configModel.BootMenu),
-		CdromBus:               iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.CDROMBus)),
-		DiskBus:                iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.DiskBus)),
-		NicModel:               iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.NICModel)),
+		CdromBus:               iaas.NewNullableString(conversion.StringValueToPointer(configModel.CDROMBus)),
+		DiskBus:                iaas.NewNullableString(conversion.StringValueToPointer(configModel.DiskBus)),
+		NicModel:               iaas.NewNullableString(conversion.StringValueToPointer(configModel.NICModel)),
 		OperatingSystem:        conversion.StringValueToPointer(configModel.OperatingSystem),
-		OperatingSystemDistro:  iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemDistro)),
-		OperatingSystemVersion: iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemVersion)),
-		RescueBus:              iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.RescueBus)),
-		RescueDevice:           iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.RescueDevice)),
+		OperatingSystemDistro:  iaas.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemDistro)),
+		OperatingSystemVersion: iaas.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemVersion)),
+		RescueBus:              iaas.NewNullableString(conversion.StringValueToPointer(configModel.RescueBus)),
+		RescueDevice:           iaas.NewNullableString(conversion.StringValueToPointer(configModel.RescueDevice)),
 		SecureBoot:             conversion.BoolValueToPointer(configModel.SecureBoot),
 		Uefi:                   conversion.BoolValueToPointer(configModel.UEFI),
-		VideoModel:             iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.VideoModel)),
+		VideoModel:             iaas.NewNullableString(conversion.StringValueToPointer(configModel.VideoModel)),
 		VirtioScsi:             conversion.BoolValueToPointer(configModel.VirtioScsi),
 	}
 
@@ -757,7 +763,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateImageP
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.CreateImagePayload{
+	return &iaas.CreateImagePayload{
 		Name:        conversion.StringValueToPointer(model.Name),
 		DiskFormat:  conversion.StringValueToPointer(model.DiskFormat),
 		MinDiskSize: conversion.Int64ValueToPointer(model.MinDiskSize),
@@ -768,7 +774,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.CreateImageP
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.UpdateImagePayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.UpdateImagePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -781,19 +787,19 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		}
 	}
 
-	configPayload := &iaasalpha.ImageConfig{
+	configPayload := &iaas.ImageConfig{
 		BootMenu:               conversion.BoolValueToPointer(configModel.BootMenu),
-		CdromBus:               iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.CDROMBus)),
-		DiskBus:                iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.DiskBus)),
-		NicModel:               iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.NICModel)),
+		CdromBus:               iaas.NewNullableString(conversion.StringValueToPointer(configModel.CDROMBus)),
+		DiskBus:                iaas.NewNullableString(conversion.StringValueToPointer(configModel.DiskBus)),
+		NicModel:               iaas.NewNullableString(conversion.StringValueToPointer(configModel.NICModel)),
 		OperatingSystem:        conversion.StringValueToPointer(configModel.OperatingSystem),
-		OperatingSystemDistro:  iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemDistro)),
-		OperatingSystemVersion: iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemVersion)),
-		RescueBus:              iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.RescueBus)),
-		RescueDevice:           iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.RescueDevice)),
+		OperatingSystemDistro:  iaas.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemDistro)),
+		OperatingSystemVersion: iaas.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemVersion)),
+		RescueBus:              iaas.NewNullableString(conversion.StringValueToPointer(configModel.RescueBus)),
+		RescueDevice:           iaas.NewNullableString(conversion.StringValueToPointer(configModel.RescueDevice)),
 		SecureBoot:             conversion.BoolValueToPointer(configModel.SecureBoot),
 		Uefi:                   conversion.BoolValueToPointer(configModel.UEFI),
-		VideoModel:             iaasalpha.NewNullableString(conversion.StringValueToPointer(configModel.VideoModel)),
+		VideoModel:             iaas.NewNullableString(conversion.StringValueToPointer(configModel.VideoModel)),
 		VirtioScsi:             conversion.BoolValueToPointer(configModel.VirtioScsi),
 	}
 
@@ -804,7 +810,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 
 	// DiskFormat is not sent in the update payload as does not have effect after image upload,
 	// and the field has RequiresReplace set
-	return &iaasalpha.UpdateImagePayload{
+	return &iaas.UpdateImagePayload{
 		Name:        conversion.StringValueToPointer(model.Name),
 		MinDiskSize: conversion.Int64ValueToPointer(model.MinDiskSize),
 		MinRam:      conversion.Int64ValueToPointer(model.MinRAM),
