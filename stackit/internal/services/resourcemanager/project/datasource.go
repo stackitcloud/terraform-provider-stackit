@@ -62,13 +62,11 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 	if providerData.ResourceManagerCustomEndpoint != "" {
 		rmClient, err = resourcemanager.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithServiceAccountEmail(providerData.ServiceAccountEmail),
 			config.WithEndpoint(providerData.ResourceManagerCustomEndpoint),
 		)
 	} else {
 		rmClient, err = resourcemanager.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithServiceAccountEmail(providerData.ServiceAccountEmail),
 		)
 	}
 	if err != nil {

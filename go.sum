@@ -84,8 +84,8 @@ github.com/hashicorp/terraform-json v0.23.0 h1:sniCkExU4iKtTADReHzACkk8fnpQXrdD2
 github.com/hashicorp/terraform-json v0.23.0/go.mod h1:MHdXbBAbSg0GvzuWazEGKAn/cyNfIB7mN6y7KJN6y2c=
 github.com/hashicorp/terraform-plugin-framework v1.13.0 h1:8OTG4+oZUfKgnfTdPTJwZ532Bh2BobF4H+yBiYJ/scw=
 github.com/hashicorp/terraform-plugin-framework v1.13.0/go.mod h1:j64rwMGpgM3NYXTKuxrCnyubQb/4VKldEKlcG8cvmjU=
-github.com/hashicorp/terraform-plugin-framework-validators v0.15.0 h1:RXMmu7JgpFjnI1a5QjMCBb11usrW2OtAG+iOTIj5c9Y=
-github.com/hashicorp/terraform-plugin-framework-validators v0.15.0/go.mod h1:Bh89/hNmqsEWug4/XWKYBwtnw3tbz5BAy1L1OgvbIaY=
+github.com/hashicorp/terraform-plugin-framework-validators v0.16.0 h1:O9QqGoYDzQT7lwTXUsZEtgabeWW96zUBh47Smn2lkFA=
+github.com/hashicorp/terraform-plugin-framework-validators v0.16.0/go.mod h1:Bh89/hNmqsEWug4/XWKYBwtnw3tbz5BAy1L1OgvbIaY=
 github.com/hashicorp/terraform-plugin-go v0.25.0 h1:oi13cx7xXA6QciMcpcFi/rwA974rdTxjqEhXJjbAyks=
 github.com/hashicorp/terraform-plugin-go v0.25.0/go.mod h1:+SYagMYadJP86Kvn+TGeV+ofr/R3g4/If0O5sO96MVw=
 github.com/hashicorp/terraform-plugin-log v0.9.0 h1:i7hOA+vdAItN1/7UrfBqBwvYPQ9TFvymaRGZED3FCV0=
@@ -183,8 +183,10 @@ github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.10.0 h1:HrnEgR
 github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.10.0/go.mod h1:268uoY2gKCa5xcDL169TGVjLUNTcZ2En77YdfYOcR1w=
 github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.3.0 h1:Tlps8vBQmQ1mx2YFbzOzMIyWtXGJy7X3N9Qk3qk88Cc=
 github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.3.0/go.mod h1:+807U5ZLXns+CEbyIg483wNEwV10vaN6GjMnSZhw/64=
-github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v0.3.0 h1:6IZBX9fyza9Eln3FHGHquvLNXQslk+dtkQp41G9+7+Y=
-github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v0.3.0/go.mod h1:zyg0hpiNdZLRbelkJb2KDf9OHQKLqqcTpePQ1qHL5dE=
+github.com/stackitcloud/stackit-sdk-go/services/serverupdate v0.2.2 h1:HXZ/hjO3shFPLrrmSb1G9eXDCSYrMeYveklm6rEUd0Y=
+github.com/stackitcloud/stackit-sdk-go/services/serverupdate v0.2.2/go.mod h1:etidTptNDvvCPA1FGC7T9DXHxXA4bYW3qIUzWG8wVcc=
+github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v0.4.0 h1:K5fVTcJxjOVwJBa3kiWRsYNAq+I3jAYdU1U+f6no5lE=
+github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v0.4.0/go.mod h1:zyg0hpiNdZLRbelkJb2KDf9OHQKLqqcTpePQ1qHL5dE=
 github.com/stackitcloud/stackit-sdk-go/services/ske v0.20.0 h1:ssEywzCS8IdRtzyxweLUKBG5GFbgwjNWJh++wGqigJM=
 github.com/stackitcloud/stackit-sdk-go/services/ske v0.20.0/go.mod h1:A4+9KslxCA31JvxnT+O/GC67eAOdw+iqhBzewZZaCD0=
 github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.8.0 h1:1ByAgO10fxWF+UZ+RkJeAiv+h5AgqrzYz6r86Pn/BWE=

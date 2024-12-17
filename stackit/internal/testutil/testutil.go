@@ -67,6 +67,7 @@ var (
 	SecretsManagerCustomEndpoint  = os.Getenv("TF_ACC_SECRETSMANAGER_CUSTOM_ENDPOINT")
 	SQLServerFlexCustomEndpoint   = os.Getenv("TF_ACC_SQLSERVERFLEX_CUSTOM_ENDPOINT")
 	ServerBackupCustomEndpoint    = os.Getenv("TF_ACC_SERVER_BACKUP_CUSTOM_ENDPOINT")
+	ServerUpdateCustomEndpoint    = os.Getenv("TF_ACC_SERVER_UPDATE_CUSTOM_ENDPOINT")
 	SKECustomEndpoint             = os.Getenv("TF_ACC_SKE_CUSTOM_ENDPOINT")
 
 	// OpenStack user domain name
@@ -340,6 +341,21 @@ func ServerBackupProviderConfig() string {
 			server_backup_custom_endpoint = "%s"
 		}`,
 		ServerBackupCustomEndpoint,
+	)
+}
+
+func ServerUpdateProviderConfig() string {
+	if ServerUpdateCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			server_update_custom_endpoint = "%s"
+		}`,
+		ServerUpdateCustomEndpoint,
 	)
 }
 
