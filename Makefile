@@ -15,7 +15,7 @@ lint-golangci-lint:
 
 lint-tf: 
 	@echo "Linting examples"
-	@terraform fmt -check -diff -recursive examples
+	@./bin/terraform fmt -check -diff -recursive examples
 
 lint: lint-golangci-lint lint-tf
 
