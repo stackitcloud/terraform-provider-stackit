@@ -4,7 +4,6 @@ on: [pull_request, workflow_dispatch]
 
 env:
   GO_VERSION: "1.23"
-  TERRAFORM_VERSION: "v1.10.2"
 
 jobs:
   main:
@@ -19,8 +18,6 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
       - name: Lint
         run: make lint
       - name: Test
