@@ -1,5 +1,6 @@
 ROOT_DIR              ?= $(shell git rev-parse --show-toplevel)
 SCRIPTS_BASE          ?= $(ROOT_DIR)/scripts
+BIN_DIR               ?= $(ROOT_DIR)/bin
 
 # SETUP AND TOOL INITIALIZATION TASKS
 project-help:
@@ -15,7 +16,7 @@ lint-golangci-lint:
 
 lint-tf: 
 	@echo "Linting examples"
-	@./bin/terraform fmt -check -diff -recursive examples
+	PATH=$(PATH):$(BIN_DIR) terraform fmt -check -diff -recursive examples
 
 lint: lint-golangci-lint lint-tf
 

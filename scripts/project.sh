@@ -18,10 +18,14 @@ elif [ "$action" = "tools" ]; then
 
     go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.0
     go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.16.0
-    # terraform binary is only available as zip, not .tgz
-    mkdir -p bin
-    curl -o bin/terraform.zip -J https://releases.hashicorp.com/terraform/1.10.2/terraform_1.10.2_linux_amd64.zip
-    unzip -d bin bin/terraform.zip
+
+    # if terraform binary not available then download it
+    if ! which terraform; then
+        # terraform binary is only available as zip, not .tgz
+        mkdir -p bin
+        curl -o bin/terraform.zip -J https://releases.hashicorp.com/terraform/1.10.2/terraform_1.10.2_linux_amd64.zip
+        unzip -d bin bin/terraform.zip
+    fi
 else
     echo "Invalid action: '$action', please use $0 help for help"
 fi
