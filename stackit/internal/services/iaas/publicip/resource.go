@@ -447,7 +447,5 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		payload.NetworkInterface = iaas.NewNullableString(nil)
 	}
 
-	tflog.Warn(ctx, fmt.Sprintf("payload.NetworkInterface: %v", payload.NetworkInterface))
-
 	return payload, nil
 }
