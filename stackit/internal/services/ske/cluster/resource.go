@@ -77,7 +77,6 @@ type Model struct {
 	Network                   types.Object `tfsdk:"network"`
 	Hibernations              types.List   `tfsdk:"hibernations"`
 	Extensions                types.Object `tfsdk:"extensions"`
-	KubeConfig                types.String `tfsdk:"kube_config"`
 }
 
 // Struct corresponding to Model.NodePools[i]
@@ -637,12 +636,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					},
 				},
 			},
-			"kube_config": schema.StringAttribute{
-				Description:        "Static token kubeconfig used for connecting to the cluster. This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see [How to rotate SKE credentials](https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).",
-				Sensitive:          true,
-				Computed:           true,
-				DeprecationMessage: "This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see [How to rotate SKE credentials](https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).",
-			},
 		},
 	}
 }
@@ -859,40 +852,6 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-
-	// Handle credential
-	err = r.getCredential(ctx, diags, model)
-	if err != nil {
-		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Getting credential: %v", err))
-		return
-	}
-}
-
-func (r *clusterResource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Model) error {
-	c := r.skeClient
-	// for kubernetes with version >= 1.27, the deprecated endpoint will not work, so we set kubeconfig to nil
-	if semver.Compare(fmt.Sprintf("v%s", model.KubernetesVersion.ValueString()), "v1.27") >= 0 {
-		core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "Kubernetes version is 1.27 or higher, you must use the stackit_ske_kubeconfig resource instead.")
-		model.KubeConfig = types.StringPointerValue(nil)
-		return nil
-	}
-	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute() //nolint:staticcheck //This endpoint is deprecated but is called to support a deprecated attribute, will be removed with the attribute
-	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if !ok {
-			return fmt.Errorf("fetch cluster credentials: could not convert error to oapierror.GenericOpenAPIError")
-		}
-		if oapiErr.StatusCode == http.StatusBadRequest {
-			// deprecated endpoint will return 400 if the new endpoints have been used
-			// if that's the case, we set the field to null
-			core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "Failed to get static token kubeconfig, which means the new credentials rotation flow might already been triggered for this cluster. If you are already using the stackit_ske_kubeconfig resource you can ignore this warning. If not, you must use it to access this cluster's short-lived admin kubeconfig.")
-			model.KubeConfig = types.StringPointerValue(nil)
-			return nil
-		}
-		return fmt.Errorf("fetching cluster credentials: %w", err)
-	}
-	model.KubeConfig = types.StringPointerValue(res.Kubeconfig)
-	return nil
 }
 
 func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions []ske.MachineImage, currentMachineImages map[string]*ske.Image) ([]ske.Nodepool, []string, error) {
@@ -1992,13 +1951,6 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 	err = mapFields(ctx, clResp, &state)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Processing API payload: %v", err))
-		return
-	}
-
-	// Handle credential
-	err = r.getCredential(ctx, &resp.Diagnostics, &state)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Getting credential: %v", err))
 		return
 	}
 
