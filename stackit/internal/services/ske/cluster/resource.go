@@ -717,7 +717,8 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	availableKubernetesVersions, availableMachines, err := r.loadAvailableVersions(ctx)
+	region := "fixme"
+	availableKubernetesVersions, availableMachines, err := r.loadAvailableVersions(ctx, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Loading available Kubernetes and machine image versions: %v", err))
 		return
@@ -737,9 +738,9 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	tflog.Info(ctx, "SKE cluster created")
 }
 
-func (r *clusterResource) loadAvailableVersions(ctx context.Context) ([]ske.KubernetesVersion, []ske.MachineImage, error) {
+func (r *clusterResource) loadAvailableVersions(ctx context.Context, region string) ([]ske.KubernetesVersion, []ske.MachineImage, error) {
 	c := r.skeClient
-	res, err := c.ListProviderOptions(ctx).Execute()
+	res, err := c.GetProviderOptions(ctx, region).Execute()
 	if err != nil {
 		return nil, nil, fmt.Errorf("calling API: %w", err)
 	}
@@ -832,7 +833,8 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		Network:     network,
 		Nodepools:   &nodePools,
 	}
-	_, err = r.skeClient.CreateOrUpdateCluster(ctx, projectId, name).CreateOrUpdateClusterPayload(payload).Execute()
+	region := "fixme"
+	_, err = r.skeClient.CreateOrUpdateCluster(ctx, projectId, name, region).CreateOrUpdateClusterPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -1236,20 +1238,24 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 		return nil, fmt.Errorf("converting maintenance object: %v", diags.Errors())
 	}
 
-	var timeWindowStart *string
+	var timeWindowStart *time.Time
 	if !(maintenance.Start.IsNull() || maintenance.Start.IsUnknown()) {
 		// API expects RFC3339 datetime
-		timeWindowStart = sdkUtils.Ptr(
-			fmt.Sprintf("0000-01-01T%s", maintenance.Start.ValueString()),
-		)
+		tmpTime, err := time.Parse(maintenance.Start.ValueString(), time.RFC3339)
+		if err != nil {
+			return nil, fmt.Errorf("invalid maintenance window start time: %v", err)
+		}
+		timeWindowStart = sdkUtils.Ptr(tmpTime)
 	}
 
-	var timeWindowEnd *string
+	var timeWindowEnd *time.Time
 	if !(maintenance.End.IsNull() || maintenance.End.IsUnknown()) {
 		// API expects RFC3339 datetime
-		timeWindowEnd = sdkUtils.Ptr(
-			fmt.Sprintf("0000-01-01T%s", maintenance.End.ValueString()),
-		)
+		tmpTime, err := time.Parse(maintenance.Start.ValueString(), time.RFC3339)
+		if err != nil {
+			return nil, fmt.Errorf("invalid maintenance window end time: %v", err)
+		}
+		timeWindowEnd = sdkUtils.Ptr(tmpTime)
 	}
 
 	return &ske.Maintenance{
@@ -1987,7 +1993,7 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", clName)
 
-	availableKubernetesVersions, availableMachines, err := r.loadAvailableVersions(ctx)
+	availableKubernetesVersions, availableMachines, err := r.loadAvailableVersions(ctx, "fixme")
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating cluster", fmt.Sprintf("Loading available Kubernetes and machine image versions: %v", err))
 		return
