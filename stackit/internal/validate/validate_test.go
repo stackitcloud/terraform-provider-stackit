@@ -682,3 +682,42 @@ func TestRrule(t *testing.T) {
 		})
 	}
 }
+
+func TestFileExists(t *testing.T) {
+	tests := []struct {
+		description string
+		input       string
+		isValid     bool
+	}{
+		{
+			"ok",
+			"testdata/file.txt",
+			true,
+		},
+		{
+			"not ok",
+			"testdata/non-existing-file.txt",
+			false,
+		},
+		{
+			"empty",
+			"",
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			r := validator.StringResponse{}
+			FileExists().ValidateString(context.Background(), validator.StringRequest{
+				ConfigValue: types.StringValue(tt.input),
+			}, &r)
+
+			if !tt.isValid && !r.Diagnostics.HasError() {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && r.Diagnostics.HasError() {
+				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
+			}
+		})
+	}
+}
