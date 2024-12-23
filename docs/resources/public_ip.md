@@ -35,7 +35,7 @@ resource "stackit_public_ip" "example" {
 ### Optional
 
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
-- `network_interface_id` (String) Associates the public IP with a network interface or a virtual IP (ID).
+- `network_interface_id` (String) Associates the public IP with a network interface or a virtual IP (ID). If you are using this resource with a Kubernetes Load Balancer or any other resource which associates a network interface implicitly, use the lifecycle `ignore_changes` property in this field to prevent unintentional removal of the network interface due to drift in the Terraform state
 
 ### Read-Only
 
