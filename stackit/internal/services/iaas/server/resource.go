@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cenkalti/backoff/v5"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -47,6 +48,13 @@ var (
 	_ resource.ResourceWithImportState = &serverResource{}
 
 	supportedSourceTypes = []string{"volume", "image"}
+	desiredStatusOptions = []string{modelStateActive, modelStateInactive, modelStateDeallocated}
+)
+
+const (
+	modelStateActive      = "active"
+	modelStateInactive    = "inactive"
+	modelStateDeallocated = "deallocated"
 )
 
 type Model struct {
@@ -65,6 +73,7 @@ type Model struct {
 	CreatedAt        types.String `tfsdk:"created_at"`
 	LaunchedAt       types.String `tfsdk:"launched_at"`
 	UpdatedAt        types.String `tfsdk:"updated_at"`
+	DesiredStatus    types.String `tfsdk:"desired_status"`
 }
 
 // Struct corresponding to Model.BootVolume
@@ -333,7 +342,56 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: "Date-time when the server was updated",
 				Computed:    true,
 			},
+			"desired_status": schema.StringAttribute{
+				Description: "The desired status of the server resource. Defaults to 'active' " + utils.SupportedValuesDocumentation(desiredStatusOptions),
+				Optional:    true,
+				Computed:    true,
+				Validators: []validator.String{
+					stringvalidator.OneOf(desiredStatusOptions...),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					desiredStateModifier{},
+				},
+			},
 		},
+	}
+}
+
+var _ planmodifier.String = desiredStateModifier{}
+
+type desiredStateModifier struct {
+}
+
+// Description implements planmodifier.String.
+func (d desiredStateModifier) Description(context.Context) string {
+	return "validates desired state transition"
+}
+
+// MarkdownDescription implements planmodifier.String.
+func (d desiredStateModifier) MarkdownDescription(ctx context.Context) string {
+	return d.Description(ctx)
+}
+
+// PlanModifyString implements planmodifier.String.
+func (d desiredStateModifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	// Retrieve values from plan
+	var (
+		planState    types.String
+		currentState types.String
+	)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("desired_status"), &planState)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("desired_status"), &currentState)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if currentState.ValueString() == modelStateDeallocated && planState.ValueString() == modelStateInactive {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error changing server state", "Server state change from deallocated to inactive is not possible")
 	}
 }
 
@@ -371,7 +429,6 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("server creation waiting: %v", err))
 		return
 	}
-
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
 	// Map response body to schema
@@ -380,6 +437,12 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
+	updateServerStatus(ctx, r.client, server.Status, model, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
@@ -387,6 +450,109 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 	tflog.Info(ctx, "Server created")
+}
+
+// serverControlClient provides a mockable interface for the necessary
+// client operations in [updateServerStatus]
+type serverControlClient interface {
+	StartServerExecute(ctx context.Context, projectId string, serverId string) error
+	StopServerExecute(ctx context.Context, projectId string, serverId string) error
+	DeallocateServerExecute(ctx context.Context, projectId string, serverId string) error
+	GetServerExecute(ctx context.Context, projectId string, serverId string) (*iaas.Server, error)
+}
+
+// updateServerStatus applies the appropriate server state changes for the actual current and the intended state
+func updateServerStatus(ctx context.Context, client serverControlClient, currentState *string, model Model, diag *diag.Diagnostics) {
+	if currentState == nil {
+		tflog.Warn(ctx, "no current state available, not updating server state")
+		return
+	}
+	switch *currentState {
+	case wait.ServerActiveStatus:
+		switch strings.ToUpper(model.DesiredStatus.ValueString()) {
+		case wait.ServerInactiveStatus:
+			tflog.Debug(ctx, "stopping server to enter inactive state")
+			if err := client.StopServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+				core.LogAndAddError(ctx, diag, "Error creating the server", fmt.Sprintf("cannot stop server: %v", err))
+			}
+		case wait.ServerDeallocatedStatus:
+			tflog.Debug(ctx, "deallocating server to enter deallocated state")
+			if err := client.DeallocateServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+				core.LogAndAddError(ctx, diag, "Error creating the server", fmt.Sprintf("cannot deallocate server: %v", err))
+			}
+		default:
+			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
+		}
+	case wait.ServerInactiveStatus:
+		switch strings.ToUpper(model.DesiredStatus.ValueString()) {
+		case wait.ServerActiveStatus:
+			tflog.Debug(ctx, "starting server to enter active state")
+			if err := client.StartServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+				core.LogAndAddError(ctx, diag, "Error creating the server", fmt.Sprintf("cannot start server: %v", err))
+			}
+
+		case wait.ServerDeallocatedStatus:
+			tflog.Debug(ctx, "deallocating server to enter deallocated state")
+			if err := client.DeallocateServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+				core.LogAndAddError(ctx, diag, "Error creating the server", fmt.Sprintf("cannot deallocate server: %v", err))
+			}
+
+		default:
+			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
+		}
+	case wait.ServerDeallocatedStatus:
+		switch strings.ToUpper(model.DesiredStatus.ValueString()) {
+		case wait.ServerActiveStatus:
+			tflog.Debug(ctx, "starting server to enter active state")
+			if err := client.StartServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+				core.LogAndAddError(ctx, diag, "Error creating the server", fmt.Sprintf("cannot start server: %v", err))
+			}
+		case wait.ServerInactiveStatus:
+			tflog.Debug(ctx, "stopping server to enter inactive state")
+			if err := client.StopServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+				core.LogAndAddError(ctx, diag, "Error creating the server", fmt.Sprintf("cannot stop server: %v", err))
+			}
+		default:
+			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
+		}
+	default:
+		tflog.Debug(ctx, "not updating server state")
+	}
+
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxInterval = 10 * time.Second
+	state, err := backoff.Retry(ctx, func() (status string, err error) {
+		server, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString())
+		if err != nil {
+			return "", backoff.Permanent(err)
+		}
+
+		// state not yet available
+		if server.Status == nil {
+			tflog.Debug(ctx, "server state undefined")
+			return "", fmt.Errorf("unknown server state")
+		}
+
+		// don't care about effective state
+		if model.DesiredStatus.IsNull() || model.DesiredStatus.IsUnknown() {
+			return strings.ToLower(*server.Status), nil
+		}
+
+		// require selected state, but not yet reached
+		if strings.ToLower(*server.Status) != model.DesiredStatus.ValueString() {
+			tflog.Debug(ctx, "target state not yet reached", map[string]any{"serverstate": *server.Status, "desired status": model.DesiredStatus})
+			return "", fmt.Errorf("wrong state, expected %s but got %s", *server.Status, model.DesiredStatus)
+		}
+
+		// desired state reached
+		return strings.ToLower(*server.Status), nil
+	}, backoff.WithMaxElapsedTime(10*time.Minute))
+	if err != nil {
+		core.LogAndAddError(ctx, diag, "Error getting server status", fmt.Sprintf("cannot get server status: %v", err))
+	} else {
+		model.DesiredStatus = types.StringValue(state)
+	}
+	return
 }
 
 // // Read refreshes the Terraform state with the latest data.
@@ -450,17 +616,42 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	var (
+		server *iaas.Server
+		err    error
+	)
+	if server, err = r.client.GetServer(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()).Execute(); err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error retrieving server state", fmt.Sprintf("Getting server state: %v", err))
+	}
+
+	// the server state must be updated before, otherwise setting the metadata might fail
+	updateServerStatus(ctx, r.client, server.Status, model, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Generate API request body from model
 	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	// Update existing server
-	updatedServer, err := r.client.UpdateServer(ctx, projectId, serverId).UpdateServerPayload(*payload).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", fmt.Sprintf("Calling API: %v", err))
-		return
+
+	var updatedServer *iaas.Server
+	if model.DesiredStatus.ValueString() != modelStateDeallocated {
+		// Update existing server
+		updatedServer, err = r.client.UpdateServer(ctx, projectId, serverId).UpdateServerPayload(*payload).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", fmt.Sprintf("Calling API: %v", err))
+			return
+		}
+	} else {
+		// we cannot update the metadata of a shelved server, read the server state again to update the model
+		updatedServer, err = r.client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString())
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", fmt.Sprintf("Calling API: %v", err))
+			return
+		}
 	}
 
 	// Update machine type
@@ -488,6 +679,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -605,7 +797,15 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 
 	model.ServerId = types.StringValue(serverId)
 	model.MachineType = types.StringPointerValue(serverResp.MachineType)
-	model.AvailabilityZone = types.StringPointerValue(serverResp.AvailabilityZone)
+
+	// Proposed fix: If the server is deallocated, it has no availability zone anymore
+	// reactivation will then _change_ the availability zone again, causing terraform
+	// to destroy and recreate the resouce, which is not intended. So we skip the zone
+	// when the server is deallocated to retain the original zone until the server
+	// is activated again
+	if serverResp.Status != nil && *serverResp.Status != wait.ServerDeallocatedStatus {
+		model.AvailabilityZone = types.StringPointerValue(serverResp.AvailabilityZone)
+	}
 	model.Name = types.StringPointerValue(serverResp.Name)
 	model.Labels = labels
 	model.ImageId = types.StringPointerValue(serverResp.ImageId)
@@ -614,6 +814,7 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 	model.CreatedAt = createdAt
 	model.UpdatedAt = updatedAt
 	model.LaunchedAt = launchedAt
+
 	return nil
 }
 

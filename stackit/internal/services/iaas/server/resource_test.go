@@ -7,9 +7,12 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
 )
 
 const (
@@ -76,6 +79,7 @@ func TestMapFields(t *testing.T) {
 				CreatedAt:     utils.Ptr(testTimestamp()),
 				UpdatedAt:     utils.Ptr(testTimestamp()),
 				LaunchedAt:    utils.Ptr(testTimestamp()),
+				Status:        utils.Ptr("active"),
 			},
 			Model{
 				Id:               types.StringValue("pid,sid"),
@@ -92,6 +96,7 @@ func TestMapFields(t *testing.T) {
 				CreatedAt:     types.StringValue(testTimestampValue),
 				UpdatedAt:     types.StringValue(testTimestampValue),
 				LaunchedAt:    types.StringValue(testTimestampValue),
+				DesiredStatus: types.StringValue("active"),
 			},
 			true,
 		},
@@ -263,6 +268,253 @@ func TestToUpdatePayload(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
+			}
+		})
+	}
+}
+
+var _ serverControlClient = (*mockServerControlClient)(nil)
+
+// mockServerControlClient mocks the [serverControlClient] interface with 
+// pluggable functions 
+type mockServerControlClient struct {
+	startServerCalled  int
+	startServerExecute func(callNo int, ctx context.Context, projectId string, serverId string) error
+
+	stopServerCalled  int
+	stopServerExecute func(callNo int, ctx context.Context, projectId string, serverId string) error
+
+	deallocateServerCalled  int
+	deallocateServerExecute func(callNo int, ctx context.Context, projectId string, serverId string) error
+
+	getServerCalled  int
+	getServerExecute func(callNo int, ctx context.Context, projectId string, serverId string) (*iaas.Server, error)
+}
+
+// DeallocateServerExecute implements serverControlClient.
+func (t *mockServerControlClient) DeallocateServerExecute(ctx context.Context, projectId string, serverId string) error {
+	t.deallocateServerCalled++
+	return t.deallocateServerExecute(t.deallocateServerCalled, ctx, projectId, serverId)
+}
+
+// GetServerExecute implements serverControlClient.
+func (t *mockServerControlClient) GetServerExecute(ctx context.Context, projectId string, serverId string) (*iaas.Server, error) {
+	t.getServerCalled++
+	return t.getServerExecute(t.getServerCalled, ctx, projectId, serverId)
+}
+
+// StartServerExecute implements serverControlClient.
+func (t *mockServerControlClient) StartServerExecute(ctx context.Context, projectId string, serverId string) error {
+	t.startServerCalled++
+	return t.startServerExecute(t.startServerCalled, ctx, projectId, serverId)
+}
+
+// StopServerExecute implements serverControlClient.
+func (t *mockServerControlClient) StopServerExecute(ctx context.Context, projectId string, serverId string) error {
+	t.stopServerCalled++
+	return t.stopServerExecute(t.stopServerCalled, ctx, projectId, serverId)
+}
+
+func Test_serverResource_updateServerStatus(t *testing.T) {
+	type fields struct {
+		client *mockServerControlClient
+	}
+	type args struct {
+		currentState *string
+		model        Model
+	}
+	type want struct {
+		err              bool
+		status           types.String
+		getServerCount   int
+		stopCount        int
+		startCount       int
+		deallocatedCount int
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   want
+	}{
+		{
+			name: "no desired status",
+			fields: fields{
+				client: &mockServerControlClient{
+					getServerExecute: func(_ int, ctx context.Context, s1, s2 string) (*iaas.Server, error) {
+						return &iaas.Server{
+							Status: utils.Ptr(wait.ServerActiveStatus),
+						}, nil
+					},
+				},
+			},
+			args: args{
+				currentState: utils.Ptr(wait.ServerActiveStatus),
+				model:        Model{},
+			},
+			want: want{
+				getServerCount: 1,
+			},
+		},
+
+		{
+			name: "desired inactive state",
+			fields: fields{
+				client: &mockServerControlClient{
+					getServerExecute: func(no int, ctx context.Context, s1, s2 string) (*iaas.Server, error) {
+						var state string
+						if no <= 1 {
+							state = wait.ServerActiveStatus
+						} else {
+							state = wait.ServerInactiveStatus
+						}
+						return &iaas.Server{
+							Status: &state,
+						}, nil
+					},
+					stopServerExecute: func(callNo int, ctx context.Context, projectId, serverId string) error { return nil },
+				},
+			},
+			args: args{
+				currentState: utils.Ptr(wait.ServerActiveStatus),
+				model: Model{
+					DesiredStatus: basetypes.NewStringValue("inactive"),
+				},
+			},
+			want: want{
+				getServerCount: 2,
+				stopCount:      1,
+				status:         basetypes.NewStringValue("inactive"),
+			},
+		},
+		{
+			name: "desired deallocated state",
+			fields: fields{
+				client: &mockServerControlClient{
+					getServerExecute: func(no int, ctx context.Context, s1, s2 string) (*iaas.Server, error) {
+						var state string
+						switch no {
+						case 1:
+							state = wait.ServerActiveStatus
+						case 2:
+							state = wait.ServerInactiveStatus
+						default:
+							state = wait.ServerDeallocatedStatus
+						}
+						return &iaas.Server{
+							Status: &state,
+						}, nil
+					},
+					deallocateServerExecute: func(callNo int, ctx context.Context, projectId, serverId string) error { return nil },
+				},
+			},
+			args: args{
+				currentState: utils.Ptr(wait.ServerActiveStatus),
+				model: Model{
+					DesiredStatus: basetypes.NewStringValue("deallocated"),
+				},
+			},
+			want: want{
+				getServerCount:   3,
+				deallocatedCount: 1,
+				status:           basetypes.NewStringValue("deallocated"),
+			},
+		},
+		{
+			name: "don't call start if active",
+			fields: fields{
+				client: &mockServerControlClient{
+					getServerExecute: func(callNo int, ctx context.Context, projectId, serverId string) (*iaas.Server, error) {
+						return &iaas.Server{
+							Status: utils.Ptr(wait.ServerActiveStatus),
+						}, nil
+					},
+				},
+			},
+			args: args{
+				currentState: utils.Ptr(wait.ServerActiveStatus),
+				model: Model{
+					DesiredStatus: basetypes.NewStringValue("active"),
+				},
+			},
+			want: want{
+				status:         basetypes.NewStringValue("active"),
+				getServerCount: 1,
+			},
+		},
+		{
+			name: "don't call stop if inactive",
+			fields: fields{
+				client: &mockServerControlClient{
+					getServerExecute: func(callNo int, ctx context.Context, projectId, serverId string) (*iaas.Server, error) {
+						return &iaas.Server{
+							Status: utils.Ptr(wait.ServerInactiveStatus),
+						}, nil
+					},
+				},
+			},
+			args: args{
+				currentState: utils.Ptr(wait.ServerInactiveStatus),
+				model: Model{
+					DesiredStatus: basetypes.NewStringValue("inactive"),
+				},
+			},
+			want: want{
+				status:         basetypes.NewStringValue("inactive"),
+				getServerCount: 1,
+			},
+		},
+		{
+			name: "don't call dealloacate if deallocated",
+			fields: fields{
+				client: &mockServerControlClient{
+					getServerExecute: func(callNo int, ctx context.Context, projectId, serverId string) (*iaas.Server, error) {
+						return &iaas.Server{
+							Status: utils.Ptr(wait.ServerDeallocatedStatus),
+						}, nil
+					},
+				},
+			},
+			args: args{
+				currentState: utils.Ptr(wait.ServerDeallocatedStatus),
+				model: Model{
+					DesiredStatus: basetypes.NewStringValue("deallocated"),
+				},
+			},
+			want: want{
+				status:         basetypes.NewStringValue("deallocated"),
+				getServerCount: 1,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var diagnostics diag.Diagnostics
+			updateServerStatus(context.Background(), tt.fields.client, tt.args.currentState, tt.args.model, &diagnostics)
+			if tt.want.err {
+				if !diagnostics.HasError() {
+					t.Errorf("expected error in diagnostics")
+				}
+			} else {
+				if diagnostics.HasError() {
+					t.Errorf("expected no errors but got %v", diagnostics.Errors())
+				}
+			}
+			if expected, actual := tt.want.status, tt.args.model.DesiredStatus; expected != actual {
+				t.Errorf("wanted status %s but got %s", expected, actual)
+			}
+
+			if expected, actual := tt.want.getServerCount, tt.fields.client.getServerCalled; expected != actual {
+				t.Errorf("wrong number of get server calls: Expected %d but got %d", expected, actual)
+			}
+			if expected, actual := tt.want.startCount, tt.fields.client.startServerCalled; expected != actual {
+				t.Errorf("wrong number of start server calls: Expected %d but got %d", expected, actual)
+			}
+			if expected, actual := tt.want.stopCount, tt.fields.client.stopServerCalled; expected != actual {
+				t.Errorf("wrong number of stop server calls: Expected %d but got %d", expected, actual)
+			}
+			if expected, actual := tt.want.deallocatedCount, tt.fields.client.deallocateServerCalled; expected != actual {
+				t.Errorf("wrong number of deallocate server calls: Expected %d but got %d", expected, actual)
 			}
 		})
 	}
