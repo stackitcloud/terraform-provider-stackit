@@ -5,26 +5,24 @@ subcategory: ""
 description: |-
   Key pair resource schema. Must have a region specified in the provider configuration. Allows uploading an SSH public key to be used for server authentication.
   Usage with server
-  
-  resource "stackit_key_pair" "keypair" {
+  ```terraform
+  resource "stackitkeypair" "keypair" {
     name       = "example-key-pair"
-    public_key = chomp(file("path/to/id_rsa.pub"))
+    publickey = chomp(file("path/to/idrsa.pub"))
   }
-  
-  resource "stackit_server" "example-server" {
-    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  resource "stackitserver" "example-server" {
+    projectid = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     name       = "example-server"
-    boot_volume = {
+    bootvolume = {
       size        = 64
-      source_type = "image"
-      source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      sourcetype = "image"
+      sourceid   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     }
-    availability_zone = "eu01-1"
-    machine_type      = "g1.1"
-    keypair_name      = "example-key-pair"
+    availabilityzone = "eu01-1"
+    machinetype      = "g1.1"
+    keypairname      = "example-key-pair"
   }
-  
-  
+  ```
   ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
