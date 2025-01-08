@@ -96,7 +96,6 @@ func TestMapFields(t *testing.T) {
 				CreatedAt:     types.StringValue(testTimestampValue),
 				UpdatedAt:     types.StringValue(testTimestampValue),
 				LaunchedAt:    types.StringValue(testTimestampValue),
-				DesiredStatus: types.StringValue("active"),
 			},
 			true,
 		},
@@ -354,6 +353,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			},
 			want: want{
 				getServerCount: 1,
+				status:         basetypes.NewStringValue("active"),
 			},
 		},
 
