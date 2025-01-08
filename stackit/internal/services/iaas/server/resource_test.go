@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
@@ -512,16 +511,9 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			var diagnostics diag.Diagnostics
-			updateServerStatus(context.Background(), tt.fields.client, tt.args.currentState, &tt.args.model, &diagnostics)
-			if tt.want.err {
-				if !diagnostics.HasError() {
-					t.Errorf("expected error in diagnostics")
-				}
-			} else {
-				if diagnostics.HasError() {
-					t.Errorf("expected no errors but got %v", diagnostics.Errors())
-				}
+			err := updateServerStatus(context.Background(), tt.fields.client, tt.args.currentState, &tt.args.model)
+			if (err != nil) != tt.want.err {
+				t.Errorf("inconsistent error, want %v and got %v", tt.want.err, err)
 			}
 			if expected, actual := tt.want.status, tt.args.model.DesiredStatus; expected != actual {
 				t.Errorf("wanted status %s but got %s", expected, actual)
