@@ -277,6 +277,7 @@ var _ serverControlClient = (*mockServerControlClient)(nil)
 // mockServerControlClient mocks the [serverControlClient] interface with
 // pluggable functions
 type mockServerControlClient struct {
+	wait.APIClientInterface
 	startServerCalled  int
 	startServerExecute func(callNo int, ctx context.Context, projectId, serverId string) error
 
@@ -315,6 +316,8 @@ func (t *mockServerControlClient) StopServerExecute(ctx context.Context, project
 }
 
 func Test_serverResource_updateServerStatus(t *testing.T) {
+	projectId := basetypes.NewStringValue("projectId")
+	serverId := basetypes.NewStringValue("serverId")
 	type fields struct {
 		client *mockServerControlClient
 	}
@@ -342,6 +345,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 				client: &mockServerControlClient{
 					getServerExecute: func(_ int, _ context.Context, _, _ string) (*iaas.Server, error) {
 						return &iaas.Server{
+							Id:     utils.Ptr(serverId.ValueString()),
 							Status: utils.Ptr(wait.ServerActiveStatus),
 						}, nil
 					},
@@ -349,7 +353,10 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			},
 			args: args{
 				currentState: utils.Ptr(wait.ServerActiveStatus),
-				model:        Model{},
+				model: Model{
+					ProjectId: projectId,
+					ServerId:  serverId,
+				},
 			},
 			want: want{
 				getServerCount: 1,
@@ -369,6 +376,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 							state = wait.ServerInactiveStatus
 						}
 						return &iaas.Server{
+							Id:     utils.Ptr(serverId.ValueString()),
 							Status: &state,
 						}, nil
 					},
@@ -378,6 +386,8 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			args: args{
 				currentState: utils.Ptr(wait.ServerActiveStatus),
 				model: Model{
+					ProjectId:     projectId,
+					ServerId:      serverId,
 					DesiredStatus: basetypes.NewStringValue("inactive"),
 				},
 			},
@@ -402,6 +412,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 							state = wait.ServerDeallocatedStatus
 						}
 						return &iaas.Server{
+							Id:     utils.Ptr(serverId.ValueString()),
 							Status: &state,
 						}, nil
 					},
@@ -411,6 +422,8 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			args: args{
 				currentState: utils.Ptr(wait.ServerActiveStatus),
 				model: Model{
+					ProjectId:     projectId,
+					ServerId:      serverId,
 					DesiredStatus: basetypes.NewStringValue("deallocated"),
 				},
 			},
@@ -426,6 +439,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 				client: &mockServerControlClient{
 					getServerExecute: func(_ int, _ context.Context, _, _ string) (*iaas.Server, error) {
 						return &iaas.Server{
+							Id:     utils.Ptr(serverId.ValueString()),
 							Status: utils.Ptr(wait.ServerActiveStatus),
 						}, nil
 					},
@@ -434,6 +448,8 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			args: args{
 				currentState: utils.Ptr(wait.ServerActiveStatus),
 				model: Model{
+					ProjectId:     projectId,
+					ServerId:      serverId,
 					DesiredStatus: basetypes.NewStringValue("active"),
 				},
 			},
@@ -448,6 +464,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 				client: &mockServerControlClient{
 					getServerExecute: func(_ int, _ context.Context, _, _ string) (*iaas.Server, error) {
 						return &iaas.Server{
+							Id:     utils.Ptr(serverId.ValueString()),
 							Status: utils.Ptr(wait.ServerInactiveStatus),
 						}, nil
 					},
@@ -456,6 +473,8 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			args: args{
 				currentState: utils.Ptr(wait.ServerInactiveStatus),
 				model: Model{
+					ProjectId:     projectId,
+					ServerId:      serverId,
 					DesiredStatus: basetypes.NewStringValue("inactive"),
 				},
 			},
@@ -470,6 +489,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 				client: &mockServerControlClient{
 					getServerExecute: func(_ int, _ context.Context, _, _ string) (*iaas.Server, error) {
 						return &iaas.Server{
+							Id:     utils.Ptr(serverId.ValueString()),
 							Status: utils.Ptr(wait.ServerDeallocatedStatus),
 						}, nil
 					},
@@ -478,6 +498,8 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			args: args{
 				currentState: utils.Ptr(wait.ServerDeallocatedStatus),
 				model: Model{
+					ProjectId:     projectId,
+					ServerId:      serverId,
 					DesiredStatus: basetypes.NewStringValue("deallocated"),
 				},
 			},
@@ -489,6 +511,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			var diagnostics diag.Diagnostics
 			updateServerStatus(context.Background(), tt.fields.client, tt.args.currentState, &tt.args.model, &diagnostics)
 			if tt.want.err {

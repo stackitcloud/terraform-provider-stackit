@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cenkalti/backoff/v5"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -455,10 +454,52 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 // serverControlClient provides a mockable interface for the necessary
 // client operations in [updateServerStatus]
 type serverControlClient interface {
+	wait.APIClientInterface
 	StartServerExecute(ctx context.Context, projectId string, serverId string) error
 	StopServerExecute(ctx context.Context, projectId string, serverId string) error
 	DeallocateServerExecute(ctx context.Context, projectId string, serverId string) error
-	GetServerExecute(ctx context.Context, projectId string, serverId string) (*iaas.Server, error)
+}
+
+func startServer(ctx context.Context, client serverControlClient, projectId, serverId string, diagnostics *diag.Diagnostics) *string {
+	tflog.Debug(ctx, "starting server to enter active state")
+	if err := client.StartServerExecute(ctx, projectId, serverId); err != nil {
+		core.LogAndAddError(ctx, diagnostics, "Error updating the server", fmt.Sprintf("cannot start server: %v", err))
+		return nil
+	}
+	server, err := wait.StartServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, diagnostics, "Error updating the server", fmt.Sprintf("cannot check started server: %v", err))
+		return nil
+	}
+	return server.Status
+}
+
+func stopServer(ctx context.Context, client serverControlClient, projectId, serverId string, diagnostics *diag.Diagnostics) *string {
+	tflog.Debug(ctx, "stopping server to enter inactive state")
+	if err := client.StopServerExecute(ctx, projectId, serverId); err != nil {
+		core.LogAndAddError(ctx, diagnostics, "Error updating the server", fmt.Sprintf("cannot stop server: %v", err))
+		return nil
+	}
+	server, err := wait.StopServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, diagnostics, "Error updating the server", fmt.Sprintf("cannot check stopped server: %v", err))
+		return nil
+	}
+	return server.Status
+}
+
+func deallocatServer(ctx context.Context, client serverControlClient, projectId, serverId string, diagnostics *diag.Diagnostics) *string {
+	tflog.Debug(ctx, "deallocating server to enter shelved state")
+	if err := client.DeallocateServerExecute(ctx, projectId, serverId); err != nil {
+		core.LogAndAddError(ctx, diagnostics, "Error updating the server", fmt.Sprintf("cannot deallocate server: %v", err))
+		return nil
+	}
+	server, err := wait.DeallocateServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, diagnostics, "Error updating the server", fmt.Sprintf("cannot check deallocated server: %v", err))
+		return nil
+	}
+	return server.Status
 }
 
 // updateServerStatus applies the appropriate server state changes for the actual current and the intended state
@@ -467,90 +508,79 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 		tflog.Warn(ctx, "no current state available, not updating server state")
 		return
 	}
+	var newState *string
 	switch *currentState {
 	case wait.ServerActiveStatus:
 		switch strings.ToUpper(model.DesiredStatus.ValueString()) {
 		case wait.ServerInactiveStatus:
-			tflog.Debug(ctx, "stopping server to enter inactive state")
-			if err := client.StopServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
-				core.LogAndAddError(ctx, diagnostics, "Error creating the server", fmt.Sprintf("cannot stop server: %v", err))
+			newState = stopServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString(), diagnostics)
+			if diagnostics.HasError() {
+				return
 			}
+
 		case wait.ServerDeallocatedStatus:
-			tflog.Debug(ctx, "deallocating server to enter deallocated state")
-			if err := client.DeallocateServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
-				core.LogAndAddError(ctx, diagnostics, "Error creating the server", fmt.Sprintf("cannot deallocate server: %v", err))
+			newState = deallocatServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString(), diagnostics)
+			if diagnostics.HasError() {
+				return
 			}
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
+			if server, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+				core.LogAndAddError(ctx, diagnostics, "Error updating the server", fmt.Sprintf("cannot check server: %v", err))
+				return
+			} else {
+				newState = server.Status
+			}
 		}
 	case wait.ServerInactiveStatus:
 		switch strings.ToUpper(model.DesiredStatus.ValueString()) {
 		case wait.ServerActiveStatus:
-			tflog.Debug(ctx, "starting server to enter active state")
-			if err := client.StartServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
-				core.LogAndAddError(ctx, diagnostics, "Error creating the server", fmt.Sprintf("cannot start server: %v", err))
+			newState = startServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString(), diagnostics)
+			if diagnostics.HasError() {
+				return
 			}
-
 		case wait.ServerDeallocatedStatus:
-			tflog.Debug(ctx, "deallocating server to enter deallocated state")
-			if err := client.DeallocateServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
-				core.LogAndAddError(ctx, diagnostics, "Error creating the server", fmt.Sprintf("cannot deallocate server: %v", err))
+			newState = deallocatServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString(), diagnostics)
+			if diagnostics.HasError() {
+				return
 			}
 
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
+			if server, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+				core.LogAndAddError(ctx, diagnostics, "Error updating the server", fmt.Sprintf("cannot check server: %v", err))
+				return
+			} else {
+				newState = server.Status
+			}
 		}
 	case wait.ServerDeallocatedStatus:
 		switch strings.ToUpper(model.DesiredStatus.ValueString()) {
 		case wait.ServerActiveStatus:
-			tflog.Debug(ctx, "starting server to enter active state")
-			if err := client.StartServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
-				core.LogAndAddError(ctx, diagnostics, "Error creating the server", fmt.Sprintf("cannot start server: %v", err))
+			newState = startServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString(), diagnostics)
+			if diagnostics.HasError() {
+				return
 			}
+
 		case wait.ServerInactiveStatus:
-			tflog.Debug(ctx, "stopping server to enter inactive state")
-			if err := client.StopServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
-				core.LogAndAddError(ctx, diagnostics, "Error creating the server", fmt.Sprintf("cannot stop server: %v", err))
+			newState = stopServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString(), diagnostics)
+			if diagnostics.HasError() {
+				return
 			}
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
+			if server, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+				core.LogAndAddError(ctx, diagnostics, "Error creating the server", fmt.Sprintf("cannot check server: %v", err))
+				return
+			} else {
+				newState = server.Status
+			}
 		}
 	default:
 		tflog.Debug(ctx, "not updating server state")
 	}
-
-	bo := backoff.NewExponentialBackOff()
-	bo.MaxInterval = 10 * time.Second
-	state, err := backoff.Retry(ctx, func() (status string, err error) {
-		server, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString())
-		if err != nil {
-			return "", backoff.Permanent(err)
-		}
-
-		// state not yet available
-		if server.Status == nil {
-			tflog.Debug(ctx, "server state undefined")
-			return "", fmt.Errorf("unknown server state")
-		}
-
-		// don't care about effective state
-		if model.DesiredStatus.IsNull() || model.DesiredStatus.IsUnknown() {
-			return strings.ToLower(*server.Status), nil
-		}
-
-		// require selected state, but not yet reached
-		if strings.ToLower(*server.Status) != model.DesiredStatus.ValueString() {
-			tflog.Debug(ctx, "target state not yet reached", map[string]any{"serverstate": *server.Status, "desired status": model.DesiredStatus})
-			return "", fmt.Errorf("wrong state, expected %s but got %s", *server.Status, model.DesiredStatus)
-		}
-
-		// desired state reached
-		return strings.ToLower(*server.Status), nil
-	}, backoff.WithMaxElapsedTime(10*time.Minute))
-	if err != nil {
-		core.LogAndAddError(ctx, diagnostics, "Error getting server status", fmt.Sprintf("cannot get server status: %v", err))
-	} else {
-		model.DesiredStatus = types.StringValue(state)
+	if newState != nil {
+		model.DesiredStatus = basetypes.NewStringValue(strings.ToLower(*newState))
 	}
 }
 
