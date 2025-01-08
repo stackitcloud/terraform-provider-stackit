@@ -374,7 +374,7 @@ func (d desiredStateModifier) MarkdownDescription(ctx context.Context) string {
 }
 
 // PlanModifyString implements planmodifier.String.
-func (d desiredStateModifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+func (d desiredStateModifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) { //nolint: gocritic //signature is defined by terraform api
 	// Retrieve values from plan
 	var (
 		planState    types.String
@@ -438,7 +438,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	updateServerStatus(ctx, r.client, server.Status, model, &resp.Diagnostics)
+	updateServerStatus(ctx, r.client, server.Status, &model, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -462,7 +462,7 @@ type serverControlClient interface {
 }
 
 // updateServerStatus applies the appropriate server state changes for the actual current and the intended state
-func updateServerStatus(ctx context.Context, client serverControlClient, currentState *string, model Model, diag *diag.Diagnostics) {
+func updateServerStatus(ctx context.Context, client serverControlClient, currentState *string, model *Model, diagnostics *diag.Diagnostics) {
 	if currentState == nil {
 		tflog.Warn(ctx, "no current state available, not updating server state")
 		return
@@ -473,12 +473,12 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 		case wait.ServerInactiveStatus:
 			tflog.Debug(ctx, "stopping server to enter inactive state")
 			if err := client.StopServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
-				core.LogAndAddError(ctx, diag, "Error creating the server", fmt.Sprintf("cannot stop server: %v", err))
+				core.LogAndAddError(ctx, diagnostics, "Error creating the server", fmt.Sprintf("cannot stop server: %v", err))
 			}
 		case wait.ServerDeallocatedStatus:
 			tflog.Debug(ctx, "deallocating server to enter deallocated state")
 			if err := client.DeallocateServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
-				core.LogAndAddError(ctx, diag, "Error creating the server", fmt.Sprintf("cannot deallocate server: %v", err))
+				core.LogAndAddError(ctx, diagnostics, "Error creating the server", fmt.Sprintf("cannot deallocate server: %v", err))
 			}
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
@@ -488,13 +488,13 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 		case wait.ServerActiveStatus:
 			tflog.Debug(ctx, "starting server to enter active state")
 			if err := client.StartServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
-				core.LogAndAddError(ctx, diag, "Error creating the server", fmt.Sprintf("cannot start server: %v", err))
+				core.LogAndAddError(ctx, diagnostics, "Error creating the server", fmt.Sprintf("cannot start server: %v", err))
 			}
 
 		case wait.ServerDeallocatedStatus:
 			tflog.Debug(ctx, "deallocating server to enter deallocated state")
 			if err := client.DeallocateServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
-				core.LogAndAddError(ctx, diag, "Error creating the server", fmt.Sprintf("cannot deallocate server: %v", err))
+				core.LogAndAddError(ctx, diagnostics, "Error creating the server", fmt.Sprintf("cannot deallocate server: %v", err))
 			}
 
 		default:
@@ -505,12 +505,12 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 		case wait.ServerActiveStatus:
 			tflog.Debug(ctx, "starting server to enter active state")
 			if err := client.StartServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
-				core.LogAndAddError(ctx, diag, "Error creating the server", fmt.Sprintf("cannot start server: %v", err))
+				core.LogAndAddError(ctx, diagnostics, "Error creating the server", fmt.Sprintf("cannot start server: %v", err))
 			}
 		case wait.ServerInactiveStatus:
 			tflog.Debug(ctx, "stopping server to enter inactive state")
 			if err := client.StopServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
-				core.LogAndAddError(ctx, diag, "Error creating the server", fmt.Sprintf("cannot stop server: %v", err))
+				core.LogAndAddError(ctx, diagnostics, "Error creating the server", fmt.Sprintf("cannot stop server: %v", err))
 			}
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
@@ -548,11 +548,10 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 		return strings.ToLower(*server.Status), nil
 	}, backoff.WithMaxElapsedTime(10*time.Minute))
 	if err != nil {
-		core.LogAndAddError(ctx, diag, "Error getting server status", fmt.Sprintf("cannot get server status: %v", err))
+		core.LogAndAddError(ctx, diagnostics, "Error getting server status", fmt.Sprintf("cannot get server status: %v", err))
 	} else {
 		model.DesiredStatus = types.StringValue(state)
 	}
-	return
 }
 
 // // Read refreshes the Terraform state with the latest data.
@@ -625,7 +624,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// the server state must be updated before, otherwise setting the metadata might fail
-	updateServerStatus(ctx, r.client, server.Status, model, &resp.Diagnostics)
+	updateServerStatus(ctx, r.client, server.Status, &model, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -800,7 +799,7 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 
 	// Proposed fix: If the server is deallocated, it has no availability zone anymore
 	// reactivation will then _change_ the availability zone again, causing terraform
-	// to destroy and recreate the resouce, which is not intended. So we skip the zone
+	// to destroy and recreate the resource, which is not intended. So we skip the zone
 	// when the server is deallocated to retain the original zone until the server
 	// is activated again
 	if serverResp.Status != nil && *serverResp.Status != wait.ServerDeallocatedStatus {

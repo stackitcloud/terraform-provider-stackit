@@ -275,42 +275,42 @@ func TestToUpdatePayload(t *testing.T) {
 
 var _ serverControlClient = (*mockServerControlClient)(nil)
 
-// mockServerControlClient mocks the [serverControlClient] interface with 
-// pluggable functions 
+// mockServerControlClient mocks the [serverControlClient] interface with
+// pluggable functions
 type mockServerControlClient struct {
 	startServerCalled  int
-	startServerExecute func(callNo int, ctx context.Context, projectId string, serverId string) error
+	startServerExecute func(callNo int, ctx context.Context, projectId, serverId string) error
 
 	stopServerCalled  int
-	stopServerExecute func(callNo int, ctx context.Context, projectId string, serverId string) error
+	stopServerExecute func(callNo int, ctx context.Context, projectId, serverId string) error
 
 	deallocateServerCalled  int
-	deallocateServerExecute func(callNo int, ctx context.Context, projectId string, serverId string) error
+	deallocateServerExecute func(callNo int, ctx context.Context, projectId, serverId string) error
 
 	getServerCalled  int
-	getServerExecute func(callNo int, ctx context.Context, projectId string, serverId string) (*iaas.Server, error)
+	getServerExecute func(callNo int, ctx context.Context, projectId, serverId string) (*iaas.Server, error)
 }
 
 // DeallocateServerExecute implements serverControlClient.
-func (t *mockServerControlClient) DeallocateServerExecute(ctx context.Context, projectId string, serverId string) error {
+func (t *mockServerControlClient) DeallocateServerExecute(ctx context.Context, projectId, serverId string) error {
 	t.deallocateServerCalled++
 	return t.deallocateServerExecute(t.deallocateServerCalled, ctx, projectId, serverId)
 }
 
 // GetServerExecute implements serverControlClient.
-func (t *mockServerControlClient) GetServerExecute(ctx context.Context, projectId string, serverId string) (*iaas.Server, error) {
+func (t *mockServerControlClient) GetServerExecute(ctx context.Context, projectId, serverId string) (*iaas.Server, error) {
 	t.getServerCalled++
 	return t.getServerExecute(t.getServerCalled, ctx, projectId, serverId)
 }
 
 // StartServerExecute implements serverControlClient.
-func (t *mockServerControlClient) StartServerExecute(ctx context.Context, projectId string, serverId string) error {
+func (t *mockServerControlClient) StartServerExecute(ctx context.Context, projectId, serverId string) error {
 	t.startServerCalled++
 	return t.startServerExecute(t.startServerCalled, ctx, projectId, serverId)
 }
 
 // StopServerExecute implements serverControlClient.
-func (t *mockServerControlClient) StopServerExecute(ctx context.Context, projectId string, serverId string) error {
+func (t *mockServerControlClient) StopServerExecute(ctx context.Context, projectId, serverId string) error {
 	t.stopServerCalled++
 	return t.stopServerExecute(t.stopServerCalled, ctx, projectId, serverId)
 }
@@ -341,7 +341,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			name: "no desired status",
 			fields: fields{
 				client: &mockServerControlClient{
-					getServerExecute: func(_ int, ctx context.Context, s1, s2 string) (*iaas.Server, error) {
+					getServerExecute: func(_ int, _ context.Context, _, _ string) (*iaas.Server, error) {
 						return &iaas.Server{
 							Status: utils.Ptr(wait.ServerActiveStatus),
 						}, nil
@@ -361,7 +361,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			name: "desired inactive state",
 			fields: fields{
 				client: &mockServerControlClient{
-					getServerExecute: func(no int, ctx context.Context, s1, s2 string) (*iaas.Server, error) {
+					getServerExecute: func(no int, _ context.Context, _, _ string) (*iaas.Server, error) {
 						var state string
 						if no <= 1 {
 							state = wait.ServerActiveStatus
@@ -372,7 +372,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 							Status: &state,
 						}, nil
 					},
-					stopServerExecute: func(callNo int, ctx context.Context, projectId, serverId string) error { return nil },
+					stopServerExecute: func(_ int, _ context.Context, _, _ string) error { return nil },
 				},
 			},
 			args: args{
@@ -391,7 +391,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			name: "desired deallocated state",
 			fields: fields{
 				client: &mockServerControlClient{
-					getServerExecute: func(no int, ctx context.Context, s1, s2 string) (*iaas.Server, error) {
+					getServerExecute: func(no int, _ context.Context, _, _ string) (*iaas.Server, error) {
 						var state string
 						switch no {
 						case 1:
@@ -405,7 +405,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 							Status: &state,
 						}, nil
 					},
-					deallocateServerExecute: func(callNo int, ctx context.Context, projectId, serverId string) error { return nil },
+					deallocateServerExecute: func(_ int, _ context.Context, _, _ string) error { return nil },
 				},
 			},
 			args: args{
@@ -424,7 +424,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			name: "don't call start if active",
 			fields: fields{
 				client: &mockServerControlClient{
-					getServerExecute: func(callNo int, ctx context.Context, projectId, serverId string) (*iaas.Server, error) {
+					getServerExecute: func(_ int, _ context.Context, _, _ string) (*iaas.Server, error) {
 						return &iaas.Server{
 							Status: utils.Ptr(wait.ServerActiveStatus),
 						}, nil
@@ -446,7 +446,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			name: "don't call stop if inactive",
 			fields: fields{
 				client: &mockServerControlClient{
-					getServerExecute: func(callNo int, ctx context.Context, projectId, serverId string) (*iaas.Server, error) {
+					getServerExecute: func(_ int, _ context.Context, _, _ string) (*iaas.Server, error) {
 						return &iaas.Server{
 							Status: utils.Ptr(wait.ServerInactiveStatus),
 						}, nil
@@ -468,7 +468,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			name: "don't call dealloacate if deallocated",
 			fields: fields{
 				client: &mockServerControlClient{
-					getServerExecute: func(callNo int, ctx context.Context, projectId, serverId string) (*iaas.Server, error) {
+					getServerExecute: func(_ int, _ context.Context, _, _ string) (*iaas.Server, error) {
 						return &iaas.Server{
 							Status: utils.Ptr(wait.ServerDeallocatedStatus),
 						}, nil
@@ -490,7 +490,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var diagnostics diag.Diagnostics
-			updateServerStatus(context.Background(), tt.fields.client, tt.args.currentState, tt.args.model, &diagnostics)
+			updateServerStatus(context.Background(), tt.fields.client, tt.args.currentState, &tt.args.model, &diagnostics)
 			if tt.want.err {
 				if !diagnostics.HasError() {
 					t.Errorf("expected error in diagnostics")
