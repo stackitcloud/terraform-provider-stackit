@@ -11,10 +11,11 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.25.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.11.0
-	github.com/stackitcloud/stackit-sdk-go/core v0.14.0
+	github.com/stackitcloud/stackit-sdk-go/core v0.15.0
 	github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.12.1
-	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.18.0
+	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.19.0
+	github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.12-alpha
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.17.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.20.1
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.20.1
@@ -80,11 +81,11 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/zclconf/go-cty v1.15.0 // indirect
-	golang.org/x/crypto v0.29.0 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
-	golang.org/x/sync v0.9.0 // indirect
-	golang.org/x/sys v0.27.0 // indirect
-	golang.org/x/text v0.20.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142 // indirect
