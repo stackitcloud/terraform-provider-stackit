@@ -46,6 +46,8 @@ var (
 	TestProjectServiceAccountEmail = os.Getenv("TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL")
 	// TestProjectUserEmail is the e-mail of a user for the project created as part of the resource-manager acceptance tests
 	TestProjectUserEmail = os.Getenv("TF_ACC_TEST_PROJECT_USER_EMAIL")
+	// TestImageLocalFilePath is the local path to an image file used for image acceptance tests
+	TestImageLocalFilePath = os.Getenv("TF_ACC_TEST_IMAGE_LOCAL_FILE_PATH")
 
 	ArgusCustomEndpoint           = os.Getenv("TF_ACC_ARGUS_CUSTOM_ENDPOINT")
 	DnsCustomEndpoint             = os.Getenv("TF_ACC_DNS_CUSTOM_ENDPOINT")
