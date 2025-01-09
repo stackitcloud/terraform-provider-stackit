@@ -344,7 +344,6 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"desired_status": schema.StringAttribute{
 				Description: "The desired status of the server resource. Defaults to 'active' " + utils.SupportedValuesDocumentation(desiredStatusOptions),
 				Optional:    true,
-				Computed:    true,
 				Validators: []validator.String{
 					stringvalidator.OneOf(desiredStatusOptions...),
 				},
@@ -460,40 +459,40 @@ type serverControlClient interface {
 	DeallocateServerExecute(ctx context.Context, projectId string, serverId string) error
 }
 
-func startServer(ctx context.Context, client serverControlClient, projectId, serverId string) (*string, error) {
+func startServer(ctx context.Context, client serverControlClient, projectId, serverId string) error {
 	tflog.Debug(ctx, "starting server to enter active state")
 	if err := client.StartServerExecute(ctx, projectId, serverId); err != nil {
-		return nil, fmt.Errorf("cannot start server: %w", err)
+		return fmt.Errorf("cannot start server: %w", err)
 	}
-	server, err := wait.StartServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
+	_, err := wait.StartServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("cannot check started server: %w", err)
+		return fmt.Errorf("cannot check started server: %w", err)
 	}
-	return server.Status, nil
+	return nil
 }
 
-func stopServer(ctx context.Context, client serverControlClient, projectId, serverId string) (*string, error) {
+func stopServer(ctx context.Context, client serverControlClient, projectId, serverId string) error {
 	tflog.Debug(ctx, "stopping server to enter inactive state")
 	if err := client.StopServerExecute(ctx, projectId, serverId); err != nil {
-		return nil, fmt.Errorf("cannot stop server: %w", err)
+		return fmt.Errorf("cannot stop server: %w", err)
 	}
-	server, err := wait.StopServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
+	_, err := wait.StopServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("cannot check stopped server: %w", err)
+		return fmt.Errorf("cannot check stopped server: %w", err)
 	}
-	return server.Status, nil
+	return nil
 }
 
-func deallocatServer(ctx context.Context, client serverControlClient, projectId, serverId string) (*string, error) {
+func deallocatServer(ctx context.Context, client serverControlClient, projectId, serverId string) error {
 	tflog.Debug(ctx, "deallocating server to enter shelved state")
 	if err := client.DeallocateServerExecute(ctx, projectId, serverId); err != nil {
-		return nil, fmt.Errorf("cannot deallocate server: %w", err)
+		return fmt.Errorf("cannot deallocate server: %w", err)
 	}
-	server, err := wait.DeallocateServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
+	_, err := wait.DeallocateServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("cannot check deallocated server: %w", err)
+		return fmt.Errorf("cannot check deallocated server: %w", err)
 	}
-	return server.Status, nil
+	return nil
 }
 
 // updateServerStatus applies the appropriate server state changes for the actual current and the intended state
@@ -502,84 +501,63 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 		tflog.Warn(ctx, "no current state available, not updating server state")
 		return nil
 	}
-	var newState *string
 	switch *currentState {
 	case wait.ServerActiveStatus:
 		switch strings.ToUpper(model.DesiredStatus.ValueString()) {
 		case wait.ServerInactiveStatus:
-			if state, err := stopServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if err := stopServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
 				return err
-			} else {
-				newState = state
 			}
 
 		case wait.ServerDeallocatedStatus:
 
-			if state, err := deallocatServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if err := deallocatServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
 				return err
-			} else {
-				newState = state
 			}
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
-			if server, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
 				return err
-			} else {
-				newState = server.Status
 			}
 		}
 	case wait.ServerInactiveStatus:
 		switch strings.ToUpper(model.DesiredStatus.ValueString()) {
 		case wait.ServerActiveStatus:
-			if state, err := startServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if err := startServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
 				return err
-			} else {
-				newState = state
 			}
 		case wait.ServerDeallocatedStatus:
-			if state, err := deallocatServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if err := deallocatServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
 				return err
-			} else {
-				newState = state
 			}
 
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
-			if server, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
 				return err
-			} else {
-				newState = server.Status
 			}
 		}
 	case wait.ServerDeallocatedStatus:
 		switch strings.ToUpper(model.DesiredStatus.ValueString()) {
 		case wait.ServerActiveStatus:
-			if state, err := startServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if err := startServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
 				return err
-			} else {
-				newState = state
 			}
 
 		case wait.ServerInactiveStatus:
-			if state, err := stopServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if err := stopServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
 				return err
-			} else {
-				newState = state
 			}
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
-			if server, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
 				return err
-			} else {
-				newState = server.Status
 			}
 		}
 	default:
 		tflog.Debug(ctx, "not updating server state")
 	}
-	if newState != nil {
-		model.DesiredStatus = basetypes.NewStringValue(strings.ToLower(*newState))
-	}
+
 	return nil
 }
 
@@ -646,12 +624,12 @@ func (r *serverResource) updateServerAttributes(ctx context.Context, model, stat
 		}
 		err := r.client.ResizeServer(ctx, projectId, serverId).ResizeServerPayload(payload).Execute()
 		if err != nil {
-			return nil, fmt.Errorf("Resizing the server, calling API: %v", err)
+			return nil, fmt.Errorf("Resizing the server, calling API: %w", err)
 		}
 
 		_, err = wait.ResizeServerWaitHandler(ctx, r.client, projectId, serverId).WaitWithContext(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("server resize waiting: %v", err)
+			return nil, fmt.Errorf("server resize waiting: %w", err)
 		}
 		// Update server model because the API doesn't return a server object as response
 		updatedServer.MachineType = modelMachineType
@@ -703,7 +681,6 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
 		}
-
 	} else {
 		// potentially unfreeze first and update afterwards
 		if err := updateServerStatus(ctx, r.client, server.Status, &model); err != nil {

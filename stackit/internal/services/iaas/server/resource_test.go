@@ -359,7 +359,6 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			},
 			want: want{
 				getServerCount: 1,
-				status:         basetypes.NewStringValue("active"),
 			},
 		},
 
