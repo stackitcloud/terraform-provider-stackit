@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -50,21 +52,22 @@ var (
 )
 
 type Model struct {
-	Id               types.String `tfsdk:"id"` // needed by TF
-	ProjectId        types.String `tfsdk:"project_id"`
-	ServerId         types.String `tfsdk:"server_id"`
-	MachineType      types.String `tfsdk:"machine_type"`
-	Name             types.String `tfsdk:"name"`
-	AvailabilityZone types.String `tfsdk:"availability_zone"`
-	BootVolume       types.Object `tfsdk:"boot_volume"`
-	ImageId          types.String `tfsdk:"image_id"`
-	KeypairName      types.String `tfsdk:"keypair_name"`
-	Labels           types.Map    `tfsdk:"labels"`
-	AffinityGroup    types.String `tfsdk:"affinity_group"`
-	UserData         types.String `tfsdk:"user_data"`
-	CreatedAt        types.String `tfsdk:"created_at"`
-	LaunchedAt       types.String `tfsdk:"launched_at"`
-	UpdatedAt        types.String `tfsdk:"updated_at"`
+	Id                types.String `tfsdk:"id"` // needed by TF
+	ProjectId         types.String `tfsdk:"project_id"`
+	ServerId          types.String `tfsdk:"server_id"`
+	MachineType       types.String `tfsdk:"machine_type"`
+	Name              types.String `tfsdk:"name"`
+	AvailabilityZone  types.String `tfsdk:"availability_zone"`
+	BootVolume        types.Object `tfsdk:"boot_volume"`
+	ImageId           types.String `tfsdk:"image_id"`
+	NetworkInterfaces types.List   `tfsdk:"network_interfaces"`
+	KeypairName       types.String `tfsdk:"keypair_name"`
+	Labels            types.Map    `tfsdk:"labels"`
+	AffinityGroup     types.String `tfsdk:"affinity_group"`
+	UserData          types.String `tfsdk:"user_data"`
+	CreatedAt         types.String `tfsdk:"created_at"`
+	LaunchedAt        types.String `tfsdk:"launched_at"`
+	UpdatedAt         types.String `tfsdk:"updated_at"`
 }
 
 // Struct corresponding to Model.BootVolume
@@ -278,6 +281,20 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"network_interfaces": schema.ListAttribute{
+				Description: "The IDs of network interfaces which should be attached to the server. Updating it will recreate the server.",
+				Optional:    true,
+				ElementType: types.StringType,
+				Validators: []validator.List{
+					listvalidator.ValueStringsAre(
+						validate.UUID(),
+						validate.NoSeparator(),
+					),
+				},
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.RequiresReplace(),
+				},
+			},
 			"keypair_name": schema.StringAttribute{
 				Description: "The name of the keypair used during server creation.",
 				Optional:    true,
@@ -402,7 +419,9 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
-	serverResp, err := r.client.GetServer(ctx, projectId, serverId).Execute()
+	serverReq := r.client.GetServer(ctx, projectId, serverId)
+	serverReq = serverReq.Details(true)
+	serverResp, err := serverReq.Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -602,6 +621,30 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 		launchedAtValue := *serverResp.LaunchedAt
 		launchedAt = types.StringValue(launchedAtValue.Format(time.RFC3339))
 	}
+	model.NetworkInterfaces = types.ListNull(types.StringType)
+	if serverResp.Nics != nil {
+		var respNics []string
+		for _, nic := range *serverResp.Nics {
+			respNics = append(respNics, *nic.NicId)
+		}
+		tflog.Debug(ctx, fmt.Sprintf("mapFields() respNics: %+v", respNics))
+		modelNics, err := utils.ListValuetoStringSlice(model.NetworkInterfaces)
+		tflog.Debug(ctx, fmt.Sprintf("mapFields() modelNics: %+v", modelNics))
+		if err != nil {
+			return err
+		}
+
+		reconciledNics := utils.ReconcileStringSlices(modelNics, respNics)
+		tflog.Debug(ctx, fmt.Sprintf("mapFields() reconciledNics: %+v", reconciledNics))
+
+		nicTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledNics)
+		tflog.Debug(ctx, fmt.Sprintf("mapFields() nicTF: %q", nicTF.String()))
+		if diags.HasError() {
+			return fmt.Errorf("failed to map networkInterfaces: %w", core.DiagsToError(diags))
+		}
+
+		model.NetworkInterfaces = nicTF
+	}
 
 	model.ServerId = types.StringValue(serverId)
 	model.MachineType = types.StringPointerValue(serverResp.MachineType)
@@ -653,6 +696,26 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		userData = &encodedUserData
 	}
 
+	var network *iaas.CreateServerPayloadNetworking
+	tflog.Debug(ctx, fmt.Sprintf("toCreatePayload() model.NetworkInterfaces: %q", model.NetworkInterfaces.String()))
+	if !model.NetworkInterfaces.IsNull() && !model.NetworkInterfaces.IsUnknown() {
+		var nicIds []string
+		for _, nic := range model.NetworkInterfaces.Elements() {
+			nicString, ok := nic.(types.String)
+			tflog.Debug(ctx, fmt.Sprintf("toCreatePayload() nicString: %q", nicString.ValueString()))
+			if !ok {
+				return nil, fmt.Errorf("type assertion failed")
+			}
+			nicIds = append(nicIds, nicString.ValueString())
+		}
+
+		network = &iaas.CreateServerPayloadNetworking{
+			CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
+				NicIds: &nicIds,
+			},
+		}
+	}
+
 	return &iaas.CreateServerPayload{
 		AvailabilityZone: conversion.StringValueToPointer(model.AvailabilityZone),
 		BootVolume:       bootVolumePayload,
@@ -660,6 +723,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		KeypairName:      conversion.StringValueToPointer(model.KeypairName),
 		Labels:           &labels,
 		Name:             conversion.StringValueToPointer(model.Name),
+		Networking:       network,
 		MachineType:      conversion.StringValueToPointer(model.MachineType),
 		UserData:         userData,
 	}, nil
