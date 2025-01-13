@@ -36,6 +36,7 @@ Server datasource schema. Must have a `region` specified in the provider configu
 - `launched_at` (String) Date-time when the server was launched
 - `machine_type` (String) Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/stackit/en/virtual-machine-flavors-75137231.html)
 - `name` (String) The name of the server.
+- `network_interfaces` (List of String) The IDs of network interfaces which should be attached to the server. Updating it will recreate the server.
 - `updated_at` (String) Date-time when the server was updated
 - `user_data` (String) User data that is passed via cloud-init to the server.
 
