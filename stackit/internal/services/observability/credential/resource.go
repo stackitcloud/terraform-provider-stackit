@@ -18,6 +18,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	argusCredentialResource "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/credential"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -25,6 +26,7 @@ import (
 var (
 	_ resource.Resource              = &credentialResource{}
 	_ resource.ResourceWithConfigure = &credentialResource{}
+	_ resource.ResourceWithMoveState = &credentialResource{}
 )
 
 type Model struct {
@@ -84,6 +86,40 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 
 	r.client = apiClient
 	tflog.Info(ctx, "Observability credential client configured")
+}
+
+func (r *credentialResource) MoveState(ctx context.Context) []resource.StateMover {
+	return []resource.StateMover{
+		{
+			SourceSchema: &argusCredentialResource.Schema,
+			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+				if req.SourceTypeName != "stackit_argus_credential" {
+					return
+				}
+
+				// Commented for local testing purposes
+				// if !strings.HasSuffix(req.SourceProviderAddress, "stackitcloud/stackit") {
+				// 	return
+				// }
+
+				var sourceStateData argusCredentialResource.Model
+				resp.Diagnostics.Append(req.SourceState.Get(ctx, &sourceStateData)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				targetStateData := Model{
+					Id:         sourceStateData.Id,
+					ProjectId:  sourceStateData.ProjectId,
+					InstanceId: sourceStateData.InstanceId,
+					Username:   sourceStateData.Username,
+					Password:   sourceStateData.Password,
+				}
+
+				resp.Diagnostics.Append(resp.TargetState.Set(ctx, targetStateData)...)
+			},
+		},
+	}
 }
 
 func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
