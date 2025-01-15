@@ -75,7 +75,7 @@ type Model struct {
 	CreatedAt         types.String `tfsdk:"created_at"`
 	LaunchedAt        types.String `tfsdk:"launched_at"`
 	UpdatedAt         types.String `tfsdk:"updated_at"`
-	DesiredStatus    types.String `tfsdk:"desired_status"`
+	DesiredStatus     types.String `tfsdk:"desired_status"`
 }
 
 // Struct corresponding to Model.BootVolume
@@ -287,6 +287,20 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"network_interfaces": schema.ListAttribute{
+				Description: "The IDs of network interfaces which should be attached to the server. Updating it will recreate the server.",
+				Optional:    true,
+				ElementType: types.StringType,
+				Validators: []validator.List{
+					listvalidator.ValueStringsAre(
+						validate.UUID(),
+						validate.NoSeparator(),
+					),
+				},
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.RequiresReplace(),
 				},
 			},
 			"keypair_name": schema.StringAttribute{
