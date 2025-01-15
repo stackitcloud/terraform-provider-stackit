@@ -35,6 +35,7 @@ resource "stackit_ske_kubeconfig" "example" {
 
 ### Read-Only
 
+- `creation_time` (String) Date-time when the kubeconfig was created
 - `expires_at` (String) Timestamp when the kubeconfig expires
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`cluster_name`,`kube_config_id`".
 - `kube_config` (String, Sensitive) Raw short-lived admin kubeconfig.

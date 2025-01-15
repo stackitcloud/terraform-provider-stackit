@@ -2,6 +2,7 @@ package ske
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -24,12 +25,13 @@ func TestMapFields(t *testing.T) {
 				Kubeconfig:          utils.Ptr("kubeconfig"),
 			},
 			Model{
-				ClusterName: types.StringValue("name"),
-				ProjectId:   types.StringValue("pid"),
-				Kubeconfig:  types.StringValue("kubeconfig"),
-				Expiration:  types.Int64Null(),
-				Refresh:     types.BoolNull(),
-				ExpiresAt:   types.StringValue("2024-02-07T16:42:12Z"),
+				ClusterName:  types.StringValue("name"),
+				ProjectId:    types.StringValue("pid"),
+				Kubeconfig:   types.StringValue("kubeconfig"),
+				Expiration:   types.Int64Null(),
+				Refresh:      types.BoolNull(),
+				ExpiresAt:    types.StringValue("2024-02-07T16:42:12Z"),
+				CreationTime: types.StringValue("2024-02-05T14:40:12Z"),
 			},
 			true,
 		},
@@ -60,7 +62,8 @@ func TestMapFields(t *testing.T) {
 				ProjectId:   tt.expected.ProjectId,
 				ClusterName: tt.expected.ClusterName,
 			}
-			err := mapFields(tt.input, state)
+			creationTime, _ := time.Parse("2006-01-02T15:04:05Z07:00", tt.expected.CreationTime.ValueString())
+			err := mapFields(tt.input, state, creationTime)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
