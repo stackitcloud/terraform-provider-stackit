@@ -376,7 +376,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 }
 
 // MoveState moves the state of a `stackit_argus_instance` resource to a `stackit_observability_instance` resource.
-func (r *instanceResource) MoveState(ctx context.Context) []resource.StateMover {
+func (r *instanceResource) MoveState(_ context.Context) []resource.StateMover {
 	return []resource.StateMover{
 		{
 			SourceSchema: &argusInstanceResource.Schema,
@@ -385,10 +385,10 @@ func (r *instanceResource) MoveState(ctx context.Context) []resource.StateMover 
 					return
 				}
 
-				// Commented for local testing purposes
-				// if !strings.HasSuffix(req.SourceProviderAddress, "stackitcloud/stackit") {
-				// 	return
-				// }
+				// Checks source provider
+				if !strings.HasSuffix(req.SourceProviderAddress, "stackitcloud/stackit") {
+					return
+				}
 
 				var sourceStateData argusInstanceResource.Model
 				resp.Diagnostics.Append(req.SourceState.Get(ctx, &sourceStateData)...)

@@ -151,7 +151,7 @@ func (r *scrapeConfigResource) Configure(ctx context.Context, req resource.Confi
 	tflog.Info(ctx, "Observability scrape config client configured")
 }
 
-func (r *scrapeConfigResource) MoveState(ctx context.Context) []resource.StateMover {
+func (r *scrapeConfigResource) MoveState(_ context.Context) []resource.StateMover {
 	return []resource.StateMover{
 		{
 			SourceSchema: &argusScrapeConfigResource.Schema,
@@ -160,10 +160,10 @@ func (r *scrapeConfigResource) MoveState(ctx context.Context) []resource.StateMo
 					return
 				}
 
-				// Commented for local testing purposes
-				// if !strings.HasSuffix(req.SourceProviderAddress, "stackitcloud/stackit") {
-				// 	return
-				// }
+				// Checks source provider
+				if !strings.HasSuffix(req.SourceProviderAddress, "stackitcloud/stackit") {
+					return
+				}
 
 				var sourceStateData argusScrapeConfigResource.Model
 				resp.Diagnostics.Append(req.SourceState.Get(ctx, &sourceStateData)...)

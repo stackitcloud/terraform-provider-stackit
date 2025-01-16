@@ -88,7 +88,7 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 	tflog.Info(ctx, "Observability credential client configured")
 }
 
-func (r *credentialResource) MoveState(ctx context.Context) []resource.StateMover {
+func (r *credentialResource) MoveState(_ context.Context) []resource.StateMover {
 	return []resource.StateMover{
 		{
 			SourceSchema: &argusCredentialResource.Schema,
@@ -97,10 +97,10 @@ func (r *credentialResource) MoveState(ctx context.Context) []resource.StateMove
 					return
 				}
 
-				// Commented for local testing purposes
-				// if !strings.HasSuffix(req.SourceProviderAddress, "stackitcloud/stackit") {
-				// 	return
-				// }
+				// Checks source provider
+				if !strings.HasSuffix(req.SourceProviderAddress, "stackitcloud/stackit") {
+					return
+				}
 
 				var sourceStateData argusCredentialResource.Model
 				resp.Diagnostics.Append(req.SourceState.Get(ctx, &sourceStateData)...)
