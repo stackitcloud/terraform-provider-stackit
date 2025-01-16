@@ -169,7 +169,7 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
 	// Create new network interface attachment
-	err := r.client.AddNICToServer(ctx, projectId, serverId, networkInterfaceId).Execute()
+	err := r.client.AddNicToServer(ctx, projectId, serverId, networkInterfaceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching network interface to server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -208,7 +208,7 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	nics, err := r.client.ListServerNICs(ctx, projectId, serverId).Execute()
+	nics, err := r.client.ListServerNics(ctx, projectId, serverId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -267,7 +267,7 @@ func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resourc
 	ctx = tflog.SetField(ctx, "network_interface_id", network_interfaceId)
 
 	// Remove network_interface from server
-	err := r.client.RemoveNICFromServer(ctx, projectId, serverId, network_interfaceId).Execute()
+	err := r.client.RemoveNicFromServer(ctx, projectId, serverId, network_interfaceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing network interface from server", fmt.Sprintf("Calling API: %v", err))
 		return

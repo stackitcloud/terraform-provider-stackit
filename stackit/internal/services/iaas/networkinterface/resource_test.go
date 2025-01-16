@@ -194,7 +194,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaas.CreateNICPayload
+		expected    *iaas.CreateNicPayload
 		isValid     bool
 	}{
 		{
@@ -210,7 +210,7 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 				Security: types.BoolValue(true),
 			},
-			&iaas.CreateNICPayload{
+			&iaas.CreateNicPayload{
 				Name: utils.Ptr("name"),
 				SecurityGroups: &[]string{
 					"sg1",
@@ -236,7 +236,7 @@ func TestToCreatePayload(t *testing.T) {
 
 				AllowedAddresses: types.ListNull(types.StringType),
 			},
-			&iaas.CreateNICPayload{
+			&iaas.CreateNicPayload{
 				Name: utils.Ptr("name"),
 				SecurityGroups: &[]string{
 					"sg1",
@@ -270,7 +270,7 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaas.UpdateNICPayload
+		expected    *iaas.UpdateNicPayload
 		isValid     bool
 	}{
 		{
@@ -286,7 +286,7 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				Security: types.BoolValue(true),
 			},
-			&iaas.UpdateNICPayload{
+			&iaas.UpdateNicPayload{
 				Name: utils.Ptr("name"),
 				SecurityGroups: &[]string{
 					"sg1",
@@ -312,7 +312,7 @@ func TestToUpdatePayload(t *testing.T) {
 
 				AllowedAddresses: types.ListNull(types.StringType),
 			},
-			&iaas.UpdateNICPayload{
+			&iaas.UpdateNicPayload{
 				Name: utils.Ptr("name"),
 				SecurityGroups: &[]string{
 					"sg1",

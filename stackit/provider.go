@@ -14,12 +14,15 @@ import (
 	argusScrapeConfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/scrapeconfig"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
+	iaasImage "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/image"
+	iaasKeyPair "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/keypair"
 	iaasNetwork "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network"
 	iaasNetworkArea "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarea"
 	iaasNetworkAreaRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearoute"
 	iaasNetworkInterface "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterface"
 	iaasNetworkInterfaceAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterfaceattach"
 	iaasPublicIp "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicip"
+	iaasPublicIpAssociate "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicipassociate"
 	iaasSecurityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/securitygroup"
 	iaasSecurityGroupRule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/securitygrouprule"
 	iaasServer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/server"
@@ -54,6 +57,7 @@ import (
 	secretsManagerInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/instance"
 	secretsManagerUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/user"
 	serverBackupSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/schedule"
+	serverUpdateSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/schedule"
 	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
 	skeProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/project"
@@ -92,7 +96,7 @@ func (p *Provider) Metadata(_ context.Context, _ provider.MetadataRequest, resp 
 
 type providerModel struct {
 	CredentialsFilePath             types.String `tfsdk:"credentials_path"`
-	ServiceAccountEmail             types.String `tfsdk:"service_account_email"`
+	ServiceAccountEmail             types.String `tfsdk:"service_account_email"` // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025
 	ServiceAccountKey               types.String `tfsdk:"service_account_key"`
 	ServiceAccountKeyPath           types.String `tfsdk:"service_account_key_path"`
 	PrivateKey                      types.String `tfsdk:"private_key"`
@@ -117,6 +121,7 @@ type providerModel struct {
 	SQLServerFlexCustomEndpoint     types.String `tfsdk:"sqlserverflex_custom_endpoint"`
 	SKECustomEndpoint               types.String `tfsdk:"ske_custom_endpoint"`
 	ServerBackupCustomEndpoint      types.String `tfsdk:"server_backup_custom_endpoint"`
+	ServerUpdateCustomEndpoint      types.String `tfsdk:"server_update_custom_endpoint"`
 	ResourceManagerCustomEndpoint   types.String `tfsdk:"resourcemanager_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
 	EnableBetaResources             types.Bool   `tfsdk:"enable_beta_resources"`
@@ -149,6 +154,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"postgresflex_custom_endpoint":       "Custom endpoint for the PostgresFlex service",
 		"redis_custom_endpoint":              "Custom endpoint for the Redis service",
 		"server_backup_custom_endpoint":      "Custom endpoint for the Server Backup service",
+		"server_update_custom_endpoint":      "Custom endpoint for the Server Update service",
 		"resourcemanager_custom_endpoint":    "Custom endpoint for the Resource Manager service",
 		"secretsmanager_custom_endpoint":     "Custom endpoint for the Secrets Manager service",
 		"sqlserverflex_custom_endpoint":      "Custom endpoint for the SQL Server Flex service",
@@ -165,8 +171,9 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Description: descriptions["credentials_path"],
 			},
 			"service_account_email": schema.StringAttribute{
-				Optional:    true,
-				Description: descriptions["service_account_email"],
+				Optional:           true,
+				Description:        descriptions["service_account_email"],
+				DeprecationMessage: "The `service_account_email` field has been deprecated because it is not required. Will be removed after June 12th 2025.",
 			},
 			"service_account_token": schema.StringAttribute{
 				Optional:    true,
@@ -269,6 +276,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["server_backup_custom_endpoint"],
 			},
+			"server_update_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["server_update_custom_endpoint"],
+			},
 			"service_enablement_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["service_enablement_custom_endpoint"],
@@ -300,10 +311,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	var providerData core.ProviderData
 	if !(providerConfig.CredentialsFilePath.IsUnknown() || providerConfig.CredentialsFilePath.IsNull()) {
 		sdkConfig.CredentialsFilePath = providerConfig.CredentialsFilePath.ValueString()
-	}
-	if !(providerConfig.ServiceAccountEmail.IsUnknown() || providerConfig.ServiceAccountEmail.IsNull()) {
-		providerData.ServiceAccountEmail = providerConfig.ServiceAccountEmail.ValueString()
-		sdkConfig.ServiceAccountEmail = providerConfig.ServiceAccountEmail.ValueString()
 	}
 	if !(providerConfig.ServiceAccountKey.IsUnknown() || providerConfig.ServiceAccountKey.IsNull()) {
 		sdkConfig.ServiceAccountKey = providerConfig.ServiceAccountKey.ValueString()
@@ -406,12 +413,14 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		argusScrapeConfig.NewScrapeConfigDataSource,
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
+		iaasImage.NewImageDataSource,
 		iaasNetwork.NewNetworkDataSource,
 		iaasNetworkArea.NewNetworkAreaDataSource,
 		iaasNetworkAreaRoute.NewNetworkAreaRouteDataSource,
 		iaasNetworkInterface.NewNetworkInterfaceDataSource,
 		iaasVolume.NewVolumeDataSource,
 		iaasPublicIp.NewPublicIpDataSource,
+		iaasKeyPair.NewKeyPairDataSource,
 		iaasServer.NewServerDataSource,
 		iaasSecurityGroup.NewSecurityGroupDataSource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
@@ -443,6 +452,8 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		sqlServerFlexUser.NewUserDataSource,
 		serverBackupSchedule.NewScheduleDataSource,
 		serverBackupSchedule.NewSchedulesDataSource,
+		serverUpdateSchedule.NewScheduleDataSource,
+		serverUpdateSchedule.NewSchedulesDataSource,
 		skeProject.NewProjectDataSource,
 		skeCluster.NewClusterDataSource,
 	}
@@ -456,15 +467,18 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		argusScrapeConfig.NewScrapeConfigResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
+		iaasImage.NewImageResource,
 		iaasNetwork.NewNetworkResource,
 		iaasNetworkArea.NewNetworkAreaResource,
 		iaasNetworkAreaRoute.NewNetworkAreaRouteResource,
 		iaasNetworkInterface.NewNetworkInterfaceResource,
 		iaasVolume.NewVolumeResource,
 		iaasPublicIp.NewPublicIpResource,
+		iaasKeyPair.NewKeyPairResource,
 		iaasVolumeAttach.NewVolumeAttachResource,
 		iaasNetworkInterfaceAttach.NewNetworkInterfaceAttachResource,
 		iaasServiceAccountAttach.NewServiceAccountAttachResource,
+		iaasPublicIpAssociate.NewPublicIpAssociateResource,
 		iaasServer.NewServerResource,
 		iaasSecurityGroup.NewSecurityGroupResource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
@@ -498,6 +512,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		sqlServerFlexInstance.NewInstanceResource,
 		sqlServerFlexUser.NewUserResource,
 		serverBackupSchedule.NewScheduleResource,
+		serverUpdateSchedule.NewScheduleResource,
 		skeProject.NewProjectResource,
 		skeCluster.NewClusterResource,
 		skeKubeconfig.NewKubeconfigResource,

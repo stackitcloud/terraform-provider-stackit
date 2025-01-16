@@ -381,7 +381,7 @@ func TestReadCredentials(t *testing.T) {
 				t.Fatalf("Failed to marshal mocked response: %v", err)
 			}
 
-			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				if tt.getCredentialsFails {
 					w.WriteHeader(http.StatusBadGateway)

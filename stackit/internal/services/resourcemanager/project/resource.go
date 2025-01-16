@@ -107,13 +107,11 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 		ctx = tflog.SetField(ctx, "resourcemanager_custom_endpoint", providerData.ResourceManagerCustomEndpoint)
 		rmClient, err = resourcemanager.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithServiceAccountEmail(providerData.ServiceAccountEmail),
 			config.WithEndpoint(providerData.ResourceManagerCustomEndpoint),
 		)
 	} else {
 		rmClient, err = resourcemanager.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithServiceAccountEmail(providerData.ServiceAccountEmail),
 		)
 	}
 
@@ -277,12 +275,6 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	containerId := model.ContainerId.ValueString()
 	ctx = tflog.SetField(ctx, "project_container_id", containerId)
-
-	serviceAccountEmail := r.resourceManagerClient.GetConfig().ServiceAccountEmail
-	if serviceAccountEmail == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", "The service account e-mail cannot be empty: set it in the provider configuration or through the STACKIT_SERVICE_ACCOUNT_EMAIL or in your credentials file (default filepath is ~/.stackit/credentials.json)")
-		return
-	}
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)

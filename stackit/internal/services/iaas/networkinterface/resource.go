@@ -271,7 +271,7 @@ func (r *networkInterfaceResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Create new network interface
-	networkInterface, err := r.client.CreateNIC(ctx, projectId, networkId).CreateNICPayload(*payload).Execute()
+	networkInterface, err := r.client.CreateNic(ctx, projectId, networkId).CreateNicPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network interface", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -311,7 +311,7 @@ func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	networkInterfaceResp, err := r.client.GetNIC(ctx, projectId, networkId, networkInterfaceId).Execute()
+	networkInterfaceResp, err := r.client.GetNic(ctx, projectId, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -368,7 +368,7 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 	// Update existing network
-	nicResp, err := r.client.UpdateNIC(ctx, projectId, networkId, networkInterfaceId).UpdateNICPayload(*payload).Execute()
+	nicResp, err := r.client.UpdateNic(ctx, projectId, networkId, networkInterfaceId).UpdateNicPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network interface", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -405,7 +405,7 @@ func (r *networkInterfaceResource) Delete(ctx context.Context, req resource.Dele
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
 	// Delete existing network interface
-	err := r.client.DeleteNIC(ctx, projectId, networkId, networkInterfaceId).Execute()
+	err := r.client.DeleteNic(ctx, projectId, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network interface", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -544,7 +544,7 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNICPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNicPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -586,7 +586,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNICPayload,
 		labelPayload = &labelMap
 	}
 
-	return &iaas.CreateNICPayload{
+	return &iaas.CreateNicPayload{
 		AllowedAddresses: allowedAddressesPayload,
 		SecurityGroups:   &modelSecurityGroups,
 		Labels:           labelPayload,
@@ -599,7 +599,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNICPayload,
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.UpdateNICPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.UpdateNicPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -637,7 +637,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		labelPayload = &labelMap
 	}
 
-	return &iaas.UpdateNICPayload{
+	return &iaas.UpdateNicPayload{
 		AllowedAddresses: &allowedAddressesPayload,
 		SecurityGroups:   &modelSecurityGroups,
 		Labels:           labelPayload,

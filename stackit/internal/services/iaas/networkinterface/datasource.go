@@ -181,7 +181,7 @@ func (d *networkInterfaceDataSource) Read(ctx context.Context, req datasource.Re
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	networkInterfaceResp, err := d.client.GetNIC(ctx, projectId, networkId, networkInterfaceId).Execute()
+	networkInterfaceResp, err := d.client.GetNic(ctx, projectId, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {

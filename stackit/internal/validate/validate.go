@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -54,7 +55,7 @@ func UUID() *Validator {
 
 	return &Validator{
 		description: description,
-		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			if _, err := uuid.Parse(req.ConfigValue.ValueString()); err != nil {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
@@ -71,7 +72,7 @@ func IP() *Validator {
 
 	return &Validator{
 		description: description,
-		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			if net.ParseIP(req.ConfigValue.ValueString()) == nil {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
@@ -127,7 +128,7 @@ func NoSeparator() *Validator {
 
 	return &Validator{
 		description: description,
-		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			if strings.Contains(req.ConfigValue.ValueString(), core.Separator) {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
@@ -144,7 +145,7 @@ func NonLegacyProjectRole() *Validator {
 
 	return &Validator{
 		description: description,
-		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			if utils.IsLegacyProjectRole(req.ConfigValue.ValueString()) {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
@@ -161,7 +162,7 @@ func MinorVersionNumber() *Validator {
 
 	return &Validator{
 		description: description,
-		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			exp := MajorMinorVersionRegex
 			r := regexp.MustCompile(exp)
 			version := req.ConfigValue.ValueString()
@@ -181,7 +182,7 @@ func VersionNumber() *Validator {
 
 	return &Validator{
 		description: description,
-		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			minorVersionExp := MajorMinorVersionRegex
 			minorVersionRegex := regexp.MustCompile(minorVersionExp)
 
@@ -205,7 +206,7 @@ func RFC3339SecondsOnly() *Validator {
 
 	return &Validator{
 		description: description,
-		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			t, err := time.Parse(time.RFC3339, req.ConfigValue.ValueString())
 			if err != nil {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
@@ -233,7 +234,7 @@ func CIDR() *Validator {
 
 	return &Validator{
 		description: description,
-		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			_, _, err := net.ParseCIDR(req.ConfigValue.ValueString())
 			if err != nil {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
@@ -251,7 +252,7 @@ func Rrule() *Validator {
 
 	return &Validator{
 		description: description,
-		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			// The go library rrule-go expects \n before RRULE (to be a newline and not a space)
 			// for example: "DTSTART;TZID=America/New_York:19970902T090000\nRRULE:FREQ=DAILY;COUNT=10"
 			// whereas a valid rrule according to the API docs is:
@@ -263,6 +264,24 @@ func Rrule() *Validator {
 			value = strings.ReplaceAll(value, " ", "\n")
 
 			if _, err := rrule.StrToRRuleSet(value); err != nil {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
+
+func FileExists() *Validator {
+	description := "file must exist"
+
+	return &Validator{
+		description: description,
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			_, err := os.Stat(req.ConfigValue.ValueString())
+			if err != nil {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
 					description,

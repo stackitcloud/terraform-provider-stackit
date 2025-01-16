@@ -8,8 +8,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
@@ -54,7 +56,6 @@ func TestMapFields(t *testing.T) {
 				Network:                   types.ObjectNull(networkTypes),
 				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
 				Extensions:                types.ObjectNull(extensionsTypes),
-				KubeConfig:                types.StringNull(),
 			},
 			true,
 		},
@@ -106,7 +107,8 @@ func TestMapFields(t *testing.T) {
 				Name: utils.Ptr("name"),
 				Nodepools: &[]ske.Nodepool{
 					{
-						AvailabilityZones: &[]string{"z1", "z2"},
+						AllowSystemComponents: utils.Ptr(true),
+						AvailabilityZones:     &[]string{"z1", "z2"},
 						Cri: &ske.CRI{
 							Name: utils.Ptr("cri"),
 						},
@@ -195,6 +197,7 @@ func TestMapFields(t *testing.T) {
 										types.StringValue("z2"),
 									},
 								),
+								"allow_system_components": types.BoolValue(true),
 							},
 						),
 					},
@@ -239,7 +242,6 @@ func TestMapFields(t *testing.T) {
 						}),
 					}),
 				}),
-				KubeConfig: types.StringNull(),
 			},
 			true,
 		},
@@ -262,7 +264,6 @@ func TestMapFields(t *testing.T) {
 				Network:                   types.ObjectNull(networkTypes),
 				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
 				Extensions:                types.ObjectNull(extensionsTypes),
-				KubeConfig:                types.StringNull(),
 			},
 			true,
 		},
@@ -310,7 +311,6 @@ func TestMapFields(t *testing.T) {
 						"zones":   types.ListNull(types.StringType),
 					}),
 				}),
-				KubeConfig: types.StringNull(),
 			},
 			true,
 		},
@@ -358,7 +358,6 @@ func TestMapFields(t *testing.T) {
 						"zones":   types.ListNull(types.StringType),
 					}),
 				}),
-				KubeConfig: types.StringNull(),
 			},
 			true,
 		},
@@ -419,7 +418,6 @@ func TestMapFields(t *testing.T) {
 						"zones":   types.ListNull(types.StringType),
 					}),
 				}),
-				KubeConfig: types.StringNull(),
 			},
 			true,
 		},
@@ -441,7 +439,6 @@ func TestMapFields(t *testing.T) {
 				Maintenance:               types.ObjectNull(maintenanceTypes),
 				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
 				Extensions:                types.ObjectNull(extensionsTypes),
-				KubeConfig:                types.StringNull(),
 			},
 			true,
 		},
@@ -481,6 +478,7 @@ func TestMapFields(t *testing.T) {
 									types.StringValue("z2"),
 								},
 							),
+							"allow_system_components": types.BoolValue(true),
 						},
 					),
 				},
@@ -599,6 +597,7 @@ func TestMapFields(t *testing.T) {
 										types.StringValue("z2"),
 									},
 								),
+								"allow_system_components": types.BoolNull(),
 							},
 						),
 					},
@@ -643,7 +642,6 @@ func TestMapFields(t *testing.T) {
 						}),
 					}),
 				}),
-				KubeConfig: types.StringNull(),
 			},
 			true,
 		},
@@ -2280,6 +2278,60 @@ func TestToNetworkPayload(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
+			}
+		})
+	}
+}
+
+func TestVerifySystemComponentNodepools(t *testing.T) {
+	tests := []struct {
+		description string
+		nodePools   []ske.Nodepool
+		isValid     bool
+	}{
+		{
+			description: "all pools allow system components",
+			nodePools: []ske.Nodepool{
+				{
+					AllowSystemComponents: conversion.BoolValueToPointer(basetypes.NewBoolValue(true)),
+				},
+				{
+					AllowSystemComponents: conversion.BoolValueToPointer(basetypes.NewBoolValue(true)),
+				},
+			},
+			isValid: true,
+		},
+		{
+			description: "one pool allows system components",
+			nodePools: []ske.Nodepool{
+				{
+					AllowSystemComponents: conversion.BoolValueToPointer(basetypes.NewBoolValue(true)),
+				},
+				{
+					AllowSystemComponents: conversion.BoolValueToPointer(basetypes.NewBoolValue(false)),
+				},
+			},
+			isValid: true,
+		},
+		{
+			description: "no pool allows system components",
+			nodePools: []ske.Nodepool{
+				{
+					AllowSystemComponents: conversion.BoolValueToPointer(basetypes.NewBoolValue(false)),
+				},
+				{
+					AllowSystemComponents: conversion.BoolValueToPointer(basetypes.NewBoolValue(false)),
+				},
+			},
+			isValid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			err := verifySystemComponentsInNodePools(tt.nodePools)
+			if (err == nil) != tt.isValid {
+				t.Errorf("expected validity to be %v, but got error: %v", tt.isValid, err)
 			}
 		})
 	}

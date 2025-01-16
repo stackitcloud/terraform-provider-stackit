@@ -13,14 +13,31 @@ Network resource schema. Must have a `region` specified in the provider configur
 ## Example Usage
 
 ```terraform
-resource "stackit_network" "example" {
-  project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name               = "example-network"
-  nameservers        = ["1.2.3.4", "5.6.7.8"]
-  ipv4_prefix_length = 24
+resource "stackit_network" "example_with_name" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "example-with-name"
+}
+
+resource "stackit_network" "example_routed_network" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "example-routed-network"
   labels = {
     "key" = "value"
   }
+  routed = true
+}
+
+resource "stackit_network" "example_non_routed_network" {
+  project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name               = "example-non-routed-network"
+  ipv4_nameservers   = ["1.2.3.4", "5.6.7.8"]
+  ipv4_prefix_length = 24
+  ipv4_gateway       = "10.1.2.3"
+  ipv4_prefix        = "10.1.2.0/24"
+  labels = {
+    "key" = "value"
+  }
+  routed = false
 }
 ```
 
@@ -34,13 +51,25 @@ resource "stackit_network" "example" {
 
 ### Optional
 
+- `ipv4_gateway` (String) The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.
+- `ipv4_nameservers` (List of String) The IPv4 nameservers of the network.
+- `ipv4_prefix` (String) The IPv4 prefix of the network (CIDR).
 - `ipv4_prefix_length` (Number) The IPv4 prefix length of the network.
+- `ipv6_gateway` (String) The IPv6 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.
+- `ipv6_nameservers` (List of String) The IPv6 nameservers of the network.
+- `ipv6_prefix` (String) The IPv6 prefix of the network (CIDR).
+- `ipv6_prefix_length` (Number) The IPv6 prefix length of the network.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
-- `nameservers` (List of String) The nameservers of the network.
+- `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed soon, use `ipv4_nameservers` to configure the nameservers for IPv4.
+- `no_ipv4_gateway` (Boolean) If set to `true`, the network doesn't have a gateway.
+- `no_ipv6_gateway` (Boolean) If set to `true`, the network doesn't have a gateway.
+- `routed` (Boolean) If set to `true`, the network is routed and therefore accessible from other networks.
 
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`network_id`".
+- `ipv4_prefixes` (List of String) The IPv4 prefixes of the network.
+- `ipv6_prefixes` (List of String) The IPv6 prefixes of the network.
 - `network_id` (String) The network ID.
-- `prefixes` (List of String) The prefixes of the network.
+- `prefixes` (List of String, Deprecated) The prefixes of the network. This field is deprecated and will be removed soon, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.
 - `public_ip` (String) The public IP of the network.

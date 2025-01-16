@@ -77,47 +77,48 @@ type Model struct {
 	Network                   types.Object `tfsdk:"network"`
 	Hibernations              types.List   `tfsdk:"hibernations"`
 	Extensions                types.Object `tfsdk:"extensions"`
-	KubeConfig                types.String `tfsdk:"kube_config"`
 }
 
 // Struct corresponding to Model.NodePools[i]
 type nodePool struct {
-	Name              types.String `tfsdk:"name"`
-	MachineType       types.String `tfsdk:"machine_type"`
-	OSName            types.String `tfsdk:"os_name"`
-	OSVersionMin      types.String `tfsdk:"os_version_min"`
-	OSVersion         types.String `tfsdk:"os_version"`
-	OSVersionUsed     types.String `tfsdk:"os_version_used"`
-	Minimum           types.Int64  `tfsdk:"minimum"`
-	Maximum           types.Int64  `tfsdk:"maximum"`
-	MaxSurge          types.Int64  `tfsdk:"max_surge"`
-	MaxUnavailable    types.Int64  `tfsdk:"max_unavailable"`
-	VolumeType        types.String `tfsdk:"volume_type"`
-	VolumeSize        types.Int64  `tfsdk:"volume_size"`
-	Labels            types.Map    `tfsdk:"labels"`
-	Taints            types.List   `tfsdk:"taints"`
-	CRI               types.String `tfsdk:"cri"`
-	AvailabilityZones types.List   `tfsdk:"availability_zones"`
+	Name                  types.String `tfsdk:"name"`
+	MachineType           types.String `tfsdk:"machine_type"`
+	OSName                types.String `tfsdk:"os_name"`
+	OSVersionMin          types.String `tfsdk:"os_version_min"`
+	OSVersion             types.String `tfsdk:"os_version"`
+	OSVersionUsed         types.String `tfsdk:"os_version_used"`
+	Minimum               types.Int64  `tfsdk:"minimum"`
+	Maximum               types.Int64  `tfsdk:"maximum"`
+	MaxSurge              types.Int64  `tfsdk:"max_surge"`
+	MaxUnavailable        types.Int64  `tfsdk:"max_unavailable"`
+	VolumeType            types.String `tfsdk:"volume_type"`
+	VolumeSize            types.Int64  `tfsdk:"volume_size"`
+	Labels                types.Map    `tfsdk:"labels"`
+	Taints                types.List   `tfsdk:"taints"`
+	CRI                   types.String `tfsdk:"cri"`
+	AvailabilityZones     types.List   `tfsdk:"availability_zones"`
+	AllowSystemComponents types.Bool   `tfsdk:"allow_system_components"`
 }
 
 // Types corresponding to nodePool
 var nodePoolTypes = map[string]attr.Type{
-	"name":               basetypes.StringType{},
-	"machine_type":       basetypes.StringType{},
-	"os_name":            basetypes.StringType{},
-	"os_version_min":     basetypes.StringType{},
-	"os_version":         basetypes.StringType{},
-	"os_version_used":    basetypes.StringType{},
-	"minimum":            basetypes.Int64Type{},
-	"maximum":            basetypes.Int64Type{},
-	"max_surge":          basetypes.Int64Type{},
-	"max_unavailable":    basetypes.Int64Type{},
-	"volume_type":        basetypes.StringType{},
-	"volume_size":        basetypes.Int64Type{},
-	"labels":             basetypes.MapType{ElemType: types.StringType},
-	"taints":             basetypes.ListType{ElemType: types.ObjectType{AttrTypes: taintTypes}},
-	"cri":                basetypes.StringType{},
-	"availability_zones": basetypes.ListType{ElemType: types.StringType},
+	"name":                    basetypes.StringType{},
+	"machine_type":            basetypes.StringType{},
+	"os_name":                 basetypes.StringType{},
+	"os_version_min":          basetypes.StringType{},
+	"os_version":              basetypes.StringType{},
+	"os_version_used":         basetypes.StringType{},
+	"minimum":                 basetypes.Int64Type{},
+	"maximum":                 basetypes.Int64Type{},
+	"max_surge":               basetypes.Int64Type{},
+	"max_unavailable":         basetypes.Int64Type{},
+	"volume_type":             basetypes.StringType{},
+	"volume_size":             basetypes.Int64Type{},
+	"labels":                  basetypes.MapType{ElemType: types.StringType},
+	"taints":                  basetypes.ListType{ElemType: types.ObjectType{AttrTypes: taintTypes}},
+	"cri":                     basetypes.StringType{},
+	"availability_zones":      basetypes.ListType{ElemType: types.StringType},
+	"allow_system_components": basetypes.BoolType{},
 }
 
 // Struct corresponding to nodePool.Taints[i]
@@ -351,7 +352,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:           true,
 				DeprecationMessage: "Use `kubernetes_version_min instead`. Setting a specific kubernetes version would cause errors during minor version upgrades due to forced updates. In those cases, this field might not represent the actual kubernetes version used in the cluster.",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(ctx context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(_ context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
 						if sr.StateValue.IsNull() || sr.PlanValue.IsNull() {
 							return
 						}
@@ -390,6 +391,12 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Description: "Specify a list of availability zones. E.g. `eu01-m`",
 							Required:    true,
 							ElementType: types.StringType,
+						},
+						"allow_system_components": schema.BoolAttribute{
+							Description: "Allow system components to run on this node pool.",
+							Optional:    true,
+							Computed:    true,
+							Default:     booldefault.StaticBool(true),
 						},
 						"minimum": schema.Int64Attribute{
 							Description: "Minimum number of nodes in the pool.",
@@ -477,6 +484,10 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 									"value": schema.StringAttribute{
 										Description: "Taint value corresponding to the taint key.",
 										Optional:    true,
+										Computed:    true,
+										PlanModifiers: []planmodifier.String{
+											stringplanmodifier.UseStateForUnknown(),
+										},
 									},
 								},
 							},
@@ -564,6 +575,10 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						"timezone": schema.StringAttribute{
 							Description: "Timezone name corresponding to a file in the IANA Time Zone database. i.e. `Europe/Berlin`.",
 							Optional:    true,
+							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 					},
 				},
@@ -620,12 +635,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						},
 					},
 				},
-			},
-			"kube_config": schema.StringAttribute{
-				Description:        "Static token kubeconfig used for connecting to the cluster. This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see [How to rotate SKE credentials](https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).",
-				Sensitive:          true,
-				Computed:           true,
-				DeprecationMessage: "This field will be empty for clusters with Kubernetes v1.27+, or if you have obtained the kubeconfig or performed credentials rotation using the new process, either through the Portal or the SKE API. Use the stackit_ske_kubeconfig resource instead. For more information, see [How to rotate SKE credentials](https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html).",
 			},
 		},
 	}
@@ -843,40 +852,6 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-
-	// Handle credential
-	err = r.getCredential(ctx, diags, model)
-	if err != nil {
-		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Getting credential: %v", err))
-		return
-	}
-}
-
-func (r *clusterResource) getCredential(ctx context.Context, diags *diag.Diagnostics, model *Model) error {
-	c := r.skeClient
-	// for kubernetes with version >= 1.27, the deprecated endpoint will not work, so we set kubeconfig to nil
-	if semver.Compare(fmt.Sprintf("v%s", model.KubernetesVersion.ValueString()), "v1.27") >= 0 {
-		core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "Kubernetes version is 1.27 or higher, you must use the stackit_ske_kubeconfig resource instead.")
-		model.KubeConfig = types.StringPointerValue(nil)
-		return nil
-	}
-	res, err := c.GetCredentials(ctx, model.ProjectId.ValueString(), model.Name.ValueString()).Execute() //nolint:staticcheck //This endpoint is deprecated but is called to support a deprecated attribute, will be removed with the attribute
-	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if !ok {
-			return fmt.Errorf("fetch cluster credentials: could not convert error to oapierror.GenericOpenAPIError")
-		}
-		if oapiErr.StatusCode == http.StatusBadRequest {
-			// deprecated endpoint will return 400 if the new endpoints have been used
-			// if that's the case, we set the field to null
-			core.LogAndAddWarning(ctx, diags, "The kubelogin field is set to null", "Failed to get static token kubeconfig, which means the new credentials rotation flow might already been triggered for this cluster. If you are already using the stackit_ske_kubeconfig resource you can ignore this warning. If not, you must use it to access this cluster's short-lived admin kubeconfig.")
-			model.KubeConfig = types.StringPointerValue(nil)
-			return nil
-		}
-		return fmt.Errorf("fetching cluster credentials: %w", err)
-	}
-	model.KubeConfig = types.StringPointerValue(res.Kubeconfig)
-	return nil
 }
 
 func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions []ske.MachineImage, currentMachineImages map[string]*ske.Image) ([]ske.Nodepool, []string, error) {
@@ -990,14 +965,30 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 				Type: conversion.StringValueToPointer(nodePool.VolumeType),
 				Size: conversion.Int64ValueToPointer(nodePool.VolumeSize),
 			},
-			Taints:            &ts,
-			Cri:               &cn,
-			Labels:            ls,
-			AvailabilityZones: &zs,
+			Taints:                &ts,
+			Cri:                   &cn,
+			Labels:                ls,
+			AvailabilityZones:     &zs,
+			AllowSystemComponents: conversion.BoolValueToPointer(nodePool.AllowSystemComponents),
 		}
 		cnps = append(cnps, cnp)
 	}
+
+	if err := verifySystemComponentsInNodePools(cnps); err != nil {
+		return nil, nil, err
+	}
+
 	return cnps, deprecatedVersionsUsed, nil
+}
+
+// verifySystemComponentsInNodePools checks if at least one node pool has the allow_system_components attribute set to true.
+func verifySystemComponentsInNodePools(nodePools []ske.Nodepool) error {
+	for _, nodePool := range nodePools {
+		if nodePool.AllowSystemComponents != nil && *nodePool.AllowSystemComponents {
+			return nil // A node pool allowing system components was found
+		}
+	}
+	return fmt.Errorf("at least one node_pool must allow system components")
 }
 
 // latestMatchingMachineVersion determines the latest machine image version for the create/update payload.
@@ -1370,20 +1361,21 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	nodePools := []attr.Value{}
 	for i, nodePoolResp := range *cl.Nodepools {
 		nodePool := map[string]attr.Value{
-			"name":               types.StringPointerValue(nodePoolResp.Name),
-			"machine_type":       types.StringPointerValue(nodePoolResp.Machine.Type),
-			"os_name":            types.StringNull(),
-			"os_version_min":     modelNodePoolOSVersionMin[*nodePoolResp.Name],
-			"os_version":         modelNodePoolOSVersion[*nodePoolResp.Name],
-			"minimum":            types.Int64PointerValue(nodePoolResp.Minimum),
-			"maximum":            types.Int64PointerValue(nodePoolResp.Maximum),
-			"max_surge":          types.Int64PointerValue(nodePoolResp.MaxSurge),
-			"max_unavailable":    types.Int64PointerValue(nodePoolResp.MaxUnavailable),
-			"volume_type":        types.StringNull(),
-			"volume_size":        types.Int64PointerValue(nodePoolResp.Volume.Size),
-			"labels":             types.MapNull(types.StringType),
-			"cri":                types.StringNull(),
-			"availability_zones": types.ListNull(types.StringType),
+			"name":                    types.StringPointerValue(nodePoolResp.Name),
+			"machine_type":            types.StringPointerValue(nodePoolResp.Machine.Type),
+			"os_name":                 types.StringNull(),
+			"os_version_min":          modelNodePoolOSVersionMin[*nodePoolResp.Name],
+			"os_version":              modelNodePoolOSVersion[*nodePoolResp.Name],
+			"minimum":                 types.Int64PointerValue(nodePoolResp.Minimum),
+			"maximum":                 types.Int64PointerValue(nodePoolResp.Maximum),
+			"max_surge":               types.Int64PointerValue(nodePoolResp.MaxSurge),
+			"max_unavailable":         types.Int64PointerValue(nodePoolResp.MaxUnavailable),
+			"volume_type":             types.StringNull(),
+			"volume_size":             types.Int64PointerValue(nodePoolResp.Volume.Size),
+			"labels":                  types.MapNull(types.StringType),
+			"cri":                     types.StringNull(),
+			"availability_zones":      types.ListNull(types.StringType),
+			"allow_system_components": types.BoolPointerValue(nodePoolResp.AllowSystemComponents),
 		}
 
 		if nodePoolResp.Machine != nil && nodePoolResp.Machine.Image != nil {
@@ -1959,13 +1951,6 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 	err = mapFields(ctx, clResp, &state)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Processing API payload: %v", err))
-		return
-	}
-
-	// Handle credential
-	err = r.getCredential(ctx, &resp.Diagnostics, &state)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Getting credential: %v", err))
 		return
 	}
 
