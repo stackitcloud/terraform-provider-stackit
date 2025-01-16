@@ -389,40 +389,49 @@ If you want to onboard resources of a STACKIT service `foo` that was not yet in 
 To test your changes locally, you have to compile the provider (requires Go 1.22) and configure the Terraform CLI to use the local version.
 
 1. Clone the repository.
-2. Set the provider address to a custom address for local development. It must correspond to the same address that is included in the dev_overrides block, in step 4.
-   In `main.go` replace the address `registry.terraform.io/providers/stackitcloud/stackit` with `local-dev.com/stackit/stackit`.
-3. Go to the repository root and compile the provider locally to any location by running `go build -o <PATH_TO_BINARY>`. The binary name must start with `terraform-provider`, e.g. `terraform-provider-stackit`.
-4. Create a `.terraformrc` config file in your home directory (`~`) for the terraform CLI with the following content:
+1. Create a `.terraformrc` config file in your home directory (`~`) for the terraform CLI with the following content:
 
-```
-provider_installation {
-    dev_overrides {
-        "local-dev.com/stackit/stackit" = "<PATH_TO_BINARY>"
-    }
+	```
+	provider_installation {
+   	   dev_overrides {
+	      "registry.terraform.io/stackitcloud/stackit" = "<PATH_TO_BINARY>"
+	   }
 
-    # For all other providers, install them directly from their origin provider
-    # registries as normal. If you omit this, Terraform will _only_ use
-    # the dev_overrides block, and so no other providers will be available.
-    direct {}
-}
-```
+	   # For all other providers, install them directly from their origin provider
+	   # registries as normal. If you omit this, Terraform will _only_ use
+	   # the dev_overrides block, and so no other providers will be available.
+	   direct {}
+	}
+	```
+1. Copy one of the folders in the [examples](examples/) folder to a location of your choosing, and define the Terraform variables according to its README. The main.tf file needs some additional configuration to use the local provider:
 
-4. Copy one of the folders in the [examples](examples/) folder to a location of your choosing, and define the Terraform variables according to its README. The main.tf file needs some additional configuration to use the local provider:
+	```
+	terraform {
+	   required_providers {
+	      stackit = {
+	         source = "registry.terraform.io/stackitcloud/stackit"
+	      }
+	   }
+	}
+	```
 
-```
-terraform {
-  required_providers {
-    stackit = {
-      source = "local-dev.com/stackit/stackit"
-    }
-  }
-}
-```
-
-5. Go to the copied example and initialize Terraform by running `terraform init -reconfigure -upgrade`. This will throw an error ("Failed to query available provider packages") which can be ignored since we are using the local provider build.
+1. Go to the copied example and initialize Terraform by running `terraform init -reconfigure -upgrade`. This will throw an error ("Failed to query available provider packages") which can be ignored since we are using the local provider build.
    > Note: Terraform will store its resources' states locally. To allow multiple people to use the same resources, check [Setup for multi-person usage](#setup-centralized-terraform-state)
-6. Setup authentication by setting the env var `STACKIT_SERVICE_ACCOUNT_TOKEN` as a valid token (see [Authentication](#authentication) for more details on how to autenticate).
-7. Run `terraform plan` or `terraform apply` commands.
+1. Setup authentication by setting the env var `STACKIT_SERVICE_ACCOUNT_TOKEN` as a valid token (see [Authentication](#authentication) for more details on how to autenticate).
+1. Run `terraform plan` or `terraform apply` commands.
+1. To debug the terraform provider, execute the following steps:
+	* install the compiled terraform provider to binary path defined in the .terraformrc file
+	* run the terraform provider from your IDE with the `-debug` flag set
+	* The provider will emit the setting for the env variable `TF_REATTACH_PROVIDERS`, e.g.
+
+	```shell
+		TF_REATTACH_PROVIDERS='{"registry.terraform.io/stackitcloud/stackit":{"Protocol":"grpc","ProtocolVersion":6,"Pid":123456,"Test":true,"Addr":{"Network":"unix","String":"/tmp/plugin47110815"}}}'
+	```
+
+Starting terraform with this environment variable set will automatically connect to the running IDE session, instead of starting a new GRPC server with the plugin. This allows to set
+breakpoints and inspect the state of the provider.
+	
+
 
 #### Setup centralized Terraform state
 
