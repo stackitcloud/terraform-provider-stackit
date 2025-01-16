@@ -5,6 +5,7 @@ subcategory: ""
 description: |-
   Argus instance resource schema. Must have a region specified in the provider configuration.
   !> The stackit_argus_instance resource has been deprecated and will be removed after February 26th 2025. Please use stackit_observability_instance instead, which offers the exact same functionality.
+  To move an existing stackit_argus_instance resource to stackit_observability_instance you must first to add a stackit_observability_instance resource to your terraform file with the same value as your previous stackit_argus_instance resource. Then you need to add a moved block, where you need to define the value from to use the stackit_argus_instance resource and the value to you need to set your new stackit_observability_instance resource. Then just remove your old stackit_argus_instance resource and run $ terraform apply.
 ---
 
 # stackit_argus_instance (Resource)
@@ -12,6 +13,7 @@ description: |-
 Argus instance resource schema. Must have a `region` specified in the provider configuration.
 
 !> The `stackit_argus_instance` resource has been deprecated and will be removed after February 26th 2025. Please use `stackit_observability_instance` instead, which offers the exact same functionality.
+To move an existing `stackit_argus_instance` resource to `stackit_observability_instance` you must first to add a `stackit_observability_instance` resource to your terraform file with the same value as your previous `stackit_argus_instance` resource. Then you need to add a `moved` block, where you need to define the value `from` to use the `stackit_argus_instance` resource and the value `to` you need to set your new `stackit_observability_instance` resource. Then just remove your old `stackit_argus_instance` resource and run `$ terraform apply`.
 
 ## Example Usage
 
