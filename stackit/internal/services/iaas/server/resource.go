@@ -845,6 +845,8 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 		}
 
 		model.NetworkInterfaces = nicTF
+	} else {
+		model.NetworkInterfaces = types.ListNull(types.StringType)
 	}
 
 	model.ServerId = types.StringValue(serverId)
