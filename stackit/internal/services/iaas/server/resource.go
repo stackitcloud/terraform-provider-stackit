@@ -834,24 +834,12 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 		launchedAtValue := *serverResp.LaunchedAt
 		launchedAt = types.StringValue(launchedAtValue.Format(time.RFC3339))
 	}
-	model.NetworkInterfaces = types.ListNull(types.StringType)
 	if serverResp.Nics != nil {
 		var respNics []string
 		for _, nic := range *serverResp.Nics {
 			respNics = append(respNics, *nic.NicId)
 		}
-		tflog.Debug(ctx, fmt.Sprintf("mapFields() respNics: %+v", respNics))
-		modelNics, err := utils.ListValuetoStringSlice(model.NetworkInterfaces)
-		tflog.Debug(ctx, fmt.Sprintf("mapFields() modelNics: %+v", modelNics))
-		if err != nil {
-			return err
-		}
-
-		reconciledNics := utils.ReconcileStringSlices(modelNics, respNics)
-		tflog.Debug(ctx, fmt.Sprintf("mapFields() reconciledNics: %+v", reconciledNics))
-
-		nicTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledNics)
-		tflog.Debug(ctx, fmt.Sprintf("mapFields() nicTF: %q", nicTF.String()))
+		nicTF, diags := types.ListValueFrom(ctx, types.StringType, respNics)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map networkInterfaces: %w", core.DiagsToError(diags))
 		}
@@ -919,12 +907,10 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 	}
 
 	var network *iaas.CreateServerPayloadNetworking
-	tflog.Debug(ctx, fmt.Sprintf("toCreatePayload() model.NetworkInterfaces: %q", model.NetworkInterfaces.String()))
 	if !model.NetworkInterfaces.IsNull() && !model.NetworkInterfaces.IsUnknown() {
 		var nicIds []string
 		for _, nic := range model.NetworkInterfaces.Elements() {
 			nicString, ok := nic.(types.String)
-			tflog.Debug(ctx, fmt.Sprintf("toCreatePayload() nicString: %q", nicString.ValueString()))
 			if !ok {
 				return nil, fmt.Errorf("type assertion failed")
 			}
