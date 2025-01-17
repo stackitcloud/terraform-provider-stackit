@@ -91,14 +91,12 @@ var (
 		"main": "Argus credential resource schema. Must have a `region` specified in the provider configuration.",
 		"deprecation_message": "The `stackit_argus_credential` resource has been deprecated and will be removed after February 26th 2025. " +
 			"Please use `stackit_observability_credential` instead, which offers the exact same functionality.",
-		"move": "To move an existing `stackit_argus_credential` resource to `stackit_observability_credential` you must first to add a `stackit_observability_credential` resource to your terraform file with the same value as your previous `stackit_argus_credential` resource. " +
-			"Then you need to add a `moved` block, where you need to define the value `from` to use the `stackit_argus_credential` resource and the value `to` you need to set your new `stackit_observability_credential` resource. " +
-			"Then just remove your old `stackit_argus_credential` resource and run `$ terraform apply`.",
 	}
 	Schema = schema.Schema{
-		Description:         fmt.Sprintf("%s\n%s\n%s", descriptions["main"], descriptions["deprecation_message"], descriptions["move"]),
-		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s\n%s", descriptions["main"], descriptions["deprecation_message"], descriptions["move"]),
-		DeprecationMessage:  descriptions["deprecation_message"],
+		Description:         fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["deprecation_message"]),
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s\n\n%s", descriptions["main"], descriptions["deprecation_message"], exampleMoveToObservability),
+
+		DeprecationMessage: descriptions["deprecation_message"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`username`\".",
