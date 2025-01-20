@@ -43,6 +43,7 @@ type Model struct {
 	Expiration   types.Int64  `tfsdk:"expiration"`
 	Refresh      types.Bool   `tfsdk:"refresh"`
 	ExpiresAt    types.String `tfsdk:"expires_at"`
+	CreationTime types.String `tfsdk:"creation_time"`
 }
 
 // NewKubeconfigResource is a helper function to simplify the provider implementation.
@@ -108,6 +109,7 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		"expiration":     "Expiration time of the kubeconfig, in seconds. Defaults to `3600`",
 		"expires_at":     "Timestamp when the kubeconfig expires",
 		"refresh":        "If set to true, the provider will check if the kubeconfig has expired and will generated a new valid one in-place",
+		"creation_time":  "Date-time when the kubeconfig was created",
 	}
 
 	resp.Schema = schema.Schema{
@@ -182,6 +184,13 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"creation_time": schema.StringAttribute{
+				Description: descriptions["creation_time"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 		},
 	}
 }
@@ -230,6 +239,8 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 // Read refreshes the Terraform state with the latest data.
 // There is no GET kubeconfig endpoint.
 // If the refresh field is set, Read will check the expiration date and will get a new valid kubeconfig if it has expired
+// If kubeconfig creation time is before lastCompletionTime of the credentials rotation or
+// before cluster creation time a new kubeconfig is created.
 func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
@@ -246,26 +257,43 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
 	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
 
-	if model.Refresh.ValueBool() && !model.ExpiresAt.IsNull() {
-		expiresAt, err := time.Parse("2006-01-02T15:04:05Z07:00", model.ExpiresAt.ValueString())
+	cluster, err := r.client.GetClusterExecute(ctx, projectId, clusterName)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("Could not get cluster(%s): %v", clusterName, err))
+		return
+	}
+
+	// check if kubeconfig has expired
+	hasExpired, err := checkHasExpired(&model, time.Now())
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("%v", err))
+		return
+	}
+
+	clusterRecreation, err := checkClusterRecreation(cluster, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("%v", err))
+		return
+	}
+
+	credentialsRotation, err := checkCredentialsRotation(cluster, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("%v", err))
+		return
+	}
+
+	if hasExpired || clusterRecreation || credentialsRotation {
+		err := r.createKubeconfig(ctx, &model)
 		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("Converting expiresAt field to timestamp: %v", err))
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("The existing kubeconfig is invalid, creating a new one: %v", err))
 			return
 		}
-		currentTime := time.Now()
-		if expiresAt.Before(currentTime) {
-			err := r.createKubeconfig(ctx, &model)
-			if err != nil {
-				core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("The existing kubeconfig is expired and the refresh field is enabled, creating a new one: %v", err))
-				return
-			}
 
-			// Set state to fully populated data
-			diags = resp.State.Set(ctx, model)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
+		// Set state to fully populated data
+		diags = resp.State.Set(ctx, model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
 		}
 	}
 
@@ -285,7 +313,7 @@ func (r *kubeconfigResource) createKubeconfig(ctx context.Context, model *Model)
 	}
 
 	// Map response body to schema
-	err = mapFields(kubeconfigResp, model)
+	err = mapFields(kubeconfigResp, model, time.Now())
 	if err != nil {
 		return fmt.Errorf("processing API payload: %w", err)
 	}
@@ -320,7 +348,7 @@ func (r *kubeconfigResource) Delete(ctx context.Context, req resource.DeleteRequ
 	tflog.Info(ctx, "SKE kubeconfig deleted")
 }
 
-func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model) error {
+func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model, creationTime time.Time) error {
 	if kubeconfigResp == nil {
 		return fmt.Errorf("response is nil")
 	}
@@ -343,6 +371,8 @@ func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model) error {
 
 	model.Kubeconfig = types.StringPointerValue(kubeconfigResp.Kubeconfig)
 	model.ExpiresAt = types.StringPointerValue(kubeconfigResp.ExpirationTimestamp)
+	// set creation time
+	model.CreationTime = types.StringValue(creationTime.Format(time.RFC3339))
 	return nil
 }
 
@@ -360,4 +390,56 @@ func toCreatePayload(model *Model) (*ske.CreateKubeconfigPayload, error) {
 	return &ske.CreateKubeconfigPayload{
 		ExpirationSeconds: expirationStringPtr,
 	}, nil
+}
+
+// helper function to check if kubecondig has expired
+func checkHasExpired(model *Model, currentTime time.Time) (bool, error) {
+	if model.Refresh.ValueBool() && !model.ExpiresAt.IsNull() {
+		expiresAt, err := time.Parse(time.RFC3339, model.ExpiresAt.ValueString())
+		if err != nil {
+			return false, fmt.Errorf("converting expiresAt field to timestamp: %w", err)
+		}
+		if expiresAt.Before(currentTime) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// helper function to check if a credentials rotation was done
+func checkCredentialsRotation(cluster *ske.Cluster, model *Model) (bool, error) {
+	creationTime, err := time.Parse(time.RFC3339, model.CreationTime.ValueString())
+	if err != nil {
+		return false, fmt.Errorf("converting creationTime field to timestamp: %w", err)
+	}
+	if cluster.Status.CredentialsRotation.LastCompletionTime != nil {
+		lastCompletionTime, err := time.Parse(time.RFC3339, *cluster.Status.CredentialsRotation.LastCompletionTime)
+		if err != nil {
+			return false, fmt.Errorf("converting LastCompletionTime to timestamp: %w", err)
+		}
+
+		if creationTime.Before(lastCompletionTime) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// helper function to check if a cluster recreation was done
+func checkClusterRecreation(cluster *ske.Cluster, model *Model) (bool, error) {
+	creationTime, err := time.Parse(time.RFC3339, model.CreationTime.ValueString())
+	if err != nil {
+		return false, fmt.Errorf("converting creationTime field to timestamp: %w", err)
+	}
+	if cluster.Status.CreationTime != nil {
+		clusterCreationTime, err := time.Parse(time.RFC3339, *cluster.Status.CreationTime)
+		if err != nil {
+			return false, fmt.Errorf("converting clusterCreationTime to timestamp: %w", err)
+		}
+
+		if creationTime.Before(clusterCreationTime) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
