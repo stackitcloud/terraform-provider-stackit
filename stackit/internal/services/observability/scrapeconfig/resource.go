@@ -32,6 +32,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	argusScrapeConfigResource "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/scrapeconfig"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -48,6 +49,7 @@ var (
 	_ resource.Resource                = &scrapeConfigResource{}
 	_ resource.ResourceWithConfigure   = &scrapeConfigResource{}
 	_ resource.ResourceWithImportState = &scrapeConfigResource{}
+	_ resource.ResourceWithMoveState   = &scrapeConfigResource{}
 )
 
 type Model struct {
@@ -147,6 +149,47 @@ func (r *scrapeConfigResource) Configure(ctx context.Context, req resource.Confi
 	}
 	r.client = apiClient
 	tflog.Info(ctx, "Observability scrape config client configured")
+}
+
+func (r *scrapeConfigResource) MoveState(_ context.Context) []resource.StateMover {
+	return []resource.StateMover{
+		{
+			SourceSchema: &argusScrapeConfigResource.Schema,
+			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+				if req.SourceTypeName != "stackit_argus_scrapeconfig" {
+					return
+				}
+
+				// Checks source provider
+				if !strings.HasSuffix(req.SourceProviderAddress, "stackitcloud/stackit") {
+					return
+				}
+
+				var sourceStateData argusScrapeConfigResource.Model
+				resp.Diagnostics.Append(req.SourceState.Get(ctx, &sourceStateData)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				targetStateData := Model{
+					Id:             sourceStateData.Id,
+					ProjectId:      sourceStateData.ProjectId,
+					InstanceId:     sourceStateData.InstanceId,
+					Name:           sourceStateData.Name,
+					MetricsPath:    sourceStateData.MetricsPath,
+					Scheme:         sourceStateData.Scheme,
+					ScrapeInterval: sourceStateData.ScrapeInterval,
+					ScrapeTimeout:  sourceStateData.ScrapeTimeout,
+					SampleLimit:    sourceStateData.SampleLimit,
+					SAML2:          sourceStateData.SAML2,
+					BasicAuth:      sourceStateData.BasicAuth,
+					Targets:        sourceStateData.Targets,
+				}
+
+				resp.Diagnostics.Append(resp.TargetState.Set(ctx, targetStateData)...)
+			},
+		},
+	}
 }
 
 // Schema defines the schema for the resource.

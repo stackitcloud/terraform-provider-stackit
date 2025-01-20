@@ -86,16 +86,17 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 	tflog.Info(ctx, "Argus credential client configured")
 }
 
-func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
+var (
+	descriptions = map[string]string{
 		"main": "Argus credential resource schema. Must have a `region` specified in the provider configuration.",
 		"deprecation_message": "The `stackit_argus_credential` resource has been deprecated and will be removed after February 26th 2025. " +
 			"Please use `stackit_observability_credential` instead, which offers the exact same functionality.",
 	}
-	resp.Schema = schema.Schema{
+	Schema = schema.Schema{
 		Description:         fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["deprecation_message"]),
-		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["deprecation_message"]),
-		DeprecationMessage:  descriptions["deprecation_message"],
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s\n\n%s", descriptions["main"], descriptions["deprecation_message"], exampleMoveToObservability),
+
+		DeprecationMessage: descriptions["deprecation_message"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`username`\".",
@@ -144,6 +145,10 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			},
 		},
 	}
+)
+
+func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = Schema
 }
 
 // Create creates the resource and sets the initial Terraform state.

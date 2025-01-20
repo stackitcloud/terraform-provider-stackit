@@ -29,6 +29,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	argusInstanceResource "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/instance"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -41,6 +42,7 @@ var (
 	_ resource.Resource                = &instanceResource{}
 	_ resource.ResourceWithConfigure   = &instanceResource{}
 	_ resource.ResourceWithImportState = &instanceResource{}
+	_ resource.ResourceWithMoveState   = &instanceResource{}
 )
 
 type Model struct {
@@ -371,6 +373,64 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 
 	r.client = apiClient
 	tflog.Info(ctx, "Observability instance client configured")
+}
+
+// MoveState moves the state of a `stackit_argus_instance` resource to a `stackit_observability_instance` resource.
+func (r *instanceResource) MoveState(_ context.Context) []resource.StateMover {
+	return []resource.StateMover{
+		{
+			SourceSchema: &argusInstanceResource.Schema,
+			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+				if req.SourceTypeName != "stackit_argus_instance" {
+					return
+				}
+
+				// Checks source provider
+				if !strings.HasSuffix(req.SourceProviderAddress, "stackitcloud/stackit") {
+					return
+				}
+
+				var sourceStateData argusInstanceResource.Model
+				resp.Diagnostics.Append(req.SourceState.Get(ctx, &sourceStateData)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				targetStateData := Model{
+					Id:                                 sourceStateData.Id,
+					ProjectId:                          sourceStateData.ProjectId,
+					InstanceId:                         sourceStateData.InstanceId,
+					Name:                               sourceStateData.Name,
+					PlanName:                           sourceStateData.PlanName,
+					PlanId:                             sourceStateData.PlanId,
+					Parameters:                         sourceStateData.Parameters,
+					DashboardURL:                       sourceStateData.DashboardURL,
+					IsUpdatable:                        sourceStateData.IsUpdatable,
+					GrafanaURL:                         sourceStateData.GrafanaURL,
+					GrafanaPublicReadAccess:            sourceStateData.GrafanaPublicReadAccess,
+					GrafanaInitialAdminPassword:        sourceStateData.GrafanaInitialAdminPassword,
+					GrafanaInitialAdminUser:            sourceStateData.GrafanaInitialAdminUser,
+					MetricsRetentionDays:               sourceStateData.MetricsRetentionDays,
+					MetricsRetentionDays5mDownsampling: sourceStateData.MetricsRetentionDays5mDownsampling,
+					MetricsRetentionDays1hDownsampling: sourceStateData.MetricsRetentionDays1hDownsampling,
+					MetricsURL:                         sourceStateData.MetricsURL,
+					MetricsPushURL:                     sourceStateData.MetricsPushURL,
+					TargetsURL:                         sourceStateData.TargetsURL,
+					AlertingURL:                        sourceStateData.AlertingURL,
+					LogsURL:                            sourceStateData.LogsURL,
+					LogsPushURL:                        sourceStateData.LogsPushURL,
+					JaegerTracesURL:                    sourceStateData.JaegerTracesURL,
+					JaegerUIURL:                        sourceStateData.JaegerUIURL,
+					OtlpTracesURL:                      sourceStateData.OtlpTracesURL,
+					ZipkinSpansURL:                     sourceStateData.ZipkinSpansURL,
+					ACL:                                sourceStateData.ACL,
+					AlertConfig:                        sourceStateData.AlertConfig,
+				}
+
+				resp.Diagnostics.Append(resp.TargetState.Set(ctx, targetStateData)...)
+			},
+		},
+	}
 }
 
 // Schema defines the schema for the resource.
