@@ -48,11 +48,6 @@ type Model struct {
 	PublicIpRanges types.List   `tfsdk:"public_ip_ranges"`
 }
 
-// Struct corresponding to Model.PublicIpRanges[i]
-type publicRangesModel struct {
-	CIDR types.String `tfsdk:"cidr"`
-}
-
 var publicIpRangesTypes = map[string]attr.Type{
 	"cidr": types.StringType,
 }
