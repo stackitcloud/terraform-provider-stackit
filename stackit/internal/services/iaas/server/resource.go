@@ -439,12 +439,20 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	serverId := *server.Id
-	server, err = wait.CreateServerWaitHandler(ctx, r.client, projectId, serverId).WaitWithContext(ctx)
+	_, err = wait.CreateServerWaitHandler(ctx, r.client, projectId, serverId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("server creation waiting: %v", err))
 		return
 	}
 	ctx = tflog.SetField(ctx, "server_id", serverId)
+
+	// Get Server with details
+	serverReq := r.client.GetServer(ctx, projectId, serverId)
+	serverReq = serverReq.Details(true)
+	server, err = serverReq.Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error get created server with details", fmt.Sprintf("get server: %v", err))
+	}
 
 	// Map response body to schema
 	err = mapFields(ctx, server, &model)
