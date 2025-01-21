@@ -451,7 +451,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	serverReq = serverReq.Details(true)
 	server, err = serverReq.Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error get created server with details", fmt.Sprintf("get server: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("get server details: %v", err))
 	}
 
 	// Map response body to schema
