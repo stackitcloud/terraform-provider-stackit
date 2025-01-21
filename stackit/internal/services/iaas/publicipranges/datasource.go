@@ -101,23 +101,19 @@ func (d *publicIpRangesDataSource) Configure(ctx context.Context, req datasource
 
 // Schema defines the schema for the resource.
 func (d *publicIpRangesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	descriptions := map[string]string{
-		"id":                    "Terraform's internal resource ID. It takes the values of \"`public_ip_ranges.*.cidr`\".",
-		"main":                  "A list of all public IP ranges that STACKIT uses.",
-		"public_ip_ranges":      "A list of all public IP ranges.",
-		"public_ip_ranges.cidr": "Classless Inter-Domain Routing (CIDR)",
-	}
+	description := "A list of all public IP ranges that STACKIT uses."
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription(descriptions["main"]),
-		Description:         descriptions["main"],
+		MarkdownDescription: features.AddBetaDescription(description),
+		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: descriptions["id"],
+				Description: "Terraform's internal resource ID. It takes the values of \"`public_ip_ranges.*.cidr`\".",
 				Computed:    true,
 				Optional:    false,
 			},
 			"public_ip_ranges": schema.ListNestedAttribute{
-				Description: descriptions["public_ip_ranges"],
+				Description: "A list of all public IP ranges.",
 				Computed:    true,
 				Optional:    false,
 				Validators: []validator.List{
@@ -128,7 +124,7 @@ func (d *publicIpRangesDataSource) Schema(_ context.Context, _ datasource.Schema
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"cidr": schema.StringAttribute{
-							Description: descriptions["public_ip_ranges.cidr"],
+							Description: "Classless Inter-Domain Routing (CIDR)",
 							Computed:    true,
 						},
 					},
