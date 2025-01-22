@@ -76,7 +76,7 @@ type parametersModel struct {
 	OpensearchTlsCiphers   types.List    `tfsdk:"opensearch_tls_ciphers"`
 	OpensearchTlsProtocols types.List    `tfsdk:"opensearch_tls_protocols"`
 	Syslog                 types.List    `tfsdk:"syslog"`
-	SyslogUseUdp           types.String  `tfsdk:"syslog_use_udp"`
+	SyslogUseUdp           types.String  `tfsdk:"syslog_use_udp"` // Deprecated
 }
 
 // Types corresponding to parametersModel
@@ -103,7 +103,7 @@ var parametersTypes = map[string]attr.Type{
 	"opensearch_tls_ciphers":   basetypes.ListType{ElemType: types.StringType},
 	"opensearch_tls_protocols": basetypes.ListType{ElemType: types.StringType},
 	"syslog":                   basetypes.ListType{ElemType: types.StringType},
-	"syslog_use_udp":           basetypes.StringType{},
+	"syslog_use_udp":           basetypes.StringType{}, // Deprecated
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -365,9 +365,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Computed:    true,
 					},
 					"syslog_use_udp": schema.StringAttribute{
-						Description: parametersDescriptions["syslog_use_udp"],
-						Optional:    true,
-						Computed:    true,
+						Description:        parametersDescriptions["syslog_use_udp"],
+						Optional:           true,
+						Computed:           true,
+						DeprecationMessage: "The `syslog_use_udp` field has been deprecated because it is not required. Will be removed after July 22th 2025.",
 					},
 				},
 				Optional: true,
@@ -859,7 +860,6 @@ func toInstanceParams(parameters *parametersModel) (*logme.InstanceParameters, e
 	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
 	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
 	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
-	payloadParams.SyslogUseUdp = conversion.StringValueToPointer(parameters.SyslogUseUdp)
 
 	var err error
 	payloadParams.OpensearchTlsCiphers, err = conversion.StringListToPointer(parameters.OpensearchTlsCiphers)
