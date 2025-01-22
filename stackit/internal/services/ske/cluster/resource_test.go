@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -97,8 +98,8 @@ func TestMapFields(t *testing.T) {
 						MachineImageVersion: utils.Ptr(true),
 					},
 					TimeWindow: &ske.TimeWindow{
-						Start: utils.Ptr("0000-01-02T03:04:05+06:00"),
-						End:   utils.Ptr("0010-11-12T13:14:15Z"),
+						Start: utils.Ptr(time.Date(0, 1, 2, 3, 4, 5, 6, time.FixedZone("UTC+6:00", 6*60*60))),
+						End:   utils.Ptr(time.Date(10, 11, 12, 13, 14, 15, 0, time.UTC)),
 					},
 				},
 				Network: &ske.Network{
@@ -517,8 +518,8 @@ func TestMapFields(t *testing.T) {
 						MachineImageVersion: utils.Ptr(true),
 					},
 					TimeWindow: &ske.TimeWindow{
-						Start: utils.Ptr("0000-01-02T03:04:05+06:00"),
-						End:   utils.Ptr("0010-11-12T13:14:15Z"),
+						Start: utils.Ptr(time.Date(0, 1, 2, 3, 4, 5, 6, time.FixedZone("UTC+6:00", 6*60*60))),
+						End:   utils.Ptr(time.Date(10, 11, 12, 13, 14, 15, 0, time.UTC)),
 					},
 				},
 				Network: &ske.Network{
@@ -1643,9 +1644,9 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 func TestGetMaintenanceTimes(t *testing.T) {
 	tests := []struct {
 		description   string
-		startAPI      string
+		startAPI      time.Time
 		startTF       *string
-		endAPI        string
+		endAPI        time.Time
 		endTF         *string
 		isValid       bool
 		startExpected string
@@ -1653,37 +1654,25 @@ func TestGetMaintenanceTimes(t *testing.T) {
 	}{
 		{
 			description:   "base",
-			startAPI:      "0001-02-03T04:05:06+07:08",
-			endAPI:        "0011-12-13T14:15:16+17:18",
+			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 7, time.FixedZone("UTC+7:08", 7*60*60+8*60)),
+			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 17, time.FixedZone("UTC+17:18", 17*60*60+18*60)),
 			isValid:       true,
 			startExpected: "04:05:06+07:08",
 			endExpected:   "14:15:16+17:18",
 		},
 		{
 			description:   "base_utc",
-			startAPI:      "0001-02-03T04:05:06Z",
-			endAPI:        "0011-12-13T14:15:16Z",
+			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 0, time.UTC),
+			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 0, time.UTC),
 			isValid:       true,
 			startExpected: "04:05:06Z",
 			endExpected:   "14:15:16Z",
 		},
 		{
-			description: "api_wrong_format_1",
-			startAPI:    "T04:05:06+07:08",
-			endAPI:      "0011-12-13T14:15:16+17:18",
-			isValid:     false,
-		},
-		{
-			description: "api_wrong_format_2",
-			startAPI:    "0001-02-03T04:05:06+07:08",
-			endAPI:      "14:15:16+17:18",
-			isValid:     false,
-		},
-		{
 			description:   "tf_state_filled_in_1",
-			startAPI:      "0001-02-03T04:05:06+07:08",
+			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 7, time.FixedZone("UTC+7:08", 7*60*60+8*60)),
 			startTF:       utils.Ptr("04:05:06+07:08"),
-			endAPI:        "0011-12-13T14:15:16+17:18",
+			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 17, time.FixedZone("UTC+17:18", 17*60*60+18*60)),
 			endTF:         utils.Ptr("14:15:16+17:18"),
 			isValid:       true,
 			startExpected: "04:05:06+07:08",
@@ -1691,9 +1680,9 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		},
 		{
 			description:   "tf_state_filled_in_2",
-			startAPI:      "0001-02-03T04:05:06Z",
+			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 0, time.UTC),
 			startTF:       utils.Ptr("04:05:06+00:00"),
-			endAPI:        "0011-12-13T14:15:16Z",
+			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 0, time.UTC),
 			endTF:         utils.Ptr("14:15:16+00:00"),
 			isValid:       true,
 			startExpected: "04:05:06+00:00",
@@ -1701,9 +1690,9 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		},
 		{
 			description:   "tf_state_filled_in_3",
-			startAPI:      "0001-02-03T04:05:06+00:00",
+			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 0, time.UTC),
 			startTF:       utils.Ptr("04:05:06Z"),
-			endAPI:        "0011-12-13T14:15:16+00:00",
+			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 0, time.UTC),
 			endTF:         utils.Ptr("14:15:16Z"),
 			isValid:       true,
 			startExpected: "04:05:06Z",
@@ -1711,9 +1700,9 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		},
 		{
 			description:   "api_takes_precedence_if_different_1",
-			startAPI:      "0001-02-03T04:05:06+07:08",
+			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 7, time.FixedZone("UTC+7:08", 7*60*60+8*60)),
 			startTF:       utils.Ptr("00:00:00+07:08"),
-			endAPI:        "0011-12-13T14:15:16+17:18",
+			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 17, time.FixedZone("UTC+17:18", 17*60*60+18*60)),
 			endTF:         utils.Ptr("14:15:16+17:18"),
 			isValid:       true,
 			startExpected: "04:05:06+07:08",
@@ -1721,9 +1710,9 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		},
 		{
 			description:   "api_takes_precedence_if_different_2",
-			startAPI:      "0001-02-03T04:05:06+07:08",
+			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 7, time.FixedZone("UTC+7:08", 7*60*60+8*60)),
 			startTF:       utils.Ptr("04:05:06+07:08"),
-			endAPI:        "0011-12-13T14:15:16+17:18",
+			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 17, time.FixedZone("UTC+17:18", 17*60*60+18*60)),
 			endTF:         utils.Ptr("00:00:00+17:18"),
 			isValid:       true,
 			startExpected: "04:05:06+07:08",
@@ -1731,9 +1720,9 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		},
 		{
 			description:   "api_takes_precedence_if_different_3",
-			startAPI:      "0001-02-03T04:05:06+07:08",
+			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 7, time.FixedZone("UTC+7:08", 7*60*60+8*60)),
 			startTF:       utils.Ptr("04:05:06Z"),
-			endAPI:        "0011-12-13T14:15:16+17:18",
+			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 17, time.FixedZone("UTC+17:18", 17*60*60+18*60)),
 			endTF:         utils.Ptr("14:15:16+17:18"),
 			isValid:       true,
 			startExpected: "04:05:06+07:08",
@@ -1741,9 +1730,9 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		},
 		{
 			description:   "api_takes_precedence_if_different_3",
-			startAPI:      "0001-02-03T04:05:06+07:08",
+			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 7, time.FixedZone("UTC+7:08", 7*60*60+8*60)),
 			startTF:       utils.Ptr("04:05:06+07:08"),
-			endAPI:        "0011-12-13T14:15:16+17:18",
+			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 17, time.FixedZone("UTC+17:18", 17*60*60+18*60)),
 			endTF:         utils.Ptr("14:15:16Z"),
 			isValid:       true,
 			startExpected: "04:05:06+07:08",
