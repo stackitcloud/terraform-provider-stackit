@@ -151,6 +151,11 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Description: "The image ID to be used for an ephemeral disk on the server.",
 				Computed:    true,
 			},
+			"network_interfaces": schema.ListAttribute{
+				Description: "The IDs of network interfaces which should be attached to the server. Updating it will recreate the server.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
 			"keypair_name": schema.StringAttribute{
 				Description: "The name of the keypair used during server creation.",
 				Computed:    true,
@@ -201,7 +206,9 @@ func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
-	serverResp, err := r.client.GetServer(ctx, projectId, serverId).Execute()
+	serverReq := r.client.GetServer(ctx, projectId, serverId)
+	serverReq = serverReq.Details(true)
+	serverResp, err := serverReq.Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
