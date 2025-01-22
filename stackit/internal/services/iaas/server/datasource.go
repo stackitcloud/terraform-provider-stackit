@@ -4,11 +4,15 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -28,6 +32,25 @@ var serverDataSourceBetaCheckDone bool
 var (
 	_ datasource.DataSource = &serverDataSource{}
 )
+
+type DataSourceModel struct {
+	Id                types.String `tfsdk:"id"` // needed by TF
+	ProjectId         types.String `tfsdk:"project_id"`
+	ServerId          types.String `tfsdk:"server_id"`
+	MachineType       types.String `tfsdk:"machine_type"`
+	Name              types.String `tfsdk:"name"`
+	AvailabilityZone  types.String `tfsdk:"availability_zone"`
+	BootVolume        types.Object `tfsdk:"boot_volume"`
+	ImageId           types.String `tfsdk:"image_id"`
+	NetworkInterfaces types.List   `tfsdk:"network_interfaces"`
+	KeypairName       types.String `tfsdk:"keypair_name"`
+	Labels            types.Map    `tfsdk:"labels"`
+	AffinityGroup     types.String `tfsdk:"affinity_group"`
+	UserData          types.String `tfsdk:"user_data"`
+	CreatedAt         types.String `tfsdk:"created_at"`
+	LaunchedAt        types.String `tfsdk:"launched_at"`
+	UpdatedAt         types.String `tfsdk:"updated_at"`
+}
 
 // NewServerDataSource is a helper function to simplify the provider implementation.
 func NewServerDataSource() datasource.DataSource {
@@ -185,17 +208,13 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Description: "Date-time when the server was updated",
 				Computed:    true,
 			},
-			"desired_status": schema.StringAttribute{
-				Description: "The desired status of the server resource." + utils.SupportedValuesDocumentation(desiredStatusOptions),
-				Computed:    true,
-			},
 		},
 	}
 }
 
 // // Read refreshes the Terraform state with the latest data.
 func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -220,7 +239,7 @@ func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, serverResp, &model)
+	err = mapDataSourceFields(ctx, serverResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -232,4 +251,88 @@ func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 	tflog.Info(ctx, "server read")
+}
+
+func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *DataSourceModel) error {
+	if serverResp == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	var serverId string
+	if model.ServerId.ValueString() != "" {
+		serverId = model.ServerId.ValueString()
+	} else if serverResp.Id != nil {
+		serverId = *serverResp.Id
+	} else {
+		return fmt.Errorf("server id not present")
+	}
+
+	idParts := []string{
+		model.ProjectId.ValueString(),
+		serverId,
+	}
+	model.Id = types.StringValue(
+		strings.Join(idParts, core.Separator),
+	)
+
+	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
+	if diags.HasError() {
+		return fmt.Errorf("convert labels to StringValue map: %w", core.DiagsToError(diags))
+	}
+	if serverResp.Labels != nil && len(*serverResp.Labels) != 0 {
+		var diags diag.Diagnostics
+		labels, diags = types.MapValueFrom(ctx, types.StringType, *serverResp.Labels)
+		if diags.HasError() {
+			return fmt.Errorf("convert labels to StringValue map: %w", core.DiagsToError(diags))
+		}
+	} else if model.Labels.IsNull() {
+		labels = types.MapNull(types.StringType)
+	}
+	var createdAt basetypes.StringValue
+	if serverResp.CreatedAt != nil {
+		createdAtValue := *serverResp.CreatedAt
+		createdAt = types.StringValue(createdAtValue.Format(time.RFC3339))
+	}
+	var updatedAt basetypes.StringValue
+	if serverResp.UpdatedAt != nil {
+		updatedAtValue := *serverResp.UpdatedAt
+		updatedAt = types.StringValue(updatedAtValue.Format(time.RFC3339))
+	}
+	var launchedAt basetypes.StringValue
+	if serverResp.LaunchedAt != nil {
+		launchedAtValue := *serverResp.LaunchedAt
+		launchedAt = types.StringValue(launchedAtValue.Format(time.RFC3339))
+	}
+	if serverResp.Nics != nil {
+		var respNics []string
+		for _, nic := range *serverResp.Nics {
+			respNics = append(respNics, *nic.NicId)
+		}
+		nicTF, diags := types.ListValueFrom(ctx, types.StringType, respNics)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map networkInterfaces: %w", core.DiagsToError(diags))
+		}
+
+		model.NetworkInterfaces = nicTF
+	} else {
+		model.NetworkInterfaces = types.ListNull(types.StringType)
+	}
+
+	model.AvailabilityZone = types.StringPointerValue(serverResp.AvailabilityZone)
+	model.ServerId = types.StringValue(serverId)
+	model.MachineType = types.StringPointerValue(serverResp.MachineType)
+
+	model.Name = types.StringPointerValue(serverResp.Name)
+	model.Labels = labels
+	model.ImageId = types.StringPointerValue(serverResp.ImageId)
+	model.KeypairName = types.StringPointerValue(serverResp.KeypairName)
+	model.AffinityGroup = types.StringPointerValue(serverResp.AffinityGroup)
+	model.CreatedAt = createdAt
+	model.UpdatedAt = updatedAt
+	model.LaunchedAt = launchedAt
+
+	return nil
 }
