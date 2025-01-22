@@ -182,7 +182,7 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			},
 			"desired_status": schema.StringAttribute{
 				Description: "The desired status of the server resource." + utils.SupportedValuesDocumentation(desiredStatusOptions),
-				Optional:    true,
+				Computed:    true,
 			},
 		},
 	}
