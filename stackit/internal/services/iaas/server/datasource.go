@@ -180,6 +180,10 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Description: "Date-time when the server was updated",
 				Computed:    true,
 			},
+			"desired_status": schema.StringAttribute{
+				Description: "The desired status of the server resource." + utils.SupportedValuesDocumentation(desiredStatusOptions),
+				Computed:    true,
+			},
 		},
 	}
 }
