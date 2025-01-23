@@ -168,6 +168,10 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 						Description: "The ID of the source, either image ID or volume ID",
 						Computed:    true,
 					},
+					"delete_on_termination": schema.BoolAttribute{
+						Description: "Delete the volume during the termination of the server.",
+						Computed:    true,
+					},
 				},
 			},
 			"image_id": schema.StringAttribute{

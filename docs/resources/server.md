@@ -384,7 +384,7 @@ resource "stackit_server" "user-data-from-file" {
 - `affinity_group` (String) The affinity group the server is assigned to.
 - `availability_zone` (String) The availability zone of the server.
 - `boot_volume` (Attributes) The boot volume for the server (see [below for nested schema](#nestedatt--boot_volume))
-- `desired_status` (String) The desired status of the server resource. Defaults to 'active' Supported values are: `active`, `inactive`, `deallocated`.
+- `desired_status` (String) The desired status of the server resource. Supported values are: `active`, `inactive`, `deallocated`.
 - `image_id` (String) The image ID to be used for an ephemeral disk on the server.
 - `keypair_name` (String) The name of the keypair used during server creation.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
@@ -409,5 +409,6 @@ Required:
 
 Optional:
 
+- `delete_on_termination` (Boolean) Delete the volume during the termination of the server. Only allowed when `source_type` is `image`.
 - `performance_class` (String) The performance class of the server.
 - `size` (Number) The size of the boot volume in GB. Must be provided when `source_type` is `image`.
