@@ -21,7 +21,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&ske.Kubeconfig{
-				ExpirationTimestamp: utils.Ptr("2024-02-07T16:42:12Z"),
+				ExpirationTimestamp: utils.Ptr(time.Date(2024, 2, 7, 16, 42, 12, 0, time.UTC)),
 				Kubeconfig:          utils.Ptr("kubeconfig"),
 			},
 			Model{
@@ -50,7 +50,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_kubeconfig_field",
 			&ske.Kubeconfig{
-				ExpirationTimestamp: utils.Ptr("2024-02-07T16:42:12Z"),
+				ExpirationTimestamp: utils.Ptr(time.Date(2024, 2, 7, 16, 42, 12, 0, time.UTC)),
 			},
 			Model{},
 			false,
@@ -62,7 +62,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:   tt.expected.ProjectId,
 				ClusterName: tt.expected.ClusterName,
 			}
-			creationTime, _ := time.Parse("2006-01-02T15:04:05Z07:00", tt.expected.CreationTime.ValueString())
+			creationTime, _ := time.Parse(time.RFC3339, tt.expected.CreationTime.ValueString())
 			err := mapFields(tt.input, state, creationTime)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
@@ -205,7 +205,7 @@ func TestCheckCredentialsRotation(t *testing.T) {
 			inputCluster: &ske.Cluster{
 				Status: &ske.ClusterStatus{
 					CredentialsRotation: &ske.CredentialsRotationState{
-						LastCompletionTime: utils.Ptr(time.Now().Add(-1 * time.Hour).Format(time.RFC3339)), // one hour ago
+						LastCompletionTime: utils.Ptr(time.Now().Add(-1 * time.Hour)), // one hour ago
 					},
 				},
 			},
@@ -220,7 +220,7 @@ func TestCheckCredentialsRotation(t *testing.T) {
 			inputCluster: &ske.Cluster{
 				Status: &ske.ClusterStatus{
 					CredentialsRotation: &ske.CredentialsRotationState{
-						LastCompletionTime: utils.Ptr(time.Now().Add(1 * time.Hour).Format(time.RFC3339)),
+						LastCompletionTime: utils.Ptr(time.Now().Add(1 * time.Hour)),
 					},
 				},
 			},
@@ -244,21 +244,6 @@ func TestCheckCredentialsRotation(t *testing.T) {
 			},
 			expected:      false,
 			expectedError: false,
-		},
-		{
-			description: "invalid last completion time",
-			inputCluster: &ske.Cluster{
-				Status: &ske.ClusterStatus{
-					CredentialsRotation: &ske.CredentialsRotationState{
-						LastCompletionTime: utils.Ptr("invalid time"),
-					},
-				},
-			},
-			inputModel: &Model{
-				CreationTime: types.StringValue(time.Now().Format(time.RFC3339)),
-			},
-			expected:      false,
-			expectedError: true,
 		},
 	}
 	for _, tt := range tests {
@@ -287,7 +272,7 @@ func TestCheckClusterRecreation(t *testing.T) {
 			description: "cluster creation time after kubeconfig creation time",
 			inputCluster: &ske.Cluster{
 				Status: &ske.ClusterStatus{
-					CreationTime: utils.Ptr(time.Now().Add(-1 * time.Hour).Format(time.RFC3339)),
+					CreationTime: utils.Ptr(time.Now().Add(-1 * time.Hour)),
 				},
 			},
 			inputModel: &Model{
@@ -300,7 +285,7 @@ func TestCheckClusterRecreation(t *testing.T) {
 			description: "cluster creation time before kubeconfig creation time",
 			inputCluster: &ske.Cluster{
 				Status: &ske.ClusterStatus{
-					CreationTime: utils.Ptr(time.Now().Add(1 * time.Hour).Format(time.RFC3339)),
+					CreationTime: utils.Ptr(time.Now().Add(1 * time.Hour)),
 				},
 			},
 			inputModel: &Model{
@@ -321,19 +306,6 @@ func TestCheckClusterRecreation(t *testing.T) {
 			},
 			expected:      false,
 			expectedError: false,
-		},
-		{
-			description: "invalid cluster creation time",
-			inputCluster: &ske.Cluster{
-				Status: &ske.ClusterStatus{
-					CreationTime: utils.Ptr("invalid time"),
-				},
-			},
-			inputModel: &Model{
-				CreationTime: types.StringValue(time.Now().Format(time.RFC3339)),
-			},
-			expected:      false,
-			expectedError: true,
 		},
 	}
 	for _, tt := range tests {

@@ -96,7 +96,6 @@ var fixtureInstanceParameters = logme.InstanceParameters{
 	OpensearchTlsCiphers:   &[]string{"ciphers", "ciphers2"},
 	OpensearchTlsProtocols: &[]string{"protocols", "protocols2"},
 	Syslog:                 &[]string{"syslog", "syslog2"},
-	SyslogUseUdp:           utils.Ptr("udp"),
 }
 
 func TestMapFields(t *testing.T) {
