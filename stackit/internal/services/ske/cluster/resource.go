@@ -1236,20 +1236,24 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 		return nil, fmt.Errorf("converting maintenance object: %v", diags.Errors())
 	}
 
-	var timeWindowStart *string
+	var timeWindowStart *time.Time
 	if !(maintenance.Start.IsNull() || maintenance.Start.IsUnknown()) {
 		// API expects RFC3339 datetime
-		timeWindowStart = sdkUtils.Ptr(
-			fmt.Sprintf("0000-01-01T%s", maintenance.Start.ValueString()),
-		)
+		tempTime, err := time.Parse(time.RFC3339, maintenance.Start.ValueString())
+		if err != nil {
+			return nil, fmt.Errorf("converting maintenance object: %w", err)
+		}
+		timeWindowStart = sdkUtils.Ptr(tempTime)
 	}
 
-	var timeWindowEnd *string
+	var timeWindowEnd *time.Time
 	if !(maintenance.End.IsNull() || maintenance.End.IsUnknown()) {
 		// API expects RFC3339 datetime
-		timeWindowEnd = sdkUtils.Ptr(
-			fmt.Sprintf("0000-01-01T%s", maintenance.End.ValueString()),
-		)
+		tempTime, err := time.Parse(time.RFC3339, maintenance.End.ValueString())
+		if err != nil {
+			return nil, fmt.Errorf("converting maintenance object: %w", err)
+		}
+		timeWindowEnd = sdkUtils.Ptr(tempTime)
 	}
 
 	return &ske.Maintenance{
@@ -1583,14 +1587,8 @@ func mapNetwork(cl *ske.Cluster, m *Model) error {
 }
 
 func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startTime, endTime string, err error) {
-	startTimeAPI, err := time.Parse(time.RFC3339, *cl.Maintenance.TimeWindow.Start)
-	if err != nil {
-		return "", "", fmt.Errorf("parsing start time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.Start, err)
-	}
-	endTimeAPI, err := time.Parse(time.RFC3339, *cl.Maintenance.TimeWindow.End)
-	if err != nil {
-		return "", "", fmt.Errorf("parsing end time '%s' from API response as RFC3339 datetime: %w", *cl.Maintenance.TimeWindow.End, err)
-	}
+	startTimeAPI := *cl.Maintenance.TimeWindow.Start
+	endTimeAPI := *cl.Maintenance.TimeWindow.End
 
 	if m.Maintenance.IsNull() || m.Maintenance.IsUnknown() {
 		return startTimeAPI.Format("15:04:05Z07:00"), endTimeAPI.Format("15:04:05Z07:00"), nil

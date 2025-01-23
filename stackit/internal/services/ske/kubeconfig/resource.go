@@ -370,7 +370,7 @@ func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model, creationTime time.T
 	}
 
 	model.Kubeconfig = types.StringPointerValue(kubeconfigResp.Kubeconfig)
-	model.ExpiresAt = types.StringPointerValue(kubeconfigResp.ExpirationTimestamp)
+	model.ExpiresAt = types.StringValue(kubeconfigResp.ExpirationTimestamp.Format(time.RFC3339))
 	// set creation time
 	model.CreationTime = types.StringValue(creationTime.Format(time.RFC3339))
 	return nil
@@ -413,12 +413,7 @@ func checkCredentialsRotation(cluster *ske.Cluster, model *Model) (bool, error) 
 		return false, fmt.Errorf("converting creationTime field to timestamp: %w", err)
 	}
 	if cluster.Status.CredentialsRotation.LastCompletionTime != nil {
-		lastCompletionTime, err := time.Parse(time.RFC3339, *cluster.Status.CredentialsRotation.LastCompletionTime)
-		if err != nil {
-			return false, fmt.Errorf("converting LastCompletionTime to timestamp: %w", err)
-		}
-
-		if creationTime.Before(lastCompletionTime) {
+		if creationTime.Before(*cluster.Status.CredentialsRotation.LastCompletionTime) {
 			return true, nil
 		}
 	}
@@ -432,12 +427,7 @@ func checkClusterRecreation(cluster *ske.Cluster, model *Model) (bool, error) {
 		return false, fmt.Errorf("converting creationTime field to timestamp: %w", err)
 	}
 	if cluster.Status.CreationTime != nil {
-		clusterCreationTime, err := time.Parse(time.RFC3339, *cluster.Status.CreationTime)
-		if err != nil {
-			return false, fmt.Errorf("converting clusterCreationTime to timestamp: %w", err)
-		}
-
-		if creationTime.Before(clusterCreationTime) {
+		if creationTime.Before(*cluster.Status.CreationTime) {
 			return true, nil
 		}
 	}
