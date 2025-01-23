@@ -76,7 +76,6 @@ type parametersModel struct {
 	OpensearchTlsCiphers   types.List    `tfsdk:"opensearch_tls_ciphers"`
 	OpensearchTlsProtocols types.List    `tfsdk:"opensearch_tls_protocols"`
 	Syslog                 types.List    `tfsdk:"syslog"`
-	SyslogUseUdp           types.String  `tfsdk:"syslog_use_udp"`
 }
 
 // Types corresponding to parametersModel
@@ -103,7 +102,6 @@ var parametersTypes = map[string]attr.Type{
 	"opensearch_tls_ciphers":   basetypes.ListType{ElemType: types.StringType},
 	"opensearch_tls_protocols": basetypes.ListType{ElemType: types.StringType},
 	"syslog":                   basetypes.ListType{ElemType: types.StringType},
-	"syslog_use_udp":           basetypes.StringType{},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -184,7 +182,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"ism_deletion_after":     "Combination of an integer and a timerange when an index will be considered \"old\" and can be deleted. Possible values for the timerange are `s`, `m`, `h` and `d`.",
 		"ism_job_interval":       "Jitter of the execution time.",
 		"syslog":                 "List of syslog servers to send logs to.",
-		"syslog-use-udp":         "Defines if syslog will use UDP. Possible values: `yes`, `no`.",
 		"opensearch-tls-ciphers": "List of ciphers to use for TLS.",
 	}
 
@@ -361,11 +358,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"syslog": schema.ListAttribute{
 						Description: parametersDescriptions["syslog"],
 						ElementType: types.StringType,
-						Optional:    true,
-						Computed:    true,
-					},
-					"syslog_use_udp": schema.StringAttribute{
-						Description: parametersDescriptions["syslog_use_udp"],
 						Optional:    true,
 						Computed:    true,
 					},
@@ -689,7 +681,6 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 			"fluentd_udp",
 			"opensearch_tls_ciphers",
 			"opensearch_tls_protocols",
-			"syslog_use_udp",
 		}
 		if slices.Contains(hyphenAttributes, attribute) {
 			alteredAttribute := strings.ReplaceAll(attribute, "_", "-")
@@ -859,7 +850,6 @@ func toInstanceParams(parameters *parametersModel) (*logme.InstanceParameters, e
 	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
 	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
 	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
-	payloadParams.SyslogUseUdp = conversion.StringValueToPointer(parameters.SyslogUseUdp)
 
 	var err error
 	payloadParams.OpensearchTlsCiphers, err = conversion.StringListToPointer(parameters.OpensearchTlsCiphers)

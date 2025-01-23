@@ -100,7 +100,6 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"ism_deletion_after":     "Combination of an integer and a timerange when an index will be considered \"old\" and can be deleted. Possible values for the timerange are `s`, `m`, `h` and `d`.",
 		"ism_job_interval":       "Jitter of the execution time.",
 		"syslog":                 "List of syslog servers to send logs to.",
-		"syslog-use-udp":         "Defines if syslog will use UDP. Possible values: `yes`, `no`.",
 		"opensearch-tls-ciphers": "List of ciphers to use for TLS.",
 	}
 
@@ -234,10 +233,6 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					"syslog": schema.ListAttribute{
 						Description: parametersDescriptions["syslog"],
 						ElementType: types.StringType,
-						Computed:    true,
-					},
-					"syslog_use_udp": schema.StringAttribute{
-						Description: parametersDescriptions["syslog_use_udp"],
 						Computed:    true,
 					},
 				},
