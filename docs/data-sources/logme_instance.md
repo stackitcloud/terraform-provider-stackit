@@ -68,4 +68,3 @@ Read-Only:
 - `opensearch_tls_protocols` (List of String)
 - `sgw_acl` (String) Comma separated list of IP networks in CIDR notation which are allowed to access this instance.
 - `syslog` (List of String) List of syslog servers to send logs to.
-- `syslog_use_udp` (String)
