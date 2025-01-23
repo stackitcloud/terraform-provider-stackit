@@ -7,6 +7,6 @@ resource "stackit_rabbitmq_instance" "example" {
     sgw_acl           = "193.148.160.0/19,45.129.40.0/21,45.135.244.0/22"
     consumer_timeout  = 18000000
     enable_monitoring = false
-    plugins           = ["rabbitmq_consistent_hash_exchange","rabbitmq_federation","rabbitmq_tracing"]
+    plugins           = ["rabbitmq_consistent_hash_exchange", "rabbitmq_federation", "rabbitmq_tracing"]
   }
 }
