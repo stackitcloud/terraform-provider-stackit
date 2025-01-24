@@ -1225,6 +1225,11 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 	}, nil
 }
 
+func parseMaintenanceWindowTime(t string) (time.Time, error) {
+	const format = "15:04:05Z07:00"
+	return time.Parse(format, strings.ReplaceAll(t, "Z", "+00:00"))
+
+}
 func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, error) {
 	if m.Maintenance.IsNull() || m.Maintenance.IsUnknown() {
 		return nil, nil
@@ -1238,8 +1243,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 
 	var timeWindowStart *time.Time
 	if !(maintenance.Start.IsNull() || maintenance.Start.IsUnknown()) {
-		// API expects RFC3339 datetime
-		tempTime, err := time.Parse(time.RFC3339, maintenance.Start.ValueString())
+		tempTime, err := parseMaintenanceWindowTime(maintenance.Start.ValueString())
 		if err != nil {
 			return nil, fmt.Errorf("converting maintenance object: %w", err)
 		}
@@ -1248,8 +1252,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 
 	var timeWindowEnd *time.Time
 	if !(maintenance.End.IsNull() || maintenance.End.IsUnknown()) {
-		// API expects RFC3339 datetime
-		tempTime, err := time.Parse(time.RFC3339, maintenance.End.ValueString())
+		tempTime, err := parseMaintenanceWindowTime(maintenance.End.ValueString())
 		if err != nil {
 			return nil, fmt.Errorf("converting maintenance object: %w", err)
 		}
