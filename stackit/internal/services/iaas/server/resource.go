@@ -935,6 +935,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 	}
 
 	return &iaas.CreateServerPayload{
+		AffinityGroup:    conversion.StringValueToPointer(model.AffinityGroup),
 		AvailabilityZone: conversion.StringValueToPointer(model.AvailabilityZone),
 		BootVolume:       bootVolumePayload,
 		ImageId:          conversion.StringValueToPointer(model.ImageId),
