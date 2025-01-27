@@ -2340,50 +2340,49 @@ func TestMaintenanceWindow(t *testing.T) {
 	}
 	for _, tt := range tc {
 		t.Run(fmt.Sprintf("from %s to %s", tt.start, tt.end), func(_ *testing.T) {
+			attributeTypes := map[string]attr.Type{
+				"start":                                types.StringType,
+				"end":                                  types.StringType,
+				"enable_kubernetes_version_updates":    types.BoolType,
+				"enable_machine_image_version_updates": types.BoolType,
+			}
 
+			attributeValues := map[string]attr.Value{
+				"start":                                basetypes.NewStringValue(tt.start),
+				"end":                                  basetypes.NewStringValue(tt.end),
+				"enable_kubernetes_version_updates":    basetypes.NewBoolValue(false),
+				"enable_machine_image_version_updates": basetypes.NewBoolValue(false),
+			}
+
+			val, diag := basetypes.NewObjectValue(attributeTypes, attributeValues)
+			if diag.HasError() {
+				t.Fatalf("cannot create object value: %v", diag)
+			}
+			model := Model{
+				Maintenance: val,
+			}
+			maintenance, err := toMaintenancePayload(context.Background(), &model)
+			if err != nil {
+				t.Fatalf("cannot create payload: %v", err)
+			}
+
+			startLocation := maintenance.TimeWindow.Start.Location()
+			endLocation := maintenance.TimeWindow.End.Location()
+			wantStart, err := time.ParseInLocation(time.TimeOnly, tt.wantStart, startLocation)
+			if err != nil {
+				t.Fatalf("cannot parse start date %q: %v", tt.wantStart, err)
+			}
+			wantEnd, err := time.ParseInLocation(time.TimeOnly, tt.wantEnd, endLocation)
+			if err != nil {
+				t.Fatalf("cannot parse end date %q: %v", tt.wantEnd, err)
+			}
+
+			if expected, actual := wantStart.In(startLocation), *maintenance.TimeWindow.Start; expected != actual {
+				t.Errorf("invalid start date. expected %s but got %s", expected, actual)
+			}
+			if expected, actual := wantEnd.In(endLocation), (*maintenance.TimeWindow.End); expected != actual {
+				t.Errorf("invalid End date. expected %s but got %s", expected, actual)
+			}
 		})
-		attributeTypes := map[string]attr.Type{
-			"start":                                types.StringType,
-			"end":                                  types.StringType,
-			"enable_kubernetes_version_updates":    types.BoolType,
-			"enable_machine_image_version_updates": types.BoolType,
-		}
-
-		attributeValues := map[string]attr.Value{
-			"start":                                basetypes.NewStringValue(tt.start),
-			"end":                                  basetypes.NewStringValue(tt.end),
-			"enable_kubernetes_version_updates":    basetypes.NewBoolValue(false),
-			"enable_machine_image_version_updates": basetypes.NewBoolValue(false),
-		}
-
-		val, diag := basetypes.NewObjectValue(attributeTypes, attributeValues)
-		if diag.HasError() {
-			t.Fatalf("cannot create object value: %v", diag)
-		}
-		model := Model{
-			Maintenance: val,
-		}
-		maintenance, err := toMaintenancePayload(context.Background(), &model)
-		if err != nil {
-			t.Fatalf("cannot create payload: %v", err)
-		}
-
-		startLocation := maintenance.TimeWindow.Start.Location()
-		endLocation := maintenance.TimeWindow.End.Location()
-		wantStart, err := time.ParseInLocation(time.TimeOnly, tt.wantStart, startLocation)
-		if err != nil {
-			t.Fatalf("cannot parse start date %q: %v", tt.wantStart, err)
-		}
-		wantEnd, err := time.ParseInLocation(time.TimeOnly, tt.wantEnd, endLocation)
-		if err != nil {
-			t.Fatalf("cannot parse end date %q: %v", tt.wantEnd, err)
-		}
-
-		if expected, actual := wantStart.In(startLocation), *maintenance.TimeWindow.Start; expected != actual {
-			t.Errorf("invalid start date. expected %s but got %s", expected, actual)
-		}
-		if expected, actual := wantEnd.In(endLocation), (*maintenance.TimeWindow.End); expected != actual {
-			t.Errorf("invalid End date. expected %s but got %s", expected, actual)
-		}
 	}
 }
