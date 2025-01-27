@@ -161,7 +161,7 @@ func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRe
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					validate.IP(),
+					validate.IP(false),
 				},
 			},
 			"prefix": schema.StringAttribute{
