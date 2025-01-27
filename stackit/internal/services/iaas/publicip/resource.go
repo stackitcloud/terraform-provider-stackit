@@ -147,7 +147,7 @@ func (r *publicIpResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringplanmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.String{
-					validate.IP(),
+					validate.IP(false),
 				},
 			},
 			"network_interface_id": schema.StringAttribute{

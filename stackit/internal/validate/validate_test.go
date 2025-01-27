@@ -58,39 +58,87 @@ func TestUUID(t *testing.T) {
 func TestIP(t *testing.T) {
 	tests := []struct {
 		description string
+		invalidZero bool
 		input       string
 		isValid     bool
 	}{
 		{
 			"ok IP4",
+			false,
 			"111.222.111.222",
 			true,
 		},
 		{
 			"ok IP6",
+			false,
 			"2001:0db8:85a3:08d3::0370:7344",
 			true,
 		},
 		{
 			"too short",
+			false,
 			"0.1.2",
 			false,
 		},
 		{
 			"Empty",
+			false,
 			"",
 			false,
 		},
 		{
 			"Not an IP",
+			false,
 			"for-sure-not-an-IP",
+			false,
+		},
+		{
+			"valid ipv4 zero",
+			true,
+			"0.0.0.0",
+			true,
+		},
+		{
+			"invalid ipv4 zero",
+			false,
+			"0.0.0.0",
+			false,
+		},
+		{
+			"valid ipv6 zero",
+			true,
+			"::",
+			true,
+		},
+		{
+			"valid ipv6 zero short notation",
+			true,
+			"::",
+			true,
+		},
+		{
+			"valid ipv6 zero long notation",
+			true,
+			"0000:0000:0000:0000:0000:0000:0000:0000",
+			true,
+		},
+		{
+			"invalid ipv6 zero short notation",
+			false,
+			"::",
+			false,
+		},
+		{
+			"invalid ipv6 zero long notation",
+			false,
+			"0000:0000:0000:0000:0000:0000:0000:0000",
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			r := validator.StringResponse{}
-			IP().ValidateString(context.Background(), validator.StringRequest{
+			IP(tt.invalidZero).ValidateString(context.Background(), validator.StringRequest{
 				ConfigValue: types.StringValue(tt.input),
 			}, &r)
 

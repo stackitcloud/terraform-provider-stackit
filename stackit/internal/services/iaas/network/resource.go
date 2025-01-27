@@ -200,7 +200,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{
-					validate.IP(),
+					validate.IP(false),
 				},
 			},
 			"ipv4_nameservers": schema.ListAttribute{
@@ -252,7 +252,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{
-					validate.IP(),
+					validate.IP(false),
 				},
 			},
 			"ipv6_nameservers": schema.ListAttribute{

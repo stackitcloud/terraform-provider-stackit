@@ -67,13 +67,17 @@ func UUID() *Validator {
 	}
 }
 
-func IP() *Validator {
+// IP returns a validator that checks, if the given string is a valid IP address.
+// The allowZeroAddress parameter defines, if 0.0.0.0, resp. [::] should be considered valid.
+func IP(allowZeroAddress bool) *Validator {
 	description := "value must be an IP address"
 
 	return &Validator{
 		description: description,
 		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-			if net.ParseIP(req.ConfigValue.ValueString()) == nil {
+			ip := net.ParseIP(req.ConfigValue.ValueString())
+			invalidZeroAddress := !allowZeroAddress && (net.IPv4zero.Equal(ip) || net.IPv6zero.Equal(ip))
+			if ip == nil || invalidZeroAddress {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
 					description,
