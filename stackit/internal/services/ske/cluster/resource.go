@@ -1225,12 +1225,12 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 	}, nil
 }
 
-func parseMaintenanceWindowTime(t string) (v time.Time, err error) {
-	v, err = time.Parse("15:04:05-07:00", t)
+func parseMaintenanceWindowTime(t string) (time.Time, error) {
+	v, err := time.Parse("15:04:05-07:00", t)
 	if err != nil {
 		v, err = time.Parse("15:04:05Z", t)
 	}
-	return
+	return v, err
 }
 
 func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, error) {

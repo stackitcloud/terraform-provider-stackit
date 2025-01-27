@@ -2339,7 +2339,7 @@ func TestMaintenanceWindow(t *testing.T) {
 		{"01:00:00-05:00", "02:00:00-05:00", "01:00:00", "02:00:00"},
 	}
 	for _, tt := range tc {
-		t.Run(fmt.Sprintf("from %s to %s", tt.start, tt.end), func(t *testing.T) {
+		t.Run(fmt.Sprintf("from %s to %s", tt.start, tt.end), func(_ *testing.T) {
 
 		})
 		attributeTypes := map[string]attr.Type{
@@ -2386,5 +2386,4 @@ func TestMaintenanceWindow(t *testing.T) {
 			t.Errorf("invalid End date. expected %s but got %s", expected, actual)
 		}
 	}
-
 }
