@@ -22,7 +22,7 @@ Affinity Group schema. Must have a `region` specified in the provider configurat
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`bar_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`affinity_group_id`".
 - `members` (List of String) Affinity Group schema. Must have a `region` specified in the provider configuration.
 - `name` (String) The name of the affinity group.
 - `policy` (String) The policy of the affinity group.

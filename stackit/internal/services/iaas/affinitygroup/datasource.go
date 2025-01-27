@@ -90,7 +90,7 @@ func (d *affinityGroupDatasource) Schema(_ context.Context, _ datasource.SchemaR
 		MarkdownDescription: descriptionMain,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`bar_id`\".",
+				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`affinity_group_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{

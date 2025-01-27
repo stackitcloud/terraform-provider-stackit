@@ -25,11 +25,10 @@ description: |-
   }
   ```
   Policies
-  hard-affinity- All instances/servers launched in this group will be hosted on the same compute node.hard-anti-affinity- All instances/servers launched in this group will be
-  hosted on different compute nodes.soft-affinity- All instances/servers launched in this group will be hosted
-  on the same compute node if possible, but if not possible they still will be scheduled instead of failure.soft-anti-affinity- All instances/servers launched in this group will be
-  hosted on different compute nodes if possible, but if not possible they
-  still will be scheduled instead of failure.
+  hard-affinity- All servers launched in this group will be hosted on the same compute node.hard-anti-affinity- All servers launched in this group will be
+  hosted on different compute nodes.soft-affinity- All servers launched in this group will be hosted
+  on the same compute node if possible, but if not possible they still will be scheduled instead of failure.soft-anti-affinity- All servers launched in this group will be hosted on different compute nodes if possible,
+  but if not possible they still will be scheduled instead of failure.
   ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
@@ -64,17 +63,16 @@ resource "stackit_server" "example-server" {
 
 ### Policies
 
-* `hard-affinity`- All instances/servers launched in this group will be hosted on the same compute node.
+* `hard-affinity`- All servers launched in this group will be hosted on the same compute node.
 
-* `hard-anti-affinity`- All instances/servers launched in this group will be
+* `hard-anti-affinity`- All servers launched in this group will be
     hosted on different compute nodes.
 
-* `soft-affinity`- All instances/servers launched in this group will be hosted
+* `soft-affinity`- All servers launched in this group will be hosted
     on the same compute node if possible, but if not possible they still will be scheduled instead of failure.
 
-* `soft-anti-affinity`- All instances/servers launched in this group will be
-    hosted on different compute nodes if possible, but if not possible they
-    still will be scheduled instead of failure.
+* `soft-anti-affinity`- All servers launched in this group will be hosted on different compute nodes if possible,
+	but if not possible they still will be scheduled instead of failure.
 
 
 ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
@@ -93,5 +91,5 @@ resource "stackit_server" "example-server" {
 ### Read-Only
 
 - `affinity_group_id` (String) The affinity group ID.
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`bar_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`affinity_group_id`".
 - `members` (List of String) The servers that are part of the affinity group.

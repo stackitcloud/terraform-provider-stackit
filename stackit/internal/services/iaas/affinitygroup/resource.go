@@ -112,7 +112,7 @@ func (r *affinityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 		MarkdownDescription: features.AddBetaDescription(description + "\n\n" + exampleUsageWithServer + policies),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`bar_id`\".",
+				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`affinity_group_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -252,9 +252,8 @@ func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	tflog.Info(ctx, "Affinity group read")
 }
 
-func (r *affinityGroupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	//TODO implement me
-	panic("implement me")
+func (r *affinityGroupResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) {
+	// Update is not supported, all fields require replace
 }
 
 // Delete deletes the resource and removes the Terraform state on success.

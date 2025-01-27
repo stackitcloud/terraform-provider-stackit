@@ -28,15 +28,14 @@ const policies = `
 
 ### Policies
 
-* ` + "`hard-affinity`" + `- All instances/servers launched in this group will be hosted on the same compute node.
+* ` + "`hard-affinity`" + `- All servers launched in this group will be hosted on the same compute node.
 
-* ` + "`hard-anti-affinity`" + `- All instances/servers launched in this group will be
+* ` + "`hard-anti-affinity`" + `- All servers launched in this group will be
     hosted on different compute nodes.
 
-* ` + "`soft-affinity`" + `- All instances/servers launched in this group will be hosted
+* ` + "`soft-affinity`" + `- All servers launched in this group will be hosted
     on the same compute node if possible, but if not possible they still will be scheduled instead of failure.
 
-* ` + "`soft-anti-affinity`" + `- All instances/servers launched in this group will be
-    hosted on different compute nodes if possible, but if not possible they
-    still will be scheduled instead of failure.
+* ` + "`soft-anti-affinity`" + `- All servers launched in this group will be hosted on different compute nodes if possible,
+	but if not possible they still will be scheduled instead of failure.
 `
