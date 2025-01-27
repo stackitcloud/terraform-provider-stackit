@@ -113,7 +113,7 @@ func TestIP(t *testing.T) {
 		{
 			"valid ipv6 zero short notation",
 			true,
-			"::",
+			"::0",
 			true,
 		},
 		{
