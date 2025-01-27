@@ -1225,11 +1225,14 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 	}, nil
 }
 
-func parseMaintenanceWindowTime(t string) (time.Time, error) {
-	const format = "15:04:05Z07:00"
-	return time.Parse(format, strings.ReplaceAll(t, "Z", "+00:00"))
-
+func parseMaintenanceWindowTime(t string) (v time.Time, err error) {
+	v, err = time.Parse("15:04:05-07:00", t)
+	if err != nil {
+		v, err = time.Parse("15:04:05Z", t)
+	}
+	return
 }
+
 func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, error) {
 	if m.Maintenance.IsNull() || m.Maintenance.IsUnknown() {
 		return nil, nil
