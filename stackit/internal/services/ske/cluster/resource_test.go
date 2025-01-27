@@ -2339,7 +2339,7 @@ func TestMaintenanceWindow(t *testing.T) {
 		{"01:00:00-05:00", "02:00:00-05:00", "01:00:00", "02:00:00"},
 	}
 	for _, tt := range tc {
-		t.Run(fmt.Sprintf("from %s to %s", tt.start, tt.end), func(_ *testing.T) {
+		t.Run(fmt.Sprintf("from %s to %s", tt.start, tt.end), func(t *testing.T) {
 			attributeTypes := map[string]attr.Type{
 				"start":                                types.StringType,
 				"end":                                  types.StringType,
