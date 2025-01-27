@@ -722,6 +722,15 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 		}
 	}
 
+	// Re-fetch the server data, to get the details values.
+	serverReq := r.client.GetServer(ctx, projectId, serverId)
+	serverReq = serverReq.Details(true)
+	updatedServer, err = serverReq.Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
 	err = mapFields(ctx, updatedServer, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", fmt.Sprintf("Processing API payload: %v", err))
