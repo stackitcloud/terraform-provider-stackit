@@ -12,42 +12,26 @@ description: |-
   1. Remove your old stackit_argus_scrapeconfig resource and run $ terraform apply.
   ```terraform
   resource "stackitargusscrapeconfig" "example" {
-    projectid   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    instanceid  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name         = "example-job"
-    metricspath = "/my-metrics"
-    saml2 = {
-      enableurl_parameters = true
-    }
-    targets = [
-      {
-        urls = ["url1", "urls2"]
-        labels = {
-          "url1" = "dev"
-        }
-      }
-    ]
+    projectid                             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    name                                   = "example-instance"
+    planname                              = "Monitoring-Medium-EU01"
+    acl                                    = ["1.1.1.1/32", "2.2.2.2/32"]
+    metricsretentiondays                 = 7
+    metricsretentiondays5mdownsampling = 30
+    metricsretentiondays1hdownsampling = 365
   }
   moved {
       from = stackitargusscrapeconfig.example
       to = stackitobservabilityscrapeconfig.example
   }
   resource "stackitobservabilityscrapeconfig" "example" {
-    projectid   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    instanceid  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name         = "example-job"
-    metricspath = "/my-metrics"
-    saml2 = {
-      enableurl_parameters = true
-    }
-    targets = [
-      {
-        urls = ["url1", "urls2"]
-        labels = {
-          "url1" = "dev"
-        }
-      }
-    ]
+    projectid                             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    name                                   = "example-instance"
+    planname                              = "Monitoring-Medium-EU01"
+    acl                                    = ["1.1.1.1/32", "2.2.2.2/32"]
+    metricsretentiondays                 = 7
+    metricsretentiondays5mdownsampling = 30
+    metricsretentiondays1hdownsampling = 365
   }
   ```
 ---
@@ -65,21 +49,13 @@ Example to move the deprecated `stackit_argus_scrapeconfig` resource to the new 
 1. Remove your old `stackit_argus_scrapeconfig` resource and run `$ terraform apply`.
 ```terraform
 resource "stackit_argus_scrapeconfig" "example" {
-  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  instance_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name         = "example-job"
-  metrics_path = "/my-metrics"
-  saml2 = {
-    enable_url_parameters = true
-  }
-  targets = [
-    {
-      urls = ["url1", "urls2"]
-      labels = {
-        "url1" = "dev"
-      }
-    }
-  ]
+  project_id                             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name                                   = "example-instance"
+  plan_name                              = "Monitoring-Medium-EU01"
+  acl                                    = ["1.1.1.1/32", "2.2.2.2/32"]
+  metrics_retention_days                 = 7
+  metrics_retention_days_5m_downsampling = 30
+  metrics_retention_days_1h_downsampling = 365
 }
 
 moved {
@@ -88,21 +64,13 @@ moved {
 }
 
 resource "stackit_observability_scrapeconfig" "example" {
-  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  instance_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name         = "example-job"
-  metrics_path = "/my-metrics"
-  saml2 = {
-    enable_url_parameters = true
-  }
-  targets = [
-    {
-      urls = ["url1", "urls2"]
-      labels = {
-        "url1" = "dev"
-      }
-    }
-  ]
+  project_id                             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name                                   = "example-instance"
+  plan_name                              = "Monitoring-Medium-EU01"
+  acl                                    = ["1.1.1.1/32", "2.2.2.2/32"]
+  metrics_retention_days                 = 7
+  metrics_retention_days_5m_downsampling = 30
+  metrics_retention_days_1h_downsampling = 365
 }
 ```
 
