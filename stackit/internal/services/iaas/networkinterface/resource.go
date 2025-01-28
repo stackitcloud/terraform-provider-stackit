@@ -200,7 +200,7 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{
-					validate.IP(),
+					validate.IP(false),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),

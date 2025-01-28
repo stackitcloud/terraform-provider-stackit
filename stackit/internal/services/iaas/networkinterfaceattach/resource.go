@@ -104,8 +104,8 @@ func (r *networkInterfaceAttachResource) Configure(ctx context.Context, req reso
 // Schema defines the schema for the resource.
 func (r *networkInterfaceAttachResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Network interface attachment resource schema. Attaches a network interface to a server. Must have a `region` specified in the provider configuration."),
-		Description:         "Network interface attachment resource schema. Attaches a network interface to a server. Must have a `region` specified in the provider configuration.",
+		MarkdownDescription: features.AddBetaDescription("Network interface attachment resource schema. Attaches a network interface to a server. Must have a `region` specified in the provider configuration. The attachment only takes full effect after server reboot."),
+		Description:         "Network interface attachment resource schema. Attaches a network interface to a server. Must have a `region` specified in the provider configuration. The attachment only takes full effect after server reboot.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`server_id`,`network_interface_id`\".",

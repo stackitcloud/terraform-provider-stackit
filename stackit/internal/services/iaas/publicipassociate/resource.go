@@ -155,7 +155,7 @@ func (r *publicIpAssociateResource) Schema(_ context.Context, _ resource.SchemaR
 					stringplanmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.String{
-					validate.IP(),
+					validate.IP(false),
 				},
 			},
 			"network_interface_id": schema.StringAttribute{
