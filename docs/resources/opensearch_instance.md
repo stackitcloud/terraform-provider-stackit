@@ -16,10 +16,10 @@ OpenSearch instance resource schema. Must have a `region` specified in the provi
 resource "stackit_opensearch_instance" "example" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name       = "example-instance"
-  version    = "10"
-  plan_name  = "example-plan-name"
+  version    = "2"
+  plan_name  = "stackit-opensearch-1.2.10-replica"
   parameters = {
-    sgw_acl = "x.x.x.x/x,y.y.y.y/y"
+    sgw_acl = "193.148.160.0/19,45.129.40.0/21,45.135.244.0/22"
   }
 }
 ```

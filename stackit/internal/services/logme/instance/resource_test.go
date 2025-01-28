@@ -44,7 +44,6 @@ var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]a
 		types.StringValue("syslog"),
 		types.StringValue("syslog2"),
 	}),
-	"syslog_use_udp": types.StringValue("udp"),
 })
 
 var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[string]attr.Value{
@@ -70,7 +69,6 @@ var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[stri
 	"opensearch_tls_ciphers":   types.ListNull(types.StringType),
 	"opensearch_tls_protocols": types.ListNull(types.StringType),
 	"syslog":                   types.ListNull(types.StringType),
-	"syslog_use_udp":           types.StringNull(),
 })
 
 var fixtureInstanceParameters = logme.InstanceParameters{
@@ -158,7 +156,6 @@ func TestMapFields(t *testing.T) {
 					"opensearch-tls-ciphers":   []string{"ciphers", "ciphers2"},
 					"opensearch-tls-protocols": []string{"protocols", "protocols2"},
 					"syslog":                   []string{"syslog", "syslog2"},
-					"syslog-use-udp":           "udp",
 				},
 			},
 			Model{

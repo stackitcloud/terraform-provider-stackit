@@ -16,10 +16,10 @@ LogMe instance resource schema. Must have a `region` specified in the provider c
 resource "stackit_logme_instance" "example" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name       = "example-instance"
-  version    = "10"
-  plan_name  = "example-plan-name"
+  version    = "2"
+  plan_name  = "stackit-logme2-1.2.50-replica"
   parameters = {
-    sgw_acl = "x.x.x.x/x,y.y.y.y/y"
+    sgw_acl = "193.148.160.0/19,45.129.40.0/21,45.135.244.0/22"
   }
 }
 ```
@@ -76,4 +76,3 @@ Optional:
 - `opensearch_tls_protocols` (List of String)
 - `sgw_acl` (String) Comma separated list of IP networks in CIDR notation which are allowed to access this instance.
 - `syslog` (List of String) List of syslog servers to send logs to.
-- `syslog_use_udp` (String)
