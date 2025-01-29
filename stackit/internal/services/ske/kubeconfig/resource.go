@@ -394,8 +394,12 @@ func toCreatePayload(model *Model) (*ske.CreateKubeconfigPayload, error) {
 
 // helper function to check if kubecondig has expired
 func checkHasExpired(model *Model, currentTime time.Time) (bool, error) {
-	if model.Refresh.ValueBool() && !model.ExpiresAt.IsNull() {
-		expiresAt, err := time.Parse(time.RFC3339, model.ExpiresAt.ValueString())
+	expiresAt := model.ExpiresAt
+	if model.Refresh.ValueBool() && !expiresAt.IsNull() {
+		if expiresAt.IsUnknown() {
+			return true, nil
+		}
+		expiresAt, err := time.Parse(time.RFC3339, expiresAt.ValueString())
 		if err != nil {
 			return false, fmt.Errorf("converting expiresAt field to timestamp: %w", err)
 		}
@@ -408,7 +412,11 @@ func checkHasExpired(model *Model, currentTime time.Time) (bool, error) {
 
 // helper function to check if a credentials rotation was done
 func checkCredentialsRotation(cluster *ske.Cluster, model *Model) (bool, error) {
-	creationTime, err := time.Parse(time.RFC3339, model.CreationTime.ValueString())
+	creationTimeValue := model.CreationTime
+	if creationTimeValue.IsNull() || creationTimeValue.IsUnknown() {
+		return false, nil
+	}
+	creationTime, err := time.Parse(time.RFC3339, creationTimeValue.ValueString())
 	if err != nil {
 		return false, fmt.Errorf("converting creationTime field to timestamp: %w", err)
 	}
@@ -422,7 +430,11 @@ func checkCredentialsRotation(cluster *ske.Cluster, model *Model) (bool, error) 
 
 // helper function to check if a cluster recreation was done
 func checkClusterRecreation(cluster *ske.Cluster, model *Model) (bool, error) {
-	creationTime, err := time.Parse(time.RFC3339, model.CreationTime.ValueString())
+	creationTimeValue := model.CreationTime
+	if creationTimeValue.IsNull() || creationTimeValue.IsUnknown() {
+		return false, nil
+	}
+	creationTime, err := time.Parse(time.RFC3339, creationTimeValue.ValueString())
 	if err != nil {
 		return false, fmt.Errorf("converting creationTime field to timestamp: %w", err)
 	}
