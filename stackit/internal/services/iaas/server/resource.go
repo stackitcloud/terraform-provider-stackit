@@ -727,11 +727,10 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error retrieving server state", fmt.Sprintf("Getting server state: %v", err))
 	}
 
-	var updatedServer *iaas.Server
 	if model.DesiredStatus.ValueString() == modelStateDeallocated {
 		// if the target state is "deallocated", we have to perform the server update first
 		// and then shelve it afterwards. A shelved server cannot be updated
-		updatedServer, err = r.updateServerAttributes(ctx, &model, &stateModel)
+		_, err = r.updateServerAttributes(ctx, &model, &stateModel)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
@@ -748,11 +747,20 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 			return
 		}
 
-		updatedServer, err = r.updateServerAttributes(ctx, &model, &stateModel)
+		_, err = r.updateServerAttributes(ctx, &model, &stateModel)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
 		}
+	}
+
+	// Re-fetch the server data, to get the details values.
+	serverReq := r.client.GetServer(ctx, projectId, serverId)
+	serverReq = serverReq.Details(true)
+	updatedServer, err := serverReq.Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", fmt.Sprintf("Calling API: %v", err))
+		return
 	}
 
 	err = mapFields(ctx, updatedServer, &model)
