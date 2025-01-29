@@ -323,6 +323,10 @@ func mapFields(ctx context.Context, affinityGroupResp *iaas.AffinityGroup, model
 		return fmt.Errorf("response input is nil")
 	}
 
+	if model == nil {
+		return fmt.Errorf("nil model")
+	}
+
 	var affinityGroupId string
 	if model.AffinityGroupId.ValueString() != "" {
 		affinityGroupId = model.AffinityGroupId.ValueString()
@@ -340,24 +344,20 @@ func mapFields(ctx context.Context, affinityGroupResp *iaas.AffinityGroup, model
 		strings.Join(idParts, core.Separator),
 	)
 
-	members, diags := types.ListValueFrom(ctx, types.StringType, []string{})
-	if diags.HasError() {
-		return fmt.Errorf("convert members to StringValue list: %w", core.DiagsToError(diags))
-	}
 	if affinityGroupResp.Members != nil && len(*affinityGroupResp.Members) > 0 {
-		members, diags = types.ListValueFrom(ctx, types.StringType, *affinityGroupResp.Members)
+		members, diags := types.ListValueFrom(ctx, types.StringType, *affinityGroupResp.Members)
 		if diags.HasError() {
 			return fmt.Errorf("convert members to StringValue list: %w", core.DiagsToError(diags))
 		}
+		model.Members = members
 	} else if model.Members.IsNull() {
-		members = types.ListNull(types.StringType)
+		model.Members = types.ListNull(types.StringType)
 	}
 
 	model.AffinityGroupId = types.StringValue(affinityGroupId)
 
 	model.Name = types.StringPointerValue(affinityGroupResp.Name)
 	model.Policy = types.StringPointerValue(affinityGroupResp.Policy)
-	model.Members = members
 
 	return nil
 }
