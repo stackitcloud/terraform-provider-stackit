@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
@@ -80,18 +81,20 @@ type Model struct {
 
 // Struct corresponding to Model.BootVolume
 type bootVolumeModel struct {
-	PerformanceClass types.String `tfsdk:"performance_class"`
-	Size             types.Int64  `tfsdk:"size"`
-	SourceType       types.String `tfsdk:"source_type"`
-	SourceId         types.String `tfsdk:"source_id"`
+	PerformanceClass    types.String `tfsdk:"performance_class"`
+	Size                types.Int64  `tfsdk:"size"`
+	SourceType          types.String `tfsdk:"source_type"`
+	SourceId            types.String `tfsdk:"source_id"`
+	DeleteOnTermination types.Bool   `tfsdk:"delete_on_termination"`
 }
 
 // Types corresponding to bootVolumeModel
 var bootVolumeTypes = map[string]attr.Type{
-	"performance_class": basetypes.StringType{},
-	"size":              basetypes.Int64Type{},
-	"source_type":       basetypes.StringType{},
-	"source_id":         basetypes.StringType{},
+	"performance_class":     basetypes.StringType{},
+	"size":                  basetypes.Int64Type{},
+	"source_type":           basetypes.StringType{},
+	"source_id":             basetypes.StringType{},
+	"delete_on_termination": basetypes.BoolType{},
 }
 
 // NewServerResource is a helper function to simplify the provider implementation.
@@ -107,6 +110,29 @@ type serverResource struct {
 // Metadata returns the resource type name.
 func (r *serverResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_server"
+}
+
+func (r serverResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var model Model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// convert boot volume model
+	var bootVolume = &bootVolumeModel{}
+	if !(model.BootVolume.IsNull() || model.BootVolume.IsUnknown()) {
+		diags := model.BootVolume.As(ctx, bootVolume, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return
+		}
+	}
+
+	if !bootVolume.DeleteOnTermination.IsUnknown() && !bootVolume.DeleteOnTermination.IsNull() && !bootVolume.SourceType.IsUnknown() && !bootVolume.SourceType.IsNull() {
+		if bootVolume.SourceType != types.StringValue("image") {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring server", "You can only provide `delete_on_termination` for `source_type` `image`.")
+		}
+	}
 }
 
 // ConfigValidators validates the resource configuration
@@ -276,6 +302,13 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
+					"delete_on_termination": schema.BoolAttribute{
+						Description: "Delete the volume during the termination of the server. Only allowed when `source_type` is `image`.",
+						Optional:    true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.RequiresReplace(),
+						},
+					},
 				},
 			},
 			"image_id": schema.StringAttribute{
@@ -359,7 +392,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Computed:    true,
 			},
 			"desired_status": schema.StringAttribute{
-				Description: "The desired status of the server resource." + utils.SupportedValuesDocumentation(desiredStatusOptions),
+				Description: "The desired status of the server resource. " + utils.SupportedValuesDocumentation(desiredStatusOptions),
 				Optional:    true,
 				Validators: []validator.String{
 					stringvalidator.OneOf(desiredStatusOptions...),
@@ -907,6 +940,10 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 				Id:   conversion.StringValueToPointer(bootVolume.SourceId),
 				Type: conversion.StringValueToPointer(bootVolume.SourceType),
 			},
+		}
+		if !bootVolume.DeleteOnTermination.IsNull() && !bootVolume.DeleteOnTermination.IsUnknown() && bootVolume.DeleteOnTermination.ValueBool() {
+			// it is set and true, adjust payload
+			bootVolumePayload.DeleteOnTermination = conversion.BoolValueToPointer(bootVolume.DeleteOnTermination)
 		}
 	}
 
