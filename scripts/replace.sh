@@ -2,10 +2,19 @@
 # Add replace directives to local files to go.work
 set -eo pipefail
 
-if [ -d $1 ]; then 
-    SDK_DIR=$1
-    shift
-fi
+while getopts "s:" option; do
+    case "${option}" in
+        s)
+        SDK_DIR=${OPTARG}
+        ;;
+        
+        *)
+            echo "call: $0 [-s sdk-dir] <apis*>"
+            exit 0
+        ;;
+    esac
+done
+shift $((OPTIND-1))
 
 if [ -z "$SDK_DIR" ]; then
     SDK_DIR=../stackit-sdk-generator/sdk-repo-updated
