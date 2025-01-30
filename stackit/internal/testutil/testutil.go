@@ -32,6 +32,7 @@ var (
 	OrganizationId = os.Getenv("TF_ACC_ORGANIZATION_ID")
 	// ProjectId is the id of project used for tests
 	ProjectId = os.Getenv("TF_ACC_PROJECT_ID")
+	Region    = os.Getenv("TF_ACC_REGION")
 	// ServerId is the id of a server used for some tests
 	ServerId = getenv("TF_ACC_SERVER_ID", "")
 	// IaaSImageId is the id of an image used for IaaS acceptance tests. Once the stackit_image resource is implemented, we can remove this

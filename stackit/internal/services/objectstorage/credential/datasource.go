@@ -25,7 +25,8 @@ func NewCredentialDataSource() datasource.DataSource {
 
 // credentialDataSource is the resource implementation.
 type credentialDataSource struct {
-	client *objectstorage.APIClient
+	client       *objectstorage.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -40,7 +41,8 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -48,15 +50,14 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 
 	var apiClient *objectstorage.APIClient
 	var err error
-	if providerData.ObjectStorageCustomEndpoint != "" {
+	if r.providerData.ObjectStorageCustomEndpoint != "" {
 		apiClient, err = objectstorage.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ObjectStorageCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.ObjectStorageCustomEndpoint),
 		)
 	} else {
 		apiClient, err = objectstorage.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 
@@ -77,6 +78,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 		"credential_id":        "The credential ID.",
 		"credentials_group_id": "The credential group ID.",
 		"project_id":           "STACKIT Project ID to which the credential group is associated.",
+		"region":               "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -111,6 +113,11 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			"expiration_timestamp": schema.StringAttribute{
 				Computed: true,
 			},
+			"region": schema.StringAttribute{
+				// the region cannot be found automatically, so it has to be passed
+				Required:    true,
+				Description: descriptions["region"],
+			},
 		},
 	}
 }
@@ -127,11 +134,17 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	credentialId := model.CredentialId.ValueString()
+	region := model.Region.ValueString()
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	found, err := readCredentials(ctx, &model, r.client)
+	found, err := readCredentials(ctx, &model, region, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Finding credential: %v", err))
 		return

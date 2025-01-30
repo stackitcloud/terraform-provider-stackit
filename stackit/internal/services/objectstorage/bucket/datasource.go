@@ -29,7 +29,8 @@ func NewBucketDataSource() datasource.DataSource {
 
 // bucketDataSource is the data source implementation.
 type bucketDataSource struct {
-	client *objectstorage.APIClient
+	client       *objectstorage.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -44,7 +45,8 @@ func (r *bucketDataSource) Configure(ctx context.Context, req datasource.Configu
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -52,15 +54,14 @@ func (r *bucketDataSource) Configure(ctx context.Context, req datasource.Configu
 
 	var apiClient *objectstorage.APIClient
 	var err error
-	if providerData.ObjectStorageCustomEndpoint != "" {
+	if r.providerData.ObjectStorageCustomEndpoint != "" {
 		apiClient, err = objectstorage.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ObjectStorageCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.ObjectStorageCustomEndpoint),
 		)
 	} else {
 		apiClient, err = objectstorage.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 
@@ -82,6 +83,7 @@ func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
 		"url_path_style":           "URL in path style.",
 		"url_virtual_hosted_style": "URL in virtual hosted style.",
+		"region":                   "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -112,6 +114,11 @@ func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			"url_virtual_hosted_style": schema.StringAttribute{
 				Computed: true,
 			},
+			"region": schema.StringAttribute{
+				// the region cannot be found automatically, so it has to be passed
+				Required:    true,
+				Description: descriptions["region"],
+			},
 		},
 	}
 }
@@ -126,10 +133,15 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 	projectId := model.ProjectId.ValueString()
 	bucketName := model.Name.ValueString()
+	region := model.Region.ValueString()
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", bucketName)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	bucketResp, err := r.client.GetBucket(ctx, projectId, bucketName).Execute()
+	bucketResp, err := r.client.GetBucket(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -140,7 +152,7 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 
 	// Map response body to schema
-	err = mapFields(bucketResp, &model)
+	err = mapFields(bucketResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading bucket", fmt.Sprintf("Processing API payload: %v", err))
 		return

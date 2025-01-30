@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -27,7 +28,8 @@ func NewCredentialsGroupDataSource() datasource.DataSource {
 
 // credentialsGroupDataSource is the data source implementation.
 type credentialsGroupDataSource struct {
-	client *objectstorage.APIClient
+	client       *objectstorage.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -42,7 +44,8 @@ func (r *credentialsGroupDataSource) Configure(ctx context.Context, req datasour
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -50,15 +53,14 @@ func (r *credentialsGroupDataSource) Configure(ctx context.Context, req datasour
 
 	var apiClient *objectstorage.APIClient
 	var err error
-	if providerData.ObjectStorageCustomEndpoint != "" {
+	if r.providerData.ObjectStorageCustomEndpoint != "" {
 		apiClient, err = objectstorage.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ObjectStorageCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.ObjectStorageCustomEndpoint),
 		)
 	} else {
 		apiClient, err = objectstorage.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 
@@ -80,6 +82,7 @@ func (r *credentialsGroupDataSource) Schema(_ context.Context, _ datasource.Sche
 		"name":                 "The credentials group's display name.",
 		"project_id":           "Object Storage Project ID to which the credentials group is associated.",
 		"urn":                  "Credentials group uniform resource name (URN)",
+		"region":               "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -111,6 +114,11 @@ func (r *credentialsGroupDataSource) Schema(_ context.Context, _ datasource.Sche
 				Computed:    true,
 				Description: descriptions["urn"],
 			},
+			"region": schema.StringAttribute{
+				// the region cannot be found automatically, so it has to be passed
+				Required:    true,
+				Description: descriptions["region"],
+			},
 		},
 	}
 }
@@ -125,10 +133,16 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 	}
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
+	region := model.Region.ValueString()
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	found, err := readCredentialsGroups(ctx, &model, r.client)
+	found, err := readCredentialsGroups(ctx, &model, region, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials group", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
 		return
@@ -138,6 +152,10 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials group", "Credentials group not found")
 		return
 	}
+
+	// update the region attribute manually, as it is not contained in the
+	// server response
+	model.Region = types.StringValue(region)
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)

@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
@@ -20,7 +23,7 @@ type objectStorageClientMocked struct {
 	returnError bool
 }
 
-func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId string) (*objectstorage.ProjectStatus, error) {
+func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId, region string) (*objectstorage.ProjectStatus, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("create project failed")
 	}
@@ -131,7 +134,7 @@ func TestMapFields(t *testing.T) {
 				CredentialsGroupId: tt.expected.CredentialsGroupId,
 				CredentialId:       tt.expected.CredentialId,
 			}
-			err := mapFields(tt.input, model)
+			err := mapFields(tt.input, model, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -196,7 +199,7 @@ func TestEnableProject(t *testing.T) {
 				CredentialsGroupId: tt.expected.CredentialsGroupId,
 				CredentialId:       tt.expected.CredentialId,
 			}
-			err := enableProject(context.Background(), model, client)
+			err := enableProject(context.Background(), model, "eu01", client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -413,7 +416,7 @@ func TestReadCredentials(t *testing.T) {
 				CredentialsGroupId: tt.expectedModel.CredentialsGroupId,
 				CredentialId:       tt.expectedModel.CredentialId,
 			}
-			found, err := readCredentials(context.Background(), model, client)
+			found, err := readCredentials(context.Background(), model, "eu01", client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -432,4 +435,78 @@ func TestReadCredentials(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAdaptRegion(t *testing.T) {
+	type args struct {
+		configRegion  types.String
+		defaultRegion string
+	}
+	testcases := []struct {
+		name       string
+		args       args
+		wantErr    bool
+		wantRegion types.String
+	}{
+		{
+			"no configured region, use provider region",
+			args{
+				types.StringNull(),
+				"eu01",
+			},
+			false,
+			types.StringValue("eu01"),
+		},
+		{
+			"no configured region, no provider region => want error",
+			args{
+				types.StringNull(),
+				"",
+			},
+			true,
+			types.StringNull(),
+		},
+		{
+			"configuration region overrides provider region",
+			args{
+				types.StringValue("eu01-m"),
+				"eu01",
+			},
+			false,
+			types.StringValue("eu01-m"),
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp := resource.ModifyPlanResponse{
+				Plan: tfsdk.Plan{
+					Schema: schema.Schema{
+						Attributes: map[string]schema.Attribute{
+							"id":                   schema.StringAttribute{},
+							"credentials_group_id": schema.StringAttribute{},
+							"credential_id":        schema.StringAttribute{},
+							"access_key":           schema.StringAttribute{},
+							"secret_access_key":    schema.StringAttribute{},
+							"expiration_timestamp": schema.StringAttribute{},
+							"name":                 schema.StringAttribute{},
+							"region":               schema.StringAttribute{},
+							"project_id":           schema.StringAttribute{},
+						},
+					},
+				},
+			}
+			configModel := Model{
+				Region: tc.args.configRegion,
+			}
+			planModel := Model{}
+			adaptRegion(context.Background(), &configModel, &planModel, tc.args.defaultRegion, &resp)
+			if diags := resp.Diagnostics; tc.wantErr != diags.HasError() {
+				t.Errorf("unexpected diagnostics: want err: %v, actual %v", tc.wantErr, diags.Errors())
+			}
+			if expected, actual := tc.wantRegion, planModel.Region; !expected.Equal(actual) {
+				t.Errorf("wrong result region. expect %s but got %s", expected, actual)
+			}
+		})
+	}
+
 }

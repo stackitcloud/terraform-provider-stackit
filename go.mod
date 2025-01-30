@@ -2,6 +2,11 @@ module github.com/stackitcloud/terraform-provider-stackit
 
 go 1.23
 
+replace (
+	github.com/stackitcloud/stackit-sdk-go/core => ../stackit-sdk-generator/sdk-repo-updated/core
+	github.com/stackitcloud/stackit-sdk-go/services/objectstorage => ../stackit-sdk-generator/sdk-repo-updated/services/objectstorage
+)
+
 require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
