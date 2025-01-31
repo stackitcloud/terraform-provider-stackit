@@ -247,6 +247,9 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"size": schema.Int64Attribute{
 				Description: "The size of the volume in GB. It can only be updated to a larger value than the current size. Either `size` or `source` must be provided",
 				Optional:    true,
+				PlanModifiers: []planmodifier.Int64{
+					volumeResizeModifier{},
+				},
 			},
 			"source": schema.SingleNestedAttribute{
 				Description: "The source of the volume. It can be either a volume, an image, a snapshot or a backup. Either `size` or `source` must be provided",
@@ -272,6 +275,39 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 			},
 		},
+	}
+}
+
+var _ planmodifier.Int64 = volumeResizeModifier{}
+
+type volumeResizeModifier struct {
+}
+
+// Description implements planmodifier.String.
+func (v volumeResizeModifier) Description(context.Context) string {
+	return "validates volume resize"
+}
+
+// MarkdownDescription implements planmodifier.String.
+func (v volumeResizeModifier) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+// PlanModifyInt64 implements planmodifier.Int64.
+func (v volumeResizeModifier) PlanModifyInt64(ctx context.Context, req planmodifier.Int64Request, resp *planmodifier.Int64Response) { // nolint:gocritic // function signature required by Terraform
+	var planSize types.Int64
+	var currentSize types.Int64
+
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("size"), &planSize)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("size"), &currentSize)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if planSize.ValueInt64() < currentSize.ValueInt64() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error changing volume size", "A volume cannot be made smaller in order to prevent data loss.")
 	}
 }
 
