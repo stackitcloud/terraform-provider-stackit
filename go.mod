@@ -25,7 +25,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.17.0
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.20.1
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.20.1
-	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.11.1
+	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.10.1
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.5.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v0.3.0
