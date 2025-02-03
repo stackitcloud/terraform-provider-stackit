@@ -27,8 +27,14 @@ resource "stackit_objectstorage_credentials_group" "example" {
 - `name` (String) The credentials group's display name.
 - `project_id` (String) Project ID to which the credentials group is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `credentials_group_id` (String) The credentials group ID
 - `id` (String) Terraform's internal data source identifier. It is structured as "`project_id`,`credentials_group_id`".
 - `urn` (String) Credentials group uniform resource name (URN)
+
+

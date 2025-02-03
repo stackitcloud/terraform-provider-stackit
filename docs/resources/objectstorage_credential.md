@@ -31,6 +31,7 @@ resource "stackit_objectstorage_credential" "example" {
 ### Optional
 
 - `expiration_timestamp` (String) Expiration timestamp, in RFC339 format without fractional seconds. Example: "2025-01-01T00:00:00Z". If not set, the credential never expires.
+- `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
 
@@ -39,3 +40,5 @@ resource "stackit_objectstorage_credential" "example" {
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`credentials_group_id`,`credential_id`".
 - `name` (String)
 - `secret_access_key` (String, Sensitive)
+
+
