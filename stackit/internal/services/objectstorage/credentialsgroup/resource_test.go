@@ -19,7 +19,7 @@ type objectStorageClientMocked struct {
 	listCredentialsGroupsResp *objectstorage.ListCredentialsGroupsResponse
 }
 
-func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId, region string) (*objectstorage.ProjectStatus, error) {
+func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId, _ string) (*objectstorage.ProjectStatus, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("create project failed")
 	}
@@ -55,6 +55,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:          types.StringValue("pid"),
 				CredentialsGroupId: types.StringValue("cid"),
 				URN:                types.StringNull(),
+				Region:             types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -72,6 +73,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:          types.StringValue("pid"),
 				CredentialsGroupId: types.StringValue("cid"),
 				URN:                types.StringValue("urn"),
+				Region:             types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -89,6 +91,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:          types.StringValue("pid"),
 				CredentialsGroupId: types.StringValue("cid"),
 				URN:                types.StringValue(""),
+				Region:             types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -312,7 +315,6 @@ func TestReadCredentialsGroups(t *testing.T) {
 	}
 }
 
-
 func TestAdaptRegion(t *testing.T) {
 	type args struct {
 		configRegion  types.String
@@ -358,12 +360,12 @@ func TestAdaptRegion(t *testing.T) {
 				Plan: tfsdk.Plan{
 					Schema: schema.Schema{
 						Attributes: map[string]schema.Attribute{
-							"id":                       schema.StringAttribute{},
-							"name":                     schema.StringAttribute{},
-							"project_id":               schema.StringAttribute{},
-							"region":                   schema.StringAttribute{},
-							"credentials_group_id":                   schema.StringAttribute{},
-							"urn":                   schema.StringAttribute{},
+							"id":                   schema.StringAttribute{},
+							"name":                 schema.StringAttribute{},
+							"project_id":           schema.StringAttribute{},
+							"region":               schema.StringAttribute{},
+							"credentials_group_id": schema.StringAttribute{},
+							"urn":                  schema.StringAttribute{},
 						},
 					},
 				},
@@ -381,5 +383,4 @@ func TestAdaptRegion(t *testing.T) {
 			}
 		})
 	}
-
 }

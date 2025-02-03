@@ -54,7 +54,7 @@ type credentialsGroupResource struct {
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
-func (r *credentialsGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+func (r *credentialsGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
@@ -80,7 +80,6 @@ func (r *credentialsGroupResource) ModifyPlan(ctx context.Context, req resource.
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 }
 
 func adaptRegion(ctx context.Context, configModel, planModel *Model, defaultRegion string, resp *resource.ModifyPlanResponse) {
@@ -107,7 +106,6 @@ func adaptRegion(ctx context.Context, configModel, planModel *Model, defaultRegi
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	return
 }
 
 // Metadata returns the resource type name.

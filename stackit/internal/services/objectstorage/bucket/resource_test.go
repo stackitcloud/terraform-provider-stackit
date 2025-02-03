@@ -19,7 +19,7 @@ type objectStorageClientMocked struct {
 	returnError bool
 }
 
-func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId, region string) (*objectstorage.ProjectStatus, error) {
+func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId, _ string) (*objectstorage.ProjectStatus, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("create project failed")
 	}
@@ -224,5 +224,4 @@ func TestAdaptRegion(t *testing.T) {
 			}
 		})
 	}
-
 }

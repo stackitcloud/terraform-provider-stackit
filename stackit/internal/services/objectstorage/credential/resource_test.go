@@ -23,7 +23,7 @@ type objectStorageClientMocked struct {
 	returnError bool
 }
 
-func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId, region string) (*objectstorage.ProjectStatus, error) {
+func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId, _ string) (*objectstorage.ProjectStatus, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("create project failed")
 	}
@@ -54,6 +54,7 @@ func TestMapFields(t *testing.T) {
 				AccessKey:           types.StringNull(),
 				SecretAccessKey:     types.StringNull(),
 				ExpirationTimestamp: types.StringNull(),
+				Region:              types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -74,6 +75,7 @@ func TestMapFields(t *testing.T) {
 				AccessKey:           types.StringValue("key"),
 				SecretAccessKey:     types.StringValue("secret-key"),
 				ExpirationTimestamp: types.StringValue(now.Format(time.RFC3339)),
+				Region:              types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -93,6 +95,7 @@ func TestMapFields(t *testing.T) {
 				AccessKey:           types.StringValue(""),
 				SecretAccessKey:     types.StringValue(""),
 				ExpirationTimestamp: types.StringNull(),
+				Region:              types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -109,6 +112,7 @@ func TestMapFields(t *testing.T) {
 				Name:                types.StringNull(),
 				AccessKey:           types.StringNull(),
 				ExpirationTimestamp: types.StringValue(now.Format(time.RFC3339)),
+				Region:              types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -508,5 +512,4 @@ func TestAdaptRegion(t *testing.T) {
 			}
 		})
 	}
-
 }
