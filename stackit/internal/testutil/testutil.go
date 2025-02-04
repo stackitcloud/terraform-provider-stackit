@@ -35,7 +35,8 @@ var (
 	// ServerId is the id of a server used for some tests
 	ServerId = getenv("TF_ACC_SERVER_ID", "")
 	// IaaSImageId is the id of an image used for IaaS acceptance tests. Once the stackit_image resource is implemented, we can remove this
-	IaaSImageId = getenv("TF_ACC_IMAGE_ID", "")
+	// Default image is ubuntu 24.04
+	IaaSImageId = getenv("TF_ACC_IMAGE_ID", "59838a89-51b1-4892-b57f-b3caf598ee2f")
 	// IaaSNetworkInterfaceId is the id of a network interface used for IaaS acceptance tests. Once acceptance tests are merged, we can remove this
 	IaaSNetworkInterfaceId = getenv("TF_ACC_NETWORK_INTERFACE_ID", "")
 	// TestProjectParentContainerID is the container id of the parent resource under which projects are created as part of the resource-manager acceptance tests
