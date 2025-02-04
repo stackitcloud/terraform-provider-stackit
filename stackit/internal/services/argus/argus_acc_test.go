@@ -20,8 +20,8 @@ import (
 var instanceResource = map[string]string{
 	"project_id":                             testutil.ProjectId,
 	"name":                                   testutil.ResourceNameWithDateTime("argus"),
-	"plan_name":                              "Monitoring-Basic-EU01",
-	"new_plan_name":                          "Monitoring-Medium-EU01",
+	"plan_name":                              "Observability-Monitoring-Basic-EU01",
+	"new_plan_name":                          "Observability-Monitoring-Medium-EU01",
 	"acl-0":                                  "1.2.3.4/32",
 	"acl-1":                                  "111.222.111.222/32",
 	"acl-1-updated":                          "111.222.111.125/32",
