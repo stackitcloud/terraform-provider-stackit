@@ -291,7 +291,9 @@ func testAccCheckSecretsManagerDestroy(s *terraform.State) error {
 	var client *secretsmanager.APIClient
 	var err error
 	if testutil.SecretsManagerCustomEndpoint == "" {
-		client, err = secretsmanager.NewAPIClient()
+		client, err = secretsmanager.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
 	} else {
 		client, err = secretsmanager.NewAPIClient(
 			config.WithEndpoint(testutil.SecretsManagerCustomEndpoint),
