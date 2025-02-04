@@ -55,6 +55,7 @@ import (
 	redisCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/credential"
 	redisInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/instance"
 	resourceManagerProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/project"
+	projectroleassignment "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/projectroleassignment"
 	secretsManagerInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/instance"
 	secretsManagerUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/user"
 	serverBackupSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/schedule"
@@ -519,5 +520,6 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		skeProject.NewProjectResource,
 		skeCluster.NewClusterResource,
 		skeKubeconfig.NewKubeconfigResource,
+		projectroleassignment.NewProjectRoleAssignmentResource,
 	}
 }

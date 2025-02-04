@@ -376,6 +376,21 @@ func SKEProviderConfig() string {
 	)
 }
 
+func AuthorizationProviderConfig() string {
+	if AuthorizationCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			authorization_custom_endpoint = "%s"
+		}`,
+		AuthorizationCustomEndpoint,
+	)
+}
+
 func ResourceNameWithDateTime(name string) string {
 	dateTime := time.Now().Format(time.RFC3339)
 	// Remove timezone to have a smaller datetime
