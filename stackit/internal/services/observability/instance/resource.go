@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -19,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -924,7 +926,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Set state to fully populated data
-	diags = resp.State.Set(ctx, model)
+	diags = setACL(ctx, resp.State, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -966,7 +968,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Set state to fully populated data
-	diags = resp.State.Set(ctx, model)
+	diags = setMetricsRetentions(ctx, resp.State, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -1010,7 +1012,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Set state to fully populated data
-	diags = resp.State.Set(ctx, model)
+	diags = setAlertConfig(ctx, resp.State, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -1192,8 +1194,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Set state to ACL populated data
-	diags = resp.State.Set(ctx, model)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(setACL(ctx, resp.State, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1233,7 +1234,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Set state to fully populated data
-	diags = resp.State.Set(ctx, model)
+	diags = setMetricsRetentions(ctx, resp.State, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -1277,7 +1278,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Set state to fully populated data
-	diags = resp.State.Set(ctx, model)
+	diags = setAlertConfig(ctx, resp.State, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -2233,4 +2234,19 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 		return fmt.Errorf("couldn't find plan_name '%s', available names are: %s", planName, avl)
 	}
 	return nil
+}
+
+func setACL(ctx context.Context, state tfsdk.State, model *Model) diag.Diagnostics {
+	return state.SetAttribute(ctx, path.Root("acl"), model.ACL)
+}
+
+func setMetricsRetentions(ctx context.Context, state tfsdk.State, model *Model) (diags diag.Diagnostics) {
+	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days"), model.MetricsRetentionDays)...)
+	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days_5m_downsampling"), model.MetricsRetentionDays5mDownsampling)...)
+	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days_1h_downsampling"), model.MetricsRetentionDays1hDownsampling)...)
+	return diags
+}
+
+func setAlertConfig(ctx context.Context, state tfsdk.State, model *Model) diag.Diagnostics {
+	return state.SetAttribute(ctx, path.Root("alert_config"), model.AlertConfig)
 }
