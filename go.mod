@@ -33,7 +33,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/ske v0.21.1
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.9.0
 	github.com/teambition/rrule-go v1.8.2
-	golang.org/x/mod v0.22.0
+	golang.org/x/mod v0.23.0
 )
 
 require github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
