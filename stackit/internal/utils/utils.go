@@ -104,3 +104,13 @@ func QuoteValues(values []string) []string {
 func IsLegacyProjectRole(role string) bool {
 	return utils.Contains(LegacyProjectRoles, role)
 }
+
+type value interface {
+	IsUnknown() bool
+	IsNull() bool
+}
+
+// IsUndefined checks if a passed value is unknown or null
+func IsUndefined(val value) bool {
+	return val.IsUnknown() || val.IsNull()
+}

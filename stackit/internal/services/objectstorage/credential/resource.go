@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -29,6 +30,7 @@ var (
 	_ resource.Resource                = &credentialResource{}
 	_ resource.ResourceWithConfigure   = &credentialResource{}
 	_ resource.ResourceWithImportState = &credentialResource{}
+	_ resource.ResourceWithModifyPlan  = &credentialResource{}
 )
 
 type Model struct {
@@ -50,6 +52,34 @@ func NewCredentialResource() resource.Resource {
 // credentialResource is the resource implementation.
 type credentialResource struct {
 	client *objectstorage.APIClient
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	p := path.Root("expiration_timestamp")
+	var (
+		stateDate time.Time
+		planDate  time.Time
+	)
+
+	resp.Diagnostics.Append(utils.GetTimeFromStringAttribute(ctx, p, req.State, time.RFC3339, &stateDate)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(utils.GetTimeFromStringAttribute(ctx, p, resp.Plan, time.RFC3339, &planDate)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// replace the planned expiration time with the current state date, iff they represent
+	// the same point in time (but perhaps with different textual representation)
+	// this will prevent no-op updates
+	if stateDate.Equal(planDate) {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p, types.StringValue(stateDate.Format(time.RFC3339)))...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 }
 
 // Metadata returns the resource type name.
@@ -167,6 +197,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 		},
@@ -218,6 +249,25 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
+	var (
+		actualDate time.Time
+		planDate   time.Time
+	)
+	resp.Diagnostics.Append(utils.ToTime(ctx, time.RFC3339, model.ExpirationTimestamp, &actualDate)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(utils.GetTimeFromStringAttribute(ctx, path.Root("expiration_timestamp"), req.Plan, time.RFC3339, &planDate)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// replace the planned expiration date with the original date, iff
+	// they represent the same point in time, (perhaps with different textual representations)
+	if actualDate.Equal(planDate) {
+		model.ExpirationTimestamp = types.StringValue(planDate.Format(time.RFC3339))
+	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -251,6 +301,26 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	var (
+		currentApiDate time.Time
+		stateDate      time.Time
+	)
+
+	resp.Diagnostics.Append(utils.ToTime(ctx, time.RFC3339, model.ExpirationTimestamp, &currentApiDate)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(utils.GetTimeFromStringAttribute(ctx, path.Root("expiration_timestamp"), req.State, time.RFC3339, &stateDate)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// replace the resulting expiration date with the original date, iff
+	// they represent the same point in time, (perhaps with different textual representations)
+	if currentApiDate.Equal(stateDate) {
+		model.ExpirationTimestamp = types.StringValue(stateDate.Format(time.RFC3339))
+	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
@@ -262,9 +332,16 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *credentialResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Update shouldn't be called
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credential", "Credential can't be updated")
+func (r *credentialResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	/*
+		While a credential cannot be updated, the Update call must not be prevented with an error:
+		When the expiration timestamp has been updated to the same point in time, but e.g. with a different timezone,
+		terraform will still trigger an Update due to the computed attributes. These will not change,
+		but terraform has no way of knowing this without calling this function. So it is
+		still updated as a no-op.
+		A possible enhancement would be to emit an error, if it is attempted to change one of the not computed attributes
+		and abort with an error in this case.
+	*/
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
