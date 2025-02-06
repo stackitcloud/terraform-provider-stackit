@@ -146,7 +146,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"max_disk_threshold":     "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
 		"metrics_frequency":      "The frequency in seconds at which metrics are emitted.",
 		"metrics_prefix":         "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key",
-		"monitoring_instance_id": "The ID of the STACKIT monitoring instance.",
+		"monitoring_instance_id": "The ID of the STACKIT monitoring instance. Monitoring instances with the plan \"Observability-Monitoring-Starter\" are not supported.",
 		"syslog":                 "List of syslog servers to send logs to.",
 	}
 
