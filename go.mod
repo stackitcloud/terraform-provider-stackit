@@ -19,7 +19,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.20.2
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.20.1
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.17.0
-	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.11.1
+	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.0.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.2.1
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.19.1
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.17.0
