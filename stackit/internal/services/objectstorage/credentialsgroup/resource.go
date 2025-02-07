@@ -71,37 +71,11 @@ func (r *credentialsGroupResource) ModifyPlan(ctx context.Context, req resource.
 		return
 	}
 
-	adaptRegion(ctx, &configModel, &planModel, r.providerData.Region, resp)
+	coreutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.Region, resp)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-}
-
-func adaptRegion(ctx context.Context, configModel, planModel *Model, defaultRegion string, resp *resource.ModifyPlanResponse) {
-	// Get the intended region. This is either set directly set in the individual
-	// config or the provider region has to be used
-	var intendedRegion types.String
-	if configModel.Region.IsNull() {
-		if defaultRegion == "" {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "set region", "no region defined in config or provider")
-			return
-		}
-		intendedRegion = types.StringValue(defaultRegion)
-	} else {
-		intendedRegion = configModel.Region
-	}
-
-	// check if the currently configured region corresponds to the planned region
-	// on mismatch override the planned region with the intended region
-	if !intendedRegion.Equal(planModel.Region) {
-		resp.RequiresReplace.Append(path.Root("region"))
-		planModel.Region = intendedRegion
-	}
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
 	if resp.Diagnostics.HasError() {
 		return

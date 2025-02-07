@@ -25,8 +25,7 @@ func NewCredentialDataSource() datasource.DataSource {
 
 // credentialDataSource is the resource implementation.
 type credentialDataSource struct {
-	client       *objectstorage.APIClient
-	providerData core.ProviderData
+	client *objectstorage.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -41,8 +40,7 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 		return
 	}
 
-	var ok bool
-	r.providerData, ok = req.ProviderData.(core.ProviderData)
+	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -50,14 +48,14 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 
 	var apiClient *objectstorage.APIClient
 	var err error
-	if r.providerData.ObjectStorageCustomEndpoint != "" {
+	if providerData.ObjectStorageCustomEndpoint != "" {
 		apiClient, err = objectstorage.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithEndpoint(r.providerData.ObjectStorageCustomEndpoint),
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithEndpoint(providerData.ObjectStorageCustomEndpoint),
 		)
 	} else {
 		apiClient, err = objectstorage.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithCustomAuth(providerData.RoundTripper),
 		)
 	}
 
@@ -115,7 +113,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			},
 			"region": schema.StringAttribute{
 				// the region cannot be found automatically, so it has to be passed
-				Required:    true,
+				Optional:    true,
 				Description: descriptions["region"],
 			},
 		},
