@@ -1,7 +1,7 @@
 package image
 
 import (
-	"bytes"
+	"bufio"
 	"context"
 	"fmt"
 	"net/http"
@@ -828,16 +828,21 @@ func uploadImage(ctx context.Context, diags *diag.Diagnostics, filePath, uploadU
 		return fmt.Errorf("upload URL is empty")
 	}
 
-	fileContents, err := os.ReadFile(filePath)
+	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("read file: %w", err)
+		return fmt.Errorf("open file: %w", err)
+	}
+	stat, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("stat file: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPut, uploadURL, bytes.NewReader(fileContents))
+	req, err := http.NewRequest(http.MethodPut, uploadURL, bufio.NewReader(file))
 	if err != nil {
 		return fmt.Errorf("create upload request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
+	req.ContentLength = stat.Size()
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
