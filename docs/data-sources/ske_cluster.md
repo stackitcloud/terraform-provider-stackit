@@ -32,6 +32,7 @@ data "stackit_ske_cluster" "example" {
 - `allow_privileged_containers` (Boolean, Deprecated) DEPRECATED as of Kubernetes 1.25+
  Flag to specify if privileged mode for containers is enabled or not.
 This should be used with care since it also disables a couple of other features like the use of some volume type (e.g. PVCs).
+- `egress_address_ranges` (List of String) The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.
 - `extensions` (Attributes) A single extensions block as defined below (see [below for nested schema](#nestedatt--extensions))
 - `hibernations` (Attributes List) One or more hibernation block as defined below. (see [below for nested schema](#nestedatt--hibernations))
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`name`".

@@ -77,6 +77,7 @@ type Model struct {
 	Network                   types.Object `tfsdk:"network"`
 	Hibernations              types.List   `tfsdk:"hibernations"`
 	Extensions                types.Object `tfsdk:"extensions"`
+	EgressAddressRanges       types.List   `tfsdk:"egress_address_ranges"`
 }
 
 // Struct corresponding to Model.NodePools[i]
@@ -373,6 +374,11 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"allow_privileged_containers": schema.BoolAttribute{
 				Description: "Flag to specify if privileged mode for containers is enabled or not.\nThis should be used with care since it also disables a couple of other features like the use of some volume type (e.g. PVCs).\nDeprecated as of Kubernetes 1.25 and later",
 				Optional:    true,
+			},
+			"egress_address_ranges": schema.ListAttribute{
+				Description: "The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.",
+				Computed:    true,
+				ElementType: types.StringType,
 			},
 			"node_pools": schema.ListNestedAttribute{
 				Description: "One or more `node_pool` block as defined below.",
@@ -1318,6 +1324,15 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	if cl.Kubernetes != nil {
 		m.KubernetesVersionUsed = types.StringPointerValue(cl.Kubernetes.Version)
 		m.AllowPrivilegedContainers = types.BoolPointerValue(cl.Kubernetes.AllowPrivilegedContainers)
+	}
+
+	m.EgressAddressRanges = types.ListNull(types.StringType)
+	if cl.Status != nil {
+		var diags diag.Diagnostics
+		m.EgressAddressRanges, diags = types.ListValueFrom(ctx, types.StringType, cl.Status.EgressAddressRanges)
+		if diags.HasError() {
+			return fmt.Errorf("map egressAddressRanges: %w", core.DiagsToError(diags))
+		}
 	}
 
 	err := mapNodePools(ctx, cl, m)

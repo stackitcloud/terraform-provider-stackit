@@ -110,7 +110,11 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				DeprecationMessage: "Please remove this flag from your configuration when using Kubernetes version 1.25+.",
 				Computed:           true,
 			},
-
+			"egress_address_ranges": schema.ListAttribute{
+				Description: "The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
 			"node_pools": schema.ListNestedAttribute{
 				Description: "One or more `node_pool` block as defined below.",
 				Computed:    true,
