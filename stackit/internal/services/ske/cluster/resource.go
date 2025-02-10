@@ -378,7 +378,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"egress_address_ranges": schema.ListAttribute{
 				Description: "The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.",
 				Computed:    true,
-				Optional:    true,
 				ElementType: types.StringType,
 			},
 			"node_pools": schema.ListNestedAttribute{
