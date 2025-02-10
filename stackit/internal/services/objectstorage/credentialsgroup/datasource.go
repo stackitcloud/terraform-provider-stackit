@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -28,7 +29,8 @@ func NewCredentialsGroupDataSource() datasource.DataSource {
 
 // credentialsGroupDataSource is the data source implementation.
 type credentialsGroupDataSource struct {
-	client *objectstorage.APIClient
+	client       *objectstorage.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -43,7 +45,8 @@ func (r *credentialsGroupDataSource) Configure(ctx context.Context, req datasour
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -51,14 +54,14 @@ func (r *credentialsGroupDataSource) Configure(ctx context.Context, req datasour
 
 	var apiClient *objectstorage.APIClient
 	var err error
-	if providerData.ObjectStorageCustomEndpoint != "" {
+	if r.providerData.ObjectStorageCustomEndpoint != "" {
 		apiClient, err = objectstorage.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ObjectStorageCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.ObjectStorageCustomEndpoint),
 		)
 	} else {
 		apiClient, err = objectstorage.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 
@@ -131,9 +134,11 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 	}
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
-	region := model.Region.ValueString()
-	if resp.Diagnostics.HasError() {
-		return
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.Region
+	} else {
+		region = model.Region.ValueString()
 	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)

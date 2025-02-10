@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.26.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.11.0
-	github.com/stackitcloud/stackit-sdk-go/core v0.15.2-0.20250204115447-63b21f25e380
+	github.com/stackitcloud/stackit-sdk-go/core v0.15.1
 	github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.12.1
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.19.0
@@ -19,7 +19,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.20.2
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.20.1
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.17.0
-	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v0.11.2-0.20250204115447-63b21f25e380
+	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.0.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.2.1
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.19.1
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.17.0

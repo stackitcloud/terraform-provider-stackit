@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -29,7 +30,8 @@ func NewBucketDataSource() datasource.DataSource {
 
 // bucketDataSource is the data source implementation.
 type bucketDataSource struct {
-	client *objectstorage.APIClient
+	client       *objectstorage.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -44,7 +46,8 @@ func (r *bucketDataSource) Configure(ctx context.Context, req datasource.Configu
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -52,14 +55,14 @@ func (r *bucketDataSource) Configure(ctx context.Context, req datasource.Configu
 
 	var apiClient *objectstorage.APIClient
 	var err error
-	if providerData.ObjectStorageCustomEndpoint != "" {
+	if r.providerData.ObjectStorageCustomEndpoint != "" {
 		apiClient, err = objectstorage.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ObjectStorageCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.ObjectStorageCustomEndpoint),
 		)
 	} else {
 		apiClient, err = objectstorage.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 
@@ -131,10 +134,13 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 	projectId := model.ProjectId.ValueString()
 	bucketName := model.Name.ValueString()
-	region := model.Region.ValueString()
-	if resp.Diagnostics.HasError() {
-		return
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.Region
+	} else {
+		region = model.Region.ValueString()
 	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", bucketName)
 	ctx = tflog.SetField(ctx, "region", region)
