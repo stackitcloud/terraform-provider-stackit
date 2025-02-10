@@ -34,11 +34,9 @@ var (
 	ProjectId = os.Getenv("TF_ACC_PROJECT_ID")
 	// ServerId is the id of a server used for some tests
 	ServerId = getenv("TF_ACC_SERVER_ID", "")
-	// IaaSImageId is the id of an image used for IaaS acceptance tests. Once the stackit_image resource is implemented, we can remove this
+	// IaaSImageId is the id of an image used for IaaS acceptance tests.
 	// Default image is ubuntu 24.04
 	IaaSImageId = getenv("TF_ACC_IMAGE_ID", "59838a89-51b1-4892-b57f-b3caf598ee2f")
-	// IaaSNetworkInterfaceId is the id of a network interface used for IaaS acceptance tests. Once acceptance tests are merged, we can remove this
-	IaaSNetworkInterfaceId = getenv("TF_ACC_NETWORK_INTERFACE_ID", "")
 	// TestProjectParentContainerID is the container id of the parent resource under which projects are created as part of the resource-manager acceptance tests
 	TestProjectParentContainerID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID")
 	// TestProjectParentContainerID is the uuid of the parent resource under which projects are created as part of the resource-manager acceptance tests
@@ -46,7 +44,8 @@ var (
 	// TestProjectServiceAccountEmail is the e-mail of a service account with admin permissions on the organization under which projects are created as part of the resource-manager acceptance tests
 	TestProjectServiceAccountEmail = os.Getenv("TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL")
 	// TestProjectUserEmail is the e-mail of a user for the project created as part of the resource-manager acceptance tests
-	TestProjectUserEmail = os.Getenv("TF_ACC_TEST_PROJECT_USER_EMAIL")
+	// Default email: acc-test@sa.stackit.cloud
+	TestProjectUserEmail = getenv("TF_ACC_TEST_PROJECT_USER_EMAIL", "acc-test@sa.stackit.cloud")
 	// TestImageLocalFilePath is the local path to an image file used for image acceptance tests
 	TestImageLocalFilePath = os.Getenv("TF_ACC_TEST_IMAGE_LOCAL_FILE_PATH")
 
