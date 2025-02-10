@@ -497,6 +497,7 @@ func readCredentials(ctx context.Context, model *Model, region string, client *o
 		}
 		break
 	}
+	model.Region = types.StringValue(region)
 
 	return foundCredential, nil
 }
