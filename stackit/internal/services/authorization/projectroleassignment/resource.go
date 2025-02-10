@@ -3,6 +3,7 @@ package projectroleassignment
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -27,6 +28,8 @@ var (
 	_ resource.ResourceWithImportState = &projectRoleAssignmentResource{}
 
 	resource_type = "project"
+	errRoleAssignmentNotFound = errors.New("Response members did not contain expected role assignment")
+	errRoleAssignmentDuplicateFound = errors.New("Found a duplicate role assignment.")
 )
 
 // Provider's internal model
@@ -49,7 +52,7 @@ type projectRoleAssignmentResource struct {
 
 // Metadata returns the resource type name.
 func (r *projectRoleAssignmentResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_resourcemanager_project_role_assignment"
+	resp.TypeName = req.ProviderTypeName + "_authorization_project_role_assignment"
 }
 
 // Configure adds the provider configured client to the resource.
@@ -148,6 +151,12 @@ func (r *projectRoleAssignmentResource) Create(ctx context.Context, req resource
 	}
 
 	ctx = annotateLogger(ctx, &model)
+
+
+	if err := r.checkDuplicate(ctx, model); err != nil	{
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error while checking for duplicate role assignments", err.Error())
+		return
+	}
 
 	// Create new project role assignment
 	payload, err := toCreatePayload(&model)
@@ -288,7 +297,7 @@ func mapListMembersResponse(resp *authorization.ListMembersResponse, model *Mode
 			return nil
 		}
 	}
-	return fmt.Errorf("response members did not contain expected role assignment")
+	return errRoleAssignmentNotFound
 }
 
 func mapMembersResponse(resp *authorization.MembersResponse, model *Model) error {
@@ -333,4 +342,23 @@ func annotateLogger(ctx context.Context, model *Model) context.Context {
 	ctx = tflog.SetField(ctx, "subject", model.Subject.ValueString())
 	ctx = tflog.SetField(ctx, "role", model.Role.ValueString())
 	return ctx
+}
+
+// returns an error if duplicate role assignment exists
+func (r *projectRoleAssignmentResource)checkDuplicate(ctx context.Context, model Model) error	{
+	listResp, err := r.authorizationClient.ListMembers(ctx, resource_type, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
+	if err != nil {		
+		return err
+	}
+
+	// Map response body to schema
+	err = mapListMembersResponse(listResp, &model)
+
+	if err != nil {
+		if err == errRoleAssignmentNotFound	{
+			return nil
+		}
+		return err
+	}
+	return errRoleAssignmentDuplicateFound
 }
