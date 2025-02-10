@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -743,6 +744,38 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	tflog.Info(ctx, "SKE cluster created")
 }
 
+func sortK8sVersions(versions []ske.KubernetesVersion) {
+	sort.Slice(versions, func(i, j int) bool {
+		v1, v2 := (versions)[i].Version, (versions)[j].Version
+		if v1 == nil && v2 == nil {
+			return false
+		}
+		if v1 == nil {
+			return false
+		}
+		if v2 == nil {
+			return true
+		}
+
+		// we have to make copies of the input strings to add prefixes,
+		// otherwise we would be changing the passed elements
+		t1, t2 := *v1, *v2
+
+		if !strings.HasPrefix(t1, "v") {
+			t1 = "v" + t1
+		}
+		if !strings.HasPrefix(t2, "v") {
+			t2 = "v" + t2
+		}
+		isLess := semver.Compare(t1, t2) > 0
+		return isLess
+	})
+
+}
+
+// loadAvailableVersions loads the available k8s and machine versions from the API.
+// The k8s versions are sorted  descending order, i.e. the latest versions (including previews)
+// are listed first
 func (r *clusterResource) loadAvailableVersions(ctx context.Context) ([]ske.KubernetesVersion, []ske.MachineImage, error) {
 	c := r.skeClient
 	res, err := c.ListProviderOptions(ctx).Execute()
@@ -793,7 +826,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	// cluster vars
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
-	kubernetes, hasDeprecatedVersion, err := toKubernetesPayload(model, availableKubernetesVersions, currentKubernetesVersion)
+	kubernetes, hasDeprecatedVersion, err := toKubernetesPayload(model, availableKubernetesVersions, currentKubernetesVersion, diags)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating cluster config API payload: %v", err))
 		return
@@ -1813,7 +1846,7 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	return nil
 }
 
-func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion, currentKubernetesVersion *string) (kubernetesPayload *ske.Kubernetes, hasDeprecatedVersion bool, err error) {
+func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion, currentKubernetesVersion *string, diags *diag.Diagnostics) (kubernetesPayload *ske.Kubernetes, hasDeprecatedVersion bool, err error) {
 	providedVersionMin := m.KubernetesVersionMin.ValueStringPointer()
 
 	if !m.KubernetesVersion.IsNull() {
@@ -1823,7 +1856,7 @@ func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion, cu
 		providedVersionMin = conversion.StringValueToPointer(m.KubernetesVersion)
 	}
 
-	versionUsed, hasDeprecatedVersion, err := latestMatchingKubernetesVersion(availableVersions, providedVersionMin, currentKubernetesVersion)
+	versionUsed, hasDeprecatedVersion, err := latestMatchingKubernetesVersion(availableVersions, providedVersionMin, currentKubernetesVersion, diags)
 	if err != nil {
 		return nil, false, fmt.Errorf("getting latest matching kubernetes version: %w", err)
 	}
@@ -1835,7 +1868,7 @@ func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion, cu
 	return k, hasDeprecatedVersion, nil
 }
 
-func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, kubernetesVersionMin, currentKubernetesVersion *string) (version *string, deprecated bool, err error) {
+func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, kubernetesVersionMin, currentKubernetesVersion *string, diags *diag.Diagnostics) (version *string, deprecated bool, err error) {
 	deprecated = false
 
 	if availableVersions == nil {
@@ -1865,12 +1898,8 @@ func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, 
 		}
 	}
 
-	var fullVersion bool
-	versionExp := validate.FullVersionRegex
-	versionRegex := regexp.MustCompile(versionExp)
-	if versionRegex.MatchString(*kubernetesVersionMin) {
-		fullVersion = true
-	}
+	versionRegex := regexp.MustCompile(validate.FullVersionRegex)
+	fullVersion := versionRegex.MatchString(*kubernetesVersionMin)
 
 	providedVersionPrefixed := "v" + *kubernetesVersionMin
 
@@ -1878,45 +1907,87 @@ func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, 
 		return nil, false, fmt.Errorf("provided version is invalid")
 	}
 
-	var versionUsed *string
-	var state *string
-	var availableVersionsArray []string
-	// Get the higher available version that matches the major, minor and patch version provided by the user
-	for _, v := range availableVersions {
-		if v.State == nil || v.Version == nil {
-			continue
-		}
-		availableVersionsArray = append(availableVersionsArray, *v.Version)
-		vPreffixed := "v" + *v.Version
+	var (
+		selectedVersion        *ske.KubernetesVersion
+		availableVersionsArray []string
+	)
+	if fullVersion {
+		for _, versionCandidate := range availableVersions {
+			if versionCandidate.State == nil || versionCandidate.Version == nil {
+				continue
+			}
+			availableVersionsArray = append(availableVersionsArray, *versionCandidate.Version)
+			vPreffixed := "v" + *versionCandidate.Version
 
-		if fullVersion {
 			// [MAJOR].[MINOR].[PATCH] version provided, match available version
 			if semver.Compare(vPreffixed, providedVersionPrefixed) == 0 {
-				versionUsed = v.Version
-				state = v.State
+				selectedVersion = &versionCandidate
 				break
 			}
-		} else {
+		}
+	} else {
+		sortK8sVersions(availableVersions)
+		for _, candidateVersion := range availableVersions {
+			if candidateVersion.State == nil || candidateVersion.Version == nil {
+				continue
+			}
+			availableVersionsArray = append(availableVersionsArray, *candidateVersion.Version)
+			vPreffixed := "v" + *candidateVersion.Version
+
 			// [MAJOR].[MINOR] version provided, get the latest non-preview patch version
 			if semver.MajorMinor(vPreffixed) == semver.MajorMinor(providedVersionPrefixed) &&
-				(semver.Compare(vPreffixed, providedVersionPrefixed) == 1 || semver.Compare(vPreffixed, providedVersionPrefixed) == 0) &&
-				(v.State != nil && *v.State != VersionStatePreview) {
-				versionUsed = v.Version
-				state = v.State
+				(semver.Compare(vPreffixed, providedVersionPrefixed) >= 0) &&
+				(candidateVersion.State != nil) {
+				// take the current version as a candidate, if we have no other version inspected before
+				// OR the previously found version was a preview version
+				if selectedVersion == nil {
+					selectedVersion = &candidateVersion
+				} else if isSupported(&candidateVersion) && isPreview(selectedVersion) {
+					// a supported version has priority before a preview version
+					selectedVersion = &candidateVersion
+				}
+				// all other cases are ignored
 			}
 		}
 	}
 
-	if versionUsed != nil {
-		deprecated = strings.EqualFold(*state, VersionStateDeprecated)
+	if selectedVersion != nil {
+		deprecated = strings.EqualFold(*selectedVersion.State, VersionStateDeprecated)
+		if selectedVersion.State != nil && *selectedVersion.State == VersionStatePreview {
+			diags.AddWarning("preview version selected", fmt.Sprintf("only the preview version %q matched the selection criteria", *selectedVersion.Version))
+		}
 	}
 
 	// Throwing error if we could not match the version with the available versions
-	if versionUsed == nil {
+	if selectedVersion == nil {
 		return nil, false, fmt.Errorf("provided version is not one of the available kubernetes versions, available versions are: %s", strings.Join(availableVersionsArray, ","))
 	}
 
-	return versionUsed, deprecated, nil
+	return selectedVersion.Version, deprecated, nil
+}
+
+func isPreview(v *ske.KubernetesVersion) bool {
+	if v == nil {
+		return false
+	}
+
+	if v.State == nil {
+		return false
+	}
+
+	return *v.State == VersionStatePreview
+}
+
+func isSupported(v *ske.KubernetesVersion) bool {
+	if v == nil {
+		return false
+	}
+
+	if v.State == nil {
+		return false
+	}
+
+	return *v.State == VersionStateSupported
 }
 
 func getLatestSupportedKubernetesVersion(versions []ske.KubernetesVersion) (*string, error) {
