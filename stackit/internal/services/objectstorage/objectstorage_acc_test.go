@@ -248,7 +248,7 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		bucketsToDestroy = append(bucketsToDestroy, bucketName)
 	}
 
-	bucketsResp, err := client.ListBuckets(ctx, testutil.ProjectId).Execute()
+	bucketsResp, err := client.ListBuckets(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting bucketsResp: %w", err)
 	}
@@ -260,11 +260,11 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		}
 		bucketName := *bucket.Name
 		if utils.Contains(bucketsToDestroy, bucketName) {
-			_, err := client.DeleteBucketExecute(ctx, testutil.ProjectId, bucketName)
+			_, err := client.DeleteBucketExecute(ctx, testutil.ProjectId, testutil.Region, bucketName)
 			if err != nil {
 				return fmt.Errorf("destroying bucket %s during CheckDestroy: %w", bucketName, err)
 			}
-			_, err = wait.DeleteBucketWaitHandler(ctx, client, testutil.ProjectId, bucketName).WaitWithContext(ctx)
+			_, err = wait.DeleteBucketWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, bucketName).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", bucketName, err)
 			}
@@ -281,7 +281,7 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		credentialsGroupsToDestroy = append(credentialsGroupsToDestroy, credentialsGroupId)
 	}
 
-	credentialsGroupsResp, err := client.ListCredentialsGroups(ctx, testutil.ProjectId).Execute()
+	credentialsGroupsResp, err := client.ListCredentialsGroups(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting bucketsResp: %w", err)
 	}
@@ -293,7 +293,7 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		}
 		groupId := *group.CredentialsGroupId
 		if utils.Contains(credentialsGroupsToDestroy, groupId) {
-			_, err := client.DeleteCredentialsGroupExecute(ctx, testutil.ProjectId, groupId)
+			_, err := client.DeleteCredentialsGroupExecute(ctx, testutil.ProjectId, testutil.Region, groupId)
 			if err != nil {
 				return fmt.Errorf("destroying credentials group %s during CheckDestroy: %w", groupId, err)
 			}

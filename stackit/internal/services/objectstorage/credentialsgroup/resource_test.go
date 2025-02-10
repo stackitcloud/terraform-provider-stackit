@@ -16,7 +16,7 @@ type objectStorageClientMocked struct {
 	listCredentialsGroupsResp *objectstorage.ListCredentialsGroupsResponse
 }
 
-func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId string) (*objectstorage.ProjectStatus, error) {
+func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId, _ string) (*objectstorage.ProjectStatus, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("create project failed")
 	}
@@ -26,7 +26,7 @@ func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, proj
 	}, nil
 }
 
-func (c *objectStorageClientMocked) ListCredentialsGroupsExecute(_ context.Context, _ string) (*objectstorage.ListCredentialsGroupsResponse, error) {
+func (c *objectStorageClientMocked) ListCredentialsGroupsExecute(_ context.Context, _, _ string) (*objectstorage.ListCredentialsGroupsResponse, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("get credentials groups failed")
 	}
@@ -52,6 +52,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:          types.StringValue("pid"),
 				CredentialsGroupId: types.StringValue("cid"),
 				URN:                types.StringNull(),
+				Region:             types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -69,6 +70,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:          types.StringValue("pid"),
 				CredentialsGroupId: types.StringValue("cid"),
 				URN:                types.StringValue("urn"),
+				Region:             types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -86,6 +88,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:          types.StringValue("pid"),
 				CredentialsGroupId: types.StringValue("cid"),
 				URN:                types.StringValue(""),
+				Region:             types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -108,7 +111,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:          tt.expected.ProjectId,
 				CredentialsGroupId: tt.expected.CredentialsGroupId,
 			}
-			err := mapFields(tt.input, model)
+			err := mapFields(tt.input, model, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -147,7 +150,7 @@ func TestEnableProject(t *testing.T) {
 			client := &objectStorageClientMocked{
 				returnError: tt.enableFails,
 			}
-			err := enableProject(context.Background(), &Model{}, client)
+			err := enableProject(context.Background(), &Model{}, "eu01", client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -288,7 +291,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 				ProjectId:          tt.expectedModel.ProjectId,
 				CredentialsGroupId: tt.expectedModel.CredentialsGroupId,
 			}
-			found, err := readCredentialsGroups(context.Background(), model, client)
+			found, err := readCredentialsGroups(context.Background(), model, "eu01", client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

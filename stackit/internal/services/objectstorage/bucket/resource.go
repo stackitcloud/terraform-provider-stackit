@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -28,6 +29,7 @@ var (
 	_ resource.Resource                = &bucketResource{}
 	_ resource.ResourceWithConfigure   = &bucketResource{}
 	_ resource.ResourceWithImportState = &bucketResource{}
+	_ resource.ResourceWithModifyPlan  = &bucketResource{}
 )
 
 type Model struct {
@@ -36,6 +38,7 @@ type Model struct {
 	ProjectId             types.String `tfsdk:"project_id"`
 	URLPathStyle          types.String `tfsdk:"url_path_style"`
 	URLVirtualHostedStyle types.String `tfsdk:"url_virtual_hosted_style"`
+	Region                types.String `tfsdk:"region"`
 }
 
 // NewBucketResource is a helper function to simplify the provider implementation.
@@ -45,7 +48,38 @@ func NewBucketResource() resource.Resource {
 
 // bucketResource is the resource implementation.
 type bucketResource struct {
-	client *objectstorage.APIClient
+	client       *objectstorage.APIClient
+	providerData core.ProviderData
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *bucketResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.Region, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Metadata returns the resource type name.
@@ -60,7 +94,8 @@ func (r *bucketResource) Configure(ctx context.Context, req resource.ConfigureRe
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -68,15 +103,14 @@ func (r *bucketResource) Configure(ctx context.Context, req resource.ConfigureRe
 
 	var apiClient *objectstorage.APIClient
 	var err error
-	if providerData.ObjectStorageCustomEndpoint != "" {
+	if r.providerData.ObjectStorageCustomEndpoint != "" {
 		apiClient, err = objectstorage.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ObjectStorageCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.ObjectStorageCustomEndpoint),
 		)
 	} else {
 		apiClient, err = objectstorage.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 
@@ -98,6 +132,7 @@ func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
 		"url_path_style":           "URL in path style.",
 		"url_virtual_hosted_style": "URL in virtual hosted style.",
+		"region":                   "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -139,6 +174,15 @@ func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"url_virtual_hosted_style": schema.StringAttribute{
 				Computed: true,
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -153,31 +197,34 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 	projectId := model.ProjectId.ValueString()
 	bucketName := model.Name.ValueString()
+	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", bucketName)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Handle project init
-	err := enableProject(ctx, &model, r.client)
+	err := enableProject(ctx, &model, region, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
 	}
 
 	// Create new bucket
-	_, err = r.client.CreateBucket(ctx, projectId, bucketName).Execute()
+	_, err = r.client.CreateBucket(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	waitResp, err := wait.CreateBucketWaitHandler(ctx, r.client, projectId, bucketName).WaitWithContext(ctx)
+	waitResp, err := wait.CreateBucketWaitHandler(ctx, r.client, projectId, region, bucketName).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Bucket creation waiting: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model)
+	err = mapFields(waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -200,10 +247,13 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 	projectId := model.ProjectId.ValueString()
 	bucketName := model.Name.ValueString()
+	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", bucketName)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	bucketResp, err := r.client.GetBucket(ctx, projectId, bucketName).Execute()
+	bucketResp, err := r.client.GetBucket(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -215,7 +265,7 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	// Map response body to schema
-	err = mapFields(bucketResp, &model)
+	err = mapFields(bucketResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading bucket", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -246,15 +296,18 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	}
 	projectId := model.ProjectId.ValueString()
 	bucketName := model.Name.ValueString()
+	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", bucketName)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing bucket
-	_, err := r.client.DeleteBucket(ctx, projectId, bucketName).Execute()
+	_, err := r.client.DeleteBucket(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", fmt.Sprintf("Calling API: %v", err))
 	}
-	_, err = wait.DeleteBucketWaitHandler(ctx, r.client, projectId, bucketName).WaitWithContext(ctx)
+	_, err = wait.DeleteBucketWaitHandler(ctx, r.client, projectId, region, bucketName).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", fmt.Sprintf("Bucket deletion waiting: %v", err))
 		return
@@ -279,7 +332,7 @@ func (r *bucketResource) ImportState(ctx context.Context, req resource.ImportSta
 	tflog.Info(ctx, "ObjectStorage bucket state imported")
 }
 
-func mapFields(bucketResp *objectstorage.GetBucketResponse, model *Model) error {
+func mapFields(bucketResp *objectstorage.GetBucketResponse, model *Model, region string) error {
 	if bucketResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -300,19 +353,20 @@ func mapFields(bucketResp *objectstorage.GetBucketResponse, model *Model) error 
 	)
 	model.URLPathStyle = types.StringPointerValue(bucket.UrlPathStyle)
 	model.URLVirtualHostedStyle = types.StringPointerValue(bucket.UrlVirtualHostedStyle)
+	model.Region = types.StringValue(region)
 	return nil
 }
 
 type objectStorageClient interface {
-	EnableServiceExecute(ctx context.Context, projectId string) (*objectstorage.ProjectStatus, error)
+	EnableServiceExecute(ctx context.Context, projectId, region string) (*objectstorage.ProjectStatus, error)
 }
 
 // enableProject enables object storage for the specified project. If the project is already enabled, nothing happens
-func enableProject(ctx context.Context, model *Model, client objectStorageClient) error {
+func enableProject(ctx context.Context, model *Model, region string, client objectStorageClient) error {
 	projectId := model.ProjectId.ValueString()
 
 	// From the object storage OAS: Creation will also be successful if the project is already enabled, but will not create a duplicate
-	_, err := client.EnableServiceExecute(ctx, projectId)
+	_, err := client.EnableServiceExecute(ctx, projectId, region)
 	if err != nil {
 		return fmt.Errorf("failed to create object storage project: %w", err)
 	}

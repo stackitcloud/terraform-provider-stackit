@@ -2,6 +2,7 @@ package objectstorage
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"testing"
 
@@ -15,7 +16,7 @@ type objectStorageClientMocked struct {
 	returnError bool
 }
 
-func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId string) (*objectstorage.ProjectStatus, error) {
+func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId, _ string) (*objectstorage.ProjectStatus, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("create project failed")
 	}
@@ -43,6 +44,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:             types.StringValue("pid"),
 				URLPathStyle:          types.StringNull(),
 				URLVirtualHostedStyle: types.StringNull(),
+				Region:                types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -60,6 +62,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:             types.StringValue("pid"),
 				URLPathStyle:          types.StringValue("url/path/style"),
 				URLVirtualHostedStyle: types.StringValue("url/virtual/hosted/style"),
+				Region:                types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -77,6 +80,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:             types.StringValue("pid"),
 				URLPathStyle:          types.StringValue(""),
 				URLVirtualHostedStyle: types.StringValue(""),
+				Region:                types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -99,7 +103,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: tt.expected.ProjectId,
 				Name:      tt.expected.Name,
 			}
-			err := mapFields(tt.input, model)
+			err := mapFields(tt.input, model, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -138,7 +142,7 @@ func TestEnableProject(t *testing.T) {
 			client := &objectStorageClientMocked{
 				returnError: tt.enableFails,
 			}
-			err := enableProject(context.Background(), &Model{}, client)
+			err := enableProject(context.Background(), &Model{}, "eu01", client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
