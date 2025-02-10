@@ -4,6 +4,6 @@ variable "test_service_account" {}
 
 resource "stackit_authorization_project_role_assignment" "serviceaccount" {
   resource_id = var.project_id
-  role = "reader"
-  subject = var.test_service_account
+  role        = "reader"
+  subject     = var.test_service_account
 }

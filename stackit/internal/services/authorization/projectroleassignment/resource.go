@@ -27,8 +27,8 @@ var (
 	_ resource.ResourceWithConfigure   = &projectRoleAssignmentResource{}
 	_ resource.ResourceWithImportState = &projectRoleAssignmentResource{}
 
-	resource_type = "project"
-	errRoleAssignmentNotFound = errors.New("Response members did not contain expected role assignment")
+	resource_type                   = "project"
+	errRoleAssignmentNotFound       = errors.New("Response members did not contain expected role assignment")
 	errRoleAssignmentDuplicateFound = errors.New("Found a duplicate role assignment.")
 )
 
@@ -152,8 +152,7 @@ func (r *projectRoleAssignmentResource) Create(ctx context.Context, req resource
 
 	ctx = annotateLogger(ctx, &model)
 
-
-	if err := r.checkDuplicate(ctx, model); err != nil	{
+	if err := r.checkDuplicate(ctx, model); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error while checking for duplicate role assignments", err.Error())
 		return
 	}
@@ -345,9 +344,9 @@ func annotateLogger(ctx context.Context, model *Model) context.Context {
 }
 
 // returns an error if duplicate role assignment exists
-func (r *projectRoleAssignmentResource)checkDuplicate(ctx context.Context, model Model) error	{
+func (r *projectRoleAssignmentResource) checkDuplicate(ctx context.Context, model Model) error { //nolint:gocritic // A read only copy is required since an api response is parsed into the model and this check should not affect the model parameter
 	listResp, err := r.authorizationClient.ListMembers(ctx, resource_type, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
-	if err != nil {		
+	if err != nil {
 		return err
 	}
 
@@ -355,7 +354,7 @@ func (r *projectRoleAssignmentResource)checkDuplicate(ctx context.Context, model
 	err = mapListMembersResponse(listResp, &model)
 
 	if err != nil {
-		if err == errRoleAssignmentNotFound	{
+		if errors.Is(err, errRoleAssignmentNotFound) {
 			return nil
 		}
 		return err

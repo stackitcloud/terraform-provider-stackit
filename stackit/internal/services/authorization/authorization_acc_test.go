@@ -31,34 +31,35 @@ var project_owner string
 var invalid_role string
 
 var testConfigVars = config.Variables{
-	"project_id": config.StringVariable(testutil.ProjectId),
+	"project_id":           config.StringVariable(testutil.ProjectId),
 	"test_service_account": config.StringVariable(testutil.TestProjectServiceAccountEmail),
 }
 
-
-func TestAccProjectRoleAssignmentResource(t *testing.T)	{
+func TestAccProjectRoleAssignmentResource(t *testing.T) {
 	t.Log(testutil.AuthorizationProviderConfig())
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				ConfigVariables: testConfigVars ,
-				Config: testutil.AuthorizationProviderConfig() + prerequisites,
-				Check: func(s *terraform.State) error {
+				ConfigVariables: testConfigVars,
+				Config:          testutil.AuthorizationProviderConfig() + prerequisites,
+				Check: func(_ *terraform.State) error {
 					client, err := authApiClient()
-					if err != nil	{
+					if err != nil {
 						return err
 					}
 
 					members, err := client.ListMembers(context.TODO(), "project", testutil.ProjectId).Execute()
 
-					if err != nil 	{
+					if err != nil {
 						return err
 					}
-					
-					if !slices.ContainsFunc(*members.Members, func(m authorization.Member) bool { return *m.Role == "reader" && *m.Subject == testutil.TestProjectServiceAccountEmail })	{
+
+					if !slices.ContainsFunc(*members.Members, func(m authorization.Member) bool {
+						return *m.Role == "reader" && *m.Subject == testutil.TestProjectServiceAccountEmail
+					}) {
 						t.Log(members.Members)
-						 return errors.New("Membership not found")
+						return errors.New("Membership not found")
 					}
 					return nil
 				},
@@ -67,19 +68,19 @@ func TestAccProjectRoleAssignmentResource(t *testing.T)	{
 				// Expect failure on creating an already existing role_assignment
 				// Would be bad, since two resources could be created and deletion of one would lead to state drift for the second TF resource
 				ConfigVariables: testConfigVars,
-				Config: testutil.AuthorizationProviderConfig() + prerequisites + double_definition,
-				ExpectError: regexp.MustCompile(".+"),
+				Config:          testutil.AuthorizationProviderConfig() + prerequisites + double_definition,
+				ExpectError:     regexp.MustCompile(".+"),
 			},
 			{
 				// The Service Account inherits owner permissions for the project from the organization. Check if you can still assign owner permissions on the project explicitly
 				ConfigVariables: testConfigVars,
-				Config: testutil.AuthorizationProviderConfig() + prerequisites + project_owner,
+				Config:          testutil.AuthorizationProviderConfig() + prerequisites + project_owner,
 			},
 			{
 				// Assign a non-existent role. Expect failure
 				ConfigVariables: testConfigVars,
-				Config: testutil.AuthorizationProviderConfig() + prerequisites + invalid_role,
-				ExpectError: regexp.MustCompile(".+"),
+				Config:          testutil.AuthorizationProviderConfig() + prerequisites + invalid_role,
+				ExpectError:     regexp.MustCompile(".+"),
 			},
 		},
 	})
