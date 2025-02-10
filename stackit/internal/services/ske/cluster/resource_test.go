@@ -2428,9 +2428,9 @@ func TestMaintenanceWindow(t *testing.T) {
 				"enable_machine_image_version_updates": basetypes.NewBoolValue(false),
 			}
 
-			val, diag := basetypes.NewObjectValue(attributeTypes, attributeValues)
-			if diag.HasError() {
-				t.Fatalf("cannot create object value: %v", diag)
+			val, diags := basetypes.NewObjectValue(attributeTypes, attributeValues)
+			if diags.HasError() {
+				t.Fatalf("cannot create object value: %v", diags)
 			}
 			model := Model{
 				Maintenance: val,

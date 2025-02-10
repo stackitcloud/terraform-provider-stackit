@@ -770,7 +770,6 @@ func sortK8sVersions(versions []ske.KubernetesVersion) {
 		isLess := semver.Compare(t1, t2) > 0
 		return isLess
 	})
-
 }
 
 // loadAvailableVersions loads the available k8s and machine versions from the API.
@@ -1902,7 +1901,6 @@ func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, 
 	fullVersion := versionRegex.MatchString(*kubernetesVersionMin)
 
 	providedVersionPrefixed := "v" + *kubernetesVersionMin
-
 	if !semver.IsValid(providedVersionPrefixed) {
 		return nil, false, fmt.Errorf("provided version is invalid")
 	}
@@ -1912,43 +1910,9 @@ func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, 
 		availableVersionsArray []string
 	)
 	if fullVersion {
-		for _, versionCandidate := range availableVersions {
-			if versionCandidate.State == nil || versionCandidate.Version == nil {
-				continue
-			}
-			availableVersionsArray = append(availableVersionsArray, *versionCandidate.Version)
-			vPreffixed := "v" + *versionCandidate.Version
-
-			// [MAJOR].[MINOR].[PATCH] version provided, match available version
-			if semver.Compare(vPreffixed, providedVersionPrefixed) == 0 {
-				selectedVersion = &versionCandidate
-				break
-			}
-		}
+		availableVersionsArray, selectedVersion = selectFullVersion(availableVersions, providedVersionPrefixed)
 	} else {
-		sortK8sVersions(availableVersions)
-		for _, candidateVersion := range availableVersions {
-			if candidateVersion.State == nil || candidateVersion.Version == nil {
-				continue
-			}
-			availableVersionsArray = append(availableVersionsArray, *candidateVersion.Version)
-			vPreffixed := "v" + *candidateVersion.Version
-
-			// [MAJOR].[MINOR] version provided, get the latest non-preview patch version
-			if semver.MajorMinor(vPreffixed) == semver.MajorMinor(providedVersionPrefixed) &&
-				(semver.Compare(vPreffixed, providedVersionPrefixed) >= 0) &&
-				(candidateVersion.State != nil) {
-				// take the current version as a candidate, if we have no other version inspected before
-				// OR the previously found version was a preview version
-				if selectedVersion == nil {
-					selectedVersion = &candidateVersion
-				} else if isSupported(&candidateVersion) && isPreview(selectedVersion) {
-					// a supported version has priority before a preview version
-					selectedVersion = &candidateVersion
-				}
-				// all other cases are ignored
-			}
-		}
+		availableVersionsArray, selectedVersion = selectMatchingVersion(availableVersions, providedVersionPrefixed)
 	}
 
 	if selectedVersion != nil {
@@ -1964,6 +1928,50 @@ func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, 
 	}
 
 	return selectedVersion.Version, deprecated, nil
+}
+
+func selectFullVersion(availableVersions []ske.KubernetesVersion, kubernetesVersionMin string) (availableVersionsArray []string, selectedVersion *ske.KubernetesVersion) {
+	for _, versionCandidate := range availableVersions {
+		if versionCandidate.State == nil || versionCandidate.Version == nil {
+			continue
+		}
+		availableVersionsArray = append(availableVersionsArray, *versionCandidate.Version)
+		vPrefixed := "v" + *versionCandidate.Version
+
+		// [MAJOR].[MINOR].[PATCH] version provided, match available version
+		if semver.Compare(vPrefixed, kubernetesVersionMin) == 0 {
+			selectedVersion = &versionCandidate
+			break
+		}
+	}
+	return availableVersionsArray, selectedVersion
+}
+
+func selectMatchingVersion(availableVersions []ske.KubernetesVersion, kubernetesVersionMin string) (availableVersionsArray []string, selectedVersion *ske.KubernetesVersion) {
+	sortK8sVersions(availableVersions)
+	for _, candidateVersion := range availableVersions {
+		if candidateVersion.State == nil || candidateVersion.Version == nil {
+			continue
+		}
+		availableVersionsArray = append(availableVersionsArray, *candidateVersion.Version)
+		vPreffixed := "v" + *candidateVersion.Version
+
+		// [MAJOR].[MINOR] version provided, get the latest non-preview patch version
+		if semver.MajorMinor(vPreffixed) == semver.MajorMinor(kubernetesVersionMin) &&
+			(semver.Compare(vPreffixed, kubernetesVersionMin) >= 0) &&
+			(candidateVersion.State != nil) {
+			// take the current version as a candidate, if we have no other version inspected before
+			// OR the previously found version was a preview version
+			if selectedVersion == nil {
+				selectedVersion = &candidateVersion
+			} else if isSupported(&candidateVersion) && isPreview(selectedVersion) {
+				// a supported version has priority before a preview version
+				selectedVersion = &candidateVersion
+			}
+			// all other cases are ignored
+		}
+	}
+	return availableVersionsArray, selectedVersion
 }
 
 func isPreview(v *ske.KubernetesVersion) bool {
