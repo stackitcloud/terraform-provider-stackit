@@ -1867,9 +1867,7 @@ func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion, cu
 	return k, hasDeprecatedVersion, nil
 }
 
-func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, kubernetesVersionMin, currentKubernetesVersion *string, diags *diag.Diagnostics) (version *string, deprecated bool, err error) {
-	deprecated = false
-
+func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, kubernetesVersionMin, currentKubernetesVersion *string, diags *diag.Diagnostics) (*string, bool, error) {
 	if availableVersions == nil {
 		return nil, false, fmt.Errorf("nil available kubernetes versions")
 	}
@@ -1915,12 +1913,10 @@ func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, 
 		availableVersionsArray, selectedVersion = selectMatchingVersion(availableVersions, providedVersionPrefixed)
 	}
 
-	if selectedVersion != nil {
-		deprecated = isDeprecated(selectedVersion)
+	deprecated := isDeprecated(selectedVersion)
 
-		if isPreview(selectedVersion) {
-			diags.AddWarning("preview version selected", fmt.Sprintf("only the preview version %q matched the selection criteria", *selectedVersion.Version))
-		}
+	if isPreview(selectedVersion) {
+		diags.AddWarning("preview version selected", fmt.Sprintf("only the preview version %q matched the selection criteria", *selectedVersion.Version))
 	}
 
 	// Throwing error if we could not match the version with the available versions
