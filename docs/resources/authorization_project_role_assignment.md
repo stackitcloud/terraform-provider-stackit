@@ -3,12 +3,12 @@
 page_title: "stackit_authorization_project_role_assignment Resource - stackit"
 subcategory: ""
 description: |-
-  Role Assignment resource schema.
+  project Role Assignment resource schema.
 ---
 
 # stackit_authorization_project_role_assignment (Resource)
 
-Role Assignment resource schema.
+project Role Assignment resource schema.
 
 ## Example Usage
 
@@ -25,7 +25,7 @@ resource "stackit_authorization_project_role_assignment" "example" {
 
 ### Required
 
-- `resource_id` (String) Resource to assign the role to.
+- `resource_id` (String) project Resource to assign the role to.
 - `role` (String) Role to be assigned
 - `subject` (String) Identifier of user, service account or client. Usually email address or name in case of clients
 

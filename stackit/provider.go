@@ -12,7 +12,7 @@ import (
 	argusCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/credential"
 	argusInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/instance"
 	argusScrapeConfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/scrapeconfig"
-	projectroleassignment "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/projectroleassignment"
+	roleassignments "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
 	iaasAffinityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/affinitygroup"
@@ -464,7 +464,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 
 // Resources defines the resources implemented in the provider.
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
+	resources := []func() resource.Resource{
 		argusCredential.NewCredentialResource,
 		argusInstance.NewInstanceResource,
 		argusScrapeConfig.NewScrapeConfigResource,
@@ -520,6 +520,8 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		skeProject.NewProjectResource,
 		skeCluster.NewClusterResource,
 		skeKubeconfig.NewKubeconfigResource,
-		projectroleassignment.NewProjectRoleAssignmentResource,
 	}
+	resources = append(resources, roleassignments.NewRoleAssignmentResources()...)
+
+	return resources
 }

@@ -1,4 +1,4 @@
-package projectroleassignment
+package roleassignments
 
 import (
 	"context"
@@ -21,15 +21,20 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
+// List of permission assignments targets in form [TF resource name]:[api name]
+var roleTargets = []string{
+	"project",
+	"organization",
+}
+
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &projectRoleAssignmentResource{}
-	_ resource.ResourceWithConfigure   = &projectRoleAssignmentResource{}
-	_ resource.ResourceWithImportState = &projectRoleAssignmentResource{}
+	_ resource.Resource                = &roleAssignmentResource{}
+	_ resource.ResourceWithConfigure   = &roleAssignmentResource{}
+	_ resource.ResourceWithImportState = &roleAssignmentResource{}
 
-	resource_type                   = "project"
-	errRoleAssignmentNotFound       = errors.New("Response members did not contain expected role assignment")
-	errRoleAssignmentDuplicateFound = errors.New("Found a duplicate role assignment.")
+	errRoleAssignmentNotFound       = errors.New("response members did not contain expected role assignment")
+	errRoleAssignmentDuplicateFound = errors.New("found a duplicate role assignment.")
 )
 
 // Provider's internal model
@@ -41,22 +46,31 @@ type Model struct {
 }
 
 // NewProjectRoleAssignmentResource is a helper function to simplify the provider implementation.
-func NewProjectRoleAssignmentResource() resource.Resource {
-	return &projectRoleAssignmentResource{}
+func NewRoleAssignmentResources() []func() resource.Resource {
+	resources := make([]func() resource.Resource, 0)
+	for _, v := range roleTargets {
+		resources = append(resources, func() resource.Resource {
+			return &roleAssignmentResource{
+				api_name: v,
+			}
+		})
+	}
+	return resources
 }
 
-// projectRoleAssignmentResource is the resource implementation.
-type projectRoleAssignmentResource struct {
+// roleAssignmentResource is the resource implementation.
+type roleAssignmentResource struct {
 	authorizationClient *authorization.APIClient
+	api_name            string
 }
 
 // Metadata returns the resource type name.
-func (r *projectRoleAssignmentResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_authorization_project_role_assignment"
+func (r *roleAssignmentResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = fmt.Sprintf("%s_authorization_%s_role_assignment", req.ProviderTypeName, r.api_name)
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *projectRoleAssignmentResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -89,15 +103,15 @@ func (r *projectRoleAssignmentResource) Configure(ctx context.Context, req resou
 	}
 
 	r.authorizationClient = aClient
-	tflog.Info(ctx, "Resource Manager Project Role Assignment client configured")
+	tflog.Info(ctx, fmt.Sprintf("Resource Manager %s Role Assignment client configured", r.api_name))
 }
 
 // Schema defines the schema for the resource.
-func (r *projectRoleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "Role Assignment resource schema.",
+		"main":        fmt.Sprintf("%s Role Assignment resource schema.", r.api_name),
 		"id":          "Terraform's internal resource identifier. It is structured as \"[resource_id],[role],[subject]\".",
-		"resource_id": "Resource to assign the role to.",
+		"resource_id": fmt.Sprintf("%s Resource to assign the role to.", r.api_name),
 		"role":        "Role to be assigned",
 		"subject":     "Identifier of user, service account or client. Usually email address or name in case of clients",
 	}
@@ -142,7 +156,7 @@ func (r *projectRoleAssignmentResource) Schema(_ context.Context, _ resource.Sch
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *projectRoleAssignmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *roleAssignmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -150,7 +164,7 @@ func (r *projectRoleAssignmentResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	ctx = annotateLogger(ctx, &model)
+	ctx = r.annotateLogger(ctx, &model)
 
 	if err := r.checkDuplicate(ctx, model); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error while checking for duplicate role assignments", err.Error())
@@ -158,21 +172,21 @@ func (r *projectRoleAssignmentResource) Create(ctx context.Context, req resource
 	}
 
 	// Create new project role assignment
-	payload, err := toCreatePayload(&model)
+	payload, err := r.toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 	createResp, err := r.authorizationClient.AddMembers(ctx, model.ResourceId.ValueString()).AddMembersPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project role assignment", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.api_name), fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	// Map response body to schema
 	err = mapMembersResponse(createResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project role assignment", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.api_name), fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
@@ -180,11 +194,11 @@ func (r *projectRoleAssignmentResource) Create(ctx context.Context, req resource
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "project role assignment created")
+	tflog.Info(ctx, fmt.Sprintf("%s role assignment created", r.api_name))
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *projectRoleAssignmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -192,9 +206,9 @@ func (r *projectRoleAssignmentResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	ctx = annotateLogger(ctx, &model)
+	ctx = r.annotateLogger(ctx, &model)
 
-	listResp, err := r.authorizationClient.ListMembers(ctx, resource_type, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
+	listResp, err := r.authorizationClient.ListMembers(ctx, r.api_name, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading authorizations", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -213,16 +227,16 @@ func (r *projectRoleAssignmentResource) Read(ctx context.Context, req resource.R
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "project role assignment read successful")
+	tflog.Info(ctx, fmt.Sprintf("%s role assignment read successful", r.api_name))
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *projectRoleAssignmentResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *roleAssignmentResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// does nothing since resource updates should always trigger resource replacement
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *projectRoleAssignmentResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -230,10 +244,10 @@ func (r *projectRoleAssignmentResource) Delete(ctx context.Context, req resource
 		return
 	}
 
-	ctx = annotateLogger(ctx, &model)
+	ctx = r.annotateLogger(ctx, &model)
 
 	payload := authorization.RemoveMembersPayload{
-		ResourceType: &resource_type,
+		ResourceType: &r.api_name,
 		Members: &[]authorization.Member{
 			*authorization.NewMember(model.Role.ValueStringPointer(), model.Subject.ValueStringPointer()),
 		},
@@ -242,19 +256,19 @@ func (r *projectRoleAssignmentResource) Delete(ctx context.Context, req resource
 	// Delete existing project role assignment
 	_, err := r.authorizationClient.RemoveMembers(ctx, model.ResourceId.ValueString()).RemoveMembersPayload(payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project role assignment", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error deleting %s role assignment", r.api_name), fmt.Sprintf("Calling API: %v", err))
 	}
 
-	tflog.Info(ctx, "project role assignment deleted")
+	tflog.Info(ctx, fmt.Sprintf("%s role assignment deleted", r.api_name))
 }
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the project role assignment resource import identifier is: resource_id,role,subject
-func (r *projectRoleAssignmentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *roleAssignmentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			"Error importing project role assignment",
+			fmt.Sprintf("Error importing %s role assignment", r.api_name),
 			fmt.Sprintf("Expected import identifier with format [resource_id],[role],[subject], got %q", req.ID),
 		)
 		return
@@ -263,7 +277,7 @@ func (r *projectRoleAssignmentResource) ImportState(ctx context.Context, req res
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("subject"), idParts[2])...)
-	tflog.Info(ctx, "project role assignment state imported")
+	tflog.Info(ctx, fmt.Sprintf("%s role assignment state imported", r.api_name))
 }
 
 // Maps project role assignment fields to the provider's internal model.
@@ -322,30 +336,31 @@ func typeConverter[R any](data any) (*R, error) {
 }
 
 // Build Createproject role assignmentPayload from provider's model
-func toCreatePayload(model *Model) (*authorization.AddMembersPayload, error) {
+func (r *roleAssignmentResource) toCreatePayload(model *Model) (*authorization.AddMembersPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
 	return &authorization.AddMembersPayload{
-		ResourceType: &resource_type,
+		ResourceType: &r.api_name,
 		Members: &[]authorization.Member{
 			*authorization.NewMember(model.Role.ValueStringPointer(), model.Subject.ValueStringPointer()),
 		},
 	}, nil
 }
 
-func annotateLogger(ctx context.Context, model *Model) context.Context {
+func (r *roleAssignmentResource) annotateLogger(ctx context.Context, model *Model) context.Context {
 	resourceId := model.ResourceId.ValueString()
 	ctx = tflog.SetField(ctx, "resource_id", resourceId)
 	ctx = tflog.SetField(ctx, "subject", model.Subject.ValueString())
 	ctx = tflog.SetField(ctx, "role", model.Role.ValueString())
+	ctx = tflog.SetField(ctx, "resource_type", r.api_name)
 	return ctx
 }
 
 // returns an error if duplicate role assignment exists
-func (r *projectRoleAssignmentResource) checkDuplicate(ctx context.Context, model Model) error { //nolint:gocritic // A read only copy is required since an api response is parsed into the model and this check should not affect the model parameter
-	listResp, err := r.authorizationClient.ListMembers(ctx, resource_type, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
+func (r *roleAssignmentResource) checkDuplicate(ctx context.Context, model Model) error { //nolint:gocritic // A read only copy is required since an api response is parsed into the model and this check should not affect the model parameter
+	listResp, err := r.authorizationClient.ListMembers(ctx, r.api_name, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
 	if err != nil {
 		return err
 	}

@@ -30,9 +30,13 @@ var project_owner string
 //go:embed testfiles/invalid-role.tf
 var invalid_role string
 
+//go:embed testfiles/organization-role.tf
+var organization_role string
+
 var testConfigVars = config.Variables{
 	"project_id":           config.StringVariable(testutil.ProjectId),
 	"test_service_account": config.StringVariable(testutil.TestProjectServiceAccountEmail),
+	"organization_id":      config.StringVariable(testutil.OrganizationId),
 }
 
 func TestAccProjectRoleAssignmentResource(t *testing.T) {
@@ -65,16 +69,21 @@ func TestAccProjectRoleAssignmentResource(t *testing.T) {
 				},
 			},
 			{
+				// Assign a resource to an organization
+				ConfigVariables: testConfigVars,
+				Config:          testutil.AuthorizationProviderConfig() + prerequisites + organization_role,
+			},
+			{
+				// The Service Account inherits owner permissions for the project from the organization. Check if you can still assign owner permissions on the project explicitly
+				ConfigVariables: testConfigVars,
+				Config:          testutil.AuthorizationProviderConfig() + prerequisites + organization_role + project_owner,
+			},
+			{
 				// Expect failure on creating an already existing role_assignment
 				// Would be bad, since two resources could be created and deletion of one would lead to state drift for the second TF resource
 				ConfigVariables: testConfigVars,
 				Config:          testutil.AuthorizationProviderConfig() + prerequisites + double_definition,
 				ExpectError:     regexp.MustCompile(".+"),
-			},
-			{
-				// The Service Account inherits owner permissions for the project from the organization. Check if you can still assign owner permissions on the project explicitly
-				ConfigVariables: testConfigVars,
-				Config:          testutil.AuthorizationProviderConfig() + prerequisites + project_owner,
 			},
 			{
 				// Assign a non-existent role. Expect failure
