@@ -57,8 +57,20 @@ type credentialResource struct {
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
-// Use the modifier to set the effective region in the current plan.
 func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	r.modifyPlanRegion(ctx, &req, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	r.modifyPlanExpiration(ctx, &req, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *credentialResource) modifyPlanRegion(ctx context.Context, req *resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
@@ -87,7 +99,7 @@ func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.Modify
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
-func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialResource) modifyPlanExpiration(ctx context.Context, req *resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	p := path.Root("expiration_timestamp")
 	var (
 		stateDate time.Time
