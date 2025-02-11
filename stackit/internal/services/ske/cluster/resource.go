@@ -1916,8 +1916,9 @@ func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, 
 	}
 
 	if selectedVersion != nil {
-		deprecated = strings.EqualFold(*selectedVersion.State, VersionStateDeprecated)
-		if selectedVersion.State != nil && *selectedVersion.State == VersionStatePreview {
+		deprecated = isDeprecated(selectedVersion)
+
+		if isPreview(selectedVersion) {
 			diags.AddWarning("preview version selected", fmt.Sprintf("only the preview version %q matched the selection criteria", *selectedVersion.Version))
 		}
 	}
@@ -1962,16 +1963,25 @@ func selectMatchingVersion(availableVersions []ske.KubernetesVersion, kubernetes
 			(candidateVersion.State != nil) {
 			// take the current version as a candidate, if we have no other version inspected before
 			// OR the previously found version was a preview version
-			if selectedVersion == nil {
-				selectedVersion = &candidateVersion
-			} else if isSupported(&candidateVersion) && isPreview(selectedVersion) {
-				// a supported version has priority before a preview version
+			if selectedVersion == nil || (isSupported(&candidateVersion) && isPreview(selectedVersion)) {
 				selectedVersion = &candidateVersion
 			}
 			// all other cases are ignored
 		}
 	}
 	return availableVersionsArray, selectedVersion
+}
+
+func isDeprecated(v *ske.KubernetesVersion) bool {
+	if v == nil {
+		return false
+	}
+
+	if v.State == nil {
+		return false
+	}
+
+	return *v.State == VersionStateDeprecated
 }
 
 func isPreview(v *ske.KubernetesVersion) bool {
