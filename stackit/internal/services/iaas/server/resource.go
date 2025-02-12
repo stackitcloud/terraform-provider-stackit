@@ -888,12 +888,39 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 		for _, nic := range *serverResp.Nics {
 			respNics = append(respNics, *nic.NicId)
 		}
-		nicTF, diags := types.ListValueFrom(ctx, types.StringType, respNics)
-		if diags.HasError() {
-			return fmt.Errorf("failed to map networkInterfaces: %w", core.DiagsToError(diags))
+
+		var modelNics []string
+		for _, modelNic := range model.NetworkInterfaces.Elements() {
+			modelNicString, ok := modelNic.(types.String)
+			if !ok {
+				return fmt.Errorf("type assertion for network interfaces failed")
+			}
+			modelNics = append(modelNics, modelNicString.ValueString())
 		}
 
-		model.NetworkInterfaces = nicTF
+		var filteredNics []string
+		for _, modelNic := range modelNics {
+			for _, nic := range respNics {
+				if nic == modelNic {
+					filteredNics = append(filteredNics, nic)
+					break
+				}
+			}
+		}
+
+		// Sorts the filteredNics based on the modelNics order
+		resultNics := utils.ReconcileStringSlices(modelNics, filteredNics)
+
+		if len(resultNics) != 0 {
+			nicTF, diags := types.ListValueFrom(ctx, types.StringType, resultNics)
+			if diags.HasError() {
+				return fmt.Errorf("failed to map networkInterfaces: %w", core.DiagsToError(diags))
+			}
+
+			model.NetworkInterfaces = nicTF
+		} else {
+			model.NetworkInterfaces = types.ListNull(types.StringType)
+		}
 	} else {
 		model.NetworkInterfaces = types.ListNull(types.StringType)
 	}
