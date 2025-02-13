@@ -56,6 +56,7 @@ var (
 	LoadBalancerCustomEndpoint    = os.Getenv("TF_ACC_LOADBALANCER_CUSTOM_ENDPOINT")
 	LogMeCustomEndpoint           = os.Getenv("TF_ACC_LOGME_CUSTOM_ENDPOINT")
 	MariaDBCustomEndpoint         = os.Getenv("TF_ACC_MARIADB_CUSTOM_ENDPOINT")
+	ModelServingCustomEndpoint    = os.Getenv("TF_ACC_MODELSERVING_CUSTOM_ENDPOINT")
 	AuthorizationCustomEndpoint   = os.Getenv("TF_ACC_authorization_custom_endpoint")
 	MongoDBFlexCustomEndpoint     = os.Getenv("TF_ACC_MONGODBFLEX_CUSTOM_ENDPOINT")
 	OpenSearchCustomEndpoint      = os.Getenv("TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT")
@@ -182,6 +183,18 @@ func MariaDBProviderConfig() string {
 			mariadb_custom_endpoint = "%s"
 		}`,
 		MariaDBCustomEndpoint,
+	)
+}
+
+func ModelServingProviderConfig() string {
+	if ModelServingCustomEndpoint == "" {
+		return `provider "stackit" {}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			model_serving_custom_endpoint = "%s"
+		}`,
+		ModelServingCustomEndpoint,
 	)
 }
 
