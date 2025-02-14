@@ -17,6 +17,6 @@ jobs:
         run: make project-tools
       - name: Run tests
         run: |
-          make test-acceptance-tf TF_ACC_PROJECT_ID=$${{ secrets.TF_ACC_PROJECT_ID }}
+          make test-acceptance-tf TF_ACC_PROJECT_ID=$${{ secrets.TF_ACC_PROJECT_ID }} TF_ACC_ORGANIZATION_ID=$${{ secrets.TF_ACC_ORGANIZATION_ID }}
         env:
           STACKIT_SERVICE_ACCOUNT_TOKEN: ${{ secrets.TF_ACC_SERVICE_ACCOUNT_TOKEN }}
