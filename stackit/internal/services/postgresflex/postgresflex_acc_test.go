@@ -239,8 +239,9 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"password"},
 			},
 			{
 				ResourceName: "stackit_postgresflex_user.user",
@@ -262,7 +263,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"password"},
+				ImportStateVerifyIgnore: []string{"password", "uri"},
 			},
 			{
 				ResourceName: "stackit_postgresflex_database.database",
