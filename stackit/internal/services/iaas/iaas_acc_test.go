@@ -82,6 +82,16 @@ var serverResource = map[string]string{
 	"label1":                "value",
 	"user_data":             "#!/bin/bash",
 	"delete_on_termination": "true",
+	"project_id":            testutil.ProjectId,
+	"availability_zone":     "eu01-1",
+	"size":                  "64",
+	"source_type":           "image",
+	"source_id":             testutil.IaaSImageId,
+	"name":                  fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha)),
+	"machine_type":          serverMachineType,
+	"label1":                "value",
+	"user_data":             "#!/bin/bash",
+	"delete_on_termination": "true",
 }
 
 // Security Group resource data
@@ -103,6 +113,7 @@ var securityGroupRuleResource = map[string]string{
 var publicIpResource = map[string]string{
 	"project_id":           testutil.ProjectId,
 	"label1":               "value",
+	"network_interface_id": "stackit_network_interface.network_interface.network_interface_id",
 	"network_interface_id": "stackit_network_interface.network_interface.network_interface_id",
 }
 
@@ -148,6 +159,26 @@ func networkResourceConfig(name, nameservers string) string {
 		networkResource["ipv4_gateway"],
 		networkResource["ipv4_prefix"],
 		networkResource["routed"],
+	)
+}
+
+// routed: true, gateway not present
+func networkResourceConfigRouted(name, nameservers string) string {
+	return fmt.Sprintf(`
+				resource "stackit_network" "network" {
+					project_id = "%s"
+					name       = "%s"
+					ipv4_prefix_length = "%s"
+					ipv4_nameservers = %s
+					ipv4_prefix = "%s"
+					routed = "true"
+				}
+				`,
+		networkResource["project_id"],
+		name,
+		networkResource["ipv4_prefix_length"],
+		nameservers,
+		networkResource["ipv4_prefix"],
 	)
 }
 
@@ -256,7 +287,9 @@ func serverResourceConfig(name, machineType string) string {
 						source_type = "%s"
 						source_id = "%s"
 						delete_on_termination = "%s"
+						delete_on_termination = "%s"
 					}
+					network_interfaces = [stackit_network_interface.network_interface.network_interface_id]
 					network_interfaces = [stackit_network_interface.network_interface.network_interface_id]
 					labels = {
 						"label1" = "%s"
@@ -271,6 +304,7 @@ func serverResourceConfig(name, machineType string) string {
 		serverResource["size"],
 		serverResource["source_type"],
 		serverResource["source_id"],
+		serverResource["delete_on_termination"],
 		serverResource["delete_on_termination"],
 		serverResource["label1"],
 		serverResource["user_data"],
@@ -401,6 +435,8 @@ func testAccVolumeConfig(name, size string) string {
 
 func testAccServerConfig(name, nameservers, serverName, machineType, nicTfName, interfacename string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
+func testAccServerConfig(name, nameservers, serverName, machineType, interfacename string) string {
+	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		networkResourceConfig(name, nameservers),
 		serverResourceConfig(serverName, machineType),
@@ -423,9 +459,13 @@ func resourceConfigSecurityGroup(name, direction string) string {
 
 func testAccPublicIpConfig(nameNetwork, nameservers, nicTfName, nameNetworkInterface, publicIpResourceConfig string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
+func testAccPublicIpConfig(nameNetwork, nameservers, nameNetworkInterface, publicIpResourceConfig string) string {
+	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		networkResourceConfigRouted(nameNetwork, nameservers),
 		networkInterfaceResourceConfig(nicTfName, nameNetworkInterface),
+		networkResourceConfigRouted(nameNetwork, nameservers),
+		networkInterfaceResourceConfig(nameNetworkInterface),
 		publicIpResourceConfig,
 	)
 }
@@ -737,6 +777,11 @@ func TestAccServer(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", serverResource["source_type"]),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_id", serverResource["source_id"]),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.delete_on_termination", serverResource["delete_on_termination"]),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "network_interfaces.0"),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.size", serverResource["size"]),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", serverResource["source_type"]),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_id", serverResource["source_id"]),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.delete_on_termination", serverResource["delete_on_termination"]),
 
 					// Network Interface
 					resource.TestCheckResourceAttrPair(
@@ -808,6 +853,7 @@ func TestAccServer(t *testing.T) {
 			{
 				Config: fmt.Sprintf(`
 						%s
+						%s
 
 						data "stackit_network" "network" {
 							project_id  = stackit_network.network.project_id
@@ -818,7 +864,22 @@ func TestAccServer(t *testing.T) {
 							project_id  = stackit_server.server.project_id
 							server_id = stackit_server.server.server_id
 						}
+						data "stackit_network" "network" {
+							project_id  = stackit_network.network.project_id
+							network_id = stackit_network.network.network_id
+						}
 
+						data "stackit_server" "server" {
+							project_id  = stackit_server.server.project_id
+							server_id = stackit_server.server.server_id
+						}
+
+						data "stackit_network_interface" "network_interface" {
+							project_id  	     = stackit_network.network.project_id
+							network_id  	     = stackit_network.network.network_id
+							network_interface_id = stackit_network_interface.network_interface.network_interface_id
+						}
+						`,
 						data "stackit_network_interface" "network_interface" {
 							project_id  	     = stackit_network.network.project_id
 							network_id  	     = stackit_network.network.network_id
@@ -889,6 +950,7 @@ func TestAccServer(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"ipv4_prefix_length", "ipv4_prefix"}, // Field is not returned by the API
 				ImportStateVerifyIgnore: []string{"ipv4_prefix_length", "ipv4_prefix"}, // Field is not returned by the API
 			},
 			{
@@ -1040,6 +1102,11 @@ func TestAccServer(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_server.server", "machine_type", updatedServerMachineType),
 					resource.TestCheckResourceAttr("stackit_server.server", "labels.label1", serverResource["label1"]),
 					resource.TestCheckResourceAttr("stackit_server.server", "user_data", serverResource["user_data"]),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "network_interfaces.0"),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.size", serverResource["size"]),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", serverResource["source_type"]),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_id", serverResource["source_id"]),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.delete_on_termination", serverResource["delete_on_termination"]),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "network_interfaces.0"),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.size", serverResource["size"]),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", serverResource["source_type"]),
@@ -1245,12 +1312,19 @@ func TestAccPublicIp(t *testing.T) {
 					),
 					networkInterfaceResource["tfName"],
 					networkInterfaceResource["name"],
+					networkResource["name"],
+					fmt.Sprintf(
+						"[%q]",
+						networkResource["nameserver0"],
+					),
+					networkInterfaceResource["name"],
 					fmt.Sprintf(`
 						resource "stackit_public_ip" "public_ip" {
 							project_id = "%s"
 							labels = {
 								"label1" = "%s"
 							}
+							network_interface_id = %s
 							network_interface_id = %s
 						}
 					`,
@@ -1264,12 +1338,21 @@ func TestAccPublicIp(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip", "public_ip_id"),
 					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.label1", publicIpResource["label1"]),
 					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_interface_id"),
+					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_interface_id"),
 				),
 			},
+
 
 			// Data source
 			{
 				Config: fmt.Sprintf(`
+						%s
+
+						data "stackit_public_ip" "public_ip" {
+							project_id   		 = stackit_public_ip.public_ip.project_id
+							public_ip_id 		 = stackit_public_ip.public_ip.public_ip_id
+						}
+						`,
 						%s
 
 						data "stackit_public_ip" "public_ip" {
@@ -1285,7 +1368,21 @@ func TestAccPublicIp(t *testing.T) {
 						),
 						networkInterfaceResource["tfName"],
 						networkInterfaceResource["name"],
+						networkResource["name"],
+						fmt.Sprintf(
+							"[%q]",
+							networkResource["nameserver0"],
+						),
+						networkInterfaceResource["name"],
 						fmt.Sprintf(`
+								resource "stackit_public_ip" "public_ip" {
+									project_id = "%s"
+									labels = {
+										"label1" = "%s"
+									}
+									network_interface_id = %s
+								}
+							`,
 								resource "stackit_public_ip" "public_ip" {
 									project_id = "%s"
 									labels = {
@@ -1308,6 +1405,7 @@ func TestAccPublicIp(t *testing.T) {
 						"data.stackit_public_ip.public_ip", "public_ip_id",
 					),
 					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.label1", publicIpResource["label1"]),
+					resource.TestCheckResourceAttrSet("data.stackit_public_ip.public_ip", "network_interface_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_public_ip.public_ip", "network_interface_id"),
 				),
 			},
@@ -1338,7 +1436,20 @@ func TestAccPublicIp(t *testing.T) {
 					),
 					networkInterfaceResource["tfName"],
 					networkInterfaceResource["name"],
+					networkResource["name"],
+					fmt.Sprintf(
+						"[%q]",
+						networkResource["nameserver0"],
+					),
+					networkInterfaceResource["name"],
 					fmt.Sprintf(`
+								resource "stackit_public_ip" "public_ip" {
+									project_id = "%s"
+									labels = {
+										"label1" = "%s"
+									}
+								}
+							`,
 								resource "stackit_public_ip" "public_ip" {
 									project_id = "%s"
 									labels = {
@@ -1491,6 +1602,8 @@ func TestAccImage(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_image.image", "min_ram", imageResource["min_ram"]),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "local_file_path"),
 					resource.TestCheckResourceAttr("stackit_image.image", "local_file_path", imageResource["local_file_path"]),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "local_file_path"),
+					resource.TestCheckResourceAttr("stackit_image.image", "local_file_path", imageResource["local_file_path"]),
 					resource.TestCheckResourceAttr("stackit_image.image", "labels.label1", imageResource["label1"]),
 					resource.TestCheckResourceAttr("stackit_image.image", "config.boot_menu", imageResource["boot_menu"]),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
@@ -1507,6 +1620,7 @@ func TestAccImage(t *testing.T) {
 						image_id = stackit_image.image.image_id
 					}
 					`,
+					testAccImageConfig(imageResource["name"]),
 					testAccImageConfig(imageResource["name"]),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -1535,6 +1649,9 @@ func TestAccImage(t *testing.T) {
 					}
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, imageId), nil
 				},
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"local_file_path"},
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"local_file_path"},
