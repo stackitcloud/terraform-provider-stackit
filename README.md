@@ -179,6 +179,7 @@ Terraform acceptance tests are run using the command `make test-acceptance-tf`. 
 - The env var `TF_ACC_PROJECT_ID` must be set with the ID of the STACKIT test project to test it.
 - Authentication is set as usual.
 - Optionally, the env var `TF_ACC_XXXXXX_CUSTOM_ENDPOINT` (where `XXXXXX` is the uppercase name of the service) can be set to use endpoints other than the default value.
+- There are some acceptance test where it is needed to provide additional parameters, some of them have default values in order to run normally without manual interaction. Those default values can be overwritten (see testutils.go for a full list.)
 
 Additionally:
 
@@ -187,12 +188,6 @@ Additionally:
   - The env var `TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL` must be set as the email of the service account
   - The env var `TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN` must be set as a valid token of the service account. Can also be set in the credentials file used by authentication (see [Authentication](#authentication) for more details)
   - The env var `TF_ACC_PROJECT_ID` is ignored
-- For the Load Balancer service:
-  - OpenStack credentials are required, as the acceptance tests use the OpenStack provider to set up the supporting infrastructure
-    - These can be obtained after creating a user token through the [STACKIT Portal](https://portal.stackit.cloud/), in your project's Infrastructure API page
-  - The env var `TF_ACC_OS_USER_DOMAIN_NAME` must be set as the OpenStack user domain name
-  - The env var `TF_ACC_OS_USER_NAME` must be set as the OpenStack username
-  - The env var `TF_ACC_OS_PASSWORD` must be set as the OpenStack password
 
 **WARNING:** Acceptance tests will create real resources, which may incur in costs.
 
