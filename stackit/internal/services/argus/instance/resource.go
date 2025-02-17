@@ -877,7 +877,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Set state to fully populated data
-	diags = setACL(ctx, resp.State, &model)
+	diags = setACL(ctx, &resp.State, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -919,7 +919,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Set state to fully populated data
-	diags = setMetricsRetentions(ctx, resp.State, &model)
+	diags = setMetricsRetentions(ctx, &resp.State, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -963,7 +963,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Set state to fully populated data
-	diags = setAlertConfig(ctx, resp.State, &model)
+	diags = setAlertConfig(ctx, &resp.State, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -1025,6 +1025,13 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
+	// Set state to fully populated data
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Map response body to schema
 	err = mapACLField(aclListResp, &model)
 	if err != nil {
@@ -1032,10 +1039,24 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
+	// Set state to fully populated data
+	diags = setACL(ctx, &resp.State, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Map response body to schema
 	err = mapMetricsRetentionField(metricsRetentionResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
+		return
+	}
+
+	// Set state to fully populated data
+	diags = setMetricsRetentions(ctx, &resp.State, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -1047,7 +1068,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Set state to fully populated data
-	diags = resp.State.Set(ctx, model)
+	diags = setAlertConfig(ctx, &resp.State, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -1145,7 +1166,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Set state to ACL populated data
-	resp.Diagnostics.Append(setACL(ctx, resp.State, &model)...)
+	resp.Diagnostics.Append(setACL(ctx, &resp.State, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1185,7 +1206,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Set state to fully populated data
-	diags = setMetricsRetentions(ctx, resp.State, &model)
+	diags = setMetricsRetentions(ctx, &resp.State, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -1229,7 +1250,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Set state to fully populated data
-	diags = setAlertConfig(ctx, resp.State, &model)
+	diags = setAlertConfig(ctx, &resp.State, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -1335,9 +1356,6 @@ func mapFields(ctx context.Context, r *argus.GetInstanceResponse, model *Model) 
 		model.GrafanaPublicReadAccess = types.BoolPointerValue(i.GrafanaPublicReadAccess)
 		model.GrafanaInitialAdminPassword = types.StringPointerValue(i.GrafanaAdminPassword)
 		model.GrafanaInitialAdminUser = types.StringPointerValue(i.GrafanaAdminUser)
-		model.MetricsRetentionDays = types.Int64Value(int64(*i.MetricsRetentionTimeRaw))
-		model.MetricsRetentionDays5mDownsampling = types.Int64Value(int64(*i.MetricsRetentionTime5m))
-		model.MetricsRetentionDays1hDownsampling = types.Int64Value(int64(*i.MetricsRetentionTime1h))
 		model.MetricsURL = types.StringPointerValue(i.MetricsUrl)
 		model.MetricsPushURL = types.StringPointerValue(i.PushMetricsUrl)
 		model.TargetsURL = types.StringPointerValue(i.TargetsUrl)
@@ -2187,17 +2205,17 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	return nil
 }
 
-func setACL(ctx context.Context, state tfsdk.State, model *Model) diag.Diagnostics {
+func setACL(ctx context.Context, state *tfsdk.State, model *Model) diag.Diagnostics {
 	return state.SetAttribute(ctx, path.Root("acl"), model.ACL)
 }
 
-func setMetricsRetentions(ctx context.Context, state tfsdk.State, model *Model) (diags diag.Diagnostics) {
+func setMetricsRetentions(ctx context.Context, state *tfsdk.State, model *Model) (diags diag.Diagnostics) {
 	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days"), model.MetricsRetentionDays)...)
 	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days_5m_downsampling"), model.MetricsRetentionDays5mDownsampling)...)
 	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days_1h_downsampling"), model.MetricsRetentionDays1hDownsampling)...)
 	return diags
 }
 
-func setAlertConfig(ctx context.Context, state tfsdk.State, model *Model) diag.Diagnostics {
+func setAlertConfig(ctx context.Context, state *tfsdk.State, model *Model) diag.Diagnostics {
 	return state.SetAttribute(ctx, path.Root("alert_config"), model.AlertConfig)
 }
