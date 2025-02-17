@@ -747,9 +747,6 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 func sortK8sVersions(versions []ske.KubernetesVersion) {
 	sort.Slice(versions, func(i, j int) bool {
 		v1, v2 := (versions)[i].Version, (versions)[j].Version
-		if v1 == nil && v2 == nil {
-			return false
-		}
 		if v1 == nil {
 			return false
 		}
@@ -767,8 +764,7 @@ func sortK8sVersions(versions []ske.KubernetesVersion) {
 		if !strings.HasPrefix(t2, "v") {
 			t2 = "v" + t2
 		}
-		isLess := semver.Compare(t1, t2) > 0
-		return isLess
+		return semver.Compare(t1, t2) > 0
 	})
 }
 
