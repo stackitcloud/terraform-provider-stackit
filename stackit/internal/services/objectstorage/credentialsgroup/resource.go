@@ -132,7 +132,7 @@ func (r *credentialsGroupResource) Schema(_ context.Context, _ resource.SchemaRe
 		"name":                 "The credentials group's display name.",
 		"project_id":           "Project ID to which the credentials group is associated.",
 		"urn":                  "Credentials group uniform resource name (URN)",
-		"region":               "The resource region. If not defined, the provider region is used.",
+		"region":               "The resource region. Read-only attribute that reflects the provider region.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -174,7 +174,7 @@ func (r *credentialsGroupResource) Schema(_ context.Context, _ resource.SchemaRe
 				Computed:    true,
 			},
 			"region": schema.StringAttribute{
-				Optional: true,
+				Optional: false,
 				// must be computed to allow for storing the override value from the provider
 				Computed:    true,
 				Description: descriptions["region"],

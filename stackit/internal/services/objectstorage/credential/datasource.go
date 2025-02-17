@@ -79,7 +79,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 		"credential_id":        "The credential ID.",
 		"credentials_group_id": "The credential group ID.",
 		"project_id":           "STACKIT Project ID to which the credential group is associated.",
-		"region":               "The resource region. If not defined, the provider region is used.",
+		"region":               "The resource region. Read-only attribute that reflects the provider region.",
 	}
 
 	resp.Schema = schema.Schema{

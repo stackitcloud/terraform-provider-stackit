@@ -83,7 +83,7 @@ func (r *credentialsGroupDataSource) Schema(_ context.Context, _ datasource.Sche
 		"name":                 "The credentials group's display name.",
 		"project_id":           "Object Storage Project ID to which the credentials group is associated.",
 		"urn":                  "Credentials group uniform resource name (URN)",
-		"region":               "The resource region. If not defined, the provider region is used.",
+		"region":               "The resource region. Read-only attribute that reflects the provider region.",
 	}
 
 	resp.Schema = schema.Schema{
