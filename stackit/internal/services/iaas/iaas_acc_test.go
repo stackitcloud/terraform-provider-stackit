@@ -19,6 +19,7 @@ import (
 const (
 	serverMachineType        = "t1.1"
 	updatedServerMachineType = "t1.2"
+	nicAttachTfName          = "second_network_interface"
 )
 
 // Network resource data
@@ -53,6 +54,7 @@ var networkInterfaceResource = map[string]string{
 	"project_id": testutil.ProjectId,
 	"network_id": networkResource["network_id"],
 	"name":       "name",
+	"tfName":     "network_interface",
 }
 
 // Volume resource data
@@ -200,14 +202,15 @@ func networkAreaRouteResourceConfig(labelValue string) string {
 	)
 }
 
-func networkInterfaceResourceConfig(name string) string {
+func networkInterfaceResourceConfig(resourceName, name string) string {
 	return fmt.Sprintf(`
-				resource "stackit_network_interface" "network_interface" {
+				resource "stackit_network_interface" "%s" {
 					project_id = stackit_network.network.project_id
 					network_id = stackit_network.network.network_id
 					name       = "%s"
 				}
 				`,
+		resourceName,
 		name,
 	)
 }
@@ -355,6 +358,19 @@ func imageResourceConfig(name string) string {
 	)
 }
 
+func networkInterfaceAttachmentResourceConfig(nicTfName string) string {
+	return fmt.Sprintf(`
+				resource "stackit_server_network_interface_attach" "attach_nic" {
+					project_id = "%s"
+					server_id = stackit_server.server.server_id
+					network_interface_id = stackit_network_interface.%s.network_interface_id
+				}
+			`,
+		testutil.ProjectId,
+		nicTfName,
+	)
+}
+
 func testAccNetworkAreaConfig(areaname, networkranges, routeLabelValue string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
@@ -370,13 +386,15 @@ func testAccVolumeConfig(name, size string) string {
 	)
 }
 
-func testAccServerConfig(name, nameservers, serverName, machineType, interfacename string) string {
-	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
+func testAccServerConfig(name, nameservers, serverName, machineType, nicTfName, interfacename string) string {
+	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		networkResourceConfig(name, nameservers),
 		serverResourceConfig(serverName, machineType),
 		volumeResourceConfig(volumeResource["name"], volumeResource["size"]),
-		networkInterfaceResourceConfig(interfacename),
+		networkInterfaceResourceConfig(nicTfName, interfacename),
+		networkInterfaceResourceConfig(nicAttachTfName, fmt.Sprintf("%s-%s", interfacename, nicAttachTfName)),
+		networkInterfaceAttachmentResourceConfig(nicAttachTfName),
 		volumeAttachmentResourceConfig(),
 		serviceAccountAttachmentResourceConfig(),
 	)
@@ -390,11 +408,11 @@ func resourceConfigSecurityGroup(name, direction string) string {
 	)
 }
 
-func testAccPublicIpConfig(nameNetwork, nameservers, nameNetworkInterface, publicIpResourceConfig string) string {
+func testAccPublicIpConfig(nameNetwork, nameservers, nicTfName, nameNetworkInterface, publicIpResourceConfig string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		networkResourceConfigRouted(nameNetwork, nameservers),
-		networkInterfaceResourceConfig(nameNetworkInterface),
+		networkInterfaceResourceConfig(nicTfName, nameNetworkInterface),
 		publicIpResourceConfig,
 	)
 }
@@ -659,6 +677,7 @@ func TestAccVolume(t *testing.T) {
 }
 
 func TestAccServer(t *testing.T) {
+	networkInterfaceSecSchemaName := fmt.Sprintf("stackit_network_interface.%s", nicAttachTfName)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckServerDestroy,
@@ -674,6 +693,7 @@ func TestAccServer(t *testing.T) {
 					),
 					serverResource["name"],
 					serverResource["machine_type"],
+					networkInterfaceResource["tfName"],
 					networkInterfaceResource["name"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -697,6 +717,9 @@ func TestAccServer(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_server.server", "labels.label1", serverResource["label1"]),
 					resource.TestCheckResourceAttr("stackit_server.server", "user_data", serverResource["user_data"]),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "network_interfaces.0"),
+					// The network interface which was attached by "stackit_server_network_interface_attach" should not appear here
+					resource.TestCheckResourceAttr("stackit_server.server", "network_interfaces.#", "1"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "network_interfaces.1"),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.size", serverResource["size"]),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", serverResource["source_type"]),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_id", serverResource["source_id"]),
@@ -713,6 +736,35 @@ func TestAccServer(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_interface_id"),
 					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "name", networkInterfaceResource["name"]),
+
+					// Network Interface second
+					resource.TestCheckResourceAttrPair(
+						networkInterfaceSecSchemaName, "project_id",
+						"stackit_network.network", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						networkInterfaceSecSchemaName, "network_id",
+						"stackit_network.network", "network_id",
+					),
+					resource.TestCheckResourceAttrSet(networkInterfaceSecSchemaName, "network_interface_id"),
+					resource.TestCheckResourceAttr(
+						networkInterfaceSecSchemaName, "name",
+						fmt.Sprintf("%s-%s", networkInterfaceResource["name"], nicAttachTfName),
+					),
+
+					// Network Interface Attachment
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_network_interface_attach.attach_nic", "project_id",
+						"stackit_network.network", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_network_interface_attach.attach_nic", "server_id",
+						"stackit_server.server", "server_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_network_interface_attach.attach_nic", "network_interface_id",
+						networkInterfaceSecSchemaName, "network_interface_id",
+					),
 
 					// Volume attachment
 					resource.TestCheckResourceAttrPair(
@@ -768,6 +820,7 @@ func TestAccServer(t *testing.T) {
 						),
 						serverResource["name"],
 						serverResource["machine_type"],
+						networkInterfaceResource["tfName"],
 						networkInterfaceResource["name"],
 					),
 				),
@@ -840,7 +893,7 @@ func TestAccServer(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"boot_volume", "user_data"}, // Field is not mapped as it is only relevant on creation
+				ImportStateVerifyIgnore: []string{"boot_volume", "user_data", "network_interfaces"}, // Field is not mapped as it is only relevant on creation
 			},
 			{
 				ResourceName: "stackit_network_interface.network_interface",
@@ -861,6 +914,46 @@ func TestAccServer(t *testing.T) {
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+			{
+				ResourceName: networkInterfaceSecSchemaName,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources[networkInterfaceSecSchemaName]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_network_interface.%s", nicAttachTfName)
+					}
+					networkId, ok := r.Primary.Attributes["network_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_id")
+					}
+					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_interface_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, networkId, networkInterfaceId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName: "stackit_server_network_interface_attach.attach_nic",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_server_network_interface_attach.attach_nic"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_network_interface.%s", nicAttachTfName)
+					}
+					serverId, ok := r.Primary.Attributes["server_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_id")
+					}
+					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_interface_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, serverId, networkInterfaceId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: false,
 			},
 			{
 				ResourceName: "stackit_server_volume_attach.attach_volume",
@@ -913,6 +1006,7 @@ func TestAccServer(t *testing.T) {
 					),
 					fmt.Sprintf("%s-updated", serverResource["name"]),
 					updatedServerMachineType,
+					networkInterfaceResource["tfName"],
 					fmt.Sprintf("%s-updated", networkInterfaceResource["name"]),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -950,6 +1044,35 @@ func TestAccServer(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_interface_id"),
 					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "name", fmt.Sprintf("%s-updated", networkInterfaceResource["name"])),
+
+					// Network Interface second
+					resource.TestCheckResourceAttrPair(
+						networkInterfaceSecSchemaName, "project_id",
+						"stackit_network.network", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						networkInterfaceSecSchemaName, "network_id",
+						"stackit_network.network", "network_id",
+					),
+					resource.TestCheckResourceAttrSet(networkInterfaceSecSchemaName, "network_interface_id"),
+					resource.TestCheckResourceAttr(
+						networkInterfaceSecSchemaName, "name",
+						fmt.Sprintf("%s-%s", fmt.Sprintf("%s-updated", networkInterfaceResource["name"]), nicAttachTfName),
+					),
+
+					// Network Interface Attachment
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_network_interface_attach.attach_nic", "project_id",
+						networkInterfaceSecSchemaName, "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_network_interface_attach.attach_nic", "server_id",
+						"stackit_server.server", "server_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_network_interface_attach.attach_nic", "network_interface_id",
+						networkInterfaceSecSchemaName, "network_interface_id",
+					),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -1107,6 +1230,7 @@ func TestAccPublicIp(t *testing.T) {
 						"[%q]",
 						networkResource["nameserver0"],
 					),
+					networkInterfaceResource["tfName"],
 					networkInterfaceResource["name"],
 					fmt.Sprintf(`
 						resource "stackit_public_ip" "public_ip" {
@@ -1146,6 +1270,7 @@ func TestAccPublicIp(t *testing.T) {
 							"[%q]",
 							networkResource["nameserver0"],
 						),
+						networkInterfaceResource["tfName"],
 						networkInterfaceResource["name"],
 						fmt.Sprintf(`
 								resource "stackit_public_ip" "public_ip" {
@@ -1198,6 +1323,7 @@ func TestAccPublicIp(t *testing.T) {
 						"[%q]",
 						networkResource["nameserver0"],
 					),
+					networkInterfaceResource["tfName"],
 					networkInterfaceResource["name"],
 					fmt.Sprintf(`
 								resource "stackit_public_ip" "public_ip" {
