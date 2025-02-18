@@ -84,7 +84,7 @@ func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
 		"url_path_style":           "URL in path style.",
 		"url_virtual_hosted_style": "URL in virtual hosted style.",
-		"region":                   "The resource region. If not defined, the provider region is used.",
+		"region":                   "The resource region. Read-only attribute that reflects the provider region.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -117,7 +117,8 @@ func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			},
 			"region": schema.StringAttribute{
 				// the region cannot be found automatically, so it has to be passed
-				Optional:    true,
+				Optional:    false,
+				Computed:    true,
 				Description: descriptions["region"],
 			},
 		},
