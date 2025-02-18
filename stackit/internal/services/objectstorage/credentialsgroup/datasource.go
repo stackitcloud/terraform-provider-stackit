@@ -117,7 +117,8 @@ func (r *credentialsGroupDataSource) Schema(_ context.Context, _ datasource.Sche
 			},
 			"region": schema.StringAttribute{
 				// the region cannot be found automatically, so it has to be passed
-				Optional:    true,
+				Optional:    false,
+				Computed:    true,
 				Description: descriptions["region"],
 			},
 		},

@@ -117,7 +117,8 @@ func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			},
 			"region": schema.StringAttribute{
 				// the region cannot be found automatically, so it has to be passed
-				Optional:    true,
+				Optional:    false,
+				Computed:    true,
 				Description: descriptions["region"],
 			},
 		},
