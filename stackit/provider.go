@@ -166,7 +166,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"service_enablement_custom_endpoint": "Custom endpoint for the Service Enablement API",
 		"token_custom_endpoint":              "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
 		"enable_beta_resources":              "Enable beta resources. Default is false.",
-		"experiments":                        fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", features.Available_experiments),
+		"experiments":                        fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", features.AvailableExperiments),
 	}
 
 	resp.Schema = schema.Schema{
@@ -403,6 +403,15 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.EnableBetaResources.IsUnknown() || providerConfig.EnableBetaResources.IsNull()) {
 		providerData.EnableBetaResources = providerConfig.EnableBetaResources.ValueBool()
 	}
+	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
+		var experimentValues []string
+		diags := providerConfig.Experiments.ElementsAs(ctx, &experimentValues, false)
+		if diags.HasError() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up experiments: %v", diags.Errors()))
+		}
+		providerData.Experiments = experimentValues
+	}
+
 	roundTripper, err := sdkauth.SetupAuth(sdkConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up authentication: %v", err))

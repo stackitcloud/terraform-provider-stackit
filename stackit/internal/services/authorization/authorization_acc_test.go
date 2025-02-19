@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackit_sdk_config "github.com/stackitcloud/stackit-sdk-go/core/config"
+	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -22,16 +22,16 @@ import (
 var prerequisites string
 
 //go:embed testfiles/double-definition.tf
-var double_definition string
+var doubleDefinition string
 
 //go:embed testfiles/project-owner.tf
-var project_owner string
+var projectOwner string
 
 //go:embed testfiles/invalid-role.tf
-var invalid_role string
+var invalidRole string
 
 //go:embed testfiles/organization-role.tf
-var organization_role string
+var organizationRole string
 
 var testConfigVars = config.Variables{
 	"project_id":           config.StringVariable(testutil.ProjectId),
@@ -71,24 +71,24 @@ func TestAccProjectRoleAssignmentResource(t *testing.T) {
 			{
 				// Assign a resource to an organization
 				ConfigVariables: testConfigVars,
-				Config:          testutil.AuthorizationProviderConfig() + prerequisites + organization_role,
+				Config:          testutil.AuthorizationProviderConfig() + prerequisites + organizationRole,
 			},
 			{
 				// The Service Account inherits owner permissions for the project from the organization. Check if you can still assign owner permissions on the project explicitly
 				ConfigVariables: testConfigVars,
-				Config:          testutil.AuthorizationProviderConfig() + prerequisites + organization_role + project_owner,
+				Config:          testutil.AuthorizationProviderConfig() + prerequisites + organizationRole + projectOwner,
 			},
 			{
 				// Expect failure on creating an already existing role_assignment
 				// Would be bad, since two resources could be created and deletion of one would lead to state drift for the second TF resource
 				ConfigVariables: testConfigVars,
-				Config:          testutil.AuthorizationProviderConfig() + prerequisites + double_definition,
+				Config:          testutil.AuthorizationProviderConfig() + prerequisites + doubleDefinition,
 				ExpectError:     regexp.MustCompile(".+"),
 			},
 			{
 				// Assign a non-existent role. Expect failure
 				ConfigVariables: testConfigVars,
-				Config:          testutil.AuthorizationProviderConfig() + prerequisites + invalid_role,
+				Config:          testutil.AuthorizationProviderConfig() + prerequisites + invalidRole,
 				ExpectError:     regexp.MustCompile(".+"),
 			},
 		},
@@ -100,11 +100,11 @@ func authApiClient() (*authorization.APIClient, error) {
 	var err error
 	if testutil.AuthorizationCustomEndpoint == "" {
 		client, err = authorization.NewAPIClient(
-			stackit_sdk_config.WithRegion("eu01"),
+			stackitSdkConfig.WithRegion("eu01"),
 		)
 	} else {
 		client, err = authorization.NewAPIClient(
-			stackit_sdk_config.WithEndpoint(testutil.AuthorizationCustomEndpoint),
+			stackitSdkConfig.WithEndpoint(testutil.AuthorizationCustomEndpoint),
 		)
 	}
 	if err != nil {

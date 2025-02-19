@@ -11,18 +11,18 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
-var Available_experiments []string = []string{"iam"}
+var AvailableExperiments []string = []string{"iam"}
 
 // Check if an experiment is valid.
 func ValidExperiment(experiment string, diags *diag.Diagnostics) bool {
-	valid_experiment := slices.ContainsFunc(Available_experiments, func(e string) bool {
+	validExperiment := slices.ContainsFunc(AvailableExperiments, func(e string) bool {
 		return strings.EqualFold(e, experiment)
 	})
-	if !valid_experiment {
-		diags.AddError("Invalid Experiment", fmt.Sprintf("The Experiment %s is invalid. This is most likely a bug in the STACKIT Provider. Please open an issue. Available Experiments: %v", experiment, Available_experiments))
+	if !validExperiment {
+		diags.AddError("Invalid Experiment", fmt.Sprintf("The Experiment %s is invalid. This is most likely a bug in the STACKIT Provider. Please open an issue. Available Experiments: %v", experiment, AvailableExperiments))
 	}
 
-	return valid_experiment
+	return validExperiment
 }
 
 // Check if an experiment is enabled.
@@ -30,11 +30,11 @@ func CheckExperimentEnabled(ctx context.Context, data *core.ProviderData, experi
 	if !ValidExperiment(experiment, diags) {
 		return
 	}
-	experiment_active := slices.ContainsFunc(data.Experiments, func(e string) bool {
+	experimentActive := slices.ContainsFunc(data.Experiments, func(e string) bool {
 		return strings.EqualFold(e, experiment)
 	})
 
-	if !experiment_active {
+	if experimentActive {
 		warnTitle := fmt.Sprintf("%s is part of the %s experiment.", resourceType, experiment)
 		warnContent := fmt.Sprintf("This resource is part of the %s experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.", experiment)
 		tflog.Warn(ctx, fmt.Sprintf("%s | %s", warnTitle, warnContent))

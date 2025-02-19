@@ -18,6 +18,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -26,6 +27,9 @@ var roleTargets = []string{
 	"project",
 	"organization",
 }
+
+// This resource is part of the "iam" experiment
+var experiment = "iam"
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -51,7 +55,7 @@ func NewRoleAssignmentResources() []func() resource.Resource {
 	for _, v := range roleTargets {
 		resources = append(resources, func() resource.Resource {
 			return &roleAssignmentResource{
-				api_name: v,
+				apiName: v,
 			}
 		})
 	}
@@ -61,12 +65,13 @@ func NewRoleAssignmentResources() []func() resource.Resource {
 // roleAssignmentResource is the resource implementation.
 type roleAssignmentResource struct {
 	authorizationClient *authorization.APIClient
-	api_name            string
+	apiName             string
+	experimentChecked   bool
 }
 
 // Metadata returns the resource type name.
 func (r *roleAssignmentResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = fmt.Sprintf("%s_authorization_%s_role_assignment", req.ProviderTypeName, r.api_name)
+	resp.TypeName = fmt.Sprintf("%s_authorization_%s_role_assignment", req.ProviderTypeName, r.apiName)
 }
 
 // Configure adds the provider configured client to the resource.
@@ -78,8 +83,16 @@ func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.Con
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring Authorization API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading providerData", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
+	}
+
+	if !r.experimentChecked {
+		features.CheckExperimentEnabled(ctx, &providerData, experiment, fmt.Sprintf("stackit_authorization_%s_role_assignment", r.apiName), &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		r.experimentChecked = true
 	}
 
 	var err error
@@ -103,15 +116,15 @@ func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.Con
 	}
 
 	r.authorizationClient = aClient
-	tflog.Info(ctx, fmt.Sprintf("Resource Manager %s Role Assignment client configured", r.api_name))
+	tflog.Info(ctx, fmt.Sprintf("Resource Manager %s Role Assignment client configured", r.apiName))
 }
 
 // Schema defines the schema for the resource.
 func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        fmt.Sprintf("%s Role Assignment resource schema.", r.api_name),
+		"main":        features.AddExperimentDescription(fmt.Sprintf("%s Role Assignment resource schema.", r.apiName), experiment),
 		"id":          "Terraform's internal resource identifier. It is structured as \"[resource_id],[role],[subject]\".",
-		"resource_id": fmt.Sprintf("%s Resource to assign the role to.", r.api_name),
+		"resource_id": fmt.Sprintf("%s Resource to assign the role to.", r.apiName),
 		"role":        "Role to be assigned",
 		"subject":     "Identifier of user, service account or client. Usually email address or name in case of clients",
 	}
@@ -179,14 +192,14 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	}
 	createResp, err := r.authorizationClient.AddMembers(ctx, model.ResourceId.ValueString()).AddMembersPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.api_name), fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.apiName), fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	// Map response body to schema
 	err = mapMembersResponse(createResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.api_name), fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.apiName), fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
@@ -194,7 +207,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, fmt.Sprintf("%s role assignment created", r.api_name))
+	tflog.Info(ctx, fmt.Sprintf("%s role assignment created", r.apiName))
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -208,7 +221,7 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 
 	ctx = r.annotateLogger(ctx, &model)
 
-	listResp, err := r.authorizationClient.ListMembers(ctx, r.api_name, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
+	listResp, err := r.authorizationClient.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading authorizations", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -227,7 +240,7 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, fmt.Sprintf("%s role assignment read successful", r.api_name))
+	tflog.Info(ctx, fmt.Sprintf("%s role assignment read successful", r.apiName))
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -247,7 +260,7 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 	ctx = r.annotateLogger(ctx, &model)
 
 	payload := authorization.RemoveMembersPayload{
-		ResourceType: &r.api_name,
+		ResourceType: &r.apiName,
 		Members: &[]authorization.Member{
 			*authorization.NewMember(model.Role.ValueStringPointer(), model.Subject.ValueStringPointer()),
 		},
@@ -256,10 +269,10 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 	// Delete existing project role assignment
 	_, err := r.authorizationClient.RemoveMembers(ctx, model.ResourceId.ValueString()).RemoveMembersPayload(payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error deleting %s role assignment", r.api_name), fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error deleting %s role assignment", r.apiName), fmt.Sprintf("Calling API: %v", err))
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("%s role assignment deleted", r.api_name))
+	tflog.Info(ctx, fmt.Sprintf("%s role assignment deleted", r.apiName))
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -268,7 +281,7 @@ func (r *roleAssignmentResource) ImportState(ctx context.Context, req resource.I
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			fmt.Sprintf("Error importing %s role assignment", r.api_name),
+			fmt.Sprintf("Error importing %s role assignment", r.apiName),
 			fmt.Sprintf("Expected import identifier with format [resource_id],[role],[subject], got %q", req.ID),
 		)
 		return
@@ -277,7 +290,7 @@ func (r *roleAssignmentResource) ImportState(ctx context.Context, req resource.I
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("subject"), idParts[2])...)
-	tflog.Info(ctx, fmt.Sprintf("%s role assignment state imported", r.api_name))
+	tflog.Info(ctx, fmt.Sprintf("%s role assignment state imported", r.apiName))
 }
 
 // Maps project role assignment fields to the provider's internal model.
@@ -342,7 +355,7 @@ func (r *roleAssignmentResource) toCreatePayload(model *Model) (*authorization.A
 	}
 
 	return &authorization.AddMembersPayload{
-		ResourceType: &r.api_name,
+		ResourceType: &r.apiName,
 		Members: &[]authorization.Member{
 			*authorization.NewMember(model.Role.ValueStringPointer(), model.Subject.ValueStringPointer()),
 		},
@@ -354,13 +367,13 @@ func (r *roleAssignmentResource) annotateLogger(ctx context.Context, model *Mode
 	ctx = tflog.SetField(ctx, "resource_id", resourceId)
 	ctx = tflog.SetField(ctx, "subject", model.Subject.ValueString())
 	ctx = tflog.SetField(ctx, "role", model.Role.ValueString())
-	ctx = tflog.SetField(ctx, "resource_type", r.api_name)
+	ctx = tflog.SetField(ctx, "resource_type", r.apiName)
 	return ctx
 }
 
 // returns an error if duplicate role assignment exists
 func (r *roleAssignmentResource) checkDuplicate(ctx context.Context, model Model) error { //nolint:gocritic // A read only copy is required since an api response is parsed into the model and this check should not affect the model parameter
-	listResp, err := r.authorizationClient.ListMembers(ctx, r.api_name, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
+	listResp, err := r.authorizationClient.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
 	if err != nil {
 		return err
 	}
