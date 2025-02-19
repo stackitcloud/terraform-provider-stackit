@@ -185,6 +185,12 @@ provider "stackit" {
 }
 ```
 
+### Available Experiments
+
+#### `iam`
+
+Enables IAM management features in the Terraform provider. The underlying IAM API is expected to undergo a redesign in the future, which leads to it being considered experimental.
+
 ## Acceptance Tests
 
 Terraform acceptance tests are run using the command `make test-acceptance-tf`. For all services,

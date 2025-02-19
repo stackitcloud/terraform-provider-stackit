@@ -381,11 +381,13 @@ func AuthorizationProviderConfig() string {
 		return `
 		provider "stackit" {
 			region = "eu01"
+			experiments = ["iam"]
 		}`
 	}
 	return fmt.Sprintf(`
 		provider "stackit" {
 			authorization_custom_endpoint = "%s"
+			experiments = ["iam"]
 		}`,
 		AuthorizationCustomEndpoint,
 	)

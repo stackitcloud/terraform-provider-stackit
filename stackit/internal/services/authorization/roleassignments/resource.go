@@ -18,6 +18,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -26,6 +27,9 @@ var roleTargets = []string{
 	"project",
 	"organization",
 }
+
+// This resource is part of the "iam" experiment
+var experiment = "iam"
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -62,6 +66,7 @@ func NewRoleAssignmentResources() []func() resource.Resource {
 type roleAssignmentResource struct {
 	authorizationClient *authorization.APIClient
 	api_name            string
+	experiment_checked  bool
 }
 
 // Metadata returns the resource type name.
@@ -78,8 +83,16 @@ func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.Con
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring Authorization API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading providerData", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
+	}
+
+	if !r.experiment_checked {
+		features.CheckExperimentEnabled(ctx, &providerData, experiment, fmt.Sprintf("stackit_authorization_%s_role_assignment", r.api_name), &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		r.experiment_checked = true
 	}
 
 	var err error
@@ -109,7 +122,7 @@ func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.Con
 // Schema defines the schema for the resource.
 func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        fmt.Sprintf("%s Role Assignment resource schema.", r.api_name),
+		"main":        features.AddExperimentDescription(fmt.Sprintf("%s Role Assignment resource schema.", r.api_name), experiment),
 		"id":          "Terraform's internal resource identifier. It is structured as \"[resource_id],[role],[subject]\".",
 		"resource_id": fmt.Sprintf("%s Resource to assign the role to.", r.api_name),
 		"role":        "Role to be assigned",
