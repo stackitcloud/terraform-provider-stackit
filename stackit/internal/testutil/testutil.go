@@ -48,7 +48,7 @@ var (
 	// Default email: acc-test@sa.stackit.cloud
 	TestProjectUserEmail = getenv("TF_ACC_TEST_PROJECT_USER_EMAIL", "acc-test@sa.stackit.cloud")
 	// TestImageLocalFilePath is the local path to an image file used for image acceptance tests
-	TestImageLocalFilePath = os.Getenv("TF_ACC_TEST_IMAGE_LOCAL_FILE_PATH")
+	TestImageLocalFilePath = getenv("TF_ACC_TEST_IMAGE_LOCAL_FILE_PATH", "default")
 
 	ArgusCustomEndpoint           = os.Getenv("TF_ACC_ARGUS_CUSTOM_ENDPOINT")
 	DnsCustomEndpoint             = os.Getenv("TF_ACC_DNS_CUSTOM_ENDPOINT")
@@ -431,4 +431,26 @@ func getenv(key, defaultValue string) string {
 		return defaultValue
 	}
 	return val
+}
+
+// helper for local_file_path
+// no real data is created
+func CreateDefaultLocalFile() os.File {
+	// Define the file name and size
+	fileName := "test-512k.img"
+	size := 512 * 1024 // 512 KB
+
+	// Create the file
+	file, err := os.Create(fileName)
+	if err != nil {
+		panic(err)
+	}
+
+	// Seek to the desired position (512 KB)
+	_, err = file.Seek(int64(size), 0)
+	if err != nil {
+		panic(err)
+	}
+
+	return *file
 }

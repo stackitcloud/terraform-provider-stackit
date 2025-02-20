@@ -3,6 +3,8 @@ package iaas_test
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -123,6 +125,9 @@ var imageResource = map[string]string{
 	"label1":          "value1",
 	"boot_menu":       "true",
 }
+
+// if no local file is provided the test should create a default file and work with this instead of failing
+var localFileForIaasImage os.File
 
 func networkResourceConfig(name, nameservers string) string {
 	return fmt.Sprintf(`
@@ -331,6 +336,14 @@ func serviceAccountAttachmentResourceConfig() string {
 }
 
 func imageResourceConfig(name string) string {
+	if imageResource["local_file_path"] == "default" {
+		localFileForIaasImage = testutil.CreateDefaultLocalFile()
+		filePath, err := filepath.Abs(localFileForIaasImage.Name())
+		if err != nil {
+			fmt.Println("Absolute path for localFileForIaasImage could not be retrieved.")
+		}
+		imageResource["local_file_path"] = filePath
+	}
 	return fmt.Sprintf(`
 				resource "stackit_image" "image" {
 					project_id = "%s"
@@ -1866,6 +1879,15 @@ func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *iaas.APIClient
 	var err error
+
+	if _, err := os.Stat(localFileForIaasImage.Name()); err == nil {
+		// file exists, delete it
+		err := os.Remove(localFileForIaasImage.Name())
+		if err != nil {
+			return fmt.Errorf("Error deleting localFileForIaasImage file: %w", err)
+		}
+	}
+
 	if testutil.IaaSCustomEndpoint == "" {
 		client, err = iaas.NewAPIClient(
 			config.WithRegion("eu01"),

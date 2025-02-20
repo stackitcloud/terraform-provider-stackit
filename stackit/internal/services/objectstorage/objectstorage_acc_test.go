@@ -192,8 +192,9 @@ func TestAccObjectStorageResource(t *testing.T) {
 
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, credentialsGroupId), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"region"},
 			},
 			{
 				ResourceName: "stackit_objectstorage_credential.credential",
@@ -214,7 +215,7 @@ func TestAccObjectStorageResource(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"access_key", "secret_access_key"},
+				ImportStateVerifyIgnore: []string{"access_key", "secret_access_key", "region"},
 			},
 			// Deletion is done by the framework implicitly
 		},
