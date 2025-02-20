@@ -86,8 +86,8 @@ github.com/hashicorp/terraform-exec v0.21.0 h1:uNkLAe95ey5Uux6KJdua6+cv8asgILFVW
 github.com/hashicorp/terraform-exec v0.21.0/go.mod h1:1PPeMYou+KDUSSeRE9szMZ/oHf4fYUmB923Wzbq1ICg=
 github.com/hashicorp/terraform-json v0.23.0 h1:sniCkExU4iKtTADReHzACkk8fnpQXrdD2xoR+lppBkI=
 github.com/hashicorp/terraform-json v0.23.0/go.mod h1:MHdXbBAbSg0GvzuWazEGKAn/cyNfIB7mN6y7KJN6y2c=
-github.com/hashicorp/terraform-plugin-framework v1.13.0 h1:8OTG4+oZUfKgnfTdPTJwZ532Bh2BobF4H+yBiYJ/scw=
-github.com/hashicorp/terraform-plugin-framework v1.13.0/go.mod h1:j64rwMGpgM3NYXTKuxrCnyubQb/4VKldEKlcG8cvmjU=
+github.com/hashicorp/terraform-plugin-framework v1.14.0 h1:lsmTJqBlZ4GUabnDxj8Lsa5bmbuUKiUO3Zm9iIKSDf0=
+github.com/hashicorp/terraform-plugin-framework v1.14.0/go.mod h1:xNUKmvTs6ldbwTuId5euAtg37dTxuyj3LHS3uj7BHQ4=
 github.com/hashicorp/terraform-plugin-framework-validators v0.16.0 h1:O9QqGoYDzQT7lwTXUsZEtgabeWW96zUBh47Smn2lkFA=
 github.com/hashicorp/terraform-plugin-framework-validators v0.16.0/go.mod h1:Bh89/hNmqsEWug4/XWKYBwtnw3tbz5BAy1L1OgvbIaY=
 github.com/hashicorp/terraform-plugin-go v0.26.0 h1:cuIzCv4qwigug3OS7iKhpGAbZTiypAfFQmw8aE65O2M=
@@ -153,8 +153,6 @@ github.com/skeema/knownhosts v1.2.2 h1:Iug2P4fLmDw9f41PB6thxUkNUkJzB5i+1/exaj40L
 github.com/skeema/knownhosts v1.2.2/go.mod h1:xYbVRSPxqBZFrdmDyMmsOs+uX1UZC3nTN3ThzgDxUwo=
 github.com/stackitcloud/stackit-sdk-go/core v0.15.1 h1:hIj/k/JXEuYmud3VWo3lr7Cfj2hfl4gG9nUIzcaZ9pM=
 github.com/stackitcloud/stackit-sdk-go/core v0.15.1/go.mod h1:mDX1mSTsB3mP+tNBGcFNx6gH1mGBN4T+dVt+lcw7nlw=
-github.com/stackitcloud/stackit-sdk-go/core v0.15.2-0.20250204115447-63b21f25e380 h1:qy9kkEavIBFi11ztFnj6w1suZtzSnXUAo0bMwqDrLJQ=
-github.com/stackitcloud/stackit-sdk-go/core v0.15.2-0.20250204115447-63b21f25e380/go.mod h1:mDX1mSTsB3mP+tNBGcFNx6gH1mGBN4T+dVt+lcw7nlw=
 github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0 h1:JVEx/ouHB6PlwGzQa3ywyDym1HTWo3WgrxAyXprCnuM=
 github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0/go.mod h1:nVllQfYODhX1q3bgwVTLO7wHOp+8NMLiKbn3u/Dg5nU=
 github.com/stackitcloud/stackit-sdk-go/services/authorization v0.5.1 h1:MAB7z8Hr6nCNdPCiLy5uNOJB+1R/eYFseFNEQUYK7qc=
