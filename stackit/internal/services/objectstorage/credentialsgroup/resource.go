@@ -249,6 +249,9 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 	ctx = tflog.SetField(ctx, "region", region)
+	if region == "" {
+		region = r.providerData.Region
+	}
 
 	found, err := readCredentialsGroups(ctx, &model, region, r.client)
 	if err != nil {
