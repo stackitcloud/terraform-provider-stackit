@@ -11,27 +11,27 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.26.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.11.0
-	github.com/stackitcloud/stackit-sdk-go/core v0.15.1
+	github.com/stackitcloud/stackit-sdk-go/core v0.16.0
 	github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.12.1
-	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.19.0
-	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.17.0
-	github.com/stackitcloud/stackit-sdk-go/services/logme v0.20.2
-	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.20.1
-	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.17.0
-	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.0.0
-	github.com/stackitcloud/stackit-sdk-go/services/observability v0.2.1
-	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.19.1
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.17.0
-	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.20.1
-	github.com/stackitcloud/stackit-sdk-go/services/redis v0.20.1
-	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.12.0
-	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.10.1
-	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.5.0
-	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v0.4.0
-	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v0.4.0
-	github.com/stackitcloud/stackit-sdk-go/services/ske v0.21.1
-	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.9.0
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.13.0
+	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.20.0
+	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.18.0
+	github.com/stackitcloud/stackit-sdk-go/services/logme v0.21.0
+	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.21.0
+	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.18.0
+	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.1.0
+	github.com/stackitcloud/stackit-sdk-go/services/observability v0.3.0
+	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.20.0
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v0.18.0
+	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.21.0
+	github.com/stackitcloud/stackit-sdk-go/services/redis v0.21.0
+	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.13.0
+	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.11.0
+	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.6.0
+	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v0.5.0
+	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v0.5.0
+	github.com/stackitcloud/stackit-sdk-go/services/ske v0.22.0
+	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v0.10.0
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.23.0
 )
@@ -74,7 +74,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
-	github.com/stackitcloud/stackit-sdk-go/services/authorization v0.5.1
+	github.com/stackitcloud/stackit-sdk-go/services/authorization v0.6.0
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
