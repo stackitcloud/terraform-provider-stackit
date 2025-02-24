@@ -115,11 +115,10 @@ func (r *credentialResource) modifyPlanExpiration(ctx context.Context, req *reso
 		return
 	}
 
-	var unsetTime time.Time
 	// replace the planned expiration time with the current state date, iff they represent
 	// the same point in time (but perhaps with different textual representation)
 	// this will prevent no-op updates
-	if stateDate.Equal(planDate) && !stateDate.Equal(unsetTime) {
+	if stateDate.Equal(planDate) && !stateDate.IsZero() {
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p, types.StringValue(stateDate.Format(time.RFC3339)))...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -308,7 +307,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	if !model.ExpirationTimestamp.IsUnknown() && !model.ExpirationTimestamp.IsNull() {
+	if !utils.IsUndefined(model.ExpirationTimestamp) {
 		var (
 			actualDate time.Time
 			planDate   time.Time
@@ -372,7 +371,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 		stateDate      time.Time
 	)
 
-	if !model.ExpirationTimestamp.IsUnknown() && !model.ExpirationTimestamp.IsNull() {
+	if !utils.IsUndefined(model.ExpirationTimestamp) {
 		resp.Diagnostics.Append(utils.ToTime(ctx, time.RFC3339, model.ExpirationTimestamp, &currentApiDate)...)
 		if resp.Diagnostics.HasError() {
 			return
