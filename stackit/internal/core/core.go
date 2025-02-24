@@ -39,6 +39,7 @@ type ProviderData struct {
 	SKECustomEndpoint               string
 	ServiceEnablementCustomEndpoint string
 	EnableBetaResources             bool
+	Experiments                     []string
 }
 
 // DiagsToError Converts TF diagnostics' errors into an error with a human-readable description.
