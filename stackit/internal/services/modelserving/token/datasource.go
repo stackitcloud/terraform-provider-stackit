@@ -3,12 +3,13 @@ package token
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/dns"
+	"github.com/stackitcloud/stackit-sdk-go/services/modelserving"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -25,7 +26,7 @@ func NewTokenDataSource() datasource.DataSource {
 
 // tokenDataSource is the data source implementation.
 type tokenDataSource struct {
-	client *dns.APIClient
+	client *modelserving.APIClient
 }
 
 // Metadata returns the data source type name.
@@ -59,16 +60,15 @@ func (d *tokenDataSource) Configure(
 		return
 	}
 
-	// TODO: Add correct client
-	var apiClient *dns.APIClient
+	var apiClient *modelserving.APIClient
 	var err error
 	if providerData.DnsCustomEndpoint != "" {
-		apiClient, err = dns.NewAPIClient(
+		apiClient, err = modelserving.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.DnsCustomEndpoint),
 		)
 	} else {
-		apiClient, err = dns.NewAPIClient(
+		apiClient, err = modelserving.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 		)
 	}
@@ -151,7 +151,7 @@ func (d *tokenDataSource) Schema(
 // Read refreshes the Terraform state with the latest data.
 func (d *tokenDataSource) Read(
 	ctx context.Context,
-	req datasource.ReadRequest,
+	req datasource.ReadRequest, //nolint:gocritic // function signature required by Terraform
 	resp *datasource.ReadResponse,
 ) { // nolint:gocritic // function signature required by Terraform
 	var model Model
@@ -169,20 +169,30 @@ func (d *tokenDataSource) Read(
 	ctx = tflog.SetField(ctx, "token_id", tokenId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// TODO: Add correct client
-	// recordSetResp, err := d.client.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
-	// if err != nil {
-	// 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Calling API: %v", err))
-	// 	return
-	// }
-	// if recordSetResp != nil && recordSetResp.Rrset.State != nil && *recordSetResp.Rrset.State == wait.DeleteSuccess {
-	// 	resp.State.RemoveResource(ctx)
-	// 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", "Record set was deleted successfully")
-	// 	return
-	// }
+	getTokenResp, err := d.client.GetToken(ctx, region, projectId, tokenId).Execute()
+	if err != nil {
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error reading model serving auth token",
+			fmt.Sprintf("Calling API: %v", err),
+		)
+		return
+	}
 
-	getTokenResp := &GetTokenResponse{}
-	err := mapGetResponse(getTokenResp, &model)
+	if getTokenResp != nil && getTokenResp.Token.State != nil &&
+		*getTokenResp.Token.State == inactiveState {
+		resp.State.RemoveResource(ctx)
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error reading model serving auth token",
+			"Model serving auth token has expired",
+		)
+		return
+	}
+
+	err = mapGetResponse(getTokenResp, &model)
 	if err != nil {
 		core.LogAndAddError(
 			ctx,

@@ -1,11 +1,16 @@
 package modelserving_test
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/services/modelserving"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -15,7 +20,7 @@ var tokenResource = map[string]string{
 	"name":                testutil.ResourceNameWithDateTime("token"),
 	"description":         "my description",
 	"description_updated": "my description updated",
-	"region":              "eu01",
+	"region":              testutil.Region,
 	"ttl_duration":        "1h",
 }
 
@@ -49,15 +54,44 @@ func TestAccModelServingTokenResource(t *testing.T) {
 			{
 				Config: inputTokenConfig(tokenResource["name"], tokenResource["description"]),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_model_serving_token.token", "project_id", tokenResource["project_id"]),
-					resource.TestCheckResourceAttr("stackit_model_serving_token.token", "region", tokenResource["region"]),
-					resource.TestCheckResourceAttr("stackit_model_serving_token.token", "name", tokenResource["name"]),
-					resource.TestCheckResourceAttr("stackit_model_serving_token.token", "description", tokenResource["description"]),
-					resource.TestCheckResourceAttr("stackit_model_serving_token.token", "ttl_duration", tokenResource["ttl_duration"]),
-					resource.TestCheckResourceAttrSet("stackit_model_serving_token.token", "token_id"),
+					resource.TestCheckResourceAttr(
+						"stackit_model_serving_token.token",
+						"project_id",
+						tokenResource["project_id"],
+					),
+					resource.TestCheckResourceAttr(
+						"stackit_model_serving_token.token",
+						"region",
+						tokenResource["region"],
+					),
+					resource.TestCheckResourceAttr(
+						"stackit_model_serving_token.token",
+						"name",
+						tokenResource["name"],
+					),
+					resource.TestCheckResourceAttr(
+						"stackit_model_serving_token.token",
+						"description",
+						tokenResource["description"],
+					),
+					resource.TestCheckResourceAttr(
+						"stackit_model_serving_token.token",
+						"ttl_duration",
+						tokenResource["ttl_duration"],
+					),
+					resource.TestCheckResourceAttrSet(
+						"stackit_model_serving_token.token",
+						"token_id",
+					),
 					resource.TestCheckResourceAttrSet("stackit_model_serving_token.token", "state"),
-					resource.TestCheckResourceAttrSet("stackit_model_serving_token.token", "validUntil"),
-					resource.TestCheckResourceAttrSet("stackit_model_serving_token.token", "content"),
+					resource.TestCheckResourceAttrSet(
+						"stackit_model_serving_token.token",
+						"validUntil",
+					),
+					resource.TestCheckResourceAttrSet(
+						"stackit_model_serving_token.token",
+						"content",
+					),
 				),
 			},
 			// Data Source
@@ -109,7 +143,9 @@ func TestAccModelServingTokenResource(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_model_serving_token.token"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_model_serving_token.token")
+						return "", fmt.Errorf(
+							"couldn't find resource stackit_model_serving_token.token",
+						)
 					}
 					tokenId, ok := r.Primary.Attributes["token_id"]
 					if !ok {
@@ -123,15 +159,40 @@ func TestAccModelServingTokenResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: inputTokenConfig(tokenResource["name"], tokenResource["description_updated"]),
+				Config: inputTokenConfig(
+					tokenResource["name"],
+					tokenResource["description_updated"],
+				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_model_serving_token.token", "project_id", tokenResource["project_id"]),
-					resource.TestCheckResourceAttr("stackit_model_serving_token.token", "region", tokenResource["region"]),
-					resource.TestCheckResourceAttr("stackit_model_serving_token.token", "name", tokenResource["name"]),
-					resource.TestCheckResourceAttr("stackit_model_serving_token.token", "description", tokenResource["description_updated"]),
-					resource.TestCheckResourceAttrSet("stackit_model_serving_token.token", "token_id"),
+					resource.TestCheckResourceAttr(
+						"stackit_model_serving_token.token",
+						"project_id",
+						tokenResource["project_id"],
+					),
+					resource.TestCheckResourceAttr(
+						"stackit_model_serving_token.token",
+						"region",
+						tokenResource["region"],
+					),
+					resource.TestCheckResourceAttr(
+						"stackit_model_serving_token.token",
+						"name",
+						tokenResource["name"],
+					),
+					resource.TestCheckResourceAttr(
+						"stackit_model_serving_token.token",
+						"description",
+						tokenResource["description_updated"],
+					),
+					resource.TestCheckResourceAttrSet(
+						"stackit_model_serving_token.token",
+						"token_id",
+					),
 					resource.TestCheckResourceAttrSet("stackit_model_serving_token.token", "state"),
-					resource.TestCheckResourceAttrSet("stackit_model_serving_token.token", "validUntil"),
+					resource.TestCheckResourceAttrSet(
+						"stackit_model_serving_token.token",
+						"validUntil",
+					),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -140,38 +201,37 @@ func TestAccModelServingTokenResource(t *testing.T) {
 }
 
 func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
-	// ctx := context.Background()
+	ctx := context.Background()
 
-	// TODO: Add correct client initialization and deletion check
-	// var client *modelserving.APIClient
-	// var err error
-	// if testutil.ModelServingCustomEndpoint == "" {
-	// 	client, err = modelserving.NewAPIClient()
-	// } else {
-	// 	client, err = modelserving.NewAPIClient(
-	// 		config.WithEndpoint(testutil.ModelServingCustomEndpoint),
-	// 	)
-	// }
-	// if err != nil {
-	// 	return fmt.Errorf("creating client: %w", err)
-	// }
+	var client *modelserving.APIClient
+	var err error
+	if testutil.ModelServingCustomEndpoint == "" {
+		client, err = modelserving.NewAPIClient()
+	} else {
+		client, err = modelserving.NewAPIClient(
+			config.WithEndpoint(testutil.ModelServingCustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
 
-	// for _, rs := range s.RootModule().Resources {
-	// 	if rs.Type != "stackit_model_serving_token" {
-	// 		continue
-	// 	}
-	// 	// Token terraform ID: "[projectId],[tokenId]"
-	// 	idParts := strings.Split(rs.Primary.ID, core.Separator)
-	// 	if len(idParts) != 2 {
-	// 		return fmt.Errorf("invalid ID: %s", rs.Primary.ID)
-	// 	}
-	// 	tokenId := idParts[1]
-	//
-	// 	_, err := client.GetToken(ctx, testutil.ProjectId, tokenId).Execute()
-	// 	if err == nil {
-	// 		return fmt.Errorf("token %s still exists", tokenId)
-	// 	}
-	// }
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_model_serving_token" {
+			continue
+		}
+		// Token terraform ID: "[projectId],[tokenId]"
+		idParts := strings.Split(rs.Primary.ID, core.Separator)
+		if len(idParts) != 2 {
+			return fmt.Errorf("invalid ID: %s", rs.Primary.ID)
+		}
+		tokenId := idParts[1]
+
+		_, err := client.GetToken(ctx, testutil.Region, testutil.ProjectId, tokenId).Execute()
+		if err == nil {
+			return fmt.Errorf("token %s still exists", tokenId)
+		}
+	}
 
 	return nil
 }

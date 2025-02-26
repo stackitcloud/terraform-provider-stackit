@@ -1,10 +1,13 @@
 package token
 
 import (
+	"testing"
+	"time"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"testing"
+	"github.com/stackitcloud/stackit-sdk-go/services/modelserving"
 )
 
 func TestMapGetTokenFields(t *testing.T) {
@@ -13,7 +16,7 @@ func TestMapGetTokenFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       *Model
-		input       *GetTokenResponse
+		input       *modelserving.GetTokenResponse
 		expected    Model
 		isValid     bool
 	}{
@@ -27,14 +30,14 @@ func TestMapGetTokenFields(t *testing.T) {
 		{
 			description: "should error when token is nil in response",
 			state:       &Model{},
-			input:       &GetTokenResponse{Token: nil},
+			input:       &modelserving.GetTokenResponse{Token: nil},
 			expected:    Model{},
 			isValid:     false,
 		},
 		{
 			description: "should error when state is nil in response",
 			state:       nil,
-			input:       &GetTokenResponse{Token: &Token{}},
+			input:       &modelserving.GetTokenResponse{Token: &modelserving.Token{}},
 			expected:    Model{},
 			isValid:     false,
 		},
@@ -45,10 +48,10 @@ func TestMapGetTokenFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				TokenId:   types.StringValue("tid"),
 			},
-			input: &GetTokenResponse{
-				Token: &Token{
-					ID:          utils.Ptr("tid"),
-					ValidUntil:  utils.Ptr("2021-01-01T00:00:00Z"),
+			input: &modelserving.GetTokenResponse{
+				Token: &modelserving.Token{
+					Id:          utils.Ptr("tid"),
+					ValidUntil:  utils.Ptr(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)),
 					State:       utils.Ptr("active"),
 					Name:        utils.Ptr("name"),
 					Description: utils.Ptr("desc"),
@@ -63,7 +66,7 @@ func TestMapGetTokenFields(t *testing.T) {
 				Name:        types.StringValue("name"),
 				Description: types.StringValue("desc"),
 				State:       types.StringValue("active"),
-				ValidUntil:  types.StringValue("2021-01-01T00:00:00Z"),
+				ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
 			},
 			isValid: true,
 		},
@@ -100,7 +103,7 @@ func TestMapUpdateTokenFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       *Model
-		input       *UpdateTokenResponse
+		input       *modelserving.UpdateTokenResponse
 		expected    Model
 		isValid     bool
 	}{
@@ -114,14 +117,14 @@ func TestMapUpdateTokenFields(t *testing.T) {
 		{
 			description: "should error when token is nil in response",
 			state:       &Model{},
-			input:       &UpdateTokenResponse{Token: nil},
+			input:       &modelserving.UpdateTokenResponse{Token: nil},
 			expected:    Model{},
 			isValid:     false,
 		},
 		{
 			description: "should error when state is nil in response",
 			state:       nil,
-			input:       &UpdateTokenResponse{Token: &Token{}},
+			input:       &modelserving.UpdateTokenResponse{Token: &modelserving.Token{}},
 			expected:    Model{},
 			isValid:     false,
 		},
@@ -132,10 +135,10 @@ func TestMapUpdateTokenFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				TokenId:   types.StringValue("tid"),
 			},
-			input: &UpdateTokenResponse{
-				Token: &Token{
-					ID:          utils.Ptr("tid"),
-					ValidUntil:  utils.Ptr("2021-01-01T00:00:00Z"),
+			input: &modelserving.UpdateTokenResponse{
+				Token: &modelserving.Token{
+					Id:          utils.Ptr("tid"),
+					ValidUntil:  utils.Ptr(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)),
 					State:       utils.Ptr("active"),
 					Name:        utils.Ptr("name"),
 					Description: utils.Ptr("desc"),
@@ -150,7 +153,7 @@ func TestMapUpdateTokenFields(t *testing.T) {
 				Name:        types.StringValue("name"),
 				Description: types.StringValue("desc"),
 				State:       types.StringValue("active"),
-				ValidUntil:  types.StringValue("2021-01-01T00:00:00Z"),
+				ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
 			},
 			isValid: true,
 		},
@@ -185,32 +188,59 @@ func TestMapCreateTokenFields(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		description string
-		state       *Model
-		input       *CreateTokenResponse
-		expected    Model
-		isValid     bool
+		description              string
+		state                    *Model
+		inputCreateTokenResponse *modelserving.CreateTokenResponse
+		inputGetTokenResponse    *modelserving.GetTokenResponse
+		expected                 Model
+		isValid                  bool
 	}{
 		{
-			description: "should error when response is nil",
-			state:       &Model{},
-			input:       nil,
-			expected:    Model{},
-			isValid:     false,
+			description:              "should error when create token response is nil",
+			state:                    &Model{},
+			inputCreateTokenResponse: nil,
+			inputGetTokenResponse:    nil,
+			expected:                 Model{},
+			isValid:                  false,
 		},
 		{
-			description: "should error when token is nil in response",
-			state:       &Model{},
-			input:       &CreateTokenResponse{Token: nil},
-			expected:    Model{},
-			isValid:     false,
+			description:              "should error when token is nil in create token response",
+			state:                    &Model{},
+			inputCreateTokenResponse: &modelserving.CreateTokenResponse{Token: nil},
+			inputGetTokenResponse:    nil,
+			expected:                 Model{},
+			isValid:                  false,
 		},
 		{
-			description: "should error when state is nil in response",
-			state:       nil,
-			input:       &CreateTokenResponse{Token: &TokenCreated{}},
-			expected:    Model{},
-			isValid:     false,
+			description: "should error when get token response is nil",
+			state:       &Model{},
+			inputCreateTokenResponse: &modelserving.CreateTokenResponse{
+				Token: &modelserving.TokenCreated{},
+			},
+			inputGetTokenResponse: nil,
+			expected:              Model{},
+			isValid:               false,
+		},
+		{
+			description: "should error when get token response is nil",
+			state: &Model{
+				Id:        types.StringValue("pid,tid"),
+				ProjectId: types.StringValue("pid"),
+			},
+			inputCreateTokenResponse: &modelserving.CreateTokenResponse{
+				Token: &modelserving.TokenCreated{
+					Id:          utils.Ptr("tid"),
+					ValidUntil:  utils.Ptr(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)),
+					State:       utils.Ptr("active"),
+					Name:        utils.Ptr("name"),
+					Description: utils.Ptr("desc"),
+					Region:      utils.Ptr("eu01"),
+					Content:     utils.Ptr("content"),
+				},
+			},
+			inputGetTokenResponse: nil,
+			expected:              Model{},
+			isValid:               false,
 		},
 		{
 			description: "should map fields correctly",
@@ -218,15 +248,20 @@ func TestMapCreateTokenFields(t *testing.T) {
 				Id:        types.StringValue("pid,tid"),
 				ProjectId: types.StringValue("pid"),
 			},
-			input: &CreateTokenResponse{
-				Token: &TokenCreated{
-					ID:          utils.Ptr("tid"),
-					ValidUntil:  utils.Ptr("2021-01-01T00:00:00Z"),
+			inputCreateTokenResponse: &modelserving.CreateTokenResponse{
+				Token: &modelserving.TokenCreated{
+					Id:          utils.Ptr("tid"),
+					ValidUntil:  utils.Ptr(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)),
 					State:       utils.Ptr("active"),
 					Name:        utils.Ptr("name"),
 					Description: utils.Ptr("desc"),
 					Region:      utils.Ptr("eu01"),
 					Content:     utils.Ptr("content"),
+				},
+			},
+			inputGetTokenResponse: &modelserving.GetTokenResponse{
+				Token: &modelserving.Token{
+					State: utils.Ptr("active"),
 				},
 			},
 			expected: Model{
@@ -237,7 +272,7 @@ func TestMapCreateTokenFields(t *testing.T) {
 				Name:        types.StringValue("name"),
 				Description: types.StringValue("desc"),
 				State:       types.StringValue("active"),
-				ValidUntil:  types.StringValue("2021-01-01T00:00:00Z"),
+				ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
 				Content:     types.StringValue("content"),
 			},
 			isValid: true,
@@ -250,7 +285,11 @@ func TestMapCreateTokenFields(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			t.Parallel()
 
-			err := mapCreateResponse(tt.input, tt.state)
+			err := mapCreateResponse(
+				tt.inputCreateTokenResponse,
+				tt.inputGetTokenResponse,
+				tt.state,
+			)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -275,7 +314,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *CreateTokenPayload
+		expected    *modelserving.CreateTokenPayload
 		isValid     bool
 	}{
 		{
@@ -291,10 +330,10 @@ func TestToCreatePayload(t *testing.T) {
 				Description: types.StringValue("desc"),
 				TTLDuration: types.StringValue("1h"),
 			},
-			expected: &CreateTokenPayload{
+			expected: &modelserving.CreateTokenPayload{
 				Name:        utils.Ptr("name"),
 				Description: utils.Ptr("desc"),
-				TTLDuration: utils.Ptr("1h"),
+				TtlDuration: utils.Ptr("1h"),
 			},
 			isValid: true,
 		},
@@ -331,7 +370,7 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *UpdateTokenPayload
+		expected    *modelserving.PartialUpdateTokenPayload
 		isValid     bool
 	}{
 		{
@@ -346,7 +385,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Name:        types.StringValue("name"),
 				Description: types.StringValue("desc"),
 			},
-			expected: &UpdateTokenPayload{
+			expected: &modelserving.PartialUpdateTokenPayload{
 				Name:        utils.Ptr("name"),
 				Description: utils.Ptr("desc"),
 			},

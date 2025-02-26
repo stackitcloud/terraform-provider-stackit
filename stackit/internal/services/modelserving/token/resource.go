@@ -2,8 +2,13 @@ package token
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
+
+	"github.com/stackitcloud/stackit-sdk-go/services/modelserving"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -12,7 +17,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/dns"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"github.com/stackitcloud/stackit-sdk-go/core/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -23,6 +29,11 @@ var (
 	_ resource.Resource                = &tokenResource{}
 	_ resource.ResourceWithConfigure   = &tokenResource{}
 	_ resource.ResourceWithImportState = &tokenResource{}
+)
+
+const (
+	inactiveState = "inactive"
+	activeState   = "active"
 )
 
 type Model struct {
@@ -45,16 +56,24 @@ func NewTokenResource() resource.Resource {
 
 // tokenResource is the resource implementation.
 type tokenResource struct {
-	client *dns.APIClient
+	client *modelserving.APIClient
 }
 
 // Metadata returns the resource type name.
-func (r *tokenResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *tokenResource) Metadata(
+	_ context.Context,
+	req resource.MetadataRequest,
+	resp *resource.MetadataResponse,
+) {
 	resp.TypeName = req.ProviderTypeName + "_model_serving_token"
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *tokenResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *tokenResource) Configure(
+	ctx context.Context,
+	req resource.ConfigureRequest,
+	resp *resource.ConfigureResponse,
+) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -62,35 +81,51 @@ func (r *tokenResource) Configure(ctx context.Context, req resource.ConfigureReq
 
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error configuring API client",
+			fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData),
+		)
 		return
 	}
 
-	// TODO: Add correct client
-	var apiClient *dns.APIClient
+	var apiClient *modelserving.APIClient
 	var err error
 	if providerData.DnsCustomEndpoint != "" {
-		apiClient, err = dns.NewAPIClient(
+		apiClient, err = modelserving.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.DnsCustomEndpoint),
 		)
 	} else {
-		apiClient, err = dns.NewAPIClient(
+		apiClient, err = modelserving.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 		)
 	}
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error configuring API client",
+			fmt.Sprintf(
+				"Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration",
+				err,
+			),
+		)
 		return
 	}
 
 	r.client = apiClient
-	tflog.Info(ctx, "DNS record set client configured")
+	tflog.Info(ctx, "Model-Serving auth token client configured")
 }
 
 // Schema defines the schema for the resource.
-func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *tokenResource) Schema(
+	_ context.Context,
+	_ resource.SchemaRequest,
+	resp *resource.SchemaResponse,
+) {
 	resp.Schema = schema.Schema{
 		Description: "Model Serving Auth Token Resource schema.",
 		Attributes: map[string]schema.Attribute{
@@ -143,7 +178,11 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *tokenResource) Create(
+	ctx context.Context,
+	req resource.CreateRequest, //nolint:gocritic // function signature required by Terraform
+	resp *resource.CreateResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -161,31 +200,50 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating model serving auth token", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error creating model serving auth token",
+			fmt.Sprintf("Creating API payload: %v", err),
+		)
 		return
 	}
 
 	// Create new model serving auth token
-	// TODO: Add correct client
-	println(payload)
-	// recordSetResp, err := r.client.CreateRecordSet(ctx, projectId, zoneId).CreateRecordSetPayload(*payload).Execute()
-	// if err != nil || recordSetResp.Rrset == nil || recordSetResp.Rrset.Id == nil {
-	// 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Calling API: %v", err))
-	// 	return
-	// }
-	// ctx = tflog.SetField(ctx, "record_set_id", *recordSetResp.Rrset.Id)
-	//
-	// waitResp, err := wait.CreateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, *recordSetResp.Rrset.Id).WaitWithContext(ctx)
-	// if err != nil {
-	// 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Instance creation waiting: %v", err))
-	// 	return
-	// }
+	createTokenResp, err := r.client.CreateToken(ctx, region, projectId).
+		CreateTokenPayload(*payload).
+		Execute()
+	if err != nil {
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error creating model serving auth token",
+			fmt.Sprintf("Calling API: %v", err),
+		)
+		return
+	}
+
+	waitResp, err := r.activeTokenHandler(ctx, projectId, *createTokenResp.Token.Id, region).
+		WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error creating model serving auth token",
+			fmt.Sprintf("Waiting for token to be active: %v", err),
+		)
+		return
+	}
 
 	// Map response body to schema
-	waitResp := &CreateTokenResponse{}
-	err = mapCreateResponse(waitResp, &model)
+	err = mapCreateResponse(createTokenResp, waitResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error creating model serving auth token",
+			fmt.Sprintf("Processing API payload: %v", err),
+		)
 		return
 	}
 
@@ -200,7 +258,11 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *tokenResource) Read(
+	ctx context.Context,
+	req resource.ReadRequest, //nolint:gocritic // function signature required by Terraform
+	resp *resource.ReadResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -216,22 +278,38 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	ctx = tflog.SetField(ctx, "token_id", tokenId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// TODO: Add correct client
-	// recordSetResp, err := r.client.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
-	// if err != nil {
-	// 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Calling API: %v", err))
-	// 	return
-	// }
-	// if recordSetResp != nil && recordSetResp.Rrset.State != nil && *recordSetResp.Rrset.State == wait.DeleteSuccess {
-	// 	resp.State.RemoveResource(ctx)
-	// 	return
-	// }
+	getTokenResp, err := r.client.GetToken(ctx, region, projectId, tokenId).Execute()
+	if err != nil {
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error reading model serving auth token",
+			fmt.Sprintf("Calling API: %v", err),
+		)
+		return
+	}
+
+	if getTokenResp != nil && getTokenResp.Token.State != nil &&
+		*getTokenResp.Token.State == inactiveState {
+		resp.State.RemoveResource(ctx)
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error reading model serving auth token",
+			"Model serving auth token has expired",
+		)
+		return
+	}
 
 	// Map response body to schema
-	getTokenResp := &GetTokenResponse{}
-	err := mapGetResponse(getTokenResp, &model)
+	err = mapGetResponse(getTokenResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error reading model serving auth token",
+			fmt.Sprintf("Processing API payload: %v", err),
+		)
 		return
 	}
 
@@ -246,7 +324,11 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *tokenResource) Update(
+	ctx context.Context,
+	req resource.UpdateRequest, //nolint:gocritic // function signature required by Terraform
+	resp *resource.UpdateResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -266,28 +348,49 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Generate API request body from model
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating model serving auth token", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error updating model serving auth token",
+			fmt.Sprintf("Creating API payload: %v", err),
+		)
 		return
 	}
 
 	// Update model serving auth token
-	// TODO: Add correct client
-	println(payload)
-	// _, err = r.client.PartialUpdateRecordSet(ctx, projectId, zoneId, recordSetId).PartialUpdateRecordSetPayload(*payload).Execute()
-	// if err != nil {
-	// 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", err.Error())
-	// 	return
-	// }
-	// waitResp, err := wait.PartialUpdateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
-	// if err != nil {
-	// 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Instance update waiting: %v", err))
-	// 	return
-	// }
-
-	waitResp := &UpdateTokenResponse{}
-	err = mapUpdateResponse(waitResp, &model)
+	updateTokenResp, err := r.client.PartialUpdateToken(ctx, region, projectId, tokenId).
+		PartialUpdateTokenPayload(*payload).
+		Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error updating model serving auth token",
+			fmt.Sprintf("Calling API: %v", err),
+		)
+		return
+	}
+
+	if updateTokenResp != nil && updateTokenResp.Token.State != nil &&
+		*updateTokenResp.Token.State == inactiveState {
+		resp.State.RemoveResource(ctx)
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error updating model serving auth token",
+			"Model serving auth token has expired",
+		)
+		return
+	}
+
+	err = mapUpdateResponse(updateTokenResp, &model)
+	if err != nil {
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error updating model serving auth token",
+			fmt.Sprintf("Processing API payload: %v", err),
+		)
 		return
 	}
 
@@ -301,7 +404,11 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *tokenResource) Delete(
+	ctx context.Context,
+	req resource.DeleteRequest, //nolint:gocritic // function signature required by Terraform
+	resp *resource.DeleteResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.State.Get(ctx, &model)
@@ -318,29 +425,49 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = tflog.SetField(ctx, "token_id", tokenId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// Delete existing model serving auth token
-	// TODO: Add correct client
-	// _, err := r.client.DeleteRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
-	// if err != nil {
-	// 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Calling API: %v", err))
-	// }
-	// _, err = wait.DeleteRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
-	// if err != nil {
-	// 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Instance deletion waiting: %v", err))
-	// 	return
-	// }
+	// Delete existing model serving auth token. We will ignore the state 'deleting' for now.
+	_, err := r.client.DeleteToken(ctx, region, projectId, tokenId).Execute()
+	if err != nil {
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error deleting model serving auth token",
+			fmt.Sprintf("Calling API: %v", err),
+		)
+		return
+	}
+
+	_, err = r.deleteTokenHandler(ctx, projectId, tokenId, region).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error deleting model serving auth token",
+			fmt.Sprintf("Waiting for token to be deleted: %v", err),
+		)
+		return
+	}
 
 	tflog.Info(ctx, "Model-Serving auth token deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: project_id,zone_id,record_set_id
-func (r *tokenResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *tokenResource) ImportState(
+	ctx context.Context,
+	req resource.ImportStateRequest,
+	resp *resource.ImportStateResponse,
+) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics,
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
 			"Error importing model serving auth token",
-			fmt.Sprintf("Expected import identifier with format [project_id],[token_id], got %q", req.ID),
+			fmt.Sprintf(
+				"Expected import identifier with format [project_id],[token_id], got %q",
+				req.ID,
+			),
 		)
 		return
 	}
@@ -351,21 +478,11 @@ func (r *tokenResource) ImportState(ctx context.Context, req resource.ImportStat
 	tflog.Info(ctx, "Model-Serving auth token state imported")
 }
 
-type CreateTokenResponse struct {
-	Token *TokenCreated `json:"token"`
-}
-
-type TokenCreated struct {
-	ID          *string `json:"id"`
-	Content     *string `json:"content"`
-	State       *string `json:"state"`
-	ValidUntil  *string `json:"validUntil"`
-	Name        *string `json:"name"`
-	Region      *string `json:"region"`
-	Description *string `json:"description"`
-}
-
-func mapCreateResponse(tokenCreateResp *CreateTokenResponse, model *Model) error {
+func mapCreateResponse(
+	tokenCreateResp *modelserving.CreateTokenResponse,
+	waitResp *modelserving.GetTokenResponse,
+	model *Model,
+) error {
 	if tokenCreateResp == nil || tokenCreateResp.Token == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -375,42 +492,38 @@ func mapCreateResponse(tokenCreateResp *CreateTokenResponse, model *Model) error
 
 	token := tokenCreateResp.Token
 
-	if token.ID == nil {
+	if token.Id == nil {
 		return fmt.Errorf("token id not present")
+	}
+
+	validUntil := time.Now().Format(time.RFC3339)
+	if token.ValidUntil != nil {
+		validUntil = token.ValidUntil.Format(time.RFC3339)
+	}
+
+	if waitResp == nil || waitResp.Token == nil || waitResp.Token.State == nil {
+		return fmt.Errorf("response input is nil")
 	}
 
 	idParts := []string{
 		model.ProjectId.ValueString(),
-		*tokenCreateResp.Token.ID,
+		*tokenCreateResp.Token.Id,
 	}
 	model.Id = types.StringValue(
 		strings.Join(idParts, core.Separator),
 	)
-	model.TokenId = types.StringPointerValue(token.ID)
+	model.TokenId = types.StringPointerValue(token.Id)
 	model.Name = types.StringPointerValue(token.Name)
 	model.Region = types.StringPointerValue(token.Region)
-	model.State = types.StringPointerValue(token.State)
-	model.ValidUntil = types.StringPointerValue(token.ValidUntil)
+	model.State = types.StringPointerValue(waitResp.Token.State)
+	model.ValidUntil = types.StringValue(validUntil)
 	model.Content = types.StringPointerValue(token.Content)
 	model.Description = types.StringPointerValue(token.Description)
 
 	return nil
 }
 
-type UpdateTokenResponse struct {
-	Token *Token
-}
-
-type Token struct {
-	ID          *string `json:"id"`
-	ValidUntil  *string `json:"validUntil"`
-	State       *string `json:"state"`
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
-	Region      *string `json:"region"`
-}
-
-func mapUpdateResponse(tokenUpdateResp *UpdateTokenResponse, model *Model) error {
+func mapUpdateResponse(tokenUpdateResp *modelserving.UpdateTokenResponse, model *Model) error {
 	if tokenUpdateResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -418,16 +531,18 @@ func mapUpdateResponse(tokenUpdateResp *UpdateTokenResponse, model *Model) error
 	return mapToken(tokenUpdateResp.Token, model)
 }
 
-type GetTokenResponse struct {
-	Token *Token
-}
-
-func mapToken(token *Token, model *Model) error {
+func mapToken(token *modelserving.Token, model *Model) error {
 	if token == nil {
 		return fmt.Errorf("response input is nil")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
+	}
+
+	// theoretically, should never happen, but still catch null pointers
+	validUntil := time.Now().Format(time.RFC3339)
+	if token.ValidUntil != nil {
+		validUntil = token.ValidUntil.Format(time.RFC3339)
 	}
 
 	idParts := []string{
@@ -437,17 +552,17 @@ func mapToken(token *Token, model *Model) error {
 	model.Id = types.StringValue(
 		strings.Join(idParts, core.Separator),
 	)
-	model.TokenId = types.StringPointerValue(token.ID)
+	model.TokenId = types.StringPointerValue(token.Id)
 	model.Name = types.StringPointerValue(token.Name)
 	model.Region = types.StringPointerValue(token.Region)
 	model.State = types.StringPointerValue(token.State)
-	model.ValidUntil = types.StringPointerValue(token.ValidUntil)
+	model.ValidUntil = types.StringValue(validUntil)
 	model.Description = types.StringPointerValue(token.Description)
 
 	return nil
 }
 
-func mapGetResponse(tokenGetResp *GetTokenResponse, model *Model) error {
+func mapGetResponse(tokenGetResp *modelserving.GetTokenResponse, model *Model) error {
 	if tokenGetResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -455,36 +570,82 @@ func mapGetResponse(tokenGetResp *GetTokenResponse, model *Model) error {
 	return mapToken(tokenGetResp.Token, model)
 }
 
-type CreateTokenPayload struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
-	TTLDuration *string `json:"ttl_duration"`
-}
-
-func toCreatePayload(model *Model) (*CreateTokenPayload, error) {
+func toCreatePayload(model *Model) (*modelserving.CreateTokenPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	return &CreateTokenPayload{
+	return &modelserving.CreateTokenPayload{
 		Name:        conversion.StringValueToPointer(model.Name),
 		Description: conversion.StringValueToPointer(model.Description),
-		TTLDuration: conversion.StringValueToPointer(model.TTLDuration),
+		TtlDuration: conversion.StringValueToPointer(model.TTLDuration),
 	}, nil
 }
 
-type UpdateTokenPayload struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
-}
-
-func toUpdatePayload(model *Model) (*UpdateTokenPayload, error) {
+func toUpdatePayload(model *Model) (*modelserving.PartialUpdateTokenPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	return &UpdateTokenPayload{
+	return &modelserving.PartialUpdateTokenPayload{
 		Name:        conversion.StringValueToPointer(model.Name),
 		Description: conversion.StringValueToPointer(model.Description),
 	}, nil
+}
+
+func (r *tokenResource) activeTokenHandler(
+	ctx context.Context,
+	projectId, tokenId, region string,
+) *wait.AsyncActionHandler[modelserving.GetTokenResponse] {
+	handler := wait.New(
+		func() (waitFinished bool, response *modelserving.GetTokenResponse, err error) {
+			getTokenResp, err := r.client.GetToken(ctx, region, projectId, tokenId).Execute()
+			if err != nil {
+				return false, nil, err
+			}
+			if getTokenResp.Token.State == nil {
+				return false, nil, fmt.Errorf(
+					"token state is missing for token with id %s",
+					tokenId,
+				)
+			}
+			if *getTokenResp.Token.State == activeState {
+				return true, getTokenResp, nil
+			}
+			return false, nil, nil
+		},
+	)
+
+	handler.SetTimeout(10 * time.Minute)
+
+	return handler
+}
+
+func (r *tokenResource) deleteTokenHandler(
+	ctx context.Context,
+	projectId, tokenId, region string,
+) *wait.AsyncActionHandler[modelserving.GetTokenResponse] {
+	handler := wait.New(
+		func() (waitFinished bool, response *modelserving.GetTokenResponse, err error) {
+			_, err = r.client.GetToken(ctx, region, projectId, tokenId).Execute()
+			if err != nil {
+				// check if error is not found -> token is deleted
+				// use errors.As
+				var oapiErr *oapierror.GenericOpenAPIError
+				if errors.As(err, &oapiErr) {
+					if oapiErr.StatusCode == http.StatusNotFound {
+						return true, nil, nil
+					}
+				}
+
+				return false, nil, err
+			}
+
+			return false, nil, nil
+		},
+	)
+
+	handler.SetTimeout(10 * time.Minute)
+
+	return handler
 }
