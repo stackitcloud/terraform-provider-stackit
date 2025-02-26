@@ -37,6 +37,7 @@ import (
 	logMeInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/instance"
 	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
 	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
+	modelServingToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelserving/token"
 	mongoDBFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/instance"
 	mongoDBFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/user"
 	objectStorageBucket "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/bucket"
@@ -431,6 +432,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		logMeCredential.NewCredentialDataSource,
 		mariaDBInstance.NewInstanceDataSource,
 		mariaDBCredential.NewCredentialDataSource,
+		modelServingToken.NewTokenDataSource,
 		mongoDBFlexInstance.NewInstanceDataSource,
 		mongoDBFlexUser.NewUserDataSource,
 		objectStorageBucket.NewBucketDataSource,
@@ -492,6 +494,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		logMeCredential.NewCredentialResource,
 		mariaDBInstance.NewInstanceResource,
 		mariaDBCredential.NewCredentialResource,
+		modelServingToken.NewTokenResource,
 		mongoDBFlexInstance.NewInstanceResource,
 		mongoDBFlexUser.NewUserResource,
 		objectStorageBucket.NewBucketResource,
