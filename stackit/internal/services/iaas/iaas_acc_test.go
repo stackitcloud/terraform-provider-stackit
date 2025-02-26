@@ -435,8 +435,11 @@ func testAccVolumeConfig(name, size string) string {
 
 func testAccServerConfig(name, nameservers, serverName, machineType, nicTfName, interfacename string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
+<<<<<<< HEAD
 func testAccServerConfig(name, nameservers, serverName, machineType, interfacename string) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
+=======
+>>>>>>> 19ab17b (fix: state drift of "stackit_server" (#679))
 		testutil.IaaSProviderConfig(),
 		networkResourceConfig(name, nameservers),
 		serverResourceConfig(serverName, machineType),
@@ -458,14 +461,20 @@ func resourceConfigSecurityGroup(name, direction string) string {
 }
 
 func testAccPublicIpConfig(nameNetwork, nameservers, nicTfName, nameNetworkInterface, publicIpResourceConfig string) string {
+<<<<<<< HEAD
 	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
 func testAccPublicIpConfig(nameNetwork, nameservers, nameNetworkInterface, publicIpResourceConfig string) string {
+=======
+>>>>>>> 19ab17b (fix: state drift of "stackit_server" (#679))
 	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		networkResourceConfigRouted(nameNetwork, nameservers),
 		networkInterfaceResourceConfig(nicTfName, nameNetworkInterface),
+<<<<<<< HEAD
 		networkResourceConfigRouted(nameNetwork, nameservers),
 		networkInterfaceResourceConfig(nameNetworkInterface),
+=======
+>>>>>>> 19ab17b (fix: state drift of "stackit_server" (#679))
 		publicIpResourceConfig,
 	)
 }
@@ -773,11 +782,14 @@ func TestAccServer(t *testing.T) {
 					// The network interface which was attached by "stackit_server_network_interface_attach" should not appear here
 					resource.TestCheckResourceAttr("stackit_server.server", "network_interfaces.#", "1"),
 					resource.TestCheckNoResourceAttr("stackit_server.server", "network_interfaces.1"),
+<<<<<<< HEAD
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.size", serverResource["size"]),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", serverResource["source_type"]),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_id", serverResource["source_id"]),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.delete_on_termination", serverResource["delete_on_termination"]),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "network_interfaces.0"),
+=======
+>>>>>>> 19ab17b (fix: state drift of "stackit_server" (#679))
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.size", serverResource["size"]),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", serverResource["source_type"]),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_id", serverResource["source_id"]),
@@ -1311,12 +1323,15 @@ func TestAccPublicIp(t *testing.T) {
 						networkResource["nameserver0"],
 					),
 					networkInterfaceResource["tfName"],
+<<<<<<< HEAD
 					networkInterfaceResource["name"],
 					networkResource["name"],
 					fmt.Sprintf(
 						"[%q]",
 						networkResource["nameserver0"],
 					),
+=======
+>>>>>>> 19ab17b (fix: state drift of "stackit_server" (#679))
 					networkInterfaceResource["name"],
 					fmt.Sprintf(`
 						resource "stackit_public_ip" "public_ip" {
@@ -1367,12 +1382,15 @@ func TestAccPublicIp(t *testing.T) {
 							networkResource["nameserver0"],
 						),
 						networkInterfaceResource["tfName"],
+<<<<<<< HEAD
 						networkInterfaceResource["name"],
 						networkResource["name"],
 						fmt.Sprintf(
 							"[%q]",
 							networkResource["nameserver0"],
 						),
+=======
+>>>>>>> 19ab17b (fix: state drift of "stackit_server" (#679))
 						networkInterfaceResource["name"],
 						fmt.Sprintf(`
 								resource "stackit_public_ip" "public_ip" {
@@ -1435,12 +1453,15 @@ func TestAccPublicIp(t *testing.T) {
 						networkResource["nameserver0"],
 					),
 					networkInterfaceResource["tfName"],
+<<<<<<< HEAD
 					networkInterfaceResource["name"],
 					networkResource["name"],
 					fmt.Sprintf(
 						"[%q]",
 						networkResource["nameserver0"],
 					),
+=======
+>>>>>>> 19ab17b (fix: state drift of "stackit_server" (#679))
 					networkInterfaceResource["name"],
 					fmt.Sprintf(`
 								resource "stackit_public_ip" "public_ip" {
