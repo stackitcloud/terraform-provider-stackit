@@ -18,6 +18,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.18.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.21.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.21.0
+	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.18.0
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.3.0
@@ -36,10 +37,7 @@ require (
 	golang.org/x/mod v0.23.0
 )
 
-require (
-	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
-	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.1.0 // indirect
-)
+require github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 
 require (
 	github.com/ProtonMail/go-crypto v1.1.0-alpha.2 // indirect
