@@ -62,10 +62,10 @@ func (d *tokenDataSource) Configure(
 
 	var apiClient *modelserving.APIClient
 	var err error
-	if providerData.DnsCustomEndpoint != "" {
+	if providerData.ModelServingCustomEndpoint != "" {
 		apiClient, err = modelserving.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.DnsCustomEndpoint),
+			config.WithEndpoint(providerData.ModelServingCustomEndpoint),
 		)
 	} else {
 		apiClient, err = modelserving.NewAPIClient(
