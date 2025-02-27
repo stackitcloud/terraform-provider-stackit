@@ -37,6 +37,7 @@ import (
 	logMeInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/instance"
 	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
 	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
+	modelServingToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelserving/token"
 	mongoDBFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/instance"
 	mongoDBFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/user"
 	objectStorageBucket "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/bucket"
@@ -90,7 +91,11 @@ func New(version string) func() provider.Provider {
 	}
 }
 
-func (p *Provider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
+func (p *Provider) Metadata(
+	_ context.Context,
+	_ provider.MetadataRequest,
+	resp *provider.MetadataResponse,
+) {
 	resp.TypeName = "stackit"
 	resp.Version = p.version
 }
@@ -109,6 +114,7 @@ type providerModel struct {
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
 	PostgresFlexCustomEndpoint      types.String `tfsdk:"postgresflex_custom_endpoint"`
 	MongoDBFlexCustomEndpoint       types.String `tfsdk:"mongodbflex_custom_endpoint"`
+	ModelServingCustomEndpoint      types.String `tfsdk:"modelserving_custom_endpoint"`
 	LoadBalancerCustomEndpoint      types.String `tfsdk:"loadbalancer_custom_endpoint"`
 	LogMeCustomEndpoint             types.String `tfsdk:"logme_custom_endpoint"`
 	RabbitMQCustomEndpoint          types.String `tfsdk:"rabbitmq_custom_endpoint"`
@@ -130,7 +136,11 @@ type providerModel struct {
 }
 
 // Schema defines the provider-level schema for configuration data.
-func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *Provider) Schema(
+	_ context.Context,
+	_ provider.SchemaRequest,
+	resp *provider.SchemaResponse,
+) {
 	descriptions := map[string]string{
 		"credentials_path":                   "Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.",
 		"service_account_token":              "Token used for authentication. If set, the token flow will be used to authenticate all operations.",
@@ -144,6 +154,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"dns_custom_endpoint":                "Custom endpoint for the DNS service",
 		"iaas_custom_endpoint":               "Custom endpoint for the IaaS service",
 		"mongodbflex_custom_endpoint":        "Custom endpoint for the MongoDB Flex service",
+		"modelserving_custom_endpoint":       "Custom endpoint for the Model Serving service",
 		"loadbalancer_custom_endpoint":       "Custom endpoint for the Load Balancer service",
 		"logme_custom_endpoint":              "Custom endpoint for the LogMe service",
 		"rabbitmq_custom_endpoint":           "Custom endpoint for the RabbitMQ service",
@@ -220,6 +231,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"mariadb_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["mariadb_custom_endpoint"],
+			},
+			"modelserving_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["modelserving_custom_endpoint"],
 			},
 			"authorization_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -298,7 +313,11 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 }
 
 // Configure prepares a stackit API client for data sources and resources.
-func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+func (p *Provider) Configure(
+	ctx context.Context,
+	req provider.ConfigureRequest,
+	resp *provider.ConfigureResponse,
+) {
 	// Retrieve provider data and configuration
 	var providerConfig providerModel
 	diags := req.Config.Get(ctx, &providerConfig)
@@ -342,6 +361,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	}
 	if !(providerConfig.PostgresFlexCustomEndpoint.IsUnknown() || providerConfig.PostgresFlexCustomEndpoint.IsNull()) {
 		providerData.PostgresFlexCustomEndpoint = providerConfig.PostgresFlexCustomEndpoint.ValueString()
+	}
+	if !(providerConfig.ModelServingCustomEndpoint.IsUnknown() || providerConfig.ModelServingCustomEndpoint.IsNull()) {
+		providerData.ModelServingCustomEndpoint = providerConfig.ModelServingCustomEndpoint.ValueString()
 	}
 	if !(providerConfig.MongoDBFlexCustomEndpoint.IsUnknown() || providerConfig.MongoDBFlexCustomEndpoint.IsNull()) {
 		providerData.MongoDBFlexCustomEndpoint = providerConfig.MongoDBFlexCustomEndpoint.ValueString()
@@ -396,7 +418,12 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	}
 	roundTripper, err := sdkauth.SetupAuth(sdkConfig)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up authentication: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error configuring provider",
+			fmt.Sprintf("Setting up authentication: %v", err),
+		)
 		return
 	}
 
@@ -431,6 +458,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		logMeCredential.NewCredentialDataSource,
 		mariaDBInstance.NewInstanceDataSource,
 		mariaDBCredential.NewCredentialDataSource,
+		modelServingToken.NewTokenDataSource,
 		mongoDBFlexInstance.NewInstanceDataSource,
 		mongoDBFlexUser.NewUserDataSource,
 		objectStorageBucket.NewBucketDataSource,
@@ -492,6 +520,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		logMeCredential.NewCredentialResource,
 		mariaDBInstance.NewInstanceResource,
 		mariaDBCredential.NewCredentialResource,
+		modelServingToken.NewTokenResource,
 		mongoDBFlexInstance.NewInstanceResource,
 		mongoDBFlexUser.NewUserResource,
 		objectStorageBucket.NewBucketResource,
