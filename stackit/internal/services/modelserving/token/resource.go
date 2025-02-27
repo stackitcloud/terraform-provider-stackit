@@ -65,7 +65,7 @@ func (r *tokenResource) Metadata(
 	req resource.MetadataRequest,
 	resp *resource.MetadataResponse,
 ) {
-	resp.TypeName = req.ProviderTypeName + "_model_serving_token"
+	resp.TypeName = req.ProviderTypeName + "_modelserving_token"
 }
 
 // Configure adds the provider configured client to the resource.
@@ -95,7 +95,7 @@ func (r *tokenResource) Configure(
 	if providerData.ModelServingCustomEndpoint != "" {
 		ctx = tflog.SetField(
 			ctx,
-			"model_serving_custom_endpoint",
+			"modelserving_custom_endpoint",
 			providerData.ModelServingCustomEndpoint,
 		)
 		apiClient, err = modelserving.NewAPIClient(

@@ -35,7 +35,7 @@ func (d *tokenDataSource) Metadata(
 	req datasource.MetadataRequest,
 	resp *datasource.MetadataResponse,
 ) {
-	resp.TypeName = req.ProviderTypeName + "_model_serving_token"
+	resp.TypeName = req.ProviderTypeName + "_modelserving_token"
 }
 
 // Configure adds the provider configured client to the data source.

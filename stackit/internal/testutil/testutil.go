@@ -192,7 +192,7 @@ func ModelServingProviderConfig() string {
 	}
 	return fmt.Sprintf(`
 		provider "stackit" {
-			model_serving_custom_endpoint = "%s"
+			modelserving_custom_endpoint = "%s"
 		}`,
 		ModelServingCustomEndpoint,
 	)
