@@ -106,7 +106,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 		"instance_id": "ID of the SQLServer Flex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
 		"username":    "Username of the SQLServer Flex instance.",
-		"roles":       "Database access levels for the user. Possible values: [`##STACKIT_LoginManager##`, `##STACKIT_DatabaseManager##`]",
+		"roles":       "Database access levels for the user. Possible values: [`##STACKIT_DatabaseManager##`, `##STACKIT_LoginManager##`, `##STACKIT_ProcessManager##`, `##STACKIT_ServerManager##`, `##STACKIT_SQLAgentManager##`, `##STACKIT_SQLAgentUser##`]",
 		"password":    "Password of the user account.",
 	}
 
@@ -171,7 +171,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 				Validators: []validator.Set{
 					setvalidator.ValueStringsAre(
-						stringvalidator.OneOf("##STACKIT_LoginManager##", "##STACKIT_DatabaseManager##"),
+						stringvalidator.OneOf("##STACKIT_DatabaseManager##", "##STACKIT_LoginManager##", "##STACKIT_ProcessManager##", "##STACKIT_ServerManager##", "##STACKIT_SQLAgentManager##", "##STACKIT_SQLAgentUser##"),
 					),
 				},
 			},
