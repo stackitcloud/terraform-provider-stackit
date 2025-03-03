@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -20,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 )
 
 // publicIpRangesDataSourceBetaCheckDone is used to prevent multiple checks for beta resources.
@@ -40,7 +40,7 @@ func NewPublicIpRangesDataSource() datasource.DataSource {
 
 // publicIpRangesDataSource is the data source implementation.
 type publicIpRangesDataSource struct {
-	alphaclient *iaasalpha.APIClient
+	client *iaas.APIClient
 }
 
 type Model struct {
@@ -77,15 +77,15 @@ func (d *publicIpRangesDataSource) Configure(ctx context.Context, req datasource
 		publicIpRangesDataSourceBetaCheckDone = true
 	}
 
-	var apiClient *iaasalpha.APIClient
+	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.IaaSCustomEndpoint),
 		)
 	} else {
-		apiClient, err = iaasalpha.NewAPIClient(
+		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithRegion(providerData.Region),
 		)
@@ -95,7 +95,7 @@ func (d *publicIpRangesDataSource) Configure(ctx context.Context, req datasource
 		return
 	}
 
-	d.alphaclient = apiClient
+	d.client = apiClient
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -142,7 +142,7 @@ func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.Read
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	publicIpRangeResp, err := d.alphaclient.ListPublicIPRangesExecute(ctx)
+	publicIpRangeResp, err := d.client.ListPublicIpRangesExecute(ctx)
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -167,7 +167,7 @@ func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.Read
 	tflog.Info(ctx, "read public IP ranges")
 }
 
-func mapFields(ctx context.Context, publicIpRangeResp *iaasalpha.PublicNetworkListResponse, model *Model) error {
+func mapFields(ctx context.Context, publicIpRangeResp *iaas.PublicNetworkListResponse, model *Model) error {
 	if publicIpRangeResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -183,7 +183,7 @@ func mapFields(ctx context.Context, publicIpRangeResp *iaasalpha.PublicNetworkLi
 }
 
 // mapPublicIpRanges map the response publicIpRanges to the model
-func mapPublicIpRanges(_ context.Context, publicIpRanges *[]iaasalpha.PublicNetwork, model *Model) error {
+func mapPublicIpRanges(_ context.Context, publicIpRanges *[]iaas.PublicNetwork, model *Model) error {
 	if publicIpRanges == nil {
 		return fmt.Errorf("publicIpRanges input is nil")
 	}
