@@ -42,7 +42,11 @@ var userResource = map[string]string{
 	"project_id": instanceResource["project_id"],
 }
 
-func configResources(backupSchedule string) string {
+func configResources(backupSchedule string, region *string) string {
+	var regionConfig string
+	if region != nil {
+		regionConfig = fmt.Sprintf(`region = "%s"`, *region)
+	}
 	return fmt.Sprintf(`
 				%s
 
@@ -63,6 +67,7 @@ func configResources(backupSchedule string) string {
 						retention_days = %s
 					}
 					backup_schedule = "%s"
+					%s
 				}
 
                 resource "stackit_sqlserverflex_user" "user" {
@@ -70,6 +75,7 @@ func configResources(backupSchedule string) string {
 					instance_id = stackit_sqlserverflex_instance.instance.instance_id
 					username = "%s"
 					roles = ["%s"]
+					%s
 				}
 				`,
 		testutil.SQLServerFlexProviderConfig(),
@@ -83,19 +89,22 @@ func configResources(backupSchedule string) string {
 		instanceResource["version"],
 		instanceResource["options_retention_days"],
 		backupSchedule,
+		regionConfig,
 		userResource["username"],
 		userResource["role"],
+		regionConfig,
 	)
 }
 
 func TestAccSQLServerFlexResource(t *testing.T) {
+	testRegion := utils.Ptr("eu01")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccChecksqlserverflexDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: configResources(instanceResource["backup_schedule"]),
+				Config: configResources(instanceResource["backup_schedule"], testRegion),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "project_id", instanceResource["project_id"]),
@@ -113,6 +122,41 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "options.retention_days", instanceResource["options_retention_days"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "region", *testRegion),
+					// User
+					resource.TestCheckResourceAttrPair(
+						"stackit_sqlserverflex_user.user", "project_id",
+						"stackit_sqlserverflex_instance.instance", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_sqlserverflex_user.user", "instance_id",
+						"stackit_sqlserverflex_instance.instance", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_user.user", "user_id"),
+					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_user.user", "password"),
+				),
+			},
+			// Update
+			{
+				Config: configResources(instanceResource["backup_schedule"], nil),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_instance.instance", "instance_id"),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "acl.#", "1"),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "acl.0", instanceResource["acl"]),
+					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_instance.instance", "flavor.id"),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "flavor.description", instanceResource["flavor_description"]),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "replicas", instanceResource["replicas"]),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "flavor.cpu", instanceResource["flavor_cpu"]),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "flavor.ram", instanceResource["flavor_ram"]),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "storage.class", instanceResource["storage_class"]),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "storage.size", instanceResource["storage_size"]),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "version", instanceResource["version"]),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "options.retention_days", instanceResource["options_retention_days"]),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "region", testutil.Region),
 					// User
 					resource.TestCheckResourceAttrPair(
 						"stackit_sqlserverflex_user.user", "project_id",
@@ -142,7 +186,7 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 						user_id        = stackit_sqlserverflex_user.user.user_id
 					}
 					`,
-					configResources(instanceResource["backup_schedule"]),
+					configResources(instanceResource["backup_schedule"], nil),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -233,7 +277,7 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: configResources(instanceResource["backup_schedule_updated"]),
+				Config: configResources(instanceResource["backup_schedule_updated"], nil),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "project_id", instanceResource["project_id"]),
@@ -263,9 +307,7 @@ func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 	var client *sqlserverflex.APIClient
 	var err error
 	if testutil.SQLServerFlexCustomEndpoint == "" {
-		client, err = sqlserverflex.NewAPIClient(
-			config.WithRegion("eu01"),
-		)
+		client, err = sqlserverflex.NewAPIClient()
 	} else {
 		client, err = sqlserverflex.NewAPIClient(
 			config.WithEndpoint(testutil.SQLServerFlexCustomEndpoint),
@@ -285,7 +327,7 @@ func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
@@ -296,11 +338,11 @@ func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 			continue
 		}
 		if utils.Contains(instancesToDestroy, *items[i].Id) {
-			err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *items[i].Id)
+			err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *items[i].Id, testutil.Region)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *items[i].Id, err)
 			}
-			_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *items[i].Id).WaitWithContext(ctx)
+			_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *items[i].Id, testutil.Region).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
 			}

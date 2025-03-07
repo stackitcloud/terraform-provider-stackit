@@ -11,9 +11,11 @@ import (
 )
 
 func TestMapDataSourceFields(t *testing.T) {
+	const testRegion = "region"
 	tests := []struct {
 		description string
 		input       *sqlserverflex.GetUserResponse
+		region      string
 		expected    DataSourceModel
 		isValid     bool
 	}{
@@ -22,6 +24,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			&sqlserverflex.GetUserResponse{
 				Item: &sqlserverflex.UserResponseUser{},
 			},
+			"",
 			DataSourceModel{
 				Id:         types.StringValue("pid,iid,uid"),
 				UserId:     types.StringValue("uid"),
@@ -31,6 +34,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Roles:      types.SetNull(types.StringType),
 				Host:       types.StringNull(),
 				Port:       types.Int64Null(),
+				Region:     types.StringValue(""),
 			},
 			true,
 		},
@@ -48,6 +52,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					Port:     utils.Ptr(int64(1234)),
 				},
 			},
+			testRegion,
 			DataSourceModel{
 				Id:         types.StringValue("pid,iid,uid"),
 				UserId:     types.StringValue("uid"),
@@ -59,8 +64,9 @@ func TestMapDataSourceFields(t *testing.T) {
 					types.StringValue("role_2"),
 					types.StringValue(""),
 				}),
-				Host: types.StringValue("host"),
-				Port: types.Int64Value(1234),
+				Host:   types.StringValue("host"),
+				Port:   types.Int64Value(1234),
+				Region: types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -75,6 +81,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					Port:     utils.Ptr(int64(2123456789)),
 				},
 			},
+			testRegion,
 			DataSourceModel{
 				Id:         types.StringValue("pid,iid,uid"),
 				UserId:     types.StringValue("uid"),
@@ -84,18 +91,21 @@ func TestMapDataSourceFields(t *testing.T) {
 				Roles:      types.SetValueMust(types.StringType, []attr.Value{}),
 				Host:       types.StringNull(),
 				Port:       types.Int64Value(2123456789),
+				Region:     types.StringValue(testRegion),
 			},
 			true,
 		},
 		{
 			"nil_response",
 			nil,
+			testRegion,
 			DataSourceModel{},
 			false,
 		},
 		{
 			"nil_response_2",
 			&sqlserverflex.GetUserResponse{},
+			testRegion,
 			DataSourceModel{},
 			false,
 		},
@@ -104,6 +114,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			&sqlserverflex.GetUserResponse{
 				Item: &sqlserverflex.UserResponseUser{},
 			},
+			testRegion,
 			DataSourceModel{},
 			false,
 		},
@@ -115,7 +126,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				InstanceId: tt.expected.InstanceId,
 				UserId:     tt.expected.UserId,
 			}
-			err := mapDataSourceFields(tt.input, state)
+			err := mapDataSourceFields(tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
