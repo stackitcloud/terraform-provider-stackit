@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -30,6 +31,7 @@ var (
 	_ resource.Resource                = &userResource{}
 	_ resource.ResourceWithConfigure   = &userResource{}
 	_ resource.ResourceWithImportState = &userResource{}
+	_ resource.ResourceWithModifyPlan  = &userResource{}
 )
 
 type Model struct {
@@ -42,6 +44,7 @@ type Model struct {
 	Password   types.String `tfsdk:"password"`
 	Host       types.String `tfsdk:"host"`
 	Port       types.Int64  `tfsdk:"port"`
+	Region     types.String `tfsdk:"region"`
 }
 
 // NewUserResource is a helper function to simplify the provider implementation.
@@ -51,7 +54,8 @@ func NewUserResource() resource.Resource {
 
 // userResource is the resource implementation.
 type userResource struct {
-	client *sqlserverflex.APIClient
+	client       *sqlserverflex.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -66,7 +70,8 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -74,15 +79,15 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 
 	var apiClient *sqlserverflex.APIClient
 	var err error
-	if providerData.SQLServerFlexCustomEndpoint != "" {
+	if r.providerData.SQLServerFlexCustomEndpoint != "" {
 		apiClient, err = sqlserverflex.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.SQLServerFlexCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.SQLServerFlexCustomEndpoint),
 		)
 	} else {
 		apiClient, err = sqlserverflex.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithRegion(r.providerData.Region),
 		)
 	}
 
@@ -93,6 +98,36 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 
 	r.client = apiClient
 	tflog.Info(ctx, "SQLServer Flex user client configured")
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.Region, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Schema defines the schema for the resource.
@@ -179,6 +214,15 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"port": schema.Int64Attribute{
 				Computed: true,
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -193,8 +237,11 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	var roles []string
 	if !(model.Roles.IsNull() || model.Roles.IsUnknown()) {
@@ -212,7 +259,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	// Create new user
-	userResp, err := r.client.CreateUser(ctx, projectId, instanceId).CreateUserPayload(*payload).Execute()
+	userResp, err := r.client.CreateUser(ctx, projectId, instanceId, region).CreateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -225,7 +272,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
 	// Map response body to schema
-	err = mapFieldsCreate(userResp, &model)
+	err = mapFieldsCreate(userResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -250,11 +297,13 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	recordSetResp, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
+	recordSetResp, err := r.client.GetUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -266,7 +315,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	// Map response body to schema
-	err = mapFields(recordSetResp, &model)
+	err = mapFields(recordSetResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -300,12 +349,14 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing record set
-	err := r.client.DeleteUser(ctx, projectId, instanceId, userId).Execute()
+	err := r.client.DeleteUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -335,7 +386,7 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 	tflog.Info(ctx, "SQLServer Flex user state imported")
 }
 
-func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model) error {
+func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model, region string) error {
 	if userResp == nil || userResp.Item == nil {
 		return fmt.Errorf("response is nil")
 	}
@@ -382,10 +433,11 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model) e
 
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
+	model.Region = types.StringValue(region)
 	return nil
 }
 
-func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model) error {
+func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model, region string) error {
 	if userResp == nil || userResp.Item == nil {
 		return fmt.Errorf("response is nil")
 	}
@@ -431,6 +483,7 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model) error {
 
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
+	model.Region = types.StringValue(region)
 	return nil
 }
 

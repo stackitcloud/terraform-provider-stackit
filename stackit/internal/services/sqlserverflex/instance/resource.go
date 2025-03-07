@@ -41,6 +41,7 @@ var (
 	_ resource.Resource                = &instanceResource{}
 	_ resource.ResourceWithConfigure   = &instanceResource{}
 	_ resource.ResourceWithImportState = &instanceResource{}
+	_ resource.ResourceWithModifyPlan  = &instanceResource{}
 )
 
 type Model struct {
@@ -55,6 +56,7 @@ type Model struct {
 	Version        types.String `tfsdk:"version"`
 	Replicas       types.Int64  `tfsdk:"replicas"`
 	Options        types.Object `tfsdk:"options"`
+	Region         types.String `tfsdk:"region"`
 }
 
 // Struct corresponding to Model.Flavor
@@ -104,7 +106,8 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client *sqlserverflex.APIClient
+	client       *sqlserverflex.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -119,7 +122,8 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -127,15 +131,15 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 
 	var apiClient *sqlserverflex.APIClient
 	var err error
-	if providerData.SQLServerFlexCustomEndpoint != "" {
+	if r.providerData.SQLServerFlexCustomEndpoint != "" {
 		apiClient, err = sqlserverflex.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.SQLServerFlexCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.SQLServerFlexCustomEndpoint),
 		)
 	} else {
 		apiClient, err = sqlserverflex.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithRegion(r.providerData.Region),
 		)
 	}
 
@@ -146,6 +150,36 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 
 	r.client = apiClient
 	tflog.Info(ctx, "SQLServer Flex instance client configured")
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.Region, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Schema defines the schema for the resource.
@@ -159,6 +193,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"acl":             "The Access Control List (ACL) for the SQLServer Flex instance.",
 		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *")`,
 		"options":         "Custom parameters for the SQLServer Flex instance.",
+		"region":          "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -308,6 +343,15 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 				},
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -322,7 +366,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	var acl []string
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
@@ -370,7 +416,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
+	createResp, err := r.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -379,14 +425,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	// The creation waiter sometimes returns an error from the API: "instance with id xxx has unexpected status Failure"
 	// which can be avoided by sleeping before wait
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetSleepBeforeWait(30 * time.Second).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).SetSleepBeforeWait(30 * time.Second).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, flavor, storage, options)
+	err = mapFields(ctx, waitResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -415,8 +461,11 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	var flavor = &flavorModel{}
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
@@ -444,7 +493,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		}
 	}
 
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -456,7 +505,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, instanceResp, &model, flavor, storage, options)
+	err = mapFields(ctx, instanceResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -481,8 +530,11 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	var acl []string
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
@@ -530,19 +582,19 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	_, err = r.client.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
+	_, err = r.client.PartialUpdateInstance(ctx, projectId, instanceId, region).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
 	}
-	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, flavor, storage, options)
+	err = mapFields(ctx, waitResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -566,16 +618,18 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	}
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing instance
-	err := r.client.DeleteInstance(ctx, projectId, instanceId).Execute()
+	err := r.client.DeleteInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -601,7 +655,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "SQLServer Flex instance state imported")
 }
 
-func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, model *Model, flavor *flavorModel, storage *storageModel, options *optionsModel) error {
+func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, model *Model, flavor *flavorModel, storage *storageModel, options *optionsModel, region string) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -734,6 +788,7 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 	model.Storage = storageObject
 	model.Version = types.StringPointerValue(instance.Version)
 	model.Options = optionsObject
+	model.Region = types.StringValue(region)
 	return nil
 }
 
@@ -797,7 +852,7 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel) (*sqlserve
 }
 
 type sqlserverflexClient interface {
-	ListFlavorsExecute(ctx context.Context, projectId string) (*sqlserverflex.ListFlavorsResponse, error)
+	ListFlavorsExecute(ctx context.Context, projectId, region string) (*sqlserverflex.ListFlavorsResponse, error)
 }
 
 func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model, flavor *flavorModel) error {
@@ -817,7 +872,8 @@ func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model,
 	}
 
 	projectId := model.ProjectId.ValueString()
-	res, err := client.ListFlavorsExecute(ctx, projectId)
+	region := model.Region.ValueString()
+	res, err := client.ListFlavorsExecute(ctx, projectId, region)
 	if err != nil {
 		return fmt.Errorf("listing sqlserverflex flavors: %w", err)
 	}
