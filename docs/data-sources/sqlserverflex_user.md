@@ -29,6 +29,10 @@ data "stackit_sqlserverflex_user" "example" {
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 - `user_id` (String) User ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `host` (String)

@@ -27,6 +27,10 @@ data "stackit_sqlserverflex_instance" "example" {
 - `instance_id` (String) ID of the SQLServer Flex instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `acl` (List of String) The Access Control List (ACL) for the SQLServer Flex instance.

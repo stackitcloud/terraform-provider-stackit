@@ -174,7 +174,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					},
 				},
 			},
-			"region": schema.SingleNestedAttribute{
+			"region": schema.StringAttribute{
 				// the region cannot be found, so it has to be passed
 				Optional:    true,
 				Description: descriptions["region"],
