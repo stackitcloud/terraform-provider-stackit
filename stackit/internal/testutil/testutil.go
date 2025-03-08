@@ -404,23 +404,6 @@ func AuthorizationProviderConfig() string {
 	)
 }
 
-func ServiceAccountProviderConfig() string {
-	if ServiceAccountCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			region = "eu01"
-			enable_beta_resources = true
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			service_account_custom_endpoint = "%s"
-			enable_beta_resources = true
-		}`,
-		ServiceAccountCustomEndpoint,
-	)
-}
-
 func ResourceNameWithDateTime(name string) string {
 	dateTime := time.Now().Format(time.RFC3339)
 	// Remove timezone to have a smaller datetime
