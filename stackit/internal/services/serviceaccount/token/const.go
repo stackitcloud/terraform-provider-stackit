@@ -16,14 +16,11 @@ resource "time_rotating" "rotate" {
   rotation_days = 80
 }
 
-// The access token is valid for 180 days but is configured to rotate every 80 days
-// when a Terraform apply is triggered.
 resource "stackit_service_account_access_token" "sa1" {
   project_id            = var.stackit_project_id
   service_account_email = stackit_service_account.sa.email
   ttl_days              = 180
 
-  // Trigger token rotation based on time_rotating changes.
   rotate_when_changed = {
     rotation = time_rotating.rotate.id
   }

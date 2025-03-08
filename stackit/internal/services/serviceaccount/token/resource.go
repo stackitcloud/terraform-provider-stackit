@@ -2,7 +2,9 @@ package token
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -19,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -46,6 +49,7 @@ type Model struct {
 	TtlDays             types.Int64  `tfsdk:"ttl_days"`
 	RotateWhenChanged   types.Map    `tfsdk:"rotate_when_changed"`
 	Token               types.String `tfsdk:"token"`
+	Active              types.Bool   `tfsdk:"active"`
 	CreatedAt           types.String `tfsdk:"created_at"`
 	ValidUntil          types.String `tfsdk:"valid_until"`
 }
@@ -122,6 +126,7 @@ func (r *serviceAccountTokenResource) Schema(_ context.Context, _ resource.Schem
 		"rotate_when_changed":   "A map of arbitrary key/value pairs that will force recreation of the token when they change, enabling token rotation based on external conditions such as a rotating timestamp. Changing this forces a new resource to be created.",
 		"access_token_id":       "Identifier for the access token linked to the service account.",
 		"token":                 "JWT access token for API authentication. Prefixed by 'Bearer' and should be stored securely as it is irretrievable once lost.",
+		"active":                "Indicate whether the token is currently active or inactive",
 		"created_at":            "Timestamp indicating when the access token was created.",
 		"valid_until":           "Estimated expiration timestamp of the access token. For precise validity, check the JWT details.",
 	}
@@ -182,7 +187,10 @@ func (r *serviceAccountTokenResource) Schema(_ context.Context, _ resource.Schem
 				Computed:    true,
 				Sensitive:   true,
 			},
-
+			"active": schema.BoolAttribute{
+				Description: descriptions["active"],
+				Computed:    true,
+			},
 			"created_at": schema.StringAttribute{
 				Description: descriptions["created_at"],
 				Computed:    true,
@@ -259,6 +267,12 @@ func (r *serviceAccountTokenResource) Read(ctx context.Context, req resource.Rea
 	// Fetch the list of service account tokens from the API.
 	listSaTokensResp, err := r.client.ListAccessTokens(ctx, projectId, serviceAccountEmail).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account tokens", fmt.Sprintf("Error calling API: %v", err))
 		return
 	}
@@ -268,6 +282,12 @@ func (r *serviceAccountTokenResource) Read(ctx context.Context, req resource.Rea
 	for i := range saTokens {
 		if *saTokens[i].Id != model.AccessTokenId.ValueString() {
 			continue
+		}
+
+		if !*saTokens[i].Active {
+			tflog.Info(ctx, fmt.Sprintf("Service account access token with id %s is not active", model.AccessTokenId.ValueString()))
+			resp.State.RemoveResource(ctx)
+			return
 		}
 
 		err = mapListResponse(&saTokens[i], &model)
@@ -365,6 +385,7 @@ func mapCreateResponse(resp *serviceaccount.AccessToken, model *Model) error {
 	model.Id = types.StringValue(strings.Join(idParts, core.Separator))
 	model.AccessTokenId = types.StringPointerValue(resp.Id)
 	model.Token = types.StringPointerValue(resp.Token)
+	model.Active = types.BoolPointerValue(resp.Active)
 	model.CreatedAt = createdAt
 	model.ValidUntil = validUntil
 
