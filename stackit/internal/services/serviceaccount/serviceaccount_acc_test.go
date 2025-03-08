@@ -60,7 +60,7 @@ func TestServiceAccount(t *testing.T) {
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckServiceAccountDestroy,
 		Steps: []resource.TestStep{
-			// Creation
+			// Create
 			{
 				Config: inputServiceAccountResourceConfig(serviceAccountResource["name01"]),
 				Check: resource.ComposeAggregateTestCheckFunc(
