@@ -28,6 +28,9 @@ func ValidExperiment(experiment string, diags *diag.Diagnostics) bool {
 // Check if an experiment is enabled.
 func CheckExperimentEnabled(ctx context.Context, data *core.ProviderData, experiment, resourceType string, diags *diag.Diagnostics) {
 	if !ValidExperiment(experiment, diags) {
+		errTitle := fmt.Sprintf("The experiment %s does not exist.", experiment)
+		errContent := "This is a bug in the STACKIT Terraform Provider. Please open an issue here: https://github.com/stackitcloud/terraform-provider-stackit/issues"
+		diags.AddError(errTitle, errContent)
 		return
 	}
 	experimentActive := slices.ContainsFunc(data.Experiments, func(e string) bool {
