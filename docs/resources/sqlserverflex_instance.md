@@ -51,7 +51,7 @@ resource "stackit_sqlserverflex_instance" "example" {
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`".
 - `instance_id` (String) ID of the SQLServer Flex instance.
 - `replicas` (Number)
 

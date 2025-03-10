@@ -82,7 +82,7 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":            "SQLServer Flex instance data source schema. Must have a `region` specified in the provider configuration.",
-		"id":              "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`\".",
+		"id":              "Terraform's internal data source. ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"instance_id":     "ID of the SQLServer Flex instance.",
 		"project_id":      "STACKIT project ID to which the instance is associated.",
 		"name":            "Instance name.",

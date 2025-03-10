@@ -29,7 +29,7 @@ func TestMapFieldsCreate(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -60,7 +60,7 @@ func TestMapFieldsCreate(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -91,7 +91,7 @@ func TestMapFieldsCreate(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -178,7 +178,7 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -206,7 +206,7 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -235,7 +235,7 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),

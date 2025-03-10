@@ -52,7 +52,7 @@ func TestMapFields(t *testing.T) {
 			&optionsModel{},
 			testRegion,
 			Model{
-				Id:             types.StringValue("pid,iid"),
+				Id:             types.StringValue("pid,region,iid"),
 				InstanceId:     types.StringValue("iid"),
 				ProjectId:      types.StringValue("pid"),
 				Name:           types.StringNull(),
@@ -120,7 +120,7 @@ func TestMapFields(t *testing.T) {
 			&optionsModel{},
 			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid"),
+				Id:         types.StringValue("pid,region,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("name"),
@@ -193,7 +193,7 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid"),
+				Id:         types.StringValue("pid,region,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("name"),
@@ -268,7 +268,7 @@ func TestMapFields(t *testing.T) {
 			&optionsModel{},
 			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid"),
+				Id:         types.StringValue("pid,region,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("name"),

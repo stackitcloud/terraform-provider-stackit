@@ -24,9 +24,9 @@ func TestMapDataSourceFields(t *testing.T) {
 			&sqlserverflex.GetUserResponse{
 				Item: &sqlserverflex.UserResponseUser{},
 			},
-			"",
+			testRegion,
 			DataSourceModel{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -34,7 +34,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Roles:      types.SetNull(types.StringType),
 				Host:       types.StringNull(),
 				Port:       types.Int64Null(),
-				Region:     types.StringValue(""),
+				Region:     types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -54,7 +54,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			},
 			testRegion,
 			DataSourceModel{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -83,7 +83,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			},
 			testRegion,
 			DataSourceModel{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),

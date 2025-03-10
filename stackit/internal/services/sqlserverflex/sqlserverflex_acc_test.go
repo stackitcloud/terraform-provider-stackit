@@ -238,7 +238,7 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
 
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId), nil
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
@@ -269,7 +269,7 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 						return "", fmt.Errorf("couldn't find attribute user_id")
 					}
 
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, userId), nil
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId, userId), nil
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
@@ -322,7 +322,7 @@ func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_sqlserverflex_instance" {
 			continue
 		}
-		// instance terraform ID: = "[project_id],[instance_id]"
+		// instance terraform ID: = "[project_id],[region],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}

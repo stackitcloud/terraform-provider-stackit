@@ -186,7 +186,7 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":            "SQLServer Flex instance resource schema. Must have a `region` specified in the provider configuration.",
-		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
+		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"instance_id":     "ID of the SQLServer Flex instance.",
 		"project_id":      "STACKIT project ID to which the instance is associated.",
 		"name":            "Instance name.",
@@ -645,16 +645,17 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing instance",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[instance_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[instance_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
 	tflog.Info(ctx, "SQLServer Flex instance state imported")
 }
 
@@ -778,6 +779,7 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 
 	idParts := []string{
 		model.ProjectId.ValueString(),
+		region,
 		instanceId,
 	}
 	model.Id = types.StringValue(

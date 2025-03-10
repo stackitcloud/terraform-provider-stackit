@@ -134,7 +134,7 @@ func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRe
 func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "SQLServer Flex user resource schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
+		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the SQLServer Flex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
@@ -371,17 +371,18 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 // The expected format of the resource import identifier is: project_id,zone_id,record_set_id
 func (r *userResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing user",
-			fmt.Sprintf("Expected import identifier with format [project_id],[instance_id],[user_id], got %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id],[user_id], got %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), idParts[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), idParts[3])...)
 	core.LogAndAddWarning(ctx, &resp.Diagnostics,
 		"SQLServer Flex user imported with empty password",
 		"The user password is not imported as it is only available upon creation of a new user. The password field will be empty.",
@@ -404,6 +405,7 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model, r
 	userId := *user.Id
 	idParts := []string{
 		model.ProjectId.ValueString(),
+		region,
 		model.InstanceId.ValueString(),
 		userId,
 	}
@@ -459,6 +461,7 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model, region str
 	}
 	idParts := []string{
 		model.ProjectId.ValueString(),
+		region,
 		model.InstanceId.ValueString(),
 		userId,
 	}
