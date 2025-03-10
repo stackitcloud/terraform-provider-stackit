@@ -45,7 +45,7 @@ var userResource = map[string]string{
 func configResources(backupSchedule string, region *string) string {
 	var regionConfig string
 	if region != nil {
-		regionConfig = fmt.Sprintf(`region = "%s"`, *region)
+		regionConfig = fmt.Sprintf(`region = %q`, *region)
 	}
 	return fmt.Sprintf(`
 				%s
