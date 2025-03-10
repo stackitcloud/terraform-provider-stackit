@@ -1,4 +1,4 @@
-package serviceAccount
+package account
 
 import (
 	"github.com/google/go-cmp/cmp"

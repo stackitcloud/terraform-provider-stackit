@@ -21,7 +21,7 @@ Schema for a STACKIT service account resource.
 ### Required
 
 - `name` (String) Name of the service account.
-- `project_id` (String) STACKIT project ID to which the instance is associated.
+- `project_id` (String) STACKIT project ID to which the service account is associated.
 
 ### Read-Only
 

@@ -1,4 +1,4 @@
-package serviceAccount
+package account
 
 import (
 	"context"
@@ -109,7 +109,7 @@ func (r *serviceAccountResource) Metadata(_ context.Context, req resource.Metada
 func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"id":         "Terraform's internal resource ID, structured as \"project_id,email\".",
-		"project_id": "STACKIT project ID to which the instance is associated.",
+		"project_id": "STACKIT project ID to which the service account is associated.",
 		"name":       "Name of the service account.",
 		"email":      "Email of the service account.",
 	}

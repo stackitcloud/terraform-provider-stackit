@@ -1,4 +1,4 @@
-package serviceAccount
+package account
 
 import (
 	"context"
@@ -14,11 +14,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
-
-// publicIpDataSourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var publicIpDataSourceBetaCheckDone bool
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -87,7 +82,7 @@ func (r *serviceAccountDataSource) Metadata(_ context.Context, req datasource.Me
 func (r *serviceAccountDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"id":         "Terraform's internal resource ID, structured as \"project_id,email\".",
-		"project_id": "STACKIT project ID to which the instance is associated.",
+		"project_id": "STACKIT project ID to which the service account is associated.",
 		"name":       "Name of the service account.",
 		"email":      "Email of the service account.",
 	}
@@ -159,7 +154,7 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 
 		// Try to parse the name from the provided email address
 		name, err := parseNameFromEmail(model.Email.ValueString())
-		if err == nil {
+		if name != "" && err == nil {
 			model.Name = types.StringValue(name)
 		}
 
