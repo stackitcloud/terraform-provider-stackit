@@ -60,6 +60,7 @@ import (
 	secretsManagerUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/user"
 	serverBackupSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/schedule"
 	serverUpdateSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/schedule"
+	serviceAccount "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/account"
 	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
 	skeProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/project"
@@ -124,6 +125,7 @@ type providerModel struct {
 	SKECustomEndpoint               types.String `tfsdk:"ske_custom_endpoint"`
 	ServerBackupCustomEndpoint      types.String `tfsdk:"server_backup_custom_endpoint"`
 	ServerUpdateCustomEndpoint      types.String `tfsdk:"server_update_custom_endpoint"`
+	ServiceAccountCustomEndpoint    types.String `tfsdk:"service_account_custom_endpoint"`
 	ResourceManagerCustomEndpoint   types.String `tfsdk:"resourcemanager_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
 	EnableBetaResources             types.Bool   `tfsdk:"enable_beta_resources"`
@@ -157,6 +159,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"redis_custom_endpoint":              "Custom endpoint for the Redis service",
 		"server_backup_custom_endpoint":      "Custom endpoint for the Server Backup service",
 		"server_update_custom_endpoint":      "Custom endpoint for the Server Update service",
+		"service_account_custom_endpoint":    "Custom endpoint for the Service Account service",
 		"resourcemanager_custom_endpoint":    "Custom endpoint for the Resource Manager service",
 		"secretsmanager_custom_endpoint":     "Custom endpoint for the Secrets Manager service",
 		"sqlserverflex_custom_endpoint":      "Custom endpoint for the SQL Server Flex service",
@@ -282,6 +285,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["server_update_custom_endpoint"],
 			},
+			"service_account_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["service_account_custom_endpoint"],
+			},
 			"service_enablement_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["service_enablement_custom_endpoint"],
@@ -383,6 +390,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.SQLServerFlexCustomEndpoint.IsUnknown() || providerConfig.SQLServerFlexCustomEndpoint.IsNull()) {
 		providerData.SQLServerFlexCustomEndpoint = providerConfig.SQLServerFlexCustomEndpoint.ValueString()
 	}
+	if !(providerConfig.ServiceAccountCustomEndpoint.IsUnknown() || providerConfig.ServiceAccountCustomEndpoint.IsNull()) {
+		providerData.ServiceAccountCustomEndpoint = providerConfig.ServiceAccountCustomEndpoint.ValueString()
+	}
 	if !(providerConfig.SKECustomEndpoint.IsUnknown() || providerConfig.SKECustomEndpoint.IsNull()) {
 		providerData.SKECustomEndpoint = providerConfig.SKECustomEndpoint.ValueString()
 	}
@@ -458,6 +468,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		serverBackupSchedule.NewSchedulesDataSource,
 		serverUpdateSchedule.NewScheduleDataSource,
 		serverUpdateSchedule.NewSchedulesDataSource,
+		serviceAccount.NewServiceAccountDataSource,
 		skeProject.NewProjectDataSource,
 		skeCluster.NewClusterDataSource,
 	}
@@ -518,6 +529,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		sqlServerFlexUser.NewUserResource,
 		serverBackupSchedule.NewScheduleResource,
 		serverUpdateSchedule.NewScheduleResource,
+		serviceAccount.NewServiceAccountResource,
 		skeProject.NewProjectResource,
 		skeCluster.NewClusterResource,
 		skeKubeconfig.NewKubeconfigResource,

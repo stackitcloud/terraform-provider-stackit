@@ -40,7 +40,7 @@ var (
 	IaaSImageId = getenv("TF_ACC_IMAGE_ID", "59838a89-51b1-4892-b57f-b3caf598ee2f")
 	// TestProjectParentContainerID is the container id of the parent resource under which projects are created as part of the resource-manager acceptance tests
 	TestProjectParentContainerID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID")
-	// TestProjectParentContainerID is the uuid of the parent resource under which projects are created as part of the resource-manager acceptance tests
+	// TestProjectParentUUID is the uuid of the parent resource under which projects are created as part of the resource-manager acceptance tests
 	TestProjectParentUUID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_UUID")
 	// TestProjectServiceAccountEmail is the e-mail of a service account with admin permissions on the organization under which projects are created as part of the resource-manager acceptance tests
 	TestProjectServiceAccountEmail = os.Getenv("TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL")
@@ -69,14 +69,8 @@ var (
 	SQLServerFlexCustomEndpoint   = os.Getenv("TF_ACC_SQLSERVERFLEX_CUSTOM_ENDPOINT")
 	ServerBackupCustomEndpoint    = os.Getenv("TF_ACC_SERVER_BACKUP_CUSTOM_ENDPOINT")
 	ServerUpdateCustomEndpoint    = os.Getenv("TF_ACC_SERVER_UPDATE_CUSTOM_ENDPOINT")
+	ServiceAccountCustomEndpoint  = os.Getenv("TF_ACC_SERVICE_ACCOUNT_CUSTOM_ENDPOINT")
 	SKECustomEndpoint             = os.Getenv("TF_ACC_SKE_CUSTOM_ENDPOINT")
-
-	// OpenStack user domain name
-	OSUserDomainName = os.Getenv("TF_ACC_OS_USER_DOMAIN_NAME")
-	// OpenStack user name
-	OSUserName = os.Getenv("TF_ACC_OS_USER_NAME")
-	// OpenStack password
-	OSPassword = os.Getenv("TF_ACC_OS_PASSWORD")
 )
 
 // Provider config helper functions
@@ -373,6 +367,23 @@ func SKEProviderConfig() string {
 			ske_custom_endpoint = "%s"
 		}`,
 		SKECustomEndpoint,
+	)
+}
+
+func ServiceAccountProviderConfig() string {
+	if ServiceAccountCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			region = "eu01"
+			enable_beta_resources = true
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			service_account_custom_endpoint = "%s"
+			enable_beta_resources = true
+		}`,
+		ServiceAccountCustomEndpoint,
 	)
 }
 
