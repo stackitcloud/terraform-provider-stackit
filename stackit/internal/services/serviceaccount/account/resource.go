@@ -16,11 +16,17 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 	"regexp"
 	"strings"
 	"time"
 )
+
+// resourceBetaCheckDone is used to prevent multiple checks for beta resources.
+// This is a workaround for the lack of a global state in the provider and
+// needs to exist because the Configure method is called twice.
+var resourceBetaCheckDone bool
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -59,6 +65,14 @@ func (r *serviceAccountResource) Configure(ctx context.Context, req resource.Con
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
+	}
+
+	if !resourceBetaCheckDone {
+		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_service_account", "resource")
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		resourceBetaCheckDone = true
 	}
 
 	// Initialize the API client with the appropriate authentication and endpoint settings.
@@ -101,7 +115,8 @@ func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 	}
 
 	resp.Schema = schema.Schema{
-		Description: "Schema for a STACKIT service account resource.",
+		MarkdownDescription: features.AddBetaDescription("Schema for a STACKIT service account resource."),
+		Description:         "Schema for a STACKIT service account resource.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],

@@ -375,11 +375,13 @@ func ServiceAccountProviderConfig() string {
 		return `
 		provider "stackit" {
 			region = "eu01"
+			enable_beta_resources = true
 		}`
 	}
 	return fmt.Sprintf(`
 		provider "stackit" {
 			service_account_custom_endpoint = "%s"
+			enable_beta_resources = true
 		}`,
 		ServiceAccountCustomEndpoint,
 	)

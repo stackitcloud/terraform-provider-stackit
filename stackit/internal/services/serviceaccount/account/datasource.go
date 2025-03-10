@@ -11,8 +11,14 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
+
+// publicIpDataSourceBetaCheckDone is used to prevent multiple checks for beta resources.
+// This is a workaround for the lack of a global state in the provider and
+// needs to exist because the Configure method is called twice.
+var publicIpDataSourceBetaCheckDone bool
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -40,6 +46,14 @@ func (r *serviceAccountDataSource) Configure(ctx context.Context, req datasource
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
+	}
+
+	if !resourceBetaCheckDone {
+		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_service_account", "datasource")
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		resourceBetaCheckDone = true
 	}
 
 	var apiClient *serviceaccount.APIClient
@@ -71,7 +85,6 @@ func (r *serviceAccountDataSource) Metadata(_ context.Context, req datasource.Me
 
 // Schema defines the schema for the service account data source.
 func (r *serviceAccountDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	// Description map for attributes
 	descriptions := map[string]string{
 		"id":         "Terraform's internal resource ID, structured as \"project_id,email\".",
 		"project_id": "STACKIT project ID to which the instance is associated.",
@@ -83,7 +96,8 @@ func (r *serviceAccountDataSource) Schema(_ context.Context, _ datasource.Schema
 	// The datasource schema differs slightly from the resource schema.
 	// In this case, the email attribute is required to read the service account data from the API.
 	resp.Schema = schema.Schema{
-		Description: "Schema for a STACKIT service account resource.",
+		MarkdownDescription: features.AddBetaDescription("Schema for a STACKIT service account resource."),
+		Description:         "Schema for a STACKIT service account resource.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
