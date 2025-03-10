@@ -176,7 +176,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		"credentials_group_id": "The credential group ID.",
 		"project_id":           "STACKIT Project ID to which the credential group is associated.",
 		"expiration_timestamp": "Expiration timestamp, in RFC339 format without fractional seconds. Example: \"2025-01-01T00:00:00Z\". If not set, the credential never expires.",
-		"region":               "The resource region. Read-only attribute that reflects the provider region.",
+		"region":               "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -246,7 +246,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				},
 			},
 			"region": schema.StringAttribute{
-				Optional: false,
+				Optional: true,
 				// must be computed to allow for storing the override value from the provider
 				Computed:    true,
 				Description: descriptions["region"],

@@ -132,7 +132,7 @@ func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
 		"url_path_style":           "URL in path style.",
 		"url_virtual_hosted_style": "URL in virtual hosted style.",
-		"region":                   "The resource region. Read-only attribute that reflects the provider region.",
+		"region":                   "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -175,7 +175,7 @@ func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Computed: true,
 			},
 			"region": schema.StringAttribute{
-				Optional: false,
+				Optional: true,
 				// must be computed to allow for storing the override value from the provider
 				Computed:    true,
 				Description: descriptions["region"],
