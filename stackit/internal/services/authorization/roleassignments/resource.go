@@ -66,7 +66,6 @@ func NewRoleAssignmentResources() []func() resource.Resource {
 type roleAssignmentResource struct {
 	authorizationClient *authorization.APIClient
 	apiName             string
-	experimentChecked   bool
 }
 
 // Metadata returns the resource type name.
@@ -87,12 +86,9 @@ func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.Con
 		return
 	}
 
-	if !r.experimentChecked {
-		features.CheckExperimentEnabled(ctx, &providerData, experiment, fmt.Sprintf("stackit_authorization_%s_role_assignment", r.apiName), &resp.Diagnostics)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		r.experimentChecked = true
+	features.CheckExperimentEnabled(ctx, &providerData, experiment, fmt.Sprintf("stackit_authorization_%s_role_assignment", r.apiName), &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	var err error
