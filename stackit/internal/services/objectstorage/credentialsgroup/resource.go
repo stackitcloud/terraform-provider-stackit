@@ -71,7 +71,7 @@ func (r *credentialsGroupResource) ModifyPlan(ctx context.Context, req resource.
 		return
 	}
 
-	coreutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.Region, resp)
+	coreutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -250,7 +250,7 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 	ctx = tflog.SetField(ctx, "region", region)
 	if region == "" {
-		region = r.providerData.Region
+		region = r.providerData.GetRegion()
 	}
 
 	found, err := readCredentialsGroups(ctx, &model, region, r.client)

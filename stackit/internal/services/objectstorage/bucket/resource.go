@@ -71,7 +71,7 @@ func (r *bucketResource) ModifyPlan(ctx context.Context, req resource.ModifyPlan
 		return
 	}
 
-	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.Region, resp)
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -249,7 +249,7 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 	bucketName := model.Name.ValueString()
 	region := model.Region.ValueString()
 	if region == "" {
-		region = r.providerData.Region
+		region = r.providerData.GetRegion()
 	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)

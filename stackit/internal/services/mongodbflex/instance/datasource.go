@@ -62,7 +62,7 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	} else {
 		apiClient, err = mongodbflex.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 

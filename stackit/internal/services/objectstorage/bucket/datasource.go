@@ -136,7 +136,7 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	bucketName := model.Name.ValueString()
 	var region string
 	if utils.IsUndefined(model.Region) {
-		region = r.providerData.Region
+		region = r.providerData.GetRegion()
 	} else {
 		region = model.Region.ValueString()
 	}

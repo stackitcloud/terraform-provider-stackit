@@ -60,7 +60,7 @@ func (r *clusterDataSource) Configure(ctx context.Context, req datasource.Config
 	} else {
 		apiClient, err = ske.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 

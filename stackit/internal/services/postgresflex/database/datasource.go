@@ -60,7 +60,7 @@ func (r *databaseDataSource) Configure(ctx context.Context, req datasource.Confi
 	} else {
 		apiClient, err = postgresflex.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 

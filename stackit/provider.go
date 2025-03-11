@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	argusCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/credential"
 	argusInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/instance"
@@ -97,14 +100,16 @@ func (p *Provider) Metadata(_ context.Context, _ provider.MetadataRequest, resp 
 }
 
 type providerModel struct {
-	CredentialsFilePath             types.String `tfsdk:"credentials_path"`
-	ServiceAccountEmail             types.String `tfsdk:"service_account_email"` // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025
-	ServiceAccountKey               types.String `tfsdk:"service_account_key"`
-	ServiceAccountKeyPath           types.String `tfsdk:"service_account_key_path"`
-	PrivateKey                      types.String `tfsdk:"private_key"`
-	PrivateKeyPath                  types.String `tfsdk:"private_key_path"`
-	Token                           types.String `tfsdk:"service_account_token"`
+	CredentialsFilePath   types.String `tfsdk:"credentials_path"`
+	ServiceAccountEmail   types.String `tfsdk:"service_account_email"` // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025
+	ServiceAccountKey     types.String `tfsdk:"service_account_key"`
+	ServiceAccountKeyPath types.String `tfsdk:"service_account_key_path"`
+	PrivateKey            types.String `tfsdk:"private_key"`
+	PrivateKeyPath        types.String `tfsdk:"private_key_path"`
+	Token                 types.String `tfsdk:"service_account_token"`
+	// Deprecated: Use DefaultRegion instead
 	Region                          types.String `tfsdk:"region"`
+	DefaultRegion                   types.String `tfsdk:"default_region"`
 	ArgusCustomEndpoint             types.String `tfsdk:"argus_custom_endpoint"`
 	DNSCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
@@ -141,6 +146,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"private_key":                        "Private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.",
 		"service_account_email":              "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.",
 		"region":                             "Region will be used as the default location for regional services. Not all services require a region, some are global",
+		"default_region":                     "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"argus_custom_endpoint":              "Custom endpoint for the Argus service",
 		"dns_custom_endpoint":                "Custom endpoint for the DNS service",
 		"iaas_custom_endpoint":               "Custom endpoint for the IaaS service",
@@ -198,8 +204,19 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Description: descriptions["private_key_path"],
 			},
 			"region": schema.StringAttribute{
+				Optional:           true,
+				Description:        descriptions["region"],
+				DeprecationMessage: "This attribute is deprecated. Use 'default_region' instead",
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(path.MatchRoot("default_region")),
+				},
+			},
+			"default_region": schema.StringAttribute{
 				Optional:    true,
-				Description: descriptions["region"],
+				Description: descriptions["default_region"],
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(path.MatchRoot("region")),
+				},
 			},
 			"argus_custom_endpoint": schema.StringAttribute{
 				Optional:           true,
@@ -330,10 +347,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		sdkConfig.Token = providerConfig.Token.ValueString()
 	}
 	if !(providerConfig.Region.IsUnknown() || providerConfig.Region.IsNull()) {
-		providerData.Region = providerConfig.Region.ValueString()
-	}
-	if !(providerConfig.ArgusCustomEndpoint.IsUnknown() || providerConfig.ArgusCustomEndpoint.IsNull()) {
-		providerData.ArgusCustomEndpoint = providerConfig.ArgusCustomEndpoint.ValueString()
+		providerData.Region = providerConfig.Region.ValueString() // nolint:staticcheck // preliminary handling of deprecated attribute
+	} else if !(providerConfig.DefaultRegion.IsUnknown() || providerConfig.DefaultRegion.IsNull()) {
+		providerData.DefaultRegion = providerConfig.DefaultRegion.ValueString()
 	}
 	if !(providerConfig.DNSCustomEndpoint.IsUnknown() || providerConfig.DNSCustomEndpoint.IsNull()) {
 		providerData.DnsCustomEndpoint = providerConfig.DNSCustomEndpoint.ValueString()

@@ -136,7 +136,7 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	var region string
 	if utils.IsUndefined(model.Region) {
-		region = r.providerData.Region
+		region = r.providerData.GetRegion()
 	} else {
 		region = model.Region.ValueString()
 	}

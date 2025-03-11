@@ -139,7 +139,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	} else {
 		apiClient, err = sqlserverflex.NewAPIClient(
 			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithRegion(r.providerData.Region),
+			config.WithRegion(r.providerData.GetRegion()),
 		)
 	}
 

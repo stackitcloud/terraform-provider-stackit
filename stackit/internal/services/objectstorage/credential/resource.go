@@ -87,7 +87,7 @@ func (r *credentialResource) modifyPlanRegion(ctx context.Context, req *resource
 		return
 	}
 
-	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.Region, resp)
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -349,7 +349,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	credentialId := model.CredentialId.ValueString()
 	region := model.Region.ValueString()
 	if region == "" {
-		region = r.providerData.Region
+		region = r.providerData.GetRegion()
 	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)

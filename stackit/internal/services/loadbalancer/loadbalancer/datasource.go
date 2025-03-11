@@ -64,7 +64,7 @@ func (r *loadBalancerDataSource) Configure(ctx context.Context, req datasource.C
 	} else {
 		apiClient, err = loadbalancer.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 
