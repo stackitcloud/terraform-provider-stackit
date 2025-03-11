@@ -45,12 +45,13 @@ resource "stackit_sqlserverflex_instance" "example" {
 - `acl` (List of String) The Access Control List (ACL) for the SQLServer Flex instance.
 - `backup_schedule` (String) The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *")
 - `options` (Attributes) (see [below for nested schema](#nestedatt--options))
+- `region` (String) The resource region. If not defined, the provider region is used.
 - `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
 - `version` (String)
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`".
 - `instance_id` (String) ID of the SQLServer Flex instance.
 - `replicas` (Number)
 

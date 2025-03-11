@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -31,7 +32,8 @@ func NewInstanceDataSource() datasource.DataSource {
 
 // instanceDataSource is the data source implementation.
 type instanceDataSource struct {
-	client *sqlserverflex.APIClient
+	client       *sqlserverflex.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -46,7 +48,8 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -54,15 +57,15 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 
 	var apiClient *sqlserverflex.APIClient
 	var err error
-	if providerData.SQLServerFlexCustomEndpoint != "" {
+	if r.providerData.SQLServerFlexCustomEndpoint != "" {
 		apiClient, err = sqlserverflex.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.SQLServerFlexCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.SQLServerFlexCustomEndpoint),
 		)
 	} else {
 		apiClient, err = sqlserverflex.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithRegion(r.providerData.Region),
 		)
 	}
 
@@ -79,13 +82,14 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":            "SQLServer Flex instance data source schema. Must have a `region` specified in the provider configuration.",
-		"id":              "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`\".",
+		"id":              "Terraform's internal data source. ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"instance_id":     "ID of the SQLServer Flex instance.",
 		"project_id":      "STACKIT project ID to which the instance is associated.",
 		"name":            "Instance name.",
 		"acl":             "The Access Control List (ACL) for the SQLServer Flex instance.",
 		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
 		"options":         "Custom parameters for the SQLServer Flex instance.",
+		"region":          "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -170,6 +174,11 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					},
 				},
 			},
+			"region": schema.StringAttribute{
+				// the region cannot be found, so it has to be passed
+				Optional:    true,
+				Description: descriptions["region"],
+			},
 		},
 	}
 }
@@ -185,9 +194,16 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.Region
+	} else {
+		region = model.Region.ValueString()
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	ctx = tflog.SetField(ctx, "region", region)
+	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -222,7 +238,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 	}
 
-	err = mapFields(ctx, instanceResp, &model, flavor, storage, options)
+	err = mapFields(ctx, instanceResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return

@@ -17,7 +17,7 @@ type sqlserverflexClientMocked struct {
 	listFlavorsResp *sqlserverflex.ListFlavorsResponse
 }
 
-func (c *sqlserverflexClientMocked) ListFlavorsExecute(_ context.Context, _ string) (*sqlserverflex.ListFlavorsResponse, error) {
+func (c *sqlserverflexClientMocked) ListFlavorsExecute(_ context.Context, _, _ string) (*sqlserverflex.ListFlavorsResponse, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("get flavors failed")
 	}
@@ -26,6 +26,7 @@ func (c *sqlserverflexClientMocked) ListFlavorsExecute(_ context.Context, _ stri
 }
 
 func TestMapFields(t *testing.T) {
+	const testRegion = "region"
 	tests := []struct {
 		description string
 		state       Model
@@ -33,6 +34,7 @@ func TestMapFields(t *testing.T) {
 		flavor      *flavorModel
 		storage     *storageModel
 		options     *optionsModel
+		region      string
 		expected    Model
 		isValid     bool
 	}{
@@ -48,8 +50,9 @@ func TestMapFields(t *testing.T) {
 			&flavorModel{},
 			&storageModel{},
 			&optionsModel{},
+			testRegion,
 			Model{
-				Id:             types.StringValue("pid,iid"),
+				Id:             types.StringValue("pid,region,iid"),
 				InstanceId:     types.StringValue("iid"),
 				ProjectId:      types.StringValue("pid"),
 				Name:           types.StringNull(),
@@ -71,6 +74,7 @@ func TestMapFields(t *testing.T) {
 					"retention_days": types.Int64Null(),
 				}),
 				Version: types.StringNull(),
+				Region:  types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -114,8 +118,9 @@ func TestMapFields(t *testing.T) {
 			&flavorModel{},
 			&storageModel{},
 			&optionsModel{},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid"),
+				Id:         types.StringValue("pid,region,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("name"),
@@ -141,6 +146,7 @@ func TestMapFields(t *testing.T) {
 					"retention_days": types.Int64Value(1),
 				}),
 				Version: types.StringValue("version"),
+				Region:  types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -185,8 +191,9 @@ func TestMapFields(t *testing.T) {
 				Edition:       types.StringValue("edition"),
 				RetentionDays: types.Int64Value(1),
 			},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid"),
+				Id:         types.StringValue("pid,region,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("name"),
@@ -212,6 +219,7 @@ func TestMapFields(t *testing.T) {
 					"retention_days": types.Int64Value(1),
 				}),
 				Version: types.StringValue("version"),
+				Region:  types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -258,8 +266,9 @@ func TestMapFields(t *testing.T) {
 				Size:  types.Int64Value(78),
 			},
 			&optionsModel{},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid"),
+				Id:         types.StringValue("pid,region,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("name"),
@@ -285,6 +294,7 @@ func TestMapFields(t *testing.T) {
 					"retention_days": types.Int64Value(1),
 				}),
 				Version: types.StringValue("version"),
+				Region:  types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -298,6 +308,7 @@ func TestMapFields(t *testing.T) {
 			&flavorModel{},
 			&storageModel{},
 			&optionsModel{},
+			testRegion,
 			Model{},
 			false,
 		},
@@ -311,13 +322,14 @@ func TestMapFields(t *testing.T) {
 			&flavorModel{},
 			&storageModel{},
 			&optionsModel{},
+			testRegion,
 			Model{},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.storage, tt.options)
+			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.storage, tt.options, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

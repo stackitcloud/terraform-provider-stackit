@@ -317,7 +317,7 @@ func SecretsManagerProviderConfig() string {
 }
 
 func SQLServerFlexProviderConfig() string {
-	if MongoDBFlexCustomEndpoint == "" {
+	if SQLServerFlexCustomEndpoint == "" {
 		return `
 		provider "stackit" {
 			region = "eu01"
