@@ -53,6 +53,7 @@ resource "stackit_server_network_interface_attach" "nic-attachment" {
 resource "stackit_loadbalancer" "example" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name       = "example-load-balancer"
+  plan_id    = "p10"
   target_pools = [
     {
       name        = "example-target-pool"
