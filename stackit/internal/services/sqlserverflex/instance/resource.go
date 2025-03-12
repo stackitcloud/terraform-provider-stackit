@@ -139,7 +139,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	} else {
 		apiClient, err = sqlserverflex.NewAPIClient(
 			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithRegion(r.providerData.Region),
+			config.WithRegion(r.providerData.GetRegion()),
 		)
 	}
 
@@ -171,7 +171,7 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 		return
 	}
 
-	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.Region, resp)
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -463,7 +463,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	instanceId := model.InstanceId.ValueString()
 	region := model.Region.ValueString()
 	if region == "" {
-		region = r.providerData.Region
+		region = r.providerData.GetRegion()
 	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)

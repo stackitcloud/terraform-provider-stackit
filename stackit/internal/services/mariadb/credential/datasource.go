@@ -61,7 +61,7 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 	} else {
 		apiClient, err = mariadb.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 

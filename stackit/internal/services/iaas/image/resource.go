@@ -153,7 +153,7 @@ func (r *imageResource) Configure(ctx context.Context, req resource.ConfigureReq
 	} else {
 		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 

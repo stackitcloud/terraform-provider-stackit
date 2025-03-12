@@ -96,7 +96,7 @@ func (r *securityGroupResource) Configure(ctx context.Context, req resource.Conf
 	} else {
 		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 

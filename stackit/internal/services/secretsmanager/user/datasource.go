@@ -72,7 +72,7 @@ func (r *userDataSource) Configure(ctx context.Context, req datasource.Configure
 	} else {
 		apiClient, err = secretsmanager.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 

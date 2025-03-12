@@ -87,7 +87,7 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	} else {
 		apiClient, err = sqlserverflex.NewAPIClient(
 			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithRegion(r.providerData.Region),
+			config.WithRegion(r.providerData.GetRegion()),
 		)
 	}
 
@@ -119,7 +119,7 @@ func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRe
 		return
 	}
 
-	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.Region, resp)
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -303,7 +303,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	ctx = tflog.SetField(ctx, "user_id", userId)
 	ctx = tflog.SetField(ctx, "region", region)
 	if region == "" {
-		region = r.providerData.Region
+		region = r.providerData.GetRegion()
 	}
 
 	recordSetResp, err := r.client.GetUser(ctx, projectId, instanceId, userId, region).Execute()
