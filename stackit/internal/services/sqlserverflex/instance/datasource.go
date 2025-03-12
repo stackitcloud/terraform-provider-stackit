@@ -196,7 +196,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	instanceId := model.InstanceId.ValueString()
 	var region string
 	if utils.IsUndefined(model.Region) {
-		region = r.providerData.Region
+		region = r.providerData.GetRegion()
 	} else {
 		region = model.Region.ValueString()
 	}
