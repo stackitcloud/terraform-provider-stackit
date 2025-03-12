@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -29,7 +30,8 @@ func NewDatabaseDataSource() datasource.DataSource {
 
 // databaseDataSource is the data source implementation.
 type databaseDataSource struct {
-	client *postgresflex.APIClient
+	client       *postgresflex.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -44,7 +46,8 @@ func (r *databaseDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -52,15 +55,15 @@ func (r *databaseDataSource) Configure(ctx context.Context, req datasource.Confi
 
 	var apiClient *postgresflex.APIClient
 	var err error
-	if providerData.PostgresFlexCustomEndpoint != "" {
+	if r.providerData.PostgresFlexCustomEndpoint != "" {
 		apiClient, err = postgresflex.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.PostgresFlexCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.PostgresFlexCustomEndpoint),
 		)
 	} else {
 		apiClient, err = postgresflex.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithRegion(r.providerData.GetRegion()),
 		)
 	}
 
@@ -77,12 +80,13 @@ func (r *databaseDataSource) Configure(ctx context.Context, req datasource.Confi
 func (r *databaseDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "Postgres Flex database resource schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`database_id`\".",
+		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`,`database_id`\".",
 		"database_id": "Database ID.",
 		"instance_id": "ID of the Postgres Flex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
 		"name":        "Database name.",
 		"owner":       "Username of the database owner.",
+		"region":      "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -123,6 +127,11 @@ func (r *databaseDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: descriptions["owner"],
 				Computed:    true,
 			},
+			"region": schema.StringAttribute{
+				// the region cannot be found, so it has to be passed
+				Optional:    true,
+				Description: descriptions["region"],
+			},
 		},
 	}
 }
@@ -138,11 +147,18 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	databaseId := model.DatabaseId.ValueString()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "database_id", databaseId)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	databaseResp, err := getDatabase(ctx, r.client, projectId, instanceId, databaseId)
+	databaseResp, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -153,7 +169,7 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	// Map response body to schema and populate Computed attribute values
-	err = mapFields(databaseResp, &model)
+	err = mapFields(databaseResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Processing API payload: %v", err))
 		return
