@@ -346,10 +346,10 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.Token.IsUnknown() || providerConfig.Token.IsNull()) {
 		sdkConfig.Token = providerConfig.Token.ValueString()
 	}
-	if !(providerConfig.Region.IsUnknown() || providerConfig.Region.IsNull()) {
-		providerData.Region = providerConfig.Region.ValueString() // nolint:staticcheck // preliminary handling of deprecated attribute
-	} else if !(providerConfig.DefaultRegion.IsUnknown() || providerConfig.DefaultRegion.IsNull()) {
+	if !(providerConfig.DefaultRegion.IsUnknown() || providerConfig.DefaultRegion.IsNull()) {
 		providerData.DefaultRegion = providerConfig.DefaultRegion.ValueString()
+	} else if !(providerConfig.Region.IsUnknown() || providerConfig.Region.IsNull()) { // nolint:staticcheck // preliminary handling of deprecated attribute
+		providerData.Region = providerConfig.Region.ValueString() // nolint:staticcheck // preliminary handling of deprecated attribute
 	}
 	if !(providerConfig.DNSCustomEndpoint.IsUnknown() || providerConfig.DNSCustomEndpoint.IsNull()) {
 		providerData.DnsCustomEndpoint = providerConfig.DNSCustomEndpoint.ValueString()
