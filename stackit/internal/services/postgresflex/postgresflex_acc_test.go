@@ -47,7 +47,11 @@ var databaseResource = map[string]string{
 	"name": fmt.Sprintf("tfaccdb%s", acctest.RandStringFromCharSet(4, acctest.CharSetAlphaNum)),
 }
 
-func configResources(backupSchedule string) string {
+func configResources(backupSchedule string, region *string) string {
+	var regionConfig string
+	if region != nil {
+		regionConfig = fmt.Sprintf(`region = %q`, *region)
+	}
 	return fmt.Sprintf(`
 				%s
 
@@ -66,6 +70,7 @@ func configResources(backupSchedule string) string {
 						size = %s
 					}
 					version = "%s"
+					%s
 				}
 
 				resource "stackit_postgresflex_user" "user" {
@@ -93,6 +98,7 @@ func configResources(backupSchedule string) string {
 		instanceResource["storage_class"],
 		instanceResource["storage_size"],
 		instanceResource["version"],
+		regionConfig,
 		userResource["username"],
 		userResource["role"],
 		databaseResource["name"],
@@ -100,13 +106,14 @@ func configResources(backupSchedule string) string {
 }
 
 func TestAccPostgresFlexFlexResource(t *testing.T) {
+	testRegion := utils.Ptr("eu01")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckPostgresFlexDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: configResources(instanceResource["backup_schedule"]),
+				Config: configResources(instanceResource["backup_schedule"], testRegion),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "project_id", instanceResource["project_id"]),
@@ -123,6 +130,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "storage.class", instanceResource["storage_class"]),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "storage.size", instanceResource["storage_size"]),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "version", instanceResource["version"]),
+					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "region", *testRegion),
 
 					// User
 					resource.TestCheckResourceAttrPair(
@@ -174,7 +182,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 						database_id    = stackit_postgresflex_database.database.database_id
 					}
 					`,
-					configResources(instanceResource["backup_schedule"]),
+					configResources(instanceResource["backup_schedule"], nil),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -237,7 +245,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
 
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId), nil
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
@@ -259,7 +267,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 						return "", fmt.Errorf("couldn't find attribute user_id")
 					}
 
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, userId), nil
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId, userId), nil
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
@@ -281,14 +289,14 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 						return "", fmt.Errorf("couldn't find attribute database_id")
 					}
 
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, databaseId), nil
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId, databaseId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
 			// Update
 			{
-				Config: configResources(instanceResource["backup_schedule_updated"]),
+				Config: configResources(instanceResource["backup_schedule_updated"], nil),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "project_id", instanceResource["project_id"]),
@@ -317,9 +325,7 @@ func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 	var client *postgresflex.APIClient
 	var err error
 	if testutil.PostgresFlexCustomEndpoint == "" {
-		client, err = postgresflex.NewAPIClient(
-			config.WithRegion("eu01"),
-		)
+		client, err = postgresflex.NewAPIClient()
 	} else {
 		client, err = postgresflex.NewAPIClient(
 			config.WithEndpoint(testutil.PostgresFlexCustomEndpoint),
@@ -334,12 +340,12 @@ func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_postgresflex_instance" {
 			continue
 		}
-		// instance terraform ID: = "[project_id],[instance_id]"
+		// instance terraform ID: = "[project_id],[region],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
@@ -350,15 +356,15 @@ func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 			continue
 		}
 		if utils.Contains(instancesToDestroy, *items[i].Id) {
-			err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *items[i].Id)
+			err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, testutil.Region, *items[i].Id)
 			if err != nil {
 				return fmt.Errorf("deleting instance %s during CheckDestroy: %w", *items[i].Id, err)
 			}
-			_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *items[i].Id).WaitWithContext(ctx)
+			_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, *items[i].Id).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("deleting instance %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
 			}
-			err = client.ForceDeleteInstanceExecute(ctx, testutil.ProjectId, *items[i].Id)
+			err = client.ForceDeleteInstanceExecute(ctx, testutil.ProjectId, testutil.Region, *items[i].Id)
 			if err != nil {
 				return fmt.Errorf("force deleting instance %s during CheckDestroy: %w", *items[i].Id, err)
 			}
