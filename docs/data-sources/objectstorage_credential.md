@@ -40,5 +40,3 @@ data "stackit_objectstorage_credentials_group" "example" {
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`credentials_group_id`,`credential_id`".
 - `name` (String)
 - `secret_access_key` (String, Sensitive)
-
-

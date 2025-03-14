@@ -36,5 +36,3 @@ data "stackit_objectstorage_credentials_group" "example" {
 
 - `id` (String) Terraform's internal data source identifier. It is structured as "`project_id`,`credentials_group_id`".
 - `urn` (String) Credentials group uniform resource name (URN)
-
-
