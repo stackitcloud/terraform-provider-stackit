@@ -7,17 +7,15 @@ description: |-
   !> The stackit_argus_scrapeconfig resource has been deprecated and will be removed after February 26th 2025. Please use stackit_observability_scrapeconfig instead, which offers the exact same functionality.
   Example move
   Example to move the deprecated stackit_argus_scrapeconfig resource to the new stackit_observability_scrapeconfig resource:
-  1. Add a new stackit_observability_scrapeconfig resource with the same values like your previous stackit_argus_scrapeconfig resource.
-  1. Add a moved block which reference the stackit_argus_scrapeconfig and stackit_observability_scrapeconfig resource.
-  1. Remove your old stackit_argus_scrapeconfig resource and run $ terraform apply.
-  ```terraform
-  resource "stackitargusscrapeconfig" "example" {
-    projectid   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    instanceid  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  Add a new stackit_observability_scrapeconfig resource with the same values like your previous stackit_argus_scrapeconfig resource.Add a moved block which reference the stackit_argus_scrapeconfig and stackit_observability_scrapeconfig resource.Remove your old stackit_argus_scrapeconfig resource and run $ terraform apply.
+  
+  resource "stackit_argus_scrapeconfig" "example" {
+    project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    instance_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     name         = "example-job"
-    metricspath = "/my-metrics"
+    metrics_path = "/my-metrics"
     saml2 = {
-      enableurl_parameters = true
+      enable_url_parameters = true
     }
     targets = [
       {
@@ -28,17 +26,19 @@ description: |-
       }
     ]
   }
+  
   moved {
-      from = stackitargusscrapeconfig.example
-      to = stackitobservabilityscrapeconfig.example
+  	from = stackit_argus_scrapeconfig.example
+  	to = stackit_observability_scrapeconfig.example
   }
-  resource "stackitobservabilityscrapeconfig" "example" {
-    projectid   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    instanceid  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  
+  resource "stackit_observability_scrapeconfig" "example" {
+    project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    instance_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     name         = "example-job"
-    metricspath = "/my-metrics"
+    metrics_path = "/my-metrics"
     saml2 = {
-      enableurl_parameters = true
+      enable_url_parameters = true
     }
     targets = [
       {
@@ -49,7 +49,6 @@ description: |-
       }
     ]
   }
-  ```
 ---
 
 # stackit_argus_scrapeconfig (Resource)
