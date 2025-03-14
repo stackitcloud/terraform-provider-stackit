@@ -2,11 +2,9 @@ package server
 
 const markdownDescription = `
 Server resource schema. Must have a region specified in the provider configuration.` + "\n" + `
-~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 ## Example Usage` + "\n" + `
 
 ### With key pair` + "\n" +
-
 	"```terraform" + `
 resource "stackit_key_pair" "keypair" {
   name       = "example-key-pair"
@@ -28,7 +26,6 @@ resource "stackit_server" "user-data-from-file" {
 ` + "\n```" + `
 
 ### Boot from volume` + "\n" +
-
 	"```terraform" + `
 resource "stackit_server" "boot-from-volume" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -45,7 +42,6 @@ resource "stackit_server" "boot-from-volume" {
 ` + "\n```" + `
 
 ### Boot from existing volume` + "\n" +
-
 	"```terraform" + `
 resource "stackit_volume" "example-volume" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -72,7 +68,6 @@ resource "stackit_server" "boot-from-volume" {
 ` + "\n```" + `
 
 ### Network setup` + "\n" +
-
 	"```terraform" + `
 resource "stackit_server" "server-with-network" {
   project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -125,7 +120,6 @@ resource "stackit_server_network_interface_attach" "nic-attachment" {
 ` + "\n```" + `
 
 ### Server with attached volume` + "\n" +
-
 	"```terraform" + `
 resource "stackit_volume" "example-volume" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -156,7 +150,6 @@ resource "stackit_server_volume_attach" "attach_volume" {
 ` + "\n```" + `
 
 ### Server with user data (cloud-init)` + "\n" +
-
 	"```terraform" + `
 resource "stackit_server" "user-data" {
   project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"

@@ -23,15 +23,9 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
-
-// resourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var resourceBetaCheckDone bool
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -84,14 +78,6 @@ func (r *networkInterfaceResource) Configure(ctx context.Context, req resource.C
 		return
 	}
 
-	if !resourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_network_interface", "resource")
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		resourceBetaCheckDone = true
-	}
-
 	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
@@ -119,10 +105,11 @@ func (r *networkInterfaceResource) Configure(ctx context.Context, req resource.C
 // Schema defines the schema for the resource.
 func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	typeOptions := []string{"server", "metadata", "gateway"}
+	description := "Network interface resource schema. Must have a `region` specified in the provider configuration."
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Network interface resource schema. Must have a `region` specified in the provider configuration."),
-		Description:         "Network interface resource schema. Must have a `region` specified in the provider configuration.",
+		MarkdownDescription: description,
+		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`network_id`,`network_interface_id`\".",

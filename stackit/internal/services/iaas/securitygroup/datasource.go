@@ -14,14 +14,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
-
-// securityGroupDataSourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var securityGroupDataSourceBetaCheckDone bool
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -58,14 +52,6 @@ func (d *securityGroupDataSource) Configure(ctx context.Context, req datasource.
 		return
 	}
 
-	if !securityGroupDataSourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_security_group", "data source")
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		securityGroupDataSourceBetaCheckDone = true
-	}
-
 	if providerData.IaaSCustomEndpoint != "" {
 		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
@@ -88,9 +74,10 @@ func (d *securityGroupDataSource) Configure(ctx context.Context, req datasource.
 
 // Schema defines the schema for the resource.
 func (r *securityGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	description := "Security group datasource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Security group datasource schema. Must have a `region` specified in the provider configuration."),
-		Description:         "Security group datasource schema. Must have a `region` specified in the provider configuration.",
+		MarkdownDescription: description,
+		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`security_group_id`\".",

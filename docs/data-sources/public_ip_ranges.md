@@ -4,14 +4,11 @@ page_title: "stackit_public_ip_ranges Data Source - stackit"
 subcategory: ""
 description: |-
   A list of all public IP ranges that STACKIT uses.
-  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_public_ip_ranges (Data Source)
 
 A list of all public IP ranges that STACKIT uses.
-
-~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 
