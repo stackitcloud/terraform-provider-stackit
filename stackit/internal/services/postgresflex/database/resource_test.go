@@ -10,9 +10,11 @@ import (
 )
 
 func TestMapFields(t *testing.T) {
+	const testRegion = "region"
 	tests := []struct {
 		description string
 		input       *postgresflex.InstanceDatabase
+		region      string
 		expected    Model
 		isValid     bool
 	}{
@@ -21,13 +23,15 @@ func TestMapFields(t *testing.T) {
 			&postgresflex.InstanceDatabase{
 				Id: utils.Ptr("uid"),
 			},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				DatabaseId: types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringNull(),
 				Owner:      types.StringNull(),
+				Region:     types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -40,13 +44,15 @@ func TestMapFields(t *testing.T) {
 					"owner": "username",
 				},
 			},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				DatabaseId: types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("dbname"),
 				Owner:      types.StringValue("username"),
+				Region:     types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -59,25 +65,29 @@ func TestMapFields(t *testing.T) {
 					"owner": "",
 				},
 			},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				DatabaseId: types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue(""),
 				Owner:      types.StringValue(""),
+				Region:     types.StringValue(testRegion),
 			},
 			true,
 		},
 		{
 			"nil_response",
 			nil,
+			testRegion,
 			Model{},
 			false,
 		},
 		{
 			"empty_response",
 			&postgresflex.InstanceDatabase{},
+			testRegion,
 			Model{},
 			false,
 		},
@@ -90,6 +100,7 @@ func TestMapFields(t *testing.T) {
 					"owner": "username",
 				},
 			},
+			testRegion,
 			Model{},
 			false,
 		},
@@ -100,7 +111,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapFields(tt.input, state)
+			err := mapFields(tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
