@@ -41,6 +41,7 @@ type ProviderData struct {
 	SKECustomEndpoint               string
 	ServiceEnablementCustomEndpoint string
 	EnableBetaResources             bool
+	Experiments                     []string
 }
 
 // GetRegion returns the effective region for the provider, falling back to the deprecated _region_ attribute

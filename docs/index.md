@@ -157,6 +157,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `default_region` (String) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `dns_custom_endpoint` (String) Custom endpoint for the DNS service
 - `enable_beta_resources` (Boolean) Enable beta resources. Default is false.
+- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: [iam]
 - `iaas_custom_endpoint` (String) Custom endpoint for the IaaS service
 - `loadbalancer_custom_endpoint` (String) Custom endpoint for the Load Balancer service
 - `logme_custom_endpoint` (String) Custom endpoint for the LogMe service

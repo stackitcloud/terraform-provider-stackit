@@ -12,9 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	argusCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/credential"
 	argusInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/instance"
 	argusScrapeConfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/scrapeconfig"
+	roleassignments "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
 	iaasAffinityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/affinitygroup"
@@ -133,6 +135,7 @@ type providerModel struct {
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
 	EnableBetaResources             types.Bool   `tfsdk:"enable_beta_resources"`
 	ServiceEnablementCustomEndpoint types.String `tfsdk:"service_enablement_custom_endpoint"`
+	Experiments                     types.List   `tfsdk:"experiments"`
 }
 
 // Schema defines the provider-level schema for configuration data.
@@ -170,6 +173,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"service_enablement_custom_endpoint": "Custom endpoint for the Service Enablement API",
 		"token_custom_endpoint":              "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
 		"enable_beta_resources":              "Enable beta resources. Default is false.",
+		"experiments":                        fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", features.AvailableExperiments),
 	}
 
 	resp.Schema = schema.Schema{
@@ -311,6 +315,11 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["enable_beta_resources"],
 			},
+			"experiments": schema.ListAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Description: descriptions["experiments"],
+			},
 		},
 	}
 }
@@ -411,6 +420,15 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.EnableBetaResources.IsUnknown() || providerConfig.EnableBetaResources.IsNull()) {
 		providerData.EnableBetaResources = providerConfig.EnableBetaResources.ValueBool()
 	}
+	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
+		var experimentValues []string
+		diags := providerConfig.Experiments.ElementsAs(ctx, &experimentValues, false)
+		if diags.HasError() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up experiments: %v", diags.Errors()))
+		}
+		providerData.Experiments = experimentValues
+	}
+
 	roundTripper, err := sdkauth.SetupAuth(sdkConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up authentication: %v", err))
@@ -481,7 +499,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 
 // Resources defines the resources implemented in the provider.
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
+	resources := []func() resource.Resource{
 		argusCredential.NewCredentialResource,
 		argusInstance.NewInstanceResource,
 		argusScrapeConfig.NewScrapeConfigResource,
@@ -538,4 +556,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		skeCluster.NewClusterResource,
 		skeKubeconfig.NewKubeconfigResource,
 	}
+	resources = append(resources, roleassignments.NewRoleAssignmentResources()...)
+
+	return resources
 }
