@@ -27,6 +27,10 @@ data "stackit_ske_cluster" "example" {
 - `name` (String) The cluster name.
 - `project_id` (String) STACKIT project ID to which the cluster is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `allow_privileged_containers` (Boolean, Deprecated) DEPRECATED as of Kubernetes 1.25+
