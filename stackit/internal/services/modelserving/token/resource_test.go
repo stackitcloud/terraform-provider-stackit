@@ -37,9 +37,11 @@ func TestMapGetTokenFields(t *testing.T) {
 		{
 			description: "should error when state is nil in response",
 			state:       nil,
-			input:       &modelserving.GetTokenResponse{Token: &modelserving.Token{}},
-			expected:    Model{},
-			isValid:     false,
+			input: &modelserving.GetTokenResponse{
+				Token: &modelserving.Token{},
+			},
+			expected: Model{},
+			isValid:  false,
 		},
 		{
 			description: "should map fields correctly",
@@ -50,8 +52,10 @@ func TestMapGetTokenFields(t *testing.T) {
 			},
 			input: &modelserving.GetTokenResponse{
 				Token: &modelserving.Token{
-					Id:          utils.Ptr("tid"),
-					ValidUntil:  utils.Ptr(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)),
+					Id: utils.Ptr("tid"),
+					ValidUntil: utils.Ptr(
+						time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
+					),
 					State:       utils.Ptr("active"),
 					Name:        utils.Ptr("name"),
 					Description: utils.Ptr("desc"),
@@ -97,93 +101,6 @@ func TestMapGetTokenFields(t *testing.T) {
 	}
 }
 
-func TestMapUpdateTokenFields(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		description string
-		state       *Model
-		input       *modelserving.UpdateTokenResponse
-		expected    Model
-		isValid     bool
-	}{
-		{
-			description: "should error when response is nil",
-			state:       &Model{},
-			input:       nil,
-			expected:    Model{},
-			isValid:     false,
-		},
-		{
-			description: "should error when token is nil in response",
-			state:       &Model{},
-			input:       &modelserving.UpdateTokenResponse{Token: nil},
-			expected:    Model{},
-			isValid:     false,
-		},
-		{
-			description: "should error when state is nil in response",
-			state:       nil,
-			input:       &modelserving.UpdateTokenResponse{Token: &modelserving.Token{}},
-			expected:    Model{},
-			isValid:     false,
-		},
-		{
-			description: "should map fields correctly",
-			state: &Model{
-				Id:        types.StringValue("pid,tid"),
-				ProjectId: types.StringValue("pid"),
-				TokenId:   types.StringValue("tid"),
-			},
-			input: &modelserving.UpdateTokenResponse{
-				Token: &modelserving.Token{
-					Id:          utils.Ptr("tid"),
-					ValidUntil:  utils.Ptr(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)),
-					State:       utils.Ptr("active"),
-					Name:        utils.Ptr("name"),
-					Description: utils.Ptr("desc"),
-					Region:      utils.Ptr("eu01"),
-				},
-			},
-			expected: Model{
-				Id:          types.StringValue("pid,tid"),
-				ProjectId:   types.StringValue("pid"),
-				Region:      types.StringValue("eu01"),
-				TokenId:     types.StringValue("tid"),
-				Name:        types.StringValue("name"),
-				Description: types.StringValue("desc"),
-				State:       types.StringValue("active"),
-				ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
-			},
-			isValid: true,
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-
-		t.Run(tt.description, func(t *testing.T) {
-			t.Parallel()
-
-			err := mapUpdateResponse(tt.input, tt.state)
-			if !tt.isValid && err == nil {
-				t.Fatalf("Should have failed")
-			}
-
-			if tt.isValid && err != nil {
-				t.Fatalf("Should not have failed: %v", err)
-			}
-
-			if tt.isValid {
-				diff := cmp.Diff(tt.state, &tt.expected)
-				if diff != "" {
-					t.Fatalf("Data does not match: %s", diff)
-				}
-			}
-		})
-	}
-}
-
 func TestMapCreateTokenFields(t *testing.T) {
 	t.Parallel()
 
@@ -204,12 +121,14 @@ func TestMapCreateTokenFields(t *testing.T) {
 			isValid:                  false,
 		},
 		{
-			description:              "should error when token is nil in create token response",
-			state:                    &Model{},
-			inputCreateTokenResponse: &modelserving.CreateTokenResponse{Token: nil},
-			inputGetTokenResponse:    nil,
-			expected:                 Model{},
-			isValid:                  false,
+			description: "should error when token is nil in create token response",
+			state:       &Model{},
+			inputCreateTokenResponse: &modelserving.CreateTokenResponse{
+				Token: nil,
+			},
+			inputGetTokenResponse: nil,
+			expected:              Model{},
+			isValid:               false,
 		},
 		{
 			description: "should error when get token response is nil",
@@ -229,8 +148,10 @@ func TestMapCreateTokenFields(t *testing.T) {
 			},
 			inputCreateTokenResponse: &modelserving.CreateTokenResponse{
 				Token: &modelserving.TokenCreated{
-					Id:          utils.Ptr("tid"),
-					ValidUntil:  utils.Ptr(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)),
+					Id: utils.Ptr("tid"),
+					ValidUntil: utils.Ptr(
+						time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
+					),
 					State:       utils.Ptr("active"),
 					Name:        utils.Ptr("name"),
 					Description: utils.Ptr("desc"),
@@ -250,8 +171,10 @@ func TestMapCreateTokenFields(t *testing.T) {
 			},
 			inputCreateTokenResponse: &modelserving.CreateTokenResponse{
 				Token: &modelserving.TokenCreated{
-					Id:          utils.Ptr("tid"),
-					ValidUntil:  utils.Ptr(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)),
+					Id: utils.Ptr("tid"),
+					ValidUntil: utils.Ptr(
+						time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
+					),
 					State:       utils.Ptr("active"),
 					Name:        utils.Ptr("name"),
 					Description: utils.Ptr("desc"),

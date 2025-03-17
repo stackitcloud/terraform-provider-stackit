@@ -55,7 +55,10 @@ func (d *tokenDataSource) Configure(
 			ctx,
 			&resp.Diagnostics,
 			"Error configuring API client",
-			fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData),
+			fmt.Sprintf(
+				"Expected configure type stackit.ProviderData, got %T",
+				req.ProviderData,
+			),
 		)
 		return
 	}
@@ -66,6 +69,7 @@ func (d *tokenDataSource) Configure(
 		apiClient, err = modelserving.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.ModelServingCustomEndpoint),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	} else {
 		apiClient, err = modelserving.NewAPIClient(
@@ -114,7 +118,8 @@ func (d *tokenDataSource) Schema(
 			},
 			"region": schema.StringAttribute{
 				Description: "STACKIT region to which the model serving auth token is associated.",
-				Required:    true,
+				Required:    false,
+				Optional:    true,
 			},
 			"token_id": schema.StringAttribute{
 				Description: "The model serving auth token ID.",
@@ -140,7 +145,7 @@ func (d *tokenDataSource) Schema(
 				Description: "Content of the model serving auth token.",
 				Computed:    true,
 			},
-			"validUntil": schema.StringAttribute{
+			"valid_until": schema.StringAttribute{
 				Description: "The time until the model serving auth token is valid.",
 				Computed:    true,
 			},
@@ -165,11 +170,16 @@ func (d *tokenDataSource) Read(
 	projectId := model.ProjectId.ValueString()
 	tokenId := model.TokenId.ValueString()
 	region := model.Region.ValueString()
+	if region == "" {
+		region = d.client.GetConfig().Region
+	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "token_id", tokenId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	getTokenResp, err := d.client.GetToken(ctx, region, projectId, tokenId).Execute()
+	getTokenResp, err := d.client.GetToken(ctx, region, projectId, tokenId).
+		Execute()
 	if err != nil {
 		core.LogAndAddError(
 			ctx,

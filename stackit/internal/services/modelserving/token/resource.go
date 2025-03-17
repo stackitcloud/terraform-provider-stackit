@@ -2,9 +2,7 @@ package token
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -17,8 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/modelserving/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -85,7 +82,10 @@ func (r *tokenResource) Configure(
 			ctx,
 			&resp.Diagnostics,
 			"Error configuring API client",
-			fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData),
+			fmt.Sprintf(
+				"Expected configure type stackit.ProviderData, got %T",
+				req.ProviderData,
+			),
 		)
 		return
 	}
@@ -101,6 +101,7 @@ func (r *tokenResource) Configure(
 		apiClient, err = modelserving.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.ModelServingCustomEndpoint),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	} else {
 		apiClient, err = modelserving.NewAPIClient(
@@ -148,7 +149,8 @@ func (r *tokenResource) Schema(
 			},
 			"region": schema.StringAttribute{
 				Description: "STACKIT region to which the model serving auth token is associated.",
-				Required:    true,
+				Required:    false,
+				Optional:    true,
 			},
 			"token_id": schema.StringAttribute{
 				Description: "The model serving auth token ID.",
@@ -174,7 +176,7 @@ func (r *tokenResource) Schema(
 				Description: "Content of the model serving auth token.",
 				Computed:    true,
 			},
-			"validUntil": schema.StringAttribute{
+			"valid_until": schema.StringAttribute{
 				Description: "The time until the model serving auth token is valid.",
 				Computed:    true,
 			},
@@ -198,6 +200,9 @@ func (r *tokenResource) Create(
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
+	if region == "" {
+		region = r.client.GetConfig().Region
+	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -228,7 +233,7 @@ func (r *tokenResource) Create(
 		return
 	}
 
-	waitResp, err := r.activeTokenHandler(ctx, projectId, *createTokenResp.Token.Id, region).
+	waitResp, err := wait.CreateModelServingWaitHandler(ctx, r.client, projectId, *createTokenResp.Token.Id, region).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(
@@ -278,12 +283,16 @@ func (r *tokenResource) Read(
 	projectId := model.ProjectId.ValueString()
 	tokenId := model.TokenId.ValueString()
 	region := model.Region.ValueString()
+	if region == "" {
+		region = r.client.GetConfig().Region
+	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "token_id", tokenId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	getTokenResp, err := r.client.GetToken(ctx, region, projectId, tokenId).Execute()
+	getTokenResp, err := r.client.GetToken(ctx, region, projectId, tokenId).
+		Execute()
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -345,6 +354,9 @@ func (r *tokenResource) Update(
 	projectId := model.ProjectId.ValueString()
 	tokenId := model.TokenId.ValueString()
 	region := model.Region.ValueString()
+	if region == "" {
+		region = r.client.GetConfig().Region
+	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "token_id", tokenId)
@@ -388,7 +400,19 @@ func (r *tokenResource) Update(
 		return
 	}
 
-	err = mapUpdateResponse(updateTokenResp, &model)
+	waitResp, err := wait.UpdateModelServingWaitHandler(ctx, r.client, projectId, tokenId, region).
+		WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error updating model serving auth token",
+			fmt.Sprintf("Waiting for token to be updated: %v", err),
+		)
+		return
+	}
+
+	err = mapGetResponse(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -425,6 +449,9 @@ func (r *tokenResource) Delete(
 	projectId := model.ProjectId.ValueString()
 	tokenId := model.TokenId.ValueString()
 	region := model.Region.ValueString()
+	if region == "" {
+		region = r.client.GetConfig().Region
+	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "token_id", tokenId)
@@ -442,7 +469,8 @@ func (r *tokenResource) Delete(
 		return
 	}
 
-	_, err = r.deleteTokenHandler(ctx, projectId, tokenId, region).WaitWithContext(ctx)
+	_, err = wait.DeleteModelServingWaitHandler(ctx, r.client, projectId, tokenId, region).
+		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -477,8 +505,10 @@ func (r *tokenResource) ImportState(
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("token_id"), idParts[1])...)
+	resp.Diagnostics.Append(
+		resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
+	resp.Diagnostics.Append(
+		resp.State.SetAttribute(ctx, path.Root("token_id"), idParts[1])...)
 
 	tflog.Info(ctx, "Model-Serving auth token state imported")
 }
@@ -528,14 +558,6 @@ func mapCreateResponse(
 	return nil
 }
 
-func mapUpdateResponse(tokenUpdateResp *modelserving.UpdateTokenResponse, model *Model) error {
-	if tokenUpdateResp == nil {
-		return fmt.Errorf("response input is nil")
-	}
-
-	return mapToken(tokenUpdateResp.Token, model)
-}
-
 func mapToken(token *modelserving.Token, model *Model) error {
 	if token == nil {
 		return fmt.Errorf("response input is nil")
@@ -567,7 +589,10 @@ func mapToken(token *modelserving.Token, model *Model) error {
 	return nil
 }
 
-func mapGetResponse(tokenGetResp *modelserving.GetTokenResponse, model *Model) error {
+func mapGetResponse(
+	tokenGetResp *modelserving.GetTokenResponse,
+	model *Model,
+) error {
 	if tokenGetResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -587,7 +612,9 @@ func toCreatePayload(model *Model) (*modelserving.CreateTokenPayload, error) {
 	}, nil
 }
 
-func toUpdatePayload(model *Model) (*modelserving.PartialUpdateTokenPayload, error) {
+func toUpdatePayload(
+	model *Model,
+) (*modelserving.PartialUpdateTokenPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -596,61 +623,4 @@ func toUpdatePayload(model *Model) (*modelserving.PartialUpdateTokenPayload, err
 		Name:        conversion.StringValueToPointer(model.Name),
 		Description: conversion.StringValueToPointer(model.Description),
 	}, nil
-}
-
-func (r *tokenResource) activeTokenHandler(
-	ctx context.Context,
-	projectId, tokenId, region string,
-) *wait.AsyncActionHandler[modelserving.GetTokenResponse] {
-	handler := wait.New(
-		func() (waitFinished bool, response *modelserving.GetTokenResponse, err error) {
-			getTokenResp, err := r.client.GetToken(ctx, region, projectId, tokenId).Execute()
-			if err != nil {
-				return false, nil, err
-			}
-			if getTokenResp.Token.State == nil {
-				return false, nil, fmt.Errorf(
-					"token state is missing for token with id %s",
-					tokenId,
-				)
-			}
-			if *getTokenResp.Token.State == activeState {
-				return true, getTokenResp, nil
-			}
-			return false, nil, nil
-		},
-	)
-
-	handler.SetTimeout(10 * time.Minute)
-
-	return handler
-}
-
-func (r *tokenResource) deleteTokenHandler(
-	ctx context.Context,
-	projectId, tokenId, region string,
-) *wait.AsyncActionHandler[modelserving.GetTokenResponse] {
-	handler := wait.New(
-		func() (waitFinished bool, response *modelserving.GetTokenResponse, err error) {
-			_, err = r.client.GetToken(ctx, region, projectId, tokenId).Execute()
-			if err != nil {
-				// check if error is not found -> token is deleted
-				// use errors.As
-				var oapiErr *oapierror.GenericOpenAPIError
-				if errors.As(err, &oapiErr) {
-					if oapiErr.StatusCode == http.StatusNotFound {
-						return true, nil, nil
-					}
-				}
-
-				return false, nil, err
-			}
-
-			return false, nil, nil
-		},
-	)
-
-	handler.SetTimeout(10 * time.Minute)
-
-	return handler
 }

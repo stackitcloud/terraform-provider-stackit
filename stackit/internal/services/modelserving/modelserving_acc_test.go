@@ -52,7 +52,10 @@ func TestAccModelServingTokenResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: inputTokenConfig(tokenResource["name"], tokenResource["description"]),
+				Config: inputTokenConfig(
+					tokenResource["name"],
+					tokenResource["description"],
+				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(
 						"stackit_modelserving_token.token",
@@ -83,10 +86,13 @@ func TestAccModelServingTokenResource(t *testing.T) {
 						"stackit_modelserving_token.token",
 						"token_id",
 					),
-					resource.TestCheckResourceAttrSet("stackit_modelserving_token.token", "state"),
 					resource.TestCheckResourceAttrSet(
 						"stackit_modelserving_token.token",
-						"validUntil",
+						"state",
+					),
+					resource.TestCheckResourceAttrSet(
+						"stackit_modelserving_token.token",
+						"valid_until",
 					),
 					resource.TestCheckResourceAttrSet(
 						"stackit_modelserving_token.token",
@@ -96,7 +102,8 @@ func TestAccModelServingTokenResource(t *testing.T) {
 			},
 			// Data Source
 			{
-				Config: fmt.Sprintf(`
+				Config: fmt.Sprintf(
+					`
 					%s
 
 					data "stackit_modelserving_token" "token" {
@@ -104,7 +111,10 @@ func TestAccModelServingTokenResource(t *testing.T) {
 						token_id = stackit_modelserving_token.token.token_id
 						region = stackit_modelserving_token.token.region
 					}`,
-					inputTokenConfig(tokenResource["name"], tokenResource["description"]),
+					inputTokenConfig(
+						tokenResource["name"],
+						tokenResource["description"],
+					),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(
@@ -132,8 +142,8 @@ func TestAccModelServingTokenResource(t *testing.T) {
 						"data.stackit_modelserving_token.token", "state",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_modelserving_token.token", "validUntil",
-						"data.stackit_modelserving_token.token", "validUntil",
+						"stackit_modelserving_token.token", "valid_until",
+						"data.stackit_modelserving_token.token", "valid_until",
 					),
 				),
 			},
@@ -149,10 +159,16 @@ func TestAccModelServingTokenResource(t *testing.T) {
 					}
 					tokenId, ok := r.Primary.Attributes["token_id"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find attribute token_id")
+						return "", fmt.Errorf(
+							"couldn't find attribute token_id",
+						)
 					}
 
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, tokenId), nil
+					return fmt.Sprintf(
+						"%s,%s",
+						testutil.ProjectId,
+						tokenId,
+					), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -188,10 +204,13 @@ func TestAccModelServingTokenResource(t *testing.T) {
 						"stackit_modelserving_token.token",
 						"token_id",
 					),
-					resource.TestCheckResourceAttrSet("stackit_modelserving_token.token", "state"),
 					resource.TestCheckResourceAttrSet(
 						"stackit_modelserving_token.token",
-						"validUntil",
+						"state",
+					),
+					resource.TestCheckResourceAttrSet(
+						"stackit_modelserving_token.token",
+						"valid_until",
 					),
 				),
 			},
@@ -227,7 +246,8 @@ func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 		}
 		tokenId := idParts[1]
 
-		_, err := client.GetToken(ctx, testutil.Region, testutil.ProjectId, tokenId).Execute()
+		_, err := client.GetToken(ctx, testutil.Region, testutil.ProjectId, tokenId).
+			Execute()
 		if err == nil {
 			return fmt.Errorf("token %s still exists", tokenId)
 		}
