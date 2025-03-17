@@ -71,7 +71,7 @@ func (r *credentialsGroupResource) ModifyPlan(ctx context.Context, req resource.
 		return
 	}
 
-	coreutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.Region, resp)
+	coreutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -132,7 +132,7 @@ func (r *credentialsGroupResource) Schema(_ context.Context, _ resource.SchemaRe
 		"name":                 "The credentials group's display name.",
 		"project_id":           "Project ID to which the credentials group is associated.",
 		"urn":                  "Credentials group uniform resource name (URN)",
-		"region":               "The resource region. Read-only attribute that reflects the provider region.",
+		"region":               "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -174,7 +174,7 @@ func (r *credentialsGroupResource) Schema(_ context.Context, _ resource.SchemaRe
 				Computed:    true,
 			},
 			"region": schema.StringAttribute{
-				Optional: false,
+				Optional: true,
 				// must be computed to allow for storing the override value from the provider
 				Computed:    true,
 				Description: descriptions["region"],
@@ -250,7 +250,7 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 	ctx = tflog.SetField(ctx, "region", region)
 	if region == "" {
-		region = r.providerData.Region
+		region = r.providerData.GetRegion()
 	}
 
 	found, err := readCredentialsGroups(ctx, &model, region, r.client)

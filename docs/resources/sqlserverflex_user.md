@@ -32,12 +32,13 @@ resource "stackit_sqlserverflex_user" "example" {
 
 ### Optional
 
-- `roles` (Set of String) Database access levels for the user. Possible values: [`##STACKIT_LoginManager##`, `##STACKIT_DatabaseManager##`]
+- `region` (String)
+- `roles` (Set of String) Database access levels for the user.
 
 ### Read-Only
 
 - `host` (String)
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`,`user_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`,`user_id`".
 - `password` (String, Sensitive) Password of the user account.
 - `port` (Number)
 - `user_id` (String) User ID.

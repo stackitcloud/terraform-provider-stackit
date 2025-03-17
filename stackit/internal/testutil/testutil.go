@@ -330,7 +330,7 @@ func SecretsManagerProviderConfig() string {
 }
 
 func SQLServerFlexProviderConfig() string {
-	if MongoDBFlexCustomEndpoint == "" {
+	if SQLServerFlexCustomEndpoint == "" {
 		return `
 		provider "stackit" {
 			region = "eu01"
@@ -386,6 +386,23 @@ func SKEProviderConfig() string {
 			ske_custom_endpoint = "%s"
 		}`,
 		SKECustomEndpoint,
+	)
+}
+
+func AuthorizationProviderConfig() string {
+	if AuthorizationCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			region = "eu01"
+			experiments = ["iam"]
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			authorization_custom_endpoint = "%s"
+			experiments = ["iam"]
+		}`,
+		AuthorizationCustomEndpoint,
 	)
 }
 

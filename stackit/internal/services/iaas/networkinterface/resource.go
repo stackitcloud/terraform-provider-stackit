@@ -103,7 +103,7 @@ func (r *networkInterfaceResource) Configure(ctx context.Context, req resource.C
 	} else {
 		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 
@@ -532,8 +532,13 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 		labels = types.MapNull(types.StringType)
 	}
 
+	networkInterfaceName := types.StringNull()
+	if networkInterfaceResp.Name != nil && *networkInterfaceResp.Name != "" {
+		networkInterfaceName = types.StringPointerValue(networkInterfaceResp.Name)
+	}
+
 	model.NetworkInterfaceId = types.StringValue(networkInterfaceId)
-	model.Name = types.StringPointerValue(networkInterfaceResp.Name)
+	model.Name = networkInterfaceName
 	model.IPv4 = types.StringPointerValue(networkInterfaceResp.Ipv4)
 	model.Security = types.BoolPointerValue(networkInterfaceResp.NicSecurity)
 	model.Device = types.StringPointerValue(networkInterfaceResp.Device)

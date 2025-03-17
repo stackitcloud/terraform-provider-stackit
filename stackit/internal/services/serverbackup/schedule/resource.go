@@ -107,7 +107,7 @@ func (r *scheduleResource) Configure(ctx context.Context, req resource.Configure
 	} else {
 		apiClient, err = serverbackup.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 

@@ -14,9 +14,11 @@ import (
 const Separator = ","
 
 type ProviderData struct {
-	RoundTripper                    http.RoundTripper
-	ServiceAccountEmail             string // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025.
+	RoundTripper        http.RoundTripper
+	ServiceAccountEmail string // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025.
+	// Deprecated: Use DefaultRegion instead
 	Region                          string
+	DefaultRegion                   string
 	ArgusCustomEndpoint             string
 	AuthorizationCustomEndpoint     string
 	DnsCustomEndpoint               string
@@ -40,6 +42,18 @@ type ProviderData struct {
 	SKECustomEndpoint               string
 	ServiceEnablementCustomEndpoint string
 	EnableBetaResources             bool
+	Experiments                     []string
+}
+
+// GetRegion returns the effective region for the provider, falling back to the deprecated _region_ attribute
+func (pd *ProviderData) GetRegion() string {
+	if pd.DefaultRegion != "" {
+		return pd.DefaultRegion
+	} else if pd.Region != "" {
+		return pd.Region
+	}
+	// final fallback
+	return "eu01"
 }
 
 // DiagsToError Converts TF diagnostics' errors into an error with a human-readable description.

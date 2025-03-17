@@ -83,7 +83,7 @@ func (r *credentialsGroupDataSource) Schema(_ context.Context, _ datasource.Sche
 		"name":                 "The credentials group's display name.",
 		"project_id":           "Object Storage Project ID to which the credentials group is associated.",
 		"urn":                  "Credentials group uniform resource name (URN)",
-		"region":               "The resource region. Read-only attribute that reflects the provider region.",
+		"region":               "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -117,8 +117,7 @@ func (r *credentialsGroupDataSource) Schema(_ context.Context, _ datasource.Sche
 			},
 			"region": schema.StringAttribute{
 				// the region cannot be found automatically, so it has to be passed
-				Optional:    false,
-				Computed:    true,
+				Optional:    true,
 				Description: descriptions["region"],
 			},
 		},
@@ -137,7 +136,7 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	var region string
 	if utils.IsUndefined(model.Region) {
-		region = r.providerData.Region
+		region = r.providerData.GetRegion()
 	} else {
 		region = model.Region.ValueString()
 	}

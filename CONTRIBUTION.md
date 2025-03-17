@@ -124,7 +124,7 @@ func (r *barResource) Configure(ctx context.Context, req resource.ConfigureReque
 	} else {
 		apiClient, err = foo.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.DefaultRegion),
 		)
 	}
 

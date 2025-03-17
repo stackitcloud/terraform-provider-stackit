@@ -74,7 +74,7 @@ func (d *securityGroupDataSource) Configure(ctx context.Context, req datasource.
 	} else {
 		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 	if err != nil {
