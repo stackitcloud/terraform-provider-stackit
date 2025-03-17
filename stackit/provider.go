@@ -36,7 +36,6 @@ import (
 	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
 	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
 	iaasVolumeAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volumeattach"
-	loadBalancerCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/credential"
 	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
 	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
@@ -533,7 +532,6 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasSecurityGroup.NewSecurityGroupResource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
 		loadBalancer.NewLoadBalancerResource,
-		loadBalancerCredential.NewCredentialResource,
 		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
 		logMeInstance.NewInstanceResource,
 		logMeCredential.NewCredentialResource,
