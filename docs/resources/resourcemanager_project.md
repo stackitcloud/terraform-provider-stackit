@@ -18,6 +18,7 @@ resource "stackit_resourcemanager_project" "example" {
   name                = "example-container"
   labels = {
     "Label 1" = "foo"
+    // "networkArea" = stackit_network_area.foo.network_area_id
   }
   owner_email = "john.doe@stackit.cloud"
 }
@@ -34,7 +35,7 @@ resource "stackit_resourcemanager_project" "example" {
 
 ### Optional
 
-- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}. To add a project to a STACKIT Network Area, setting the label `networkArea=<networkAreaID>` is required.
 
 ### Read-Only
 
