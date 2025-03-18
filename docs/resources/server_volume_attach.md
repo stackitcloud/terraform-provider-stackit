@@ -4,14 +4,11 @@ page_title: "stackit_server_volume_attach Resource - stackit"
 subcategory: ""
 description: |-
   Volume attachment resource schema. Attaches a volume to a server. Must have a region specified in the provider configuration.
-  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_server_volume_attach (Resource)
 
 Volume attachment resource schema. Attaches a volume to a server. Must have a `region` specified in the provider configuration.
-
-~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 

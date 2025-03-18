@@ -9,7 +9,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -26,11 +25,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
-
-// affinityGroupResourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var affinityGroupResourceBetaCheckDone bool
 
 var (
 	_ resource.Resource                = &affinityGroupResource{}
@@ -75,14 +69,6 @@ func (r *affinityGroupResource) Configure(ctx context.Context, req resource.Conf
 		return
 	}
 
-	if !affinityGroupResourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_affinity_group", "resource")
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		affinityGroupResourceBetaCheckDone = true
-	}
-
 	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
@@ -111,7 +97,7 @@ func (r *affinityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 	description := "Affinity Group schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		Description:         description,
-		MarkdownDescription: features.AddBetaDescription(description + "\n\n" + exampleUsageWithServer + policies),
+		MarkdownDescription: description + "\n\n" + exampleUsageWithServer + policies,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`affinity_group_id`\".",

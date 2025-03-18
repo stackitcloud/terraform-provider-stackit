@@ -19,14 +19,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
-
-// resourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var resourceBetaCheckDone bool
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -71,14 +65,6 @@ func (r *publicIpAssociateResource) Configure(ctx context.Context, req resource.
 		return
 	}
 
-	if !resourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_public_ip_associate", "resource")
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		resourceBetaCheckDone = true
-	}
-
 	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
@@ -116,7 +102,7 @@ func (r *publicIpAssociateResource) Schema(_ context.Context, _ resource.SchemaR
 			"Using both resources together for the same public IP or network interface WILL lead to conflicts, as they both have control of the public IP and network interface association.",
 	}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription(fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["warning_message"])),
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["warning_message"]),
 		Description:         fmt.Sprintf("%s\n\n%s", descriptions["main"], descriptions["warning_message"]),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

@@ -18,14 +18,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
-
-// resourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var resourceBetaCheckDone bool
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -69,14 +63,6 @@ func (r *networkInterfaceAttachResource) Configure(ctx context.Context, req reso
 		return
 	}
 
-	if !resourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_server_network_interface_attach", "resource")
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		resourceBetaCheckDone = true
-	}
-
 	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
@@ -103,9 +89,10 @@ func (r *networkInterfaceAttachResource) Configure(ctx context.Context, req reso
 
 // Schema defines the schema for the resource.
 func (r *networkInterfaceAttachResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	description := "Network interface attachment resource schema. Attaches a network interface to a server. Must have a `region` specified in the provider configuration. The attachment only takes full effect after server reboot."
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Network interface attachment resource schema. Attaches a network interface to a server. Must have a `region` specified in the provider configuration. The attachment only takes full effect after server reboot."),
-		Description:         "Network interface attachment resource schema. Attaches a network interface to a server. Must have a `region` specified in the provider configuration. The attachment only takes full effect after server reboot.",
+		MarkdownDescription: description,
+		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`server_id`,`network_interface_id`\".",
