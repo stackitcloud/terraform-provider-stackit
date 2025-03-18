@@ -27,10 +27,14 @@ data "stackit_loadbalancer" "example" {
 - `name` (String) Load balancer name.
 - `project_id` (String) STACKIT project ID to which the Load Balancer is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `external_address` (String) External Load Balancer IP address where this Load Balancer is exposed.
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`","`name`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`","region","`name`".
 - `listeners` (Attributes List) List of all listeners which will accept traffic. Limited to 20. (see [below for nested schema](#nestedatt--listeners))
 - `networks` (Attributes List) List of networks that listeners and targets reside in. (see [below for nested schema](#nestedatt--networks))
 - `options` (Attributes) Defines any optional functionality you want to have enabled on your load balancer. (see [below for nested schema](#nestedatt--options))

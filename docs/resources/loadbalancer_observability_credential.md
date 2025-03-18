@@ -31,7 +31,11 @@ resource "stackit_loadbalancer_observability_credential" "example" {
 - `project_id` (String) STACKIT project ID to which the load balancer observability credential is associated.
 - `username` (String) The password for the observability service (e.g. Argus) where the logs/metrics will be pushed into.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `credentials_ref` (String) The credentials reference is used by the Load Balancer to define which credentials it will use.
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`","`credentials_ref`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`","region","`credentials_ref`".

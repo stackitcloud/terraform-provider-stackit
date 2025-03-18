@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -33,7 +34,8 @@ func NewLoadBalancerDataSource() datasource.DataSource {
 
 // loadBalancerDataSource is the data source implementation.
 type loadBalancerDataSource struct {
-	client *loadbalancer.APIClient
+	client       *loadbalancer.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -64,7 +66,6 @@ func (r *loadBalancerDataSource) Configure(ctx context.Context, req datasource.C
 	} else {
 		apiClient, err = loadbalancer.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 
@@ -81,7 +82,7 @@ func (r *loadBalancerDataSource) Configure(ctx context.Context, req datasource.C
 func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                        "Load Balancer data source schema. Must have a `region` specified in the provider configuration.",
-		"id":                          "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`name`\".",
+		"id":                          "Terraform's internal resource ID. It is structured as \"`project_id`\",\"region\",\"`name`\".",
 		"project_id":                  "STACKIT project ID to which the Load Balancer is associated.",
 		"external_address":            "External Load Balancer IP address where this Load Balancer is exposed.",
 		"listeners":                   "List of all listeners which will accept traffic. Limited to 20.",
@@ -111,6 +112,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		"targets":                     "List of all targets which will be used in the pool. Limited to 1000.",
 		"targets.display_name":        "Target display name",
 		"ip":                          "Target IP",
+		"region":                      "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -302,6 +304,11 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 					},
 				},
 			},
+			"region": schema.StringAttribute{
+				// the region cannot be found, so it has to be passed
+				Optional:    true,
+				Description: descriptions["region"],
+			},
 		},
 	}
 }
@@ -316,10 +323,17 @@ func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, name).Execute()
+	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -330,7 +344,7 @@ func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, lbResp, &model)
+	err = mapFields(ctx, lbResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
