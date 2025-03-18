@@ -25,18 +25,20 @@ resource "stackit_modelserving_token" "example" {
 
 ### Required
 
-- `description` (String) The description of the model serving auth token.
+- `name` (String) Name of the model serving auth token.
 - `project_id` (String) STACKIT project ID to which the model serving auth token is associated.
-- `token_id` (String) The model serving auth token ID.
 
 ### Optional
 
+- `description` (String) The description of the model serving auth token.
 - `region` (String) STACKIT region to which the model serving auth token is associated.
+- `rotate_when_changed` (Map of String) A map of arbitrary key/value pairs that will force recreation of the token when they change, enabling token rotation based on external conditions such as a rotating timestamp. Changing this forces a new resource to be created.
+- `ttl_duration` (String) The TTL duration of the model serving auth token.
 
 ### Read-Only
 
 - `content` (String) Content of the model serving auth token.
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`token_id`".
-- `name` (String) Name of the model serving auth token.
 - `state` (String) State of the model serving auth token.
+- `token_id` (String) The model serving auth token ID.
 - `valid_until` (String) The time until the model serving auth token is valid.

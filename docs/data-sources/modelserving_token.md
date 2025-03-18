@@ -24,12 +24,12 @@ data "stackit_modelserving_token" "example" {
 
 ### Required
 
-- `description` (String) The description of the model serving auth token.
 - `project_id` (String) STACKIT project ID to which the model serving auth token is associated.
 - `token_id` (String) The model serving auth token ID.
 
 ### Optional
 
+- `description` (String) The description of the model serving auth token.
 - `region` (String) STACKIT region to which the model serving auth token is associated.
 
 ### Read-Only

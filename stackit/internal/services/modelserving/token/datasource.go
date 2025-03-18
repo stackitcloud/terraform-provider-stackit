@@ -131,7 +131,8 @@ func (d *tokenDataSource) Schema(
 			},
 			"description": schema.StringAttribute{
 				Description: "The description of the model serving auth token.",
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 			},
 			"name": schema.StringAttribute{
 				Description: "Name of the model serving auth token.",

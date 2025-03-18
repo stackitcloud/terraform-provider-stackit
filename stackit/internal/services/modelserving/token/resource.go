@@ -11,6 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -34,16 +37,17 @@ const (
 )
 
 type Model struct {
-	Id          types.String `tfsdk:"id"` // needed by TF
-	ProjectId   types.String `tfsdk:"project_id"`
-	Region      types.String `tfsdk:"region"`
-	TokenId     types.String `tfsdk:"token_id"`
-	Name        types.String `tfsdk:"name"`
-	Description types.String `tfsdk:"description"`
-	State       types.String `tfsdk:"state"`
-	ValidUntil  types.String `tfsdk:"validUntil"`
-	TTLDuration types.String `tfsdk:"ttlDuration"`
-	Content     types.String `tfsdk:"content"`
+	Id                types.String `tfsdk:"id"` // needed by TF
+	ProjectId         types.String `tfsdk:"project_id"`
+	Region            types.String `tfsdk:"region"`
+	TokenId           types.String `tfsdk:"token_id"`
+	Name              types.String `tfsdk:"name"`
+	Description       types.String `tfsdk:"description"`
+	State             types.String `tfsdk:"state"`
+	ValidUntil        types.String `tfsdk:"valid_until"`
+	TTLDuration       types.String `tfsdk:"ttl_duration"`
+	Content           types.String `tfsdk:"content"`
+	RotateWhenChanged types.Map    `tfsdk:"rotate_when_changed"`
 }
 
 // NewTokenResource is a helper function to simplify the provider implementation.
@@ -154,19 +158,36 @@ func (r *tokenResource) Schema(
 			},
 			"token_id": schema.StringAttribute{
 				Description: "The model serving auth token ID.",
-				Required:    true,
-				Validators: []validator.String{
-					validate.UUID(),
-					validate.NoSeparator(),
+				Computed:    true,
+			},
+			"ttl_duration": schema.StringAttribute{
+				Description: "The TTL duration of the model serving auth token.",
+				Required:    false,
+				Optional:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"rotate_when_changed": schema.MapAttribute{
+				Description: "A map of arbitrary key/value pairs that will force " +
+					"recreation of the token when they change, enabling token rotation " +
+					"based on external conditions such as a rotating timestamp. Changing " +
+					"this forces a new resource to be created.",
+				Optional:    true,
+				Required:    false,
+				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.RequiresReplace(),
 				},
 			},
 			"description": schema.StringAttribute{
 				Description: "The description of the model serving auth token.",
-				Required:    true,
+				Required:    false,
+				Optional:    true,
 			},
 			"name": schema.StringAttribute{
 				Description: "Name of the model serving auth token.",
-				Computed:    true,
+				Required:    true,
 			},
 			"state": schema.StringAttribute{
 				Description: "State of the model serving auth token.",
@@ -554,6 +575,7 @@ func mapCreateResponse(
 	model.ValidUntil = types.StringValue(validUntil)
 	model.Content = types.StringPointerValue(token.Content)
 	model.Description = types.StringPointerValue(token.Description)
+	model.RotateWhenChanged = types.MapNull(types.StringType)
 
 	return nil
 }
@@ -585,6 +607,7 @@ func mapToken(token *modelserving.Token, model *Model) error {
 	model.State = types.StringPointerValue(token.State)
 	model.ValidUntil = types.StringValue(validUntil)
 	model.Description = types.StringPointerValue(token.Description)
+	model.RotateWhenChanged = types.MapNull(types.StringType)
 
 	return nil
 }
