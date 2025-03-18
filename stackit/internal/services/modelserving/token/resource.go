@@ -233,7 +233,7 @@ func (r *tokenResource) Create(
 		return
 	}
 
-	waitResp, err := wait.CreateModelServingWaitHandler(ctx, r.client, projectId, *createTokenResp.Token.Id, region).
+	waitResp, err := wait.CreateModelServingWaitHandler(ctx, r.client, region, projectId, *createTokenResp.Token.Id).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(
@@ -400,7 +400,7 @@ func (r *tokenResource) Update(
 		return
 	}
 
-	waitResp, err := wait.UpdateModelServingWaitHandler(ctx, r.client, projectId, tokenId, region).
+	waitResp, err := wait.UpdateModelServingWaitHandler(ctx, r.client, region, projectId, tokenId).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(
@@ -469,7 +469,7 @@ func (r *tokenResource) Delete(
 		return
 	}
 
-	_, err = wait.DeleteModelServingWaitHandler(ctx, r.client, projectId, tokenId, region).
+	_, err = wait.DeleteModelServingWaitHandler(ctx, r.client, region, projectId, tokenId).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(
