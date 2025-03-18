@@ -46,9 +46,11 @@ func TestMapGetTokenFields(t *testing.T) {
 		{
 			description: "should map fields correctly",
 			state: &Model{
-				Id:        types.StringValue("pid,tid"),
-				ProjectId: types.StringValue("pid"),
-				TokenId:   types.StringValue("tid"),
+				Id:                types.StringValue("pid,tid"),
+				ProjectId:         types.StringValue("pid"),
+				TokenId:           types.StringValue("tid"),
+				Region:            types.StringValue("eu01"),
+				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			input: &modelserving.GetTokenResponse{
 				Token: &modelserving.Token{
@@ -83,7 +85,7 @@ func TestMapGetTokenFields(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			t.Parallel()
 
-			err := mapGetResponse(tt.input, tt.state)
+			err := mapGetResponse(tt.input, tt.state, tt.state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -167,8 +169,10 @@ func TestMapCreateTokenFields(t *testing.T) {
 		{
 			description: "should map fields correctly",
 			state: &Model{
-				Id:        types.StringValue("pid,tid"),
-				ProjectId: types.StringValue("pid"),
+				Id:                types.StringValue("pid,tid"),
+				ProjectId:         types.StringValue("pid"),
+				Region:            types.StringValue("eu01"),
+				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			inputCreateTokenResponse: &modelserving.CreateTokenResponse{
 				Token: &modelserving.TokenCreated{

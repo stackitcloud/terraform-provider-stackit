@@ -110,6 +110,7 @@ func (r *tokenResource) Configure(
 	} else {
 		apiClient, err = modelserving.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 
@@ -337,7 +338,7 @@ func (r *tokenResource) Read(
 	}
 
 	// Map response body to schema
-	err = mapGetResponse(getTokenResp, &model)
+	err = mapGetResponse(getTokenResp, &model, &model)
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -372,9 +373,17 @@ func (r *tokenResource) Update(
 		return
 	}
 
-	projectId := model.ProjectId.ValueString()
-	tokenId := model.TokenId.ValueString()
-	region := model.Region.ValueString()
+	// Get current state
+	var state Model
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	projectId := state.ProjectId.ValueString()
+	tokenId := state.TokenId.ValueString()
+	region := state.Region.ValueString()
 	if region == "" {
 		region = r.client.GetConfig().Region
 	}
@@ -404,7 +413,13 @@ func (r *tokenResource) Update(
 			ctx,
 			&resp.Diagnostics,
 			"Error updating model serving auth token",
-			fmt.Sprintf("Calling API: %v", err),
+			fmt.Sprintf(
+				"Calling API: %v, tokenId: %s, region: %s, projectId: %s",
+				err,
+				tokenId,
+				region,
+				projectId,
+			),
 		)
 		return
 	}
@@ -433,7 +448,7 @@ func (r *tokenResource) Update(
 		return
 	}
 
-	err = mapGetResponse(waitResp, &model)
+	err = mapGetResponse(waitResp, &model, &state)
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -570,22 +585,23 @@ func mapCreateResponse(
 	)
 	model.TokenId = types.StringPointerValue(token.Id)
 	model.Name = types.StringPointerValue(token.Name)
-	model.Region = types.StringPointerValue(token.Region)
 	model.State = types.StringPointerValue(waitResp.Token.State)
 	model.ValidUntil = types.StringValue(validUntil)
 	model.Content = types.StringPointerValue(token.Content)
 	model.Description = types.StringPointerValue(token.Description)
-	model.RotateWhenChanged = types.MapNull(types.StringType)
 
 	return nil
 }
 
-func mapToken(token *modelserving.Token, model *Model) error {
+func mapToken(token *modelserving.Token, model, state *Model) error {
 	if token == nil {
 		return fmt.Errorf("response input is nil")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
+	}
+	if state == nil {
+		return fmt.Errorf("state input is nil")
 	}
 
 	// theoretically, should never happen, but still catch null pointers
@@ -603,11 +619,10 @@ func mapToken(token *modelserving.Token, model *Model) error {
 	)
 	model.TokenId = types.StringPointerValue(token.Id)
 	model.Name = types.StringPointerValue(token.Name)
-	model.Region = types.StringPointerValue(token.Region)
 	model.State = types.StringPointerValue(token.State)
 	model.ValidUntil = types.StringValue(validUntil)
 	model.Description = types.StringPointerValue(token.Description)
-	model.RotateWhenChanged = types.MapNull(types.StringType)
+	model.Content = state.Content
 
 	return nil
 }
@@ -615,12 +630,13 @@ func mapToken(token *modelserving.Token, model *Model) error {
 func mapGetResponse(
 	tokenGetResp *modelserving.GetTokenResponse,
 	model *Model,
+	state *Model,
 ) error {
 	if tokenGetResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
 
-	return mapToken(tokenGetResp.Token, model)
+	return mapToken(tokenGetResp.Token, model, state)
 }
 
 func toCreatePayload(model *Model) (*modelserving.CreateTokenPayload, error) {

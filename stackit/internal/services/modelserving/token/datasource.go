@@ -203,7 +203,7 @@ func (d *tokenDataSource) Read(
 		return
 	}
 
-	err = mapGetResponse(getTokenResp, &model)
+	err = mapGetResponse(getTokenResp, &model, &model)
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
