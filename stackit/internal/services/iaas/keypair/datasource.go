@@ -132,6 +132,11 @@ func (r *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			summary := fmt.Sprintf("Key Pair with name %q does not exists", name)
+			description := fmt.Sprintf("Key Pair with name %q cannot be found. A key pair can be added with the resource \"stackit_key_pair\"", name)
+			diags.AddError(summary, description)
+			resp.Diagnostics.Append(diags...)
+
 			resp.State.RemoveResource(ctx)
 			return
 		}
