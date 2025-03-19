@@ -23,6 +23,7 @@ lint: lint-golangci-lint lint-tf
 generate-docs:
 	@echo "Generating documentation with tfplugindocs"
 	@$(SCRIPTS_BASE)/tfplugindocs.sh
+	# workaround until STACKITTPR-165 will be resolved
 	@git apply $(SCRIPTS_BASE)/docs.patch
 
 build:
