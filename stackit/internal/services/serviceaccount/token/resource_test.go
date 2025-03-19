@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
@@ -70,10 +71,11 @@ func TestMapCreateResponse(t *testing.T) {
 				Token: utils.Ptr("token"),
 			},
 			Model{
-				Id:            types.StringValue("pid,aid"),
-				ProjectId:     types.StringValue("pid"),
-				Token:         types.StringValue("token"),
-				AccessTokenId: types.StringValue("aid"),
+				Id:                types.StringValue("pid,aid"),
+				ProjectId:         types.StringValue("pid"),
+				Token:             types.StringValue("token"),
+				AccessTokenId:     types.StringValue("aid"),
+				RotateWhenChanged: types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			},
 			true,
 		},
@@ -84,14 +86,17 @@ func TestMapCreateResponse(t *testing.T) {
 				Token:      utils.Ptr("token"),
 				CreatedAt:  utils.Ptr(time.Now()),
 				ValidUntil: utils.Ptr(time.Now().Add(24 * time.Hour)),
+				Active:     utils.Ptr(true),
 			},
 			Model{
-				Id:            types.StringValue("pid,aid"),
-				ProjectId:     types.StringValue("pid"),
-				Token:         types.StringValue("token"),
-				AccessTokenId: types.StringValue("aid"),
-				CreatedAt:     types.StringValue(time.Now().Format(time.RFC3339)),                     // Adjust to the format used
-				ValidUntil:    types.StringValue(time.Now().Add(24 * time.Hour).Format(time.RFC3339)), // Adjust format
+				Id:                types.StringValue("pid,aid"),
+				ProjectId:         types.StringValue("pid"),
+				Token:             types.StringValue("token"),
+				AccessTokenId:     types.StringValue("aid"),
+				Active:            types.BoolValue(true),
+				CreatedAt:         types.StringValue(time.Now().Format(time.RFC3339)),
+				ValidUntil:        types.StringValue(time.Now().Add(24 * time.Hour).Format(time.RFC3339)),
+				RotateWhenChanged: types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			},
 			true,
 		},
@@ -126,15 +131,22 @@ func TestMapCreateResponse(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			state := &Model{
-				ProjectId: tt.expected.ProjectId,
+			model := &Model{
+				ProjectId:         tt.expected.ProjectId,
+				RotateWhenChanged: types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			}
-			err := mapCreateResponse(tt.input, state)
+			err := mapCreateResponse(tt.input, model)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(*model, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
 			}
 		})
 	}
@@ -155,11 +167,12 @@ func TestMapListResponse(t *testing.T) {
 				ValidUntil: utils.Ptr(time.Now().Add(24 * time.Hour)),
 			},
 			Model{
-				Id:            types.StringValue("pid,aid"),
-				ProjectId:     types.StringValue("pid"),
-				AccessTokenId: types.StringValue("aid"),
-				CreatedAt:     types.StringValue(time.Now().Format(time.RFC3339)),                     // Adjusted for test setup time
-				ValidUntil:    types.StringValue(time.Now().Add(24 * time.Hour).Format(time.RFC3339)), // Adjust for format
+				Id:                types.StringValue("pid,aid"),
+				ProjectId:         types.StringValue("pid"),
+				AccessTokenId:     types.StringValue("aid"),
+				CreatedAt:         types.StringValue(time.Now().Format(time.RFC3339)),                     // Adjusted for test setup time
+				ValidUntil:        types.StringValue(time.Now().Add(24 * time.Hour).Format(time.RFC3339)), // Adjust for format
+				RotateWhenChanged: types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			},
 			true,
 		},
@@ -190,15 +203,22 @@ func TestMapListResponse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			state := &Model{
-				ProjectId: tt.expected.ProjectId,
+			model := &Model{
+				ProjectId:         tt.expected.ProjectId,
+				RotateWhenChanged: types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			}
-			err := mapListResponse(tt.input, state)
+			err := mapListResponse(tt.input, model)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Expected an error but did not get one")
 			}
 			if tt.isValid && err != nil {
 				t.Fatalf("Did not expect an error but got one: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(*model, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
 			}
 		})
 	}

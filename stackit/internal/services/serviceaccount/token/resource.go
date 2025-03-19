@@ -119,7 +119,7 @@ func (r *serviceAccountTokenResource) Metadata(_ context.Context, req resource.M
 // Schema defines the resource schema for the service account access token.
 func (r *serviceAccountTokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"id":                    "Unique internal resource ID for Terraform, formatted as \"project_id,access_token_id\".",
+		"id":                    "Unique internal resource ID for Terraform, formatted as \"`project_id`,`access_token_id`\".",
 		"project_id":            "STACKIT project ID associated with the service account token.",
 		"service_account_email": "Email address linked to the service account.",
 		"ttl_days":              "Specifies the token's validity duration in days. If unspecified, defaults to 90 days.",
@@ -133,7 +133,7 @@ func (r *serviceAccountTokenResource) Schema(_ context.Context, _ resource.Schem
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: markdownDescription,
-		Description:         "Schema for managing a STACKIT service account access token.",
+		Description:         "STACKIT service account access token schema.",
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -269,6 +269,7 @@ func (r *serviceAccountTokenResource) Read(ctx context.Context, req resource.Rea
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		// due to security purposes, attempting to list access tokens for a non-existent Service Account will return 403.
 		if ok && oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
 			return
