@@ -109,15 +109,15 @@ func (r *serviceAccountResource) Metadata(_ context.Context, req resource.Metada
 // Schema defines the schema for the resource.
 func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"id":         "Terraform's internal resource ID, structured as \"project_id,email\".",
+		"id":         "Terraform's internal resource ID, structured as \"`project_id`,`email`\".",
 		"project_id": "STACKIT project ID to which the service account is associated.",
 		"name":       "Name of the service account.",
 		"email":      "Email of the service account.",
 	}
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Schema for a STACKIT service account resource."),
-		Description:         "Schema for a STACKIT service account resource.",
+		MarkdownDescription: features.AddBetaDescription("Service account resource schema."),
+		Description:         "Service account resource schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -185,7 +185,7 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 
 	// Set the service account name and map the response to the resource schema.
 	model.Name = types.StringValue(serviceAccountName)
-	err = mapCreateOrListResponse(serviceAccountResp, &model)
+	err = mapFields(serviceAccountResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -231,7 +231,7 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 		}
 
 		// Map the response data to the resource schema and update the state.
-		err = mapCreateOrListResponse(&serviceAccounts[i], &model)
+		err = mapFields(&serviceAccounts[i], &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account", fmt.Sprintf("Error processing API response: %v", err))
 			return
@@ -324,8 +324,8 @@ func toCreatePayload(model *Model) (*serviceaccount.CreateServiceAccountPayload,
 	}, nil
 }
 
-// mapCreateOrListResponse maps a ServiceAccount response to the model.
-func mapCreateOrListResponse(resp *serviceaccount.ServiceAccount, model *Model) error {
+// mapFields maps a ServiceAccount response to the model.
+func mapFields(resp *serviceaccount.ServiceAccount, model *Model) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}

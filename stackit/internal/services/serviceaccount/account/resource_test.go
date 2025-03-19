@@ -13,14 +13,12 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		inputRoles  []string
 		expected    *serviceaccount.CreateServiceAccountPayload
 		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
-			[]string{},
 			&serviceaccount.CreateServiceAccountPayload{
 				Name: nil,
 			},
@@ -31,7 +29,6 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{
 				Name: types.StringValue("example-name1"),
 			},
-			[]string{},
 			&serviceaccount.CreateServiceAccountPayload{
 				Name: utils.Ptr("example-name1"),
 			},
@@ -40,7 +37,6 @@ func TestToCreatePayload(t *testing.T) {
 		{
 			"nil_model",
 			nil,
-			[]string{},
 			nil,
 			false,
 		},
@@ -64,7 +60,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 }
 
-func TestMapCreateResponse(t *testing.T) {
+func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *serviceaccount.ServiceAccount
@@ -111,7 +107,7 @@ func TestMapCreateResponse(t *testing.T) {
 			state := &Model{
 				ProjectId: tt.expected.ProjectId,
 			}
-			err := mapCreateOrListResponse(tt.input, state)
+			err := mapFields(tt.input, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

@@ -16,6 +16,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
+// dataSourceBetaCheckDone is used to prevent multiple checks for beta resources.
+// This is a workaround for the lack of a global state in the provider and
+// needs to exist because the Configure method is called twice.
+var dataSourceBetaCheckDone bool
+
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ datasource.DataSource = &serviceAccountDataSource{}
@@ -44,12 +49,12 @@ func (r *serviceAccountDataSource) Configure(ctx context.Context, req datasource
 		return
 	}
 
-	if !resourceBetaCheckDone {
+	if !dataSourceBetaCheckDone {
 		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_service_account", "datasource")
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		resourceBetaCheckDone = true
+		dataSourceBetaCheckDone = true
 	}
 
 	var apiClient *serviceaccount.APIClient
@@ -82,7 +87,7 @@ func (r *serviceAccountDataSource) Metadata(_ context.Context, req datasource.Me
 // Schema defines the schema for the service account data source.
 func (r *serviceAccountDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"id":         "Terraform's internal resource ID, structured as \"project_id,email\".",
+		"id":         "Terraform's internal resource ID, structured as \"`project_id`,`email`\".",
 		"project_id": "STACKIT project ID to which the service account is associated.",
 		"name":       "Name of the service account.",
 		"email":      "Email of the service account.",
@@ -92,8 +97,8 @@ func (r *serviceAccountDataSource) Schema(_ context.Context, _ datasource.Schema
 	// The datasource schema differs slightly from the resource schema.
 	// In this case, the email attribute is required to read the service account data from the API.
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Schema for a STACKIT service account resource."),
-		Description:         "Schema for a STACKIT service account resource.",
+		MarkdownDescription: features.AddBetaDescription("Service account data source schema."),
+		Description:         "Service account data source schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -147,7 +152,7 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 		}
 
 		// Map the API response to the model, updating its fields with the service account data
-		err = mapCreateOrListResponse(&serviceAccounts[i], &model)
+		err = mapFields(&serviceAccounts[i], &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account", fmt.Sprintf("Error processing API response: %v", err))
 			return

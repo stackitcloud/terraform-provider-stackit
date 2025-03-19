@@ -3,13 +3,13 @@
 page_title: "stackit_service_account Data Source - stackit"
 subcategory: ""
 description: |-
-  Schema for a STACKIT service account resource.
+  Service account data source schema.
   ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_service_account (Data Source)
 
-Schema for a STACKIT service account resource.
+Service account data source schema.
 
 ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
@@ -32,5 +32,5 @@ data "stackit_service_account" "sa" {
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID, structured as "project_id,email".
+- `id` (String) Terraform's internal resource ID, structured as "`project_id`,`email`".
 - `name` (String) Name of the service account.

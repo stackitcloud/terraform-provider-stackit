@@ -101,7 +101,10 @@ func TestServiceAccount(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_service_account.sa")
 					}
-					email := strings.Split(r.Primary.ID, ",")[1]
+					email, ok := r.Primary.Attributes["email"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute email")
+					}
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, email), nil
 				},
 				ImportState:       true,
