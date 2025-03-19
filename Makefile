@@ -23,6 +23,7 @@ lint: lint-golangci-lint lint-tf
 generate-docs:
 	@echo "Generating documentation with tfplugindocs"
 	@$(SCRIPTS_BASE)/tfplugindocs.sh
+	@git apply $(SCRIPTS_BASE)/docs.patch
 
 build:
 	@go build -o bin/terraform-provider-stackit
