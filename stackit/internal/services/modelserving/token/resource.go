@@ -148,9 +148,6 @@ func (r *tokenResource) Schema(
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`token_id`\".",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"project_id": schema.StringAttribute{
 				Description: "STACKIT project ID to which the model serving auth token is associated.",
@@ -171,9 +168,6 @@ func (r *tokenResource) Schema(
 			"token_id": schema.StringAttribute{
 				Description: "The model serving auth token ID.",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
@@ -345,12 +339,6 @@ func (r *tokenResource) Read(
 			if oapiErr.StatusCode == http.StatusNotFound {
 				// Remove the resource from the state so Terraform will recreate it
 				resp.State.RemoveResource(ctx)
-				core.LogAndAddWarning(
-					ctx,
-					&resp.Diagnostics,
-					"Error reading model serving auth token",
-					"Model serving auth token not found",
-				)
 				return
 			}
 		}
@@ -456,12 +444,6 @@ func (r *tokenResource) Update(
 			if oapiErr.StatusCode == http.StatusNotFound {
 				// Remove the resource from the state so Terraform will recreate it
 				resp.State.RemoveResource(ctx)
-				core.LogAndAddWarning(
-					ctx,
-					&resp.Diagnostics,
-					"Error updating model serving auth token",
-					"Model serving auth token not found",
-				)
 				return
 			}
 		}
@@ -559,12 +541,7 @@ func (r *tokenResource) Delete(
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
-				core.LogAndAddWarning(
-					ctx,
-					&resp.Diagnostics,
-					"Error deleting model serving auth token",
-					"Model serving auth token not found",
-				)
+				resp.State.RemoveResource(ctx)
 				return
 			}
 		}
