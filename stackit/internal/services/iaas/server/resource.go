@@ -196,9 +196,10 @@ func (r *serverResource) Configure(ctx context.Context, req resource.ConfigureRe
 
 // Schema defines the schema for the resource.
 func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	description := "Server resource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
-		MarkdownDescription: markdownDescription,
-		Description:         "Server resource schema. Must have a `region` specified in the provider configuration.",
+		MarkdownDescription: description,
+		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`server_id`\".",

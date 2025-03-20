@@ -5,35 +5,6 @@ subcategory: ""
 description: |-
   Argus instance resource schema. Must have a region specified in the provider configuration.
   !> The stackit_argus_instance resource has been deprecated and will be removed after February 26th 2025. Please use stackit_observability_instance instead, which offers the exact same functionality.
-  Example move
-  Example to move the deprecated stackit_argus_instance resource to the newstackit_observability_instance resource:
-  1. Add a new stackit_observability_instance resource with the same values like your previous stackit_argus_instance resource.
-  1. Add a moved block which reference the stackit_argus_instance and stackit_observability_instance resource.
-  1. Remove your old stackit_argus_instance resource and run $ terraform apply.
-  ```terraform
-  resource "stackitargusinstance" "example" {
-    projectid                             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name                                   = "example-instance"
-    planname                              = "Monitoring-Medium-EU01"
-    acl                                    = ["1.1.1.1/32", "2.2.2.2/32"]
-    metricsretentiondays                 = 7
-    metricsretentiondays5mdownsampling = 30
-    metricsretentiondays1hdownsampling = 365
-  }
-  moved {
-      from = stackitargusinstance.example
-      to = stackitobservabilityinstance.example
-  }
-  resource "stackitobservabilityinstance" "example" {
-    projectid                             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name                                   = "example-instance"
-    planname                              = "Monitoring-Medium-EU01"
-    acl                                    = ["1.1.1.1/32", "2.2.2.2/32"]
-    metricsretentiondays                 = 7
-    metricsretentiondays5mdownsampling = 30
-    metricsretentiondays1hdownsampling = 365
-  }
-  ```
 ---
 
 # stackit_argus_instance (Resource)
@@ -42,12 +13,26 @@ Argus instance resource schema. Must have a `region` specified in the provider c
 
 !> The `stackit_argus_instance` resource has been deprecated and will be removed after February 26th 2025. Please use `stackit_observability_instance` instead, which offers the exact same functionality.
 
-## Example move
-Example to move the deprecated `stackit_argus_instance` resource to the new`stackit_observability_instance` resource:
-1. Add a new `stackit_observability_instance` resource with the same values like your previous `stackit_argus_instance` resource.
-1. Add a moved block which reference the `stackit_argus_instance` and `stackit_observability_instance` resource.
-1. Remove your old `stackit_argus_instance` resource and run `$ terraform apply`.
+## Example Usage
+
 ```terraform
+resource "stackit_argus_instance" "example" {
+  project_id                             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name                                   = "example-instance"
+  plan_name                              = "Monitoring-Medium-EU01"
+  acl                                    = ["1.1.1.1/32", "2.2.2.2/32"]
+  metrics_retention_days                 = 7
+  metrics_retention_days_5m_downsampling = 30
+  metrics_retention_days_1h_downsampling = 365
+}
+
+### Example move
+
+#	Example to move the deprecated `stackit_argus_instance` resource to the new`stackit_observability_instance` resource:
+#	1. Add a new `stackit_observability_instance` resource with the same values like your previous `stackit_argus_instance` resource.
+#	2. Add a moved block which reference the `stackit_argus_instance` and `stackit_observability_instance` resource.
+#	3. Remove your old `stackit_argus_instance` resource and run `$ terraform apply`.
+
 resource "stackit_argus_instance" "example" {
   project_id                             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name                                   = "example-instance"
@@ -64,20 +49,6 @@ moved {
 }
 
 resource "stackit_observability_instance" "example" {
-  project_id                             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name                                   = "example-instance"
-  plan_name                              = "Monitoring-Medium-EU01"
-  acl                                    = ["1.1.1.1/32", "2.2.2.2/32"]
-  metrics_retention_days                 = 7
-  metrics_retention_days_5m_downsampling = 30
-  metrics_retention_days_1h_downsampling = 365
-}
-```
-
-## Example Usage
-
-```terraform
-resource "stackit_argus_instance" "example" {
   project_id                             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name                                   = "example-instance"
   plan_name                              = "Monitoring-Medium-EU01"

@@ -94,7 +94,7 @@ var (
 	}
 	Schema = schema.Schema{
 		Description:         fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["deprecation_message"]),
-		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s\n\n%s", descriptions["main"], descriptions["deprecation_message"], exampleMoveToObservability),
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s\n\n", descriptions["main"], descriptions["deprecation_message"]),
 
 		DeprecationMessage: descriptions["deprecation_message"],
 		Attributes: map[string]schema.Attribute{

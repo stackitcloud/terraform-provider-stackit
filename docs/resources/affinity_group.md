@@ -4,31 +4,6 @@ page_title: "stackit_affinity_group Resource - stackit"
 subcategory: ""
 description: |-
   Affinity Group schema. Must have a region specified in the provider configuration.
-  Usage with server
-  ```terraform
-  resource "stackitaffinitygroup" "affinity-group" {
-    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name       = "example-key-pair"
-    policy     = "soft-affinity"
-  }
-  resource "stackitserver" "example-server" {
-    projectid = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name       = "example-server"
-    bootvolume = {
-      size        = 64
-      sourcetype = "image"
-      sourceid   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    }
-    affinitygroup    = stackitaffinitygroup.affinity-group.affinitygroupid
-    availabilityzone = "eu01-1"
-    machinetype      = "g1.1"
-  }
-  ```
-  Policies
-  hard-affinity- All servers launched in this group will be hosted on the same compute node.hard-anti-affinity- All servers launched in this group will be
-  hosted on different compute nodes.soft-affinity- All servers launched in this group will be hosted
-  on the same compute node if possible, but if not possible they still will be scheduled instead of failure.soft-anti-affinity- All servers launched in this group will be hosted on different compute nodes if possible,
-  but if not possible they still will be scheduled instead of failure.
   ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
@@ -36,10 +11,18 @@ description: |-
 
 Affinity Group schema. Must have a `region` specified in the provider configuration.
 
+~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
+## Example Usage
+
+```terraform
+resource "stackit_affinity_group" "example" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "example-affinity-group-name"
+  policy     = "hard-anti-affinity"
+}
 
 ### Usage with server
-```terraform
 resource "stackit_affinity_group" "affinity-group" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name       = "example-key-pair"
@@ -57,33 +40,6 @@ resource "stackit_server" "example-server" {
   affinity_group    = stackit_affinity_group.affinity-group.affinity_group_id
   availability_zone = "eu01-1"
   machine_type      = "g1.1"
-}
-
-```
-
-### Policies
-
-* `hard-affinity`- All servers launched in this group will be hosted on the same compute node.
-
-* `hard-anti-affinity`- All servers launched in this group will be
-    hosted on different compute nodes.
-
-* `soft-affinity`- All servers launched in this group will be hosted
-    on the same compute node if possible, but if not possible they still will be scheduled instead of failure.
-
-* `soft-anti-affinity`- All servers launched in this group will be hosted on different compute nodes if possible,
-	but if not possible they still will be scheduled instead of failure.
-
-
-~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
-
-## Example Usage
-
-```terraform
-resource "stackit_affinity_group" "example" {
-  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name       = "example-affinity-group-name"
-  policy     = "hard-anti-affinity"
 }
 ```
 

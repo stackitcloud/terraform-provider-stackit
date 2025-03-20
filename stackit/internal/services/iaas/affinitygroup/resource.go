@@ -111,7 +111,7 @@ func (r *affinityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 	description := "Affinity Group schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		Description:         description,
-		MarkdownDescription: features.AddBetaDescription(description + "\n\n" + exampleUsageWithServer + policies),
+		MarkdownDescription: features.AddBetaDescription(description),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`affinity_group_id`\".",

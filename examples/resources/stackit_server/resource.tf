@@ -1,20 +1,11 @@
-package server
-
-const markdownDescription = `
-Server resource schema. Must have a region specified in the provider configuration.` + "\n" + `
-~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
-## Example Usage` + "\n" + `
-
-### With key pair` + "\n" +
-
-	"```terraform" + `
+### With key pair
 resource "stackit_key_pair" "keypair" {
   name       = "example-key-pair"
   public_key = chomp(file("path/to/id_rsa.pub"))
 }
 
 resource "stackit_server" "user-data-from-file" {
-  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   boot_volume = {
     size        = 64
     source_type = "image"
@@ -25,11 +16,8 @@ resource "stackit_server" "user-data-from-file" {
   keypair_name = stackit_key_pair.keypair.name
   user_data    = file("${path.module}/cloud-init.yaml")
 }
-` + "\n```" + `
 
-### Boot from volume` + "\n" +
-
-	"```terraform" + `
+### Boot from volume
 resource "stackit_server" "boot-from-volume" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name       = "example-server"
@@ -42,11 +30,8 @@ resource "stackit_server" "boot-from-volume" {
   machine_type      = "g1.1"
   keypair_name      = "example-keypair"
 }
-` + "\n```" + `
 
-### Boot from existing volume` + "\n" +
-
-	"```terraform" + `
+### Boot from existing volume
 resource "stackit_volume" "example-volume" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   size       = 12
@@ -67,16 +52,13 @@ resource "stackit_server" "boot-from-volume" {
   }
   availability_zone = "eu01-1"
   machine_type      = "g1.1"
-  keypair_name = stackit_key_pair.keypair.name
+  keypair_name      = stackit_key_pair.keypair.name
 }
-` + "\n```" + `
 
-### Network setup` + "\n" +
-
-	"```terraform" + `
+### Network setup
 resource "stackit_server" "server-with-network" {
-  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name         = "example-server"
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "example-server"
   boot_volume = {
     size        = 64
     source_type = "image"
@@ -103,7 +85,7 @@ resource "stackit_security_group_rule" "rule" {
   project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   security_group_id = stackit_security_group.sec-group.security_group_id
   direction         = "ingress"
-  ether_type         = "IPv4"
+  ether_type        = "IPv4"
 }
 
 resource "stackit_network_interface" "nic" {
@@ -122,22 +104,20 @@ resource "stackit_server_network_interface_attach" "nic-attachment" {
   server_id            = stackit_server.server-with-network.server_id
   network_interface_id = stackit_network_interface.nic.network_interface_id
 }
-` + "\n```" + `
 
-### Server with attached volume` + "\n" +
 
-	"```terraform" + `
+### Server with attached volume
 resource "stackit_volume" "example-volume" {
-  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  size       = 12
+  project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  size              = 12
   performance_class = "storage_premium_perf6"
   name              = "example-volume"
   availability_zone = "eu01-1"
 }
 
 resource "stackit_server" "server-with-volume" {
-  project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name              = "example-server"
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "example-server"
   boot_volume = {
     size        = 64
     source_type = "image"
@@ -145,7 +125,7 @@ resource "stackit_server" "server-with-volume" {
   }
   availability_zone = "eu01-1"
   machine_type      = "g1.1"
-  keypair_name = stackit_key_pair.keypair.name
+  keypair_name      = stackit_key_pair.keypair.name
 }
 
 resource "stackit_server_volume_attach" "attach_volume" {
@@ -153,13 +133,10 @@ resource "stackit_server_volume_attach" "attach_volume" {
   server_id  = stackit_server.server-with-volume.server_id
   volume_id  = stackit_volume.example-volume.volume_id
 }
-` + "\n```" + `
 
-### Server with user data (cloud-init)` + "\n" +
-
-	"```terraform" + `
+### Server with user data (cloud-init)
 resource "stackit_server" "user-data" {
-  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   boot_volume = {
     size        = 64
     source_type = "image"
@@ -172,7 +149,7 @@ resource "stackit_server" "user-data" {
 }
 
 resource "stackit_server" "user-data-from-file" {
-  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   boot_volume = {
     size        = 64
     source_type = "image"
@@ -183,4 +160,3 @@ resource "stackit_server" "user-data-from-file" {
   keypair_name = stackit_key_pair.keypair.name
   user_data    = file("${path.module}/cloud-init.yaml")
 }
-` + "\n```"
