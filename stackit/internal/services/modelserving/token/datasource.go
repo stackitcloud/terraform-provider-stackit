@@ -119,7 +119,7 @@ func (d *tokenDataSource) Schema(
 				},
 			},
 			"region": schema.StringAttribute{
-				Description: "STACKIT region to which the model serving auth token is associated.",
+				Description: "Region to which the model serving auth token is associated. If not defined, the provider region is used.",
 				Required:    false,
 				Optional:    true,
 			},
