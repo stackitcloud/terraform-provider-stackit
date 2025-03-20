@@ -2,7 +2,9 @@ package token
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -18,9 +20,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/modelserving/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -33,7 +37,6 @@ var (
 
 const (
 	inactiveState = "inactive"
-	activeState   = "active"
 )
 
 type Model struct {
@@ -57,7 +60,8 @@ func NewTokenResource() resource.Resource {
 
 // tokenResource is the resource implementation.
 type tokenResource struct {
-	client *modelserving.APIClient
+	client       *modelserving.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -128,6 +132,7 @@ func (r *tokenResource) Configure(
 	}
 
 	r.client = apiClient
+	r.providerData = providerData
 	tflog.Info(ctx, "Model-Serving auth token client configured")
 }
 
@@ -143,6 +148,9 @@ func (r *tokenResource) Schema(
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`token_id`\".",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Description: "STACKIT project ID to which the model serving auth token is associated.",
@@ -153,13 +161,23 @@ func (r *tokenResource) Schema(
 				},
 			},
 			"region": schema.StringAttribute{
-				Description: "STACKIT region to which the model serving auth token is associated.",
+				Description: "Region to which the model serving auth token is associated. If not defined, the provider region is used.",
 				Required:    false,
 				Optional:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"token_id": schema.StringAttribute{
 				Description: "The model serving auth token ID.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
 			},
 			"ttl_duration": schema.StringAttribute{
 				Description: "The TTL duration of the model serving auth token.",
@@ -221,9 +239,12 @@ func (r *tokenResource) Create(
 	}
 
 	projectId := model.ProjectId.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = r.client.GetConfig().Region
+
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
 	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -304,9 +325,12 @@ func (r *tokenResource) Read(
 
 	projectId := model.ProjectId.ValueString()
 	tokenId := model.TokenId.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = r.client.GetConfig().Region
+
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
 	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -316,6 +340,21 @@ func (r *tokenResource) Read(
 	getTokenResp, err := r.client.GetToken(ctx, region, projectId, tokenId).
 		Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) {
+			if oapiErr.StatusCode == http.StatusNotFound {
+				// Remove the resource from the state so Terraform will recreate it
+				resp.State.RemoveResource(ctx)
+				core.LogAndAddWarning(
+					ctx,
+					&resp.Diagnostics,
+					"Error reading model serving auth token",
+					"Model serving auth token not found",
+				)
+				return
+			}
+		}
+
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,
@@ -328,7 +367,7 @@ func (r *tokenResource) Read(
 	if getTokenResp != nil && getTokenResp.Token.State != nil &&
 		*getTokenResp.Token.State == inactiveState {
 		resp.State.RemoveResource(ctx)
-		core.LogAndAddError(
+		core.LogAndAddWarning(
 			ctx,
 			&resp.Diagnostics,
 			"Error reading model serving auth token",
@@ -383,9 +422,12 @@ func (r *tokenResource) Update(
 
 	projectId := state.ProjectId.ValueString()
 	tokenId := state.TokenId.ValueString()
-	region := state.Region.ValueString()
-	if region == "" {
-		region = r.client.GetConfig().Region
+
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
 	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -409,6 +451,21 @@ func (r *tokenResource) Update(
 		PartialUpdateTokenPayload(*payload).
 		Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) {
+			if oapiErr.StatusCode == http.StatusNotFound {
+				// Remove the resource from the state so Terraform will recreate it
+				resp.State.RemoveResource(ctx)
+				core.LogAndAddWarning(
+					ctx,
+					&resp.Diagnostics,
+					"Error updating model serving auth token",
+					"Model serving auth token not found",
+				)
+				return
+			}
+		}
+
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,
@@ -427,7 +484,7 @@ func (r *tokenResource) Update(
 	if updateTokenResp != nil && updateTokenResp.Token.State != nil &&
 		*updateTokenResp.Token.State == inactiveState {
 		resp.State.RemoveResource(ctx)
-		core.LogAndAddError(
+		core.LogAndAddWarning(
 			ctx,
 			&resp.Diagnostics,
 			"Error updating model serving auth token",
@@ -484,9 +541,12 @@ func (r *tokenResource) Delete(
 
 	projectId := model.ProjectId.ValueString()
 	tokenId := model.TokenId.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = r.client.GetConfig().Region
+
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
 	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -496,6 +556,19 @@ func (r *tokenResource) Delete(
 	// Delete existing model serving auth token. We will ignore the state 'deleting' for now.
 	_, err := r.client.DeleteToken(ctx, region, projectId, tokenId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) {
+			if oapiErr.StatusCode == http.StatusNotFound {
+				core.LogAndAddWarning(
+					ctx,
+					&resp.Diagnostics,
+					"Error deleting model serving auth token",
+					"Model serving auth token not found",
+				)
+				return
+			}
+		}
+
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,

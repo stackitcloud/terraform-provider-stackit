@@ -80,8 +80,6 @@ func TestMapGetTokenFields(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.description, func(t *testing.T) {
 			t.Parallel()
 
@@ -209,8 +207,6 @@ func TestMapCreateTokenFields(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.description, func(t *testing.T) {
 			t.Parallel()
 
@@ -269,8 +265,6 @@ func TestToCreatePayload(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.description, func(t *testing.T) {
 			t.Parallel()
 
@@ -323,8 +317,6 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.description, func(t *testing.T) {
 			t.Parallel()
 

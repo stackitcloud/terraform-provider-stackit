@@ -11,6 +11,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/modelserving"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -26,7 +27,8 @@ func NewTokenDataSource() datasource.DataSource {
 
 // tokenDataSource is the data source implementation.
 type tokenDataSource struct {
-	client *modelserving.APIClient
+	client       *modelserving.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -91,7 +93,7 @@ func (d *tokenDataSource) Configure(
 	}
 
 	d.client = apiClient
-
+	d.providerData = providerData
 	tflog.Info(ctx, "Model-Serving auth token client configured")
 }
 
@@ -170,9 +172,12 @@ func (d *tokenDataSource) Read(
 
 	projectId := model.ProjectId.ValueString()
 	tokenId := model.TokenId.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = d.client.GetConfig().Region
+
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = d.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
 	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
