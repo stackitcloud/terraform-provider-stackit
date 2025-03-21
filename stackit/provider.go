@@ -66,6 +66,7 @@ import (
 	serverBackupSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/schedule"
 	serverUpdateSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/schedule"
 	serviceAccount "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/account"
+	serviceAccountKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/key"
 	serviceAccountToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/token"
 	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
@@ -566,6 +567,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		serverUpdateSchedule.NewScheduleResource,
 		serviceAccount.NewServiceAccountResource,
 		serviceAccountToken.NewServiceAccountTokenResource,
+		serviceAccountKey.NewServiceAccountKeyResource,
 		skeProject.NewProjectResource,
 		skeCluster.NewClusterResource,
 		skeKubeconfig.NewKubeconfigResource,
