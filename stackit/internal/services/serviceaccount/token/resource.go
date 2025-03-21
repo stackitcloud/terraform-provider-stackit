@@ -119,7 +119,8 @@ func (r *serviceAccountTokenResource) Metadata(_ context.Context, req resource.M
 // Schema defines the resource schema for the service account access token.
 func (r *serviceAccountTokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"id":                    "Unique internal resource ID for Terraform, formatted as \"`project_id`,`access_token_id`\".",
+		"id":                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`access_token_id`,`service_account_email`\".",
+		"main":                  "Service account access token schema.",
 		"project_id":            "STACKIT project ID associated with the service account token.",
 		"service_account_email": "Email address linked to the service account.",
 		"ttl_days":              "Specifies the token's validity duration in days. If unspecified, defaults to 90 days.",
@@ -130,11 +131,9 @@ func (r *serviceAccountTokenResource) Schema(_ context.Context, _ resource.Schem
 		"created_at":            "Timestamp indicating when the access token was created.",
 		"valid_until":           "Estimated expiration timestamp of the access token. For precise validity, check the JWT details.",
 	}
-
 	resp.Schema = schema.Schema{
-		MarkdownDescription: markdownDescription,
-		Description:         "STACKIT service account access token schema.",
-
+		MarkdownDescription: fmt.Sprintf("%s%s", features.AddBetaDescription(descriptions["main"]), markdownDescription),
+		Description:         descriptions["main"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -382,7 +381,7 @@ func mapCreateResponse(resp *serviceaccount.AccessToken, model *Model) error {
 		validUntil = types.StringValue(validUntilValue.Format(time.RFC3339))
 	}
 
-	idParts := []string{model.ProjectId.ValueString(), *resp.Id}
+	idParts := []string{model.ProjectId.ValueString(), *resp.Id, model.ServiceAccountEmail.ValueString()}
 	model.Id = types.StringValue(strings.Join(idParts, core.Separator))
 	model.AccessTokenId = types.StringPointerValue(resp.Id)
 	model.Token = types.StringPointerValue(resp.Token)
@@ -417,7 +416,7 @@ func mapListResponse(resp *serviceaccount.AccessTokenMetadata, model *Model) err
 		validUntil = types.StringValue(validUntilValue.Format(time.RFC3339))
 	}
 
-	idParts := []string{model.ProjectId.ValueString(), *resp.Id}
+	idParts := []string{model.ProjectId.ValueString(), *resp.Id, model.ServiceAccountEmail.ValueString()}
 	model.Id = types.StringValue(strings.Join(idParts, core.Separator))
 	model.AccessTokenId = types.StringPointerValue(resp.Id)
 	model.CreatedAt = createdAt

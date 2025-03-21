@@ -71,11 +71,12 @@ func TestMapCreateResponse(t *testing.T) {
 				Token: utils.Ptr("token"),
 			},
 			Model{
-				Id:                types.StringValue("pid,aid"),
-				ProjectId:         types.StringValue("pid"),
-				Token:             types.StringValue("token"),
-				AccessTokenId:     types.StringValue("aid"),
-				RotateWhenChanged: types.MapValueMust(types.StringType, map[string]attr.Value{}),
+				Id:                  types.StringValue("pid,aid,email"),
+				ProjectId:           types.StringValue("pid"),
+				ServiceAccountEmail: types.StringValue("email"),
+				Token:               types.StringValue("token"),
+				AccessTokenId:       types.StringValue("aid"),
+				RotateWhenChanged:   types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			},
 			true,
 		},
@@ -89,14 +90,15 @@ func TestMapCreateResponse(t *testing.T) {
 				Active:     utils.Ptr(true),
 			},
 			Model{
-				Id:                types.StringValue("pid,aid"),
-				ProjectId:         types.StringValue("pid"),
-				Token:             types.StringValue("token"),
-				AccessTokenId:     types.StringValue("aid"),
-				Active:            types.BoolValue(true),
-				CreatedAt:         types.StringValue(time.Now().Format(time.RFC3339)),
-				ValidUntil:        types.StringValue(time.Now().Add(24 * time.Hour).Format(time.RFC3339)),
-				RotateWhenChanged: types.MapValueMust(types.StringType, map[string]attr.Value{}),
+				Id:                  types.StringValue("pid,aid,email"),
+				ProjectId:           types.StringValue("pid"),
+				ServiceAccountEmail: types.StringValue("email"),
+				Token:               types.StringValue("token"),
+				AccessTokenId:       types.StringValue("aid"),
+				Active:              types.BoolValue(true),
+				CreatedAt:           types.StringValue(time.Now().Format(time.RFC3339)),
+				ValidUntil:          types.StringValue(time.Now().Add(24 * time.Hour).Format(time.RFC3339)),
+				RotateWhenChanged:   types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			},
 			true,
 		},
@@ -132,8 +134,9 @@ func TestMapCreateResponse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			model := &Model{
-				ProjectId:         tt.expected.ProjectId,
-				RotateWhenChanged: types.MapValueMust(types.StringType, map[string]attr.Value{}),
+				ProjectId:           tt.expected.ProjectId,
+				ServiceAccountEmail: tt.expected.ServiceAccountEmail,
+				RotateWhenChanged:   types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			}
 			err := mapCreateResponse(tt.input, model)
 			if !tt.isValid && err == nil {
@@ -167,12 +170,13 @@ func TestMapListResponse(t *testing.T) {
 				ValidUntil: utils.Ptr(time.Now().Add(24 * time.Hour)),
 			},
 			Model{
-				Id:                types.StringValue("pid,aid"),
-				ProjectId:         types.StringValue("pid"),
-				AccessTokenId:     types.StringValue("aid"),
-				CreatedAt:         types.StringValue(time.Now().Format(time.RFC3339)),                     // Adjusted for test setup time
-				ValidUntil:        types.StringValue(time.Now().Add(24 * time.Hour).Format(time.RFC3339)), // Adjust for format
-				RotateWhenChanged: types.MapValueMust(types.StringType, map[string]attr.Value{}),
+				Id:                  types.StringValue("pid,aid,email"),
+				ProjectId:           types.StringValue("pid"),
+				ServiceAccountEmail: types.StringValue("email"),
+				AccessTokenId:       types.StringValue("aid"),
+				CreatedAt:           types.StringValue(time.Now().Format(time.RFC3339)),                     // Adjusted for test setup time
+				ValidUntil:          types.StringValue(time.Now().Add(24 * time.Hour).Format(time.RFC3339)), // Adjust for format
+				RotateWhenChanged:   types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			},
 			true,
 		},
@@ -204,8 +208,9 @@ func TestMapListResponse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			model := &Model{
-				ProjectId:         tt.expected.ProjectId,
-				RotateWhenChanged: types.MapValueMust(types.StringType, map[string]attr.Value{}),
+				ProjectId:           tt.expected.ProjectId,
+				ServiceAccountEmail: tt.expected.ServiceAccountEmail,
+				RotateWhenChanged:   types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			}
 			err := mapListResponse(tt.input, model)
 			if !tt.isValid && err == nil {

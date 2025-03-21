@@ -3,13 +3,13 @@
 page_title: "stackit_service_account_access_token Resource - stackit"
 subcategory: ""
 description: |-
-  Schema for a STACKIT service account access token resource.
+  Service account access token schema.
   ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
   Example Usage
   Automatically rotate access tokens
   
   resource "stackit_service_account" "sa" {
-    project_id = var.stackit_project_id
+    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     name       = "sa01"
   }
   
@@ -17,8 +17,8 @@ description: |-
     rotation_days = 80
   }
   
-  resource "stackit_service_account_access_token" "sa1" {
-    project_id            = var.stackit_project_id
+  resource "stackit_service_account_access_token" "sa_token" {
+    project_id            = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     service_account_email = stackit_service_account.sa.email
     ttl_days              = 180
   
@@ -30,7 +30,7 @@ description: |-
 
 # stackit_service_account_access_token (Resource)
 
-Schema for a STACKIT service account access token resource.
+Service account access token schema.
 
 ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 ## Example Usage
@@ -39,7 +39,7 @@ Schema for a STACKIT service account access token resource.
 ### Automatically rotate access tokens
 ```terraform
 resource "stackit_service_account" "sa" {
-  project_id = var.stackit_project_id
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name       = "sa01"
 }
 
@@ -47,8 +47,8 @@ resource "time_rotating" "rotate" {
   rotation_days = 80
 }
 
-resource "stackit_service_account_access_token" "sa1" {
-  project_id            = var.stackit_project_id
+resource "stackit_service_account_access_token" "sa_token" {
+  project_id            = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   service_account_email = stackit_service_account.sa.email
   ttl_days              = 180
 
@@ -79,6 +79,6 @@ resource "stackit_service_account_access_token" "sa1" {
 - `access_token_id` (String) Identifier for the access token linked to the service account.
 - `active` (Boolean) Indicate whether the token is currently active or inactive
 - `created_at` (String) Timestamp indicating when the access token was created.
-- `id` (String) Unique internal resource ID for Terraform, formatted as "`project_id`,`access_token_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`access_token_id`".
 - `token` (String, Sensitive) JWT access token for API authentication. Prefixed by 'Bearer' and should be stored securely as it is irretrievable once lost.
 - `valid_until` (String) Estimated expiration timestamp of the access token. For precise validity, check the JWT details.
