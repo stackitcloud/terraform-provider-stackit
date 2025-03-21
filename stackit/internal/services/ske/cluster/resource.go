@@ -422,7 +422,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							},
 						},
 						"max_unavailable": schema.Int64Attribute{
-							Description: fmt.Sprintf("%s %s", descriptions["max_surge"], descriptions["nodepool_validators"]),
+							Description: fmt.Sprintf("%s %s", descriptions["max_unavailable"], descriptions["nodepool_validators"]),
 							Optional:    true,
 							Computed:    true,
 							PlanModifiers: []planmodifier.Int64{
