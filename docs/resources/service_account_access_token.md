@@ -79,6 +79,6 @@ resource "stackit_service_account_access_token" "sa_token" {
 - `access_token_id` (String) Identifier for the access token linked to the service account.
 - `active` (Boolean) Indicate whether the token is currently active or inactive
 - `created_at` (String) Timestamp indicating when the access token was created.
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`access_token_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`service_account_email`,`access_token_id`".
 - `token` (String, Sensitive) JWT access token for API authentication. Prefixed by 'Bearer' and should be stored securely as it is irretrievable once lost.
 - `valid_until` (String) Estimated expiration timestamp of the access token. For precise validity, check the JWT details.

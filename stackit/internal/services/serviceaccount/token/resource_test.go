@@ -71,7 +71,7 @@ func TestMapCreateResponse(t *testing.T) {
 				Token: utils.Ptr("token"),
 			},
 			Model{
-				Id:                  types.StringValue("pid,aid,email"),
+				Id:                  types.StringValue("pid,email,aid"),
 				ProjectId:           types.StringValue("pid"),
 				ServiceAccountEmail: types.StringValue("email"),
 				Token:               types.StringValue("token"),
@@ -90,7 +90,7 @@ func TestMapCreateResponse(t *testing.T) {
 				Active:     utils.Ptr(true),
 			},
 			Model{
-				Id:                  types.StringValue("pid,aid,email"),
+				Id:                  types.StringValue("pid,email,aid"),
 				ProjectId:           types.StringValue("pid"),
 				ServiceAccountEmail: types.StringValue("email"),
 				Token:               types.StringValue("token"),
@@ -170,7 +170,7 @@ func TestMapListResponse(t *testing.T) {
 				ValidUntil: utils.Ptr(time.Now().Add(24 * time.Hour)),
 			},
 			Model{
-				Id:                  types.StringValue("pid,aid,email"),
+				Id:                  types.StringValue("pid,email,aid"),
 				ProjectId:           types.StringValue("pid"),
 				ServiceAccountEmail: types.StringValue("email"),
 				AccessTokenId:       types.StringValue("aid"),

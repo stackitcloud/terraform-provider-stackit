@@ -119,7 +119,7 @@ func (r *serviceAccountTokenResource) Metadata(_ context.Context, req resource.M
 // Schema defines the resource schema for the service account access token.
 func (r *serviceAccountTokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"id":                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`access_token_id`,`service_account_email`\".",
+		"id":                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`service_account_email`,`access_token_id`\".",
 		"main":                  "Service account access token schema.",
 		"project_id":            "STACKIT project ID associated with the service account token.",
 		"service_account_email": "Email address linked to the service account.",
@@ -381,7 +381,7 @@ func mapCreateResponse(resp *serviceaccount.AccessToken, model *Model) error {
 		validUntil = types.StringValue(validUntilValue.Format(time.RFC3339))
 	}
 
-	idParts := []string{model.ProjectId.ValueString(), *resp.Id, model.ServiceAccountEmail.ValueString()}
+	idParts := []string{model.ProjectId.ValueString(), model.ServiceAccountEmail.ValueString(), *resp.Id}
 	model.Id = types.StringValue(strings.Join(idParts, core.Separator))
 	model.AccessTokenId = types.StringPointerValue(resp.Id)
 	model.Token = types.StringPointerValue(resp.Token)
@@ -416,7 +416,7 @@ func mapListResponse(resp *serviceaccount.AccessTokenMetadata, model *Model) err
 		validUntil = types.StringValue(validUntilValue.Format(time.RFC3339))
 	}
 
-	idParts := []string{model.ProjectId.ValueString(), *resp.Id, model.ServiceAccountEmail.ValueString()}
+	idParts := []string{model.ProjectId.ValueString(), model.ServiceAccountEmail.ValueString(), *resp.Id}
 	model.Id = types.StringValue(strings.Join(idParts, core.Separator))
 	model.AccessTokenId = types.StringPointerValue(resp.Id)
 	model.CreatedAt = createdAt
