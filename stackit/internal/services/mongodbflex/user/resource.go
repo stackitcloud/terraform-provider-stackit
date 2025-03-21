@@ -287,9 +287,72 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *userResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Update shouldn't be called
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", "User can't be updated")
+func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	// Retrieve values from plan
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
+	userId := model.UserId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "user_id", userId)
+
+	// Retrieve values from state
+	var stateModel Model
+	diags = req.State.Get(ctx, &stateModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var roles []string
+	if !(model.Roles.IsNull() || model.Roles.IsUnknown()) {
+		diags = model.Roles.ElementsAs(ctx, &roles, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	// Generate API request body from model
+	payload, err := toUpdatePayload(&model, roles)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Updating API payload: %v", err))
+		return
+	}
+
+	// Update existing instance
+	err = r.client.UpdateUser(ctx, projectId, instanceId, userId).UpdateUserPayload(*payload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", err.Error())
+		return
+	}
+
+	userResp, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapFields(userResp, &stateModel)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	// Set state to fully populated data
+	diags = resp.State.Set(ctx, stateModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "MongoDB Flex user updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -447,6 +510,20 @@ func toCreatePayload(model *Model, roles []string) (*mongodbflex.CreateUserPaylo
 	return &mongodbflex.CreateUserPayload{
 		Roles:    &roles,
 		Username: conversion.StringValueToPointer(model.Username),
+		Database: conversion.StringValueToPointer(model.Database),
+	}, nil
+}
+
+func toUpdatePayload(model *Model, roles []string) (*mongodbflex.UpdateUserPayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
+	if roles == nil {
+		return nil, fmt.Errorf("nil roles")
+	}
+
+	return &mongodbflex.UpdateUserPayload{
+		Roles:    &roles,
 		Database: conversion.StringValueToPointer(model.Database),
 	}, nil
 }
