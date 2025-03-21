@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -28,6 +29,7 @@ var (
 	_ resource.Resource                = &databaseResource{}
 	_ resource.ResourceWithConfigure   = &databaseResource{}
 	_ resource.ResourceWithImportState = &databaseResource{}
+	_ resource.ResourceWithModifyPlan  = &databaseResource{}
 )
 
 type Model struct {
@@ -37,6 +39,7 @@ type Model struct {
 	ProjectId  types.String `tfsdk:"project_id"`
 	Name       types.String `tfsdk:"name"`
 	Owner      types.String `tfsdk:"owner"`
+	Region     types.String `tfsdk:"region"`
 }
 
 // NewDatabaseResource is a helper function to simplify the provider implementation.
@@ -46,7 +49,38 @@ func NewDatabaseResource() resource.Resource {
 
 // databaseResource is the resource implementation.
 type databaseResource struct {
-	client *postgresflex.APIClient
+	client       *postgresflex.APIClient
+	providerData core.ProviderData
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *databaseResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Metadata returns the resource type name.
@@ -61,7 +95,8 @@ func (r *databaseResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -69,15 +104,15 @@ func (r *databaseResource) Configure(ctx context.Context, req resource.Configure
 
 	var apiClient *postgresflex.APIClient
 	var err error
-	if providerData.PostgresFlexCustomEndpoint != "" {
+	if r.providerData.PostgresFlexCustomEndpoint != "" {
 		apiClient, err = postgresflex.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.PostgresFlexCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.PostgresFlexCustomEndpoint),
 		)
 	} else {
 		apiClient, err = postgresflex.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithRegion(r.providerData.GetRegion()),
 		)
 	}
 
@@ -94,12 +129,13 @@ func (r *databaseResource) Configure(ctx context.Context, req resource.Configure
 func (r *databaseResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "Postgres Flex database resource schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`database_id`\".",
+		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`,`database_id`\".",
 		"database_id": "Database ID.",
 		"instance_id": "ID of the Postgres Flex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
 		"name":        "Database name.",
 		"owner":       "Username of the database owner.",
+		"region":      "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -160,6 +196,15 @@ func (r *databaseResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -173,9 +218,11 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := model.Region.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
@@ -184,7 +231,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new database
-	databaseResp, err := r.client.CreateDatabase(ctx, projectId, instanceId).CreateDatabasePayload(*payload).Execute()
+	databaseResp, err := r.client.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -196,14 +243,14 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	databaseId := *databaseResp.Id
 	ctx = tflog.SetField(ctx, "database_id", databaseId)
 
-	database, err := getDatabase(ctx, r.client, projectId, instanceId, databaseId)
+	database, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Getting database details after creation: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(database, &model)
+	err = mapFields(database, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -228,11 +275,16 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	databaseId := model.DatabaseId.ValueString()
+	region := model.Region.ValueString()
+	if region == "" {
+		region = r.providerData.GetRegion()
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "database_id", databaseId)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	databaseResp, err := getDatabase(ctx, r.client, projectId, instanceId, databaseId)
+	databaseResp, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if (ok && oapiErr.StatusCode == http.StatusNotFound) || errors.Is(err, databaseNotFoundErr) {
@@ -244,7 +296,7 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(databaseResp, &model)
+	err = mapFields(databaseResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -278,12 +330,14 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	databaseId := model.DatabaseId.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "database_id", databaseId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing record set
-	err := r.client.DeleteDatabase(ctx, projectId, instanceId, databaseId).Execute()
+	err := r.client.DeleteDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting database", fmt.Sprintf("Calling API: %v", err))
 	}
@@ -294,17 +348,18 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 // The expected format of the resource import identifier is: project_id,zone_id,record_set_id
 func (r *databaseResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing database",
-			fmt.Sprintf("Expected import identifier with format [project_id],[instance_id],[database_id], got %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id],[database_id], got %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("database_id"), idParts[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("database_id"), idParts[3])...)
 	core.LogAndAddWarning(ctx, &resp.Diagnostics,
 		"Postgresflex database imported with empty password",
 		"The database password is not imported as it is only available upon creation of a new database. The password field will be empty.",
@@ -312,7 +367,7 @@ func (r *databaseResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Postgres Flex database state imported")
 }
 
-func mapFields(databaseResp *postgresflex.InstanceDatabase, model *Model) error {
+func mapFields(databaseResp *postgresflex.InstanceDatabase, model *Model, region string) error {
 	if databaseResp == nil {
 		return fmt.Errorf("response is nil")
 	}
@@ -333,6 +388,7 @@ func mapFields(databaseResp *postgresflex.InstanceDatabase, model *Model) error 
 	}
 	idParts := []string{
 		model.ProjectId.ValueString(),
+		region,
 		model.InstanceId.ValueString(),
 		databaseId,
 	}
@@ -341,6 +397,7 @@ func mapFields(databaseResp *postgresflex.InstanceDatabase, model *Model) error 
 	)
 	model.DatabaseId = types.StringValue(databaseId)
 	model.Name = types.StringPointerValue(databaseResp.Name)
+	model.Region = types.StringValue(region)
 
 	if databaseResp.Options != nil {
 		owner, ok := (*databaseResp.Options)["owner"]
@@ -375,8 +432,8 @@ func toCreatePayload(model *Model) (*postgresflex.CreateDatabasePayload, error) 
 var databaseNotFoundErr = errors.New("database not found")
 
 // The API does not have a GetDatabase endpoint, only ListDatabases
-func getDatabase(ctx context.Context, client *postgresflex.APIClient, projectId, instanceId, databaseId string) (*postgresflex.InstanceDatabase, error) {
-	resp, err := client.ListDatabases(ctx, projectId, instanceId).Execute()
+func getDatabase(ctx context.Context, client *postgresflex.APIClient, projectId, region, instanceId, databaseId string) (*postgresflex.InstanceDatabase, error) {
+	resp, err := client.ListDatabases(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		return nil, err
 	}

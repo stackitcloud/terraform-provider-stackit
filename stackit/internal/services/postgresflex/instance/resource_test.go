@@ -17,7 +17,7 @@ type postgresFlexClientMocked struct {
 	getFlavorsResp *postgresflex.ListFlavorsResponse
 }
 
-func (c *postgresFlexClientMocked) ListFlavorsExecute(_ context.Context, _ string) (*postgresflex.ListFlavorsResponse, error) {
+func (c *postgresFlexClientMocked) ListFlavorsExecute(_ context.Context, _, _ string) (*postgresflex.ListFlavorsResponse, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("get flavors failed")
 	}
@@ -26,12 +26,14 @@ func (c *postgresFlexClientMocked) ListFlavorsExecute(_ context.Context, _ strin
 }
 
 func TestMapFields(t *testing.T) {
+	const testRegion = "region"
 	tests := []struct {
 		description string
 		state       Model
 		input       *postgresflex.InstanceResponse
 		flavor      *flavorModel
 		storage     *storageModel
+		region      string
 		expected    Model
 		isValid     bool
 	}{
@@ -46,8 +48,9 @@ func TestMapFields(t *testing.T) {
 			},
 			&flavorModel{},
 			&storageModel{},
+			testRegion,
 			Model{
-				Id:             types.StringValue("pid,iid"),
+				Id:             types.StringValue("pid,region,iid"),
 				InstanceId:     types.StringValue("iid"),
 				ProjectId:      types.StringValue("pid"),
 				Name:           types.StringNull(),
@@ -65,6 +68,7 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Null(),
 				}),
 				Version: types.StringNull(),
+				Region:  types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -103,8 +107,9 @@ func TestMapFields(t *testing.T) {
 			},
 			&flavorModel{},
 			&storageModel{},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid"),
+				Id:         types.StringValue("pid,region,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("name"),
@@ -126,6 +131,7 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Value(78),
 				}),
 				Version: types.StringValue("version"),
+				Region:  types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -162,8 +168,9 @@ func TestMapFields(t *testing.T) {
 				Class: types.StringValue("class"),
 				Size:  types.Int64Value(78),
 			},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid"),
+				Id:         types.StringValue("pid,region,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("name"),
@@ -185,6 +192,7 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Value(78),
 				}),
 				Version: types.StringValue("version"),
+				Region:  types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -226,8 +234,9 @@ func TestMapFields(t *testing.T) {
 				Class: types.StringValue("class"),
 				Size:  types.Int64Value(78),
 			},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid"),
+				Id:         types.StringValue("pid,region,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue("name"),
@@ -249,6 +258,7 @@ func TestMapFields(t *testing.T) {
 					"size":  types.Int64Value(78),
 				}),
 				Version: types.StringValue("version"),
+				Region:  types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -261,6 +271,7 @@ func TestMapFields(t *testing.T) {
 			nil,
 			&flavorModel{},
 			&storageModel{},
+			testRegion,
 			Model{},
 			false,
 		},
@@ -273,13 +284,14 @@ func TestMapFields(t *testing.T) {
 			&postgresflex.InstanceResponse{},
 			&flavorModel{},
 			&storageModel{},
+			testRegion,
 			Model{},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.storage)
+			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.storage, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
