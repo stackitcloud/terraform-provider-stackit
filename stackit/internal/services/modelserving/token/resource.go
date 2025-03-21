@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/modelserving"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -21,7 +19,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"github.com/stackitcloud/stackit-sdk-go/services/modelserving"
 	"github.com/stackitcloud/stackit-sdk-go/services/modelserving/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
+	serviceEnablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -60,8 +61,9 @@ func NewTokenResource() resource.Resource {
 
 // tokenResource is the resource implementation.
 type tokenResource struct {
-	client       *modelserving.APIClient
-	providerData core.ProviderData
+	client                  *modelserving.APIClient
+	providerData            core.ProviderData
+	serviceEnablementClient *serviceenablement.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -117,7 +119,6 @@ func (r *tokenResource) Configure(
 			config.WithRegion(providerData.GetRegion()),
 		)
 	}
-
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -131,8 +132,34 @@ func (r *tokenResource) Configure(
 		return
 	}
 
+	var serviceEnablementClient *serviceenablement.APIClient
+	if providerData.ServiceEnablementCustomEndpoint != "" {
+		serviceEnablementClient, err = serviceenablement.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithEndpoint(providerData.ServiceEnablementCustomEndpoint),
+		)
+	} else {
+		serviceEnablementClient, err = serviceenablement.NewAPIClient(
+			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithRegion(providerData.GetRegion()),
+		)
+	}
+	if err != nil {
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error configuring service enablement client",
+			fmt.Sprintf(
+				"Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration",
+				err,
+			),
+		)
+		return
+	}
+
 	r.client = apiClient
 	r.providerData = providerData
+	r.serviceEnablementClient = serviceEnablementClient
 	tflog.Info(ctx, "Model-Serving auth token client configured")
 }
 
@@ -243,6 +270,31 @@ func (r *tokenResource) Create(
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
+
+	// If model serving is not enabled, enable it
+	err := r.serviceEnablementClient.EnableService(ctx, projectId, utils.ModelServingServiceId).
+		Execute()
+	if err != nil {
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error enabling model serving",
+			fmt.Sprintf("Error enabling model serving: %v", err),
+		)
+		return
+	}
+
+	_, err = serviceEnablementWait.EnableServiceWaitHandler(ctx, r.serviceEnablementClient, projectId, utils.ModelServingServiceId).
+		WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error enabling model serving",
+			fmt.Sprintf("Error enabling model serving: %v", err),
+		)
+		return
+	}
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
