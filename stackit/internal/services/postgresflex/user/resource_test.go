@@ -385,3 +385,86 @@ func TestToCreatePayload(t *testing.T) {
 		})
 	}
 }
+
+func TestToUpdatePayload(t *testing.T) {
+	tests := []struct {
+		description string
+		input       *Model
+		inputRoles  []string
+		expected    *postgresflex.UpdateUserPayload
+		isValid     bool
+	}{
+		{
+			"default_values",
+			&Model{},
+			[]string{},
+			&postgresflex.UpdateUserPayload{
+				Roles: &[]string{},
+			},
+			true,
+		},
+		{
+			"default_values",
+			&Model{
+				Username: types.StringValue("username"),
+			},
+			[]string{
+				"role_1",
+				"role_2",
+			},
+			&postgresflex.UpdateUserPayload{
+				Roles: &[]string{
+					"role_1",
+					"role_2",
+				},
+			},
+			true,
+		},
+		{
+			"null_fields_and_int_conversions",
+			&Model{
+				Username: types.StringNull(),
+			},
+			[]string{
+				"",
+			},
+			&postgresflex.UpdateUserPayload{
+				Roles: &[]string{
+					"",
+				},
+			},
+			true,
+		},
+		{
+			"nil_model",
+			nil,
+			[]string{},
+			nil,
+			false,
+		},
+		{
+			"nil_roles",
+			&Model{},
+			nil,
+			nil,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output, err := toUpdatePayload(tt.input, tt.inputRoles)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(output, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
