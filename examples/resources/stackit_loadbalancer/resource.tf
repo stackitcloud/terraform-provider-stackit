@@ -16,10 +16,12 @@ resource "stackit_network_interface" "nic" {
   network_id = stackit_network.example_network.network_id
 }
 
-# Create a public IP and assign it to the network interface
+# Create a public IP for the load balance
 resource "stackit_public_ip" "public-ip" {
-  project_id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  network_interface_id = stackit_network_interface.nic.network_interface_id
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  lifecycle {
+    ignore_changes = [network_interface_id]
+  }
 }
 
 # Create a key pair for accessing the server instance
@@ -29,7 +31,7 @@ resource "stackit_key_pair" "keypair" {
 }
 
 # Create a server instance
-resource "stackit_server" "boot-from-volume" {
+resource "stackit_server" "boot-from-image" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name       = "example-server"
   boot_volume = {
@@ -45,7 +47,7 @@ resource "stackit_server" "boot-from-volume" {
 # Attach the network interface to the server
 resource "stackit_server_network_interface_attach" "nic-attachment" {
   project_id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  server_id            = stackit_server.boot-from-volume.server_id
+  server_id            = stackit_server.boot-from-image.server_id
   network_interface_id = stackit_network_interface.nic.network_interface_id
 }
 
@@ -59,7 +61,7 @@ resource "stackit_loadbalancer" "example" {
       target_port = 80
       targets = [
         {
-          display_name = "example-target"
+          display_name = stackit_server.boot-from-image.name
           ip           = stackit_network_interface.nic.ipv4
         }
       ]

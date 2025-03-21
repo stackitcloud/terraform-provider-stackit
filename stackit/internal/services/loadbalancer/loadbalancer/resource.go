@@ -42,6 +42,7 @@ var (
 	_ resource.Resource                = &loadBalancerResource{}
 	_ resource.ResourceWithConfigure   = &loadBalancerResource{}
 	_ resource.ResourceWithImportState = &loadBalancerResource{}
+	_ resource.ResourceWithModifyPlan  = &loadBalancerResource{}
 )
 
 type Model struct {
@@ -54,6 +55,7 @@ type Model struct {
 	Options         types.Object `tfsdk:"options"`
 	PrivateAddress  types.String `tfsdk:"private_address"`
 	TargetPools     types.List   `tfsdk:"target_pools"`
+	Region          types.String `tfsdk:"region"`
 }
 
 // Struct corresponding to Model.Listeners[i]
@@ -173,12 +175,43 @@ func NewLoadBalancerResource() resource.Resource {
 
 // loadBalancerResource is the resource implementation.
 type loadBalancerResource struct {
-	client *loadbalancer.APIClient
+	client       *loadbalancer.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
 func (r *loadBalancerResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_loadbalancer"
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *loadBalancerResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Configure adds the provider configured client to the resource.
@@ -188,7 +221,8 @@ func (r *loadBalancerResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -196,16 +230,15 @@ func (r *loadBalancerResource) Configure(ctx context.Context, req resource.Confi
 
 	var apiClient *loadbalancer.APIClient
 	var err error
-	if providerData.LoadBalancerCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "loadbalancer_custom_endpoint", providerData.LoadBalancerCustomEndpoint)
+	if r.providerData.LoadBalancerCustomEndpoint != "" {
+		ctx = tflog.SetField(ctx, "loadbalancer_custom_endpoint", r.providerData.LoadBalancerCustomEndpoint)
 		apiClient, err = loadbalancer.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.LoadBalancerCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.LoadBalancerCustomEndpoint),
 		)
 	} else {
 		apiClient, err = loadbalancer.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 
@@ -225,7 +258,7 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 
 	descriptions := map[string]string{
 		"main":                        "Load Balancer resource schema.",
-		"id":                          "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`name`\".",
+		"id":                          "Terraform's internal resource ID. It is structured as \"`project_id`\",\"region\",\"`name`\".",
 		"project_id":                  "STACKIT project ID to which the Load Balancer is associated.",
 		"external_address":            "External Load Balancer IP address where this Load Balancer is exposed.",
 		"listeners":                   "List of all listeners which will accept traffic. Limited to 20.",
@@ -255,6 +288,7 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 		"targets":                     "List of all targets which will be used in the pool. Limited to 1000.",
 		"targets.display_name":        "Target display name",
 		"ip":                          "Target IP",
+		"region":                      "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -527,6 +561,15 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 					},
 				},
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -541,7 +584,9 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
@@ -551,20 +596,20 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Create a new load balancer
-	createResp, err := r.client.CreateLoadBalancer(ctx, projectId).CreateLoadBalancerPayload(*payload).XRequestID(uuid.NewString()).Execute()
+	createResp, err := r.client.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).XRequestID(uuid.NewString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	waitResp, err := wait.CreateLoadBalancerWaitHandler(ctx, r.client, projectId, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateLoadBalancerWaitHandler(ctx, r.client, projectId, region, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Load balancer creation waiting: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model)
+	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -590,10 +635,16 @@ func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 	}
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
+	region := model.Region.ValueString()
+	if region == "" {
+		region = r.providerData.GetRegion()
+	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, name).Execute()
+	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -605,7 +656,7 @@ func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, lbResp, &model)
+	err = mapFields(ctx, lbResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -631,8 +682,10 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	targetPoolsModel := []targetPool{}
 	diags = model.TargetPools.ElementsAs(ctx, &targetPoolsModel, false)
@@ -653,7 +706,7 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 
 		// Update target pool
-		_, err = r.client.UpdateTargetPool(ctx, projectId, name, targetPoolName).UpdateTargetPoolPayload(*payload).Execute()
+		_, err = r.client.UpdateTargetPool(ctx, projectId, region, name, targetPoolName).UpdateTargetPoolPayload(*payload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API for target pool: %v", err))
 			return
@@ -662,14 +715,14 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 	ctx = tflog.SetField(ctx, "target_pool_name", nil)
 
 	// Get updated load balancer
-	getResp, err := r.client.GetLoadBalancer(ctx, projectId, name).Execute()
+	getResp, err := r.client.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API after update: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, getResp, &model)
+	err = mapFields(ctx, getResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -695,17 +748,19 @@ func (r *loadBalancerResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete load balancer
-	_, err := r.client.DeleteLoadBalancer(ctx, projectId, name).Execute()
+	_, err := r.client.DeleteLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting load balancer", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	_, err = wait.DeleteLoadBalancerWaitHandler(ctx, r.client, projectId, name).WaitWithContext(ctx)
+	_, err = wait.DeleteLoadBalancerWaitHandler(ctx, r.client, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting load balancer", fmt.Sprintf("Load balancer deleting waiting: %v", err))
 		return
@@ -719,16 +774,17 @@ func (r *loadBalancerResource) Delete(ctx context.Context, req resource.DeleteRe
 func (r *loadBalancerResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing load balancer",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[name]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[name]  Got: %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[2])...)
 	tflog.Info(ctx, "Load balancer state imported")
 }
 
@@ -1012,7 +1068,7 @@ func toTargetsPayload(ctx context.Context, tp *targetPool) (*[]loadbalancer.Targ
 	return &payload, nil
 }
 
-func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) error {
+func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, region string) error {
 	if lb == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -1028,9 +1084,11 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model) err
 	} else {
 		return fmt.Errorf("name not present")
 	}
+	m.Region = types.StringValue(region)
 	m.Name = types.StringValue(name)
 	idParts := []string{
 		m.ProjectId.ValueString(),
+		m.Region.ValueString(),
 		name,
 	}
 	m.Id = types.StringValue(
