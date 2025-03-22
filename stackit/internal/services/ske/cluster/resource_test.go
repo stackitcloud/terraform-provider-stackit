@@ -33,11 +33,13 @@ func (c *skeClientMocked) GetClusterExecute(_ context.Context, _, _ string) (*sk
 
 func TestMapFields(t *testing.T) {
 	cs := ske.ClusterStatusState("OK")
+	const testRegion = "region"
 	tests := []struct {
 		description     string
 		stateExtensions types.Object
 		stateNodePools  types.List
 		input           *ske.Cluster
+		region          string
 		expected        Model
 		isValid         bool
 	}{
@@ -48,8 +50,9 @@ func TestMapFields(t *testing.T) {
 			&ske.Cluster{
 				Name: utils.Ptr("name"),
 			},
+			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,name"),
+				Id:                        types.StringValue("pid,region,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
 				KubernetesVersion:         types.StringNull(),
@@ -60,6 +63,7 @@ func TestMapFields(t *testing.T) {
 				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
 				Extensions:                types.ObjectNull(extensionsTypes),
 				EgressAddressRanges:       types.ListNull(types.StringType),
+				Region:                    types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -149,8 +153,9 @@ func TestMapFields(t *testing.T) {
 					EgressAddressRanges: &[]string{"0.0.0.0/32", "1.1.1.1/32"},
 				},
 			},
+			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,name"),
+				Id:                        types.StringValue("pid,region,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
 				KubernetesVersion:         types.StringNull(),
@@ -253,6 +258,7 @@ func TestMapFields(t *testing.T) {
 						}),
 					}),
 				}),
+				Region: types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -264,8 +270,9 @@ func TestMapFields(t *testing.T) {
 				Name:    utils.Ptr("name"),
 				Network: &ske.Network{},
 			},
+			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,name"),
+				Id:                        types.StringValue("pid,region,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
 				KubernetesVersion:         types.StringNull(),
@@ -276,6 +283,7 @@ func TestMapFields(t *testing.T) {
 				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
 				Extensions:                types.ObjectNull(extensionsTypes),
 				EgressAddressRanges:       types.ListNull(types.StringType),
+				Region:                    types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -300,8 +308,9 @@ func TestMapFields(t *testing.T) {
 				},
 				Name: utils.Ptr("name"),
 			},
+			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,name"),
+				Id:                        types.StringValue("pid,region,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
 				KubernetesVersion:         types.StringNull(),
@@ -324,6 +333,7 @@ func TestMapFields(t *testing.T) {
 						"zones":   types.ListNull(types.StringType),
 					}),
 				}),
+				Region: types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -348,8 +358,9 @@ func TestMapFields(t *testing.T) {
 				Extensions: &ske.Extension{},
 				Name:       utils.Ptr("name"),
 			},
+			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,name"),
+				Id:                        types.StringValue("pid,region,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
 				KubernetesVersion:         types.StringNull(),
@@ -372,6 +383,7 @@ func TestMapFields(t *testing.T) {
 						"zones":   types.ListNull(types.StringType),
 					}),
 				}),
+				Region: types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -407,8 +419,9 @@ func TestMapFields(t *testing.T) {
 				},
 				Name: utils.Ptr("name"),
 			},
+			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,name"),
+				Id:                        types.StringValue("pid,region,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
 				KubernetesVersion:         types.StringNull(),
@@ -433,6 +446,7 @@ func TestMapFields(t *testing.T) {
 						"zones":   types.ListNull(types.StringType),
 					}),
 				}),
+				Region: types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -444,8 +458,9 @@ func TestMapFields(t *testing.T) {
 				Extensions: &ske.Extension{},
 				Name:       utils.Ptr("name"),
 			},
+			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,name"),
+				Id:                        types.StringValue("pid,region,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
 				KubernetesVersion:         types.StringNull(),
@@ -455,6 +470,7 @@ func TestMapFields(t *testing.T) {
 				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
 				Extensions:                types.ObjectNull(extensionsTypes),
 				EgressAddressRanges:       types.ListNull(types.StringType),
+				Region:                    types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -573,8 +589,9 @@ func TestMapFields(t *testing.T) {
 					Hibernated: nil,
 				},
 			},
+			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,name"),
+				Id:                        types.StringValue("pid,region,name"),
 				ProjectId:                 types.StringValue("pid"),
 				Name:                      types.StringValue("name"),
 				KubernetesVersion:         types.StringNull(),
@@ -659,6 +676,7 @@ func TestMapFields(t *testing.T) {
 						}),
 					}),
 				}),
+				Region: types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -667,6 +685,7 @@ func TestMapFields(t *testing.T) {
 			types.ObjectNull(extensionsTypes),
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			nil,
+			testRegion,
 			Model{},
 			false,
 		},
@@ -675,6 +694,7 @@ func TestMapFields(t *testing.T) {
 			types.ObjectNull(extensionsTypes),
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{},
+			testRegion,
 			Model{},
 			false,
 		},
@@ -686,7 +706,7 @@ func TestMapFields(t *testing.T) {
 				Extensions: tt.stateExtensions,
 				NodePools:  tt.stateNodePools,
 			}
-			err := mapFields(context.Background(), tt.input, state)
+			err := mapFields(context.Background(), tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
