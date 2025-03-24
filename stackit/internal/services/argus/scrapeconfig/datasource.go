@@ -64,7 +64,7 @@ func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.C
 	} else {
 		apiClient, err = argus.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 	if err != nil {

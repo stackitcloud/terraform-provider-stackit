@@ -103,7 +103,7 @@ func (r *networkInterfaceResource) Configure(ctx context.Context, req resource.C
 	} else {
 		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 

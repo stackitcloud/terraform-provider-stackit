@@ -2,6 +2,7 @@ package keypair
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -72,7 +73,7 @@ func (d *keyPairDataSource) Configure(ctx context.Context, req datasource.Config
 	} else {
 		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 	if err != nil {
@@ -130,8 +131,14 @@ func (r *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	keypairResp, err := r.client.GetKeyPair(ctx, name).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			summary := fmt.Sprintf("Key Pair with name %q does not exists", name)
+			description := fmt.Sprintf("Key Pair with name %q cannot be found. A key pair can be added with the resource \"stackit_key_pair\"", name)
+			diags.AddError(summary, description)
+			resp.Diagnostics.Append(diags...)
+
 			resp.State.RemoveResource(ctx)
 			return
 		}

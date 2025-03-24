@@ -59,6 +59,7 @@ var (
 	_ resource.Resource                = &clusterResource{}
 	_ resource.ResourceWithConfigure   = &clusterResource{}
 	_ resource.ResourceWithImportState = &clusterResource{}
+	_ resource.ResourceWithModifyPlan  = &clusterResource{}
 )
 
 type skeClient interface {
@@ -79,6 +80,7 @@ type Model struct {
 	Hibernations              types.List   `tfsdk:"hibernations"`
 	Extensions                types.Object `tfsdk:"extensions"`
 	EgressAddressRanges       types.List   `tfsdk:"egress_address_ranges"`
+	Region                    types.String `tfsdk:"region"`
 }
 
 // Struct corresponding to Model.NodePools[i]
@@ -236,6 +238,37 @@ func NewClusterResource() resource.Resource {
 type clusterResource struct {
 	skeClient        *ske.APIClient
 	enablementClient *serviceenablement.APIClient
+	providerData     core.ProviderData
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *clusterResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Metadata returns the resource type name.
@@ -250,7 +283,8 @@ func (r *clusterResource) Configure(ctx context.Context, req resource.ConfigureR
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -259,15 +293,15 @@ func (r *clusterResource) Configure(ctx context.Context, req resource.ConfigureR
 	var skeClient *ske.APIClient
 	var enablementClient *serviceenablement.APIClient
 	var err error
-	if providerData.SKECustomEndpoint != "" {
+	if r.providerData.SKECustomEndpoint != "" {
 		skeClient, err = ske.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.SKECustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.SKECustomEndpoint),
 		)
 	} else {
 		skeClient, err = ske.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithRegion(r.providerData.GetRegion()),
 		)
 	}
 
@@ -276,15 +310,15 @@ func (r *clusterResource) Configure(ctx context.Context, req resource.ConfigureR
 		return
 	}
 
-	if providerData.ServiceEnablementCustomEndpoint != "" {
+	if r.providerData.ServiceEnablementCustomEndpoint != "" {
 		enablementClient, err = serviceenablement.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ServiceEnablementCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.ServiceEnablementCustomEndpoint),
 		)
 	} else {
 		enablementClient, err = serviceenablement.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithRegion(r.providerData.GetRegion()),
 		)
 	}
 
@@ -307,6 +341,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		"max_surge":           "Maximum number of additional VMs that are created during an update.",
 		"max_unavailable":     "Maximum number of VMs that that can be unavailable during an update.",
 		"nodepool_validators": "If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. The `max_surge` and `max_unavailable` fields cannot both be unset at the same time.",
+		"region":              "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -315,7 +350,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		MarkdownDescription: fmt.Sprintf("%s\n\n-> %s", descriptions["main"], descriptions["node_pools_plan_note"]),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`name`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`name`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -422,7 +457,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							},
 						},
 						"max_unavailable": schema.Int64Attribute{
-							Description: fmt.Sprintf("%s %s", descriptions["max_surge"], descriptions["nodepool_validators"]),
+							Description: fmt.Sprintf("%s %s", descriptions["max_unavailable"], descriptions["nodepool_validators"]),
 							Optional:    true,
 							Computed:    true,
 							PlanModifiers: []planmodifier.Int64{
@@ -643,6 +678,15 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					},
 				},
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -707,18 +751,20 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	projectId := model.ProjectId.ValueString()
+	region := model.Region.ValueString()
 	clusterName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", clusterName)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// If SKE functionality is not enabled, enable it
-	err := r.enablementClient.EnableService(ctx, projectId, utils.SKEServiceId).Execute()
+	err := r.enablementClient.EnableServiceRegional(ctx, region, projectId, utils.SKEServiceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Calling API to enable SKE: %v", err))
 		return
 	}
 
-	_, err = enablementWait.EnableServiceWaitHandler(ctx, r.enablementClient, projectId, utils.SKEServiceId).WaitWithContext(ctx)
+	_, err = enablementWait.EnableServiceWaitHandler(ctx, r.enablementClient, region, projectId, utils.SKEServiceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Wait for SKE enablement: %v", err))
 		return
@@ -821,6 +867,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	// cluster vars
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
+	region := model.Region.ValueString()
 	kubernetes, hasDeprecatedVersion, err := toKubernetesPayload(model, availableKubernetesVersions, currentKubernetesVersion, diags)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating cluster config API payload: %v", err))
@@ -881,7 +928,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid argus instance id, the cluster is usable but metrics won't be forwarded: %s", *waitResp.Status.Error.Message))
 	}
 
-	err = mapFields(ctx, waitResp, model)
+	err = mapFields(ctx, waitResp, model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -1324,7 +1371,7 @@ func toNetworkPayload(ctx context.Context, m *Model) (*ske.Network, error) {
 	}, nil
 }
 
-func mapFields(ctx context.Context, cl *ske.Cluster, m *Model) error {
+func mapFields(ctx context.Context, cl *ske.Cluster, m *Model, region string) error {
 	if cl == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -1343,11 +1390,13 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	m.Name = types.StringValue(name)
 	idParts := []string{
 		m.ProjectId.ValueString(),
+		region,
 		name,
 	}
 	m.Id = types.StringValue(
 		strings.Join(idParts, core.Separator),
 	)
+	m.Region = types.StringValue(region)
 
 	if cl.Kubernetes != nil {
 		m.KubernetesVersionUsed = types.StringPointerValue(cl.Kubernetes.Version)
@@ -2034,8 +2083,13 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 	projectId := state.ProjectId.ValueString()
 	name := state.Name.ValueString()
+	region := state.Region.ValueString()
+	if region == "" {
+		region = r.providerData.GetRegion()
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	clResp, err := r.skeClient.GetCluster(ctx, projectId, name).Execute()
 	if err != nil {
@@ -2048,7 +2102,7 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	err = mapFields(ctx, clResp, &state)
+	err = mapFields(ctx, clResp, &state, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -2084,8 +2138,10 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	projectId := model.ProjectId.ValueString()
 	clName := model.Name.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", clName)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	availableKubernetesVersions, availableMachines, err := r.loadAvailableVersions(ctx)
 	if err != nil {
@@ -2116,8 +2172,10 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 	}
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	c := r.skeClient
 	_, err := c.DeleteCluster(ctx, projectId, name).Execute()
@@ -2138,15 +2196,16 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 func (r *clusterResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing cluster",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[name]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[name]  Got: %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[2])...)
 	tflog.Info(ctx, "SKE cluster state imported")
 }

@@ -172,6 +172,25 @@ To use beta resources in the STACKIT Terraform provider, follow these steps:
 
 For more details, please refer to the [beta resources configuration guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources).
 
+## Opting into Experiments
+
+Experiments are features that are even less mature and stable than Beta Resources. While there is some assumed stability in beta resources, will have to expect breaking changes while using experimental resources. Experimental Resources do not come with any support or warranty.
+
+To enable experiments set the experiments field in the provider definition:
+
+```hcl
+provider "stackit" {
+  region                = "eu01"
+  experiments           = ["iam"]
+}
+```
+
+### Available Experiments
+
+#### `iam`
+
+Enables IAM management features in the Terraform provider. The underlying IAM API is expected to undergo a redesign in the future, which leads to it being considered experimental.
+
 ## Acceptance Tests
 
 Terraform acceptance tests are run using the command `make test-acceptance-tf`. For all services,

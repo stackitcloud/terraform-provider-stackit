@@ -4,14 +4,19 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	argusCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/credential"
 	argusInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/instance"
 	argusScrapeConfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/argus/scrapeconfig"
+	roleassignments "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
 	iaasAffinityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/affinitygroup"
@@ -60,9 +65,11 @@ import (
 	secretsManagerUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/user"
 	serverBackupSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/schedule"
 	serverUpdateSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/schedule"
+	serviceAccount "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/account"
+	serviceAccountKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/key"
+	serviceAccountToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/token"
 	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
-	skeProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/project"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
 
@@ -97,14 +104,16 @@ func (p *Provider) Metadata(_ context.Context, _ provider.MetadataRequest, resp 
 }
 
 type providerModel struct {
-	CredentialsFilePath             types.String `tfsdk:"credentials_path"`
-	ServiceAccountEmail             types.String `tfsdk:"service_account_email"` // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025
-	ServiceAccountKey               types.String `tfsdk:"service_account_key"`
-	ServiceAccountKeyPath           types.String `tfsdk:"service_account_key_path"`
-	PrivateKey                      types.String `tfsdk:"private_key"`
-	PrivateKeyPath                  types.String `tfsdk:"private_key_path"`
-	Token                           types.String `tfsdk:"service_account_token"`
+	CredentialsFilePath   types.String `tfsdk:"credentials_path"`
+	ServiceAccountEmail   types.String `tfsdk:"service_account_email"` // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025
+	ServiceAccountKey     types.String `tfsdk:"service_account_key"`
+	ServiceAccountKeyPath types.String `tfsdk:"service_account_key_path"`
+	PrivateKey            types.String `tfsdk:"private_key"`
+	PrivateKeyPath        types.String `tfsdk:"private_key_path"`
+	Token                 types.String `tfsdk:"service_account_token"`
+	// Deprecated: Use DefaultRegion instead
 	Region                          types.String `tfsdk:"region"`
+	DefaultRegion                   types.String `tfsdk:"default_region"`
 	ArgusCustomEndpoint             types.String `tfsdk:"argus_custom_endpoint"`
 	DNSCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
@@ -124,10 +133,12 @@ type providerModel struct {
 	SKECustomEndpoint               types.String `tfsdk:"ske_custom_endpoint"`
 	ServerBackupCustomEndpoint      types.String `tfsdk:"server_backup_custom_endpoint"`
 	ServerUpdateCustomEndpoint      types.String `tfsdk:"server_update_custom_endpoint"`
+	ServiceAccountCustomEndpoint    types.String `tfsdk:"service_account_custom_endpoint"`
 	ResourceManagerCustomEndpoint   types.String `tfsdk:"resourcemanager_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
 	EnableBetaResources             types.Bool   `tfsdk:"enable_beta_resources"`
 	ServiceEnablementCustomEndpoint types.String `tfsdk:"service_enablement_custom_endpoint"`
+	Experiments                     types.List   `tfsdk:"experiments"`
 }
 
 // Schema defines the provider-level schema for configuration data.
@@ -141,6 +152,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"private_key":                        "Private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.",
 		"service_account_email":              "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.",
 		"region":                             "Region will be used as the default location for regional services. Not all services require a region, some are global",
+		"default_region":                     "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"argus_custom_endpoint":              "Custom endpoint for the Argus service",
 		"dns_custom_endpoint":                "Custom endpoint for the DNS service",
 		"iaas_custom_endpoint":               "Custom endpoint for the IaaS service",
@@ -157,6 +169,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"redis_custom_endpoint":              "Custom endpoint for the Redis service",
 		"server_backup_custom_endpoint":      "Custom endpoint for the Server Backup service",
 		"server_update_custom_endpoint":      "Custom endpoint for the Server Update service",
+		"service_account_custom_endpoint":    "Custom endpoint for the Service Account service",
 		"resourcemanager_custom_endpoint":    "Custom endpoint for the Resource Manager service",
 		"secretsmanager_custom_endpoint":     "Custom endpoint for the Secrets Manager service",
 		"sqlserverflex_custom_endpoint":      "Custom endpoint for the SQL Server Flex service",
@@ -164,6 +177,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"service_enablement_custom_endpoint": "Custom endpoint for the Service Enablement API",
 		"token_custom_endpoint":              "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
 		"enable_beta_resources":              "Enable beta resources. Default is false.",
+		"experiments":                        fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", features.AvailableExperiments),
 	}
 
 	resp.Schema = schema.Schema{
@@ -198,8 +212,19 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Description: descriptions["private_key_path"],
 			},
 			"region": schema.StringAttribute{
+				Optional:           true,
+				Description:        descriptions["region"],
+				DeprecationMessage: "This attribute is deprecated. Use 'default_region' instead",
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(path.MatchRoot("default_region")),
+				},
+			},
+			"default_region": schema.StringAttribute{
 				Optional:    true,
-				Description: descriptions["region"],
+				Description: descriptions["default_region"],
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(path.MatchRoot("region")),
+				},
 			},
 			"argus_custom_endpoint": schema.StringAttribute{
 				Optional:           true,
@@ -282,6 +307,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["server_update_custom_endpoint"],
 			},
+			"service_account_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["service_account_custom_endpoint"],
+			},
 			"service_enablement_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["service_enablement_custom_endpoint"],
@@ -293,6 +322,11 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"enable_beta_resources": schema.BoolAttribute{
 				Optional:    true,
 				Description: descriptions["enable_beta_resources"],
+			},
+			"experiments": schema.ListAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Description: descriptions["experiments"],
 			},
 		},
 	}
@@ -329,11 +363,10 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.Token.IsUnknown() || providerConfig.Token.IsNull()) {
 		sdkConfig.Token = providerConfig.Token.ValueString()
 	}
-	if !(providerConfig.Region.IsUnknown() || providerConfig.Region.IsNull()) {
-		providerData.Region = providerConfig.Region.ValueString()
-	}
-	if !(providerConfig.ArgusCustomEndpoint.IsUnknown() || providerConfig.ArgusCustomEndpoint.IsNull()) {
-		providerData.ArgusCustomEndpoint = providerConfig.ArgusCustomEndpoint.ValueString()
+	if !(providerConfig.DefaultRegion.IsUnknown() || providerConfig.DefaultRegion.IsNull()) {
+		providerData.DefaultRegion = providerConfig.DefaultRegion.ValueString()
+	} else if !(providerConfig.Region.IsUnknown() || providerConfig.Region.IsNull()) { // nolint:staticcheck // preliminary handling of deprecated attribute
+		providerData.Region = providerConfig.Region.ValueString() // nolint:staticcheck // preliminary handling of deprecated attribute
 	}
 	if !(providerConfig.DNSCustomEndpoint.IsUnknown() || providerConfig.DNSCustomEndpoint.IsNull()) {
 		providerData.DnsCustomEndpoint = providerConfig.DNSCustomEndpoint.ValueString()
@@ -383,6 +416,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.SQLServerFlexCustomEndpoint.IsUnknown() || providerConfig.SQLServerFlexCustomEndpoint.IsNull()) {
 		providerData.SQLServerFlexCustomEndpoint = providerConfig.SQLServerFlexCustomEndpoint.ValueString()
 	}
+	if !(providerConfig.ServiceAccountCustomEndpoint.IsUnknown() || providerConfig.ServiceAccountCustomEndpoint.IsNull()) {
+		providerData.ServiceAccountCustomEndpoint = providerConfig.ServiceAccountCustomEndpoint.ValueString()
+	}
 	if !(providerConfig.SKECustomEndpoint.IsUnknown() || providerConfig.SKECustomEndpoint.IsNull()) {
 		providerData.SKECustomEndpoint = providerConfig.SKECustomEndpoint.ValueString()
 	}
@@ -395,6 +431,15 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	if !(providerConfig.EnableBetaResources.IsUnknown() || providerConfig.EnableBetaResources.IsNull()) {
 		providerData.EnableBetaResources = providerConfig.EnableBetaResources.ValueBool()
 	}
+	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
+		var experimentValues []string
+		diags := providerConfig.Experiments.ElementsAs(ctx, &experimentValues, false)
+		if diags.HasError() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up experiments: %v", diags.Errors()))
+		}
+		providerData.Experiments = experimentValues
+	}
+
 	roundTripper, err := sdkauth.SetupAuth(sdkConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up authentication: %v", err))
@@ -458,14 +503,14 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		serverBackupSchedule.NewSchedulesDataSource,
 		serverUpdateSchedule.NewScheduleDataSource,
 		serverUpdateSchedule.NewSchedulesDataSource,
-		skeProject.NewProjectDataSource,
+		serviceAccount.NewServiceAccountDataSource,
 		skeCluster.NewClusterDataSource,
 	}
 }
 
 // Resources defines the resources implemented in the provider.
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
+	resources := []func() resource.Resource{
 		argusCredential.NewCredentialResource,
 		argusInstance.NewInstanceResource,
 		argusScrapeConfig.NewScrapeConfigResource,
@@ -518,8 +563,13 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		sqlServerFlexUser.NewUserResource,
 		serverBackupSchedule.NewScheduleResource,
 		serverUpdateSchedule.NewScheduleResource,
-		skeProject.NewProjectResource,
+		serviceAccount.NewServiceAccountResource,
+		serviceAccountToken.NewServiceAccountTokenResource,
+		serviceAccountKey.NewServiceAccountKeyResource,
 		skeCluster.NewClusterResource,
 		skeKubeconfig.NewKubeconfigResource,
 	}
+	resources = append(resources, roleassignments.NewRoleAssignmentResources()...)
+
+	return resources
 }

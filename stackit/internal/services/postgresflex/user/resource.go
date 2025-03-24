@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
@@ -34,6 +33,7 @@ var (
 	_ resource.Resource                = &userResource{}
 	_ resource.ResourceWithConfigure   = &userResource{}
 	_ resource.ResourceWithImportState = &userResource{}
+	_ resource.ResourceWithModifyPlan  = &userResource{}
 )
 
 type Model struct {
@@ -47,6 +47,7 @@ type Model struct {
 	Host       types.String `tfsdk:"host"`
 	Port       types.Int64  `tfsdk:"port"`
 	Uri        types.String `tfsdk:"uri"`
+	Region     types.String `tfsdk:"region"`
 }
 
 // NewUserResource is a helper function to simplify the provider implementation.
@@ -56,7 +57,38 @@ func NewUserResource() resource.Resource {
 
 // userResource is the resource implementation.
 type userResource struct {
-	client *postgresflex.APIClient
+	client       *postgresflex.APIClient
+	providerData core.ProviderData
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Metadata returns the resource type name.
@@ -71,7 +103,8 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -79,15 +112,15 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 
 	var apiClient *postgresflex.APIClient
 	var err error
-	if providerData.PostgresFlexCustomEndpoint != "" {
+	if r.providerData.PostgresFlexCustomEndpoint != "" {
 		apiClient, err = postgresflex.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.PostgresFlexCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.PostgresFlexCustomEndpoint),
 		)
 	} else {
 		apiClient, err = postgresflex.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithRegion(r.providerData.GetRegion()),
 		)
 	}
 
@@ -106,11 +139,12 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 
 	descriptions := map[string]string{
 		"main":        "Postgres Flex user resource schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
+		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the PostgresFlex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
 		"roles":       "Database access levels for the user. " + utils.SupportedValuesDocumentation(rolesOptions),
+		"region":      "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -167,9 +201,6 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Description: descriptions["roles"],
 				ElementType: types.StringType,
 				Required:    true,
-				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.RequiresReplace(),
-				},
 				Validators: []validator.Set{
 					setvalidator.ValueStringsAre(
 						stringvalidator.OneOf("login", "createdb"),
@@ -190,6 +221,15 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Computed:  true,
 				Sensitive: true,
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -204,8 +244,10 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	var roles []string
 	if !(model.Roles.IsNull() || model.Roles.IsUnknown()) {
@@ -223,7 +265,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	// Create new user
-	userResp, err := r.client.CreateUser(ctx, projectId, instanceId).CreateUserPayload(*payload).Execute()
+	userResp, err := r.client.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -236,7 +278,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
 	// Map response body to schema
-	err = mapFieldsCreate(userResp, &model)
+	err = mapFieldsCreate(userResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -261,11 +303,16 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
+	region := model.Region.ValueString()
+	if region == "" {
+		region = r.providerData.GetRegion()
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	recordSetResp, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
+	recordSetResp, err := r.client.GetUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -277,7 +324,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	// Map response body to schema
-	err = mapFields(recordSetResp, &model)
+	err = mapFields(recordSetResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -293,9 +340,74 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *userResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Update shouldn't be called
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", "User can't be updated")
+func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	// Retrieve values from plan
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
+	userId := model.UserId.ValueString()
+	region := model.Region.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = tflog.SetField(ctx, "region", region)
+
+	// Retrieve values from state
+	var stateModel Model
+	diags = req.State.Get(ctx, &stateModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var roles []string
+	if !(model.Roles.IsNull() || model.Roles.IsUnknown()) {
+		diags = model.Roles.ElementsAs(ctx, &roles, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	// Generate API request body from model
+	payload, err := toUpdatePayload(&model, roles)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Updating API payload: %v", err))
+		return
+	}
+
+	// Update existing instance
+	err = r.client.UpdateUser(ctx, projectId, region, instanceId, userId).UpdateUserPayload(*payload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", err.Error())
+		return
+	}
+
+	userResp, err := r.client.GetUser(ctx, projectId, region, instanceId, userId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapFields(userResp, &stateModel, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	// Set state to fully populated data
+	diags = resp.State.Set(ctx, stateModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Postgres Flex user updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -311,16 +423,18 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing record set
-	err := r.client.DeleteUser(ctx, projectId, instanceId, userId).Execute()
+	err := r.client.DeleteUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
 	}
-	_, err = wait.DeleteUserWaitHandler(ctx, r.client, projectId, instanceId, userId).WaitWithContext(ctx)
+	_, err = wait.DeleteUserWaitHandler(ctx, r.client, projectId, region, instanceId, userId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -332,17 +446,18 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 // The expected format of the resource import identifier is: project_id,zone_id,record_set_id
 func (r *userResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing user",
-			fmt.Sprintf("Expected import identifier with format [project_id],[instance_id],[user_id], got %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id],[user_id], got %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), idParts[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), idParts[3])...)
 	core.LogAndAddWarning(ctx, &resp.Diagnostics,
 		"Postgresflex user imported with empty password and empty uri",
 		"The user password and uri are not imported as they are only available upon creation of a new user. The password and uri fields will be empty.",
@@ -350,7 +465,7 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 	tflog.Info(ctx, "Postgresflex user state imported")
 }
 
-func mapFieldsCreate(userResp *postgresflex.CreateUserResponse, model *Model) error {
+func mapFieldsCreate(userResp *postgresflex.CreateUserResponse, model *Model, region string) error {
 	if userResp == nil || userResp.Item == nil {
 		return fmt.Errorf("response is nil")
 	}
@@ -365,6 +480,7 @@ func mapFieldsCreate(userResp *postgresflex.CreateUserResponse, model *Model) er
 	userId := *user.Id
 	idParts := []string{
 		model.ProjectId.ValueString(),
+		region,
 		model.InstanceId.ValueString(),
 		userId,
 	}
@@ -395,10 +511,11 @@ func mapFieldsCreate(userResp *postgresflex.CreateUserResponse, model *Model) er
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
 	model.Uri = types.StringPointerValue(user.Uri)
+	model.Region = types.StringValue(region)
 	return nil
 }
 
-func mapFields(userResp *postgresflex.GetUserResponse, model *Model) error {
+func mapFields(userResp *postgresflex.GetUserResponse, model *Model, region string) error {
 	if userResp == nil || userResp.Item == nil {
 		return fmt.Errorf("response is nil")
 	}
@@ -417,6 +534,7 @@ func mapFields(userResp *postgresflex.GetUserResponse, model *Model) error {
 	}
 	idParts := []string{
 		model.ProjectId.ValueString(),
+		region,
 		model.InstanceId.ValueString(),
 		userId,
 	}
@@ -441,6 +559,7 @@ func mapFields(userResp *postgresflex.GetUserResponse, model *Model) error {
 	}
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
+	model.Region = types.StringValue(region)
 	return nil
 }
 
@@ -455,5 +574,18 @@ func toCreatePayload(model *Model, roles []string) (*postgresflex.CreateUserPayl
 	return &postgresflex.CreateUserPayload{
 		Roles:    &roles,
 		Username: conversion.StringValueToPointer(model.Username),
+	}, nil
+}
+
+func toUpdatePayload(model *Model, roles []string) (*postgresflex.UpdateUserPayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
+	if roles == nil {
+		return nil, fmt.Errorf("nil roles")
+	}
+
+	return &postgresflex.UpdateUserPayload{
+		Roles: &roles,
 	}, nil
 }

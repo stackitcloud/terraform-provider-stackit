@@ -26,6 +26,9 @@ data "stackit_objectstorage_bucket" "example" {
 
 - `name` (String) The bucket name. It must be DNS conform.
 - `project_id` (String) STACKIT Project ID to which the bucket is associated.
+
+### Optional
+
 - `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
@@ -33,5 +36,3 @@ data "stackit_objectstorage_bucket" "example" {
 - `id` (String) Terraform's internal data source identifier. It is structured as "`project_id`,`name`".
 - `url_path_style` (String)
 - `url_virtual_hosted_style` (String)
-
-

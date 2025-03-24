@@ -60,7 +60,7 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 	} else {
 		apiClient, err = logme.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 

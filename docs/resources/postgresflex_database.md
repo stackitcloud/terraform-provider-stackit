@@ -31,7 +31,11 @@ resource "stackit_postgresflex_database" "example" {
 - `owner` (String) Username of the database owner.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `database_id` (String) Database ID.
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`,`database_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`,`database_id`".

@@ -90,7 +90,7 @@ func (r *publicIpAssociateResource) Configure(ctx context.Context, req resource.
 	} else {
 		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 

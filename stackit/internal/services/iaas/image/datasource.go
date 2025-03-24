@@ -93,7 +93,7 @@ func (d *imageDataSource) Configure(ctx context.Context, req datasource.Configur
 	} else {
 		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 	if err != nil {

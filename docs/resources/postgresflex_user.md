@@ -31,10 +31,14 @@ resource "stackit_postgresflex_user" "example" {
 - `roles` (Set of String) Database access levels for the user. Supported values are: `login`, `createdb`.
 - `username` (String)
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `host` (String)
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`,`user_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`,`user_id`".
 - `password` (String, Sensitive)
 - `port` (Number)
 - `uri` (String, Sensitive)

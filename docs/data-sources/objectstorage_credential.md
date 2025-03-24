@@ -28,6 +28,9 @@ data "stackit_objectstorage_credentials_group" "example" {
 - `credential_id` (String) The credential ID.
 - `credentials_group_id` (String) The credential group ID.
 - `project_id` (String) STACKIT Project ID to which the credential group is associated.
+
+### Optional
+
 - `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
@@ -37,5 +40,3 @@ data "stackit_objectstorage_credentials_group" "example" {
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`credentials_group_id`,`credential_id`".
 - `name` (String)
 - `secret_access_key` (String, Sensitive)
-
-

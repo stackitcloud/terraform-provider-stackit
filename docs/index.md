@@ -154,8 +154,10 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `argus_custom_endpoint` (String, Deprecated) Custom endpoint for the Argus service
 - `authorization_custom_endpoint` (String) Custom endpoint for the Membership service
 - `credentials_path` (String) Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.
+- `default_region` (String) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `dns_custom_endpoint` (String) Custom endpoint for the DNS service
 - `enable_beta_resources` (Boolean) Enable beta resources. Default is false.
+- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: [iam]
 - `iaas_custom_endpoint` (String) Custom endpoint for the IaaS service
 - `loadbalancer_custom_endpoint` (String) Custom endpoint for the Load Balancer service
 - `logme_custom_endpoint` (String) Custom endpoint for the LogMe service
@@ -169,11 +171,12 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `private_key_path` (String) Path for the private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.
 - `rabbitmq_custom_endpoint` (String) Custom endpoint for the RabbitMQ service
 - `redis_custom_endpoint` (String) Custom endpoint for the Redis service
-- `region` (String) Region will be used as the default location for regional services. Not all services require a region, some are global
+- `region` (String, Deprecated) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `resourcemanager_custom_endpoint` (String) Custom endpoint for the Resource Manager service
 - `secretsmanager_custom_endpoint` (String) Custom endpoint for the Secrets Manager service
 - `server_backup_custom_endpoint` (String) Custom endpoint for the Server Backup service
 - `server_update_custom_endpoint` (String) Custom endpoint for the Server Update service
+- `service_account_custom_endpoint` (String) Custom endpoint for the Service Account service
 - `service_account_email` (String, Deprecated) Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.
 - `service_account_key` (String) Service account key used for authentication. If set, the key flow will be used to authenticate all operations.
 - `service_account_key_path` (String) Path for the service account key used for authentication. If set, the key flow will be used to authenticate all operations.

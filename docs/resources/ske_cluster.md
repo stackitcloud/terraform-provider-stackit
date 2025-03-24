@@ -59,11 +59,12 @@ Deprecated as of Kubernetes 1.25 and later
 - `kubernetes_version_min` (String) The minimum Kubernetes version. This field will be used to set the minimum kubernetes version on creation/update of the cluster. If unset, the latest supported Kubernetes version will be used. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html). To get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field.
 - `maintenance` (Attributes) A single maintenance block as defined below. (see [below for nested schema](#nestedatt--maintenance))
 - `network` (Attributes) Network block as defined below. (see [below for nested schema](#nestedatt--network))
+- `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
 
 - `egress_address_ranges` (List of String) The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`name`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`name`".
 - `kubernetes_version_used` (String) Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html).
 
 <a id="nestedatt--node_pools"></a>
@@ -83,7 +84,7 @@ Optional:
 - `cri` (String) Specifies the container runtime. Defaults to `containerd`
 - `labels` (Map of String) Labels to add to each node.
 - `max_surge` (Number) Maximum number of additional VMs that are created during an update. If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. The `max_surge` and `max_unavailable` fields cannot both be unset at the same time.
-- `max_unavailable` (Number) Maximum number of additional VMs that are created during an update. If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. The `max_surge` and `max_unavailable` fields cannot both be unset at the same time.
+- `max_unavailable` (Number) Maximum number of VMs that that can be unavailable during an update. If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. The `max_surge` and `max_unavailable` fields cannot both be unset at the same time.
 - `os_name` (String) The name of the OS image. Defaults to `flatcar`.
 - `os_version` (String, Deprecated) This field is deprecated, use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead.
 - `os_version_min` (String) The minimum OS image version. This field will be used to set the minimum OS image version on creation/update of the cluster. If unset, the latest supported OS image version will be used. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html). To get the current OS image version being used for the node pool, use the read-only `os_version_used` field.

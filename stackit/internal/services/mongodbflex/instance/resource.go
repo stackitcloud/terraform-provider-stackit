@@ -144,7 +144,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	} else {
 		apiClient, err = mongodbflex.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.Region),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 
@@ -250,6 +250,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"replicas": schema.Int64Attribute{
 				Required: true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.RequiresReplace(),
+				},
 			},
 			"storage": schema.SingleNestedAttribute{
 				Required: true,
