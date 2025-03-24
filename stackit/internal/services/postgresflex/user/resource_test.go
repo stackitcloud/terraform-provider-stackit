@@ -11,9 +11,11 @@ import (
 )
 
 func TestMapFieldsCreate(t *testing.T) {
+	const testRegion = "region"
 	tests := []struct {
 		description string
 		input       *postgresflex.CreateUserResponse
+		region      string
 		expected    Model
 		isValid     bool
 	}{
@@ -25,8 +27,9 @@ func TestMapFieldsCreate(t *testing.T) {
 					Password: utils.Ptr(""),
 				},
 			},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -36,6 +39,7 @@ func TestMapFieldsCreate(t *testing.T) {
 				Host:       types.StringNull(),
 				Port:       types.Int64Null(),
 				Uri:        types.StringNull(),
+				Region:     types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -56,8 +60,9 @@ func TestMapFieldsCreate(t *testing.T) {
 					Uri:      utils.Ptr("uri"),
 				},
 			},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -71,6 +76,7 @@ func TestMapFieldsCreate(t *testing.T) {
 				Host:     types.StringValue("host"),
 				Port:     types.Int64Value(1234),
 				Uri:      types.StringValue("uri"),
+				Region:   types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -87,8 +93,9 @@ func TestMapFieldsCreate(t *testing.T) {
 					Uri:      nil,
 				},
 			},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -98,18 +105,21 @@ func TestMapFieldsCreate(t *testing.T) {
 				Host:       types.StringNull(),
 				Port:       types.Int64Value(2123456789),
 				Uri:        types.StringNull(),
+				Region:     types.StringValue(testRegion),
 			},
 			true,
 		},
 		{
 			"nil_response",
 			nil,
+			testRegion,
 			Model{},
 			false,
 		},
 		{
 			"nil_response_2",
 			&postgresflex.CreateUserResponse{},
+			testRegion,
 			Model{},
 			false,
 		},
@@ -118,6 +128,7 @@ func TestMapFieldsCreate(t *testing.T) {
 			&postgresflex.CreateUserResponse{
 				Item: &postgresflex.User{},
 			},
+			testRegion,
 			Model{},
 			false,
 		},
@@ -128,6 +139,7 @@ func TestMapFieldsCreate(t *testing.T) {
 					Id: utils.Ptr("uid"),
 				},
 			},
+			testRegion,
 			Model{},
 			false,
 		},
@@ -138,7 +150,7 @@ func TestMapFieldsCreate(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapFieldsCreate(tt.input, state)
+			err := mapFieldsCreate(tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -156,9 +168,11 @@ func TestMapFieldsCreate(t *testing.T) {
 }
 
 func TestMapFields(t *testing.T) {
+	const testRegion = "region"
 	tests := []struct {
 		description string
 		input       *postgresflex.GetUserResponse
+		region      string
 		expected    Model
 		isValid     bool
 	}{
@@ -167,8 +181,9 @@ func TestMapFields(t *testing.T) {
 			&postgresflex.GetUserResponse{
 				Item: &postgresflex.UserResponse{},
 			},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -176,6 +191,7 @@ func TestMapFields(t *testing.T) {
 				Roles:      types.SetNull(types.StringType),
 				Host:       types.StringNull(),
 				Port:       types.Int64Null(),
+				Region:     types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -193,8 +209,9 @@ func TestMapFields(t *testing.T) {
 					Port:     utils.Ptr(int64(1234)),
 				},
 			},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -204,8 +221,9 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("role_2"),
 					types.StringValue(""),
 				}),
-				Host: types.StringValue("host"),
-				Port: types.Int64Value(1234),
+				Host:   types.StringValue("host"),
+				Port:   types.Int64Value(1234),
+				Region: types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -220,8 +238,9 @@ func TestMapFields(t *testing.T) {
 					Port:     utils.Ptr(int64(2123456789)),
 				},
 			},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid,uid"),
+				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -229,18 +248,21 @@ func TestMapFields(t *testing.T) {
 				Roles:      types.SetValueMust(types.StringType, []attr.Value{}),
 				Host:       types.StringNull(),
 				Port:       types.Int64Value(2123456789),
+				Region:     types.StringValue(testRegion),
 			},
 			true,
 		},
 		{
 			"nil_response",
 			nil,
+			testRegion,
 			Model{},
 			false,
 		},
 		{
 			"nil_response_2",
 			&postgresflex.GetUserResponse{},
+			testRegion,
 			Model{},
 			false,
 		},
@@ -249,6 +271,7 @@ func TestMapFields(t *testing.T) {
 			&postgresflex.GetUserResponse{
 				Item: &postgresflex.UserResponse{},
 			},
+			testRegion,
 			Model{},
 			false,
 		},
@@ -260,7 +283,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId: tt.expected.InstanceId,
 				UserId:     tt.expected.UserId,
 			}
-			err := mapFields(tt.input, state)
+			err := mapFields(tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

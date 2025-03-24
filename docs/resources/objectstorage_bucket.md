@@ -36,5 +36,3 @@ resource "stackit_objectstorage_bucket" "example" {
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`name`".
 - `url_path_style` (String)
 - `url_virtual_hosted_style` (String)
-
-

@@ -17,7 +17,7 @@ elif [ "$action" = "tools" ]; then
     go mod download
 
     go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.0
-    go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.16.0
+    go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.21.0
 else
     echo "Invalid action: '$action', please use $0 help for help"
 fi
