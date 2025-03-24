@@ -1,0 +1,2 @@
+!> STACKIT provides a Terraform provider that enables the deployment and ordering of MongoDB Flex. However, please exercise caution when using Terraform, as some API calls initiated through Terraform may behave differently than expected. Before applying any changes, ensure you review them carefully or contact us if you are unsure about the usage. **Please note that updates may result in the recreation of the entire instance, which could lead to data loss.**
+
