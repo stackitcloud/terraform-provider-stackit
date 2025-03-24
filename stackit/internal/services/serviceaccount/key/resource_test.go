@@ -101,7 +101,7 @@ func TestMapResponse(t *testing.T) {
 			model := &Model{
 				ProjectId:           tt.expected.ProjectId,
 				ServiceAccountEmail: tt.expected.ServiceAccountEmail,
-				KeyId:               tt.expected.KeyId,
+				KeyId:               types.StringNull(),
 				Json:                types.StringValue("{}"),
 				RotateWhenChanged:   types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			}

@@ -25,6 +25,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -108,7 +109,7 @@ func (r *serviceAccountKeyResource) Configure(ctx context.Context, req resource.
 	tflog.Info(ctx, "Service Account client configured")
 }
 
-// Metadata sets the resource type name for the service account resource.
+// Metadata sets the resource type name for the service account key resource.
 func (r *serviceAccountKeyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_service_account_key"
 }
@@ -117,7 +118,7 @@ func (r *serviceAccountKeyResource) Metadata(_ context.Context, req resource.Met
 func (r *serviceAccountKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"id":                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`service_account_email`,`key_id`\".",
-		"main":                  "Service account access key schema.",
+		"main":                  "Service account key schema.",
 		"project_id":            "The STACKIT project ID associated with the service account key.",
 		"key_id":                "The unique identifier for the key associated with the service account.",
 		"service_account_email": "The email address associated with the service account, used for account identification and communication.",
@@ -139,7 +140,6 @@ func (r *serviceAccountKeyResource) Schema(_ context.Context, _ resource.SchemaR
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
-					validate.NoSeparator(),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -206,14 +206,14 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "service_account_email", serviceAccountEmail)
 
-	if model.TtlDays.IsUnknown() {
+	if utils.IsUndefined(model.TtlDays) {
 		model.TtlDays = types.Int64Null()
 	}
 
 	// Generate the API request payload.
 	payload, err := toCreatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account access key", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account key", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
@@ -221,14 +221,14 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 	saAccountKeyResp, err := r.client.CreateServiceAccountKey(ctx, projectId, serviceAccountEmail).CreateServiceAccountKeyPayload(*payload).Execute()
 
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Failed to create service account access key", fmt.Sprintf("API call error: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Failed to create service account key", fmt.Sprintf("API call error: %v", err))
 		return
 	}
 
 	// Map the response to the resource schema.
 	err = mapCreateResponse(saAccountKeyResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account access key", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account key", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -238,7 +238,7 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Service account access key created")
+	tflog.Info(ctx, "Service account key created")
 }
 
 // Read refreshes the Terraform state with the latest service account data.
@@ -285,10 +285,10 @@ func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadR
 // lifecycle management.
 func (r *serviceAccountKeyResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Service accounts cannot be updated, so we log an error.
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating service account access key", "Service account key can't be updated")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating service account key", "Service account key can't be updated")
 }
 
-// Delete deletes the service account and removes it from the Terraform state on success.
+// Delete deletes the service account key and removes it from the Terraform state on success.
 func (r *serviceAccountKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve current state of the resource.
 	var model Model
@@ -324,7 +324,7 @@ func toCreatePayload(model *Model) (*serviceaccount.CreateServiceAccountKeyPaylo
 	payload := &serviceaccount.CreateServiceAccountKeyPayload{}
 
 	// Set ValidUntil based on TtlDays if specified
-	if !model.TtlDays.IsUnknown() && !model.TtlDays.IsNull() {
+	if !utils.IsUndefined(model.TtlDays) {
 		validUntil, err := computeValidUntil(model.TtlDays.ValueInt64Pointer())
 		if err != nil {
 			return nil, err
@@ -333,7 +333,7 @@ func toCreatePayload(model *Model) (*serviceaccount.CreateServiceAccountKeyPaylo
 	}
 
 	// Set PublicKey if specified
-	if !model.PublicKey.IsUnknown() && model.PublicKey.String() != "" {
+	if !utils.IsUndefined(model.PublicKey) && model.PublicKey.ValueString() != "" {
 		payload.PublicKey = conversion.StringValueToPointer(model.PublicKey)
 	}
 
