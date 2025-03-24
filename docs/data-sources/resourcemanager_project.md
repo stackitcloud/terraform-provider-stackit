@@ -25,7 +25,6 @@ data "stackit_resourcemanager_project" "example" {
 ### Optional
 
 - `container_id` (String) Project container ID. Globally unique, user-friendly identifier.
-- `owner_email` (String) Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.
 - `project_id` (String) Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.
 
 ### Read-Only
@@ -33,4 +32,5 @@ data "stackit_resourcemanager_project" "example" {
 - `id` (String) Terraform's internal data source. ID. It is structured as "`container_id`".
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}
 - `name` (String) Project name.
+- `owner_email` (String) Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.
 - `parent_container_id` (String) Parent resource identifier. Both container ID (user-friendly) and UUID are supported
