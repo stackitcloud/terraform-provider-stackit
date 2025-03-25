@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -20,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 )
 
@@ -36,8 +33,7 @@ func NewProjectDataSource() datasource.DataSource {
 
 // projectDataSource is the data source implementation.
 type projectDataSource struct {
-	resourceManagerClient *resourcemanager.APIClient
-	membershipClient      *authorization.APIClient
+	client *resourcemanager.APIClient
 }
 
 // Metadata returns the data source type name.
@@ -51,7 +47,7 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 		return
 	}
 
-	var rmClient *resourcemanager.APIClient
+	var apiClient *resourcemanager.APIClient
 	var err error
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
@@ -60,12 +56,12 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 	}
 
 	if providerData.ResourceManagerCustomEndpoint != "" {
-		rmClient, err = resourcemanager.NewAPIClient(
+		apiClient, err = resourcemanager.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.ResourceManagerCustomEndpoint),
 		)
 	} else {
-		rmClient, err = resourcemanager.NewAPIClient(
+		apiClient, err = resourcemanager.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 		)
 	}
@@ -74,44 +70,20 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 		return
 	}
 
-	var aClient *authorization.APIClient
-	if providerData.AuthorizationCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "authorization_custom_endpoint", providerData.AuthorizationCustomEndpoint)
-		aClient, err = authorization.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.AuthorizationCustomEndpoint),
-		)
-	} else {
-		aClient, err = authorization.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-		)
-	}
-
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring Membership API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
-		return
-	}
-
-	d.resourceManagerClient = rmClient
-	d.membershipClient = aClient
+	d.client = apiClient
 	tflog.Info(ctx, "Resource Manager project client configured")
 }
 
 // Schema defines the schema for the data source.
 func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                        "Resource Manager project data source schema. To identify the project, you need to provider either project_id or container_id. If you provide both, project_id will be used.",
-		"id":                          "Terraform's internal data source. ID. It is structured as \"`container_id`\".",
-		"project_id":                  "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
-		"container_id":                "Project container ID. Globally unique, user-friendly identifier.",
-		"parent_container_id":         "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
-		"name":                        "Project name.",
-		"labels":                      `Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`,
-		"owner_email":                 "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
-		"members":                     "The members assigned to the project. At least one subject needs to be a user, and not a client or service account. This value is only considered during creation. Changing it afterwards will have no effect.",
-		"members.role":                fmt.Sprintf("The role of the member in the project. Legacy roles (%s) are not supported.", strings.Join(utils.QuoteValues(utils.LegacyProjectRoles), ", ")),
-		"members.subject":             "Unique identifier of the user, service account or client. This is usually the email address for users or service accounts, and the name in case of clients.",
-		"members_deprecation_message": "The \"members\" field has been deprecated in favor of the \"owner_email\" field. Please use the \"owner_email\" field to assign the owner role to a user.",
+		"main":                "Resource Manager project data source schema. To identify the project, you need to provider either project_id or container_id. If you provide both, project_id will be used.",
+		"id":                  "Terraform's internal data source. ID. It is structured as \"`container_id`\".",
+		"project_id":          "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
+		"container_id":        "Project container ID. Globally unique, user-friendly identifier.",
+		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
+		"name":                "Project name.",
+		"labels":              `Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`,
 	}
 
 	resp.Schema = schema.Schema{
@@ -167,31 +139,6 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 					),
 				},
 			},
-			"owner_email": schema.StringAttribute{
-				Description: descriptions["owner_email"],
-				Optional:    true,
-			},
-			"members": schema.ListNestedAttribute{
-				Description:         descriptions["members"],
-				DeprecationMessage:  descriptions["members_deprecation_message"],
-				MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["members"], descriptions["members_deprecation_message"]),
-				Computed:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"role": schema.StringAttribute{
-							Description: descriptions["members.role"],
-							Computed:    true,
-							Validators: []validator.String{
-								validate.NonLegacyProjectRole(),
-							},
-						},
-						"subject": schema.StringAttribute{
-							Description: descriptions["members.subject"],
-							Computed:    true,
-						},
-					},
-				},
-			},
 		},
 	}
 }
@@ -222,7 +169,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		identifier = projectId
 	}
 
-	projectResp, err := d.resourceManagerClient.GetProject(ctx, identifier).Execute()
+	projectResp, err := d.client.GetProject(ctx, identifier).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusForbidden {
