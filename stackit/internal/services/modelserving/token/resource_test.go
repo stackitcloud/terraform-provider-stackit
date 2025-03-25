@@ -46,7 +46,7 @@ func TestMapGetTokenFields(t *testing.T) {
 		{
 			description: "should map fields correctly",
 			state: &Model{
-				Id:                types.StringValue("pid,tid"),
+				Id:                types.StringValue("pid,eu01,tid"),
 				ProjectId:         types.StringValue("pid"),
 				TokenId:           types.StringValue("tid"),
 				Region:            types.StringValue("eu01"),
@@ -65,7 +65,7 @@ func TestMapGetTokenFields(t *testing.T) {
 				},
 			},
 			expected: Model{
-				Id:                types.StringValue("pid,tid"),
+				Id:                types.StringValue("pid,eu01,tid"),
 				ProjectId:         types.StringValue("pid"),
 				Region:            types.StringValue("eu01"),
 				TokenId:           types.StringValue("tid"),
@@ -144,7 +144,7 @@ func TestMapCreateTokenFields(t *testing.T) {
 		{
 			description: "should error when get token response is nil",
 			state: &Model{
-				Id:        types.StringValue("pid,tid"),
+				Id:        types.StringValue("pid,eu01,tid"),
 				ProjectId: types.StringValue("pid"),
 			},
 			inputCreateTokenResponse: &modelserving.CreateTokenResponse{
@@ -167,7 +167,7 @@ func TestMapCreateTokenFields(t *testing.T) {
 		{
 			description: "should map fields correctly",
 			state: &Model{
-				Id:                types.StringValue("pid,tid"),
+				Id:                types.StringValue("pid,eu01,tid"),
 				ProjectId:         types.StringValue("pid"),
 				Region:            types.StringValue("eu01"),
 				RotateWhenChanged: types.MapNull(types.StringType),
@@ -191,7 +191,7 @@ func TestMapCreateTokenFields(t *testing.T) {
 				},
 			},
 			expected: Model{
-				Id:                types.StringValue("pid,tid"),
+				Id:                types.StringValue("pid,eu01,tid"),
 				ProjectId:         types.StringValue("pid"),
 				Region:            types.StringValue("eu01"),
 				TokenId:           types.StringValue("tid"),
@@ -214,6 +214,7 @@ func TestMapCreateTokenFields(t *testing.T) {
 				tt.inputCreateTokenResponse,
 				tt.inputGetTokenResponse,
 				tt.state,
+				"eu01",
 			)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")

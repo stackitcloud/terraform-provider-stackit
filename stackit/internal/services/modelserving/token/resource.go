@@ -34,6 +34,7 @@ var (
 	_ resource.Resource                = &tokenResource{}
 	_ resource.ResourceWithConfigure   = &tokenResource{}
 	_ resource.ResourceWithImportState = &tokenResource{}
+	_ resource.ResourceWithModifyPlan  = &tokenResource{}
 )
 
 const (
@@ -110,13 +111,10 @@ func (r *tokenResource) Configure(
 		)
 		apiClient, err = modelserving.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ModelServingCustomEndpoint),
-			config.WithRegion(providerData.GetRegion()),
 		)
 	} else {
 		apiClient, err = modelserving.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 	if err != nil {
@@ -141,7 +139,6 @@ func (r *tokenResource) Configure(
 	} else {
 		serviceEnablementClient, err = serviceenablement.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 	if err != nil {
@@ -161,6 +158,49 @@ func (r *tokenResource) Configure(
 	r.providerData = providerData
 	r.serviceEnablementClient = serviceEnablementClient
 	tflog.Info(ctx, "Model-Serving auth token client configured")
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+//
+//nolint:gocritic // function signature required by Terraform
+func (r *tokenResource) ModifyPlan(
+	ctx context.Context,
+	req resource.ModifyPlanRequest,
+	resp *resource.ModifyPlanResponse,
+) {
+	var configModel Model
+
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(
+		ctx,
+		configModel.Region,
+		&planModel.Region,
+		r.providerData.GetRegion(),
+		resp,
+	)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Schema defines the schema for the resource.
@@ -272,7 +312,7 @@ func (r *tokenResource) Create(
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// If model serving is not enabled, enable it
-	err := r.serviceEnablementClient.EnableService(ctx, projectId, utils.ModelServingServiceId).
+	err := r.serviceEnablementClient.EnableServiceRegional(ctx, region, projectId, utils.ModelServingServiceId).
 		Execute()
 	if err != nil {
 		core.LogAndAddError(
@@ -284,7 +324,7 @@ func (r *tokenResource) Create(
 		return
 	}
 
-	_, err = serviceEnablementWait.EnableServiceWaitHandler(ctx, r.serviceEnablementClient, projectId, utils.ModelServingServiceId).
+	_, err = serviceEnablementWait.EnableServiceWaitHandler(ctx, r.serviceEnablementClient, region, projectId, utils.ModelServingServiceId).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(
@@ -335,7 +375,7 @@ func (r *tokenResource) Create(
 	}
 
 	// Map response body to schema
-	err = mapCreateResponse(createTokenResp, waitResp, &model)
+	err = mapCreateResponse(createTokenResp, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -630,7 +670,8 @@ func (r *tokenResource) ImportState(
 	resp *resource.ImportStateResponse,
 ) {
 	idParts := strings.Split(req.ID, core.Separator)
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" ||
+		idParts[2] == "" {
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,
@@ -646,7 +687,9 @@ func (r *tokenResource) ImportState(
 	resp.Diagnostics.Append(
 		resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(
-		resp.State.SetAttribute(ctx, path.Root("token_id"), idParts[1])...)
+		resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(
+		resp.State.SetAttribute(ctx, path.Root("token_id"), idParts[2])...)
 
 	tflog.Info(ctx, "Model-Serving auth token state imported")
 }
@@ -655,6 +698,7 @@ func mapCreateResponse(
 	tokenCreateResp *modelserving.CreateTokenResponse,
 	waitResp *modelserving.GetTokenResponse,
 	model *Model,
+	region string,
 ) error {
 	if tokenCreateResp == nil || tokenCreateResp.Token == nil {
 		return fmt.Errorf("response input is nil")
@@ -669,9 +713,9 @@ func mapCreateResponse(
 		return fmt.Errorf("token id not present")
 	}
 
-	validUntil := time.Now().Format(time.RFC3339)
+	validUntil := types.StringNull()
 	if token.ValidUntil != nil {
-		validUntil = token.ValidUntil.Format(time.RFC3339)
+		validUntil = types.StringValue(token.ValidUntil.Format(time.RFC3339))
 	}
 
 	if waitResp == nil || waitResp.Token == nil || waitResp.Token.State == nil {
@@ -680,6 +724,7 @@ func mapCreateResponse(
 
 	idParts := []string{
 		model.ProjectId.ValueString(),
+		region,
 		*tokenCreateResp.Token.Id,
 	}
 	model.Id = types.StringValue(
@@ -688,14 +733,17 @@ func mapCreateResponse(
 	model.TokenId = types.StringPointerValue(token.Id)
 	model.Name = types.StringPointerValue(token.Name)
 	model.State = types.StringPointerValue(waitResp.Token.State)
-	model.ValidUntil = types.StringValue(validUntil)
+	model.ValidUntil = validUntil
 	model.Content = types.StringPointerValue(token.Content)
 	model.Description = types.StringPointerValue(token.Description)
 
 	return nil
 }
 
-func mapToken(token *modelserving.Token, model, state *Model) error {
+func mapToken(
+	token *modelserving.Token,
+	model, state *Model,
+) error {
 	if token == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -707,13 +755,14 @@ func mapToken(token *modelserving.Token, model, state *Model) error {
 	}
 
 	// theoretically, should never happen, but still catch null pointers
-	validUntil := time.Now().Format(time.RFC3339)
+	validUntil := types.StringNull()
 	if token.ValidUntil != nil {
-		validUntil = token.ValidUntil.Format(time.RFC3339)
+		validUntil = types.StringValue(token.ValidUntil.Format(time.RFC3339))
 	}
 
 	idParts := []string{
 		model.ProjectId.ValueString(),
+		model.Region.ValueString(),
 		model.TokenId.ValueString(),
 	}
 	model.Id = types.StringValue(
@@ -722,7 +771,7 @@ func mapToken(token *modelserving.Token, model, state *Model) error {
 	model.TokenId = types.StringPointerValue(token.Id)
 	model.Name = types.StringPointerValue(token.Name)
 	model.State = types.StringPointerValue(token.State)
-	model.ValidUntil = types.StringValue(validUntil)
+	model.ValidUntil = validUntil
 	model.Description = types.StringPointerValue(token.Description)
 	model.Content = state.Content
 

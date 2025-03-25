@@ -18,7 +18,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v0.18.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.21.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.21.0
-	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.2.0
+	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.2.1
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.18.0
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.3.0

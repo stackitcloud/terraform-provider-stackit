@@ -71,7 +71,6 @@ func (d *tokenDataSource) Configure(
 		apiClient, err = modelserving.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.ModelServingCustomEndpoint),
-			config.WithRegion(providerData.GetRegion()),
 		)
 	} else {
 		apiClient, err = modelserving.NewAPIClient(
