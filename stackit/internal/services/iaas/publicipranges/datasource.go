@@ -128,7 +128,7 @@ func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.Read
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	publicIpRangeResp, err := d.client.ListPublicIpRangesExecute(ctx)
+	publicIpRangeResp, err := d.client.ListPublicIPRangesExecute(ctx)
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {

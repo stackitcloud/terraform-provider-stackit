@@ -968,9 +968,11 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		}
 	}
 
-	var userData *string
+	var userData *[]byte
 	if !model.UserData.IsNull() && !model.UserData.IsUnknown() {
-		encodedUserData := base64.StdEncoding.EncodeToString([]byte(model.UserData.ValueString()))
+		src := []byte(model.UserData.ValueString())
+		encodedUserData := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
+		base64.StdEncoding.Encode(encodedUserData, src)
 		userData = &encodedUserData
 	}
 
