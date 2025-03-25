@@ -2,6 +2,7 @@ package loadbalancer
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -267,10 +268,13 @@ func TestToTargetPoolUpdatePayload(t *testing.T) {
 }
 
 func TestMapFields(t *testing.T) {
+	const testRegion = "eu01"
+	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "name")
 	tests := []struct {
 		description             string
 		input                   *loadbalancer.LoadBalancer
 		modelPrivateNetworkOnly *bool
+		region                  string
 		expected                *Model
 		isValid                 bool
 	}{
@@ -290,8 +294,9 @@ func TestMapFields(t *testing.T) {
 				TargetPools: nil,
 			},
 			nil,
+			testRegion,
 			&Model{
-				Id:              types.StringValue("pid,name"),
+				Id:              types.StringValue(id),
 				ProjectId:       types.StringValue("pid"),
 				ExternalAddress: types.StringNull(),
 				Listeners:       types.ListNull(types.ObjectType{AttrTypes: listenerTypes}),
@@ -303,6 +308,7 @@ func TestMapFields(t *testing.T) {
 				}),
 				PrivateAddress: types.StringNull(),
 				TargetPools:    types.ListNull(types.ObjectType{AttrTypes: targetPoolTypes}),
+				Region:         types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -361,8 +367,9 @@ func TestMapFields(t *testing.T) {
 				}),
 			},
 			nil,
+			testRegion,
 			&Model{
-				Id:              types.StringValue("pid,name"),
+				Id:              types.StringValue(id),
 				ProjectId:       types.StringValue("pid"),
 				ExternalAddress: types.StringValue("external_address"),
 				Listeners: types.ListValueMust(types.ObjectType{AttrTypes: listenerTypes}, []attr.Value{
@@ -422,6 +429,7 @@ func TestMapFields(t *testing.T) {
 						}),
 					}),
 				}),
+				Region: types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -483,8 +491,9 @@ func TestMapFields(t *testing.T) {
 				}),
 			},
 			utils.Ptr(false),
+			testRegion,
 			&Model{
-				Id:              types.StringValue("pid,name"),
+				Id:              types.StringValue(id),
 				ProjectId:       types.StringValue("pid"),
 				ExternalAddress: types.StringValue("external_address"),
 				Listeners: types.ListValueMust(types.ObjectType{AttrTypes: listenerTypes}, []attr.Value{
@@ -546,6 +555,7 @@ func TestMapFields(t *testing.T) {
 						}),
 					}),
 				}),
+				Region: types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -553,6 +563,7 @@ func TestMapFields(t *testing.T) {
 			"nil_response",
 			nil,
 			nil,
+			testRegion,
 			&Model{},
 			false,
 		},
@@ -560,6 +571,7 @@ func TestMapFields(t *testing.T) {
 			"no_name",
 			&loadbalancer.LoadBalancer{},
 			nil,
+			testRegion,
 			&Model{},
 			false,
 		},
@@ -575,7 +587,7 @@ func TestMapFields(t *testing.T) {
 					"acl":                  types.SetNull(types.StringType),
 				})
 			}
-			err := mapFields(context.Background(), tt.input, model)
+			err := mapFields(context.Background(), tt.input, model, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
