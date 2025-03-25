@@ -50,7 +50,8 @@ func (r *loadBalancerDataSource) Configure(ctx context.Context, req datasource.C
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -58,14 +59,14 @@ func (r *loadBalancerDataSource) Configure(ctx context.Context, req datasource.C
 
 	var apiClient *loadbalancer.APIClient
 	var err error
-	if providerData.LoadBalancerCustomEndpoint != "" {
+	if r.providerData.LoadBalancerCustomEndpoint != "" {
 		apiClient, err = loadbalancer.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.LoadBalancerCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.LoadBalancerCustomEndpoint),
 		)
 	} else {
 		apiClient, err = loadbalancer.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 

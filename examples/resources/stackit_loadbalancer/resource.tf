@@ -16,7 +16,7 @@ resource "stackit_network_interface" "nic" {
   network_id = stackit_network.example_network.network_id
 }
 
-# Create a public IP for the load balance
+# Create a public IP for the load balancer
 resource "stackit_public_ip" "public-ip" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   lifecycle {
