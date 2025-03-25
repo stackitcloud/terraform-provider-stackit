@@ -84,7 +84,6 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
 		"name":                "Project name.",
 		"labels":              `Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`,
-		"owner_email":         "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -139,10 +138,6 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							"must match expression"),
 					),
 				},
-			},
-			"owner_email": schema.StringAttribute{
-				Description: descriptions["owner_email"],
-				Computed:    true,
 			},
 		},
 	}
