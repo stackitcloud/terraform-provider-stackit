@@ -14,6 +14,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -29,7 +30,8 @@ func NewClusterDataSource() datasource.DataSource {
 
 // clusterDataSource is the data source implementation.
 type clusterDataSource struct {
-	client *ske.APIClient
+	client       *ske.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -44,7 +46,8 @@ func (r *clusterDataSource) Configure(ctx context.Context, req datasource.Config
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -52,15 +55,15 @@ func (r *clusterDataSource) Configure(ctx context.Context, req datasource.Config
 
 	var apiClient *ske.APIClient
 	var err error
-	if providerData.SKECustomEndpoint != "" {
+	if r.providerData.SKECustomEndpoint != "" {
 		apiClient, err = ske.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.SKECustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.SKECustomEndpoint),
 		)
 	} else {
 		apiClient, err = ske.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithRegion(r.providerData.GetRegion()),
 		)
 	}
 
@@ -319,6 +322,11 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 					},
 				},
 			},
+			"region": schema.StringAttribute{
+				// the region cannot be found, so it has to be passed
+				Optional:    true,
+				Description: "The resource region. If not defined, the provider region is used.",
+			},
 		},
 	}
 }
@@ -334,8 +342,15 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	projectId := state.ProjectId.ValueString()
 	name := state.Name.ValueString()
+	var region string
+	if utils.IsUndefined(state.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = state.Region.ValueString()
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
+	ctx = tflog.SetField(ctx, "region", region)
 	clusterResp, err := r.client.GetCluster(ctx, projectId, name).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
@@ -346,7 +361,7 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	err = mapFields(ctx, clusterResp, &state)
+	err = mapFields(ctx, clusterResp, &state, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Processing API payload: %v", err))
 		return

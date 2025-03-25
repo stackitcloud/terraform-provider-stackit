@@ -35,6 +35,12 @@ func inputServiceAccountResourceConfig(name string) string {
 					project_id = stackit_service_account.sa.project_id
   					service_account_email = stackit_service_account.sa.email
 				}
+
+				resource "stackit_service_account_key" "key" {
+					project_id            = stackit_service_account.sa.project_id
+					service_account_email = stackit_service_account.sa.email
+					ttl_days              = 90
+				}
 				`,
 		testutil.ServiceAccountProviderConfig(),
 		serviceAccountResource["project_id"],
@@ -71,7 +77,11 @@ func TestServiceAccount(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "created_at"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "valid_until"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "service_account_email"),
+					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "ttl_days"),
+					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "json"),
+					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "service_account_email"),
 					resource.TestCheckResourceAttrPair("stackit_service_account.sa", "email", "stackit_service_account_access_token.token", "service_account_email"),
+					resource.TestCheckResourceAttrPair("stackit_service_account.sa", "email", "stackit_service_account_key.key", "service_account_email"),
 				),
 			},
 			// Update
@@ -85,7 +95,11 @@ func TestServiceAccount(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "created_at"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "valid_until"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "service_account_email"),
+					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "ttl_days"),
+					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "json"),
+					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "service_account_email"),
 					resource.TestCheckResourceAttrPair("stackit_service_account.sa", "email", "stackit_service_account_access_token.token", "service_account_email"),
+					resource.TestCheckResourceAttrPair("stackit_service_account.sa", "email", "stackit_service_account_key.key", "service_account_email"),
 				),
 			},
 			// Data source
