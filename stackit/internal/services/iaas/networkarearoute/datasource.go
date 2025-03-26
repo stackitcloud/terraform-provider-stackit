@@ -14,14 +14,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
-
-// scheduleDataSourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var networkAreaRouteDataSourceBetaCheckDone bool
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -58,14 +52,6 @@ func (d *networkAreaRouteDataSource) Configure(ctx context.Context, req datasour
 		return
 	}
 
-	if !networkAreaRouteDataSourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_network_area_route", "data source")
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		networkAreaRouteDataSourceBetaCheckDone = true
-	}
-
 	if providerData.IaaSCustomEndpoint != "" {
 		apiClient, err = iaas.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
@@ -88,9 +74,10 @@ func (d *networkAreaRouteDataSource) Configure(ctx context.Context, req datasour
 
 // Schema defines the schema for the data source.
 func (d *networkAreaRouteDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	description := "Network area route data resource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
-		Description:         "Network area route data resource schema. Must have a `region` specified in the provider configuration.",
-		MarkdownDescription: features.AddBetaDescription("Network area route data source schema. Must have a `region` specified in the provider configuration."),
+		Description:         description,
+		MarkdownDescription: description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source ID. It is structured as \"`organization_id`,`network_area_id`,`network_area_route_id`\".",
