@@ -26,6 +26,7 @@ These commands can be executed from the project root:
 - `make lint`: lint the code and examples
 - `make generate-docs`: generate terraform documentation
 - `make test`: run unit tests
+- `make coverage`: create unit test coverage report (output file: `stackit/coverage.html`)
 - `make test-acceptance-tf`: run acceptance tests
 
 ### Repository structure
