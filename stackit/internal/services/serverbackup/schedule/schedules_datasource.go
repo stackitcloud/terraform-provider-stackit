@@ -77,7 +77,6 @@ func (r *schedulesDataSource) Configure(ctx context.Context, req datasource.Conf
 	} else {
 		apiClient, err = serverbackup.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 
@@ -154,6 +153,11 @@ func (r *schedulesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 					},
 				},
 			},
+			"region": schema.StringAttribute{
+				// the region cannot be found, so it has to be passed
+				Optional:    true,
+				Description: "The resource region. If not defined, the provider region is used.",
+			},
 		},
 	}
 }
@@ -164,6 +168,7 @@ type schedulesDataSourceModel struct {
 	ProjectId types.String                   `tfsdk:"project_id"`
 	ServerId  types.String                   `tfsdk:"server_id"`
 	Items     []schedulesDatasourceItemModel `tfsdk:"items"`
+	Region    types.String                   `tfsdk:"region"`
 }
 
 // schedulesDatasourceItemModel maps schedule schema data.
@@ -185,10 +190,12 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	schedules, err := r.client.ListBackupSchedules(ctx, projectId, serverId).Execute()
+	schedules, err := r.client.ListBackupSchedules(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -199,7 +206,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 
 	// Map response body to schema
-	err = mapSchedulesDatasourceFields(ctx, schedules, &model)
+	err = mapSchedulesDatasourceFields(ctx, schedules, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server backup schedules", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -214,7 +221,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	tflog.Info(ctx, "Server backup schedules read")
 }
 
-func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverbackup.GetBackupSchedulesResponse, model *schedulesDataSourceModel) error {
+func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverbackup.GetBackupSchedulesResponse, model *schedulesDataSourceModel, region string) error {
 	if schedules == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -226,10 +233,11 @@ func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverbackup.G
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 
-	idParts := []string{projectId, serverId}
+	idParts := []string{projectId, region, serverId}
 	model.ID = types.StringValue(
 		strings.Join(idParts, core.Separator),
 	)
+	model.Region = types.StringValue(region)
 
 	for _, schedule := range *schedules.Items {
 		scheduleState := schedulesDatasourceItemModel{

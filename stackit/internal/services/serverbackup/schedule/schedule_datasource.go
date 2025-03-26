@@ -78,7 +78,6 @@ func (r *scheduleDataSource) Configure(ctx context.Context, req datasource.Confi
 	} else {
 		apiClient, err = serverbackup.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 
@@ -149,6 +148,11 @@ func (r *scheduleDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					},
 				},
 			},
+			"region": schema.StringAttribute{
+				// the region cannot be found, so it has to be passed
+				Optional:    true,
+				Description: "The resource region. If not defined, the provider region is used.",
+			},
 		},
 	}
 }
@@ -164,11 +168,14 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
+	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "backup_schedule_id", backupScheduleId)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	scheduleResp, err := r.client.GetBackupSchedule(ctx, projectId, serverId, strconv.FormatInt(backupScheduleId, 10)).Execute()
+	scheduleResp, err := r.client.GetBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(backupScheduleId, 10)).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -179,7 +186,7 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, scheduleResp, &model)
+	err = mapFields(ctx, scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server backup schedule", fmt.Sprintf("Processing API payload: %v", err))
 		return

@@ -40,6 +40,7 @@ var (
 	_ resource.Resource                = &scheduleResource{}
 	_ resource.ResourceWithConfigure   = &scheduleResource{}
 	_ resource.ResourceWithImportState = &scheduleResource{}
+	_ resource.ResourceWithModifyPlan  = &scheduleResource{}
 )
 
 type Model struct {
@@ -51,6 +52,7 @@ type Model struct {
 	Rrule            types.String                   `tfsdk:"rrule"`
 	Enabled          types.Bool                     `tfsdk:"enabled"`
 	BackupProperties *scheduleBackupPropertiesModel `tfsdk:"backup_properties"`
+	Region           types.String                   `tfsdk:"region"`
 }
 
 // scheduleBackupPropertiesModel maps schedule backup_properties data
@@ -67,7 +69,38 @@ func NewScheduleResource() resource.Resource {
 
 // scheduleResource is the resource implementation.
 type scheduleResource struct {
-	client *serverbackup.APIClient
+	client       *serverbackup.APIClient
+	providerData core.ProviderData
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *scheduleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Metadata returns the resource type name.
@@ -82,32 +115,34 @@ func (r *scheduleResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
 	if !resourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_server_backup_schedule", "resource")
+		features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_server_backup_schedule", "resource")
 		if resp.Diagnostics.HasError() {
 			return
 		}
 		resourceBetaCheckDone = true
 	}
 
-	var apiClient *serverbackup.APIClient
-	var err error
-	if providerData.ServerBackupCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "server_backup_custom_endpoint", providerData.ServerBackupCustomEndpoint)
+	var (
+		apiClient *serverbackup.APIClient
+		err       error
+	)
+	if r.providerData.ServerBackupCustomEndpoint != "" {
+		ctx = tflog.SetField(ctx, "server_backup_custom_endpoint", r.providerData.ServerBackupCustomEndpoint)
 		apiClient, err = serverbackup.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ServerBackupCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.ServerBackupCustomEndpoint),
 		)
 	} else {
 		apiClient, err = serverbackup.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 
@@ -127,7 +162,7 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		MarkdownDescription: features.AddBetaDescription("Server backup schedule resource schema. Must have a `region` specified in the provider configuration."),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`server_id`,`backup_schedule_id`\".",
+				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`server_id`,`backup_schedule_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -196,7 +231,7 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"backup_properties": schema.SingleNestedAttribute{
 				Description: "Backup schedule details for the backups.",
-				Optional:    true,
+				Required:    true,
 				Attributes: map[string]schema.Attribute{
 					"volume_ids": schema.ListAttribute{
 						ElementType: types.StringType,
@@ -213,6 +248,15 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 				},
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: "The resource region. If not defined, the provider region is used.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -227,8 +271,11 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
+	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Enable backups if not already enabled
 	err := enableBackupsService(ctx, &model, r.client)
@@ -243,7 +290,7 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	scheduleResp, err := r.client.CreateBackupSchedule(ctx, projectId, serverId).CreateBackupSchedulePayload(*payload).Execute()
+	scheduleResp, err := r.client.CreateBackupSchedule(ctx, projectId, serverId, region).CreateBackupSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -251,7 +298,7 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "backup_schedule_id", *scheduleResp.Id)
 
 	// Map response body to schema
-	err = mapFields(ctx, scheduleResp, &model)
+	err = mapFields(ctx, scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -275,11 +322,14 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
+	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "backup_schedule_id", backupScheduleId)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	scheduleResp, err := r.client.GetBackupSchedule(ctx, projectId, serverId, strconv.FormatInt(backupScheduleId, 10)).Execute()
+	scheduleResp, err := r.client.GetBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(backupScheduleId, 10)).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -291,7 +341,7 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, scheduleResp, &model)
+	err = mapFields(ctx, scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading backup schedule", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -317,9 +367,12 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
+	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "backup_schedule_id", backupScheduleId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Update schedule
 	payload, err := toUpdatePayload(&model)
@@ -328,14 +381,14 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	scheduleResp, err := r.client.UpdateBackupSchedule(ctx, projectId, serverId, strconv.FormatInt(backupScheduleId, 10)).UpdateBackupSchedulePayload(*payload).Execute()
+	scheduleResp, err := r.client.UpdateBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(backupScheduleId, 10)).UpdateBackupSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, scheduleResp, &model)
+	err = mapFields(ctx, scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server backup schedule", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -359,11 +412,14 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
+	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "backup_schedule_id", backupScheduleId)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	err := r.client.DeleteBackupSchedule(ctx, projectId, serverId, strconv.FormatInt(backupScheduleId, 10)).Execute()
+	err := r.client.DeleteBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(backupScheduleId, 10)).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -382,15 +438,15 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 // The expected format of the resource import identifier is: // project_id,server_id,schedule_id
 func (r *scheduleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing server backup schedule",
-			fmt.Sprintf("Expected import identifier with format [project_id],[server_id],[backup_schedule_id], got %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format [project_id],[region],[server_id],[backup_schedule_id], got %q", req.ID),
 		)
 		return
 	}
 
-	intId, err := strconv.ParseInt(idParts[2], 10, 64)
+	intId, err := strconv.ParseInt(idParts[3], 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing server backup schedule",
@@ -400,12 +456,13 @@ func (r *scheduleResource) ImportState(ctx context.Context, req resource.ImportS
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("server_id"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("server_id"), idParts[2])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("backup_schedule_id"), intId)...)
 	tflog.Info(ctx, "Server backup schedule state imported.")
 }
 
-func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model *Model) error {
+func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model *Model, region string) error {
 	if schedule == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -419,6 +476,7 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 	model.BackupScheduleId = types.Int64PointerValue(schedule.Id)
 	idParts := []string{
 		model.ProjectId.ValueString(),
+		region,
 		model.ServerId.ValueString(),
 		strconv.FormatInt(model.BackupScheduleId.ValueInt64(), 10),
 	}
@@ -441,6 +499,7 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 		RetentionPeriod: types.Int64Value(*schedule.BackupProperties.RetentionPeriod),
 		VolumeIds:       ids,
 	}
+	model.Region = types.StringValue(region)
 	return nil
 }
 
@@ -448,11 +507,13 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 func enableBackupsService(ctx context.Context, model *Model, client *serverbackup.APIClient) error {
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	enableServicePayload := serverbackup.EnableServicePayload{}
+	region := model.Region.ValueString()
 
 	tflog.Debug(ctx, "Enabling server backup service")
-	err := client.EnableService(ctx, projectId, serverId).EnableServicePayload(enableServicePayload).Execute()
-	if err != nil {
+	request := client.EnableServiceResource(ctx, projectId, serverId, region).
+		EnableServiceResourcePayload(serverbackup.EnableServiceResourcePayload{})
+
+	if err := request.Execute(); err != nil {
 		if strings.Contains(err.Error(), "Tried to activate already active service") {
 			tflog.Debug(ctx, "Service for server backup already enabled")
 			return nil
@@ -469,19 +530,10 @@ func disableBackupsService(ctx context.Context, model *Model, client *serverback
 
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-
-	tflog.Debug(ctx, "Checking for existing backup schedules")
-	schedules, err := client.ListBackupSchedules(ctx, projectId, serverId).Execute()
-	if err != nil {
-		return fmt.Errorf("list existing backup schedules: %w", err)
-	}
-	if *schedules.Items != nil && len(*schedules.Items) > 0 {
-		tflog.Debug(ctx, "Backup schedules found - will not disable server backup service")
-		return nil
-	}
+	region := model.Region.ValueString()
 
 	tflog.Debug(ctx, "Checking for existing backups")
-	backups, err := client.ListBackups(ctx, projectId, serverId).Execute()
+	backups, err := client.ListBackups(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("list backups: %w", err)
 	}
@@ -490,7 +542,7 @@ func disableBackupsService(ctx context.Context, model *Model, client *serverback
 		return nil
 	}
 
-	err = client.DisableService(ctx, projectId, serverId).Execute()
+	err = client.DisableServiceResourceExecute(ctx, projectId, serverId, region)
 	if err != nil {
 		return fmt.Errorf("disable server backup service: %w", err)
 	}

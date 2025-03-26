@@ -153,6 +153,8 @@ github.com/skeema/knownhosts v1.2.2 h1:Iug2P4fLmDw9f41PB6thxUkNUkJzB5i+1/exaj40L
 github.com/skeema/knownhosts v1.2.2/go.mod h1:xYbVRSPxqBZFrdmDyMmsOs+uX1UZC3nTN3ThzgDxUwo=
 github.com/stackitcloud/stackit-sdk-go/core v0.16.0 h1:9caGZwGLZDyBBe6ojk9VR4B2m3/0H5It6znBz76sH1w=
 github.com/stackitcloud/stackit-sdk-go/core v0.16.0/go.mod h1:LRheSoXTFRHWAyA8Q9skWtWBp3ZZ+bFAKiKuf4lTDkE=
+github.com/stackitcloud/stackit-sdk-go/core v0.16.2 h1:F8A4P/LLlQSbz0S0+G3m8rb3BUOK6EcR/CKx5UQY5jQ=
+github.com/stackitcloud/stackit-sdk-go/core v0.16.2/go.mod h1:8KIw3czdNJ9sdil9QQimxjR6vHjeINFrRv0iZ67wfn0=
 github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0 h1:JVEx/ouHB6PlwGzQa3ywyDym1HTWo3WgrxAyXprCnuM=
 github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0/go.mod h1:nVllQfYODhX1q3bgwVTLO7wHOp+8NMLiKbn3u/Dg5nU=
 github.com/stackitcloud/stackit-sdk-go/services/authorization v0.6.0 h1:nSaSvo9o4c9KGc0vct+JWk5T49Ic6i3hzbLKviJtVhA=
@@ -187,6 +189,8 @@ github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.11.0 h1:PwfpDF
 github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.11.0/go.mod h1:Hb21FmYP95q0fzOb9jk4/9CIxTsHzrSYDQZh6e82XUg=
 github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.6.0 h1:cESGAkm0ftADRBfdbiyx3pp/KVQ8JgmUQdRzpwG61wE=
 github.com/stackitcloud/stackit-sdk-go/services/serverbackup v0.6.0/go.mod h1:aYPLsiImzWaYXEfYIZ0wJnV56PwcR+buy8Xu9jjbfGA=
+github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.0.1-0.20250326131254-9d4a6d4b1d72 h1:sDvlbBlBo37I2F8YIRIvd3K4RRnScdSB5NBIZW9KBQo=
+github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.0.1-0.20250326131254-9d4a6d4b1d72/go.mod h1:e1fsQL24gTPXcMWptuslNscawmXv/PLUAFuw+sOofbc=
 github.com/stackitcloud/stackit-sdk-go/services/serverupdate v0.5.0 h1:TMUxDh8XGgWUpnWo7GsawVq2ICDsy/r8dMlfC26MR5g=
 github.com/stackitcloud/stackit-sdk-go/services/serverupdate v0.5.0/go.mod h1:giHnHz3kHeLY8Av9MZLsyJlaTXYz+BuGqdP/SKB5Vo0=
 github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.6.0 h1:y+XzJcntHJ7M+IWWvAUkiVFA8op+jZxwHs3ktW2aLoA=
