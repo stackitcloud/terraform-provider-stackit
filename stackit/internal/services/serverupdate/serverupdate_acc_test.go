@@ -26,7 +26,11 @@ var serverUpdateScheduleResource = map[string]string{
 	"maintenance_window": "1",
 }
 
-func resourceConfig(maintenanceWindow int64) string {
+func resourceConfig(maintenanceWindow int64, region *string) string {
+	var regionConfig string
+	if region != nil {
+		regionConfig = fmt.Sprintf(`region = %q`, *region)
+	}
 	return fmt.Sprintf(`
 				%s
 
@@ -37,6 +41,7 @@ func resourceConfig(maintenanceWindow int64) string {
  				 	rrule = "%s"
                     enabled = true
                     maintenance_window = %d
+					%s
 				}
 				`,
 		testutil.ServerUpdateProviderConfig(),
@@ -45,6 +50,7 @@ func resourceConfig(maintenanceWindow int64) string {
 		serverUpdateScheduleResource["name"],
 		serverUpdateScheduleResource["rrule"],
 		maintenanceWindow,
+		regionConfig,
 	)
 }
 
@@ -53,6 +59,7 @@ func TestAccServerUpdateScheduleResource(t *testing.T) {
 		fmt.Println("TF_ACC_SERVER_ID not set, skipping test")
 		return
 	}
+	testRegion := utils.Ptr("eu01")
 	var invalidMaintenanceWindow int64 = 0
 	var validMaintenanceWindow int64 = 15
 	var updatedMaintenanceWindow int64 = 8
@@ -62,12 +69,12 @@ func TestAccServerUpdateScheduleResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
-				Config:      resourceConfig(invalidMaintenanceWindow),
+				Config:      resourceConfig(invalidMaintenanceWindow, testRegion),
 				ExpectError: regexp.MustCompile(`.*maintenance_window value must be at least 1*`),
 			},
 			// Creation
 			{
-				Config: resourceConfig(validMaintenanceWindow),
+				Config: resourceConfig(validMaintenanceWindow, testRegion),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", serverUpdateScheduleResource["project_id"]),
@@ -77,6 +84,7 @@ func TestAccServerUpdateScheduleResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "name", serverUpdateScheduleResource["name"]),
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "rrule", serverUpdateScheduleResource["rrule"]),
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "enabled", strconv.FormatBool(true)),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "region", *testRegion),
 				),
 			},
 			// data source
@@ -94,7 +102,7 @@ func TestAccServerUpdateScheduleResource(t *testing.T) {
 						server_id  = stackit_server_update_schedule.test_schedule.server_id
                         update_schedule_id = stackit_server_update_schedule.test_schedule.update_schedule_id
 					}`,
-					resourceConfig(validMaintenanceWindow),
+					resourceConfig(validMaintenanceWindow, testRegion),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server update schedule data
@@ -124,14 +132,14 @@ func TestAccServerUpdateScheduleResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute update_schedule_id")
 					}
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.ServerId, scheduleId), nil
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, testutil.ServerId, scheduleId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
 			// Update
 			{
-				Config: resourceConfig(updatedMaintenanceWindow),
+				Config: resourceConfig(updatedMaintenanceWindow, nil),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", serverUpdateScheduleResource["project_id"]),
@@ -154,9 +162,7 @@ func testAccCheckServerUpdateScheduleDestroy(s *terraform.State) error {
 	var client *serverupdate.APIClient
 	var err error
 	if testutil.ServerUpdateCustomEndpoint == "" {
-		client, err = serverupdate.NewAPIClient(
-			config.WithRegion("eu01"),
-		)
+		client, err = serverupdate.NewAPIClient()
 	} else {
 		client, err = serverupdate.NewAPIClient(
 			config.WithEndpoint(testutil.ServerUpdateCustomEndpoint),
@@ -176,7 +182,7 @@ func testAccCheckServerUpdateScheduleDestroy(s *terraform.State) error {
 		schedulesToDestroy = append(schedulesToDestroy, scheduleId)
 	}
 
-	schedulesResp, err := client.ListUpdateSchedules(ctx, testutil.ProjectId, testutil.ServerId).Execute()
+	schedulesResp, err := client.ListUpdateSchedules(ctx, testutil.ProjectId, testutil.ServerId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting schedulesResp: %w", err)
 	}
@@ -188,7 +194,7 @@ func testAccCheckServerUpdateScheduleDestroy(s *terraform.State) error {
 		}
 		scheduleId := strconv.FormatInt(*schedules[i].Id, 10)
 		if utils.Contains(schedulesToDestroy, scheduleId) {
-			err := client.DeleteUpdateScheduleExecute(ctx, testutil.ProjectId, testutil.ServerId, scheduleId)
+			err := client.DeleteUpdateScheduleExecute(ctx, testutil.ProjectId, testutil.ServerId, scheduleId, testutil.Region)
 			if err != nil {
 				return fmt.Errorf("destroying server update schedule %s during CheckDestroy: %w", scheduleId, err)
 			}

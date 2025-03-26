@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -37,7 +38,8 @@ func NewSchedulesDataSource() datasource.DataSource {
 
 // schedulesDataSource is the data source implementation.
 type schedulesDataSource struct {
-	client *serverupdate.APIClient
+	client       *serverupdate.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -52,14 +54,15 @@ func (r *schedulesDataSource) Configure(ctx context.Context, req datasource.Conf
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
 	if !schedulesDataSourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_server_update_schedules", "data source")
+		features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_server_update_schedules", "data source")
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -68,16 +71,15 @@ func (r *schedulesDataSource) Configure(ctx context.Context, req datasource.Conf
 
 	var apiClient *serverupdate.APIClient
 	var err error
-	if providerData.ServerUpdateCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "server_update_custom_endpoint", providerData.ServerUpdateCustomEndpoint)
+	if r.providerData.ServerUpdateCustomEndpoint != "" {
+		ctx = tflog.SetField(ctx, "server_update_custom_endpoint", r.providerData.ServerUpdateCustomEndpoint)
 		apiClient, err = serverupdate.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ServerUpdateCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.ServerUpdateCustomEndpoint),
 		)
 	} else {
 		apiClient, err = serverupdate.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 
@@ -97,7 +99,7 @@ func (r *schedulesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 		MarkdownDescription: features.AddBetaDescription("Server update schedules datasource schema. Must have a `region` specified in the provider configuration."),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal data source identifier. It is structured as \"`project_id`,`server_id`\".",
+				Description: "Terraform's internal data source identifier. It is structured as \"`project_id`,`region`,`server_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
@@ -142,6 +144,11 @@ func (r *schedulesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 					},
 				},
 			},
+			"region": schema.StringAttribute{
+				// the region cannot be found, so it has to be passed
+				Optional:    true,
+				Description: "The resource region. If not defined, the provider region is used.",
+			},
 		},
 	}
 }
@@ -152,6 +159,7 @@ type schedulesDataSourceModel struct {
 	ProjectId types.String                   `tfsdk:"project_id"`
 	ServerId  types.String                   `tfsdk:"server_id"`
 	Items     []schedulesDatasourceItemModel `tfsdk:"items"`
+	Region    types.String                   `tfsdk:"region"`
 }
 
 // schedulesDatasourceItemModel maps schedule schema data.
@@ -173,10 +181,16 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
-	schedules, err := r.client.ListUpdateSchedules(ctx, projectId, serverId).Execute()
+	schedules, err := r.client.ListUpdateSchedules(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -187,7 +201,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 
 	// Map response body to schema
-	err = mapSchedulesDatasourceFields(ctx, schedules, &model)
+	err = mapSchedulesDatasourceFields(ctx, schedules, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server update schedules", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -202,7 +216,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	tflog.Info(ctx, "Server update schedules read")
 }
 
-func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverupdate.GetUpdateSchedulesResponse, model *schedulesDataSourceModel) error {
+func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverupdate.GetUpdateSchedulesResponse, model *schedulesDataSourceModel, region string) error {
 	if schedules == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -214,10 +228,11 @@ func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverupdate.G
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 
-	idParts := []string{projectId, serverId}
+	idParts := []string{projectId, region, serverId}
 	model.ID = types.StringValue(
 		strings.Join(idParts, core.Separator),
 	)
+	model.Region = types.StringValue(region)
 
 	for _, schedule := range *schedules.Items {
 		scheduleState := schedulesDatasourceItemModel{
