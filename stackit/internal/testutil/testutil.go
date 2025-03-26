@@ -360,7 +360,8 @@ func ServerUpdateProviderConfig() string {
 	if ServerUpdateCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
+			enable_beta_resources = true
 		}`
 	}
 	return fmt.Sprintf(`

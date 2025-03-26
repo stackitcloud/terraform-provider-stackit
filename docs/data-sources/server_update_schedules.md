@@ -30,9 +30,13 @@ data "stackit_server_update_schedules" "example" {
 - `project_id` (String) STACKIT Project ID (UUID) to which the server is associated.
 - `server_id` (String) Server ID (UUID) to which the update schedule is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
-- `id` (String) Terraform's internal data source identifier. It is structured as "`project_id`,`server_id`".
+- `id` (String) Terraform's internal data source identifier. It is structured as "`project_id`,`region`,`server_id`".
 - `items` (Attributes List) (see [below for nested schema](#nestedatt--items))
 
 <a id="nestedatt--items"></a>

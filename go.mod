@@ -29,7 +29,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.0.1
-	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v0.5.0
+	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.0.0
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.0.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v0.22.0
