@@ -17,7 +17,7 @@ import (
 // Token resource data
 var tokenResource = map[string]string{
 	"project_id":          testutil.ProjectId,
-	"name":                testutil.ResourceNameWithDateTime("token"),
+	"name":                "token01",
 	"description":         "my description",
 	"description_updated": "my description updated",
 	"region":              testutil.Region,
@@ -100,33 +100,6 @@ func TestAccModelServingTokenResource(t *testing.T) {
 					),
 				),
 			},
-			// Data Source
-			// Import
-			{
-				ResourceName: "stackit_modelserving_token.token",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_modelserving_token.token"]
-					if !ok {
-						return "", fmt.Errorf(
-							"couldn't find resource stackit_modelserving_token.token",
-						)
-					}
-					tokenId, ok := r.Primary.Attributes["token_id"]
-					if !ok {
-						return "", fmt.Errorf(
-							"couldn't find attribute token_id",
-						)
-					}
-
-					return fmt.Sprintf(
-						"%s,%s",
-						testutil.ProjectId,
-						tokenId,
-					), nil
-				},
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
 			// Update
 			{
 				Config: inputTokenConfig(
@@ -200,9 +173,8 @@ func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 		}
 		tokenId := idParts[2]
 
-		_, err := client.GetToken(ctx, testutil.Region, testutil.ProjectId, tokenId).
-			Execute()
-		if err == nil {
+		_, err := client.GetToken(ctx, testutil.Region, testutil.ProjectId, tokenId).Execute()
+		if err != nil {
 			return fmt.Errorf("token %s still exists", tokenId)
 		}
 	}

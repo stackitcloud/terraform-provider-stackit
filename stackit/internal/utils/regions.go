@@ -26,7 +26,7 @@ func AdaptRegion(ctx context.Context, configRegion types.String, planRegion *typ
 
 	// check if the currently configured region corresponds to the planned region
 	// on mismatch override the planned region with the intended region
-	// and force a replace of the resource
+	// and force a replacement of the resource
 	p := path.Root("region")
 	if !intendedRegion.Equal(*planRegion) {
 		resp.RequiresReplace.Append(p)
