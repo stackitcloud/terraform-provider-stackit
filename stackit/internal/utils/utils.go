@@ -91,7 +91,6 @@ func SupportedValuesDocumentation(values []string) string {
 		return ""
 	}
 	return "Supported values are: " + strings.Join(QuoteValues(values), ", ") + "."
-
 }
 
 func QuoteValues(values []string) []string {
