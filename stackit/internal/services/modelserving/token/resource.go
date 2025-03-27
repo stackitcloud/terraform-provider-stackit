@@ -221,11 +221,14 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"ttl_duration": schema.StringAttribute{
-				Description: "The TTL duration of the model serving auth token. E.g. 5h30m40s",
+				Description: "The TTL duration of the model serving auth token. E.g. 5h30m40s,5h,5h30m,30m,30s",
 				Required:    false,
 				Optional:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					validate.ValidDurationString(),
 				},
 			},
 			"rotate_when_changed": schema.MapAttribute{

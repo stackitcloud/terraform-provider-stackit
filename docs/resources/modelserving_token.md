@@ -69,7 +69,7 @@ resource "stackit_modelserving_token" "example" {
 - `description` (String) The description of the model serving auth token.
 - `region` (String) Region to which the model serving auth token is associated. If not defined, the provider region is used
 - `rotate_when_changed` (Map of String) A map of arbitrary key/value pairs that will force recreation of the token when they change, enabling token rotation based on external conditions such as a rotating timestamp. Changing this forces a new resource to be created.
-- `ttl_duration` (String) The TTL duration of the model serving auth token. E.g. 5h30m40s
+- `ttl_duration` (String) The TTL duration of the model serving auth token. E.g. 5h30m40s,5h,5h30m,30m,30s
 
 ### Read-Only
 
