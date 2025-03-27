@@ -2,6 +2,7 @@ package token
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"net/http"
@@ -39,6 +40,9 @@ var (
 const (
 	inactiveState = "inactive"
 )
+
+//go:embed description.md
+var markdownDescription string
 
 type Model struct {
 	Id          types.String `tfsdk:"id"` // needed by TF
@@ -188,7 +192,7 @@ func (r *tokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 // Schema defines the schema for the resource.
 func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Model Serving Auth Token Resource schema.\n\n" + markdownDescription,
+		Description: markdownDescription,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`region`,`token_id`\".",
