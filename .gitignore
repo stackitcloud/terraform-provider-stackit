@@ -31,3 +31,10 @@ vendor/
 # Go workspace file
 go.work
 go.work.sum
+
+# Unit test files
+stackit/internal/services/iaas/test-512k.img
+
+# Test coverage reports
+coverage.out
+coverage.html

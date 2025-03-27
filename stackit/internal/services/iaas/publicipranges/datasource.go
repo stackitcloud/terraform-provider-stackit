@@ -9,7 +9,6 @@ import (
 
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -22,11 +21,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 )
-
-// publicIpRangesDataSourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var publicIpRangesDataSourceBetaCheckDone bool
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -69,14 +63,6 @@ func (d *publicIpRangesDataSource) Configure(ctx context.Context, req datasource
 		return
 	}
 
-	if !publicIpRangesDataSourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_public_ip_ranges", "data source")
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		publicIpRangesDataSourceBetaCheckDone = true
-	}
-
 	var apiClient *iaas.APIClient
 	var err error
 	if providerData.IaaSCustomEndpoint != "" {
@@ -104,7 +90,7 @@ func (d *publicIpRangesDataSource) Schema(_ context.Context, _ datasource.Schema
 	description := "A list of all public IP ranges that STACKIT uses."
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription(description),
+		MarkdownDescription: description,
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -142,7 +128,7 @@ func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.Read
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	publicIpRangeResp, err := d.client.ListPublicIpRangesExecute(ctx)
+	publicIpRangeResp, err := d.client.ListPublicIPRangesExecute(ctx)
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {

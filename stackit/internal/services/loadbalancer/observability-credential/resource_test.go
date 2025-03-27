@@ -1,6 +1,7 @@
 package loadbalancer
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -67,9 +68,12 @@ func TestToCreatePayload(t *testing.T) {
 }
 
 func TestMapFields(t *testing.T) {
+	const testRegion = "eu01"
+	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "credentials_ref")
 	tests := []struct {
 		description string
 		input       *loadbalancer.CredentialsResponse
+		region      string
 		expected    *Model
 		isValid     bool
 	}{
@@ -79,11 +83,13 @@ func TestMapFields(t *testing.T) {
 				CredentialsRef: utils.Ptr("credentials_ref"),
 				Username:       utils.Ptr("username"),
 			},
+			testRegion,
 			&Model{
-				Id:             types.StringValue("pid,credentials_ref"),
+				Id:             types.StringValue(id),
 				ProjectId:      types.StringValue("pid"),
 				CredentialsRef: types.StringValue("credentials_ref"),
 				Username:       types.StringValue("username"),
+				Region:         types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -95,18 +101,21 @@ func TestMapFields(t *testing.T) {
 				DisplayName:    utils.Ptr("display_name"),
 				Username:       utils.Ptr("username"),
 			},
+			testRegion,
 			&Model{
-				Id:             types.StringValue("pid,credentials_ref"),
+				Id:             types.StringValue(id),
 				ProjectId:      types.StringValue("pid"),
 				CredentialsRef: types.StringValue("credentials_ref"),
 				DisplayName:    types.StringValue("display_name"),
 				Username:       types.StringValue("username"),
+				Region:         types.StringValue(testRegion),
 			},
 			true,
 		},
 		{
 			"nil_response",
 			nil,
+			testRegion,
 			&Model{},
 			false,
 		},
@@ -116,6 +125,7 @@ func TestMapFields(t *testing.T) {
 				CredentialsRef: utils.Ptr("credentials_ref"),
 				DisplayName:    utils.Ptr("display_name"),
 			},
+			testRegion,
 			&Model{},
 			false,
 		},
@@ -125,6 +135,7 @@ func TestMapFields(t *testing.T) {
 				DisplayName: utils.Ptr("display_name"),
 				Username:    utils.Ptr("username"),
 			},
+			testRegion,
 			&Model{},
 			false,
 		},
@@ -134,7 +145,7 @@ func TestMapFields(t *testing.T) {
 			model := &Model{
 				ProjectId: tt.expected.ProjectId,
 			}
-			err := mapFields(tt.input, model)
+			err := mapFields(tt.input, model, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

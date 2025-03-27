@@ -963,14 +963,14 @@ func TestUpdateNetworkRanges(t *testing.T) {
 
 			// Setup server and client
 			router := mux.NewRouter()
-			router.HandleFunc("/v1beta1/organizations/{organizationId}/network-areas/{areaId}/network-ranges", func(w http.ResponseWriter, r *http.Request) {
+			router.HandleFunc("/v1/organizations/{organizationId}/network-areas/{areaId}/network-ranges", func(w http.ResponseWriter, r *http.Request) {
 				if r.Method == "GET" {
 					getAllNetworkRangesHandler(w, r)
 				} else if r.Method == "POST" {
 					createNetworkRangeHandler(w, r)
 				}
 			})
-			router.HandleFunc("/v1beta1/organizations/{organizationId}/network-areas/{areaId}/network-ranges/{networkRangeId}", deleteNetworkRangeHandler)
+			router.HandleFunc("/v1/organizations/{organizationId}/network-areas/{areaId}/network-ranges/{networkRangeId}", deleteNetworkRangeHandler)
 			mockedServer := httptest.NewServer(router)
 			defer mockedServer.Close()
 			client, err := iaas.NewAPIClient(

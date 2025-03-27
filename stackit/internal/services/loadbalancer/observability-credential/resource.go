@@ -20,6 +20,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -28,6 +29,7 @@ var (
 	_ resource.Resource                = &observabilityCredentialResource{}
 	_ resource.ResourceWithConfigure   = &observabilityCredentialResource{}
 	_ resource.ResourceWithImportState = &observabilityCredentialResource{}
+	_ resource.ResourceWithModifyPlan  = &observabilityCredentialResource{}
 )
 
 type Model struct {
@@ -37,6 +39,7 @@ type Model struct {
 	Username       types.String `tfsdk:"username"`
 	Password       types.String `tfsdk:"password"`
 	CredentialsRef types.String `tfsdk:"credentials_ref"`
+	Region         types.String `tfsdk:"region"`
 }
 
 // NewObservabilityCredentialResource is a helper function to simplify the provider implementation.
@@ -46,12 +49,43 @@ func NewObservabilityCredentialResource() resource.Resource {
 
 // observabilityCredentialResource is the resource implementation.
 type observabilityCredentialResource struct {
-	client *loadbalancer.APIClient
+	client       *loadbalancer.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
 func (r *observabilityCredentialResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_loadbalancer_observability_credential"
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *observabilityCredentialResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Configure adds the provider configured client to the resource.
@@ -61,7 +95,8 @@ func (r *observabilityCredentialResource) Configure(ctx context.Context, req res
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
@@ -69,16 +104,15 @@ func (r *observabilityCredentialResource) Configure(ctx context.Context, req res
 
 	var apiClient *loadbalancer.APIClient
 	var err error
-	if providerData.LoadBalancerCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "loadbalancer_custom_endpoint", providerData.LoadBalancerCustomEndpoint)
+	if r.providerData.LoadBalancerCustomEndpoint != "" {
+		ctx = tflog.SetField(ctx, "loadbalancer_custom_endpoint", r.providerData.LoadBalancerCustomEndpoint)
 		apiClient, err = loadbalancer.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.LoadBalancerCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.LoadBalancerCustomEndpoint),
 		)
 	} else {
 		apiClient, err = loadbalancer.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 
@@ -95,12 +129,13 @@ func (r *observabilityCredentialResource) Configure(ctx context.Context, req res
 func (r *observabilityCredentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":            "Load balancer observability credential resource schema. Must have a `region` specified in the provider configuration. These contain the username and password for the observability service (e.g. Argus) where the load balancer logs/metrics will be pushed into",
-		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`\",\"`credentials_ref`\".",
+		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`\",\"region\",\"`credentials_ref`\".",
 		"credentials_ref": "The credentials reference is used by the Load Balancer to define which credentials it will use.",
 		"project_id":      "STACKIT project ID to which the load balancer observability credential is associated.",
 		"display_name":    "Observability credential name.",
 		"username":        "The password for the observability service (e.g. Argus) where the logs/metrics will be pushed into.",
 		"password":        "The username for the observability service (e.g. Argus) where the logs/metrics will be pushed into.",
+		"region":          "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -151,6 +186,15 @@ func (r *observabilityCredentialResource) Schema(_ context.Context, _ resource.S
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -165,7 +209,9 @@ func (r *observabilityCredentialResource) Create(ctx context.Context, req resour
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
@@ -175,7 +221,7 @@ func (r *observabilityCredentialResource) Create(ctx context.Context, req resour
 	}
 
 	// Create new observability credentials
-	createResp, err := r.client.CreateCredentials(ctx, projectId).CreateCredentialsPayload(*payload).XRequestID(uuid.NewString()).Execute()
+	createResp, err := r.client.CreateCredentials(ctx, projectId, region).CreateCredentialsPayload(*payload).XRequestID(uuid.NewString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating observability credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -183,7 +229,7 @@ func (r *observabilityCredentialResource) Create(ctx context.Context, req resour
 	ctx = tflog.SetField(ctx, "credentials_ref", createResp.Credential.CredentialsRef)
 
 	// Map response body to schema
-	err = mapFields(createResp.Credential, &model)
+	err = mapFields(createResp.Credential, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating observability credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -209,11 +255,16 @@ func (r *observabilityCredentialResource) Read(ctx context.Context, req resource
 	}
 	projectId := model.ProjectId.ValueString()
 	credentialsRef := model.CredentialsRef.ValueString()
+	region := model.Region.ValueString()
+	if region == "" {
+		region = r.providerData.GetRegion()
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "credentials_ref", credentialsRef)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Get credentials
-	credResp, err := r.client.GetCredentials(ctx, projectId, credentialsRef).Execute()
+	credResp, err := r.client.GetCredentials(ctx, projectId, region, credentialsRef).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -225,7 +276,7 @@ func (r *observabilityCredentialResource) Read(ctx context.Context, req resource
 	}
 
 	// Map response body to schema
-	err = mapFields(credResp.Credential, &model)
+	err = mapFields(credResp.Credential, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading observability credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -255,11 +306,13 @@ func (r *observabilityCredentialResource) Delete(ctx context.Context, req resour
 	}
 	projectId := model.ProjectId.ValueString()
 	credentialsRef := model.CredentialsRef.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "credentials_ref", credentialsRef)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete credentials
-	_, err := r.client.DeleteCredentials(ctx, projectId, credentialsRef).Execute()
+	_, err := r.client.DeleteCredentials(ctx, projectId, region, credentialsRef).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting observability credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -273,16 +326,17 @@ func (r *observabilityCredentialResource) Delete(ctx context.Context, req resour
 func (r *observabilityCredentialResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing observability credential",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[credentials_ref]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[credentials_ref]  Got: %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials_ref"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials_ref"), idParts[2])...)
 	tflog.Info(ctx, "Load balancer observability credential state imported")
 }
 
@@ -298,7 +352,7 @@ func toCreatePayload(model *Model) (*loadbalancer.CreateCredentialsPayload, erro
 	}, nil
 }
 
-func mapFields(cred *loadbalancer.CredentialsResponse, m *Model) error {
+func mapFields(cred *loadbalancer.CredentialsResponse, m *Model, region string) error {
 	if cred == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -325,9 +379,11 @@ func mapFields(cred *loadbalancer.CredentialsResponse, m *Model) error {
 		return fmt.Errorf("username not present")
 	}
 	m.Username = types.StringValue(username)
+	m.Region = types.StringValue(region)
 
 	idParts := []string{
 		m.ProjectId.ValueString(),
+		m.Region.ValueString(),
 		m.CredentialsRef.ValueString(),
 	}
 	m.Id = types.StringValue(

@@ -7,7 +7,6 @@ import (
 	"regexp"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -21,8 +20,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
-
-var affinityGroupDataSourceBetaCheckDone bool
 
 var (
 	_ datasource.DataSource              = &affinityGroupDatasource{}
@@ -47,14 +44,6 @@ func (d *affinityGroupDatasource) Configure(ctx context.Context, req datasource.
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
-	}
-
-	if !affinityGroupDataSourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_affinity_group", "data source")
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		affinityGroupDataSourceBetaCheckDone = true
 	}
 
 	var apiClient *iaas.APIClient

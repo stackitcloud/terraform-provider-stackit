@@ -35,7 +35,6 @@ description: |-
   on the same compute node if possible, but if not possible they still will be scheduled instead of failure.
   soft-anti-affinity- All servers launched in this group will be hosted on different compute nodes if possible,
   but if not possible they still will be scheduled instead of failure.
-  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_affinity_group (Resource)
@@ -79,9 +78,6 @@ resource "stackit_server" "example-server" {
 
 * `soft-anti-affinity`- All servers launched in this group will be hosted on different compute nodes if possible,
 	but if not possible they still will be scheduled instead of failure.
-
-
-~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 

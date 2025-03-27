@@ -306,7 +306,7 @@ func TestAccLoadBalancerResource(t *testing.T) {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
 
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, name), nil
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
@@ -331,9 +331,7 @@ func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 	var client *loadbalancer.APIClient
 	var err error
 	if testutil.LoadBalancerCustomEndpoint == "" {
-		client, err = loadbalancer.NewAPIClient(
-			config.WithRegion("eu01"),
-		)
+		client, err = loadbalancer.NewAPIClient()
 	} else {
 		client, err = loadbalancer.NewAPIClient(
 			config.WithEndpoint(testutil.LoadBalancerCustomEndpoint),
@@ -343,6 +341,10 @@ func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
+	region := "eu01"
+	if testutil.Region != "" {
+		region = testutil.Region
+	}
 	loadbalancersToDestroy := []string{}
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_loadbalancer" {
@@ -353,7 +355,7 @@ func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 		loadbalancersToDestroy = append(loadbalancersToDestroy, loadbalancerName)
 	}
 
-	loadbalancersResp, err := client.ListLoadBalancers(ctx, testutil.ProjectId).Execute()
+	loadbalancersResp, err := client.ListLoadBalancers(ctx, testutil.ProjectId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting loadbalancersResp: %w", err)
 	}
@@ -369,11 +371,11 @@ func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 			continue
 		}
 		if utils.Contains(loadbalancersToDestroy, *items[i].Name) {
-			_, err := client.DeleteLoadBalancerExecute(ctx, testutil.ProjectId, *items[i].Name)
+			_, err := client.DeleteLoadBalancerExecute(ctx, testutil.ProjectId, region, *items[i].Name)
 			if err != nil {
 				return fmt.Errorf("destroying load balancer %s during CheckDestroy: %w", *items[i].Name, err)
 			}
-			_, err = wait.DeleteLoadBalancerWaitHandler(ctx, client, testutil.ProjectId, *items[i].Name).WaitWithContext(ctx)
+			_, err = wait.DeleteLoadBalancerWaitHandler(ctx, client, testutil.ProjectId, region, *items[i].Name).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying load balancer %s during CheckDestroy: waiting for deletion %w", *items[i].Name, err)
 			}

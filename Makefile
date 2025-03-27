@@ -37,6 +37,12 @@ test:
 	@echo "Running tests for the terraform provider"
 	@cd $(ROOT_DIR)/stackit && go test ./... -count=1 && cd $(ROOT_DIR)
 
+# Test coverage
+coverage:
+	@echo ">> Creating test coverage report for the terraform provider"
+	@cd $(ROOT_DIR)/stackit && (go test ./... -count=1 -coverprofile=coverage.out || true) && cd $(ROOT_DIR)
+	@cd $(ROOT_DIR)/stackit && go tool cover -html=coverage.out -o coverage.html && cd $(ROOT_DIR)
+
 test-acceptance-tf:
 	@if [ -z $(TF_ACC_PROJECT_ID) ]; then echo "Input TF_ACC_PROJECT_ID missing"; exit 1; fi
 	@if [ -z $(TF_ACC_ORGANIZATION_ID) ]; then echo "Input TF_ACC_ORGANIZATION_ID missing"; exit 1; fi
