@@ -11,9 +11,11 @@ import (
 )
 
 func TestMapSchedulesDataSourceFields(t *testing.T) {
+	const testRegion = "region"
 	tests := []struct {
 		description string
 		input       *sdk.GetUpdateSchedulesResponse
+		region      string
 		expected    schedulesDataSourceModel
 		isValid     bool
 	}{
@@ -22,11 +24,13 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 			&sdk.GetUpdateSchedulesResponse{
 				Items: &[]sdk.UpdateSchedule{},
 			},
+			testRegion,
 			schedulesDataSourceModel{
-				ID:        types.StringValue("project_uid,server_uid"),
+				ID:        types.StringValue("project_uid,region,server_uid"),
 				ProjectId: types.StringValue("project_uid"),
 				ServerId:  types.StringValue("server_uid"),
 				Items:     nil,
+				Region:    types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -43,8 +47,9 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 					},
 				},
 			},
+			testRegion,
 			schedulesDataSourceModel{
-				ID:        types.StringValue("project_uid,server_uid"),
+				ID:        types.StringValue("project_uid,region,server_uid"),
 				ServerId:  types.StringValue("server_uid"),
 				ProjectId: types.StringValue("project_uid"),
 				Items: []schedulesDatasourceItemModel{
@@ -56,12 +61,14 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 						MaintenanceWindow: types.Int64Value(1),
 					},
 				},
+				Region: types.StringValue(testRegion),
 			},
 			true,
 		},
 		{
 			"nil_response",
 			nil,
+			testRegion,
 			schedulesDataSourceModel{},
 			false,
 		},
@@ -73,7 +80,7 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 				ServerId:  tt.expected.ServerId,
 			}
 			ctx := context.TODO()
-			err := mapSchedulesDatasourceFields(ctx, tt.input, state)
+			err := mapSchedulesDatasourceFields(ctx, tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -39,6 +40,7 @@ var (
 	_ resource.Resource                = &scheduleResource{}
 	_ resource.ResourceWithConfigure   = &scheduleResource{}
 	_ resource.ResourceWithImportState = &scheduleResource{}
+	_ resource.ResourceWithModifyPlan  = &scheduleResource{}
 )
 
 type Model struct {
@@ -50,6 +52,7 @@ type Model struct {
 	Rrule             types.String `tfsdk:"rrule"`
 	Enabled           types.Bool   `tfsdk:"enabled"`
 	MaintenanceWindow types.Int64  `tfsdk:"maintenance_window"`
+	Region            types.String `tfsdk:"region"`
 }
 
 // NewScheduleResource is a helper function to simplify the provider implementation.
@@ -59,7 +62,38 @@ func NewScheduleResource() resource.Resource {
 
 // scheduleResource is the resource implementation.
 type scheduleResource struct {
-	client *serverupdate.APIClient
+	client       *serverupdate.APIClient
+	providerData core.ProviderData
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *scheduleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Metadata returns the resource type name.
@@ -74,14 +108,15 @@ func (r *scheduleResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
 	if !resourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_server_update_schedule", "resource")
+		features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_server_update_schedule", "resource")
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -90,16 +125,15 @@ func (r *scheduleResource) Configure(ctx context.Context, req resource.Configure
 
 	var apiClient *serverupdate.APIClient
 	var err error
-	if providerData.ServerUpdateCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "server_update_custom_endpoint", providerData.ServerUpdateCustomEndpoint)
+	if r.providerData.ServerUpdateCustomEndpoint != "" {
+		ctx = tflog.SetField(ctx, "server_update_custom_endpoint", r.providerData.ServerUpdateCustomEndpoint)
 		apiClient, err = serverupdate.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ServerUpdateCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.ServerUpdateCustomEndpoint),
 		)
 	} else {
 		apiClient, err = serverupdate.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 
@@ -119,7 +153,7 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		MarkdownDescription: features.AddBetaDescription("Server update schedule resource schema. Must have a `region` specified in the provider configuration."),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`server_id`,`update_schedule_id`\".",
+				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`server_id`,`update_schedule_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -194,6 +228,15 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					int64validator.AtMost(24),
 				},
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: "The resource region. If not defined, the provider region is used.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -208,11 +251,13 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Enable updates if not already enabled
-	err := enableUpdatesService(ctx, &model, r.client)
+	err := enableUpdatesService(ctx, &model, r.client, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server update schedule", fmt.Sprintf("Enabling server update project before creation: %v", err))
 		return
@@ -224,7 +269,7 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server update schedule", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	scheduleResp, err := r.client.CreateUpdateSchedule(ctx, projectId, serverId).CreateUpdateSchedulePayload(*payload).Execute()
+	scheduleResp, err := r.client.CreateUpdateSchedule(ctx, projectId, serverId, region).CreateUpdateSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server update schedule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -232,7 +277,7 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "update_schedule_id", *scheduleResp.Id)
 
 	// Map response body to schema
-	err = mapFields(scheduleResp, &model)
+	err = mapFields(scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server update schedule", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -256,11 +301,16 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	updateScheduleId := model.UpdateScheduleId.ValueInt64()
+	region := model.Region.ValueString()
+	if region == "" {
+		region = r.providerData.GetRegion()
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "update_schedule_id", updateScheduleId)
 
-	scheduleResp, err := r.client.GetUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(updateScheduleId, 10)).Execute()
+	scheduleResp, err := r.client.GetUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(updateScheduleId, 10), region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -272,7 +322,7 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(scheduleResp, &model)
+	err = mapFields(scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading update schedule", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -298,8 +348,10 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	updateScheduleId := model.UpdateScheduleId.ValueInt64()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "update_schedule_id", updateScheduleId)
 
 	// Update schedule
@@ -309,14 +361,14 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	scheduleResp, err := r.client.UpdateUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(updateScheduleId, 10)).UpdateUpdateSchedulePayload(*payload).Execute()
+	scheduleResp, err := r.client.UpdateUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(updateScheduleId, 10), region).UpdateUpdateSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server update schedule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(scheduleResp, &model)
+	err = mapFields(scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server update schedule", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -340,11 +392,13 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	updateScheduleId := model.UpdateScheduleId.ValueInt64()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "update_schedule_id", updateScheduleId)
 
-	err := r.client.DeleteUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(updateScheduleId, 10)).Execute()
+	err := r.client.DeleteUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(updateScheduleId, 10), region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server update schedule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -356,15 +410,15 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 // The expected format of the resource import identifier is: // project_id,server_id,schedule_id
 func (r *scheduleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing server update schedule",
-			fmt.Sprintf("Expected import identifier with format [project_id],[server_id],[update_schedule_id], got %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format [project_id],[region],[server_id],[update_schedule_id], got %q", req.ID),
 		)
 		return
 	}
 
-	intId, err := strconv.ParseInt(idParts[2], 10, 64)
+	intId, err := strconv.ParseInt(idParts[3], 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing server update schedule",
@@ -374,12 +428,13 @@ func (r *scheduleResource) ImportState(ctx context.Context, req resource.ImportS
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("server_id"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("server_id"), idParts[2])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("update_schedule_id"), intId)...)
 	tflog.Info(ctx, "Server update schedule state imported.")
 }
 
-func mapFields(schedule *serverupdate.UpdateSchedule, model *Model) error {
+func mapFields(schedule *serverupdate.UpdateSchedule, model *Model, region string) error {
 	if schedule == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -393,6 +448,7 @@ func mapFields(schedule *serverupdate.UpdateSchedule, model *Model) error {
 	model.UpdateScheduleId = types.Int64PointerValue(schedule.Id)
 	idParts := []string{
 		model.ProjectId.ValueString(),
+		region,
 		model.ServerId.ValueString(),
 		strconv.FormatInt(model.UpdateScheduleId.ValueInt64(), 10),
 	}
@@ -403,17 +459,18 @@ func mapFields(schedule *serverupdate.UpdateSchedule, model *Model) error {
 	model.Rrule = types.StringPointerValue(schedule.Rrule)
 	model.Enabled = types.BoolPointerValue(schedule.Enabled)
 	model.MaintenanceWindow = types.Int64PointerValue(schedule.MaintenanceWindow)
+	model.Region = types.StringValue(region)
 	return nil
 }
 
 // If already enabled, just continues
-func enableUpdatesService(ctx context.Context, model *Model, client *serverupdate.APIClient) error {
+func enableUpdatesService(ctx context.Context, model *Model, client *serverupdate.APIClient, region string) error {
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	enableServicePayload := serverupdate.EnableServicePayload{}
+	payload := serverupdate.EnableServiceResourcePayload{}
 
 	tflog.Debug(ctx, "Enabling server update service")
-	err := client.EnableService(ctx, projectId, serverId).EnableServicePayload(enableServicePayload).Execute()
+	err := client.EnableServiceResource(ctx, projectId, serverId, region).EnableServiceResourcePayload(payload).Execute()
 	if err != nil {
 		if strings.Contains(err.Error(), "Tried to activate already active service") {
 			tflog.Debug(ctx, "Service for server update already enabled")
