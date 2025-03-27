@@ -13,7 +13,7 @@ ObjectStorage credential data source schema. Must have a `region` specified in t
 ## Example Usage
 
 ```terraform
-data "stackit_objectstorage_credentials_group" "example" {
+data "stackit_objectstorage_credential" "example" {
   project_id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   credentials_group_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   credential_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -35,8 +35,6 @@ data "stackit_objectstorage_credentials_group" "example" {
 
 ### Read-Only
 
-- `access_key` (String)
 - `expiration_timestamp` (String)
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`credentials_group_id`,`credential_id`".
 - `name` (String)
-- `secret_access_key` (String, Sensitive)

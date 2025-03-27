@@ -3,14 +3,19 @@ package objectstorage
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
 )
 
@@ -18,6 +23,16 @@ import (
 var (
 	_ datasource.DataSource = &credentialDataSource{}
 )
+
+type DataSourceModel struct {
+	Id                  types.String `tfsdk:"id"` // needed by TF
+	CredentialId        types.String `tfsdk:"credential_id"`
+	CredentialsGroupId  types.String `tfsdk:"credentials_group_id"`
+	ProjectId           types.String `tfsdk:"project_id"`
+	Name                types.String `tfsdk:"name"`
+	ExpirationTimestamp types.String `tfsdk:"expiration_timestamp"`
+	Region              types.String `tfsdk:"region"`
+}
 
 // NewCredentialDataSource is a helper function to simplify the provider implementation.
 func NewCredentialDataSource() datasource.DataSource {
@@ -104,13 +119,6 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			"name": schema.StringAttribute{
 				Computed: true,
 			},
-			"access_key": schema.StringAttribute{
-				Computed: true,
-			},
-			"secret_access_key": schema.StringAttribute{
-				Computed:  true,
-				Sensitive: true,
-			},
 			"expiration_timestamp": schema.StringAttribute{
 				Computed: true,
 			},
@@ -125,7 +133,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 
 // Read refreshes the Terraform state with the latest data.
 func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -147,14 +155,30 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	found, err := readCredentials(ctx, &model, region, r.client)
+	credentialsGroupResp, err := r.client.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Finding credential: %v", err))
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	if !found {
-		resp.State.RemoveResource(ctx)
+	if credentialsGroupResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", fmt.Sprintf("Response is nil: %v", err))
+		return
+	}
+
+	credential := findCredential(*credentialsGroupResp, credentialId)
+	if credential == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", "Credential not found")
+		return
+	}
+
+	err = mapDataSourceFields(credential, &model, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -165,4 +189,58 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 	tflog.Info(ctx, "ObjectStorage credential read")
+}
+
+func mapDataSourceFields(credentialResp *objectstorage.AccessKey, model *DataSourceModel, region string) error {
+	if credentialResp == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	var credentialId string
+	if model.CredentialId.ValueString() != "" {
+		credentialId = model.CredentialId.ValueString()
+	} else if credentialResp.KeyId != nil {
+		credentialId = *credentialResp.KeyId
+	} else {
+		return fmt.Errorf("credential id not present")
+	}
+
+	if credentialResp.Expires == nil {
+		model.ExpirationTimestamp = types.StringNull()
+	} else {
+		// Harmonize the timestamp format
+		// Eg. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
+		expirationTimestamp, err := time.Parse(time.RFC3339, *credentialResp.Expires)
+		if err != nil {
+			return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credentialResp.Expires, err)
+		}
+		model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
+	}
+
+	idParts := []string{
+		model.ProjectId.ValueString(),
+		model.CredentialsGroupId.ValueString(),
+		credentialId,
+	}
+	model.Id = types.StringValue(
+		strings.Join(idParts, core.Separator),
+	)
+	model.CredentialId = types.StringValue(credentialId)
+	model.Name = types.StringPointerValue(credentialResp.DisplayName)
+	model.Region = types.StringValue(region)
+	return nil
+}
+
+// Returns the access key if found otherwise nil
+func findCredential(credentialsGroupResp objectstorage.ListAccessKeysResponse, credentialId string) *objectstorage.AccessKey {
+	for _, credential := range *credentialsGroupResp.AccessKeys {
+		if credential.KeyId == nil || *credential.KeyId != credentialId {
+			continue
+		}
+		return &credential
+	}
+	return nil
 }
