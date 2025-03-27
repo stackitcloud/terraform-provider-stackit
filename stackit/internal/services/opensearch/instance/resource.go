@@ -464,7 +464,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	var parameters *parametersModel
 	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
-		parameters := &parametersModel{}
+		parameters = &parametersModel{}
 		diags = model.Parameters.As(ctx, parameters, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
