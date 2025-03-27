@@ -3,10 +3,13 @@ package token
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/modelserving"
@@ -19,6 +22,17 @@ import (
 var (
 	_ datasource.DataSource = &tokenDataSource{}
 )
+
+type DatasourceModel struct {
+	Id          types.String `tfsdk:"id"` // needed by TF
+	ProjectId   types.String `tfsdk:"project_id"`
+	Region      types.String `tfsdk:"region"`
+	TokenId     types.String `tfsdk:"token_id"`
+	Name        types.String `tfsdk:"name"`
+	Description types.String `tfsdk:"description"`
+	State       types.String `tfsdk:"state"`
+	ValidUntil  types.String `tfsdk:"valid_until"`
+}
 
 // NewTokenDataSource is a helper function to simplify the provider implementation.
 func NewTokenDataSource() datasource.DataSource {
@@ -71,10 +85,12 @@ func (d *tokenDataSource) Configure(
 		apiClient, err = modelserving.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
 			config.WithEndpoint(providerData.ModelServingCustomEndpoint),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	} else {
 		apiClient, err = modelserving.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithRegion(providerData.GetRegion()),
 		)
 	}
 
@@ -143,10 +159,6 @@ func (d *tokenDataSource) Schema(
 				Description: "State of the model serving auth token.",
 				Computed:    true,
 			},
-			"content": schema.StringAttribute{
-				Description: "Content of the model serving auth token.",
-				Computed:    true,
-			},
 			"valid_until": schema.StringAttribute{
 				Description: "The time until the model serving auth token is valid.",
 				Computed:    true,
@@ -161,7 +173,7 @@ func (d *tokenDataSource) Read(
 	req datasource.ReadRequest, //nolint:gocritic // function signature required by Terraform
 	resp *datasource.ReadResponse,
 ) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model DatasourceModel
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -195,7 +207,17 @@ func (d *tokenDataSource) Read(
 		return
 	}
 
-	if getTokenResp != nil && getTokenResp.Token.State != nil &&
+	if getTokenResp == nil {
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error reading model serving auth token",
+			"Model serving auth token no response",
+		)
+		return
+	}
+
+	if getTokenResp.Token.State != nil &&
 		*getTokenResp.Token.State == inactiveState {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(
@@ -207,16 +229,38 @@ func (d *tokenDataSource) Read(
 		return
 	}
 
-	err = mapGetResponse(getTokenResp, &model, &model)
-	if err != nil {
+	if getTokenResp.Token == nil {
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,
 			"Error reading model serving auth token",
-			fmt.Sprintf("Processing API payload: %v", err),
+			"Model serving auth token not found",
 		)
 		return
 	}
+
+	// theoretically, should never happen, but still catch null pointers
+	validUntil := types.StringNull()
+	if getTokenResp.Token.ValidUntil != nil {
+		validUntil = types.StringValue(
+			getTokenResp.Token.ValidUntil.Format(time.RFC3339),
+		)
+	}
+
+	idParts := []string{
+		model.ProjectId.ValueString(),
+		model.Region.ValueString(),
+		model.TokenId.ValueString(),
+	}
+	model.Id = types.StringValue(
+		strings.Join(idParts, core.Separator),
+	)
+	model.TokenId = types.StringPointerValue(getTokenResp.Token.Id)
+	model.Name = types.StringPointerValue(getTokenResp.Token.Name)
+	model.State = types.StringPointerValue(getTokenResp.Token.State)
+	model.ValidUntil = validUntil
+	model.Description = types.StringPointerValue(getTokenResp.Token.Description)
+	model.Region = types.StringValue(region)
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)

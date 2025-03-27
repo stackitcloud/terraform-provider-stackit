@@ -42,17 +42,21 @@ const (
 )
 
 type Model struct {
-	Id                types.String `tfsdk:"id"` // needed by TF
-	ProjectId         types.String `tfsdk:"project_id"`
-	Region            types.String `tfsdk:"region"`
-	TokenId           types.String `tfsdk:"token_id"`
-	Name              types.String `tfsdk:"name"`
-	Description       types.String `tfsdk:"description"`
-	State             types.String `tfsdk:"state"`
-	ValidUntil        types.String `tfsdk:"valid_until"`
-	TTLDuration       types.String `tfsdk:"ttl_duration"`
-	Content           types.String `tfsdk:"content"`
-	RotateWhenChanged types.Map    `tfsdk:"rotate_when_changed"`
+	Id          types.String `tfsdk:"id"` // needed by TF
+	ProjectId   types.String `tfsdk:"project_id"`
+	Region      types.String `tfsdk:"region"`
+	TokenId     types.String `tfsdk:"token_id"`
+	Name        types.String `tfsdk:"name"`
+	Description types.String `tfsdk:"description"`
+	State       types.String `tfsdk:"state"`
+	ValidUntil  types.String `tfsdk:"valid_until"`
+	TTLDuration types.String `tfsdk:"ttl_duration"`
+	Content     types.String `tfsdk:"content"`
+	// RotateWhenChanged is a map of arbitrary key/value pairs that will force
+	// recreation of the token when they change, enabling token rotation based on
+	// external conditions such as a rotating timestamp. Changing this forces a new
+	// resource to be created. This resource is not sent to the api.
+	RotateWhenChanged types.Map `tfsdk:"rotate_when_changed"`
 }
 
 // NewTokenResource is a helper function to simplify the provider implementation.
@@ -111,6 +115,7 @@ func (r *tokenResource) Configure(
 		)
 		apiClient, err = modelserving.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithEndpoint(providerData.ModelServingCustomEndpoint),
 		)
 	} else {
 		apiClient, err = modelserving.NewAPIClient(
@@ -210,7 +215,7 @@ func (r *tokenResource) Schema(
 	resp *resource.SchemaResponse,
 ) {
 	resp.Schema = schema.Schema{
-		Description: "Model Serving Auth Token Resource schema.",
+		Description: "Model Serving Auth Token Resource schema.\n\n" + markdownDescription,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`token_id`\".",

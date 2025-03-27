@@ -30,7 +30,7 @@ data "stackit_modelserving_token" "example" {
 ### Optional
 
 - `description` (String) The description of the model serving auth token.
-- `region` (String) STACKIT region to which the model serving auth token is associated.
+- `region` (String) Region to which the model serving auth token is associated. If not defined, the provider region is used.
 
 ### Read-Only
 

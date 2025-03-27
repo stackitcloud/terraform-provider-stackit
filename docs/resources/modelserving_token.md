@@ -4,11 +4,47 @@ page_title: "stackit_modelserving_token Resource - stackit"
 subcategory: ""
 description: |-
   Model Serving Auth Token Resource schema.
+  Example Usage
+  Automatically rotate model serving token
+  
+  resource "time_rotating" "rotate" {
+    rotation_days = 80
+  }
+  
+  resource "stackit_modelserving_token" "example" {
+    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    name       = "Example token"
+  
+    rotate_when_changed = {
+      rotation = time_rotating.rotate.id
+    }	
+  }
 ---
 
 # stackit_modelserving_token (Resource)
 
 Model Serving Auth Token Resource schema.
+
+
+## Example Usage
+
+
+### Automatically rotate model serving token
+```terraform
+resource "time_rotating" "rotate" {
+  rotation_days = 80
+}
+
+resource "stackit_modelserving_token" "example" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "Example token"
+
+  rotate_when_changed = {
+    rotation = time_rotating.rotate.id
+  }	
+}
+
+```
 
 ## Example Usage
 
@@ -31,7 +67,7 @@ resource "stackit_modelserving_token" "example" {
 ### Optional
 
 - `description` (String) The description of the model serving auth token.
-- `region` (String) STACKIT region to which the model serving auth token is associated.
+- `region` (String) Region to which the model serving auth token is associated. If not defined, the provider region is used.
 - `rotate_when_changed` (Map of String) A map of arbitrary key/value pairs that will force recreation of the token when they change, enabling token rotation based on external conditions such as a rotating timestamp. Changing this forces a new resource to be created.
 - `ttl_duration` (String) The TTL duration of the model serving auth token.
 
