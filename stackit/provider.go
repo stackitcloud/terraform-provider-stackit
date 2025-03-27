@@ -451,12 +451,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	roundTripper, err := sdkauth.SetupAuth(sdkConfig)
 	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error configuring provider",
-			fmt.Sprintf("Setting up authentication: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up authentication: %v", err))
 		return
 	}
 
