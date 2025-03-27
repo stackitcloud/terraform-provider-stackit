@@ -3,13 +3,13 @@ package modelserving_test
 import (
 	"context"
 	"fmt"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/modelserving"
 	"github.com/stackitcloud/stackit-sdk-go/services/modelserving/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -119,7 +119,7 @@ func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 		if len(idParts) != 3 {
 			return fmt.Errorf("invalid ID: %s", rs.Primary.ID)
 		}
-		if len(idParts[2]) != 0 {
+		if idParts[2] != "" {
 			tokensToDestroy = append(tokensToDestroy, idParts[2])
 		}
 	}

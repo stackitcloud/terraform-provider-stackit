@@ -83,7 +83,7 @@ func TestMapGetTokenFields(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			t.Parallel()
 
-			err := mapGetResponse(tt.input, tt.state, tt.state)
+			err := mapGetResponse(tt.input, tt.state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

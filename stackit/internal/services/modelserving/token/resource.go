@@ -4,12 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
@@ -151,7 +150,7 @@ func (r *tokenResource) Configure(ctx context.Context, req resource.ConfigureReq
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
-func (r *tokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+func (r *tokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
 
 	// skip initial empty configuration to avoid follow-up errors
@@ -249,7 +248,6 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(1, 2000),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-zA-Z\s.:\/\-]+$`), ""),
 				},
 			},
 			"name": schema.StringAttribute{
@@ -257,7 +255,6 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(1, 200),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-zA-Z\s_-]+$`), ""),
 				},
 			},
 			"state": schema.StringAttribute{
@@ -278,7 +275,7 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -307,7 +304,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling model serving",
-					fmt.Sprintf("Service not availiable in region %s \n%v", region, err),
+					fmt.Sprintf("Service not available in region %s \n%v", region, err),
 				)
 				return
 			}
@@ -378,7 +375,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -424,7 +421,7 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	// Map response body to schema
-	err = mapGetResponse(getTokenResp, &model, &model)
+	err = mapGetResponse(getTokenResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -519,7 +516,9 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	err = mapGetResponse(waitResp, &model, &state)
+	// Since STACKIT is not saving the content of the token. We have to use it from the state.
+	model.Token = state.Token
+	err = mapGetResponse(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -620,41 +619,33 @@ func mapCreateResponse(tokenCreateResp *modelserving.CreateTokenResponse, waitRe
 	return nil
 }
 
-func mapToken(token *modelserving.Token, model, state *Model) error {
-	if token == nil {
+func mapGetResponse(tokenGetResp *modelserving.GetTokenResponse, model *Model) error {
+	if tokenGetResp == nil {
+		return fmt.Errorf("response input is nil")
+	}
+
+	if tokenGetResp.Token == nil {
 		return fmt.Errorf("response input is nil")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	if state == nil {
-		return fmt.Errorf("state input is nil")
-	}
 
 	// theoretically, should never happen, but still catch null pointers
 	validUntil := types.StringNull()
-	if token.ValidUntil != nil {
-		validUntil = types.StringValue(token.ValidUntil.Format(time.RFC3339))
+	if tokenGetResp.Token.ValidUntil != nil {
+		validUntil = types.StringValue(tokenGetResp.Token.ValidUntil.Format(time.RFC3339))
 	}
 
 	idParts := []string{model.ProjectId.ValueString(), model.Region.ValueString(), model.TokenId.ValueString()}
 	model.Id = types.StringValue(strings.Join(idParts, core.Separator))
-	model.TokenId = types.StringPointerValue(token.Id)
-	model.Name = types.StringPointerValue(token.Name)
-	model.State = types.StringPointerValue(token.State)
+	model.TokenId = types.StringPointerValue(tokenGetResp.Token.Id)
+	model.Name = types.StringPointerValue(tokenGetResp.Token.Name)
+	model.State = types.StringPointerValue(tokenGetResp.Token.State)
 	model.ValidUntil = validUntil
-	model.Description = types.StringPointerValue(token.Description)
-	model.Token = state.Token
+	model.Description = types.StringPointerValue(tokenGetResp.Token.Description)
 
 	return nil
-}
-
-func mapGetResponse(tokenGetResp *modelserving.GetTokenResponse, model *Model, state *Model) error {
-	if tokenGetResp == nil {
-		return fmt.Errorf("response input is nil")
-	}
-
-	return mapToken(tokenGetResp.Token, model, state)
 }
 
 func toCreatePayload(model *Model) (*modelserving.CreateTokenPayload, error) {
