@@ -16,12 +16,7 @@ const (
 )
 
 var (
-	LegacyProjectRoles = []string{
-		"project.admin",
-		"project.auditor",
-		"project.member",
-		"project.owner",
-	}
+	LegacyProjectRoles = []string{"project.admin", "project.auditor", "project.member", "project.owner"}
 )
 
 // ReconcileStringSlices reconciles two string lists by removing elements from the
@@ -69,11 +64,7 @@ func ListValuetoStringSlice(list basetypes.ListValue) ([]string, error) {
 	for _, el := range list.Elements() {
 		elStr, ok := el.(types.String)
 		if !ok {
-			return result, fmt.Errorf(
-				"expected record to be of type %T, got %T",
-				types.String{},
-				elStr,
-			)
+			return result, fmt.Errorf("expected record to be of type %T, got %T", types.String{}, elStr)
 		}
 		result = append(result, elStr.ValueString())
 	}
@@ -81,22 +72,17 @@ func ListValuetoStringSlice(list basetypes.ListValue) ([]string, error) {
 	return result, nil
 }
 
-// Remove leading 0s from backup schedule numbers (e.g. "00 00 * * *" becomes "0 0 * * *")
+// SimplifyBackupSchedule removes leading 0s from backup schedule numbers (e.g. "00 00 * * *" becomes "0 0 * * *")
 // Needed as the API does it internally and would otherwise cause inconsistent result in Terraform
 func SimplifyBackupSchedule(schedule string) string {
-	regex := regexp.MustCompile(
-		`0+\d+`,
-	) // Matches series of one or more zeros followed by a series of one or more digits
-	simplifiedSchedule := regex.ReplaceAllStringFunc(
-		schedule,
-		func(match string) string {
-			simplified := strings.TrimLeft(match, "0")
-			if simplified == "" {
-				simplified = "0"
-			}
-			return simplified
-		},
-	)
+	regex := regexp.MustCompile(`0+\d+`) // Matches series of one or more zeros followed by a series of one or more digits
+	simplifiedSchedule := regex.ReplaceAllStringFunc(schedule, func(match string) string {
+		simplified := strings.TrimLeft(match, "0")
+		if simplified == "" {
+			simplified = "0"
+		}
+		return simplified
+	})
 	return simplifiedSchedule
 }
 
@@ -104,10 +90,8 @@ func SupportedValuesDocumentation(values []string) string {
 	if len(values) == 0 {
 		return ""
 	}
-	return "Supported values are: " + strings.Join(
-		QuoteValues(values),
-		", ",
-	) + "."
+	return "Supported values are: " + strings.Join(QuoteValues(values), ", ") + "."
+
 }
 
 func QuoteValues(values []string) []string {

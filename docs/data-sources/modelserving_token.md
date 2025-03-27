@@ -34,7 +34,6 @@ data "stackit_modelserving_token" "example" {
 
 ### Read-Only
 
-- `content` (String) Content of the model serving auth token.
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`token_id`".
 - `name` (String) Name of the model serving auth token.
 - `state` (String) State of the model serving auth token.
