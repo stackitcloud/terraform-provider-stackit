@@ -239,12 +239,12 @@ func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_modelserving_token" {
 			continue
 		}
-		// Token terraform ID: "[projectId],[tokenId]"
+		// Token terraform ID: "[projectId],[region],[tokenId]"
 		idParts := strings.Split(rs.Primary.ID, core.Separator)
-		if len(idParts) != 2 {
+		if len(idParts) != 3 {
 			return fmt.Errorf("invalid ID: %s", rs.Primary.ID)
 		}
-		tokenId := idParts[1]
+		tokenId := idParts[2]
 
 		_, err := client.GetToken(ctx, testutil.Region, testutil.ProjectId, tokenId).
 			Execute()
