@@ -1,6 +1,6 @@
 <div align="center">
 <br>
-<img src=".github/images/stackit-logo.png" alt="STACKIT logo" width="50%"/>
+<img src=".github/images/stackit-logo.svg" alt="STACKIT logo" width="50%"/>
 <br>
 <br>
 </div>
