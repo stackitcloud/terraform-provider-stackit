@@ -101,52 +101,6 @@ func TestAccModelServingTokenResource(t *testing.T) {
 				),
 			},
 			// Data Source
-			{
-				Config: fmt.Sprintf(
-					`
-					%s
-
-					data "stackit_modelserving_token" "token" {
-						project_id = stackit_modelserving_token.token.project_id
-						token_id = stackit_modelserving_token.token.token_id
-						region = stackit_modelserving_token.token.region
-					}`,
-					inputTokenConfig(
-						tokenResource["name"],
-						tokenResource["description"],
-					),
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrPair(
-						"stackit_modelserving_token.token", "project_id",
-						"data.stackit_modelserving_token.token", "project_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_modelserving_token.token", "token_id",
-						"data.stackit_modelserving_token.token", "token_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_modelserving_token.token", "region",
-						"data.stackit_modelserving_token.token", "region",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_modelserving_token.token", "name",
-						"data.stackit_modelserving_token.token", "name",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_modelserving_token.token", "description",
-						"data.stackit_modelserving_token.token", "description",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_modelserving_token.token", "state",
-						"data.stackit_modelserving_token.token", "state",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_modelserving_token.token", "valid_until",
-						"data.stackit_modelserving_token.token", "valid_until",
-					),
-				),
-			},
 			// Import
 			{
 				ResourceName: "stackit_modelserving_token.token",
