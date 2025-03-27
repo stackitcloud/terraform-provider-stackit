@@ -181,7 +181,11 @@ func MariaDBProviderConfig() string {
 
 func ModelServingProviderConfig() string {
 	if ModelServingCustomEndpoint == "" {
-		return `provider "stackit" {}`
+		return `
+		provider "stackit" {
+			region = "eu01"
+		}
+		`
 	}
 	return fmt.Sprintf(`
 		provider "stackit" {

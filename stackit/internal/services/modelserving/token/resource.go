@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -49,7 +51,7 @@ type Model struct {
 	State       types.String `tfsdk:"state"`
 	ValidUntil  types.String `tfsdk:"valid_until"`
 	TTLDuration types.String `tfsdk:"ttl_duration"`
-	Content     types.String `tfsdk:"content"`
+	Token       types.String `tfsdk:"token"`
 	// RotateWhenChanged is a map of arbitrary key/value pairs that will force
 	// recreation of the token when they change, enabling token rotation based on
 	// external conditions such as a rotating timestamp. Changing this forces a new
@@ -190,7 +192,7 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 		Description: "Model Serving Auth Token Resource schema.\n\n" + markdownDescription,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`zone_id`,`token_id`\".",
+				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`region`,`token_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
@@ -219,7 +221,7 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"ttl_duration": schema.StringAttribute{
-				Description: "The TTL duration of the model serving auth token.",
+				Description: "The TTL duration of the model serving auth token. E.g. 5h30m40s",
 				Required:    false,
 				Optional:    true,
 				PlanModifiers: []planmodifier.String{
@@ -242,18 +244,27 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Description: "The description of the model serving auth token.",
 				Required:    false,
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(1, 2000),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-zA-Z\s.:\/\-]+$`), ""),
+				},
 			},
 			"name": schema.StringAttribute{
 				Description: "Name of the model serving auth token.",
 				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(1, 200),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-zA-Z\s_-]+$`), ""),
+				},
 			},
 			"state": schema.StringAttribute{
 				Description: "State of the model serving auth token.",
 				Computed:    true,
 			},
-			"content": schema.StringAttribute{
+			"token": schema.StringAttribute{
 				Description: "Content of the model serving auth token.",
 				Computed:    true,
+				Sensitive:   true,
 			},
 			"valid_until": schema.StringAttribute{
 				Description: "The time until the model serving auth token is valid.",
@@ -600,7 +611,7 @@ func mapCreateResponse(tokenCreateResp *modelserving.CreateTokenResponse, waitRe
 	model.Name = types.StringPointerValue(token.Name)
 	model.State = types.StringPointerValue(waitResp.Token.State)
 	model.ValidUntil = validUntil
-	model.Content = types.StringPointerValue(token.Content)
+	model.Token = types.StringPointerValue(token.Content)
 	model.Description = types.StringPointerValue(token.Description)
 
 	return nil
@@ -630,7 +641,7 @@ func mapToken(token *modelserving.Token, model, state *Model) error {
 	model.State = types.StringPointerValue(token.State)
 	model.ValidUntil = validUntil
 	model.Description = types.StringPointerValue(token.Description)
-	model.Content = state.Content
+	model.Token = state.Token
 
 	return nil
 }

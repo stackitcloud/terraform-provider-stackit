@@ -199,7 +199,7 @@ func TestMapCreateTokenFields(t *testing.T) {
 				Description:       types.StringValue("desc"),
 				State:             types.StringValue("active"),
 				ValidUntil:        types.StringValue("2099-01-01T00:00:00Z"),
-				Content:           types.StringValue("content"),
+				Token:             types.StringValue("content"),
 				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			isValid: true,
