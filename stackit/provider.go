@@ -98,11 +98,7 @@ func New(version string) func() provider.Provider {
 	}
 }
 
-func (p *Provider) Metadata(
-	_ context.Context,
-	_ provider.MetadataRequest,
-	resp *provider.MetadataResponse,
-) {
+func (p *Provider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "stackit"
 	resp.Version = p.version
 }
@@ -147,11 +143,7 @@ type providerModel struct {
 }
 
 // Schema defines the provider-level schema for configuration data.
-func (p *Provider) Schema(
-	_ context.Context,
-	_ provider.SchemaRequest,
-	resp *provider.SchemaResponse,
-) {
+func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	descriptions := map[string]string{
 		"credentials_path":                   "Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.",
 		"service_account_token":              "Token used for authentication. If set, the token flow will be used to authenticate all operations.",
@@ -347,11 +339,7 @@ func (p *Provider) Schema(
 }
 
 // Configure prepares a stackit API client for data sources and resources.
-func (p *Provider) Configure(
-	ctx context.Context,
-	req provider.ConfigureRequest,
-	resp *provider.ConfigureResponse,
-) {
+func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	// Retrieve provider data and configuration
 	var providerConfig providerModel
 	diags := req.Config.Get(ctx, &providerConfig)
