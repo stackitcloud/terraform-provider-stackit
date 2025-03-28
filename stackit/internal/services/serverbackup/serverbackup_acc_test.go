@@ -22,7 +22,7 @@ var serverBackupScheduleResource = map[string]string{
 	"project_id":           testutil.ProjectId,
 	"server_id":            testutil.ServerId,
 	"backup_schedule_name": testutil.ResourceNameWithDateTime("server-backup-schedule"),
-	"rrule":                "DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1",
+	"rrule":                "DTSTART;TZID=Europe/Berlin:20250325T080000 RRULE:FREQ=DAILY;INTERVAL=1;COUNT=3",
 	"backup_name":          testutil.ResourceNameWithDateTime("server-backup-schedule-backup"),
 }
 
@@ -118,12 +118,14 @@ func TestAccServerBackupScheduleResource(t *testing.T) {
 					data "stackit_server_backup_schedules" "schedules_data_test" {
 						project_id  = stackit_server_backup_schedule.test_schedule.project_id
 						server_id  = stackit_server_backup_schedule.test_schedule.server_id
+						region = stackit_server_backup_schedule.test_schedule.region
 					}
 
 					data "stackit_server_backup_schedule" "schedule_data_test" {
 						project_id  = stackit_server_backup_schedule.test_schedule.project_id
 						server_id  = stackit_server_backup_schedule.test_schedule.server_id
                         backup_schedule_id = stackit_server_backup_schedule.test_schedule.backup_schedule_id
+						region = stackit_server_backup_schedule.test_schedule.region
 					}`,
 					resourceConfig(validRetentionPeriod),
 				),
@@ -156,7 +158,7 @@ func TestAccServerBackupScheduleResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute backup_schedule_id")
 					}
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.ServerId, scheduleId), nil
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, testutil.ServerId, scheduleId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -187,9 +189,7 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 	var client *serverbackup.APIClient
 	var err error
 	if testutil.ServerBackupCustomEndpoint == "" {
-		client, err = serverbackup.NewAPIClient(
-			config.WithRegion("eu01"),
-		)
+		client, err = serverbackup.NewAPIClient()
 	} else {
 		client, err = serverbackup.NewAPIClient(
 			config.WithEndpoint(testutil.ServerBackupCustomEndpoint),
@@ -205,11 +205,11 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 			continue
 		}
 		// server backup schedule terraform ID: "[project_id],[server_id],[backup_schedule_id]"
-		scheduleId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		scheduleId := strings.Split(rs.Primary.ID, core.Separator)[3]
 		schedulesToDestroy = append(schedulesToDestroy, scheduleId)
 	}
 
-	schedulesResp, err := client.ListBackupSchedules(ctx, testutil.ProjectId, testutil.ServerId).Execute()
+	schedulesResp, err := client.ListBackupSchedules(ctx, testutil.ProjectId, testutil.ServerId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting schedulesResp: %w", err)
 	}
@@ -221,7 +221,7 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 		}
 		scheduleId := strconv.FormatInt(*schedules[i].Id, 10)
 		if utils.Contains(schedulesToDestroy, scheduleId) {
-			err := client.DeleteBackupScheduleExecute(ctx, testutil.ProjectId, testutil.ServerId, scheduleId)
+			err := client.DeleteBackupScheduleExecute(ctx, testutil.ProjectId, testutil.ServerId, scheduleId, testutil.Region)
 			if err != nil {
 				return fmt.Errorf("destroying server backup schedule %s during CheckDestroy: %w", scheduleId, err)
 			}

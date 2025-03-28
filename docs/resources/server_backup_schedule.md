@@ -35,6 +35,7 @@ resource "stackit_server_backup_schedule" "example" {
 
 ### Required
 
+- `backup_properties` (Attributes) Backup schedule details for the backups. (see [below for nested schema](#nestedatt--backup_properties))
 - `enabled` (Boolean) Is the backup schedule enabled or disabled.
 - `name` (String) The schedule name.
 - `project_id` (String) STACKIT Project ID to which the server is associated.
@@ -43,12 +44,12 @@ resource "stackit_server_backup_schedule" "example" {
 
 ### Optional
 
-- `backup_properties` (Attributes) Backup schedule details for the backups. (see [below for nested schema](#nestedatt--backup_properties))
+- `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
 
 - `backup_schedule_id` (Number) Backup schedule ID.
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`server_id`,`backup_schedule_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`server_id`,`backup_schedule_id`".
 
 <a id="nestedatt--backup_properties"></a>
 ### Nested Schema for `backup_properties`
@@ -61,3 +62,5 @@ Required:
 Optional:
 
 - `volume_ids` (List of String)
+
+

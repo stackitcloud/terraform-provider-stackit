@@ -29,10 +29,11 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 				Items: &[]sdk.BackupSchedule{},
 			},
 			schedulesDataSourceModel{
-				ID:        types.StringValue("project_uid,server_uid"),
+				ID:        types.StringValue("project_uid,eu01,server_uid"),
 				ProjectId: types.StringValue("project_uid"),
 				ServerId:  types.StringValue("server_uid"),
 				Items:     nil,
+				Region:    types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -54,7 +55,7 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 				},
 			},
 			schedulesDataSourceModel{
-				ID:        types.StringValue("project_uid,server_uid"),
+				ID:        types.StringValue("project_uid,eu01,server_uid"),
 				ServerId:  types.StringValue("server_uid"),
 				ProjectId: types.StringValue("project_uid"),
 				Items: []schedulesDatasourceItemModel{
@@ -70,6 +71,7 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 						},
 					},
 				},
+				Region: types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -87,7 +89,7 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 				ServerId:  tt.expected.ServerId,
 			}
 			ctx := context.TODO()
-			err := mapSchedulesDatasourceFields(ctx, tt.input, state)
+			err := mapSchedulesDatasourceFields(ctx, tt.input, state, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
