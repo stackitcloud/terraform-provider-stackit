@@ -271,14 +271,19 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	region := model.Region.ValueString()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Enable backups if not already enabled
-	err := enableBackupsService(ctx, &model, r.client)
+	err := r.enableBackupsService(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Enabling server backup project before creation: %v", err))
 		return
@@ -322,7 +327,12 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
-	region := model.Region.ValueString()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
@@ -367,7 +377,12 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
-	region := model.Region.ValueString()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
@@ -412,7 +427,12 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
-	region := model.Region.ValueString()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
@@ -427,7 +447,7 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 	tflog.Info(ctx, "Server backup schedule deleted.")
 
 	// Disable backups service in case there are no backups and no backup schedules.
-	err = disableBackupsService(ctx, &model, r.client)
+	err = r.disableBackupsService(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server backup schedule", fmt.Sprintf("Disabling server backup service after deleting schedule: %v", err))
 		return
@@ -504,13 +524,18 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 }
 
 // If already enabled, just continues
-func enableBackupsService(ctx context.Context, model *Model, client *serverbackup.APIClient) error {
+func (r *scheduleResource) enableBackupsService(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	region := model.Region.ValueString()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
 
 	tflog.Debug(ctx, "Enabling server backup service")
-	request := client.EnableServiceResource(ctx, projectId, serverId, region).
+	request := r.client.EnableServiceResource(ctx, projectId, serverId, region).
 		EnableServiceResourcePayload(serverbackup.EnableServiceResourcePayload{})
 
 	if err := request.Execute(); err != nil {
@@ -525,15 +550,20 @@ func enableBackupsService(ctx context.Context, model *Model, client *serverbacku
 }
 
 // Disables only if no backup schedules are present and no backups are present
-func disableBackupsService(ctx context.Context, model *Model, client *serverbackup.APIClient) error {
+func (r *scheduleResource) disableBackupsService(ctx context.Context, model *Model) error {
 	tflog.Debug(ctx, "Disabling server backup service (in case there are no backups and no backup schedules)")
 
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	region := model.Region.ValueString()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
 
 	tflog.Debug(ctx, "Checking for existing backups")
-	backups, err := client.ListBackups(ctx, projectId, serverId, region).Execute()
+	backups, err := r.client.ListBackups(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("list backups: %w", err)
 	}
@@ -542,7 +572,7 @@ func disableBackupsService(ctx context.Context, model *Model, client *serverback
 		return nil
 	}
 
-	err = client.DisableServiceResourceExecute(ctx, projectId, serverId, region)
+	err = r.client.DisableServiceResourceExecute(ctx, projectId, serverId, region)
 	if err != nil {
 		return fmt.Errorf("disable server backup service: %w", err)
 	}

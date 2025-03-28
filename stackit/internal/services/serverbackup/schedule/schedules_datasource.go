@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -37,7 +38,8 @@ func NewSchedulesDataSource() datasource.DataSource {
 
 // schedulesDataSource is the data source implementation.
 type schedulesDataSource struct {
-	client *serverbackup.APIClient
+	client       *serverbackup.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -52,14 +54,15 @@ func (r *schedulesDataSource) Configure(ctx context.Context, req datasource.Conf
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
 	if !schedulesDataSourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_server_backup_schedules", "data source")
+		features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_server_backup_schedules", "data source")
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -68,15 +71,15 @@ func (r *schedulesDataSource) Configure(ctx context.Context, req datasource.Conf
 
 	var apiClient *serverbackup.APIClient
 	var err error
-	if providerData.ServerBackupCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "server_backup_custom_endpoint", providerData.ServerBackupCustomEndpoint)
+	if r.providerData.ServerBackupCustomEndpoint != "" {
+		ctx = tflog.SetField(ctx, "server_backup_custom_endpoint", r.providerData.ServerBackupCustomEndpoint)
 		apiClient, err = serverbackup.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ServerBackupCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.ServerBackupCustomEndpoint),
 		)
 	} else {
 		apiClient, err = serverbackup.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 
@@ -190,7 +193,12 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	region := model.Region.ValueString()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
