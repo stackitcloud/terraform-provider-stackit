@@ -23,7 +23,7 @@ func TestMapFields(t *testing.T) {
 				Id: utils.Ptr(int64(5)),
 			},
 			Model{
-				ID:               types.StringValue("project_uid,server_uid,5"),
+				ID:               types.StringValue("project_uid,eu01,server_uid,5"),
 				ProjectId:        types.StringValue("project_uid"),
 				ServerId:         types.StringValue("server_uid"),
 				BackupScheduleId: types.Int64Value(5),
@@ -47,7 +47,7 @@ func TestMapFields(t *testing.T) {
 				ServerId:         types.StringValue("server_uid"),
 				ProjectId:        types.StringValue("project_uid"),
 				BackupScheduleId: types.Int64Value(5),
-				ID:               types.StringValue("project_uid,server_uid,5"),
+				ID:               types.StringValue("project_uid,eu01,server_uid,5"),
 				Name:             types.StringValue("backup_schedule_name_1"),
 				Rrule:            types.StringValue("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
 				Enabled:          types.BoolValue(true),
@@ -56,6 +56,7 @@ func TestMapFields(t *testing.T) {
 					RetentionPeriod: types.Int64Value(3),
 					VolumeIds:       listValueFrom([]string{"uuid1", "uuid2"}),
 				},
+				Region: types.StringValue("eu01"),
 			},
 			true,
 		},
@@ -79,7 +80,7 @@ func TestMapFields(t *testing.T) {
 				ServerId:  tt.expected.ServerId,
 			}
 			ctx := context.TODO()
-			err := mapFields(ctx, tt.input, state)
+			err := mapFields(ctx, tt.input, state, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

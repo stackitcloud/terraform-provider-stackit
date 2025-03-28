@@ -14,6 +14,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
@@ -38,7 +39,8 @@ func NewScheduleDataSource() datasource.DataSource {
 
 // scheduleDataSource is the data source implementation.
 type scheduleDataSource struct {
-	client *serverbackup.APIClient
+	client       *serverbackup.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -53,14 +55,15 @@ func (r *scheduleDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
 	if !scheduleDataSourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_server_backup_schedule", "data source")
+		features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_server_backup_schedule", "data source")
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -69,16 +72,15 @@ func (r *scheduleDataSource) Configure(ctx context.Context, req datasource.Confi
 
 	var apiClient *serverbackup.APIClient
 	var err error
-	if providerData.ServerBackupCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "server_backup_custom_endpoint", providerData.ServerBackupCustomEndpoint)
+	if r.providerData.ServerBackupCustomEndpoint != "" {
+		ctx = tflog.SetField(ctx, "server_backup_custom_endpoint", r.providerData.ServerBackupCustomEndpoint)
 		apiClient, err = serverbackup.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ServerBackupCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.ServerBackupCustomEndpoint),
 		)
 	} else {
 		apiClient, err = serverbackup.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 
@@ -149,6 +151,11 @@ func (r *scheduleDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					},
 				},
 			},
+			"region": schema.StringAttribute{
+				// the region cannot be found, so it has to be passed
+				Optional:    true,
+				Description: "The resource region. If not defined, the provider region is used.",
+			},
 		},
 	}
 }
@@ -164,11 +171,19 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "backup_schedule_id", backupScheduleId)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	scheduleResp, err := r.client.GetBackupSchedule(ctx, projectId, serverId, strconv.FormatInt(backupScheduleId, 10)).Execute()
+	scheduleResp, err := r.client.GetBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(backupScheduleId, 10)).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -179,7 +194,7 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, scheduleResp, &model)
+	err = mapFields(ctx, scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server backup schedule", fmt.Sprintf("Processing API payload: %v", err))
 		return

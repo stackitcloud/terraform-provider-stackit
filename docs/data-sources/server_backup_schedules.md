@@ -30,6 +30,10 @@ data "stackit_server_backup_schedules" "example" {
 - `project_id` (String) STACKIT Project ID (UUID) to which the server is associated.
 - `server_id` (String) Server ID (UUID) to which the backup schedule is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `id` (String) Terraform's internal data source identifier. It is structured as "`project_id`,`server_id`".
@@ -54,3 +58,5 @@ Read-Only:
 - `name` (String)
 - `retention_period` (Number)
 - `volume_ids` (List of String)
+
+

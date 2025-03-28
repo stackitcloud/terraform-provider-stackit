@@ -32,6 +32,10 @@ data "stackit_server_backup_schedule" "example" {
 - `project_id` (String) STACKIT Project ID to which the server is associated.
 - `server_id` (String) Server ID for the backup schedule.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `backup_properties` (Attributes) Backup schedule details for the backups. (see [below for nested schema](#nestedatt--backup_properties))
@@ -48,3 +52,5 @@ Read-Only:
 - `name` (String)
 - `retention_period` (Number)
 - `volume_ids` (List of String)
+
+
