@@ -769,3 +769,79 @@ func TestFileExists(t *testing.T) {
 		})
 	}
 }
+
+func TestValidTtlDuration(t *testing.T) {
+	tests := []struct {
+		description string
+		input       string
+		isValid     bool
+	}{
+		{
+			"valid duration with hours, minutes, and seconds",
+			"5h30m40s",
+			true,
+		},
+		{
+			"valid duration with hours only",
+			"5h",
+			true,
+		},
+		{
+			"valid duration with hours and minutes",
+			"5h30m",
+			true,
+		},
+		{
+			"valid duration with minutes only",
+			"30m",
+			true,
+		},
+		{
+			"valid duration with seconds only",
+			"30s",
+			true,
+		},
+		{
+			"invalid duration with incorrect unit",
+			"30o",
+			false,
+		},
+		{
+			"invalid duration without unit",
+			"30",
+			false,
+		},
+		{
+			"invalid duration with invalid letters",
+			"30e",
+			false,
+		},
+		{
+			"invalid duration with letters in middle",
+			"1h30x",
+			false,
+		},
+		{
+			"empty string",
+			"",
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			r := validator.StringResponse{}
+			va := ValidDurationString()
+			va.ValidateString(context.Background(), validator.StringRequest{
+				ConfigValue: types.StringValue(tt.input),
+			}, &r)
+
+			if !tt.isValid && !r.Diagnostics.HasError() {
+				t.Fatalf("Expected validation to fail for input: %v", tt.input)
+			}
+			if tt.isValid && r.Diagnostics.HasError() {
+				t.Fatalf("Expected validation to succeed for input: %v, but got errors: %v", tt.input, r.Diagnostics.Errors())
+			}
+		})
+	}
+}

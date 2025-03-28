@@ -42,6 +42,7 @@ import (
 	logMeInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/instance"
 	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
 	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
+	modelServingToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelserving/token"
 	mongoDBFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/instance"
 	mongoDBFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/user"
 	objectStorageBucket "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/bucket"
@@ -118,6 +119,7 @@ type providerModel struct {
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
 	PostgresFlexCustomEndpoint      types.String `tfsdk:"postgresflex_custom_endpoint"`
 	MongoDBFlexCustomEndpoint       types.String `tfsdk:"mongodbflex_custom_endpoint"`
+	ModelServingCustomEndpoint      types.String `tfsdk:"modelserving_custom_endpoint"`
 	LoadBalancerCustomEndpoint      types.String `tfsdk:"loadbalancer_custom_endpoint"`
 	LogMeCustomEndpoint             types.String `tfsdk:"logme_custom_endpoint"`
 	RabbitMQCustomEndpoint          types.String `tfsdk:"rabbitmq_custom_endpoint"`
@@ -156,6 +158,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"dns_custom_endpoint":                "Custom endpoint for the DNS service",
 		"iaas_custom_endpoint":               "Custom endpoint for the IaaS service",
 		"mongodbflex_custom_endpoint":        "Custom endpoint for the MongoDB Flex service",
+		"modelserving_custom_endpoint":       "Custom endpoint for the Model Serving service",
 		"loadbalancer_custom_endpoint":       "Custom endpoint for the Load Balancer service",
 		"logme_custom_endpoint":              "Custom endpoint for the LogMe service",
 		"rabbitmq_custom_endpoint":           "Custom endpoint for the RabbitMQ service",
@@ -245,6 +248,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"mariadb_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["mariadb_custom_endpoint"],
+			},
+			"modelserving_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["modelserving_custom_endpoint"],
 			},
 			"authorization_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -375,6 +382,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	}
 	if !(providerConfig.PostgresFlexCustomEndpoint.IsUnknown() || providerConfig.PostgresFlexCustomEndpoint.IsNull()) {
 		providerData.PostgresFlexCustomEndpoint = providerConfig.PostgresFlexCustomEndpoint.ValueString()
+	}
+	if !(providerConfig.ModelServingCustomEndpoint.IsUnknown() || providerConfig.ModelServingCustomEndpoint.IsNull()) {
+		providerData.ModelServingCustomEndpoint = providerConfig.ModelServingCustomEndpoint.ValueString()
 	}
 	if !(providerConfig.MongoDBFlexCustomEndpoint.IsUnknown() || providerConfig.MongoDBFlexCustomEndpoint.IsNull()) {
 		providerData.MongoDBFlexCustomEndpoint = providerConfig.MongoDBFlexCustomEndpoint.ValueString()
@@ -537,6 +547,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		logMeCredential.NewCredentialResource,
 		mariaDBInstance.NewInstanceResource,
 		mariaDBCredential.NewCredentialResource,
+		modelServingToken.NewTokenResource,
 		mongoDBFlexInstance.NewInstanceResource,
 		mongoDBFlexUser.NewUserResource,
 		objectStorageBucket.NewBucketResource,

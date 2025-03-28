@@ -295,3 +295,21 @@ func FileExists() *Validator {
 		},
 	}
 }
+
+func ValidDurationString() *Validator {
+	description := "value must be in a valid duration string. Such as \"300ms\", \"-1.5h\" or \"2h45m\".\nValid time units are \"ns\", \"us\" (or \"µs\"), \"ms\", \"s\", \"m\", \"h\"."
+
+	return &Validator{
+		description: description,
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			_, err := time.ParseDuration(req.ConfigValue.ValueString())
+			if err != nil {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
