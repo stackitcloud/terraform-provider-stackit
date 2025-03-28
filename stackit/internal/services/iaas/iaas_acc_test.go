@@ -2,7 +2,9 @@ package iaas_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,8 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -32,8 +36,9 @@ var networkResource = map[string]string{
 	"nameserver0":        "1.2.3.4",
 	"nameserver1":        "5.6.7.8",
 	"ipv4_gateway":       "10.1.2.1",
-	"ipv4_prefix":        "10.1.2.1/24",
+	"ipv4_prefix":        "10.1.2.0/24",
 	"routed":             "false",
+	"name_updated":       fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 }
 
 var networkAreaResource = map[string]string{
@@ -442,6 +447,102 @@ func testAccImageConfig(name string) string {
 		testutil.IaaSProviderConfig(),
 		imageResourceConfig(name),
 	)
+}
+
+func TestAccNetwork(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckNetworkDestroy,
+		Steps: []resource.TestStep{
+
+			// Creation
+			{
+				Config: networkResourceConfig(
+					networkResource["name"],
+					fmt.Sprintf("[%q, %q]",
+						networkResource["nameserver0"],
+						networkResource["nameserver1"]),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
+					resource.TestCheckResourceAttr("stackit_network.network", "name", networkResource["name"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.#", "2"),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.0", networkResource["nameserver0"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.1", networkResource["nameserver1"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_prefix", networkResource["ipv4_prefix"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_prefix_length", networkResource["ipv4_prefix_length"]),
+				),
+			},
+			// Data source
+			{
+				Config: fmt.Sprintf(`
+					%s
+
+					data "stackit_network" "network" {
+						project_id  = "%s"
+						network_id  = stackit_network.network.network_id
+					}
+					`, networkResourceConfig(
+					networkResource["name"],
+					fmt.Sprintf("[%q, %q]",
+						networkResource["nameserver0"],
+						networkResource["nameserver1"]),
+				),
+					testutil.ProjectId,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("data.stackit_network.network", "network_id"),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "name", networkResource["name"]),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_nameservers.#", "2"),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_nameservers.0", networkResource["nameserver0"]),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_nameservers.1", networkResource["nameserver1"]),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_prefix", networkResource["ipv4_prefix"]),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_prefix_length", networkResource["ipv4_prefix_length"]),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_prefixes.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_prefixes.0", networkResource["ipv4_prefix"]),
+					resource.TestCheckResourceAttr("data.stackit_network.network", "routed", networkResource["routed"]),
+				),
+			},
+
+			// Import
+			{
+				ResourceName: "stackit_network.network",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_network.network"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_network.network")
+					}
+					networkId, ok := r.Primary.Attributes["network_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, networkId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+
+			// Update
+			{
+				Config: networkResourceConfig(
+					networkResource["name_updated"],
+					fmt.Sprintf("[%q, %q]",
+						networkResource["nameserver0"],
+						networkResource["nameserver1"]),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
+					resource.TestCheckResourceAttr("stackit_network.network", "name", networkResource["name_updated"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.#", "2"),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_prefix", networkResource["ipv4_prefix"]),
+					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_prefix_length", networkResource["ipv4_prefix_length"])),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
 }
 
 func TestAccNetworkArea(t *testing.T) {
@@ -1555,6 +1656,49 @@ func TestAccImage(t *testing.T) {
 			// Deletion is done by the framework implicitly
 		},
 	})
+}
+
+func testAccCheckNetworkDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var client *iaas.APIClient
+	var err error
+	if testutil.IaaSCustomEndpoint == "" {
+		client, err = iaas.NewAPIClient(
+			config.WithRegion("eu01"),
+		)
+	} else {
+		client, err = iaas.NewAPIClient(
+			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	var errs []error
+	// networks
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_network" {
+			continue
+		}
+		networkId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		err := client.DeleteNetworkExecute(ctx, testutil.ProjectId, networkId)
+		if err != nil {
+			var oapiErr *oapierror.GenericOpenAPIError
+			if errors.As(err, &oapiErr) {
+				if oapiErr.StatusCode == http.StatusNotFound {
+					continue
+				}
+			}
+			errs = append(errs, fmt.Errorf("cannot trigger network deletion %q: %w", networkId, err))
+		}
+		_, err = wait.DeleteNetworkWaitHandler(ctx, client, testutil.ProjectId, networkId).WaitWithContext(ctx)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("cannot delete network %q: %w", networkId, err))
+		}
+	}
+
+	return errors.Join(errs...)
 }
 
 func testAccCheckNetworkAreaDestroy(s *terraform.State) error {

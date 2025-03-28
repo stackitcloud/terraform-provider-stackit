@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 
@@ -147,8 +148,9 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				ElementType: types.StringType,
 			},
 			"ipv4_prefix": schema.StringAttribute{
-				Description: "The IPv4 prefix of the network (CIDR).",
-				Computed:    true,
+				Description:        "The IPv4 prefix of the network (CIDR).",
+				DeprecationMessage: "The API supports reading multiple prefixes. So using the attribute 'ipv4_prefixes` should be preferred. This attribute will be populated with the first element from the list",
+				Computed:           true,
 			},
 			"ipv4_prefix_length": schema.Int64Attribute{
 				Description: "The IPv4 prefix length of the network.",
@@ -175,8 +177,9 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				ElementType: types.StringType,
 			},
 			"ipv6_prefix": schema.StringAttribute{
-				Description: "The IPv6 prefix of the network (CIDR).",
-				Computed:    true,
+				Description:        "The IPv6 prefix of the network (CIDR).",
+				DeprecationMessage: "The API supports reading multiple prefixes. So using the attribute 'ipv6_prefixes` should be preferred. This attribute will be populated with the first element from the list",
+				Computed:           true,
 			},
 			"ipv6_prefix_length": schema.Int64Attribute{
 				Description: "The IPv6 prefix length of the network.",
@@ -321,6 +324,17 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 		if diags.HasError() {
 			return fmt.Errorf("map network prefixes: %w", core.DiagsToError(diags))
 		}
+		if len(respPrefixes) > 0 {
+			model.IPv4Prefix = types.StringValue(respPrefixes[0])
+			_, netmask, err := net.ParseCIDR(respPrefixes[0])
+			if err != nil {
+				// silently ignore parsing error for the netmask
+				model.IPv4PrefixLength = types.Int64Null()
+			} else {
+				ones, _ := netmask.Mask.Size()
+				model.IPv4PrefixLength = types.Int64Value(int64(ones))
+			}
+		}
 
 		model.Prefixes = prefixesTF
 		model.IPv4Prefixes = prefixesTF
@@ -361,7 +375,17 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 		if diags.HasError() {
 			return fmt.Errorf("map network IPv6 prefixes: %w", core.DiagsToError(diags))
 		}
-
+		if len(respPrefixesV6) > 0 {
+			model.IPv6Prefix = types.StringValue(respPrefixesV6[0])
+			_, netmask, err := net.ParseCIDR(respPrefixesV6[0])
+			if err != nil {
+				// silently ignore parsing error for the netmask
+				model.IPv6PrefixLength = types.Int64Null()
+			} else {
+				ones, _ := netmask.Mask.Size()
+				model.IPv6PrefixLength = types.Int64Value(int64(ones))
+			}
+		}
 		model.IPv6Prefixes = prefixesV6TF
 	}
 
