@@ -733,6 +733,7 @@ func TestAccServer(t *testing.T) {
 					// The network interface which was attached by "stackit_server_network_interface_attach" should not appear here
 					resource.TestCheckResourceAttr("stackit_server.server", "network_interfaces.#", "1"),
 					resource.TestCheckNoResourceAttr("stackit_server.server", "network_interfaces.1"),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.id"),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.size", serverResource["size"]),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", serverResource["source_type"]),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_id", serverResource["source_id"]),
@@ -871,6 +872,9 @@ func TestAccServer(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_interface_id"),
 					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "name", networkInterfaceResource["name"]),
+					// Boot volume
+					resource.TestCheckResourceAttrSet("data.stackit_server.server", "boot_volume.id"),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "boot_volume.delete_on_termination", serverResource["delete_on_termination"]),
 				),
 			},
 			// Import
@@ -1028,8 +1032,8 @@ func TestAccServer(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
 					resource.TestCheckResourceAttr("stackit_network.network", "name", fmt.Sprintf("%s-updated", networkResource["name"])),
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.#", "2"),
-					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
-					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.1", networkResource["nameserver1"]),
+					resource.TestCheckTypeSetElemAttr("stackit_network.network", "nameservers.*", networkResource["nameserver0"]),
+					resource.TestCheckTypeSetElemAttr("stackit_network.network", "nameservers.*", networkResource["nameserver1"]),
 					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
 
 					// Server

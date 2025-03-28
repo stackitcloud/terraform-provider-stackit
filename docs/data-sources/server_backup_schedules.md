@@ -58,5 +58,3 @@ Read-Only:
 - `name` (String)
 - `retention_period` (Number)
 - `volume_ids` (List of String)
-
-

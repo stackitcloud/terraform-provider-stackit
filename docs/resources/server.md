@@ -410,3 +410,7 @@ Optional:
 - `delete_on_termination` (Boolean) Delete the volume during the termination of the server. Only allowed when `source_type` is `image`.
 - `performance_class` (String) The performance class of the server.
 - `size` (Number) The size of the boot volume in GB. Must be provided when `source_type` is `image`.
+
+Read-Only:
+
+- `id` (String) The ID of the boot volume
