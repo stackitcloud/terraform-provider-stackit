@@ -1032,8 +1032,8 @@ func TestAccServer(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
 					resource.TestCheckResourceAttr("stackit_network.network", "name", fmt.Sprintf("%s-updated", networkResource["name"])),
 					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.#", "2"),
-					resource.TestCheckTypeSetElemAttr("stackit_network.network", "nameservers", networkResource["nameserver0"]),
-					resource.TestCheckTypeSetElemAttr("stackit_network.network", "nameservers", networkResource["nameserver1"]),
+					resource.TestCheckTypeSetElemAttr("stackit_network.network", "nameservers.*", networkResource["nameserver0"]),
+					resource.TestCheckTypeSetElemAttr("stackit_network.network", "nameservers.*", networkResource["nameserver1"]),
 					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
 
 					// Server
