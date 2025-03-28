@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -18,7 +19,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -44,6 +44,11 @@ type DataSourceModel struct {
 	CreatedAt         types.String `tfsdk:"created_at"`
 	LaunchedAt        types.String `tfsdk:"launched_at"`
 	UpdatedAt         types.String `tfsdk:"updated_at"`
+}
+
+var bootVolumeDataTypes = map[string]attr.Type{
+	"id":                    basetypes.StringType{},
+	"delete_on_termination": basetypes.BoolType{},
 }
 
 // NewServerDataSource is a helper function to simplify the provider implementation.
@@ -139,20 +144,8 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Description: "The boot volume for the server",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
-					"performance_class": schema.StringAttribute{
-						Description: "The performance class of the server.",
-						Computed:    true,
-					},
-					"size": schema.Int64Attribute{
-						Description: "The size of the boot volume in GB.",
-						Computed:    true,
-					},
-					"type": schema.StringAttribute{
-						Description: "The type of the source. " + utils.SupportedValuesDocumentation(supportedSourceTypes),
-						Computed:    true,
-					},
 					"id": schema.StringAttribute{
-						Description: "The ID of the source, either image ID or volume ID",
+						Description: "The ID of the boot volume",
 						Computed:    true,
 					},
 					"delete_on_termination": schema.BoolAttribute{
@@ -310,6 +303,19 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 		model.NetworkInterfaces = nicTF
 	} else {
 		model.NetworkInterfaces = types.ListNull(types.StringType)
+	}
+
+	if serverResp.BootVolume != nil {
+		bootVolume, diags := types.ObjectValue(bootVolumeDataTypes, map[string]attr.Value{
+			"id":                    types.StringPointerValue(serverResp.BootVolume.Id),
+			"delete_on_termination": types.BoolPointerValue(serverResp.BootVolume.DeleteOnTermination),
+		})
+		if diags.HasError() {
+			return fmt.Errorf("failed to map bootVolume: %w", core.DiagsToError(diags))
+		}
+		model.BootVolume = bootVolume
+	} else {
+		model.BootVolume = types.ObjectNull(bootVolumeDataTypes)
 	}
 
 	model.AvailabilityZone = types.StringPointerValue(serverResp.AvailabilityZone)

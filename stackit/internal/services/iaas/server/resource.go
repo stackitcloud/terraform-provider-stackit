@@ -75,6 +75,7 @@ type Model struct {
 
 // Struct corresponding to Model.BootVolume
 type bootVolumeModel struct {
+	Id                  types.String `tfsdk:"id"`
 	PerformanceClass    types.String `tfsdk:"performance_class"`
 	Size                types.Int64  `tfsdk:"size"`
 	SourceType          types.String `tfsdk:"source_type"`
@@ -89,6 +90,7 @@ var bootVolumeTypes = map[string]attr.Type{
 	"source_type":           basetypes.StringType{},
 	"source_id":             basetypes.StringType{},
 	"delete_on_termination": basetypes.BoolType{},
+	"id":                    basetypes.StringType{},
 }
 
 // NewServerResource is a helper function to simplify the provider implementation.
@@ -253,6 +255,13 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					objectplanmodifier.RequiresReplace(),
 				},
 				Attributes: map[string]schema.Attribute{
+					"id": schema.StringAttribute{
+						Description: "The ID of the boot volume",
+						Computed:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
+					},
 					"performance_class": schema.StringAttribute{
 						Description: "The performance class of the server.",
 						Optional:    true,
@@ -909,6 +918,34 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 		}
 	} else {
 		model.NetworkInterfaces = types.ListNull(types.StringType)
+	}
+
+	if serverResp.BootVolume != nil {
+		// convert boot volume model
+		var bootVolumeModel = &bootVolumeModel{}
+		if !(model.BootVolume.IsNull() || model.BootVolume.IsUnknown()) {
+			diags := model.BootVolume.As(ctx, bootVolumeModel, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return fmt.Errorf("failed to map bootVolume: %w", core.DiagsToError(diags))
+			}
+		}
+
+		// Only the id and delete_on_termination is returned via response.
+		// Take the other values from the model.
+		bootVolume, diags := types.ObjectValue(bootVolumeTypes, map[string]attr.Value{
+			"id":                    types.StringPointerValue(serverResp.BootVolume.Id),
+			"delete_on_termination": types.BoolPointerValue(serverResp.BootVolume.DeleteOnTermination),
+			"source_id":             bootVolumeModel.SourceId,
+			"size":                  bootVolumeModel.Size,
+			"source_type":           bootVolumeModel.SourceType,
+			"performance_class":     bootVolumeModel.PerformanceClass,
+		})
+		if diags.HasError() {
+			return fmt.Errorf("failed to map bootVolume: %w", core.DiagsToError(diags))
+		}
+		model.BootVolume = bootVolume
+	} else {
+		model.BootVolume = types.ObjectNull(bootVolumeTypes)
 	}
 
 	model.ServerId = types.StringValue(serverId)
