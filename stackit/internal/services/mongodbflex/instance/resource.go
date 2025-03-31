@@ -386,6 +386,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	if createResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "API response is empty")
+		return
+	}
+	if createResp.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "API response does not contain instance id")
+		return
+	}
 	instanceId := *createResp.Id
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	diags = resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)
