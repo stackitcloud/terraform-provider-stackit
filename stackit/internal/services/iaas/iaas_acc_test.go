@@ -35,8 +35,8 @@ var networkResource = map[string]string{
 	"ipv4_prefix_length": "24",
 	"nameserver0":        "1.2.3.4",
 	"nameserver1":        "5.6.7.8",
-	"ipv4_gateway":       "10.1.2.1",
-	"ipv4_prefix":        "10.1.2.0/24",
+	"ipv4_gateway":       "10.2.2.1",
+	"ipv4_prefix":        "10.2.2.0/24",
 	"routed":             "false",
 	"name_updated":       fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 }
