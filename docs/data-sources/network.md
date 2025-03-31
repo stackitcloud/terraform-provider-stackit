@@ -32,12 +32,12 @@ data "stackit_network" "example" {
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`network_id`".
 - `ipv4_gateway` (String) The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.
 - `ipv4_nameservers` (List of String) The IPv4 nameservers of the network.
-- `ipv4_prefix` (String) The IPv4 prefix of the network (CIDR).
+- `ipv4_prefix` (String, Deprecated) The IPv4 prefix of the network (CIDR).
 - `ipv4_prefix_length` (Number) The IPv4 prefix length of the network.
 - `ipv4_prefixes` (List of String) The IPv4 prefixes of the network.
 - `ipv6_gateway` (String) The IPv6 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.
 - `ipv6_nameservers` (List of String) The IPv6 nameservers of the network.
-- `ipv6_prefix` (String) The IPv6 prefix of the network (CIDR).
+- `ipv6_prefix` (String, Deprecated) The IPv6 prefix of the network (CIDR).
 - `ipv6_prefix_length` (Number) The IPv6 prefix length of the network.
 - `ipv6_prefixes` (List of String) The IPv6 prefixes of the network.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
