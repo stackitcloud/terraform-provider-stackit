@@ -1,8 +1,8 @@
-Model Serving Auth Token Resource schema.
+AI Model Serving Auth Token Resource schema.
 
 ## Example Usage
 
-### Automatically rotate model serving token
+### Automatically rotate AI model serving token
 ```terraform
 resource "time_rotating" "rotate" {
     rotation_days = 80

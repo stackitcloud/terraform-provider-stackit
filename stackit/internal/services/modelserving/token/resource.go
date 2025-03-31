@@ -199,7 +199,7 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
-				Description: "STACKIT project ID to which the model serving auth token is associated.",
+				Description: "STACKIT project ID to which the AI model serving auth token is associated.",
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -210,13 +210,13 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional: true,
 				// must be computed to allow for storing the override value from the provider
 				Computed:    true,
-				Description: "Region to which the model serving auth token is associated. If not defined, the provider region is used",
+				Description: "Region to which the AI model serving auth token is associated. If not defined, the provider region is used",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"token_id": schema.StringAttribute{
-				Description: "The model serving auth token ID.",
+				Description: "The AI model serving auth token ID.",
 				Computed:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -224,7 +224,7 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"ttl_duration": schema.StringAttribute{
-				Description: "The TTL duration of the model serving auth token. E.g. 5h30m40s,5h,5h30m,30m,30s",
+				Description: "The TTL duration of the AI model serving auth token. E.g. 5h30m40s,5h,5h30m,30m,30s",
 				Required:    false,
 				Optional:    true,
 				PlanModifiers: []planmodifier.String{
@@ -247,7 +247,7 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"description": schema.StringAttribute{
-				Description: "The description of the model serving auth token.",
+				Description: "The description of the AI model serving auth token.",
 				Required:    false,
 				Optional:    true,
 				Validators: []validator.String{
@@ -255,23 +255,23 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"name": schema.StringAttribute{
-				Description: "Name of the model serving auth token.",
+				Description: "Name of the AI model serving auth token.",
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(1, 200),
 				},
 			},
 			"state": schema.StringAttribute{
-				Description: "State of the model serving auth token.",
+				Description: "State of the AI model serving auth token.",
 				Computed:    true,
 			},
 			"token": schema.StringAttribute{
-				Description: "Content of the model serving auth token.",
+				Description: "Content of the AI model serving auth token.",
 				Computed:    true,
 				Sensitive:   true,
 			},
 			"valid_until": schema.StringAttribute{
-				Description: "The time until the model serving auth token is valid.",
+				Description: "The time until the AI model serving auth token is valid.",
 				Computed:    true,
 			},
 		},
@@ -300,14 +300,14 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// If model serving is not enabled, enable it
+	// If AI model serving is not enabled, enable it
 	err := r.serviceEnablementClient.EnableServiceRegional(ctx, region, projectId, utils.ModelServingServiceId).
 		Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
-				core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling model serving",
+				core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling AI model serving",
 					fmt.Sprintf("Service not available in region %s \n%v", region, err),
 				)
 				return
@@ -316,8 +316,8 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,
-			"Error enabling model serving",
-			fmt.Sprintf("Error enabling model serving: %v", err),
+			"Error enabling AI model serving",
+			fmt.Sprintf("Error enabling AI model serving: %v", err),
 		)
 		return
 	}
@@ -328,8 +328,8 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,
-			"Error enabling model serving",
-			fmt.Sprintf("Error enabling model serving: %v", err),
+			"Error enabling AI model serving",
+			fmt.Sprintf("Error enabling AI model serving: %v", err),
 		)
 		return
 	}
@@ -337,11 +337,11 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating model serving auth token", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model serving auth token", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
-	// Create new model serving auth token
+	// Create new AI model serving auth token
 	createTokenResp, err := r.client.CreateToken(ctx, region, projectId).
 		CreateTokenPayload(*payload).
 		Execute()
@@ -349,7 +349,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,
-			"Error creating model serving auth token",
+			"Error creating AI model serving auth token",
 			fmt.Sprintf("Calling API: %v", err),
 		)
 		return
@@ -357,14 +357,14 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	waitResp, err := wait.CreateModelServingWaitHandler(ctx, r.client, region, projectId, *createTokenResp.Token.Id).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating model serving auth token", fmt.Sprintf("Waiting for token to be active: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model serving auth token", fmt.Sprintf("Waiting for token to be active: %v", err))
 		return
 	}
 
 	// Map response body to schema
 	err = mapCreateResponse(createTokenResp, waitResp, &model, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -413,21 +413,21 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 			}
 		}
 
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading model serving auth token", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI model serving auth token", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	if getTokenResp != nil && getTokenResp.Token.State != nil &&
 		*getTokenResp.Token.State == inactiveState {
 		resp.State.RemoveResource(ctx)
-		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Error reading model serving auth token", "Model serving auth token has expired")
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Error reading AI model serving auth token", "AI model serving auth token has expired")
 		return
 	}
 
 	// Map response body to schema
 	err = mapGetResponse(getTokenResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -476,11 +476,11 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Generate API request body from model
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating model serving auth token", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model serving auth token", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
-	// Update model serving auth token
+	// Update AI model serving auth token
 	updateTokenResp, err := r.client.PartialUpdateToken(ctx, region, projectId, tokenId).PartialUpdateTokenPayload(*payload).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -495,7 +495,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,
-			"Error updating model serving auth token",
+			"Error updating AI model serving auth token",
 			fmt.Sprintf(
 				"Calling API: %v, tokenId: %s, region: %s, projectId: %s",
 				err,
@@ -510,13 +510,13 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	if updateTokenResp != nil && updateTokenResp.Token.State != nil &&
 		*updateTokenResp.Token.State == inactiveState {
 		resp.State.RemoveResource(ctx)
-		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Error updating model serving auth token", "Model serving auth token has expired")
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Error updating AI model serving auth token", "AI model serving auth token has expired")
 		return
 	}
 
 	waitResp, err := wait.UpdateModelServingWaitHandler(ctx, r.client, region, projectId, tokenId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating model serving auth token", fmt.Sprintf("Waiting for token to be updated: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model serving auth token", fmt.Sprintf("Waiting for token to be updated: %v", err))
 		return
 	}
 
@@ -524,7 +524,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	model.Token = state.Token
 	err = mapGetResponse(waitResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -561,7 +561,7 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = tflog.SetField(ctx, "token_id", tokenId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// Delete existing model serving auth token. We will ignore the state 'deleting' for now.
+	// Delete existing AI model serving auth token. We will ignore the state 'deleting' for now.
 	_, err := r.client.DeleteToken(ctx, region, projectId, tokenId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -572,14 +572,14 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 			}
 		}
 
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting model serving auth token", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model serving auth token", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	_, err = wait.DeleteModelServingWaitHandler(ctx, r.client, region, projectId, tokenId).
 		WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting model serving auth token", fmt.Sprintf("Waiting for token to be deleted: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model serving auth token", fmt.Sprintf("Waiting for token to be deleted: %v", err))
 		return
 	}
 
