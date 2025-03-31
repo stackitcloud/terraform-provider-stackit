@@ -38,7 +38,11 @@ resource "stackit_server_update_schedule" "example" {
 - `rrule` (String) Update schedule described in `rrule` (recurrence rule) format.
 - `server_id` (String) Server ID for the update schedule.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`server_id`,`update_schedule_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`server_id`,`update_schedule_id`".
 - `update_schedule_id` (Number) Update schedule ID.

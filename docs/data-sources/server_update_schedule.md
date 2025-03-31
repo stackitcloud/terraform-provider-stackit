@@ -32,10 +32,14 @@ data "stackit_server_update_schedule" "example" {
 - `server_id` (String) Server ID for the update schedule.
 - `update_schedule_id` (Number) Update schedule ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `enabled` (Boolean) Is the update schedule enabled or disabled.
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`server_id`,`update_schedule_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`server_id`,`update_schedule_id`".
 - `maintenance_window` (Number) Maintenance window [1..24].
 - `name` (String) The schedule name.
 - `rrule` (String) Update schedule described in `rrule` (recurrence rule) format.

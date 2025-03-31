@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -37,7 +38,8 @@ func NewScheduleDataSource() datasource.DataSource {
 
 // scheduleDataSource is the data source implementation.
 type scheduleDataSource struct {
-	client *serverupdate.APIClient
+	client       *serverupdate.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -52,14 +54,15 @@ func (r *scheduleDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	var ok bool
+	r.providerData, ok = req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
 	if !scheduleDataSourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_server_update_schedule", "data source")
+		features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_server_update_schedule", "data source")
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -68,16 +71,15 @@ func (r *scheduleDataSource) Configure(ctx context.Context, req datasource.Confi
 
 	var apiClient *serverupdate.APIClient
 	var err error
-	if providerData.ServerUpdateCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "server_update_custom_endpoint", providerData.ServerUpdateCustomEndpoint)
+	if r.providerData.ServerUpdateCustomEndpoint != "" {
+		ctx = tflog.SetField(ctx, "server_update_custom_endpoint", r.providerData.ServerUpdateCustomEndpoint)
 		apiClient, err = serverupdate.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ServerUpdateCustomEndpoint),
+			config.WithCustomAuth(r.providerData.RoundTripper),
+			config.WithEndpoint(r.providerData.ServerUpdateCustomEndpoint),
 		)
 	} else {
 		apiClient, err = serverupdate.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
+			config.WithCustomAuth(r.providerData.RoundTripper),
 		)
 	}
 
@@ -97,7 +99,7 @@ func (r *scheduleDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		MarkdownDescription: features.AddBetaDescription("Server update schedule datasource schema. Must have a `region` specified in the provider configuration."),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`server_id`,`update_schedule_id`\".",
+				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`server_id`,`update_schedule_id`\".",
 				Computed:    true,
 			},
 			"name": schema.StringAttribute{
@@ -136,6 +138,11 @@ func (r *scheduleDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: "Maintenance window [1..24].",
 				Computed:    true,
 			},
+			"region": schema.StringAttribute{
+				// the region cannot be found, so it has to be passed
+				Optional:    true,
+				Description: "The resource region. If not defined, the provider region is used.",
+			},
 		},
 	}
 }
@@ -151,11 +158,18 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	updateScheduleId := model.UpdateScheduleId.ValueInt64()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "update_schedule_id", updateScheduleId)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	scheduleResp, err := r.client.GetUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(updateScheduleId, 10)).Execute()
+	scheduleResp, err := r.client.GetUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(updateScheduleId, 10), region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -166,7 +180,7 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	// Map response body to schema
-	err = mapFields(scheduleResp, &model)
+	err = mapFields(scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server update schedule", fmt.Sprintf("Processing API payload: %v", err))
 		return
