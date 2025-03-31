@@ -3,9 +3,9 @@
 page_title: "stackit_modelserving_token Resource - stackit"
 subcategory: ""
 description: |-
-  Model Serving Auth Token Resource schema.
+  AI Model Serving Auth Token Resource schema.
   Example Usage
-  Automatically rotate model serving token
+  Automatically rotate AI model serving token
   
   resource "time_rotating" "rotate" {
       rotation_days = 80
@@ -24,11 +24,11 @@ description: |-
 
 # stackit_modelserving_token (Resource)
 
-Model Serving Auth Token Resource schema.
+AI Model Serving Auth Token Resource schema.
 
 ## Example Usage
 
-### Automatically rotate model serving token
+### Automatically rotate AI model serving token
 ```terraform
 resource "time_rotating" "rotate" {
     rotation_days = 80
@@ -52,20 +52,20 @@ resource "stackit_modelserving_token" "example" {
 
 ### Required
 
-- `name` (String) Name of the model serving auth token.
-- `project_id` (String) STACKIT project ID to which the model serving auth token is associated.
+- `name` (String) Name of the AI model serving auth token.
+- `project_id` (String) STACKIT project ID to which the AI model serving auth token is associated.
 
 ### Optional
 
-- `description` (String) The description of the model serving auth token.
-- `region` (String) Region to which the model serving auth token is associated. If not defined, the provider region is used
+- `description` (String) The description of the AI model serving auth token.
+- `region` (String) Region to which the AI model serving auth token is associated. If not defined, the provider region is used
 - `rotate_when_changed` (Map of String) A map of arbitrary key/value pairs that will force recreation of the token when they change, enabling token rotation based on external conditions such as a rotating timestamp. Changing this forces a new resource to be created.
-- `ttl_duration` (String) The TTL duration of the model serving auth token. E.g. 5h30m40s,5h,5h30m,30m,30s
+- `ttl_duration` (String) The TTL duration of the AI model serving auth token. E.g. 5h30m40s,5h,5h30m,30m,30s
 
 ### Read-Only
 
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`region`,`token_id`".
-- `state` (String) State of the model serving auth token.
-- `token` (String, Sensitive) Content of the model serving auth token.
-- `token_id` (String) The model serving auth token ID.
-- `valid_until` (String) The time until the model serving auth token is valid.
+- `state` (String) State of the AI model serving auth token.
+- `token` (String, Sensitive) Content of the AI model serving auth token.
+- `token_id` (String) The AI model serving auth token ID.
+- `valid_until` (String) The time until the AI model serving auth token is valid.
