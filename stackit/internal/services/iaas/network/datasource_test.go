@@ -112,7 +112,8 @@ func TestMapDataSourceFields(t *testing.T) {
 					types.StringValue("ns1"),
 					types.StringValue("ns2"),
 				}),
-				IPv6PrefixLength: types.Int64Null(),
+				IPv6PrefixLength: types.Int64Value(64),
+				IPv6Prefix:       types.StringValue("fd12:3456:789a:1::/64"),
 				IPv6Prefixes: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("fd12:3456:789a:1::/64"),
 					types.StringValue("fd12:3456:789a:2::/64"),
@@ -251,15 +252,15 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				IPv6Prefixes: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("prefix1"),
-					types.StringValue("prefix2"),
+					types.StringValue("fd12:3456:789a:1::/64"),
+					types.StringValue("fd12:3456:789a:2::/64"),
 				}),
 			},
 			&iaas.Network{
 				NetworkId: utils.Ptr("nid"),
 				PrefixesV6: &[]string{
-					"prefix2",
-					"prefix3",
+					"fd12:3456:789a:3::/64",
+					"fd12:3456:789a:4::/64",
 				},
 			},
 			DataSourceModel{
@@ -274,10 +275,11 @@ func TestMapDataSourceFields(t *testing.T) {
 				Labels:           types.MapNull(types.StringType),
 				Nameservers:      types.ListNull(types.StringType),
 				IPv6Nameservers:  types.ListNull(types.StringType),
-				IPv6PrefixLength: types.Int64Null(),
+				IPv6PrefixLength: types.Int64Value(64),
+				IPv6Prefix:       types.StringValue("fd12:3456:789a:3::/64"),
 				IPv6Prefixes: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("prefix2"),
-					types.StringValue("prefix3"),
+					types.StringValue("fd12:3456:789a:3::/64"),
+					types.StringValue("fd12:3456:789a:4::/64"),
 				}),
 			},
 			true,
