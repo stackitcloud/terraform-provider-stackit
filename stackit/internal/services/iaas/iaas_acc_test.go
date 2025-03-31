@@ -467,7 +467,19 @@ func TestAccNetwork(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
 					resource.TestCheckResourceAttr("stackit_network.network", "name", networkResource["name"]),
 					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.#", "2"),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.0", networkResource["nameserver0"]),
+					// nameservers may be returned in a randomized order, so we have to check them with a helper function
+					resource.TestCheckResourceAttrWith("stackit_network.network", "ipv4_nameservers.0",func(value string) error {
+						if value != networkResource["nameserver0"] && value != networkResource["nameserver1"] {
+							return fmt.Errorf("wrong nameservers")
+						}
+						return nil
+					}),
+					resource.TestCheckResourceAttrWith("stackit_network.network", "ipv4_nameservers.1",func(value string) error {
+						if value != networkResource["nameserver0"] && value != networkResource["nameserver1"] {
+							return fmt.Errorf("wrong nameservers")
+						}
+						return nil
+					}),
 					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.1", networkResource["nameserver1"]),
 					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
 					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_prefix", networkResource["ipv4_prefix"]),
@@ -496,8 +508,19 @@ func TestAccNetwork(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_network.network", "name", networkResource["name"]),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_nameservers.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_nameservers.0", networkResource["nameserver0"]),
-					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_nameservers.1", networkResource["nameserver1"]),
+					// nameservers may be returned in a randomized order, so we have to check them with a helper function
+					resource.TestCheckResourceAttrWith("stackit_network.network", "ipv4_nameservers.0",func(value string) error {
+						if value != networkResource["nameserver0"] && value != networkResource["nameserver1"] {
+							return fmt.Errorf("wrong nameservers")
+						}
+						return nil
+					}),
+					resource.TestCheckResourceAttrWith("stackit_network.network", "ipv4_nameservers.1",func(value string) error {
+						if value != networkResource["nameserver0"] && value != networkResource["nameserver1"] {
+							return fmt.Errorf("wrong nameservers")
+						}
+						return nil
+					}),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_prefix", networkResource["ipv4_prefix"]),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_prefix_length", networkResource["ipv4_prefix_length"]),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_prefixes.#", "1"),
