@@ -300,6 +300,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					"delete_on_termination": schema.BoolAttribute{
 						Description: "Delete the volume during the termination of the server. Only allowed when `source_type` is `image`.",
 						Optional:    true,
+						Computed:    true,
 						PlanModifiers: []planmodifier.Bool{
 							boolplanmodifier.RequiresReplace(),
 						},
