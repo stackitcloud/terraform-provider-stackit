@@ -258,7 +258,7 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 	payload := authorization.RemoveMembersPayload{
 		ResourceType: &r.apiName,
 		Members: &[]authorization.Member{
-			*authorization.NewMember(model.Role.ValueStringPointer(), model.Subject.ValueStringPointer()),
+			*authorization.NewMember(model.Role.ValueString(), model.Subject.ValueString()),
 		},
 	}
 
@@ -353,7 +353,7 @@ func (r *roleAssignmentResource) toCreatePayload(model *Model) (*authorization.A
 	return &authorization.AddMembersPayload{
 		ResourceType: &r.apiName,
 		Members: &[]authorization.Member{
-			*authorization.NewMember(model.Role.ValueStringPointer(), model.Subject.ValueStringPointer()),
+			*authorization.NewMember(model.Role.ValueString(), model.Subject.ValueString()),
 		},
 	}, nil
 }
