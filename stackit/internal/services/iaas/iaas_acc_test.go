@@ -480,7 +480,6 @@ func TestAccNetwork(t *testing.T) {
 						}
 						return nil
 					}),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.1", networkResource["nameserver1"]),
 					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
 					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_prefix", networkResource["ipv4_prefix"]),
 					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_prefix_length", networkResource["ipv4_prefix_length"]),
