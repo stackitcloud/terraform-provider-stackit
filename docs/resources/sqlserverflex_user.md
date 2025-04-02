@@ -33,7 +33,7 @@ resource "stackit_sqlserverflex_user" "example" {
 ### Optional
 
 - `region` (String)
-- `roles` (Set of String) Database access levels for the user.
+- `roles` (Set of String) Database access levels for the user. The values for the default roles are: `##STACKIT_DatabaseManager##`, `##STACKIT_LoginManager##`, `##STACKIT_ProcessManager##`, `##STACKIT_ServerManager##`, `##STACKIT_SQLAgentManager##`, `##STACKIT_SQLAgentUser##`
 
 ### Read-Only
 
