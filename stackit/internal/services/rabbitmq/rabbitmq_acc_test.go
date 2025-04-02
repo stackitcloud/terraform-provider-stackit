@@ -21,9 +21,9 @@ import (
 var instanceResource = map[string]string{
 	"project_id":      testutil.ProjectId,
 	"name":            testutil.ResourceNameWithDateTime("rabbitmq"),
-	"plan_id":         "7e1f8394-5dd5-40b1-8608-16b4344eb51b",
+	"plan_id":         "6af42a95-8b68-436d-907b-8ae37dfec52b",
 	"plan_name":       "stackit-rabbitmq-2.4.10-single",
-	"version":         "3.10",
+	"version":         "3.13",
 	"sgw_acl_invalid": "1.2.3.4/4",
 	"sgw_acl_valid":   "192.168.0.0/16",
 }
@@ -100,7 +100,7 @@ func TestAccRabbitMQResource(t *testing.T) {
 				Config: resourceConfig(map[string]string{
 					"sgw_acl":            instanceResource["sgw_acl_valid"],
 					"consumer_timeout":   "1800000",
-					"enable_monitoring":  "true",
+					"enable_monitoring":  "false",
 					"graphite":           "graphite.example.com:2003",
 					"max_disk_threshold": "80",
 					"metrics_frequency":  "60",
@@ -122,7 +122,7 @@ func TestAccRabbitMQResource(t *testing.T) {
 					// Instance params data
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl_valid"]),
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.consumer_timeout", "1800000"),
-					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.enable_monitoring", "true"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.enable_monitoring", "false"),
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.graphite", "graphite.example.com:2003"),
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.max_disk_threshold", "80"),
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.metrics_frequency", "60"),
