@@ -1,13 +1,19 @@
 package utils
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
 const (
@@ -113,4 +119,27 @@ type value interface {
 // IsUndefined checks if a passed value is unknown or null
 func IsUndefined(val value) bool {
 	return val.IsUnknown() || val.IsNull()
+}
+
+// LogError logs errors. In descriptions different messages for http status codes can be passed. When no one matches the defaultDescription will be used
+func LogError(ctx context.Context, diag *diag.Diagnostics, err error, summary, defaultDescription string, descriptions map[int]string) {
+	if err == nil {
+		return
+	}
+	tflog.Error(ctx, fmt.Sprintf(fmt.Sprintf("%s. Err: %v", summary, err)))
+	var oapiErr *oapierror.GenericOpenAPIError
+	ok := errors.As(err, &oapiErr)
+	if !ok {
+		core.LogAndAddError(ctx, diag, summary, fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	var description string
+	if len(descriptions) != 0 {
+		description, ok = descriptions[oapiErr.StatusCode]
+	}
+	if !ok || description == "" {
+		description = defaultDescription
+	}
+	core.LogAndAddError(ctx, diag, summary, description)
 }

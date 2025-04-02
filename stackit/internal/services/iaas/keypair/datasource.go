@@ -2,18 +2,16 @@ package keypair
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -117,18 +115,15 @@ func (r *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	keypairResp, err := r.client.GetKeyPair(ctx, name).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		ok := errors.As(err, &oapiErr)
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
-			summary := fmt.Sprintf("Key Pair with name %q does not exists", name)
-			description := fmt.Sprintf("Key Pair with name %q cannot be found. A key pair can be added with the resource \"stackit_key_pair\"", name)
-			diags.AddError(summary, description)
-			resp.Diagnostics.Append(diags...)
-
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading key pair", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Reading key pair",
+			fmt.Sprintf("Key pair with name %q does not exists.", name),
+			nil,
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
