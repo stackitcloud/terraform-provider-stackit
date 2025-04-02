@@ -16,11 +16,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
-// dataSourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var dataSourceBetaCheckDone bool
-
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ datasource.DataSource = &serviceAccountDataSource{}
@@ -49,12 +44,9 @@ func (r *serviceAccountDataSource) Configure(ctx context.Context, req datasource
 		return
 	}
 
-	if !dataSourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_service_account", "datasource")
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		dataSourceBetaCheckDone = true
+	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_service_account", "datasource")
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	var apiClient *serviceaccount.APIClient

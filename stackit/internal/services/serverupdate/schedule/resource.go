@@ -30,11 +30,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/serverupdate"
 )
 
-// resourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var resourceBetaCheckDone bool
-
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &scheduleResource{}
@@ -115,12 +110,9 @@ func (r *scheduleResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	if !resourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_server_update_schedule", "resource")
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		resourceBetaCheckDone = true
+	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_server_update_schedule", "resource")
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	var apiClient *serverupdate.APIClient
