@@ -1,8 +1,6 @@
 module github.com/stackitcloud/terraform-provider-stackit
 
-go 1.23.0
-
-toolchain go1.24.2
+go 1.23
 
 require (
 	github.com/google/go-cmp v0.7.0
