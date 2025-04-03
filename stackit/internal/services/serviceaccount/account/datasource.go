@@ -13,6 +13,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -139,7 +140,15 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 	// Call the API to list service accounts in the specified project
 	listSaResp, err := r.client.ListServiceAccounts(ctx, projectId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account", fmt.Sprintf("Error calling API: %v", err))
+		utils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Reading service account",
+			fmt.Sprintf("Forbidden access for service account in project %q.", projectId),
+			map[int]string{},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -171,6 +180,6 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 	}
 
 	// If no matching service account is found, remove the resource from the state
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Service account not found", "")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Reading service account", "Service account not found")
 	resp.State.RemoveResource(ctx)
 }

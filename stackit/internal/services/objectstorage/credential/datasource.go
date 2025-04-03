@@ -15,7 +15,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
 )
 
@@ -157,22 +156,27 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	credentialsGroupResp, err := r.client.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Reading credential",
+			fmt.Sprintf("Credential group with ID %q does not exists in project %q.", credentialsGroupId, projectId),
+			map[int]string{
+				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 	if credentialsGroupResp == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials", fmt.Sprintf("Response is nil: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading credentials", fmt.Sprintf("Response is nil: %v", err))
 		return
 	}
 
 	credential := findCredential(*credentialsGroupResp, credentialId)
 	if credential == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", "Credential not found")
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading credential", "Credential not found")
 		return
 	}
 

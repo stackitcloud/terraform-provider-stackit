@@ -122,15 +122,16 @@ func IsUndefined(val value) bool {
 }
 
 // LogError logs errors. In descriptions different messages for http status codes can be passed. When no one matches the defaultDescription will be used
-func LogError(ctx context.Context, diag *diag.Diagnostics, err error, summary, defaultDescription string, descriptions map[int]string) {
+func LogError(ctx context.Context, inputDiags *diag.Diagnostics, err error, summary, defaultDescription string, descriptions map[int]string) {
 	if err == nil {
 		return
 	}
-	tflog.Error(ctx, fmt.Sprintf(fmt.Sprintf("%s. Err: %v", summary, err)))
+	tflog.Error(ctx, fmt.Sprintf("%s. Err: %v", summary, err))
+
 	var oapiErr *oapierror.GenericOpenAPIError
 	ok := errors.As(err, &oapiErr)
 	if !ok {
-		core.LogAndAddError(ctx, diag, summary, fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, inputDiags, summary, fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
@@ -141,5 +142,5 @@ func LogError(ctx context.Context, diag *diag.Diagnostics, err error, summary, d
 	if !ok || description == "" {
 		description = defaultDescription
 	}
-	core.LogAndAddError(ctx, diag, summary, description)
+	core.LogAndAddError(ctx, inputDiags, summary, description)
 }

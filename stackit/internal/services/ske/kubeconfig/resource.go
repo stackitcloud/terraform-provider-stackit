@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -24,8 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 )
 
@@ -261,12 +261,17 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	cluster, err := r.client.GetClusterExecute(ctx, projectId, clusterName)
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("Could not get cluster(%s): %v", clusterName, err))
+		utils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Reading kubeconfig",
+			fmt.Sprintf("Kubeconfig with ID %q or cluster with name %q does not exists in project %q.", kubeconfigUUID, clusterName, projectId),
+			map[int]string{
+				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -391,7 +396,7 @@ func toCreatePayload(model *Model) (*ske.CreateKubeconfigPayload, error) {
 	expiration := conversion.Int64ValueToPointer(model.Expiration)
 	var expirationStringPtr *string
 	if expiration != nil {
-		expirationStringPtr = utils.Ptr(strconv.FormatInt(*expiration, 10))
+		expirationStringPtr = sdkUtils.Ptr(strconv.FormatInt(*expiration, 10))
 	}
 
 	return &ske.CreateKubeconfigPayload{

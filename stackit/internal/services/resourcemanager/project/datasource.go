@@ -11,13 +11,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 )
 
@@ -165,17 +165,25 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	// set project identifier. If projectId is provided, it takes precedence over containerId
 	var identifier = containerId
+	identifierType := "Container"
 	if projectId != "" {
 		identifier = projectId
+		identifierType = "Project"
 	}
 
 	projectResp, err := d.client.GetProject(ctx, identifier).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusForbidden {
-			resp.State.RemoveResource(ctx)
-		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Reading project",
+			fmt.Sprintf("%s with ID %q does not exists.", identifierType, identifier),
+			map[int]string{
+				http.StatusForbidden: fmt.Sprintf("%s with ID %q not found or forbidden access", identifierType, identifier),
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
