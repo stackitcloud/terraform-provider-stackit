@@ -2,6 +2,7 @@ package mongodbflex
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -53,6 +54,9 @@ type Model struct {
 	Version        types.String `tfsdk:"version"`
 	Options        types.Object `tfsdk:"options"`
 }
+
+//go:embed information-instance.md
+var markdownDescription string
 
 // Struct corresponding to Model.Flavor
 type flavorModel struct {
@@ -140,7 +144,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	} else {
 		apiClient, err = mongodbflex.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
+			config.WithRegion(providerData.Region),
 		)
 	}
 
@@ -175,7 +179,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 	}
 
 	resp.Schema = schema.Schema{
-		Description: descriptions["main"],
+		MarkdownDescription: descriptions["main"] + "\n\n" + markdownDescription,
+		Description:         descriptions["main"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -246,9 +251,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"replicas": schema.Int64Attribute{
 				Required: true,
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
-				},
 			},
 			"storage": schema.SingleNestedAttribute{
 				Required: true,
