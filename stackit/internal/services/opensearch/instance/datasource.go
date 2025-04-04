@@ -249,6 +249,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 			fmt.Sprintf("Instance with ID %q does not exist in project %q.", instanceId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+				http.StatusGone:      fmt.Sprintf("Instance %q is gone.", instanceId),
 			},
 		)
 		resp.State.RemoveResource(ctx)
