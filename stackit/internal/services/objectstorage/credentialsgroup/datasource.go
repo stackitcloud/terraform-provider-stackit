@@ -152,7 +152,7 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 	}
 	if !found {
 		resp.State.RemoveResource(ctx)
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials group", "Credentials group not found")
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials group", fmt.Sprintf("Credentials group with ID %q does not exists in project %q", credentialsGroupId, projectId))
 		return
 	}
 

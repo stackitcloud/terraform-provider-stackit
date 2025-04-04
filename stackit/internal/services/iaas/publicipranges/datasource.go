@@ -9,6 +9,7 @@ import (
 
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -19,7 +20,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -130,12 +130,17 @@ func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.Read
 	}
 	publicIpRangeResp, err := d.client.ListPublicIPRangesExecute(ctx)
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP ranges", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Reading public ip ranges",
+			"Public ip ranges cannot be found",
+			map[int]string{
+				http.StatusForbidden: "Forbidden access",
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 

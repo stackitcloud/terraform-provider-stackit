@@ -3,6 +3,7 @@ package dns
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -13,6 +14,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -191,7 +193,17 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	zoneResp, err := d.client.GetZone(ctx, projectId, zoneId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Reading zone",
+			fmt.Sprintf("Zone with ID %q does not exist in project %q.", zoneId, projectId),
+			map[int]string{
+				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 	if zoneResp != nil && zoneResp.Zone.State != nil && *zoneResp.Zone.State == wait.DeleteSuccess {

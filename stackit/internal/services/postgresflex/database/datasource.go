@@ -14,7 +14,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
 )
 
@@ -160,11 +159,17 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	databaseResp, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
-			resp.State.RemoveResource(ctx)
-		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Reading database",
+			fmt.Sprintf("Database with ID %q or instance with ID %q does not exist in project %q.", databaseId, instanceId, projectId),
+			map[int]string{
+				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 

@@ -3,6 +3,7 @@ package dns
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -13,6 +14,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -161,7 +163,17 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 	ctx = tflog.SetField(ctx, "record_set_id", recordSetId)
 	recordSetResp, err := d.client.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Reading record set",
+			fmt.Sprintf("The record set %q or zone %q does not exist in project %q.", recordSetId, zoneId, projectId),
+			map[int]string{
+				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 	if recordSetResp != nil && recordSetResp.Rrset.State != nil && *recordSetResp.Rrset.State == wait.DeleteSuccess {
