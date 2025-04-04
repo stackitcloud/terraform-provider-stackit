@@ -29,11 +29,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
-// resourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var resourceBetaCheckDone bool
-
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource              = &serviceAccountTokenResource{}
@@ -78,12 +73,9 @@ func (r *serviceAccountTokenResource) Configure(ctx context.Context, req resourc
 		return
 	}
 
-	if !resourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_service_account_access_token", "resource")
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		resourceBetaCheckDone = true
+	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_service_account_access_token", "resource")
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	// Initialize the API client with the appropriate authentication and endpoint settings.
