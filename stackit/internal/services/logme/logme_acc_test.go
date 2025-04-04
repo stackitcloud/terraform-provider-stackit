@@ -304,12 +304,12 @@ func testAccCheckLogMeDestroy(s *terraform.State) error {
 }
 
 func checkInstanceDeleteSuccess(i *logme.Instance) bool {
-	if *i.LastOperation.Type != wait.InstanceTypeDelete {
+	if *i.LastOperation.Type != wait.InstanceOperationTypeDelete {
 		return false
 	}
 
-	if *i.LastOperation.Type == wait.InstanceTypeDelete {
-		if *i.LastOperation.State != wait.InstanceStateSuccess {
+	if *i.LastOperation.Type == wait.InstanceOperationTypeDelete {
+		if *i.LastOperation.State != wait.InstanceOperationStateSucceeded {
 			return false
 		} else if strings.Contains(*i.LastOperation.Description, "DeleteFailed") || strings.Contains(*i.LastOperation.Description, "failed") {
 			return false
