@@ -22,7 +22,6 @@ resource "stackit_sqlserverflex_instance" "example" {
     cpu = 4
     ram = 16
   }
-  replicas = 3
   storage = {
     class = "class"
     size  = 5
