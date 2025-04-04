@@ -164,7 +164,7 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 			&resp.Diagnostics,
 			err,
 			"Reading database",
-			fmt.Sprintf("Database with ID %q or instance with ID %q does not exists in project %q.", databaseId, instanceId, projectId),
+			fmt.Sprintf("Database with ID %q or instance with ID %q does not exist in project %q.", databaseId, instanceId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

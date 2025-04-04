@@ -168,7 +168,7 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 			&resp.Diagnostics,
 			err,
 			"Reading record set",
-			fmt.Sprintf("The record set %q or zone %q does not exists in project %q.", recordSetId, zoneId, projectId),
+			fmt.Sprintf("The record set %q or zone %q does not exist in project %q.", recordSetId, zoneId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

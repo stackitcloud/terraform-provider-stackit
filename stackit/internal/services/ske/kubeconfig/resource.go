@@ -266,7 +266,7 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 			&resp.Diagnostics,
 			err,
 			"Reading kubeconfig",
-			fmt.Sprintf("Kubeconfig with ID %q or cluster with name %q does not exists in project %q.", kubeconfigUUID, clusterName, projectId),
+			fmt.Sprintf("Kubeconfig with ID %q or cluster with name %q does not exist in project %q.", kubeconfigUUID, clusterName, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

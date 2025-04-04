@@ -151,7 +151,7 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			&resp.Diagnostics,
 			err,
 			"Reading bucket",
-			fmt.Sprintf("Bucket with name %q does not exists in project %q.", bucketName, projectId),
+			fmt.Sprintf("Bucket with name %q does not exist in project %q.", bucketName, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

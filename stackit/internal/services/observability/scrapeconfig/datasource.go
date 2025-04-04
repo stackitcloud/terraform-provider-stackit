@@ -219,7 +219,7 @@ func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 			&resp.Diagnostics,
 			err,
 			"Reading scrape config",
-			fmt.Sprintf("Scrape config with name %q or instance with ID %q does not exists in project %q.", scName, instanceId, projectId),
+			fmt.Sprintf("Scrape config with name %q or instance with ID %q does not exist in project %q.", scName, instanceId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

@@ -218,7 +218,7 @@ func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			&resp.Diagnostics,
 			err,
 			"Reading server",
-			fmt.Sprintf("Server with ID %q does not exists in project %q.", serverId, projectId),
+			fmt.Sprintf("Server with ID %q does not exist in project %q.", serverId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

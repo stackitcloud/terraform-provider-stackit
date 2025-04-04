@@ -218,7 +218,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 			&resp.Diagnostics,
 			err,
 			"Reading instance",
-			fmt.Sprintf("Instance with ID %q does not exists in project %q.", instanceId, projectId),
+			fmt.Sprintf("Instance with ID %q does not exist in project %q.", instanceId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

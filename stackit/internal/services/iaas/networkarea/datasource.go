@@ -201,7 +201,7 @@ func (d *networkAreaDataSource) Read(ctx context.Context, req datasource.ReadReq
 			&resp.Diagnostics,
 			err,
 			"Reading network area",
-			fmt.Sprintf("Network area with ID %q does not exists in organization %q.", networkAreaId, organizationId),
+			fmt.Sprintf("Network area with ID %q does not exist in organization %q.", networkAreaId, organizationId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Organization with ID %q not found or forbidden access", organizationId),
 			},

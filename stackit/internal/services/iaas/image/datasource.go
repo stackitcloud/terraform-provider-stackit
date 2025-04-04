@@ -243,7 +243,7 @@ func (r *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 			&resp.Diagnostics,
 			err,
 			"Reading image",
-			fmt.Sprintf("Image with ID %q does not exists in project %q.", imageId, projectId),
+			fmt.Sprintf("Image with ID %q does not exist in project %q.", imageId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

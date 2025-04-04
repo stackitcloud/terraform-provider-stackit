@@ -148,7 +148,7 @@ func (d *affinityGroupDatasource) Read(ctx context.Context, req datasource.ReadR
 			&resp.Diagnostics,
 			err,
 			"Reading affinity group",
-			fmt.Sprintf("Affinity group with ID %q does not exists in project %q.", affinityGroupId, projectId),
+			fmt.Sprintf("Affinity group with ID %q does not exist in project %q.", affinityGroupId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

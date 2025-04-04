@@ -176,7 +176,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			&resp.Diagnostics,
 			err,
 			"Reading credential",
-			fmt.Sprintf("Credential with ID %q or instance with ID %q does not exists in project %q.", credentialId, instanceId, projectId),
+			fmt.Sprintf("Credential with ID %q or instance with ID %q does not exist in project %q.", credentialId, instanceId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

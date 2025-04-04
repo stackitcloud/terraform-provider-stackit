@@ -140,7 +140,7 @@ func (d *publicIpDataSource) Read(ctx context.Context, req datasource.ReadReques
 			&resp.Diagnostics,
 			err,
 			"Reading public ip",
-			fmt.Sprintf("Public ip with ID %q does not exists in project %q.", publicIpId, projectId),
+			fmt.Sprintf("Public ip with ID %q does not exist in project %q.", publicIpId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

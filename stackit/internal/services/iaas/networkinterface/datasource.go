@@ -174,7 +174,7 @@ func (d *networkInterfaceDataSource) Read(ctx context.Context, req datasource.Re
 			&resp.Diagnostics,
 			err,
 			"Reading network interface",
-			fmt.Sprintf("Network interface with ID %q or network with ID %q does not exists in project %q.", networkInterfaceId, networkId, projectId),
+			fmt.Sprintf("Network interface with ID %q or network with ID %q does not exist in project %q.", networkInterfaceId, networkId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

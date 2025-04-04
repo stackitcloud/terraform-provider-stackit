@@ -340,7 +340,7 @@ func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRe
 			&resp.Diagnostics,
 			err,
 			"Reading load balancer",
-			fmt.Sprintf("Load balancer with name %q does not exists in project %q.", name, projectId),
+			fmt.Sprintf("Load balancer with name %q does not exist in project %q.", name, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

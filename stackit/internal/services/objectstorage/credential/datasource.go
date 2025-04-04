@@ -161,7 +161,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			&resp.Diagnostics,
 			err,
 			"Reading credential",
-			fmt.Sprintf("Credential group with ID %q does not exists in project %q.", credentialsGroupId, projectId),
+			fmt.Sprintf("Credential group with ID %q does not exist in project %q.", credentialsGroupId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
@@ -176,7 +176,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	credential := findCredential(*credentialsGroupResp, credentialId)
 	if credential == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading credential", "Credential not found")
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading credential", fmt.Sprintf("Credential with ID %q not found in credentials group %q", credentialId, credentialsGroupId))
 		return
 	}
 

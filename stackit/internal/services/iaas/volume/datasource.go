@@ -170,7 +170,7 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			&resp.Diagnostics,
 			err,
 			"Reading volume",
-			fmt.Sprintf("Volume with ID %q does not exists in project %q.", volumeId, projectId),
+			fmt.Sprintf("Volume with ID %q does not exist in project %q.", volumeId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

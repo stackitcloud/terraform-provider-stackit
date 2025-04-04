@@ -178,7 +178,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			&resp.Diagnostics,
 			err,
 			"Reading project",
-			fmt.Sprintf("%s with ID %q does not exists.", identifierType, identifier),
+			fmt.Sprintf("%s with ID %q does not exist.", identifierType, identifier),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("%s with ID %q not found or forbidden access", identifierType, identifier),
 			},

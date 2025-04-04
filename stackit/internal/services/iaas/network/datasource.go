@@ -223,7 +223,7 @@ func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			&resp.Diagnostics,
 			err,
 			"Reading network",
-			fmt.Sprintf("Network with ID %q does not exists in project %q.", networkId, projectId),
+			fmt.Sprintf("Network with ID %q does not exist in project %q.", networkId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

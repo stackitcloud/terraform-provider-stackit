@@ -120,7 +120,7 @@ func (r *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			&resp.Diagnostics,
 			err,
 			"Reading key pair",
-			fmt.Sprintf("Key pair with name %q does not exists.", name),
+			fmt.Sprintf("Key pair with name %q does not exist.", name),
 			nil,
 		)
 		resp.State.RemoveResource(ctx)

@@ -196,7 +196,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 			&resp.Diagnostics,
 			err,
 			"Reading server update schedules",
-			fmt.Sprintf("Server with ID %q does not exists in project %q.", serverId, projectId),
+			fmt.Sprintf("Server with ID %q does not exist in project %q.", serverId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

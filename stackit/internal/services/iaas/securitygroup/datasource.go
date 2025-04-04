@@ -140,7 +140,7 @@ func (d *securityGroupDataSource) Read(ctx context.Context, req datasource.ReadR
 			&resp.Diagnostics,
 			err,
 			"Reading security group",
-			fmt.Sprintf("Security group with ID %q does not exists in project %q.", securityGroupId, projectId),
+			fmt.Sprintf("Security group with ID %q does not exist in project %q.", securityGroupId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
