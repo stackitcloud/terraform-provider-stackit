@@ -387,7 +387,7 @@ If you want to onboard resources of a STACKIT service `foo` that was not yet in 
 
 ### Local development
 
-To test your changes locally, you have to compile the provider (requires Go 1.22) and configure the Terraform CLI to use the local version.
+To test your changes locally, you have to compile the provider (requires Go 1.24) and configure the Terraform CLI to use the local version.
 
 1. Clone the repository.
 1. Create a `.terraformrc` config file in your home directory (`~`) for the terraform CLI with the following content:
