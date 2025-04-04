@@ -20,6 +20,8 @@ jobs:
       
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_wrapper: false
 
       - name: "Ensure docs are up-to-date"
         if: ${{ github.event_name == 'pull_request' }}
