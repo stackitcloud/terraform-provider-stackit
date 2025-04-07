@@ -222,6 +222,10 @@ If you encounter any issues or have suggestions for improvements, please open an
 
 Your contribution is welcome! For more details on how to contribute, refer to our [Contribution Guide](./CONTRIBUTION.md).
 
+## Release creation
+
+See the [release documentation](./RELEASE.md) for further information.
+
 ## License
 
 Apache 2.0
