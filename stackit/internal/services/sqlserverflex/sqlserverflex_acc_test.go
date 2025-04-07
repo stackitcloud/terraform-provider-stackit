@@ -97,14 +97,13 @@ func configResources(backupSchedule string, region *string) string {
 }
 
 func TestAccSQLServerFlexResource(t *testing.T) {
-	testRegion := utils.Ptr("eu01")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccChecksqlserverflexDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: configResources(instanceResource["backup_schedule"], testRegion),
+				Config: configResources(instanceResource["backup_schedule"], &testutil.Region),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "project_id", instanceResource["project_id"]),
@@ -122,7 +121,7 @@ func TestAccSQLServerFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "version", instanceResource["version"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "options.retention_days", instanceResource["options_retention_days"]),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
-					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "region", *testRegion),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "region", testutil.Region),
 					// User
 					resource.TestCheckResourceAttrPair(
 						"stackit_sqlserverflex_user.user", "project_id",
@@ -323,7 +322,7 @@ func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 			continue
 		}
 		// instance terraform ID: = "[project_id],[region],[instance_id]"
-		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
