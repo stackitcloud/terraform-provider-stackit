@@ -57,7 +57,7 @@ This guide outlines the process of utilizing the [HashiCorp Vault provider](http
    resource "stackit_observability_instance" "example" {
      project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
      name       = "example-instance"
-     plan_name  = "Monitoring-Medium-EU01"
+     plan_name  = "Observability-Monitoring-Medium-EU01"
    }
     ```
 

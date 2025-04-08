@@ -16,7 +16,7 @@ Observability instance resource schema. Must have a `region` specified in the pr
 resource "stackit_observability_instance" "example" {
   project_id                             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name                                   = "example-instance"
-  plan_name                              = "Monitoring-Medium-EU01"
+  plan_name                              = "Observability-Monitoring-Medium-EU01"
   acl                                    = ["1.1.1.1/32", "2.2.2.2/32"]
   metrics_retention_days                 = 7
   metrics_retention_days_5m_downsampling = 30
@@ -30,7 +30,7 @@ resource "stackit_observability_instance" "example" {
 ### Required
 
 - `name` (String) The name of the Observability instance.
-- `plan_name` (String) Specifies the Observability plan. E.g. `Monitoring-Medium-EU01`.
+- `plan_name` (String) Specifies the Observability plan. E.g. `Observability-Monitoring-Medium-EU01`.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 
 ### Optional

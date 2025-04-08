@@ -418,7 +418,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"plan_name": schema.StringAttribute{
-				Description: "Specifies the Observability plan. E.g. `Monitoring-Medium-EU01`.",
+				Description: "Specifies the Observability plan. E.g. `Observability-Monitoring-Medium-EU01`.",
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
