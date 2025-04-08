@@ -1,0 +1,35 @@
+name: "Stale"
+on:
+  schedule:
+    # every night at 01:30
+    - cron: "30 1 * * *"
+  # run this workflow if the workflow definition gets changed within a PR
+  pull_request:
+    branches: ["main"]
+    paths: [".github/workflows/stale.yaml"]
+
+env:
+  DAYS_BEFORE_PR_STALE: 7
+  DAYS_BEFORE_PR_CLOSE: 7
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    name: "Stale"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: "Mark old PRs as stale"
+        uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          stale-pr-message: "This PR was marked as stale after ${{ env.DAYS_BEFORE_PR_STALE }} days of inactivity and will be closed after another ${{ env.DAYS_BEFORE_PR_CLOSE }} days of further inactivity. If this PR should be kept open, just add a comment, remove the stale label or push new commits to it."
+          close-pr-message: "This PR was closed automatically because it has been stalled for ${{ env.DAYS_BEFORE_PR_CLOSE }} days with no activity. Feel free to re-open it at any time."
+          days-before-pr-stale: ${{ env.DAYS_BEFORE_PR_STALE }}
+          days-before-pr-close: ${{ env.DAYS_BEFORE_PR_CLOSE }}
+          # never mark issues as stale or close them
+          days-before-issue-stale: -1
+          days-before-issue-close: -1
