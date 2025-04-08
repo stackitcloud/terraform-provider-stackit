@@ -52,7 +52,7 @@ data "stackit_observability_instance" "example" {
 - `otlp_traces_url` (String)
 - `parameters` (Map of String) Additional parameters.
 - `plan_id` (String) The Observability plan ID.
-- `plan_name` (String) Specifies the Observability plan. E.g. `Monitoring-Medium-EU01`.
+- `plan_name` (String) Specifies the Observability plan. E.g. `Observability-Monitoring-Medium-EU01`.
 - `targets_url` (String) Specifies Targets URL.
 - `zipkin_spans_url` (String)
 

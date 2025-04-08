@@ -107,7 +107,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				},
 			},
 			"plan_name": schema.StringAttribute{
-				Description: "Specifies the Observability plan. E.g. `Monitoring-Medium-EU01`.",
+				Description: "Specifies the Observability plan. E.g. `Observability-Monitoring-Medium-EU01`.",
 				Computed:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
