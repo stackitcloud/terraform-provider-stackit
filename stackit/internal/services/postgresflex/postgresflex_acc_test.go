@@ -106,14 +106,13 @@ func configResources(backupSchedule string, region *string) string {
 }
 
 func TestAccPostgresFlexFlexResource(t *testing.T) {
-	testRegion := utils.Ptr("eu01")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckPostgresFlexDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: configResources(instanceResource["backup_schedule"], testRegion),
+				Config: configResources(instanceResource["backup_schedule"], &testutil.Region),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "project_id", instanceResource["project_id"]),
@@ -130,7 +129,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "storage.class", instanceResource["storage_class"]),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "storage.size", instanceResource["storage_size"]),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "version", instanceResource["version"]),
-					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "region", *testRegion),
+					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "region", testutil.Region),
 
 					// User
 					resource.TestCheckResourceAttrPair(
@@ -169,7 +168,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 						project_id     = stackit_postgresflex_instance.instance.project_id
 						instance_id    = stackit_postgresflex_instance.instance.instance_id
 					}
-					
+
 					data "stackit_postgresflex_user" "user" {
 						project_id     = stackit_postgresflex_instance.instance.project_id
 						instance_id    = stackit_postgresflex_instance.instance.instance_id
@@ -341,7 +340,7 @@ func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 			continue
 		}
 		// instance terraform ID: = "[project_id],[region],[instance_id]"
-		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
@@ -356,17 +355,13 @@ func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 			continue
 		}
 		if utils.Contains(instancesToDestroy, *items[i].Id) {
-			err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, testutil.Region, *items[i].Id)
+			err := client.ForceDeleteInstanceExecute(ctx, testutil.ProjectId, testutil.Region, *items[i].Id)
 			if err != nil {
 				return fmt.Errorf("deleting instance %s during CheckDestroy: %w", *items[i].Id, err)
 			}
 			_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, *items[i].Id).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("deleting instance %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
-			}
-			err = client.ForceDeleteInstanceExecute(ctx, testutil.ProjectId, testutil.Region, *items[i].Id)
-			if err != nil {
-				return fmt.Errorf("force deleting instance %s during CheckDestroy: %w", *items[i].Id, err)
 			}
 		}
 	}

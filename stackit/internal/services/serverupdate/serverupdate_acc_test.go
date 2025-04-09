@@ -59,7 +59,6 @@ func TestAccServerUpdateScheduleResource(t *testing.T) {
 		fmt.Println("TF_ACC_SERVER_ID not set, skipping test")
 		return
 	}
-	testRegion := utils.Ptr("eu01")
 	var invalidMaintenanceWindow int64 = 0
 	var validMaintenanceWindow int64 = 15
 	var updatedMaintenanceWindow int64 = 8
@@ -69,12 +68,12 @@ func TestAccServerUpdateScheduleResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
-				Config:      resourceConfig(invalidMaintenanceWindow, testRegion),
+				Config:      resourceConfig(invalidMaintenanceWindow, &testutil.Region),
 				ExpectError: regexp.MustCompile(`.*maintenance_window value must be at least 1*`),
 			},
 			// Creation
 			{
-				Config: resourceConfig(validMaintenanceWindow, testRegion),
+				Config: resourceConfig(validMaintenanceWindow, &testutil.Region),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", serverUpdateScheduleResource["project_id"]),
@@ -84,7 +83,7 @@ func TestAccServerUpdateScheduleResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "name", serverUpdateScheduleResource["name"]),
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "rrule", serverUpdateScheduleResource["rrule"]),
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "enabled", strconv.FormatBool(true)),
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "region", *testRegion),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "region", testutil.Region),
 				),
 			},
 			// data source
@@ -102,7 +101,7 @@ func TestAccServerUpdateScheduleResource(t *testing.T) {
 						server_id  = stackit_server_update_schedule.test_schedule.server_id
                         update_schedule_id = stackit_server_update_schedule.test_schedule.update_schedule_id
 					}`,
-					resourceConfig(validMaintenanceWindow, testRegion),
+					resourceConfig(validMaintenanceWindow, &testutil.Region),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server update schedule data

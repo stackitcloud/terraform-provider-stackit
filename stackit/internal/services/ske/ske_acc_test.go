@@ -206,7 +206,6 @@ func getConfig(kubernetesVersion, nodePoolMachineOSVersion string, maintenanceEn
 }
 
 func TestAccSKE(t *testing.T) {
-	testRegion := utils.Ptr("eu01")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckSKEDestroy,
@@ -215,7 +214,7 @@ func TestAccSKE(t *testing.T) {
 			// 1) Creation
 			{
 
-				Config: getConfig(clusterResource["kubernetes_version_min"], clusterResource["nodepool_os_version_min"], nil, testRegion),
+				Config: getConfig(clusterResource["kubernetes_version_min"], clusterResource["nodepool_os_version_min"], nil, &testutil.Region),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", clusterResource["name"]),
@@ -257,7 +256,7 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", clusterResource["maintenance_enable_machine_image_version_updates"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "region", *testRegion),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "region", testutil.Region),
 
 					// Kubeconfig
 
@@ -285,7 +284,7 @@ func TestAccSKE(t *testing.T) {
 						}
 
 							`,
-					getConfig(clusterResource["kubernetes_version_min"], clusterResource["nodepool_os_version_min"], nil, testRegion),
+					getConfig(clusterResource["kubernetes_version_min"], clusterResource["nodepool_os_version_min"], nil, &testutil.Region),
 					clusterResource["project_id"],
 					clusterResource["name"],
 				),
@@ -294,7 +293,7 @@ func TestAccSKE(t *testing.T) {
 					// cluster data
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "id", fmt.Sprintf("%s,%s,%s",
 						clusterResource["project_id"],
-						*testRegion,
+						testutil.Region,
 						clusterResource["name"],
 					)),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
@@ -357,7 +356,7 @@ func TestAccSKE(t *testing.T) {
 			},
 			// 4) Update kubernetes version, OS version and maintenance end
 			{
-				Config: getConfig(clusterResource["kubernetes_version_min_new"], clusterResource["nodepool_os_version_min_new"], utils.Ptr(clusterResource["maintenance_end_new"]), testRegion),
+				Config: getConfig(clusterResource["kubernetes_version_min_new"], clusterResource["nodepool_os_version_min_new"], utils.Ptr(clusterResource["maintenance_end_new"]), &testutil.Region),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
@@ -399,12 +398,12 @@ func TestAccSKE(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", clusterResource["maintenance_enable_machine_image_version_updates"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", clusterResource["maintenance_start"]),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", clusterResource["maintenance_end_new"]),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "region", *testRegion),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "region", testutil.Region),
 				),
 			},
 			// 5) Downgrade kubernetes and nodepool machine OS version
 			{
-				Config: getConfig(clusterResource["kubernetes_version_min"], clusterResource["nodepool_os_version_min"], utils.Ptr(clusterResource["maintenance_end_new"]), testRegion),
+				Config: getConfig(clusterResource["kubernetes_version_min"], clusterResource["nodepool_os_version_min"], utils.Ptr(clusterResource["maintenance_end_new"]), &testutil.Region),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", clusterResource["project_id"]),
@@ -443,7 +442,7 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 			continue
 		}
 		// cluster terraform ID: = "[project_id],[region],[cluster_name]"
-		clusterName := strings.Split(rs.Primary.ID, core.Separator)[1]
+		clusterName := strings.Split(rs.Primary.ID, core.Separator)[2]
 		clustersToDestroy = append(clustersToDestroy, clusterName)
 	}
 
