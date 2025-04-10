@@ -79,7 +79,35 @@ Read-Only:
 Read-Only:
 
 - `acl` (Set of String) Load Balancer is accessible only from an IP address in this range.
+- `observability` (Attributes) We offer Load Balancer metrics observability via ARGUS or external solutions. (see [below for nested schema](#nestedatt--options--observability))
 - `private_network_only` (Boolean) If true, Load Balancer is accessible only via a private network IP address.
+
+<a id="nestedatt--options--observability"></a>
+### Nested Schema for `options.observability`
+
+Read-Only:
+
+- `logs` (Attributes) Observability logs configuration. (see [below for nested schema](#nestedatt--options--observability--logs))
+- `metrics` (Attributes) Observability metrics configuration. (see [below for nested schema](#nestedatt--options--observability--metrics))
+
+<a id="nestedatt--options--observability--logs"></a>
+### Nested Schema for `options.observability.logs`
+
+Read-Only:
+
+- `credentials_ref` (String) Credentials reference for logs.
+- `push_url` (String) Credentials reference for logs.
+
+
+<a id="nestedatt--options--observability--metrics"></a>
+### Nested Schema for `options.observability.metrics`
+
+Read-Only:
+
+- `credentials_ref` (String) Credentials reference for metrics.
+- `push_url` (String) Credentials reference for metrics.
+
+
 
 
 <a id="nestedatt--target_pools"></a>
