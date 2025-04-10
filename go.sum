@@ -150,10 +150,8 @@ github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 h1:n661drycOFuPLCN
 github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3/go.mod h1:A0bzQcvG0E7Rwjx0REVgAGH58e96+X0MeOfepqsbeW4=
 github.com/skeema/knownhosts v1.3.0 h1:AM+y0rI04VksttfwjkSTNQorvGqmwATnvnAHpSgc0LY=
 github.com/skeema/knownhosts v1.3.0/go.mod h1:sPINvnADmT/qYH1kfv+ePMmOBTH6Tbl7b5LvTDjFK7M=
-github.com/stackitcloud/stackit-sdk-go/core v0.16.2 h1:F8A4P/LLlQSbz0S0+G3m8rb3BUOK6EcR/CKx5UQY5jQ=
-github.com/stackitcloud/stackit-sdk-go/core v0.16.2/go.mod h1:8KIw3czdNJ9sdil9QQimxjR6vHjeINFrRv0iZ67wfn0=
-github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0 h1:JVEx/ouHB6PlwGzQa3ywyDym1HTWo3WgrxAyXprCnuM=
-github.com/stackitcloud/stackit-sdk-go/services/argus v0.11.0/go.mod h1:nVllQfYODhX1q3bgwVTLO7wHOp+8NMLiKbn3u/Dg5nU=
+github.com/stackitcloud/stackit-sdk-go/core v0.17.1 h1:TTrVoB1lERd/qfWzpe6HpwCJSjtaGnUI7UE7ITb5IT0=
+github.com/stackitcloud/stackit-sdk-go/core v0.17.1/go.mod h1:8KIw3czdNJ9sdil9QQimxjR6vHjeINFrRv0iZ67wfn0=
 github.com/stackitcloud/stackit-sdk-go/services/authorization v0.6.1 h1:2lq6SG8qOgPOx2OIA5Bca8mwRSlect3Yljk57bXqd5I=
 github.com/stackitcloud/stackit-sdk-go/services/authorization v0.6.1/go.mod h1:in9kC4GIBU5DpzXKFDL7RDl0fKyvN/RUIc7YbyWYEUA=
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.13.1 h1:W5zQhg/nA2RVSkUtRjsGcJMdYlOicoE5gBGE9zMT9Eo=
