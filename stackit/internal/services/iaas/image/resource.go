@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -442,7 +443,9 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Wait for image to become available
-	waitResp, err := wait.UploadImageWaitHandler(ctx, r.client, projectId, *imageCreateResp.Id).WaitWithContext(ctx)
+	waiter := wait.UploadImageWaitHandler(ctx, r.client, projectId, *imageCreateResp.Id)
+	waiter = waiter.SetTimeout(7 * 24 * time.Hour) // Set timeout to one week, to make the timeout useless
+	waitResp, err := waiter.WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Waiting for image to become available: %v", err))
 		return
