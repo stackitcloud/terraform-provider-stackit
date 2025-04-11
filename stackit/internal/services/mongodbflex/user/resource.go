@@ -2,6 +2,7 @@ package mongodbflex
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"strings"
@@ -45,6 +46,9 @@ type Model struct {
 	Uri        types.String `tfsdk:"uri"`
 }
 
+//go:embed information-user.md
+var markdownDescription string
+
 // NewUserResource is a helper function to simplify the provider implementation.
 func NewUserResource() resource.Resource {
 	return &userResource{}
@@ -83,7 +87,7 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	} else {
 		apiClient, err = mongodbflex.NewAPIClient(
 			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
+			config.WithRegion(providerData.Region),
 		)
 	}
 
@@ -108,7 +112,8 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 	}
 
 	resp.Schema = schema.Schema{
-		Description: descriptions["main"],
+		MarkdownDescription: descriptions["main"] + "\n\n" + markdownDescription,
+		Description:         descriptions["main"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
