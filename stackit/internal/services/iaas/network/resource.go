@@ -213,6 +213,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"ipv4_prefix": schema.StringAttribute{
 				Description: "The IPv4 prefix of the network (CIDR).",
 				Optional:    true,
+				Computed:    true,
 				Validators: []validator.String{
 					validate.CIDR(),
 				},
@@ -222,6 +223,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"ipv4_prefix_length": schema.Int64Attribute{
 				Description: "The IPv4 prefix length of the network.",
+				Computed:    true,
 				Optional:    true,
 			},
 			"prefixes": schema.ListAttribute{
