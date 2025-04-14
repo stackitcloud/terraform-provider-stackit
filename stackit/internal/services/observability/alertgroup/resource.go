@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -211,7 +212,7 @@ func (a *alertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest,
 							Description: descriptions["for"],
 							Optional:    true,
 							Validators: []validator.String{
-								stringvalidator.LengthBetween(1, 600),
+								stringvalidator.LengthBetween(2, 8),
 								validate.ValidDurationString(),
 							},
 						},
@@ -219,11 +220,21 @@ func (a *alertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest,
 							Description: descriptions["labels"],
 							Optional:    true,
 							ElementType: types.StringType,
+							Validators: []validator.Map{
+								mapvalidator.KeysAre(stringvalidator.LengthAtMost(200)),
+								mapvalidator.ValueStringsAre(stringvalidator.LengthAtMost(200)),
+								mapvalidator.SizeAtMost(10),
+							},
 						},
 						"annotations": schema.MapAttribute{
 							Description: descriptions["annotations"],
 							Optional:    true,
 							ElementType: types.StringType,
+							Validators: []validator.Map{
+								mapvalidator.KeysAre(stringvalidator.LengthAtMost(200)),
+								mapvalidator.ValueStringsAre(stringvalidator.LengthAtMost(200)),
+								mapvalidator.SizeAtMost(5),
+							},
 						},
 					},
 				},
@@ -261,7 +272,7 @@ func (a *alertGroupResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	// all alert groups are returned. We have to map for the one corresponding to our name
+	// all alert groups are returned. We have to search the map for the one corresponding to our name
 	for _, alertGroup := range *createAlertGroupResp.Data {
 		if model.Name.ValueString() != *alertGroup.Name {
 			continue
@@ -416,7 +427,7 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.UpdateAl
 
 	var oarrs []observability.UpdateAlertgroupsRequestInnerRulesInner
 	for i := range rules {
-		rule := rules[i]
+		rule := &rules[i]
 		oarr := observability.UpdateAlertgroupsRequestInnerRulesInner{}
 
 		if !utils.IsUndefined(rule.Alert) {

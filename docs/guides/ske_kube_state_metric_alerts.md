@@ -136,6 +136,7 @@ This guide explains how to configure the STACKIT Observability product to send a
          - url: ${metrics_push_url}
            queueConfig:
              batchSendDeadline: '5s'
+             # both values need to be configured according to your observability plan
              capacity: 30000
              maxSamplesPerSend: 3000
              writeRelabelConfigs:
