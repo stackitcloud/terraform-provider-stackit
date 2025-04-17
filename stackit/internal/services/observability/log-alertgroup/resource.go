@@ -1,4 +1,4 @@
-package alertgroup
+package logalertgroup
 
 import (
 	"context"
@@ -32,9 +32,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &alertGroupResource{}
-	_ resource.ResourceWithConfigure   = &alertGroupResource{}
-	_ resource.ResourceWithImportState = &alertGroupResource{}
+	_ resource.Resource                = &logAlertGroupResource{}
+	_ resource.ResourceWithConfigure   = &logAlertGroupResource{}
+	_ resource.ResourceWithImportState = &logAlertGroupResource{}
 )
 
 type Model struct {
@@ -65,34 +65,34 @@ var ruleTypes = map[string]attr.Type{
 // Descriptions for the resource and data source schemas are centralized here.
 var descriptions = map[string]string{
 	"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`name`\".",
-	"project_id":  "STACKIT project ID to which the alert group is associated.",
-	"instance_id": "Observability instance ID to which the alert group is associated.",
-	"name":        "The name of the alert group. Is the identifier and must be unique in the group.",
+	"project_id":  "STACKIT project ID to which the log alert group is associated.",
+	"instance_id": "Observability instance ID to which the log alert group is associated.",
+	"name":        "The name of the log alert group. Is the identifier and must be unique in the group.",
 	"interval":    "Specifies the frequency at which rules within the group are evaluated. The interval must be at least 60 seconds and defaults to 60 seconds if not set. Supported formats include hours, minutes, and seconds, either singly or in combination. Examples of valid formats are: '5h30m40s', '5h', '5h30m', '60m', and '60s'.",
 	"alert":       "The name of the alert rule. Is the identifier and must be unique in the group.",
-	"expression":  "The PromQL expression to evaluate. Every evaluation cycle this is evaluated at the current time, and all resultant time series become pending/firing alerts.",
+	"expression":  "The LogQL expression to evaluate. Every evaluation cycle this is evaluated at the current time, and all resultant time series become pending/firing alerts.",
 	"for":         "Alerts are considered firing once they have been returned for this long. Alerts which have not yet fired for long enough are considered pending. Default is 0s",
 	"labels":      "A map of key:value. Labels to add or overwrite for each alert",
 	"annotations": "A map of key:value. Annotations to add or overwrite for each alert",
 }
 
-// NewAlertGroupResource is a helper function to simplify the provider implementation.
-func NewAlertGroupResource() resource.Resource {
-	return &alertGroupResource{}
+// NewLogAlertGroupResource is a helper function to simplify the provider implementation.
+func NewLogAlertGroupResource() resource.Resource {
+	return &logAlertGroupResource{}
 }
 
 // alertGroupResource is the resource implementation.
-type alertGroupResource struct {
+type logAlertGroupResource struct {
 	client *observability.APIClient
 }
 
 // Metadata returns the resource type name.
-func (a *alertGroupResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_observability_alertgroup"
+func (l *logAlertGroupResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_observability_logalertgroup"
 }
 
 // Configure adds the provider configured client to the resource.
-func (a *alertGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (l *logAlertGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -122,14 +122,14 @@ func (a *alertGroupResource) Configure(ctx context.Context, req resource.Configu
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
-	a.client = apiClient
-	tflog.Info(ctx, "Observability alert group client configured")
+	l.client = apiClient
+	tflog.Info(ctx, "Observability log alert group client configured")
 }
 
 // Schema defines the schema for the resource.
-func (a *alertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (l *logAlertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Observability alert group resource schema. Used to create alerts based on metrics (Thanos). Must have a `region` specified in the provider configuration.",
+		Description: "Observability log alert group resource schema. Used to create alerts based on logs (Loki). Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -183,7 +183,7 @@ func (a *alertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				},
 			},
 			"rules": schema.ListNestedAttribute{
-				Description: "Rules for the alert group",
+				Description: "Rules for the log alert group",
 				Required:    true,
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.RequiresReplace(),
@@ -244,7 +244,7 @@ func (a *alertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest,
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (a *alertGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (l *logAlertGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -257,7 +257,7 @@ func (a *alertGroupResource) Create(ctx context.Context, req resource.CreateRequ
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "alert_group_name", alertGroupName)
+	ctx = tflog.SetField(ctx, "log_alert_group_name", alertGroupName)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	payload, err := toCreatePayload(ctx, &model)
@@ -266,13 +266,13 @@ func (a *alertGroupResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	createAlertGroupResp, err := a.client.CreateAlertgroups(ctx, instanceId, projectId).CreateAlertgroupsPayload(*payload).Execute()
+	createAlertGroupResp, err := l.client.CreateLogsAlertgroups(ctx, instanceId, projectId).CreateLogsAlertgroupsPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating alertgroup", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
-	// all alert groups are returned. We have to search the map for the one corresponding to our name
+	// all log alert groups are returned. We have to search the map for the one corresponding to our name
 	for _, alertGroup := range *createAlertGroupResp.Data {
 		if model.Name.ValueString() != *alertGroup.Name {
 			continue
@@ -280,7 +280,7 @@ func (a *alertGroupResource) Create(ctx context.Context, req resource.CreateRequ
 
 		err = mapFields(ctx, &alertGroup, &model)
 		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating alert group", fmt.Sprintf("Processing API payload: %v", err))
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating log alert group", fmt.Sprintf("Processing API payload: %v", err))
 			return
 		}
 	}
@@ -291,11 +291,11 @@ func (a *alertGroupResource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "alert group created")
+	tflog.Info(ctx, "log alert group created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (a *alertGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (l *logAlertGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -307,10 +307,10 @@ func (a *alertGroupResource) Read(ctx context.Context, req resource.ReadRequest,
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "alert_group_name", alertGroupName)
+	ctx = tflog.SetField(ctx, "log_alert_group_name", alertGroupName)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	readAlertGroupResp, err := a.client.GetAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
+	readAlertGroupResp, err := l.client.GetLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -318,13 +318,13 @@ func (a *alertGroupResource) Read(ctx context.Context, req resource.ReadRequest,
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading alert group", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading log alert group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	err = mapFields(ctx, readAlertGroupResp.Data, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading alert group", fmt.Sprintf("Error processing API response: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading log alert group", fmt.Sprintf("Error processing API response: %v", err))
 		return
 	}
 
@@ -337,12 +337,12 @@ func (a *alertGroupResource) Read(ctx context.Context, req resource.ReadRequest,
 // The Update function is redundant since any modifications will
 // automatically trigger a resource recreation through Terraform's built-in
 // lifecycle management.
-func (a *alertGroupResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating alert group", "Observability alert groups can't be updated")
+func (l *logAlertGroupResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating log alert group", "Observability log alert groups can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (a *alertGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (l *logAlertGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
@@ -355,21 +355,21 @@ func (a *alertGroupResource) Delete(ctx context.Context, req resource.DeleteRequ
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "alert_group_name", alertGroupName)
+	ctx = tflog.SetField(ctx, "log_alert_group_name", alertGroupName)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	_, err := a.client.DeleteAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
+	_, err := l.client.DeleteLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting alert group", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting log alert group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	tflog.Info(ctx, "Alert group deleted")
+	tflog.Info(ctx, "log alert group deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: project_id,instance_id,name
-func (a *alertGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (l *logAlertGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
@@ -383,16 +383,16 @@ func (a *alertGroupResource) ImportState(ctx context.Context, req resource.Impor
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[2])...)
-	tflog.Info(ctx, "Observability alert group state imported")
+	tflog.Info(ctx, "Observability log alert group state imported")
 }
 
-// toCreatePayload generates the payload to create a new alert group.
-func toCreatePayload(ctx context.Context, model *Model) (*observability.CreateAlertgroupsPayload, error) {
+// toCreatePayload generates the payload to create a new log alert group.
+func toCreatePayload(ctx context.Context, model *Model) (*observability.CreateLogsAlertgroupsPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	payload := observability.CreateAlertgroupsPayload{}
+	payload := observability.CreateLogsAlertgroupsPayload{}
 
 	if !utils.IsUndefined(model.Name) {
 		payload.Name = model.Name.ValueStringPointer()

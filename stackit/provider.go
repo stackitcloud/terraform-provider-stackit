@@ -48,6 +48,7 @@ import (
 	alertGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/alertgroup"
 	observabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/credential"
 	observabilityInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/instance"
+	logAlertGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/log-alertgroup"
 	observabilityScrapeConfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/scrapeconfig"
 	openSearchCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/credential"
 	openSearchInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/instance"
@@ -482,6 +483,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		loadBalancer.NewLoadBalancerDataSource,
 		logMeInstance.NewInstanceDataSource,
 		logMeCredential.NewCredentialDataSource,
+		logAlertGroup.NewLogAlertGroupDataSource,
 		mariaDBInstance.NewInstanceDataSource,
 		mariaDBCredential.NewCredentialDataSource,
 		mongoDBFlexInstance.NewInstanceDataSource,
@@ -540,6 +542,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
 		logMeInstance.NewInstanceResource,
 		logMeCredential.NewCredentialResource,
+		logAlertGroup.NewLogAlertGroupResource,
 		mariaDBInstance.NewInstanceResource,
 		mariaDBCredential.NewCredentialResource,
 		modelServingToken.NewTokenResource,

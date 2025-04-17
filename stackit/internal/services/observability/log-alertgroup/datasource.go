@@ -1,4 +1,4 @@
-package alertgroup
+package logalertgroup
 
 import (
 	"context"
@@ -21,21 +21,21 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ datasource.DataSource = &alertGroupDataSource{}
+	_ datasource.DataSource = &logAlertGroupDataSource{}
 )
 
-// NewAlertGroupDataSource creates a new instance of the alertGroupDataSource.
-func NewAlertGroupDataSource() datasource.DataSource {
-	return &alertGroupDataSource{}
+// NewLogAlertGroupDataSource creates a new instance of the alertGroupDataSource.
+func NewLogAlertGroupDataSource() datasource.DataSource {
+	return &logAlertGroupDataSource{}
 }
 
 // alertGroupDataSource is the datasource implementation.
-type alertGroupDataSource struct {
+type logAlertGroupDataSource struct {
 	client *observability.APIClient
 }
 
 // Configure adds the provider configured client to the resource.
-func (a *alertGroupDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (l *logAlertGroupDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -65,19 +65,19 @@ func (a *alertGroupDataSource) Configure(ctx context.Context, req datasource.Con
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return
 	}
-	a.client = apiClient
-	tflog.Info(ctx, "Observability alert group client configured")
+	l.client = apiClient
+	tflog.Info(ctx, "Observability log alert group client configured")
 }
 
-// Metadata provides metadata for the alert group datasource.
-func (a *alertGroupDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_observability_alertgroup"
+// Metadata provides metadata for the log alert group datasource.
+func (l *logAlertGroupDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_observability_logalertgroup"
 }
 
-// Schema defines the schema for the alert group data source.
-func (a *alertGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+// Schema defines the schema for the log alert group data source.
+func (l *logAlertGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Observability alert group datasource schema. Used to create alerts based on metrics (Thanos). Must have a `region` specified in the provider configuration.",
+		Description: "Observability log alert group datasource schema. Used to create alerts based on logs (Loki). Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -148,7 +148,7 @@ func (a *alertGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 	}
 }
 
-func (a *alertGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (l *logAlertGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -160,10 +160,10 @@ func (a *alertGroupDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "alert_group_name", alertGroupName)
+	ctx = tflog.SetField(ctx, "log_alert_group_name", alertGroupName)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	readAlertGroupResp, err := a.client.GetAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
+	readAlertGroupResp, err := l.client.GetLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -171,13 +171,13 @@ func (a *alertGroupDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading alert group", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading log alert group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	err = mapFields(ctx, readAlertGroupResp.Data, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading alert group", fmt.Sprintf("Error processing API response: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading log alert group", fmt.Sprintf("Error processing API response: %v", err))
 		return
 	}
 
