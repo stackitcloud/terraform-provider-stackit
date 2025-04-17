@@ -170,8 +170,8 @@ github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.18.1 h1:n6xMTHrLV
 github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v0.18.1/go.mod h1:R+fHrtGfy+zx+d5s31cBh09P3TG58dyytb83gB7ldi0=
 github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.1.1 h1:yyN3Q4i+5bmUVySPbQC7sSKG6sK21V8AxMjvhfJe2r0=
 github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.1.1/go.mod h1:c5/LHxZZ7qZYOboR01qOw1Mqq5v/VNyONw7WPHctNeY=
-github.com/stackitcloud/stackit-sdk-go/services/observability v0.4.0 h1:CPa/SRuX1Gl810K0SearSFyH0k/xKF9JHUV+4j+Tcn4=
-github.com/stackitcloud/stackit-sdk-go/services/observability v0.4.0/go.mod h1:/go4bZ76dxGfkvl48EYUmPZ41c+64Yrf/26RodfcFyw=
+github.com/stackitcloud/stackit-sdk-go/services/observability v0.5.0 h1:BpHIZdoAZwtzYgXznFE7lhqpUvnDJjc+HaEAQmA7NOk=
+github.com/stackitcloud/stackit-sdk-go/services/observability v0.5.0/go.mod h1:1gMNjPCqT868oIqdWGkiReS1G/qpM4bYKYBmDRi8sqg=
 github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.21.0 h1:Au07XkATgBqrGpjO5t6ASAjuif7VXcKKF3t4edRh+Yw=
 github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.21.0/go.mod h1:zyVy1/etVAq6NkdPG4kNOM2R7+AxXp5zLsiN4nDC7Fs=
 github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.0.2 h1:S6uamk6ecVy8K3jE2mgU50h14GoGE0LRVmiK3TvgfTc=
