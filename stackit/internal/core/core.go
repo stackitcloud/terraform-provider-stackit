@@ -23,6 +23,7 @@ type ProviderData struct {
 	AuthorizationCustomEndpoint     string
 	CdnCustomEndpoint               string
 	DnsCustomEndpoint               string
+	GitCustomEndpoint               string
 	IaaSCustomEndpoint              string
 	LoadBalancerCustomEndpoint      string
 	LogMeCustomEndpoint             string

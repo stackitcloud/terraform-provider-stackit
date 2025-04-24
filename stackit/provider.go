@@ -12,12 +12,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
+	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
 	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
 	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
+	gitInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/git/instance"
 	iaasAffinityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/affinitygroup"
 	iaasImage "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/image"
 	iaasKeyPair "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/keypair"
@@ -73,11 +78,6 @@ import (
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
-
-	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
 // Ensure the implementation satisfies the expected interfaces
@@ -118,6 +118,7 @@ type providerModel struct {
 	ArgusCustomEndpoint             types.String `tfsdk:"argus_custom_endpoint"`
 	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
 	DNSCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
+	GitCustomEndpoint               types.String `tfsdk:"git_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
 	PostgresFlexCustomEndpoint      types.String `tfsdk:"postgresflex_custom_endpoint"`
 	MongoDBFlexCustomEndpoint       types.String `tfsdk:"mongodbflex_custom_endpoint"`
@@ -159,6 +160,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"argus_custom_endpoint":              "Custom endpoint for the Argus service",
 		"cdn_custom_endpoint":                "Custom endpoint for the CDN service",
 		"dns_custom_endpoint":                "Custom endpoint for the DNS service",
+		"git_custom_endpoint":                "Custom endpoint for the Git service",
 		"iaas_custom_endpoint":               "Custom endpoint for the IaaS service",
 		"mongodbflex_custom_endpoint":        "Custom endpoint for the MongoDB Flex service",
 		"modelserving_custom_endpoint":       "Custom endpoint for the AI Model Serving service",
@@ -243,6 +245,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"dns_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["dns_custom_endpoint"],
+			},
+			"git_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["git_custom_endpoint"],
 			},
 			"iaas_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -358,98 +364,61 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Configure SDK client
 	sdkConfig := &config.Configuration{}
 	var providerData core.ProviderData
-	if !(providerConfig.CredentialsFilePath.IsUnknown() || providerConfig.CredentialsFilePath.IsNull()) {
-		sdkConfig.CredentialsFilePath = providerConfig.CredentialsFilePath.ValueString()
+
+	// Helper function to set a string field if it's known and not null
+	setStringField := func(v basetypes.StringValue, setter func(string)) {
+		if !v.IsUnknown() && !v.IsNull() {
+			setter(v.ValueString())
+		}
 	}
-	if !(providerConfig.ServiceAccountKey.IsUnknown() || providerConfig.ServiceAccountKey.IsNull()) {
-		sdkConfig.ServiceAccountKey = providerConfig.ServiceAccountKey.ValueString()
+
+	// Helper function to set a boolean field if it's known and not null
+	setBoolField := func(v basetypes.BoolValuable, setter func(bool)) {
+		if !v.IsUnknown() && !v.IsNull() {
+			val, err := v.ToBoolValue(ctx)
+			if err != nil {
+				core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up bool value: %v", diags.Errors()))
+			}
+			setter(val.ValueBool())
+		}
 	}
-	if !(providerConfig.ServiceAccountKeyPath.IsUnknown() || providerConfig.ServiceAccountKeyPath.IsNull()) {
-		sdkConfig.ServiceAccountKeyPath = providerConfig.ServiceAccountKeyPath.ValueString()
-	}
-	if !(providerConfig.PrivateKey.IsUnknown() || providerConfig.PrivateKey.IsNull()) {
-		sdkConfig.PrivateKey = providerConfig.PrivateKey.ValueString()
-	}
-	if !(providerConfig.PrivateKeyPath.IsUnknown() || providerConfig.PrivateKeyPath.IsNull()) {
-		sdkConfig.PrivateKeyPath = providerConfig.PrivateKeyPath.ValueString()
-	}
-	if !(providerConfig.Token.IsUnknown() || providerConfig.Token.IsNull()) {
-		sdkConfig.Token = providerConfig.Token.ValueString()
-	}
-	if !(providerConfig.DefaultRegion.IsUnknown() || providerConfig.DefaultRegion.IsNull()) {
-		providerData.DefaultRegion = providerConfig.DefaultRegion.ValueString()
-	} else if !(providerConfig.Region.IsUnknown() || providerConfig.Region.IsNull()) { // nolint:staticcheck // preliminary handling of deprecated attribute
-		providerData.Region = providerConfig.Region.ValueString() // nolint:staticcheck // preliminary handling of deprecated attribute
-	}
-	if !(providerConfig.CdnCustomEndpoint.IsUnknown() || providerConfig.CdnCustomEndpoint.IsNull()) {
-		providerData.CdnCustomEndpoint = providerConfig.CdnCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.DNSCustomEndpoint.IsUnknown() || providerConfig.DNSCustomEndpoint.IsNull()) {
-		providerData.DnsCustomEndpoint = providerConfig.DNSCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.IaaSCustomEndpoint.IsUnknown() || providerConfig.IaaSCustomEndpoint.IsNull()) {
-		providerData.IaaSCustomEndpoint = providerConfig.IaaSCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.PostgresFlexCustomEndpoint.IsUnknown() || providerConfig.PostgresFlexCustomEndpoint.IsNull()) {
-		providerData.PostgresFlexCustomEndpoint = providerConfig.PostgresFlexCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.ModelServingCustomEndpoint.IsUnknown() || providerConfig.ModelServingCustomEndpoint.IsNull()) {
-		providerData.ModelServingCustomEndpoint = providerConfig.ModelServingCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.MongoDBFlexCustomEndpoint.IsUnknown() || providerConfig.MongoDBFlexCustomEndpoint.IsNull()) {
-		providerData.MongoDBFlexCustomEndpoint = providerConfig.MongoDBFlexCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.LoadBalancerCustomEndpoint.IsUnknown() || providerConfig.LoadBalancerCustomEndpoint.IsNull()) {
-		providerData.LoadBalancerCustomEndpoint = providerConfig.LoadBalancerCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.LogMeCustomEndpoint.IsUnknown() || providerConfig.LogMeCustomEndpoint.IsNull()) {
-		providerData.LogMeCustomEndpoint = providerConfig.LogMeCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.RabbitMQCustomEndpoint.IsUnknown() || providerConfig.RabbitMQCustomEndpoint.IsNull()) {
-		providerData.RabbitMQCustomEndpoint = providerConfig.RabbitMQCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.MariaDBCustomEndpoint.IsUnknown() || providerConfig.MariaDBCustomEndpoint.IsNull()) {
-		providerData.MariaDBCustomEndpoint = providerConfig.MariaDBCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.AuthorizationCustomEndpoint.IsUnknown() || providerConfig.AuthorizationCustomEndpoint.IsNull()) {
-		providerData.AuthorizationCustomEndpoint = providerConfig.AuthorizationCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.ObjectStorageCustomEndpoint.IsUnknown() || providerConfig.ObjectStorageCustomEndpoint.IsNull()) {
-		providerData.ObjectStorageCustomEndpoint = providerConfig.ObjectStorageCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.ObservabilityCustomEndpoint.IsUnknown() || providerConfig.ObservabilityCustomEndpoint.IsNull()) {
-		providerData.ObservabilityCustomEndpoint = providerConfig.ObservabilityCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.OpenSearchCustomEndpoint.IsUnknown() || providerConfig.OpenSearchCustomEndpoint.IsNull()) {
-		providerData.OpenSearchCustomEndpoint = providerConfig.OpenSearchCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.RedisCustomEndpoint.IsUnknown() || providerConfig.RedisCustomEndpoint.IsNull()) {
-		providerData.RedisCustomEndpoint = providerConfig.RedisCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.ResourceManagerCustomEndpoint.IsUnknown() || providerConfig.ResourceManagerCustomEndpoint.IsNull()) {
-		providerData.ResourceManagerCustomEndpoint = providerConfig.ResourceManagerCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.SecretsManagerCustomEndpoint.IsUnknown() || providerConfig.SecretsManagerCustomEndpoint.IsNull()) {
-		providerData.SecretsManagerCustomEndpoint = providerConfig.SecretsManagerCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.SQLServerFlexCustomEndpoint.IsUnknown() || providerConfig.SQLServerFlexCustomEndpoint.IsNull()) {
-		providerData.SQLServerFlexCustomEndpoint = providerConfig.SQLServerFlexCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.ServiceAccountCustomEndpoint.IsUnknown() || providerConfig.ServiceAccountCustomEndpoint.IsNull()) {
-		providerData.ServiceAccountCustomEndpoint = providerConfig.ServiceAccountCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.SKECustomEndpoint.IsUnknown() || providerConfig.SKECustomEndpoint.IsNull()) {
-		providerData.SKECustomEndpoint = providerConfig.SKECustomEndpoint.ValueString()
-	}
-	if !(providerConfig.ServiceEnablementCustomEndpoint.IsUnknown() || providerConfig.ServiceEnablementCustomEndpoint.IsNull()) {
-		providerData.ServiceEnablementCustomEndpoint = providerConfig.ServiceEnablementCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.TokenCustomEndpoint.IsUnknown() || providerConfig.TokenCustomEndpoint.IsNull()) {
-		sdkConfig.TokenCustomUrl = providerConfig.TokenCustomEndpoint.ValueString()
-	}
-	if !(providerConfig.EnableBetaResources.IsUnknown() || providerConfig.EnableBetaResources.IsNull()) {
-		providerData.EnableBetaResources = providerConfig.EnableBetaResources.ValueBool()
-	}
+
+	// Configure SDK client
+	setStringField(providerConfig.CredentialsFilePath, func(v string) { sdkConfig.CredentialsFilePath = v })
+	setStringField(providerConfig.ServiceAccountKey, func(v string) { sdkConfig.ServiceAccountKey = v })
+	setStringField(providerConfig.ServiceAccountKeyPath, func(v string) { sdkConfig.ServiceAccountKeyPath = v })
+	setStringField(providerConfig.PrivateKey, func(v string) { sdkConfig.PrivateKey = v })
+	setStringField(providerConfig.PrivateKeyPath, func(v string) { sdkConfig.PrivateKeyPath = v })
+	setStringField(providerConfig.Token, func(v string) { sdkConfig.Token = v })
+	setStringField(providerConfig.TokenCustomEndpoint, func(v string) { sdkConfig.TokenCustomUrl = v })
+
+	// Provider Data Configuration
+	setStringField(providerConfig.DefaultRegion, func(v string) { providerData.DefaultRegion = v })
+	setStringField(providerConfig.Region, func(v string) { providerData.Region = v }) // nolint:staticcheck // preliminary handling of deprecated attribute
+	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { providerData.CdnCustomEndpoint = v })
+	setStringField(providerConfig.DNSCustomEndpoint, func(v string) { providerData.DnsCustomEndpoint = v })
+	setStringField(providerConfig.GitCustomEndpoint, func(v string) { providerData.GitCustomEndpoint = v })
+	setStringField(providerConfig.IaaSCustomEndpoint, func(v string) { providerData.IaaSCustomEndpoint = v })
+	setStringField(providerConfig.PostgresFlexCustomEndpoint, func(v string) { providerData.PostgresFlexCustomEndpoint = v })
+	setStringField(providerConfig.ModelServingCustomEndpoint, func(v string) { providerData.ModelServingCustomEndpoint = v })
+	setStringField(providerConfig.MongoDBFlexCustomEndpoint, func(v string) { providerData.MongoDBFlexCustomEndpoint = v })
+	setStringField(providerConfig.LoadBalancerCustomEndpoint, func(v string) { providerData.LoadBalancerCustomEndpoint = v })
+	setStringField(providerConfig.LogMeCustomEndpoint, func(v string) { providerData.LogMeCustomEndpoint = v })
+	setStringField(providerConfig.RabbitMQCustomEndpoint, func(v string) { providerData.RabbitMQCustomEndpoint = v })
+	setStringField(providerConfig.MariaDBCustomEndpoint, func(v string) { providerData.MariaDBCustomEndpoint = v })
+	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { providerData.AuthorizationCustomEndpoint = v })
+	setStringField(providerConfig.ObjectStorageCustomEndpoint, func(v string) { providerData.ObjectStorageCustomEndpoint = v })
+	setStringField(providerConfig.ObservabilityCustomEndpoint, func(v string) { providerData.ObservabilityCustomEndpoint = v })
+	setStringField(providerConfig.OpenSearchCustomEndpoint, func(v string) { providerData.OpenSearchCustomEndpoint = v })
+	setStringField(providerConfig.RedisCustomEndpoint, func(v string) { providerData.RedisCustomEndpoint = v })
+	setStringField(providerConfig.ResourceManagerCustomEndpoint, func(v string) { providerData.ResourceManagerCustomEndpoint = v })
+	setStringField(providerConfig.SecretsManagerCustomEndpoint, func(v string) { providerData.SecretsManagerCustomEndpoint = v })
+	setStringField(providerConfig.SQLServerFlexCustomEndpoint, func(v string) { providerData.SQLServerFlexCustomEndpoint = v })
+	setStringField(providerConfig.ServiceAccountCustomEndpoint, func(v string) { providerData.ServiceAccountCustomEndpoint = v })
+	setStringField(providerConfig.SKECustomEndpoint, func(v string) { providerData.SKECustomEndpoint = v })
+	setStringField(providerConfig.ServiceEnablementCustomEndpoint, func(v string) { providerData.ServiceEnablementCustomEndpoint = v })
+	setBoolField(providerConfig.EnableBetaResources, func(v bool) { providerData.EnableBetaResources = v })
+
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
 		var experimentValues []string
 		diags := providerConfig.Experiments.ElementsAs(ctx, &experimentValues, false)
@@ -480,6 +449,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		cdnCustomDomain.NewCustomDomainDataSource,
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
+		gitInstance.NewGitDataSource,
 		iaasAffinityGroup.NewAffinityGroupDatasource,
 		iaasImage.NewImageDataSource,
 		iaasNetwork.NewNetworkDataSource,
@@ -537,6 +507,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		cdnCustomDomain.NewCustomDomainResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
+		gitInstance.NewGitResource,
 		iaasAffinityGroup.NewAffinityGroupResource,
 		iaasImage.NewImageResource,
 		iaasNetwork.NewNetworkResource,
