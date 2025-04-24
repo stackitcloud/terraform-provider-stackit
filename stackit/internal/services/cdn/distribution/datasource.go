@@ -161,24 +161,22 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed:    true,
 				Description: descriptions["config"],
 				Attributes: map[string]schema.Attribute{
-					"backend": schema.ListNestedAttribute{
+					"backend": schema.SingleNestedAttribute{
 						Computed:    true,
 						Description: descriptions["config_backend"],
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"type": schema.StringAttribute{
-									Computed:    true,
-									Description: descriptions["config_backend_type"],
-								},
-								"origin_url": schema.StringAttribute{
-									Computed:    true,
-									Description: descriptions["config_backend_origin_url"],
-								},
-								"origin_request_headers": schema.ListAttribute{
-									Computed:    true,
-									Description: descriptions["config_backend_origin_request_headers"],
-									ElementType: types.StringType,
-								},
+						Attributes: map[string]schema.Attribute{
+							"type": schema.StringAttribute{
+								Computed:    true,
+								Description: descriptions["config_backend_type"],
+							},
+							"origin_url": schema.StringAttribute{
+								Computed:    true,
+								Description: descriptions["config_backend_origin_url"],
+							},
+							"origin_request_headers": schema.MapAttribute{
+								Computed:    true,
+								Description: descriptions["config_backend_origin_request_headers"],
+								ElementType: types.StringType,
 							},
 						},
 					},

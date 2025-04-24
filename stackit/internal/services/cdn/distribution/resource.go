@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -91,13 +93,15 @@ func (r *distributionResource) Configure(ctx context.Context, req resource.Confi
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
+	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_cdn_distribution", "resource")
+
 	var apiClient *cdn.APIClient
 	var err error
 	if r.providerData.CdnCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "loadbalancer_custom_endpoint", r.providerData.LoadBalancerCustomEndpoint)
+		ctx = tflog.SetField(ctx, "cdn_custom_endpoint", r.providerData.CdnCustomEndpoint)
 		apiClient, err = cdn.NewAPIClient(
 			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithEndpoint(r.providerData.LoadBalancerCustomEndpoint),
+			config.WithEndpoint(r.providerData.CdnCustomEndpoint),
 		)
 	} else {
 		apiClient, err = cdn.NewAPIClient(
@@ -151,12 +155,17 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 				Validators: []validator.String{
 					validate.UUID(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Description: descriptions["project_id"],
 				Required:    true,
-				Validators: []validator.String{
-					validate.UUID(),
+				Optional:    false,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"status": schema.StringAttribute{
@@ -205,24 +214,22 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 				Required:    true,
 				Description: descriptions["config"],
 				Attributes: map[string]schema.Attribute{
-					"backend": schema.ListNestedAttribute{
+					"backend": schema.SingleNestedAttribute{
 						Required:    true,
 						Description: descriptions["config_backend"],
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"type": schema.StringAttribute{
-									Required:    true,
-									Description: descriptions["config_backend_type"],
-								},
-								"origin_url": schema.StringAttribute{
-									Required:    true,
-									Description: descriptions["config_backend_origin_url"],
-								},
-								"origin_request_headers": schema.ListAttribute{
-									Optional:    true,
-									Description: descriptions["config_backend_origin_request_headers"],
-									ElementType: types.StringType,
-								},
+						Attributes: map[string]schema.Attribute{
+							"type": schema.StringAttribute{
+								Required:    true,
+								Description: descriptions["config_backend_type"],
+							},
+							"origin_url": schema.StringAttribute{
+								Required:    true,
+								Description: descriptions["config_backend_origin_url"],
+							},
+							"origin_request_headers": schema.MapAttribute{
+								Optional:    true,
+								Description: descriptions["config_backend_origin_request_headers"],
+								ElementType: types.StringType,
 							},
 						},
 					},
@@ -278,15 +285,15 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 	if model == nil {
 		return nil, fmt.Errorf("missing model")
 	}
-	config, err := convertConfig(ctx, model)
+	distributionConfig, err := convertConfig(ctx, model)
 	if err != nil {
 		return nil, err
 	}
 	payload := &cdn.CreateDistributionPayload{
 		IntentId:             cdn.PtrString(uuid.NewString()),
-		OriginUrl:            config.Backend.HttpBackend.OriginUrl,
-		Regions:              config.Regions,
-		OriginRequestHeaders: config.Backend.HttpBackend.OriginRequestHeaders,
+		OriginUrl:            distributionConfig.Backend.HttpBackend.OriginUrl,
+		Regions:              distributionConfig.Regions,
+		OriginRequestHeaders: distributionConfig.Backend.HttpBackend.OriginRequestHeaders,
 	}
 
 	return payload, nil
@@ -317,8 +324,10 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 	}
 
 	originRequestHeaders := map[string]string{}
-	for k, v := range *configModel.Backend.OriginRequestHeaders {
-		originRequestHeaders[k] = v
+	if configModel.Backend.OriginRequestHeaders != nil {
+		for k, v := range *configModel.Backend.OriginRequestHeaders {
+			originRequestHeaders[k] = v
+		}
 	}
 	return &cdn.Config{
 		Backend: &cdn.ConfigBackend{
@@ -339,7 +348,16 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	if model.ProjectId.IsUnknown() || model.ProjectId.IsNull() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "No project_id in plan")
+		return
+	}
 	projectId := model.ProjectId.ValueString()
+
+	if model.DistributionId.IsUnknown() || model.DistributionId.IsNull() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "No distribution_id in plan")
+		return
+	}
 	distributionId := model.DistributionId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
@@ -347,7 +365,8 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 	cdnResp, err := r.client.GetDistribution(ctx, projectId, distributionId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, oapiErr) {
+		// n.b. err is caught here if of type **oapierror.GenericOpenAPIError, which it is
+		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
 				return
@@ -370,14 +389,23 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 	tflog.Info(ctx, "CDN distribution read")
 }
 
-func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
-	diags := req.State.Get(ctx, &model)
+	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	if model.ProjectId.IsUnknown() || model.ProjectId.IsNull() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "No project_id in plan")
+		return
+	}
 	projectId := model.ProjectId.ValueString()
+
+	if model.DistributionId.IsUnknown() || model.DistributionId.IsNull() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "No distribution_id in plan")
+		return
+	}
 	distributionId := model.DistributionId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
@@ -487,7 +515,7 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 		return fmt.Errorf("CDN distribution ID not present")
 	}
 
-	id := strings.Join([]string{*distribution.ProjectId, *distribution.Id}, core.Separator)
+	id := *distribution.ProjectId + core.Separator + *distribution.Id
 
 	model.ID = types.StringValue(id)
 	model.DistributionId = types.StringValue(*distribution.Id)
@@ -496,13 +524,13 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 	model.CreatedAt = types.StringValue(distribution.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(distribution.UpdatedAt.String())
 
-	errors := []attr.Value{}
+	distributionErrors := []attr.Value{}
 	if distribution.Errors != nil {
 		for _, e := range *distribution.Errors {
-			errors = append(errors, types.StringValue(*e.En))
+			distributionErrors = append(distributionErrors, types.StringValue(*e.En))
 		}
 	}
-	modelErrors, diags := types.ListValue(types.StringType, errors)
+	modelErrors, diags := types.ListValue(types.StringType, distributionErrors)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
@@ -516,15 +544,17 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
-	headers := map[string]attr.Value{}
-	if distribution.Config.Backend.HttpBackend.OriginRequestHeaders != nil {
+	originRequestHeaders := types.MapNull(types.StringType)
+	if distribution.Config.Backend.HttpBackend.OriginRequestHeaders != nil && len(*distribution.Config.Backend.HttpBackend.OriginRequestHeaders) > 0 {
+		headers := map[string]attr.Value{}
 		for k, v := range *distribution.Config.Backend.HttpBackend.OriginRequestHeaders {
 			headers[k] = types.StringValue(v)
 		}
-	}
-	originRequestHeaders, diags := types.MapValue(types.StringType, headers)
-	if diags.HasError() {
-		return core.DiagsToError(diags)
+		mappedHeaders, diags := types.MapValue(types.StringType, headers)
+		originRequestHeaders = mappedHeaders
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
 	}
 	// note that httpbackend is hardcoded here as long as it is the only available backend
 	backend, diags := types.ObjectValue(backendTypes, map[string]attr.Value{
@@ -535,25 +565,25 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
-	config, diags := types.ObjectValue(configTypes, map[string]attr.Value{
+	distributionConfig, diags := types.ObjectValue(configTypes, map[string]attr.Value{
 		"backend": backend,
 		"regions": modelRegions,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
-	model.Config = config
+	model.Config = distributionConfig
 
 	domains := []attr.Value{}
 	if distribution.Domains != nil {
 		for _, d := range *distribution.Domains {
-			errors := []attr.Value{}
+			domainErrors := []attr.Value{}
 			if d.Errors != nil {
 				for _, e := range *d.Errors {
-					errors = append(errors, types.StringValue(*e.En))
+					domainErrors = append(domainErrors, types.StringValue(*e.En))
 				}
 			}
-			modelDomainErrors, diags := types.ListValue(types.StringType, errors)
+			modelDomainErrors, diags := types.ListValue(types.StringType, domainErrors)
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}

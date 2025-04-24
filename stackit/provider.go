@@ -155,6 +155,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"region":                             "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"default_region":                     "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"argus_custom_endpoint":              "Custom endpoint for the Argus service",
+		"cdn_custom_endpoint":                "Custom endpoint for the CDN service",
 		"dns_custom_endpoint":                "Custom endpoint for the DNS service",
 		"iaas_custom_endpoint":               "Custom endpoint for the IaaS service",
 		"mongodbflex_custom_endpoint":        "Custom endpoint for the MongoDB Flex service",
@@ -232,6 +233,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:           true,
 				Description:        descriptions["argus_custom_endpoint"],
 				DeprecationMessage: "Argus service has been deprecated and integration will be removed after February 26th 2025. Please use `observability_custom_endpoint` and `observability` resources instead, which offer the exact same functionality.",
+			},
+			"cdn_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["cdn_custom_endpoint"],
 			},
 			"dns_custom_endpoint": schema.StringAttribute{
 				Optional:    true,

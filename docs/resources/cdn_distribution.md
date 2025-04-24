@@ -52,7 +52,7 @@ resource "stackit_cdn_distribution" "example_distribution" {
 
 Required:
 
-- `backend` (Attributes List) The configured backend for the distribution (see [below for nested schema](#nestedatt--config--backend))
+- `backend` (Attributes) The configured backend for the distribution (see [below for nested schema](#nestedatt--config--backend))
 - `regions` (List of String)
 
 <a id="nestedatt--config--backend"></a>
@@ -65,7 +65,7 @@ Required:
 
 Optional:
 
-- `origin_request_headers` (List of String) The configured origin request headers for the backend
+- `origin_request_headers` (Map of String) The configured origin request headers for the backend
 
 
 

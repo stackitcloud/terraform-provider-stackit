@@ -87,7 +87,6 @@ func TestToCreatePayload(t *testing.T) {
 					t.Fatalf("Create Payload not as expected: %s", diff)
 				}
 			}
-
 		})
 	}
 }
@@ -170,7 +169,6 @@ func TestConvertConfig(t *testing.T) {
 					t.Fatalf("Create Payload not as expected: %s", diff)
 				}
 			}
-
 		})
 	}
 }
@@ -246,12 +244,10 @@ func TestMapFields(t *testing.T) {
 			Status:    cdn.PtrString("ACTIVE"),
 			UpdatedAt: &updatedAt,
 		}
-
 		for _, mod := range mods {
 			mod(distribution)
 		}
 		return distribution
-
 	}
 	tests := map[string]struct {
 		Input    *cdn.Distribution
@@ -341,7 +337,6 @@ func TestMapFields(t *testing.T) {
 					t.Fatalf("Create Payload not as expected: %s", diff)
 				}
 			}
-
 		})
 	}
 }

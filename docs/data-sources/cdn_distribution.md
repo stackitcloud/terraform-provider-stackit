@@ -45,7 +45,7 @@ data "stackit_cdn_distribution" "example" {
 
 Read-Only:
 
-- `backend` (Attributes List) The configured backend for the distribution (see [below for nested schema](#nestedatt--config--backend))
+- `backend` (Attributes) The configured backend for the distribution (see [below for nested schema](#nestedatt--config--backend))
 - `regions` (List of String)
 
 <a id="nestedatt--config--backend"></a>
@@ -53,7 +53,7 @@ Read-Only:
 
 Read-Only:
 
-- `origin_request_headers` (List of String) The configured origin request headers for the backend
+- `origin_request_headers` (Map of String) The configured origin request headers for the backend
 - `origin_url` (String) The configured backend type for the distribution
 - `type` (String) the
 

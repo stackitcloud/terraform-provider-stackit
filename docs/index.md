@@ -153,6 +153,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 
 - `argus_custom_endpoint` (String, Deprecated) Custom endpoint for the Argus service
 - `authorization_custom_endpoint` (String) Custom endpoint for the Membership service
+- `cdn_custom_endpoint` (String) Custom endpoint for the CDN service
 - `credentials_path` (String) Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.
 - `default_region` (String) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `dns_custom_endpoint` (String) Custom endpoint for the DNS service
