@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
+	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
 	iaasAffinityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/affinitygroup"
@@ -113,6 +114,7 @@ type providerModel struct {
 	Region                          types.String `tfsdk:"region"`
 	DefaultRegion                   types.String `tfsdk:"default_region"`
 	ArgusCustomEndpoint             types.String `tfsdk:"argus_custom_endpoint"`
+	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
 	DNSCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
 	PostgresFlexCustomEndpoint      types.String `tfsdk:"postgresflex_custom_endpoint"`
@@ -372,6 +374,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	} else if !(providerConfig.Region.IsUnknown() || providerConfig.Region.IsNull()) { // nolint:staticcheck // preliminary handling of deprecated attribute
 		providerData.Region = providerConfig.Region.ValueString() // nolint:staticcheck // preliminary handling of deprecated attribute
 	}
+	if !(providerConfig.CdnCustomEndpoint.IsUnknown() || providerConfig.CdnCustomEndpoint.IsNull()) {
+		providerData.CdnCustomEndpoint = providerConfig.CdnCustomEndpoint.ValueString()
+	}
 	if !(providerConfig.DNSCustomEndpoint.IsUnknown() || providerConfig.DNSCustomEndpoint.IsNull()) {
 		providerData.DnsCustomEndpoint = providerConfig.DNSCustomEndpoint.ValueString()
 	}
@@ -463,6 +468,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 // DataSources defines the data sources implemented in the provider.
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		cdn.NewDistributionDataSource,
 		alertGroup.NewAlertGroupDataSource,
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
@@ -518,6 +524,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{
 		alertGroup.NewAlertGroupResource,
+		cdn.NewDistributionResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
 		iaasAffinityGroup.NewAffinityGroupResource,
