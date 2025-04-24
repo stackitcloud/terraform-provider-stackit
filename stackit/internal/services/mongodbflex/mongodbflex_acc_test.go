@@ -2,134 +2,117 @@ package mongodbflex_test
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-// Instance resource data
-var instanceResource = map[string]string{
-	"project_id":                      testutil.ProjectId,
-	"name":                            fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
-	"acl":                             "192.168.0.0/16",
-	"flavor_cpu":                      "2",
-	"flavor_ram":                      "4",
-	"flavor_description":              "Small, Compute optimized",
-	"replicas":                        "3",
-	"storage_class":                   "premium-perf2-mongodb",
-	"storage_size":                    "10",
-	"version":                         "6.0",
-	"version_updated":                 "7.0",
-	"options_type":                    "Replica",
-	"flavor_id":                       "2.4",
-	"backup_schedule":                 "00 6 * * *",
-	"backup_schedule_updated":         "00 12 * * *",
-	"backup_schedule_read":            "0 6 * * *",
-	"snapshot_retention_days":         "4",
-	"snapshot_retention_days_updated": "3",
-	"daily_snapshot_retention_days":   "1",
+//go:embed testfiles/resource-min.tf
+var resourceMinConfig string
+
+//go:embed testfiles/resource-max.tf
+var resourceMaxConfig string
+
+var testConfigVarsMin = config.Variables{
+	"project_id":           config.StringVariable(testutil.ProjectId),
+	"name":                 config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"acl":                  config.StringVariable("192.168.0.0/16"),
+	"flavor_cpu":           config.StringVariable("2"),
+	"flavor_ram":           config.StringVariable("4"),
+	"flavor_description":   config.StringVariable("Small, Compute optimized"),
+	"replicas":             config.StringVariable("3"),
+	"storage_class":        config.StringVariable("premium-perf2-mongodb"),
+	"storage_size":         config.StringVariable("10"),
+	"version_db":           config.StringVariable("6.0"),
+	"options_type":         config.StringVariable("Replica"),
+	"flavor_id":            config.StringVariable("2.4"),
+	"backup_schedule":      config.StringVariable("00 6 * * *"),
+	"backup_schedule_read": config.StringVariable("0 6 * * *"),
+	"role":                 config.StringVariable("read"),
+	"database":             config.StringVariable("default"),
 }
 
-// User resource data
-var userResource = map[string]string{
-	"username":   fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha)),
-	"role":       "read",
-	"database":   "default",
-	"project_id": instanceResource["project_id"],
+var testConfigVarsMax = config.Variables{
+	"project_id":                        config.StringVariable(testutil.ProjectId),
+	"name":                              config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"acl":                               config.StringVariable("192.168.0.0/16"),
+	"flavor_cpu":                        config.StringVariable("2"),
+	"flavor_ram":                        config.StringVariable("4"),
+	"flavor_description":                config.StringVariable("Small, Compute optimized"),
+	"replicas":                          config.StringVariable("3"),
+	"storage_class":                     config.StringVariable("premium-perf2-mongodb"),
+	"storage_size":                      config.StringVariable("10"),
+	"version_db":                        config.StringVariable("6.0"),
+	"options_type":                      config.StringVariable("Replica"),
+	"flavor_id":                         config.StringVariable("2.4"),
+	"backup_schedule":                   config.StringVariable("00 6 * * *"),
+	"backup_schedule_read":              config.StringVariable("0 6 * * *"),
+	"username":                          config.StringVariable(fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha))),
+	"role":                              config.StringVariable("read"),
+	"database":                          config.StringVariable("default"),
+	"snapshot_retention_days":           config.StringVariable("4"),
+	"daily_snapshot_retention_days":     config.StringVariable("1"),
+	"weekly_snapshot_retention_weeks":   config.StringVariable("7"),
+	"monthly_snapshot_retention_months": config.StringVariable("12"),
+	"point_in_time_window_hours":        config.StringVariable("5"),
 }
 
-func configResources(version, backupSchedule, snapshotRetentionDays string) string {
-	return fmt.Sprintf(`
-				%s
-
-				resource "stackit_mongodbflex_instance" "instance" {
-					project_id = "%s"
-					name    = "%s"
-					acl = ["%s"]
-					flavor = {
-						cpu = %s
-						ram = %s
-					}
-					replicas = %s
-					storage = {
-						class = "%s"
-						size = %s
-					}
-					version = "%s"
-					options = {
-						type = "%s"
-						snapshot_retention_days = %s
-						daily_snapshot_retention_days = %s
-					}
-					backup_schedule = "%s"
-				}
-
-				resource "stackit_mongodbflex_user" "user" {
-					project_id = stackit_mongodbflex_instance.instance.project_id
-					instance_id = stackit_mongodbflex_instance.instance.instance_id
-					username = "%s"
-					roles = ["%s"]
-					database = "%s"
-				}
-				`,
-		testutil.MongoDBFlexProviderConfig(),
-		instanceResource["project_id"],
-		instanceResource["name"],
-		instanceResource["acl"],
-		instanceResource["flavor_cpu"],
-		instanceResource["flavor_ram"],
-		instanceResource["replicas"],
-		instanceResource["storage_class"],
-		instanceResource["storage_size"],
-		version,
-		instanceResource["options_type"],
-		snapshotRetentionDays,
-		instanceResource["daily_snapshot_retention_days"],
-		backupSchedule,
-		userResource["username"],
-		userResource["role"],
-		userResource["database"],
-	)
+func configVarsMinUpdated() config.Variables {
+	tempConfig := make(config.Variables, len(testConfigVarsMin))
+	maps.Copy(tempConfig, testConfigVarsMin)
+	tempConfig["version_db"] = config.StringVariable("7.0")
+	tempConfig["backup_schedule"] = config.StringVariable("00 12 * * *")
+	return tempConfig
 }
 
-func TestAccMongoDBFlexFlexResource(t *testing.T) {
-	resource.Test(t, resource.TestCase{
+func configVarsMaxUpdated() config.Variables {
+	tempConfig := make(config.Variables, len(testConfigVarsMax))
+	maps.Copy(tempConfig, testConfigVarsMax)
+	tempConfig["version_db"] = config.StringVariable("8.0")
+	tempConfig["backup_schedule"] = config.StringVariable("00 14 * * *")
+	return tempConfig
+}
+
+// minimum configuration
+func TestAccMongoDBFlexFlexResourceMin(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckMongoDBFlexDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: configResources(instanceResource["version"], instanceResource["backup_schedule"], instanceResource["snapshot_retention_days"]),
+				ConfigVariables: testConfigVarsMin,
+				Config:          testutil.MongoDBFlexProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_mongodbflex_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMin["name"])),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "acl.#", "1"),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "acl.0", instanceResource["acl"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "acl.0", testutil.ConvertConfigVariable(testConfigVarsMin["acl"])),
 					resource.TestCheckResourceAttrSet("stackit_mongodbflex_instance.instance", "flavor.id"),
 					resource.TestCheckResourceAttrSet("stackit_mongodbflex_instance.instance", "flavor.description"),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "flavor.cpu", instanceResource["flavor_cpu"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "flavor.ram", instanceResource["flavor_ram"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "replicas", instanceResource["replicas"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.class", instanceResource["storage_class"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.size", instanceResource["storage_size"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "version", instanceResource["version"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.type", instanceResource["options_type"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.snapshot_retention_days", instanceResource["snapshot_retention_days"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.daily_snapshot_retention_days", instanceResource["daily_snapshot_retention_days"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "flavor.cpu", testutil.ConvertConfigVariable(testConfigVarsMin["flavor_cpu"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "flavor.ram", testutil.ConvertConfigVariable(testConfigVarsMin["flavor_ram"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "replicas", testutil.ConvertConfigVariable(testConfigVarsMin["replicas"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.class", testutil.ConvertConfigVariable(testConfigVarsMin["storage_class"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.size", testutil.ConvertConfigVariable(testConfigVarsMin["storage_size"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "version", testutil.ConvertConfigVariable(testConfigVarsMin["version_db"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.type", testutil.ConvertConfigVariable(testConfigVarsMin["options_type"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "backup_schedule", testutil.ConvertConfigVariable(testConfigVarsMin["backup_schedule"])),
 
 					// User
 					resource.TestCheckResourceAttrPair(
@@ -142,32 +125,32 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrSet("stackit_mongodbflex_user.user", "user_id"),
 					resource.TestCheckResourceAttrSet("stackit_mongodbflex_user.user", "password"),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_user.user", "username", userResource["username"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_user.user", "database", userResource["database"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_user.user", "database", testutil.ConvertConfigVariable(testConfigVarsMin["database"])),
 				),
 			},
 			// data source
 			{
+				ConfigVariables: testConfigVarsMin,
 				Config: fmt.Sprintf(`
-					%s
+							%s
 
-					data "stackit_mongodbflex_instance" "instance" {
-						project_id     = stackit_mongodbflex_instance.instance.project_id
-						instance_id    = stackit_mongodbflex_instance.instance.instance_id
-					}
+							data "stackit_mongodbflex_instance" "instance" {
+								project_id     = stackit_mongodbflex_instance.instance.project_id
+								instance_id    = stackit_mongodbflex_instance.instance.instance_id
+							}
 
-					data "stackit_mongodbflex_user" "user" {
-						project_id     = stackit_mongodbflex_instance.instance.project_id
-						instance_id    = stackit_mongodbflex_instance.instance.instance_id
-						user_id        = stackit_mongodbflex_user.user.user_id
-					}
-					`,
-					configResources(instanceResource["version"], instanceResource["backup_schedule"], instanceResource["snapshot_retention_days"]),
+							data "stackit_mongodbflex_user" "user" {
+								project_id     = stackit_mongodbflex_instance.instance.project_id
+								instance_id    = stackit_mongodbflex_instance.instance.instance_id
+								user_id        = stackit_mongodbflex_user.user.user_id
+							}
+							`,
+					testutil.MongoDBFlexProviderConfig()+resourceMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "project_id", instanceResource["project_id"]),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMin["name"])),
 					resource.TestCheckResourceAttrPair(
 						"data.stackit_mongodbflex_instance.instance", "project_id",
 						"stackit_mongodbflex_instance.instance", "project_id",
@@ -182,30 +165,28 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					),
 
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "acl.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "acl.0", instanceResource["acl"]),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.id", instanceResource["flavor_id"]),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.description", instanceResource["flavor_description"]),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.cpu", instanceResource["flavor_cpu"]),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.ram", instanceResource["flavor_ram"]),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "replicas", instanceResource["replicas"]),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "options.type", instanceResource["options_type"]),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "options.snapshot_retention_days", instanceResource["snapshot_retention_days"]),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "options.daily_snapshot_retention_days", instanceResource["daily_snapshot_retention_days"]),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "backup_schedule", instanceResource["backup_schedule_read"]),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "acl.0", testutil.ConvertConfigVariable(testConfigVarsMin["acl"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.id", testutil.ConvertConfigVariable(testConfigVarsMin["flavor_id"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.description", testutil.ConvertConfigVariable(testConfigVarsMin["flavor_description"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.cpu", testutil.ConvertConfigVariable(testConfigVarsMin["flavor_cpu"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.ram", testutil.ConvertConfigVariable(testConfigVarsMin["flavor_ram"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "replicas", testutil.ConvertConfigVariable(testConfigVarsMin["replicas"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "options.type", testutil.ConvertConfigVariable(testConfigVarsMin["options_type"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "backup_schedule", testutil.ConvertConfigVariable(testConfigVarsMin["backup_schedule_read"])),
 
 					// User data
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "project_id", userResource["project_id"]),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_mongodbflex_user.user", "user_id"),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "username", userResource["username"]),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "database", userResource["database"]),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "database", testutil.ConvertConfigVariable(testConfigVarsMin["database"])),
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "roles.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "roles.0", userResource["role"]),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "roles.0", testutil.ConvertConfigVariable(testConfigVarsMin["role"])),
 					resource.TestCheckResourceAttrSet("data.stackit_mongodbflex_user.user", "host"),
 					resource.TestCheckResourceAttrSet("data.stackit_mongodbflex_user.user", "port"),
 				),
 			},
 			// Import
 			{
+				ConfigVariables: testConfigVarsMin,
 				ResourceName: "stackit_mongodbflex_instance.instance",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_mongodbflex_instance.instance"]
@@ -226,13 +207,14 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					if len(s) != 1 {
 						return fmt.Errorf("expected 1 state, got %d", len(s))
 					}
-					if s[0].Attributes["backup_schedule"] != instanceResource["backup_schedule_read"] {
-						return fmt.Errorf("expected backup_schedule %s, got %s", instanceResource["backup_schedule_read"], s[0].Attributes["backup_schedule"])
+					if s[0].Attributes["backup_schedule"] != testutil.ConvertConfigVariable(testConfigVarsMin["backup_schedule_read"]) {
+						return fmt.Errorf("expected backup_schedule %s, got %s", testutil.ConvertConfigVariable(testConfigVarsMin["backup_schedule_read"]), s[0].Attributes["backup_schedule"])
 					}
 					return nil
 				},
 			},
 			{
+				ConfigVariables: testConfigVarsMin,
 				ResourceName: "stackit_mongodbflex_user.user",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_mongodbflex_user.user"]
@@ -256,25 +238,226 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: configResources(instanceResource["version_updated"], instanceResource["backup_schedule_updated"], instanceResource["snapshot_retention_days_updated"]),
+				ConfigVariables: configVarsMinUpdated(),
+				Config:          testutil.MongoDBFlexProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_mongodbflex_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMin["name"])),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "acl.#", "1"),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "acl.0", instanceResource["acl"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "acl.0", testutil.ConvertConfigVariable(testConfigVarsMin["acl"])),
 					resource.TestCheckResourceAttrSet("stackit_mongodbflex_instance.instance", "flavor.id"),
 					resource.TestCheckResourceAttrSet("stackit_mongodbflex_instance.instance", "flavor.description"),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "flavor.cpu", instanceResource["flavor_cpu"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "flavor.ram", instanceResource["flavor_ram"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "replicas", instanceResource["replicas"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.class", instanceResource["storage_class"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.size", instanceResource["storage_size"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "version", instanceResource["version_updated"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.type", instanceResource["options_type"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.snapshot_retention_days", instanceResource["snapshot_retention_days_updated"]),
-					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "backup_schedule", instanceResource["backup_schedule_updated"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "flavor.cpu", testutil.ConvertConfigVariable(testConfigVarsMin["flavor_cpu"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "flavor.ram", testutil.ConvertConfigVariable(testConfigVarsMin["flavor_ram"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "replicas", testutil.ConvertConfigVariable(testConfigVarsMin["replicas"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.class", testutil.ConvertConfigVariable(testConfigVarsMin["storage_class"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.size", testutil.ConvertConfigVariable(testConfigVarsMin["storage_size"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "version", testutil.ConvertConfigVariable(configVarsMinUpdated()["version_db"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.type", testutil.ConvertConfigVariable(testConfigVarsMin["options_type"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "backup_schedule", testutil.ConvertConfigVariable(configVarsMinUpdated()["backup_schedule"])),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+// maximum configuration
+func TestAccMongoDBFlexFlexResourceMax(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckMongoDBFlexDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigVarsMax,
+				Config:          testutil.MongoDBFlexProviderConfig() + resourceMaxConfig,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_mongodbflex_instance.instance", "instance_id"),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMax["name"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "acl.#", "1"),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "acl.0", testutil.ConvertConfigVariable(testConfigVarsMax["acl"])),
+					resource.TestCheckResourceAttrSet("stackit_mongodbflex_instance.instance", "flavor.id"),
+					resource.TestCheckResourceAttrSet("stackit_mongodbflex_instance.instance", "flavor.description"),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "flavor.cpu", testutil.ConvertConfigVariable(testConfigVarsMax["flavor_cpu"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "flavor.ram", testutil.ConvertConfigVariable(testConfigVarsMax["flavor_ram"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "replicas", testutil.ConvertConfigVariable(testConfigVarsMax["replicas"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.class", testutil.ConvertConfigVariable(testConfigVarsMax["storage_class"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.size", testutil.ConvertConfigVariable(testConfigVarsMax["storage_size"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "version", testutil.ConvertConfigVariable(testConfigVarsMax["version_db"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.type", testutil.ConvertConfigVariable(testConfigVarsMax["options_type"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "backup_schedule", testutil.ConvertConfigVariable(testConfigVarsMax["backup_schedule"])),
+
+					// optional stuff
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.snapshot_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["snapshot_retention_days"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.daily_snapshot_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["daily_snapshot_retention_days"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.weekly_snapshot_retention_weeks", testutil.ConvertConfigVariable(testConfigVarsMax["weekly_snapshot_retention_weeks"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.monthly_snapshot_retention_months", testutil.ConvertConfigVariable(testConfigVarsMax["monthly_snapshot_retention_months"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.point_in_time_window_hours", testutil.ConvertConfigVariable(testConfigVarsMax["point_in_time_window_hours"])),
+
+					// User
+					resource.TestCheckResourceAttrPair(
+						"stackit_mongodbflex_user.user", "project_id",
+						"stackit_mongodbflex_instance.instance", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_mongodbflex_user.user", "instance_id",
+						"stackit_mongodbflex_instance.instance", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_mongodbflex_user.user", "user_id"),
+					resource.TestCheckResourceAttrSet("stackit_mongodbflex_user.user", "password"),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_user.user", "username", testutil.ConvertConfigVariable(testConfigVarsMax["username"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_user.user", "database", testutil.ConvertConfigVariable(testConfigVarsMax["database"])),
+				),
+			},
+			// data source
+			{
+				ConfigVariables: testConfigVarsMax,
+				Config: fmt.Sprintf(`
+							%s
+
+							data "stackit_mongodbflex_instance" "instance" {
+								project_id     = stackit_mongodbflex_instance.instance.project_id
+								instance_id    = stackit_mongodbflex_instance.instance.instance_id
+							}
+
+							data "stackit_mongodbflex_user" "user" {
+								project_id     = stackit_mongodbflex_instance.instance.project_id
+								instance_id    = stackit_mongodbflex_instance.instance.instance_id
+								user_id        = stackit_mongodbflex_user.user.user_id
+							}
+							`,
+					testutil.MongoDBFlexProviderConfig()+resourceMaxConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance data
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMax["name"])),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_mongodbflex_instance.instance", "project_id",
+						"stackit_mongodbflex_instance.instance", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_mongodbflex_instance.instance", "instance_id",
+						"stackit_mongodbflex_instance.instance", "instance_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_mongodbflex_user.user", "instance_id",
+						"stackit_mongodbflex_user.user", "instance_id",
+					),
+
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "acl.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "acl.0", testutil.ConvertConfigVariable(testConfigVarsMax["acl"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.id", testutil.ConvertConfigVariable(testConfigVarsMax["flavor_id"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.description", testutil.ConvertConfigVariable(testConfigVarsMax["flavor_description"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.cpu", testutil.ConvertConfigVariable(testConfigVarsMax["flavor_cpu"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "flavor.ram", testutil.ConvertConfigVariable(testConfigVarsMax["flavor_ram"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "replicas", testutil.ConvertConfigVariable(testConfigVarsMax["replicas"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "options.type", testutil.ConvertConfigVariable(testConfigVarsMax["options_type"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "backup_schedule", testutil.ConvertConfigVariable(testConfigVarsMax["backup_schedule_read"])),
+
+					// optional stuff
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.snapshot_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["snapshot_retention_days"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.daily_snapshot_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["daily_snapshot_retention_days"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.weekly_snapshot_retention_weeks", testutil.ConvertConfigVariable(testConfigVarsMax["weekly_snapshot_retention_weeks"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.monthly_snapshot_retention_months", testutil.ConvertConfigVariable(testConfigVarsMax["monthly_snapshot_retention_months"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.point_in_time_window_hours", testutil.ConvertConfigVariable(testConfigVarsMax["point_in_time_window_hours"])),
+
+					// User data
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_mongodbflex_user.user", "user_id"),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "username", testutil.ConvertConfigVariable(testConfigVarsMax["username"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "database", testutil.ConvertConfigVariable(testConfigVarsMax["database"])),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "roles.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_user.user", "roles.0", testutil.ConvertConfigVariable(testConfigVarsMax["role"])),
+					resource.TestCheckResourceAttrSet("data.stackit_mongodbflex_user.user", "host"),
+					resource.TestCheckResourceAttrSet("data.stackit_mongodbflex_user.user", "port"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigVarsMax,
+				ResourceName: "stackit_mongodbflex_instance.instance",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_mongodbflex_instance.instance"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_mongodbflex_instance.instance")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
+				},
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"backup_schedule"},
+				ImportStateCheck: func(s []*terraform.InstanceState) error {
+					if len(s) != 1 {
+						return fmt.Errorf("expected 1 state, got %d", len(s))
+					}
+					if s[0].Attributes["backup_schedule"] != testutil.ConvertConfigVariable(testConfigVarsMax["backup_schedule_read"]) {
+						return fmt.Errorf("expected backup_schedule %s, got %s", testutil.ConvertConfigVariable(testConfigVarsMax["backup_schedule_read"]), s[0].Attributes["backup_schedule"])
+					}
+					return nil
+				},
+			},
+			{
+				ConfigVariables: testConfigVarsMax,
+				ResourceName: "stackit_mongodbflex_user.user",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_mongodbflex_user.user"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_mongodbflex_user.user")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					userId, ok := r.Primary.Attributes["user_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute user_id")
+					}
+
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, userId), nil
+				},
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"password", "uri"},
+			},
+			// Update
+			{
+				ConfigVariables: configVarsMaxUpdated(),
+				Config:          testutil.MongoDBFlexProviderConfig() + resourceMaxConfig,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance data
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_mongodbflex_instance.instance", "instance_id"),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMax["name"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "acl.#", "1"),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "acl.0", testutil.ConvertConfigVariable(testConfigVarsMax["acl"])),
+					resource.TestCheckResourceAttrSet("stackit_mongodbflex_instance.instance", "flavor.id"),
+					resource.TestCheckResourceAttrSet("stackit_mongodbflex_instance.instance", "flavor.description"),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "flavor.cpu", testutil.ConvertConfigVariable(testConfigVarsMax["flavor_cpu"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "flavor.ram", testutil.ConvertConfigVariable(testConfigVarsMax["flavor_ram"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "replicas", testutil.ConvertConfigVariable(testConfigVarsMax["replicas"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.class", testutil.ConvertConfigVariable(testConfigVarsMax["storage_class"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "storage.size", testutil.ConvertConfigVariable(testConfigVarsMax["storage_size"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "version", testutil.ConvertConfigVariable(configVarsMaxUpdated()["version_db"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.type", testutil.ConvertConfigVariable(testConfigVarsMax["options_type"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "backup_schedule", testutil.ConvertConfigVariable(configVarsMaxUpdated()["backup_schedule"])),
+
+					// optional stuff
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.snapshot_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["snapshot_retention_days"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.daily_snapshot_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["daily_snapshot_retention_days"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.weekly_snapshot_retention_weeks", testutil.ConvertConfigVariable(testConfigVarsMax["weekly_snapshot_retention_weeks"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.monthly_snapshot_retention_months", testutil.ConvertConfigVariable(testConfigVarsMax["monthly_snapshot_retention_months"])),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.point_in_time_window_hours", testutil.ConvertConfigVariable(testConfigVarsMax["point_in_time_window_hours"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -288,11 +471,11 @@ func testAccCheckMongoDBFlexDestroy(s *terraform.State) error {
 	var err error
 	if testutil.MongoDBFlexCustomEndpoint == "" {
 		client, err = mongodbflex.NewAPIClient(
-			config.WithRegion("eu01"),
+			stackitSdkConfig.WithRegion("eu01"),
 		)
 	} else {
 		client, err = mongodbflex.NewAPIClient(
-			config.WithEndpoint(testutil.MongoDBFlexCustomEndpoint),
+			stackitSdkConfig.WithEndpoint(testutil.MongoDBFlexCustomEndpoint),
 		)
 	}
 	if err != nil {

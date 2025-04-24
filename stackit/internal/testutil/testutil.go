@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-testing/config"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit"
 )
@@ -498,4 +499,9 @@ func CreateDefaultLocalFile() os.File {
 	}
 
 	return *file
+}
+
+func ConvertConfigVariable(variable config.Variable) string {
+	tmpByteArray, _ := variable.MarshalJSON()
+	return string(tmpByteArray[1 : len(tmpByteArray)-1])
 }
