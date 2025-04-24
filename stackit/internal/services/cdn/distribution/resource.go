@@ -61,9 +61,9 @@ var configTypes = map[string]attr.Type{
 }
 
 var backendTypes = map[string]attr.Type{
-	"type":                 types.StringType,
-	"originUrl":            types.StringType,
-	"originRequestHeaders": types.MapType{ElemType: types.StringType},
+	"type":                   types.StringType,
+	"origin_url":             types.StringType,
+	"origin_request_headers": types.MapType{ElemType: types.StringType},
 }
 
 var domainTypes = map[string]attr.Type{
@@ -219,7 +219,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 									Description: descriptions["config_backend_origin_url"],
 								},
 								"origin_request_headers": schema.ListAttribute{
-									Optional: true,
+									Optional:    true,
 									Description: descriptions["config_backend_origin_request_headers"],
 									ElementType: types.StringType,
 								},
@@ -284,7 +284,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 	}
 	payload := &cdn.CreateDistributionPayload{
 		IntentId:             cdn.PtrString(uuid.NewString()),
-		OriginUrl:            cdn.PtrString(model.Config.Attributes()["origin_url"].String()),
+		OriginUrl:            config.Backend.HttpBackend.OriginUrl,
 		Regions:              config.Regions,
 		OriginRequestHeaders: config.Backend.HttpBackend.OriginRequestHeaders,
 	}
@@ -293,8 +293,11 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 }
 
 func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
+	if model == nil {
+		return nil, errors.New("model cannot be nil")
+	}
 	if model.Config.IsNull() || model.Config.IsUnknown() {
-		return nil, nil
+		return nil, errors.New("config cannot be nil or unknown")
 	}
 	configModel := distributionConfig{}
 	diags := model.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
@@ -506,6 +509,9 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 	model.Errors = modelErrors
 
 	regions := []attr.Value{}
+	for _, r := range *distribution.Config.Regions {
+		regions = append(regions, types.StringValue(string(r)))
+	}
 	modelRegions, diags := types.ListValue(types.StringType, regions)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -522,9 +528,9 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 	}
 	// note that httpbackend is hardcoded here as long as it is the only available backend
 	backend, diags := types.ObjectValue(backendTypes, map[string]attr.Value{
-		"type":                 types.StringValue(*distribution.Config.Backend.HttpBackend.Type),
-		"originUrl":            types.StringValue(*distribution.Config.Backend.HttpBackend.OriginUrl),
-		"originRequestHeaders": originRequestHeaders,
+		"type":                   types.StringValue(*distribution.Config.Backend.HttpBackend.Type),
+		"origin_url":             types.StringValue(*distribution.Config.Backend.HttpBackend.OriginUrl),
+		"origin_request_headers": originRequestHeaders,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -542,8 +548,10 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 	if distribution.Domains != nil {
 		for _, d := range *distribution.Domains {
 			errors := []attr.Value{}
-			for _, e := range *d.Errors {
-				errors = append(errors, types.StringValue(*e.En))
+			if d.Errors != nil {
+				for _, e := range *d.Errors {
+					errors = append(errors, types.StringValue(*e.En))
+				}
 			}
 			modelDomainErrors, diags := types.ListValue(types.StringType, errors)
 			if diags.HasError() {
