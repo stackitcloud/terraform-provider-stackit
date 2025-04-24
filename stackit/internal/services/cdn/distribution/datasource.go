@@ -221,5 +221,4 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-	return
 }

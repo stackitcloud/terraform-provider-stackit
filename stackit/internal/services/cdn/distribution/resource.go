@@ -401,7 +401,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 		regions = append(regions, *regionEnum)
 	}
-	_, err := r.client.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(*&cdn.PatchDistributionPayload{
+	_, err := r.client.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdn.PatchDistributionPayload{
 		Config: &cdn.ConfigPatch{
 			Backend: &cdn.ConfigPatchBackend{
 				HttpBackendPatch: &cdn.HttpBackendPatch{
