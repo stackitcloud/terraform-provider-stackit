@@ -34,6 +34,27 @@ var (
 	_ resource.ResourceWithImportState = &distributionResource{}
 )
 
+var schemaDescriptions = map[string]string{
+	"id":                                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`distribution_id`\".",
+	"distribution_id":                       "CDN distribution ID",
+	"project_id":                            "STACKIT project ID associated with the distribution",
+	"status":                                "Status of the distribution",
+	"created_at":                            "Time when the distribution was created",
+	"updated_at":                            "Time when the distribution was last updated",
+	"errors":                                "List of distribution errors",
+	"domains":                               "List of configured domains for the distribution",
+	"config":                                "The distribution configuration",
+	"config_backend":                        "The configured backend for the distribution",
+	"config_regions":                        "The configured regions where content will be hosted",
+	"config_backend_type":                   "The configured backend type",
+	"config_backend_origin_url":             "The configured backend type for the distribution",
+	"config_backend_origin_request_headers": "The configured origin request headers for the backend",
+	"domain_name":                           "The name of the domain",
+	"domain_status":                         "The status of the domain",
+	"domain_type":                           "The type of the domain. Each distribution has one domain of type \"managed\", and domains of type \"custom\" may be additionally created by the user",
+	"domain_errors":                         "List of domain errors",
+}
+
 type Model struct {
 	ID             types.String `tfsdk:"id"`              // Required by Terraform
 	DistributionId types.String `tfsdk:"distribution_id"` // DistributionID associated with the cdn distribution
@@ -121,46 +142,24 @@ func (r *distributionResource) Metadata(_ context.Context, req resource.Metadata
 }
 
 func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
-		"id":                                    "Terrform resource ID",
-		"distribution_id":                       "CDN distribution ID",
-		"project_id":                            "STACKIT project ID associated with the distribution",
-		"status":                                "Status of the distribution",
-		"created_at":                            "Time when the distribution was created",
-		"updated_at":                            "Time when the distribution was last updated",
-		"errors":                                "List of distribution errors",
-		"domains":                               "List of configured domains for the distribution",
-		"config":                                "The distribution configuration",
-		"config_backend":                        "The configured backend for the distribution",
-		"config_regions":                        "The configured regions where content will be hosted",
-		"config_backend_type":                   "the ",
-		"config_backend_origin_url":             "The configured backend type for the distribution",
-		"config_backend_origin_request_headers": "The configured origin request headers for the backend",
-		"domain_name":                           "The name of the domain",
-		"domain_status":                         "The status of the domain",
-		"domain_type":                           "The type of the domain. Each distribution has one domain of type \"managed\", and domains of type \"custom\" may be additionally created by the user",
-		"domain_errors":                         "List of domain errors",
-	}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema."),
 		Description:         "CDN distribution data source schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: descriptions["id"],
+				Description: schemaDescriptions["id"],
 				Computed:    true,
 			},
 			"distribution_id": schema.StringAttribute{
-				Description: descriptions["project_id"],
+				Description: schemaDescriptions["project_id"],
 				Computed:    true,
-				Validators: []validator.String{
-					validate.UUID(),
-				},
+				Validators:  []validator.String{validate.UUID()},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Description: descriptions["project_id"],
+				Description: schemaDescriptions["project_id"],
 				Required:    true,
 				Optional:    false,
 				PlanModifiers: []planmodifier.String{
@@ -170,41 +169,41 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 			},
 			"status": schema.StringAttribute{
 				Computed:    true,
-				Description: descriptions["status"],
+				Description: schemaDescriptions["status"],
 			},
 			"created_at": schema.StringAttribute{
 				Computed:    true,
-				Description: descriptions["created_at"],
+				Description: schemaDescriptions["created_at"],
 			},
 			"updated_at": schema.StringAttribute{
 				Computed:    true,
-				Description: descriptions["updated_at"],
+				Description: schemaDescriptions["updated_at"],
 			},
 			"errors": schema.ListAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
-				Description: descriptions["errors"],
+				Description: schemaDescriptions["errors"],
 			},
 			"domains": schema.ListNestedAttribute{
 				Computed:    true,
-				Description: descriptions["domains"],
+				Description: schemaDescriptions["domains"],
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
 							Computed:    true,
-							Description: descriptions["domain_name"],
+							Description: schemaDescriptions["domain_name"],
 						},
 						"status": schema.StringAttribute{
 							Computed:    true,
-							Description: descriptions["domain_status"],
+							Description: schemaDescriptions["domain_status"],
 						},
 						"type": schema.StringAttribute{
 							Computed:    true,
-							Description: descriptions["domain_type"],
+							Description: schemaDescriptions["domain_type"],
 						},
 						"errors": schema.ListAttribute{
 							Computed:    true,
-							Description: descriptions["domain_errors"],
+							Description: schemaDescriptions["domain_errors"],
 							ElementType: types.StringType,
 						},
 					},
@@ -212,29 +211,30 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 			},
 			"config": schema.SingleNestedAttribute{
 				Required:    true,
-				Description: descriptions["config"],
+				Description: schemaDescriptions["config"],
 				Attributes: map[string]schema.Attribute{
 					"backend": schema.SingleNestedAttribute{
 						Required:    true,
-						Description: descriptions["config_backend"],
+						Description: schemaDescriptions["config_backend"],
 						Attributes: map[string]schema.Attribute{
 							"type": schema.StringAttribute{
 								Required:    true,
-								Description: descriptions["config_backend_type"],
+								Description: schemaDescriptions["config_backend_type"],
 							},
 							"origin_url": schema.StringAttribute{
 								Required:    true,
-								Description: descriptions["config_backend_origin_url"],
+								Description: schemaDescriptions["config_backend_origin_url"],
 							},
 							"origin_request_headers": schema.MapAttribute{
 								Optional:    true,
-								Description: descriptions["config_backend_origin_request_headers"],
+								Description: schemaDescriptions["config_backend_origin_request_headers"],
 								ElementType: types.StringType,
 							},
 						},
 					},
 					"regions": schema.ListAttribute{
 						Required:    true,
+						Description: schemaDescriptions["config_regions"],
 						ElementType: types.StringType,
 					}},
 			},
@@ -251,6 +251,7 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 	}
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Creating API payload: %v", err))
@@ -273,72 +274,13 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	tflog.Info(ctx, "CDN distribution created")
-}
-
-func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistributionPayload, error) {
-	if model == nil {
-		return nil, fmt.Errorf("missing model")
-	}
-	distributionConfig, err := convertConfig(ctx, model)
-	if err != nil {
-		return nil, err
-	}
-	payload := &cdn.CreateDistributionPayload{
-		IntentId:             cdn.PtrString(uuid.NewString()),
-		OriginUrl:            distributionConfig.Backend.HttpBackend.OriginUrl,
-		Regions:              distributionConfig.Regions,
-		OriginRequestHeaders: distributionConfig.Backend.HttpBackend.OriginRequestHeaders,
-	}
-
-	return payload, nil
-}
-
-func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
-	if model == nil {
-		return nil, errors.New("model cannot be nil")
-	}
-	if model.Config.IsNull() || model.Config.IsUnknown() {
-		return nil, errors.New("config cannot be nil or unknown")
-	}
-	configModel := distributionConfig{}
-	diags := model.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
-		UnhandledNullAsEmpty:    false,
-		UnhandledUnknownAsEmpty: false,
-	})
-	if diags.HasError() {
-		return nil, core.DiagsToError(diags)
-	}
-	regions := []cdn.Region{}
-	for _, r := range *configModel.Regions {
-		regionEnum, err := cdn.NewRegionFromValue(r)
-		if err != nil {
-			return nil, err
-		}
-		regions = append(regions, *regionEnum)
-	}
-
-	originRequestHeaders := map[string]string{}
-	if configModel.Backend.OriginRequestHeaders != nil {
-		for k, v := range *configModel.Backend.OriginRequestHeaders {
-			originRequestHeaders[k] = v
-		}
-	}
-	return &cdn.Config{
-		Backend: &cdn.ConfigBackend{
-			HttpBackend: &cdn.HttpBackend{
-				OriginRequestHeaders: &originRequestHeaders,
-				OriginUrl:            &configModel.Backend.OriginURL,
-				Type:                 &configModel.Backend.Type,
-			},
-		},
-		Regions: &regions,
-	}, nil
 }
 
 func (r *distributionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
@@ -565,14 +507,14 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
-	distributionConfig, diags := types.ObjectValue(configTypes, map[string]attr.Value{
+	cfg, diags := types.ObjectValue(configTypes, map[string]attr.Value{
 		"backend": backend,
 		"regions": modelRegions,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
-	model.Config = distributionConfig
+	model.Config = cfg
 
 	domains := []attr.Value{}
 	if distribution.Domains != nil {
@@ -607,4 +549,64 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 	}
 	model.Domains = modelDomains
 	return nil
+}
+
+func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistributionPayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("missing model")
+	}
+	cfg, err := convertConfig(ctx, model)
+	if err != nil {
+		return nil, err
+	}
+	payload := &cdn.CreateDistributionPayload{
+		IntentId:             cdn.PtrString(uuid.NewString()),
+		OriginUrl:            cfg.Backend.HttpBackend.OriginUrl,
+		Regions:              cfg.Regions,
+		OriginRequestHeaders: cfg.Backend.HttpBackend.OriginRequestHeaders,
+	}
+
+	return payload, nil
+}
+
+func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
+	if model == nil {
+		return nil, errors.New("model cannot be nil")
+	}
+	if model.Config.IsNull() || model.Config.IsUnknown() {
+		return nil, errors.New("config cannot be nil or unknown")
+	}
+	configModel := distributionConfig{}
+	diags := model.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    false,
+		UnhandledUnknownAsEmpty: false,
+	})
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+	regions := []cdn.Region{}
+	for _, r := range *configModel.Regions {
+		regionEnum, err := cdn.NewRegionFromValue(r)
+		if err != nil {
+			return nil, err
+		}
+		regions = append(regions, *regionEnum)
+	}
+
+	originRequestHeaders := map[string]string{}
+	if configModel.Backend.OriginRequestHeaders != nil {
+		for k, v := range *configModel.Backend.OriginRequestHeaders {
+			originRequestHeaders[k] = v
+		}
+	}
+	return &cdn.Config{
+		Backend: &cdn.ConfigBackend{
+			HttpBackend: &cdn.HttpBackend{
+				OriginRequestHeaders: &originRequestHeaders,
+				OriginUrl:            &configModel.Backend.OriginURL,
+				Type:                 &configModel.Backend.Type,
+			},
+		},
+		Regions: &regions,
+	}, nil
 }

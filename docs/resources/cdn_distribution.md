@@ -43,7 +43,7 @@ resource "stackit_cdn_distribution" "example_distribution" {
 - `distribution_id` (String) STACKIT project ID associated with the distribution
 - `domains` (Attributes List) List of configured domains for the distribution (see [below for nested schema](#nestedatt--domains))
 - `errors` (List of String) List of distribution errors
-- `id` (String) Terrform resource ID
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`distribution_id`".
 - `status` (String) Status of the distribution
 - `updated_at` (String) Time when the distribution was last updated
 
@@ -53,7 +53,7 @@ resource "stackit_cdn_distribution" "example_distribution" {
 Required:
 
 - `backend` (Attributes) The configured backend for the distribution (see [below for nested schema](#nestedatt--config--backend))
-- `regions` (List of String)
+- `regions` (List of String) The configured regions where content will be hosted
 
 <a id="nestedatt--config--backend"></a>
 ### Nested Schema for `config.backend`
@@ -61,7 +61,7 @@ Required:
 Required:
 
 - `origin_url` (String) The configured backend type for the distribution
-- `type` (String) the
+- `type` (String) The configured backend type
 
 Optional:
 

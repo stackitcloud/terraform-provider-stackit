@@ -73,43 +73,23 @@ func (r *distributionDataSource) Metadata(_ context.Context, req datasource.Meta
 }
 
 func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	descriptions := map[string]string{
-		"id":                                    "Terrform resource ID",
-		"distribution_id":                       "CDN distribution ID",
-		"project_id":                            "STACKIT project ID associated with the distribution",
-		"status":                                "Status of the distribution",
-		"created_at":                            "Time when the distribution was created",
-		"updated_at":                            "Time when the distribution was last updated",
-		"errors":                                "List of distribution errors",
-		"domains":                               "List of configured domains for the distribution",
-		"config":                                "The distribution configuration",
-		"config_backend":                        "The configured backend for the distribution",
-		"config_regions":                        "The configured regions where content will be hosted",
-		"config_backend_type":                   "the ",
-		"config_backend_origin_url":             "The configured backend type for the distribution",
-		"config_backend_origin_request_headers": "The configured origin request headers for the backend",
-		"domain_name":                           "The name of the domain",
-		"domain_status":                         "The status of the domain",
-		"domain_type":                           "The type of the domain. Each distribution has one domain of type \"managed\", and domains of type \"custom\" may be additionally created by the user",
-		"domain_errors":                         "List of domain errors",
-	}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema."),
 		Description:         "CDN distribution data source schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: descriptions["id"],
+				Description: schemaDescriptions["id"],
 				Computed:    true,
 			},
 			"distribution_id": schema.StringAttribute{
-				Description: descriptions["project_id"],
+				Description: schemaDescriptions["project_id"],
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Description: descriptions["project_id"],
+				Description: schemaDescriptions["project_id"],
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -117,41 +97,41 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			},
 			"status": schema.StringAttribute{
 				Computed:    true,
-				Description: descriptions["status"],
+				Description: schemaDescriptions["status"],
 			},
 			"created_at": schema.StringAttribute{
 				Computed:    true,
-				Description: descriptions["created_at"],
+				Description: schemaDescriptions["created_at"],
 			},
 			"updated_at": schema.StringAttribute{
 				Computed:    true,
-				Description: descriptions["updated_at"],
+				Description: schemaDescriptions["updated_at"],
 			},
 			"errors": schema.ListAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
-				Description: descriptions["errors"],
+				Description: schemaDescriptions["errors"],
 			},
 			"domains": schema.ListNestedAttribute{
 				Computed:    true,
-				Description: descriptions["domains"],
+				Description: schemaDescriptions["domains"],
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
 							Computed:    true,
-							Description: descriptions["domain_name"],
+							Description: schemaDescriptions["domain_name"],
 						},
 						"status": schema.StringAttribute{
 							Computed:    true,
-							Description: descriptions["domain_status"],
+							Description: schemaDescriptions["domain_status"],
 						},
 						"type": schema.StringAttribute{
 							Computed:    true,
-							Description: descriptions["domain_type"],
+							Description: schemaDescriptions["domain_type"],
 						},
 						"errors": schema.ListAttribute{
 							Computed:    true,
-							Description: descriptions["domain_errors"],
+							Description: schemaDescriptions["domain_errors"],
 							ElementType: types.StringType,
 						},
 					},
@@ -159,29 +139,30 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			},
 			"config": schema.SingleNestedAttribute{
 				Computed:    true,
-				Description: descriptions["config"],
+				Description: schemaDescriptions["config"],
 				Attributes: map[string]schema.Attribute{
 					"backend": schema.SingleNestedAttribute{
 						Computed:    true,
-						Description: descriptions["config_backend"],
+						Description: schemaDescriptions["config_backend"],
 						Attributes: map[string]schema.Attribute{
 							"type": schema.StringAttribute{
 								Computed:    true,
-								Description: descriptions["config_backend_type"],
+								Description: schemaDescriptions["config_backend_type"],
 							},
 							"origin_url": schema.StringAttribute{
 								Computed:    true,
-								Description: descriptions["config_backend_origin_url"],
+								Description: schemaDescriptions["config_backend_origin_url"],
 							},
 							"origin_request_headers": schema.MapAttribute{
 								Computed:    true,
-								Description: descriptions["config_backend_origin_request_headers"],
+								Description: schemaDescriptions["config_backend_origin_request_headers"],
 								ElementType: types.StringType,
 							},
 						},
 					},
 					"regions": schema.ListAttribute{
 						Computed:    true,
+						Description: schemaDescriptions["config_regions"],
 						ElementType: types.StringType,
 					}},
 			},
