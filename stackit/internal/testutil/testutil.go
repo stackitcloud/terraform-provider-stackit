@@ -80,7 +80,7 @@ var (
 func ArgusProviderConfig() string {
 	if ArgusCustomEndpoint == "" {
 		return `provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -96,7 +96,7 @@ func ArgusProviderConfig() string {
 func ObservabilityProviderConfig() string {
 	if ObservabilityCustomEndpoint == "" {
 		return `provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -134,7 +134,7 @@ func IaaSProviderConfig() string {
 	if IaaSCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -149,7 +149,7 @@ func LoadBalancerProviderConfig() string {
 	if LoadBalancerCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 			enable_beta_resources = true
 		}`
 	}
@@ -165,7 +165,7 @@ func LogMeProviderConfig() string {
 	if LogMeCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -180,7 +180,7 @@ func MariaDBProviderConfig() string {
 	if MariaDBCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -195,7 +195,7 @@ func ModelServingProviderConfig() string {
 	if ModelServingCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}
 		`
 	}
@@ -211,7 +211,7 @@ func MongoDBFlexProviderConfig() string {
 	if MongoDBFlexCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -226,7 +226,7 @@ func ObjectStorageProviderConfig() string {
 	if ObjectStorageCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -241,7 +241,7 @@ func OpenSearchProviderConfig() string {
 	if OpenSearchCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -256,7 +256,7 @@ func PostgresFlexProviderConfig() string {
 	if PostgresFlexCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -271,7 +271,7 @@ func RabbitMQProviderConfig() string {
 	if RabbitMQCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -286,7 +286,7 @@ func RedisProviderConfig() string {
 	if RedisCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -327,7 +327,7 @@ func SecretsManagerProviderConfig() string {
 	if SecretsManagerCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -342,7 +342,7 @@ func SQLServerFlexProviderConfig() string {
 	if SQLServerFlexCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -357,7 +357,7 @@ func ServerBackupProviderConfig() string {
 	if ServerBackupCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -388,7 +388,7 @@ func SKEProviderConfig() string {
 	if SKECustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 		}`
 	}
 	return fmt.Sprintf(`
@@ -403,7 +403,7 @@ func AuthorizationProviderConfig() string {
 	if AuthorizationCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 			experiments = ["iam"]
 		}`
 	}
@@ -420,7 +420,7 @@ func ServiceAccountProviderConfig() string {
 	if ServiceAccountCustomEndpoint == "" {
 		return `
 		provider "stackit" {
-			region = "eu01"
+			default_region = "eu01"
 			enable_beta_resources = true
 		}`
 	}

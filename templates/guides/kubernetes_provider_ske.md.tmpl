@@ -15,7 +15,7 @@ This guide outlines the process of utilizing the [HashiCorp Kubernetes provider]
 
     ```hcl
     provider "stackit" {
-      region = "eu01"
+      default_region = "eu01"
     }
     ```
 

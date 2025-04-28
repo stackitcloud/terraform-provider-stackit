@@ -15,7 +15,7 @@ This guide outlines the process of utilizing the [AWS Terraform Provider](https:
 
       ```hcl
       provider "stackit" {
-         region = "eu01"
+         default_region = "eu01"
       }
       ```
 

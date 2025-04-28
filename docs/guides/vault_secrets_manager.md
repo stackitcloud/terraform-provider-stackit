@@ -13,7 +13,7 @@ This guide outlines the process of utilizing the [HashiCorp Vault provider](http
 
     ```hcl
     provider "stackit" {
-      region = "eu01"
+      default_region = "eu01"
     }
     ```
 

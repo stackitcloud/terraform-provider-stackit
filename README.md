@@ -155,7 +155,7 @@ To use beta resources in the STACKIT Terraform provider, follow these steps:
 
    ```hcl
    provider "stackit" {
-     region                = "eu01"
+     default_region                = "eu01"
      enable_beta_resources = true
    }
    ```
@@ -180,7 +180,7 @@ To enable experiments set the experiments field in the provider definition:
 
 ```hcl
 provider "stackit" {
-  region                = "eu01"
+  default_region                = "eu01"
   experiments           = ["iam"]
 }
 ```
