@@ -51,6 +51,7 @@ var (
 	TestImageLocalFilePath = getenv("TF_ACC_TEST_IMAGE_LOCAL_FILE_PATH", "default")
 
 	ArgusCustomEndpoint           = os.Getenv("TF_ACC_ARGUS_CUSTOM_ENDPOINT")
+	CdnCustomEndpoint             = os.Getenv("TF_ACC_CDN_CUSTOM_ENDPOINT")
 	DnsCustomEndpoint             = os.Getenv("TF_ACC_DNS_CUSTOM_ENDPOINT")
 	IaaSCustomEndpoint            = os.Getenv("TF_ACC_IAAS_CUSTOM_ENDPOINT")
 	LoadBalancerCustomEndpoint    = os.Getenv("TF_ACC_LOADBALANCER_CUSTOM_ENDPOINT")
@@ -103,6 +104,17 @@ func ObservabilityProviderConfig() string {
 			observability_custom_endpoint = "%s"
 		}`,
 		ObservabilityCustomEndpoint,
+	)
+}
+func CdnProviderConfig() string {
+	if CdnCustomEndpoint == "" {
+		return `provider "stackit" {}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			cdn_custom_endpoint = "%s"
+		}`,
+		CdnCustomEndpoint,
 	)
 }
 

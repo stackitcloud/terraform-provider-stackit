@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
+	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
 	iaasAffinityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/affinitygroup"
@@ -114,6 +115,7 @@ type providerModel struct {
 	Region                          types.String `tfsdk:"region"`
 	DefaultRegion                   types.String `tfsdk:"default_region"`
 	ArgusCustomEndpoint             types.String `tfsdk:"argus_custom_endpoint"`
+	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
 	DNSCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
 	PostgresFlexCustomEndpoint      types.String `tfsdk:"postgresflex_custom_endpoint"`
@@ -154,6 +156,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"region":                             "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"default_region":                     "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"argus_custom_endpoint":              "Custom endpoint for the Argus service",
+		"cdn_custom_endpoint":                "Custom endpoint for the CDN service",
 		"dns_custom_endpoint":                "Custom endpoint for the DNS service",
 		"iaas_custom_endpoint":               "Custom endpoint for the IaaS service",
 		"mongodbflex_custom_endpoint":        "Custom endpoint for the MongoDB Flex service",
@@ -231,6 +234,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:           true,
 				Description:        descriptions["argus_custom_endpoint"],
 				DeprecationMessage: "Argus service has been deprecated and integration will be removed after February 26th 2025. Please use `observability_custom_endpoint` and `observability` resources instead, which offer the exact same functionality.",
+			},
+			"cdn_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["cdn_custom_endpoint"],
 			},
 			"dns_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -373,6 +380,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	} else if !(providerConfig.Region.IsUnknown() || providerConfig.Region.IsNull()) { // nolint:staticcheck // preliminary handling of deprecated attribute
 		providerData.Region = providerConfig.Region.ValueString() // nolint:staticcheck // preliminary handling of deprecated attribute
 	}
+	if !(providerConfig.CdnCustomEndpoint.IsUnknown() || providerConfig.CdnCustomEndpoint.IsNull()) {
+		providerData.CdnCustomEndpoint = providerConfig.CdnCustomEndpoint.ValueString()
+	}
 	if !(providerConfig.DNSCustomEndpoint.IsUnknown() || providerConfig.DNSCustomEndpoint.IsNull()) {
 		providerData.DnsCustomEndpoint = providerConfig.DNSCustomEndpoint.ValueString()
 	}
@@ -465,6 +475,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		alertGroup.NewAlertGroupDataSource,
+		cdn.NewDistributionDataSource,
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
 		iaasAffinityGroup.NewAffinityGroupDatasource,
@@ -520,6 +531,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{
 		alertGroup.NewAlertGroupResource,
+		cdn.NewDistributionResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
 		iaasAffinityGroup.NewAffinityGroupResource,
