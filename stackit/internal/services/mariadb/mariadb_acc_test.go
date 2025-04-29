@@ -2,13 +2,16 @@ package mariadb_test
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/mariadb"
 	"github.com/stackitcloud/stackit-sdk-go/services/mariadb/wait"
@@ -16,163 +19,142 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-// Instance resource data
-var instanceResource = map[string]string{
-	"project_id":         testutil.ProjectId,
-	"name":               testutil.ResourceNameWithDateTime("mariadb"),
-	"plan_id":            "683be856-3587-42de-b1b5-a792ff854f52",
-	"plan_name":          "stackit-mariadb-1.4.10-single",
-	"version":            "10.6",
-	"sgw_acl-1":          "192.168.0.0/16",
-	"sgw_acl-2":          "192.168.0.0/24",
-	"max_disk_threshold": "80",
-	"enable_monitoring":  "false",
-	"metrics_prefix":     "stackit_acc",
-	"syslog-0":           "syslog.example.com:514",
+//go:embed testfiles/resource-min.tf
+var resourceMinConfig string
+
+//go:embed testfiles/resource-max.tf
+var resourceMaxConfig string
+
+var testConfigVarsMin = config.Variables{
+	"project_id": config.StringVariable(testutil.ProjectId),
+	"name":       config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"plan_name":  config.StringVariable("stackit-mariadb-1.4.10-single"),
+	"db_version": config.StringVariable("10.6"),
 }
 
-func parametersConfig(params map[string]string) string {
-	nonStringParams := []string{
-		"enable_monitoring",
-		"max_disk_threshold",
-		"metrics_frequency",
-		"syslog",
+var testConfigVarsMax = config.Variables{
+	"project_id":                       config.StringVariable(testutil.ProjectId),
+	"name":                             config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"plan_name":                        config.StringVariable("stackit-mariadb-1.4.10-single"),
+	"db_version":                       config.StringVariable("10.11"),
+	"observability_instance_plan_name": config.StringVariable("Observability-Monitoring-Basic-EU01"),
+	"parameters_enable_monitoring":     config.BoolVariable(true),
+	"parameters_graphite":              config.StringVariable(fmt.Sprintf("%s.graphite.stackit.cloud:2003", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha))),
+	"parameters_max_disk_threshold":    config.IntegerVariable(75),
+	"parameters_metrics_frequency":     config.IntegerVariable(15),
+	"parameters_metrics_prefix":        config.StringVariable("acc-test"),
+	"parameters_sgw_acl":               config.StringVariable("192.168.2.0/24"),
+	"parameters_syslog":                config.StringVariable("acc.test.log:514"),
+}
+
+func configVarsMaxUpdated() config.Variables {
+	updatedConfig := config.Variables{}
+	for k, v := range testConfigVarsMax {
+		updatedConfig[k] = v
 	}
-	parameters := "parameters = {"
-	for k, v := range params {
-		if utils.Contains(nonStringParams, k) {
-			parameters += fmt.Sprintf("%s = %s\n", k, v)
-		} else {
-			parameters += fmt.Sprintf("%s = %q\n", k, v)
-		}
-	}
-	parameters += "\n}"
-	return parameters
+	updatedConfig["parameters_max_disk_threshold"] = config.IntegerVariable(85)
+	updatedConfig["parameters_metrics_frequency"] = config.IntegerVariable(10)
+	updatedConfig["parameters_graphite"] = config.StringVariable("graphite.stackit.cloud:2003")
+	updatedConfig["parameters_sgw_acl"] = config.StringVariable("192.168.1.0/24")
+	updatedConfig["parameters_syslog"] = config.StringVariable("test.log:514")
+	return updatedConfig
 }
 
-func resourceConfig(params map[string]string) string {
-	return fmt.Sprintf(`
-				%s
-
-				resource "stackit_mariadb_instance" "instance" {
-					project_id = "%s"
-					name       = "%s"
-					plan_name  = "%s"
- 				 	version    = "%s"
-					%s
-				}
-
-				resource "stackit_mariadb_credential" "credential" {
-					project_id = stackit_mariadb_instance.instance.project_id
-					instance_id = stackit_mariadb_instance.instance.instance_id
-				}
-				`,
-		testutil.MariaDBProviderConfig(),
-		instanceResource["project_id"],
-		instanceResource["name"],
-		instanceResource["plan_name"],
-		instanceResource["version"],
-		parametersConfig(params),
-	)
-}
-func TestAccMariaDBResource(t *testing.T) {
-	resource.Test(t, resource.TestCase{
+// minimum configuration
+func TestAccMariaDbResourceMin(t *testing.T) {
+	t.Logf("Maria test instance name: %s", testutil.ConvertConfigVariable(testConfigVarsMin["name"]))
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckMariaDBDestroy,
 		Steps: []resource.TestStep{
-
 			// Creation
 			{
-				Config: resourceConfig(
-					map[string]string{
-						"sgw_acl":            instanceResource["sgw_acl-1"],
-						"max_disk_threshold": instanceResource["max_disk_threshold"],
-						"metrics_frequency":  "10",
-						"enable_monitoring":  instanceResource["enable_monitoring"],
-						"metrics_prefix":     instanceResource["metrics_prefix"],
-						"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
-					}),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					// Instance data
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "project_id", instanceResource["project_id"]),
+				ConfigVariables: testConfigVarsMin,
+				Config:          fmt.Sprintf("%s\n%s", testutil.MariaDBProviderConfig(), resourceMinConfig),
+				Check: resource.ComposeTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMin["name"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "version", testutil.ConvertConfigVariable(testConfigVarsMin["db_version"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "plan_name", testutil.ConvertConfigVariable(testConfigVarsMin["plan_name"])),
 					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "plan_id", instanceResource["plan_id"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "plan_name", instanceResource["plan_name"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "version", instanceResource["version"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "name", instanceResource["name"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-1"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.max_disk_threshold", instanceResource["max_disk_threshold"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.metrics_frequency", "10"),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.metrics_prefix", instanceResource["metrics_prefix"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.syslog.#", "1"),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.syslog.0", instanceResource["syslog-0"]),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "plan_id"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "cf_guid"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "cf_organization_guid"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "cf_space_guid"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "image_url"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "dashboard_url"),
 
-					// Credential data
+					// Credential
 					resource.TestCheckResourceAttrPair(
-						"stackit_mariadb_credential.credential", "project_id",
 						"stackit_mariadb_instance.instance", "project_id",
+						"stackit_mariadb_credential.credential", "project_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_mariadb_credential.credential", "instance_id",
 						"stackit_mariadb_instance.instance", "instance_id",
+						"stackit_mariadb_credential.credential", "instance_id",
 					),
 					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "credential_id"),
 					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "host"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "hosts.#"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "name"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "password"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "port"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "uri"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "username"),
 				),
 			},
 			// Data source
 			{
+				ConfigVariables: testConfigVarsMin,
 				Config: fmt.Sprintf(`
 					%s
 
+					%s
+
 					data "stackit_mariadb_instance" "instance" {
-						project_id  = stackit_mariadb_instance.instance.project_id
+						project_id = stackit_mariadb_instance.instance.project_id
 						instance_id = stackit_mariadb_instance.instance.instance_id
 					}
 
 					data "stackit_mariadb_credential" "credential" {
-						project_id     = stackit_mariadb_credential.credential.project_id
-						instance_id    = stackit_mariadb_credential.credential.instance_id
+						project_id = stackit_mariadb_credential.credential.project_id
+						instance_id = stackit_mariadb_credential.credential.instance_id
 					    credential_id = stackit_mariadb_credential.credential.credential_id
-					}`,
-					resourceConfig(map[string]string{
-						"sgw_acl":            instanceResource["sgw_acl-1"],
-						"max_disk_threshold": instanceResource["max_disk_threshold"],
-						"metrics_frequency":  "10",
-						"enable_monitoring":  instanceResource["enable_monitoring"],
-						"metrics_prefix":     instanceResource["metrics_prefix"],
-						"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
-					}),
+					}`, testutil.MariaDBProviderConfig(), resourceMinConfig,
 				),
-				Check: resource.ComposeAggregateTestCheckFunc(
+				Check: resource.ComposeTestCheckFunc(
 					// Instance data
-					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "project_id", instanceResource["project_id"]),
-					resource.TestCheckResourceAttrPair("stackit_mariadb_instance.instance", "instance_id",
-						"data.stackit_mariadb_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttrPair("stackit_mariadb_credential.credential", "credential_id",
-						"data.stackit_mariadb_credential.credential", "credential_id"),
-					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "plan_id", instanceResource["plan_id"]),
-					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "name", instanceResource["name"]),
-					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-1"]),
-					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.max_disk_threshold", instanceResource["max_disk_threshold"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.metrics_frequency", "10"),
-					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
-					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.metrics_prefix", instanceResource["metrics_prefix"]),
-					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.syslog.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.syslog.0", instanceResource["syslog-0"]),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_mariadb_instance.instance", "instance_id",
+						"stackit_mariadb_instance.instance", "instance_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMin["name"])),
+					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "version", testutil.ConvertConfigVariable(testConfigVarsMin["db_version"])),
+					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "plan_name", testutil.ConvertConfigVariable(testConfigVarsMin["plan_name"])),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_instance.instance", "plan_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_instance.instance", "cf_guid"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_instance.instance", "cf_organization_guid"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_instance.instance", "cf_space_guid"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_instance.instance", "image_url"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_instance.instance", "dashboard_url"),
 
 					// Credential data
-					resource.TestCheckResourceAttr("data.stackit_mariadb_credential.credential", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttr("data.stackit_mariadb_credential.credential", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "credential_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "host"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "hosts.#"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "password"),
 					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "port"),
 					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "uri"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "username"),
 				),
 			},
 			// Import
 			{
-				ResourceName: "stackit_mariadb_instance.instance",
+				ConfigVariables: testConfigVarsMin,
+				ResourceName:    "stackit_mariadb_instance.instance",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_mariadb_instance.instance"]
 					if !ok {
@@ -188,7 +170,169 @@ func TestAccMariaDBResource(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				ResourceName: "stackit_mariadb_credential.credential",
+				ConfigVariables: testConfigVarsMin,
+				ResourceName:    "stackit_mariadb_credential.credential",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_mariadb_credential.credential"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_mariadb_credential.credential")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					credentialId, ok := r.Primary.Attributes["credential_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute credential_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// In this minimal setup, it's not possible to perform an update
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+// maximum configuration
+func TestAccMariaDbResourceMax(t *testing.T) {
+	t.Logf("Maria test instance name: %s", testutil.ConvertConfigVariable(testConfigVarsMax["name"]))
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckMariaDBDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigVarsMax,
+				Config:          fmt.Sprintf("%s\n%s", testutil.MariaDBProviderConfig(), resourceMaxConfig),
+				Check: resource.ComposeTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMax["name"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "version", testutil.ConvertConfigVariable(testConfigVarsMax["db_version"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "plan_name", testutil.ConvertConfigVariable(testConfigVarsMax["plan_name"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.enable_monitoring", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_enable_monitoring"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.graphite", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_graphite"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.max_disk_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_max_disk_threshold"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.metrics_frequency", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_metrics_frequency"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.metrics_prefix", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_metrics_prefix"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.sgw_acl", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_sgw_acl"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.syslog.0", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_syslog"])),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "instance_id"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "plan_id"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "cf_guid"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "cf_organization_guid"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "cf_space_guid"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "image_url"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "dashboard_url"),
+
+					// Credential
+					resource.TestCheckResourceAttrPair(
+						"stackit_mariadb_instance.instance", "project_id",
+						"stackit_mariadb_credential.credential", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_mariadb_instance.instance", "instance_id",
+						"stackit_mariadb_credential.credential", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "credential_id"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "host"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "hosts.#"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "name"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "password"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "port"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "uri"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "username"),
+
+					// Observability
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.observability_instance", "instance_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.observability_instance", "instance_id",
+						"stackit_mariadb_instance", "parameters.monitoring_instance_id",
+					),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigVarsMax,
+				Config: fmt.Sprintf(`
+					%s
+
+					%s
+
+					data "stackit_mariadb_instance" "instance" {
+						project_id = stackit_mariadb_instance.instance.project_id
+						instance_id = stackit_mariadb_instance.instance.instance_id
+					}
+
+					data "stackit_mariadb_credential" "credential" {
+						project_id = stackit_mariadb_credential.credential.project_id
+						instance_id = stackit_mariadb_credential.credential.instance_id
+					    credential_id = stackit_mariadb_credential.credential.credential_id
+					}`, testutil.MariaDBProviderConfig(), resourceMaxConfig,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					// Instance data
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_mariadb_instance.instance", "instance_id",
+						"stackit_mariadb_instance.instance", "instance_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_mariadb_instance.instance", "project_id",
+						"stackit_mariadb_instance.instance", "project_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMax["name"])),
+					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "version", testutil.ConvertConfigVariable(testConfigVarsMax["db_version"])),
+					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "plan_name", testutil.ConvertConfigVariable(testConfigVarsMax["plan_name"])),
+					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.enable_monitoring", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_enable_monitoring"])),
+					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.graphite", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_graphite"])),
+					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.max_disk_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_max_disk_threshold"])),
+					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.metrics_frequency", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_metrics_frequency"])),
+					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.metrics_prefix", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_metrics_prefix"])),
+					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.sgw_acl", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_sgw_acl"])),
+					resource.TestCheckResourceAttr("data.stackit_mariadb_instance.instance", "parameters.syslog.0", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_syslog"])),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_instance.instance", "plan_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_instance.instance", "cf_guid"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_instance.instance", "cf_organization_guid"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_instance.instance", "cf_space_guid"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_instance.instance", "image_url"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_instance.instance", "dashboard_url"),
+
+					// Credential data
+					resource.TestCheckResourceAttr("data.stackit_mariadb_credential.credential", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "credential_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "host"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "hosts.#"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "password"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "port"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "uri"),
+					resource.TestCheckResourceAttrSet("data.stackit_mariadb_credential.credential", "username"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigVarsMax,
+				ResourceName:    "stackit_mariadb_instance.instance",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_mariadb_instance.instance"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_mariadb_instance.instance")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ConfigVariables: testConfigVarsMax,
+				ResourceName:    "stackit_mariadb_credential.credential",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_mariadb_credential.credential"]
 					if !ok {
@@ -209,29 +353,53 @@ func TestAccMariaDBResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfig(map[string]string{
-					"sgw_acl":            instanceResource["sgw_acl-2"],
-					"max_disk_threshold": instanceResource["max_disk_threshold"],
-					"metrics_frequency":  "10",
-					"enable_monitoring":  instanceResource["enable_monitoring"],
-					"metrics_prefix":     instanceResource["metrics_prefix"],
-					"syslog":             fmt.Sprintf(`[%q]`, instanceResource["syslog-0"]),
-				}),
+				ConfigVariables: configVarsMaxUpdated(),
+				Config:          fmt.Sprintf("%s\n%s", testutil.MariaDBProviderConfig(), resourceMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Instance data
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "project_id", instanceResource["project_id"]),
+					// Instance
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "project_id", testutil.ConvertConfigVariable(configVarsMaxUpdated()["project_id"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["name"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "version", testutil.ConvertConfigVariable(configVarsMaxUpdated()["db_version"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "plan_name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["plan_name"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.enable_monitoring", testutil.ConvertConfigVariable(configVarsMaxUpdated()["parameters_enable_monitoring"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.graphite", testutil.ConvertConfigVariable(configVarsMaxUpdated()["parameters_graphite"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.max_disk_threshold", testutil.ConvertConfigVariable(configVarsMaxUpdated()["parameters_max_disk_threshold"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.metrics_frequency", testutil.ConvertConfigVariable(configVarsMaxUpdated()["parameters_metrics_frequency"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.metrics_prefix", testutil.ConvertConfigVariable(configVarsMaxUpdated()["parameters_metrics_prefix"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.sgw_acl", testutil.ConvertConfigVariable(configVarsMaxUpdated()["parameters_sgw_acl"])),
+					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.syslog.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["parameters_syslog"])),
 					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "plan_id", instanceResource["plan_id"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "plan_name", instanceResource["plan_name"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "version", instanceResource["version"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "name", instanceResource["name"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl-2"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.max_disk_threshold", instanceResource["max_disk_threshold"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.metrics_frequency", "10"),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.enable_monitoring", instanceResource["enable_monitoring"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.metrics_prefix", instanceResource["metrics_prefix"]),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.syslog.#", "1"),
-					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.syslog.0", instanceResource["syslog-0"]),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "plan_id"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "cf_guid"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "cf_organization_guid"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "cf_space_guid"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "image_url"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "dashboard_url"),
+
+					// Credential
+					resource.TestCheckResourceAttrPair(
+						"stackit_mariadb_instance.instance", "project_id",
+						"stackit_mariadb_credential.credential", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_mariadb_instance.instance", "instance_id",
+						"stackit_mariadb_credential.credential", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "credential_id"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "host"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "hosts.#"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "name"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "password"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "port"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "uri"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "username"),
+
+					// Observability
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.observability_instance", "instance_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.observability_instance", "instance_id",
+						"stackit_mariadb_instance", "parameters.monitoring_instance_id",
+					),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -245,11 +413,11 @@ func testAccCheckMariaDBDestroy(s *terraform.State) error {
 	var err error
 	if testutil.MariaDBCustomEndpoint == "" {
 		client, err = mariadb.NewAPIClient(
-			config.WithRegion("eu01"),
+			stackitSdkConfig.WithRegion("eu01"),
 		)
 	} else {
 		client, err = mariadb.NewAPIClient(
-			config.WithEndpoint(testutil.MariaDBCustomEndpoint),
+			stackitSdkConfig.WithEndpoint(testutil.MariaDBCustomEndpoint),
 		)
 	}
 	if err != nil {
