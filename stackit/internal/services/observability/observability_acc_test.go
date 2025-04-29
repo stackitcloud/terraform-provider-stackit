@@ -20,8 +20,8 @@ import (
 var instanceResource = map[string]string{
 	"project_id":                             testutil.ProjectId,
 	"name":                                   testutil.ResourceNameWithDateTime("observability"),
-	"plan_name":                              "Observability-Monitoring-Basic-EU01",
-	"new_plan_name":                          "Observability-Monitoring-Medium-EU01",
+	"plan_name":                              "Observability-Medium-EU01",
+	"new_plan_name":                          "Observability-Large-EU01",
 	"acl-0":                                  "1.2.3.4/32",
 	"acl-1":                                  "111.222.111.222/32",
 	"acl-1-updated":                          "111.222.111.125/32",
@@ -47,8 +47,19 @@ var alertGroupResource = map[string]string{
 	"interval":           "5h",
 	"interval_updated":   "1h",
 	"alert":              "alert1",
-	"expression":         "expression1",
-	"expression_updated": "expression2",
+	"expression":         `sum(kube_pod_status_phase{phase=\"Running\"}) > 0`,
+	"expression_updated": `sum(kube_pod_status_phase{phase=\"Error\"}) > 0`,
+	"for":                "60s",
+}
+
+var logAlertGroupResource = map[string]string{
+	"name":               fmt.Sprintf("alertgroup-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
+	"name_updated":       fmt.Sprintf("alertgroup-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
+	"interval":           "5h",
+	"interval_updated":   "1h",
+	"alert":              "alert1",
+	"expression":         `sum(rate({namespace=\"example\"} |= \"Simulated error message\" [1m])) > 0`,
+	"expression_updated": `sum(rate({namespace=\"example\"} |= \"Another error message\" [1m])) > 0`,
 	"for":                "60s",
 }
 
@@ -262,8 +273,31 @@ func alertGroupResourceConfig(name, interval, expression string) string {
 	)
 }
 
-func resourceConfig(acl, metricsRetentionDays, metricsRetentionDays1hDownsampling, metricsRetentionDays5mDownsampling, alertConfig *string, instanceName, planName, target, saml2EnableUrlParameters, alertGroupName, alertGroupInterval, alertGroupRule1Expression string) string {
-	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s\n\n%s",
+func logAlertGroupResourceConfig(name, interval, expression string) string {
+	return fmt.Sprintf(
+		`resource "stackit_observability_logalertgroup" "logalertgroup" {
+		project_id = stackit_observability_instance.instance.project_id
+		instance_id = stackit_observability_instance.instance.instance_id
+		name = "%s"
+		interval = "%s"
+		rules = [
+			{
+				alert = "%s"
+				expression = "%s"
+				for = "%s"
+			}
+		]
+	}`,
+		name,
+		interval,
+		logAlertGroupResource["alert"],
+		expression,
+		logAlertGroupResource["for"],
+	)
+}
+
+func resourceConfig(acl, metricsRetentionDays, metricsRetentionDays1hDownsampling, metricsRetentionDays5mDownsampling, alertConfig *string, instanceName, planName, target, saml2EnableUrlParameters, alertGroupName, alertGroupInterval, alertGroupRule1Expression, logAlertGroupName, logAlertGroupInterval, logAlertGroupRule1Expression string) string {
+	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
 		testutil.ObservabilityProviderConfig(),
 		instanceResourceConfig(acl,
 			metricsRetentionDays,
@@ -275,6 +309,7 @@ func resourceConfig(acl, metricsRetentionDays, metricsRetentionDays1hDownsamplin
 		scrapeConfigResourceConfig(target, saml2EnableUrlParameters),
 		credentialResourceConfig(),
 		alertGroupResourceConfig(alertGroupName, alertGroupInterval, alertGroupRule1Expression),
+		logAlertGroupResourceConfig(logAlertGroupName, logAlertGroupInterval, logAlertGroupRule1Expression),
 	)
 }
 
@@ -303,6 +338,9 @@ func TestAccResource(t *testing.T) {
 					alertGroupResource["name"],
 					alertGroupResource["interval"],
 					alertGroupResource["expression"],
+					logAlertGroupResource["name"],
+					logAlertGroupResource["interval"],
+					logAlertGroupResource["expression"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -399,6 +437,18 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.alert"),
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.expression"),
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.for"),
+
+					// logalertgroup
+					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "project_id", credentialResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_logalertgroup.logalertgroup", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "name"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "interval"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.alert"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.expression"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.for"),
 				),
 			},
 			// Update Alert Config with complete Receiver (email, webhook and opsgenie configs), global options and Route with child routes
@@ -421,6 +471,9 @@ func TestAccResource(t *testing.T) {
 					alertGroupResource["name"],
 					alertGroupResource["interval"],
 					alertGroupResource["expression"],
+					logAlertGroupResource["name"],
+					logAlertGroupResource["interval"],
+					logAlertGroupResource["expression"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -526,6 +579,18 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.alert"),
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.expression"),
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.for"),
+
+					// logalertgroup
+					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "project_id", credentialResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_logalertgroup.logalertgroup", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "name"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "interval"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.alert"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.expression"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.for"),
 				),
 			},
 			// Update without ACL, partial metrics retention days and NO alert configs
@@ -543,6 +608,9 @@ func TestAccResource(t *testing.T) {
 					alertGroupResource["name"],
 					alertGroupResource["interval"],
 					alertGroupResource["expression"],
+					logAlertGroupResource["name"],
+					logAlertGroupResource["interval"],
+					logAlertGroupResource["expression"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -610,6 +678,18 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.alert"),
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.expression"),
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.for"),
+
+					// logalertgroup
+					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "project_id", credentialResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_logalertgroup.logalertgroup", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "name"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "interval"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.alert"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.expression"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.for"),
 				),
 			},
 			// Update with empty ACL, NO metrics retention days and NO alert configs
@@ -627,6 +707,9 @@ func TestAccResource(t *testing.T) {
 					alertGroupResource["name"],
 					alertGroupResource["interval"],
 					alertGroupResource["expression"],
+					logAlertGroupResource["name"],
+					logAlertGroupResource["interval"],
+					logAlertGroupResource["expression"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -694,6 +777,18 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.alert"),
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.expression"),
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.for"),
+
+					// logalertgroup
+					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "project_id", credentialResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_logalertgroup.logalertgroup", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "name"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "interval"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.alert"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.expression"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.for"),
 				),
 			},
 			// Data source
@@ -717,6 +812,12 @@ func TestAccResource(t *testing.T) {
 					  instance_id = stackit_observability_alertgroup.alertgroup.instance_id
 					  name        = stackit_observability_alertgroup.alertgroup.name
 					}
+
+					data "stackit_observability_logalertgroup" "logalertgroup" {
+					  project_id  = stackit_observability_logalertgroup.logalertgroup.project_id
+					  instance_id = stackit_observability_logalertgroup.logalertgroup.instance_id
+					  name        = stackit_observability_logalertgroup.logalertgroup.name
+					}
 					`,
 					resourceConfig(
 						utils.Ptr(fmt.Sprintf(
@@ -735,6 +836,9 @@ func TestAccResource(t *testing.T) {
 						alertGroupResource["name"],
 						alertGroupResource["interval"],
 						alertGroupResource["expression"],
+						logAlertGroupResource["name"],
+						logAlertGroupResource["interval"],
+						logAlertGroupResource["expression"],
 					),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -786,6 +890,18 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_observability_alertgroup.alertgroup", "rules.0.alert"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_alertgroup.alertgroup", "rules.0.expression"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_alertgroup.alertgroup", "rules.0.for"),
+
+					// logalertgroup
+					resource.TestCheckResourceAttr("data.stackit_observability_logalertgroup.logalertgroup", "project_id", credentialResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"data.stackit_observability_logalertgroup.logalertgroup", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_logalertgroup.logalertgroup", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_logalertgroup.logalertgroup", "interval"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_logalertgroup.logalertgroup", "rules.0.alert"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_logalertgroup.logalertgroup", "rules.0.expression"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_logalertgroup.logalertgroup", "rules.0.for"),
 				),
 			},
 			// Import 1
@@ -848,6 +964,27 @@ func TestAccResource(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
+			// Import 4
+			{
+				ResourceName: "stackit_observability_logalertgroup.logalertgroup",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_observability_logalertgroup.logalertgroup"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_observability_logalertgroup.logalertgroup")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					name, ok := r.Primary.Attributes["name"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, name), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 			// Update
 			{
 				Config: resourceConfig(
@@ -867,6 +1004,9 @@ func TestAccResource(t *testing.T) {
 					alertGroupResource["name_updated"],
 					alertGroupResource["interval_updated"],
 					alertGroupResource["expression_updated"],
+					logAlertGroupResource["name_updated"],
+					logAlertGroupResource["interval_updated"],
+					logAlertGroupResource["expression_updated"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -934,6 +1074,18 @@ func TestAccResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.alert"),
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.expression"),
 					resource.TestCheckResourceAttrSet("stackit_observability_alertgroup.alertgroup", "rules.0.for"),
+
+					// logalertgroup
+					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "project_id", credentialResource["project_id"]),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_logalertgroup.logalertgroup", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "name"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "interval"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.alert"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.expression"),
+					resource.TestCheckResourceAttrSet("stackit_observability_logalertgroup.logalertgroup", "rules.0.for"),
 				),
 			},
 			// Update and remove saml2 attribute
