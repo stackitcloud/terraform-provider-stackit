@@ -164,7 +164,6 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 				Optional:    false,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"status": schema.StringAttribute{
@@ -290,16 +289,8 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if model.ProjectId.IsUnknown() || model.ProjectId.IsNull() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "No project_id in plan")
-		return
-	}
-	projectId := model.ProjectId.ValueString()
 
-	if model.DistributionId.IsUnknown() || model.DistributionId.IsNull() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "No distribution_id in plan")
-		return
-	}
+	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
@@ -307,7 +298,7 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 	cdnResp, err := r.client.GetDistribution(ctx, projectId, distributionId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		// n.b. err is caught here if of type **oapierror.GenericOpenAPIError, which it is
+		// n.b. err is caught here if of type *oapierror.GenericOpenAPIError, which the stackit SDK client returns
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
@@ -338,16 +329,8 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if model.ProjectId.IsUnknown() || model.ProjectId.IsNull() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "No project_id in plan")
-		return
-	}
-	projectId := model.ProjectId.ValueString()
 
-	if model.DistributionId.IsUnknown() || model.DistributionId.IsNull() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "No distribution_id in plan")
-		return
-	}
+	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
@@ -457,6 +440,18 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 		return fmt.Errorf("CDN distribution ID not present")
 	}
 
+	if distribution.CreatedAt == nil {
+		return fmt.Errorf("CreatedAt missing in response")
+	}
+
+	if distribution.UpdatedAt == nil {
+		return fmt.Errorf("UpdatedAt missing in response")
+	}
+
+	if distribution.Status == nil {
+		return fmt.Errorf("Status missing in response")
+	}
+
 	id := *distribution.ProjectId + core.Separator + *distribution.Id
 
 	model.ID = types.StringValue(id)
@@ -487,9 +482,9 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 		return core.DiagsToError(diags)
 	}
 	originRequestHeaders := types.MapNull(types.StringType)
-	if distribution.Config.Backend.HttpBackend.OriginRequestHeaders != nil && len(*distribution.Config.Backend.HttpBackend.OriginRequestHeaders) > 0 {
+	if origHeaders := distribution.Config.Backend.HttpBackend.OriginRequestHeaders; origHeaders != nil && len(*origHeaders) > 0 {
 		headers := map[string]attr.Value{}
-		for k, v := range *distribution.Config.Backend.HttpBackend.OriginRequestHeaders {
+		for k, v := range *origHeaders {
 			headers[k] = types.StringValue(v)
 		}
 		mappedHeaders, diags := types.MapValue(types.StringType, headers)
@@ -522,12 +517,18 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 			domainErrors := []attr.Value{}
 			if d.Errors != nil {
 				for _, e := range *d.Errors {
+					if e.En == nil {
+						return fmt.Errorf("error description missing")
+					}
 					domainErrors = append(domainErrors, types.StringValue(*e.En))
 				}
 			}
 			modelDomainErrors, diags := types.ListValue(types.StringType, domainErrors)
 			if diags.HasError() {
 				return core.DiagsToError(diags)
+			}
+			if d.Name == nil || d.Status == nil || d.Type == nil {
+				return fmt.Errorf("domain entry incomplete")
 			}
 			modelDomain, diags := types.ObjectValue(domainTypes, map[string]attr.Value{
 				"name":   types.StringValue(*d.Name),
