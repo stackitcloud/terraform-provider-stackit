@@ -24,7 +24,7 @@ resource "stackit_cdn_distribution" "example_distribution" {
       type       = "http"
       origin_url = "mybackend.onstackit.cloud"
     }
-    regions = ["EN", "US", "ASIA", "AF", "SA"]
+    regions = ["EU", "US", "ASIA", "AF", "SA"]
   }
 }
 ```
