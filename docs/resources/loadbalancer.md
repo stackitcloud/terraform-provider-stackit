@@ -119,6 +119,7 @@ resource "stackit_loadbalancer" "example" {
 
 ### Required
 
+- `external_address` (String) External Load Balancer IP address where this Load Balancer is exposed.
 - `listeners` (Attributes List) List of all listeners which will accept traffic. Limited to 20. (see [below for nested schema](#nestedatt--listeners))
 - `name` (String) Load balancer name.
 - `networks` (Attributes List) List of networks that listeners and targets reside in. (see [below for nested schema](#nestedatt--networks))
@@ -127,7 +128,6 @@ resource "stackit_loadbalancer" "example" {
 
 ### Optional
 
-- `external_address` (String) External Load Balancer IP address where this Load Balancer is exposed.
 - `options` (Attributes) Defines any optional functionality you want to have enabled on your load balancer. (see [below for nested schema](#nestedatt--options))
 - `region` (String) The resource region. If not defined, the provider region is used.
 
@@ -139,13 +139,16 @@ resource "stackit_loadbalancer" "example" {
 <a id="nestedatt--listeners"></a>
 ### Nested Schema for `listeners`
 
+Required:
+
+- `port` (Number) Port number where we listen for traffic.
+- `protocol` (String) Protocol is the highest network protocol we understand to load balance. Supported values are: `PROTOCOL_UNSPECIFIED`, `PROTOCOL_TCP`, `PROTOCOL_UDP`, `PROTOCOL_TCP_PROXY`, `PROTOCOL_TLS_PASSTHROUGH`.
+- `target_pool` (String) Reference target pool by target pool name.
+
 Optional:
 
 - `display_name` (String)
-- `port` (Number) Port number where we listen for traffic.
-- `protocol` (String) Protocol is the highest network protocol we understand to load balance. Supported values are: `PROTOCOL_UNSPECIFIED`, `PROTOCOL_TCP`, `PROTOCOL_UDP`, `PROTOCOL_TCP_PROXY`, `PROTOCOL_TLS_PASSTHROUGH`.
 - `server_name_indicators` (Attributes List) A list of domain names to match in order to pass TLS traffic to the target pool in the current listener (see [below for nested schema](#nestedatt--listeners--server_name_indicators))
-- `target_pool` (String) Reference target pool by target pool name.
 
 <a id="nestedatt--listeners--server_name_indicators"></a>
 ### Nested Schema for `listeners.server_name_indicators`
@@ -162,9 +165,6 @@ Optional:
 Required:
 
 - `network_id` (String) Openstack network ID.
-
-Optional:
-
 - `role` (String) The role defines how the load balancer is using the network. Supported values are: `ROLE_UNSPECIFIED`, `ROLE_LISTENERS_AND_TARGETS`, `ROLE_LISTENERS`, `ROLE_TARGETS`.
 
 

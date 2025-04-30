@@ -318,7 +318,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 			},
 			"external_address": schema.StringAttribute{
 				Description: descriptions["external_address"],
-				Optional:    true,
+				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -345,8 +345,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 						},
 						"port": schema.Int64Attribute{
 							Description: descriptions["port"],
-							Optional:    true,
-							Computed:    true,
+							Required:    true,
 							PlanModifiers: []planmodifier.Int64{
 								int64planmodifier.RequiresReplace(),
 								int64planmodifier.UseStateForUnknown(),
@@ -354,8 +353,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 						},
 						"protocol": schema.StringAttribute{
 							Description: descriptions["protocol"],
-							Optional:    true,
-							Computed:    true,
+							Required:    true,
 							PlanModifiers: []planmodifier.String{
 								stringplanmodifier.RequiresReplace(),
 								stringplanmodifier.UseStateForUnknown(),
@@ -378,8 +376,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 						},
 						"target_pool": schema.StringAttribute{
 							Description: descriptions["target_pool"],
-							Optional:    true,
-							Computed:    true,
+							Required:    true,
 							PlanModifiers: []planmodifier.String{
 								stringplanmodifier.RequiresReplace(),
 								stringplanmodifier.UseStateForUnknown(),
@@ -424,8 +421,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 						},
 						"role": schema.StringAttribute{
 							Description: descriptions["role"],
-							Optional:    true,
-							Computed:    true,
+							Required:    true,
 							PlanModifiers: []planmodifier.String{
 								stringplanmodifier.RequiresReplace(),
 								stringplanmodifier.UseStateForUnknown(),
