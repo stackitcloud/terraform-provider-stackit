@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -142,6 +143,7 @@ func (r *distributionResource) Metadata(_ context.Context, req resource.Metadata
 }
 
 func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	backendOptions := []string{"http"}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema."),
 		Description:         "CDN distribution data source schema.",
@@ -219,6 +221,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 							"type": schema.StringAttribute{
 								Required:    true,
 								Description: schemaDescriptions["config_backend_type"],
+								Validators:  []validator.String{stringvalidator.OneOf(backendOptions...)},
 							},
 							"origin_url": schema.StringAttribute{
 								Required:    true,
