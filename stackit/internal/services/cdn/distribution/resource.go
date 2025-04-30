@@ -146,7 +146,8 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 	backendOptions := []string{"http"}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema."),
-		Description:         "CDN distribution data source schema.",
+		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema. " + utils.SupportedValuesDocumentation(backendOptions)),
+		Description:         "CDN distribution data source schema. " + utils.SupportedValuesDocumentation(backendOptions),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: schemaDescriptions["id"],
