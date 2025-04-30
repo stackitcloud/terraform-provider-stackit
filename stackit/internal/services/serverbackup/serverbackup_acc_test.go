@@ -2,153 +2,140 @@ package serverbackup_test
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
+	"log"
+	"maps"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	core_config "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-// Server backup schedule resource data
-var serverBackupScheduleResource = map[string]string{
-	"project_id":           testutil.ProjectId,
-	"server_id":            testutil.ServerId,
-	"backup_schedule_name": testutil.ResourceNameWithDateTime("server-backup-schedule"),
-	"rrule":                "DTSTART;TZID=Europe/Berlin:20250325T080000 RRULE:FREQ=DAILY;INTERVAL=1;COUNT=3",
-	"backup_name":          testutil.ResourceNameWithDateTime("server-backup-schedule-backup"),
+var (
+	//go:embed testdata/resource-min.tf
+	resourceMinConfig string
+
+	//go:embed testdata/resource-max.tf
+	resourceMaxConfig string
+)
+
+func unwrap(v config.Variable) string {
+	tmp, err := v.MarshalJSON()
+	if err != nil {
+		log.Panicf("cannot marshal variable %v: %v", v, err)
+	}
+	return strings.Trim(string(tmp), `"`)
 }
 
-func resourceConfig(retentionPeriod int64) string {
-	return fmt.Sprintf(`
-				%s
-
-				resource "stackit_server_backup_schedule" "test_schedule" {
-					project_id = "%s"
-					server_id  = "%s"
-					name  = "%s"
- 				 	rrule = "%s"
-                    enabled = true
-                    backup_properties = {
-                        name = "%s"
-                        retention_period = %d
-                        volume_ids = null
-                    }
-				}
-				`,
-		testutil.ServerBackupProviderConfig(),
-		serverBackupScheduleResource["project_id"],
-		serverBackupScheduleResource["server_id"],
-		serverBackupScheduleResource["backup_schedule_name"],
-		serverBackupScheduleResource["rrule"],
-		serverBackupScheduleResource["backup_name"],
-		retentionPeriod,
-	)
+var testConfigVarsMin = config.Variables{
+	"project_id":       config.StringVariable(testutil.ProjectId),
+	"server_id":        config.StringVariable(testutil.ServerId),
+	"schedule_name":    config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"rrule":            config.StringVariable("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
+	"enabled":          config.BoolVariable(true),
+	"backup_name":      config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"retention_period": config.IntegerVariable(14),
 }
 
-func resourceConfigWithUpdate() string {
-	return fmt.Sprintf(`
-				%s
-
-				resource "stackit_server_backup_schedule" "test_schedule" {
-					project_id = "%s"
-					server_id  = "%s"
-					name  = "%s"
- 				 	rrule = "%s"
-                    enabled = false
-                    backup_properties = {
-                        name = "%s"
-                        retention_period = 20 
-                        volume_ids = null
-                    }
-				}
-				`,
-		testutil.ServerBackupProviderConfig(),
-		serverBackupScheduleResource["project_id"],
-		serverBackupScheduleResource["server_id"],
-		serverBackupScheduleResource["backup_schedule_name"],
-		serverBackupScheduleResource["rrule"],
-		serverBackupScheduleResource["backup_name"],
-	)
+var testConfigVarsMax = config.Variables{
+	"project_id":       config.StringVariable(testutil.ProjectId),
+	"server_id":        config.StringVariable(testutil.ServerId),
+	"schedule_name":    config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"rrule":            config.StringVariable("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
+	"enabled":          config.BoolVariable(true),
+	"backup_name":      config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"retention_period": config.IntegerVariable(14),
+	"region":           config.StringVariable("eu01"),
 }
 
-func TestAccServerBackupScheduleResource(t *testing.T) {
+func configVarsInvalid(vars config.Variables) config.Variables {
+	tempConfig := maps.Clone(vars)
+	tempConfig["retention_period"] = config.IntegerVariable(0)
+	return tempConfig
+}
+
+func configVarsMinUpdated() config.Variables {
+	tempConfig := maps.Clone(testConfigVarsMin)
+	tempConfig["retention_period"] = config.IntegerVariable(12)
+	tempConfig["rrule"] = config.StringVariable("DTSTART;TZID=Europe/Berlin:20250430T010000 RRULE:FREQ=DAILY;INTERVAL=3")
+
+	return tempConfig
+}
+
+func configVarsMaxUpdated() config.Variables {
+	tempConfig := maps.Clone(testConfigVarsMax)
+	tempConfig["retention_period"] = config.IntegerVariable(12)
+	tempConfig["rrule"] = config.StringVariable("DTSTART;TZID=Europe/Berlin:20250430T010000 RRULE:FREQ=DAILY;INTERVAL=3")
+	return tempConfig
+}
+
+func TestAccServerBackupScheduleMinResource(t *testing.T) {
 	if testutil.ServerId == "" {
 		fmt.Println("TF_ACC_SERVER_ID not set, skipping test")
 		return
 	}
-	var invalidRetentionPeriod int64 = 0
-	var validRetentionPeriod int64 = 15
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckServerBackupScheduleDestroy,
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
-				Config:      resourceConfig(invalidRetentionPeriod),
-				ExpectError: regexp.MustCompile(`.*backup_properties.retention_period value must be at least 1*`),
+				Config:          testutil.ServerBackupCustomEndpoint + "\n" + resourceMinConfig,
+				ConfigVariables: configVarsInvalid(testConfigVarsMin),
+				ExpectError:     regexp.MustCompile(`.*backup_properties.retention_period value must be at least 1*`),
 			},
 			// Creation
 			{
-				Config: resourceConfig(validRetentionPeriod),
+				Config:          resourceMinConfig,
+				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Backup schedule data
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "project_id", serverBackupScheduleResource["project_id"]),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "server_id", serverBackupScheduleResource["server_id"]),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "project_id", unwrap(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "server_id", unwrap(testConfigVarsMin["server_id"])),
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "backup_schedule_id"),
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "id"),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "name", serverBackupScheduleResource["backup_schedule_name"]),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "rrule", serverBackupScheduleResource["rrule"]),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "name", unwrap(testConfigVarsMin["schedule_name"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "rrule", unwrap(testConfigVarsMin["rrule"])),
 					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "enabled", strconv.FormatBool(true)),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.name", serverBackupScheduleResource["backup_name"]),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.name", unwrap(testConfigVarsMin["backup_name"])),
 				),
 			},
 			// data source
 			{
-				Config: fmt.Sprintf(`
-					%s
-
-					data "stackit_server_backup_schedules" "schedules_data_test" {
-						project_id  = stackit_server_backup_schedule.test_schedule.project_id
-						server_id  = stackit_server_backup_schedule.test_schedule.server_id
-						region = stackit_server_backup_schedule.test_schedule.region
-					}
-
-					data "stackit_server_backup_schedule" "schedule_data_test" {
-						project_id  = stackit_server_backup_schedule.test_schedule.project_id
-						server_id  = stackit_server_backup_schedule.test_schedule.server_id
-                        backup_schedule_id = stackit_server_backup_schedule.test_schedule.backup_schedule_id
-						region = stackit_server_backup_schedule.test_schedule.region
-					}`,
-					resourceConfig(validRetentionPeriod),
-				),
+				Config:          testutil.ServerBackupCustomEndpoint + "\n" + resourceMinConfig,
+				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server backup schedule data
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "project_id", serverBackupScheduleResource["project_id"]),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "server_id", serverBackupScheduleResource["server_id"]),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "project_id", unwrap(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "server_id", unwrap(testConfigVarsMin["server_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedule.schedule_data_test", "backup_schedule_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedule.schedule_data_test", "id"),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "name", serverBackupScheduleResource["backup_schedule_name"]),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "rrule", serverBackupScheduleResource["rrule"]),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "name", unwrap(testConfigVarsMin["schedule_name"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "rrule", unwrap(testConfigVarsMin["rrule"])),
 					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "enabled", strconv.FormatBool(true)),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "backup_properties.name", serverBackupScheduleResource["backup_name"]),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "backup_properties.name", unwrap(testConfigVarsMin["backup_name"])),
 
 					// Server backup schedules data
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "project_id", serverBackupScheduleResource["project_id"]),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "server_id", serverBackupScheduleResource["server_id"]),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "project_id", unwrap(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "server_id", unwrap(testConfigVarsMin["server_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedules.schedules_data_test", "id"),
 				),
 			},
 			// Import
 			{
-				ResourceName: "stackit_server_backup_schedule.test_schedule",
+				ResourceName:    "stackit_server_backup_schedule.test_schedule",
+				ConfigVariables: testConfigVarsMin,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_server_backup_schedule.test_schedule"]
 					if !ok {
@@ -165,18 +152,112 @@ func TestAccServerBackupScheduleResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfigWithUpdate(),
+				Config:          testutil.ServerBackupCustomEndpoint + "\n" + resourceMinConfig,
+				ConfigVariables: configVarsMinUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Backup schedule data
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "project_id", serverBackupScheduleResource["project_id"]),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "server_id", serverBackupScheduleResource["server_id"]),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "project_id", unwrap(configVarsMinUpdated()["project_id"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "server_id", unwrap(configVarsMinUpdated()["server_id"])),
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "backup_schedule_id"),
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "id"),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "name", serverBackupScheduleResource["backup_schedule_name"]),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "rrule", serverBackupScheduleResource["rrule"]),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "enabled", strconv.FormatBool(false)),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.retention_period", strconv.FormatInt(20, 10)),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.name", serverBackupScheduleResource["backup_name"]),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "name", unwrap(configVarsMinUpdated()["schedule_name"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "rrule", unwrap(configVarsMinUpdated()["rrule"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "enabled", unwrap(configVarsMinUpdated()["enabled"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.retention_period", unwrap(configVarsMinUpdated()["retention_period"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.name", unwrap(configVarsMinUpdated()["backup_name"])),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+
+func TestAccServerBackupScheduleMaxResource(t *testing.T) {
+	if testutil.ServerId == "" {
+		fmt.Println("TF_ACC_SERVER_ID not set, skipping test")
+		return
+	}
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckServerBackupScheduleDestroy,
+		Steps: []resource.TestStep{
+			// Creation fail
+			{
+				Config:          testutil.ServerBackupCustomEndpoint + "\n" + resourceMaxConfig,
+				ConfigVariables: configVarsInvalid(testConfigVarsMax),
+				ExpectError:     regexp.MustCompile(`.*backup_properties.retention_period value must be at least 1*`),
+			},
+			// Creation
+			{
+				Config:          resourceMaxConfig,
+				ConfigVariables: testConfigVarsMax,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Backup schedule data
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "project_id", unwrap(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "server_id", unwrap(testConfigVarsMax["server_id"])),
+					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "backup_schedule_id"),
+					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "id"),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "name", unwrap(testConfigVarsMax["schedule_name"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "rrule", unwrap(testConfigVarsMax["rrule"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "enabled", strconv.FormatBool(true)),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.name", unwrap(testConfigVarsMax["backup_name"])),
+				),
+			},
+			// data source
+			{
+				Config:          testutil.ServerBackupCustomEndpoint + "\n" + resourceMaxConfig,
+				ConfigVariables: testConfigVarsMax,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Server backup schedule data
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "project_id", unwrap(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "server_id", unwrap(testConfigVarsMax["server_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedule.schedule_data_test", "backup_schedule_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedule.schedule_data_test", "id"),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "name", unwrap(testConfigVarsMax["schedule_name"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "rrule", unwrap(testConfigVarsMax["rrule"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "enabled", strconv.FormatBool(true)),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "backup_properties.name", unwrap(testConfigVarsMax["backup_name"])),
+
+					// Server backup schedules data
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "project_id", unwrap(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "server_id", unwrap(testConfigVarsMax["server_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedules.schedules_data_test", "id"),
+				),
+			},
+			// Import
+			{
+				ResourceName:    "stackit_server_backup_schedule.test_schedule",
+				ConfigVariables: testConfigVarsMax,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_server_backup_schedule.test_schedule"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_server_backup_schedule.test_schedule")
+					}
+					scheduleId, ok := r.Primary.Attributes["backup_schedule_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute backup_schedule_id")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, testutil.ServerId, scheduleId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				Config:          testutil.ServerBackupCustomEndpoint + "\n" + resourceMaxConfig,
+				ConfigVariables: configVarsMaxUpdated(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Backup schedule data
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "project_id", unwrap(configVarsMaxUpdated()["project_id"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "server_id", unwrap(configVarsMaxUpdated()["server_id"])),
+					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "backup_schedule_id"),
+					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "id"),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "name", unwrap(configVarsMaxUpdated()["schedule_name"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "rrule", unwrap(configVarsMaxUpdated()["rrule"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "enabled", unwrap(configVarsMaxUpdated()["enabled"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.retention_period", unwrap(configVarsMaxUpdated()["retention_period"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.name", unwrap(configVarsMaxUpdated()["backup_name"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -192,7 +273,7 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 		client, err = serverbackup.NewAPIClient()
 	} else {
 		client, err = serverbackup.NewAPIClient(
-			config.WithEndpoint(testutil.ServerBackupCustomEndpoint),
+			core_config.WithEndpoint(testutil.ServerBackupCustomEndpoint),
 		)
 	}
 	if err != nil {
