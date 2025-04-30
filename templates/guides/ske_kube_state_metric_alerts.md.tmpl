@@ -13,7 +13,7 @@ This guide explains how to configure the STACKIT Observability product to send a
 
    ```hcl
    provider "stackit" {
-     region = "eu01"
+     default_region = "eu01"
    }
 
    provider "kubernetes" {

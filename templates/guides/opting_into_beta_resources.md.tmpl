@@ -19,7 +19,7 @@ Set the `enable_beta_resources` option in the provider configuration. This is a 
 
 ```hcl
 provider "stackit" {
-  region                = "eu01"
+  default_region        = "eu01"
   enable_beta_resources = true
 }
 ```
