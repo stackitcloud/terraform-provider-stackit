@@ -73,6 +73,7 @@ func (r *distributionDataSource) Metadata(_ context.Context, req datasource.Meta
 }
 
 func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	backendOptions := []string{"http"}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema."),
 		Description:         "CDN distribution data source schema.",
@@ -147,7 +148,7 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						Attributes: map[string]schema.Attribute{
 							"type": schema.StringAttribute{
 								Computed:    true,
-								Description: schemaDescriptions["config_backend_type"],
+								Description: schemaDescriptions["config_backend_type"] + utils.SupportedValuesDocumentation(backendOptions),
 							},
 							"origin_url": schema.StringAttribute{
 								Computed:    true,
