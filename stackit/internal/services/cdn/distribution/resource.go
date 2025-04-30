@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -24,6 +25,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -46,7 +48,7 @@ var schemaDescriptions = map[string]string{
 	"config":                                "The distribution configuration",
 	"config_backend":                        "The configured backend for the distribution",
 	"config_regions":                        "The configured regions where content will be hosted",
-	"config_backend_type":                   "The configured backend type",
+	"config_backend_type":                   "The configured backend type. ",
 	"config_backend_origin_url":             "The configured backend type for the distribution",
 	"config_backend_origin_request_headers": "The configured origin request headers for the backend",
 	"domain_name":                           "The name of the domain",
@@ -142,6 +144,7 @@ func (r *distributionResource) Metadata(_ context.Context, req resource.Metadata
 }
 
 func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	backendOptions := []string{"http"}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema."),
 		Description:         "CDN distribution data source schema.",
@@ -218,7 +221,8 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						Attributes: map[string]schema.Attribute{
 							"type": schema.StringAttribute{
 								Required:    true,
-								Description: schemaDescriptions["config_backend_type"],
+								Description: schemaDescriptions["config_backend_type"] + utils.SupportedValuesDocumentation(backendOptions),
+								Validators:  []validator.String{stringvalidator.OneOf(backendOptions...)},
 							},
 							"origin_url": schema.StringAttribute{
 								Required:    true,

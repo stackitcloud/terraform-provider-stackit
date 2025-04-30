@@ -55,7 +55,7 @@ Read-Only:
 
 - `origin_request_headers` (Map of String) The configured origin request headers for the backend
 - `origin_url` (String) The configured backend type for the distribution
-- `type` (String) The configured backend type
+- `type` (String) The configured backend type. Supported values are: `http`.
 
 
 
