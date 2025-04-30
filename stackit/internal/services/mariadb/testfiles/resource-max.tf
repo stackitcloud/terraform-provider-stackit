@@ -34,7 +34,7 @@ resource "stackit_mariadb_instance" "instance" {
   }
 }
 
-resource "stackit_mariadb_credential" "credentials" {
+resource "stackit_mariadb_credential" "credential" {
   project_id  = var.project_id
   instance_id = stackit_mariadb_instance.instance.instance_id
 }

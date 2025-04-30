@@ -220,6 +220,7 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.metrics_prefix", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_metrics_prefix"])),
 					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.sgw_acl", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_sgw_acl"])),
 					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "parameters.syslog.0", testutil.ConvertConfigVariable(testConfigVarsMax["parameters_syslog"])),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "parameters.monitoring_instance_id"),
 					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "plan_id"),
 					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "cf_guid"),
@@ -247,10 +248,9 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "username"),
 
 					// Observability
-					resource.TestCheckResourceAttrSet("stackit_observability_instance.observability_instance", "instance_id"),
 					resource.TestCheckResourceAttrPair(
 						"stackit_observability_instance.observability_instance", "instance_id",
-						"stackit_mariadb_instance", "parameters.monitoring_instance_id",
+						"stackit_mariadb_instance.instance", "parameters.monitoring_instance_id",
 					),
 				),
 			},
@@ -375,6 +375,7 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "cf_space_guid"),
 					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "image_url"),
 					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "dashboard_url"),
+					resource.TestCheckResourceAttrSet("stackit_mariadb_instance.instance", "parameters.monitoring_instance_id"),
 
 					// Credential
 					resource.TestCheckResourceAttrPair(
@@ -395,10 +396,9 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_mariadb_credential.credential", "username"),
 
 					// Observability
-					resource.TestCheckResourceAttrSet("stackit_observability_instance.observability_instance", "instance_id"),
 					resource.TestCheckResourceAttrPair(
 						"stackit_observability_instance.observability_instance", "instance_id",
-						"stackit_mariadb_instance", "parameters.monitoring_instance_id",
+						"stackit_mariadb_instance.instance", "parameters.monitoring_instance_id",
 					),
 				),
 			},
