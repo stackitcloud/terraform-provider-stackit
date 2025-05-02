@@ -154,7 +154,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 				Computed:    true,
 			},
 			"distribution_id": schema.StringAttribute{
-				Description: schemaDescriptions["project_id"],
+				Description: schemaDescriptions["distribution_id"],
 				Computed:    true,
 				Validators:  []validator.String{validate.UUID()},
 				PlanModifiers: []planmodifier.String{
