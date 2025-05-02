@@ -2,6 +2,7 @@ package iaas_test
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,10 +11,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
@@ -21,6 +23,12 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
+
+//go:embed testfiles/resource-security-group-min.tf
+var resourceSecurityGroupMinConfig string
+
+//go:embed testfiles/resource-security-group-max.tf
+var resourceSecurityGroupMaxConfig string
 
 const (
 	serverMachineType        = "t1.1"
@@ -89,19 +97,49 @@ var serverResource = map[string]string{
 	"delete_on_termination": "true",
 }
 
-// Security Group resource data
-var securityGroupResource = map[string]string{
-	"project_id":  testutil.ProjectId,
-	"name":        "name",
-	"description": "description",
-	"label1":      "value",
+var testConfigSecurityGroupsVarsMin = config.Variables{
+	"project_id": config.StringVariable(testutil.ProjectId),
+	"name":       config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+	"direction":  config.StringVariable("ingress"),
 }
 
-// Security Group rule resource data
-var securityGroupRuleResource = map[string]string{
-	"project_id":  testutil.ProjectId,
-	"direction":   "ingress",
-	"description": "description",
+func testConfigSecurityGroupsVarsMinUpdated() config.Variables {
+	updatedConfig := config.Variables{}
+	for k, v := range testConfigSecurityGroupsVarsMin {
+		updatedConfig[k] = v
+	}
+	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
+	return updatedConfig
+}
+
+var testConfigSecurityGroupsVarsMax = config.Variables{
+	"project_id":       config.StringVariable(testutil.ProjectId),
+	"name":             config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+	"description":      config.StringVariable("description"),
+	"description_rule": config.StringVariable("description"),
+	"label":            config.StringVariable("label"),
+	"stateful":         config.BoolVariable(false),
+	"direction":        config.StringVariable("ingress"),
+	"ether_type":       config.StringVariable("IPv4"),
+	"ip_range":         config.StringVariable("192.168.2.0/24"),
+	"port":             config.StringVariable("443"),
+	"protocol":         config.StringVariable("tcp"),
+	"icmp_code":        config.IntegerVariable(0),
+	"icmp_type":        config.IntegerVariable(8),
+	"name_remote":      config.StringVariable(fmt.Sprintf("tf-acc-remote-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+}
+
+func testConfigSecurityGroupsVarsMaxUpdated() config.Variables {
+	updatedConfig := config.Variables{}
+	for k, v := range testConfigSecurityGroupsVarsMax {
+		updatedConfig[k] = v
+	}
+	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
+	updatedConfig["name_remote"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name_remote"])))
+	updatedConfig["description"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["description"])))
+	updatedConfig["label"] = config.StringVariable("updated")
+
+	return updatedConfig
 }
 
 // Public IP resource data
@@ -282,39 +320,6 @@ func serverResourceConfig(name, machineType string) string {
 	)
 }
 
-func securityGroupResourceConfig(name string) string {
-	return fmt.Sprintf(`
-				resource "stackit_security_group" "security_group" {
-					project_id = "%s"
-					name = "%s"
-					description = "%s"
-					labels = {
-						"label1" = "%s"
-					}
-				}
-				`,
-		securityGroupResource["project_id"],
-		name,
-		securityGroupResource["description"],
-		securityGroupResource["label1"],
-	)
-}
-
-func securityGroupRuleResourceConfig(direction string) string {
-	return fmt.Sprintf(`
-				resource "stackit_security_group_rule" "security_group_rule" {
-					project_id 		  = "%s"
-					security_group_id = stackit_security_group.security_group.security_group_id
-					direction 		  = "%s"
-					description 	  = "%s"
-				}
-				`,
-		securityGroupRuleResource["project_id"],
-		direction,
-		securityGroupRuleResource["description"],
-	)
-}
-
 func volumeAttachmentResourceConfig() string {
 	return fmt.Sprintf(`
 				resource "stackit_server_volume_attach" "attach_volume" {
@@ -415,14 +420,6 @@ func testAccServerConfig(name, nameservers, serverName, machineType, nicTfName, 
 		networkInterfaceAttachmentResourceConfig(nicAttachTfName),
 		volumeAttachmentResourceConfig(),
 		serviceAccountAttachmentResourceConfig(),
-	)
-}
-
-func resourceConfigSecurityGroup(name, direction string) string {
-	return fmt.Sprintf("%s\n\n%s\n\n%s",
-		testutil.IaaSProviderConfig(),
-		securityGroupResourceConfig(name),
-		securityGroupRuleResourceConfig(direction),
 	)
 }
 
@@ -1213,25 +1210,23 @@ func TestAccServer(t *testing.T) {
 	})
 }
 
-func TestAccIaaSSecurityGroup(t *testing.T) {
-	resource.Test(t, resource.TestCase{
+func TestAccIaaSSecurityGroupMin(t *testing.T) {
+	t.Logf("Security group name: %s", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMin["name"]))
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckIaaSSecurityGroupDestroy,
 		Steps: []resource.TestStep{
 
 			// Creation
 			{
-				Config: resourceConfigSecurityGroup(
-					securityGroupResource["name"],
-					securityGroupRuleResource["direction"],
-				),
+				ConfigVariables: testConfigSecurityGroupsVarsMin,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceSecurityGroupMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Security Group
-					resource.TestCheckResourceAttr("stackit_security_group.security_group", "project_id", securityGroupResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "project_id", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMin["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_security_group.security_group", "security_group_id"),
-					resource.TestCheckResourceAttr("stackit_security_group.security_group", "name", securityGroupResource["name"]),
-					resource.TestCheckResourceAttr("stackit_security_group.security_group", "labels.label1", securityGroupResource["label1"]),
-					resource.TestCheckResourceAttr("stackit_security_group.security_group", "description", securityGroupResource["description"]),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "name", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMin["name"])),
+					resource.TestCheckResourceAttrSet("stackit_security_group.security_group", "stateful"),
 
 					// Security Group Rule
 					resource.TestCheckResourceAttrPair(
@@ -1243,13 +1238,14 @@ func TestAccIaaSSecurityGroup(t *testing.T) {
 						"stackit_security_group.security_group", "security_group_id",
 					),
 					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
-					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "direction", securityGroupRuleResource["direction"]),
-					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "description", securityGroupRuleResource["description"]),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMin["direction"])),
 				),
 			},
 			// Data source
 			{
+				ConfigVariables: testConfigSecurityGroupsVarsMin,
 				Config: fmt.Sprintf(`
+					%s
 					%s
 			
 					data "stackit_security_group" "security_group" {
@@ -1263,21 +1259,16 @@ func TestAccIaaSSecurityGroup(t *testing.T) {
 						security_group_rule_id = stackit_security_group_rule.security_group_rule.security_group_rule_id
 					}
 					`,
-					resourceConfigSecurityGroup(
-						securityGroupResource["name"],
-						securityGroupRuleResource["direction"],
-					),
+					testutil.IaaSProviderConfig(), resourceSecurityGroupMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "project_id", securityGroupResource["project_id"]),
+					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "project_id", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMin["project_id"])),
 					resource.TestCheckResourceAttrPair(
 						"stackit_security_group.security_group", "security_group_id",
 						"data.stackit_security_group.security_group", "security_group_id",
 					),
-					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "name", securityGroupResource["name"]),
-					resource.TestCheckResourceAttr("stackit_security_group.security_group", "labels.label1", securityGroupResource["label1"]),
-					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "description", securityGroupResource["description"]),
+					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "name", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMin["name"])),
 
 					// Security Group Rule
 					resource.TestCheckResourceAttrPair(
@@ -1289,13 +1280,13 @@ func TestAccIaaSSecurityGroup(t *testing.T) {
 						"stackit_security_group.security_group", "security_group_id",
 					),
 					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
-					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "direction", securityGroupRuleResource["direction"]),
-					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "description", securityGroupRuleResource["description"]),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMin["direction"])),
 				),
 			},
 			// Import
 			{
-				ResourceName: "stackit_security_group.security_group",
+				ConfigVariables: testConfigSecurityGroupsVarsMin,
+				ResourceName:    "stackit_security_group.security_group",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_security_group.security_group"]
 					if !ok {
@@ -1311,7 +1302,8 @@ func TestAccIaaSSecurityGroup(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				ResourceName: "stackit_security_group_rule.security_group_rule",
+				ConfigVariables: testConfigSecurityGroupsVarsMin,
+				ResourceName:    "stackit_security_group_rule.security_group_rule",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_security_group_rule.security_group_rule"]
 					if !ok {
@@ -1332,16 +1324,382 @@ func TestAccIaaSSecurityGroup(t *testing.T) {
 			},
 			// Update
 			{
-				Config: resourceConfigSecurityGroup(
-					fmt.Sprintf("%s-updated", securityGroupResource["name"]),
-					securityGroupRuleResource["direction"],
+				ConfigVariables: testConfigSecurityGroupsVarsMinUpdated(),
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceSecurityGroupMinConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Security Group
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "project_id", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMinUpdated()["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_security_group.security_group", "security_group_id"),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "name", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMinUpdated()["name"])),
+					resource.TestCheckResourceAttrSet("stackit_security_group.security_group", "stateful"),
+
+					// Security Group Rule
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule", "project_id",
+						"stackit_security_group.security_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule", "security_group_id",
+						"stackit_security_group.security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMinUpdated()["direction"])),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccIaaSSecurityGroupMax(t *testing.T) {
+	t.Logf("Security group name: %s", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["name"]))
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckIaaSSecurityGroupDestroy,
+		Steps: []resource.TestStep{
+
+			// Creation
+			{
+				ConfigVariables: testConfigSecurityGroupsVarsMax,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceSecurityGroupMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Security Group (default)
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "project_id", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_security_group.security_group", "security_group_id"),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "name", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["name"])),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "description", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["description"])),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "stateful", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["stateful"])),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "labels.acc-test", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["label"])),
+
+					// Security Group (remote)
+					resource.TestCheckResourceAttr("stackit_security_group.security_group_remote", "project_id", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_security_group.security_group_remote", "security_group_id"),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group_remote", "name", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["name_remote"])),
+
+					// Security Group Rule (default)
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule", "project_id",
+						"stackit_security_group.security_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule", "security_group_id",
+						"stackit_security_group.security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["direction"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "description", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["description_rule"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "ether_type", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["ether_type"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "port_range.min", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["port"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "port_range.max", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["port"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "protocol.name", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["protocol"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "ip_range", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["ip_range"])),
+
+					// Security Group Rule (icmp)
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule_icmp", "project_id",
+						"stackit_security_group.security_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule_icmp", "security_group_id",
+						"stackit_security_group.security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule_icmp", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_icmp", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["direction"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_icmp", "description", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["description_rule"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_icmp", "ether_type", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["ether_type"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_icmp", "icmp_parameters.code", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["icmp_code"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_icmp", "icmp_parameters.type", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["icmp_type"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_icmp", "protocol.name", "icmp"),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_icmp", "ip_range", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["ip_range"])),
+
+					// Security Group Rule (remote)
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule", "project_id",
+						"stackit_security_group.security_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule", "security_group_id",
+						"stackit_security_group.security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule_remote_security_group", "remote_security_group_id",
+						"stackit_security_group.security_group_remote", "security_group_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["direction"])),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigSecurityGroupsVarsMax,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+			
+					data "stackit_security_group" "security_group" {
+						project_id  = stackit_security_group.security_group.project_id
+						security_group_id = stackit_security_group.security_group.security_group_id
+					}
+
+					data "stackit_security_group" "security_group_remote" {
+						project_id  = stackit_security_group.security_group_remote.project_id
+						security_group_id = stackit_security_group.security_group_remote.security_group_id
+					}
+
+					data "stackit_security_group_rule" "security_group_rule" {
+						project_id             = stackit_security_group.security_group.project_id
+						security_group_id      = stackit_security_group.security_group.security_group_id
+						security_group_rule_id = stackit_security_group_rule.security_group_rule.security_group_rule_id
+					}
+
+					data "stackit_security_group_rule" "security_group_rule_icmp" {
+						project_id             = stackit_security_group.security_group.project_id
+						security_group_id      = stackit_security_group.security_group.security_group_id
+						security_group_rule_id = stackit_security_group_rule.security_group_rule_icmp.security_group_rule_id
+					}
+
+					data "stackit_security_group_rule" "security_group_rule_remote_security_group" {
+						project_id             = stackit_security_group.security_group.project_id
+						security_group_id      = stackit_security_group.security_group.security_group_id
+						security_group_rule_id = stackit_security_group_rule.security_group_rule_remote_security_group.security_group_rule_id
+					}
+					`,
+					testutil.IaaSProviderConfig(), resourceSecurityGroupMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_security_group.security_group", "project_id", securityGroupResource["project_id"]),
+					// Security Group (default)
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group.security_group", "project_id",
+						"stackit_security_group.security_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group.security_group", "security_group_id",
+						"stackit_security_group.security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "project_id", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_security_group.security_group", "security_group_id"),
+					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "name", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["name"])),
+					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "description", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["description"])),
+					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "stateful", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["stateful"])),
+					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_security_group.security_group", "labels.acc-test", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["label"])),
+
+					// Security Group (remote)
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group.security_group_remote", "project_id",
+						"stackit_security_group.security_group_remote", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group.security_group_remote", "security_group_id",
+						"stackit_security_group.security_group_remote", "security_group_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_security_group.security_group_remote", "project_id", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_security_group.security_group_remote", "security_group_id"),
+					resource.TestCheckResourceAttr("data.stackit_security_group.security_group_remote", "name", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["name_remote"])),
+
+					// Security Group Rule (default)
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule", "project_id",
+						"data.stackit_security_group.security_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule", "security_group_id",
+						"data.stackit_security_group.security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule", "security_group_rule_id",
+						"stackit_security_group_rule.security_group_rule", "security_group_rule_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule", "project_id",
+						"stackit_security_group_rule.security_group_rule", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule", "security_group_id",
+						"stackit_security_group_rule.security_group_rule", "security_group_id",
+					),
+					resource.TestCheckResourceAttrSet("data.stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["direction"])),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "description", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["description_rule"])),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "ether_type", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["ether_type"])),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "port_range.min", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["port"])),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "port_range.max", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["port"])),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "protocol.name", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["protocol"])),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "ip_range", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["ip_range"])),
+
+					// Security Group Rule (icmp)
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule_icmp", "project_id",
+						"data.stackit_security_group.security_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule_icmp", "security_group_id",
+						"data.stackit_security_group.security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule_icmp", "security_group_rule_id",
+						"stackit_security_group_rule.security_group_rule_icmp", "security_group_rule_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule_icmp", "project_id",
+						"stackit_security_group_rule.security_group_rule_icmp", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule_icmp", "security_group_id",
+						"stackit_security_group_rule.security_group_rule_icmp", "security_group_id",
+					),
+					resource.TestCheckResourceAttrSet("data.stackit_security_group_rule.security_group_rule_icmp", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule_icmp", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["direction"])),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule_icmp", "description", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["description_rule"])),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule_icmp", "ether_type", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["ether_type"])),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule_icmp", "icmp_parameters.code", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["icmp_code"])),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule_icmp", "icmp_parameters.type", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["icmp_type"])),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule_icmp", "protocol.name", "icmp"),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule_icmp", "ip_range", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["ip_range"])),
+
+					// Security Group Rule (remote)
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule_remote_security_group", "project_id",
+						"data.stackit_security_group.security_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule_remote_security_group", "security_group_id",
+						"data.stackit_security_group.security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule_remote_security_group", "security_group_rule_id",
+						"stackit_security_group_rule.security_group_rule_remote_security_group", "security_group_rule_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule_remote_security_group", "project_id",
+						"stackit_security_group_rule.security_group_rule_remote_security_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule_remote_security_group", "security_group_id",
+						"stackit_security_group_rule.security_group_rule_remote_security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule_remote_security_group", "remote_security_group_id",
+						"stackit_security_group_rule.security_group_rule_remote_security_group", "remote_security_group_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_security_group_rule.security_group_rule_remote_security_group", "remote_security_group_id",
+						"data.stackit_security_group.security_group_remote", "security_group_id",
+					),
+					resource.TestCheckResourceAttrSet("data.stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["direction"])),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigSecurityGroupsVarsMax,
+				ResourceName:    "stackit_security_group.security_group",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_security_group.security_group"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_security_group.security_group")
+					}
+					securityGroupId, ok := r.Primary.Attributes["security_group_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute security_group_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, securityGroupId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ConfigVariables: testConfigSecurityGroupsVarsMax,
+				ResourceName:    "stackit_security_group_rule.security_group_rule",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_security_group_rule.security_group_rule"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_security_group_rule.security_group_rule")
+					}
+					securityGroupId, ok := r.Primary.Attributes["security_group_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute security_group_id")
+					}
+					securityGroupRuleId, ok := r.Primary.Attributes["security_group_rule_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute security_group_rule_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, securityGroupId, securityGroupRuleId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				ConfigVariables: testConfigSecurityGroupsVarsMaxUpdated(),
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceSecurityGroupMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Security Group (default)
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "project_id", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_security_group.security_group", "security_group_id"),
-					resource.TestCheckResourceAttr("stackit_security_group.security_group", "name", fmt.Sprintf("%s-updated", securityGroupResource["name"])),
-					resource.TestCheckResourceAttr("stackit_security_group.security_group", "labels.label1", securityGroupResource["label1"]),
-					resource.TestCheckResourceAttr("stackit_security_group.security_group", "description", securityGroupResource["description"]),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "name", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["name"])),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "description", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["description"])),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "stateful", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["stateful"])),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group", "labels.acc-test", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["label"])),
+
+					// Security Group (remote)
+					resource.TestCheckResourceAttr("stackit_security_group.security_group_remote", "project_id", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_security_group.security_group_remote", "security_group_id"),
+					resource.TestCheckResourceAttr("stackit_security_group.security_group_remote", "name", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["name_remote"])),
+
+					// Security Group Rule (default)
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule", "project_id",
+						"stackit_security_group.security_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule", "security_group_id",
+						"stackit_security_group.security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["direction"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "description", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["description_rule"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "ether_type", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["ether_type"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "port_range.min", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["port"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "port_range.max", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["port"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "protocol.name", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["protocol"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "ip_range", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["ip_range"])),
+
+					// Security Group Rule (icmp)
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule_icmp", "project_id",
+						"stackit_security_group.security_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule_icmp", "security_group_id",
+						"stackit_security_group.security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule_icmp", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_icmp", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["direction"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_icmp", "description", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["description_rule"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_icmp", "ether_type", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["ether_type"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_icmp", "icmp_parameters.code", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["icmp_code"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_icmp", "icmp_parameters.type", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["icmp_type"])),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_icmp", "protocol.name", "icmp"),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_icmp", "ip_range", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["ip_range"])),
+
+					// Security Group Rule (remote)
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule", "project_id",
+						"stackit_security_group.security_group", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule", "security_group_id",
+						"stackit_security_group.security_group", "security_group_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_security_group_rule.security_group_rule_remote_security_group", "remote_security_group_id",
+						"stackit_security_group.security_group_remote", "security_group_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["direction"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -1679,11 +2037,11 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
 		client, err = iaas.NewAPIClient(
-			config.WithRegion("eu01"),
+			stackitSdkConfig.WithRegion("eu01"),
 		)
 	} else {
 		client, err = iaas.NewAPIClient(
-			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
 	if err != nil {
@@ -1722,11 +2080,11 @@ func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
 		client, err = iaas.NewAPIClient(
-			config.WithRegion("eu01"),
+			stackitSdkConfig.WithRegion("eu01"),
 		)
 	} else {
 		client, err = iaas.NewAPIClient(
-			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
 	if err != nil {
@@ -1769,11 +2127,11 @@ func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
 		client, err = iaas.NewAPIClient(
-			config.WithRegion("eu01"),
+			stackitSdkConfig.WithRegion("eu01"),
 		)
 	} else {
 		client, err = iaas.NewAPIClient(
-			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
 	if err != nil {
@@ -1818,17 +2176,17 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 	var alphaErr error
 	if testutil.IaaSCustomEndpoint == "" {
 		alphaClient, alphaErr = iaas.NewAPIClient(
-			config.WithRegion("eu01"),
+			stackitSdkConfig.WithRegion("eu01"),
 		)
 		client, err = iaas.NewAPIClient(
-			config.WithRegion("eu01"),
+			stackitSdkConfig.WithRegion("eu01"),
 		)
 	} else {
 		alphaClient, alphaErr = iaas.NewAPIClient(
-			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 		client, err = iaas.NewAPIClient(
-			config.WithRegion("eu01"),
+			stackitSdkConfig.WithRegion("eu01"),
 		)
 	}
 	if err != nil || alphaErr != nil {
@@ -1904,11 +2262,11 @@ func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
 		client, err = iaas.NewAPIClient(
-			config.WithRegion("eu01"),
+			stackitSdkConfig.WithRegion("eu01"),
 		)
 	} else {
 		client, err = iaas.NewAPIClient(
-			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
 	if err != nil {
@@ -1951,11 +2309,11 @@ func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
 		client, err = iaas.NewAPIClient(
-			config.WithRegion("eu01"),
+			stackitSdkConfig.WithRegion("eu01"),
 		)
 	} else {
 		client, err = iaas.NewAPIClient(
-			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
 	if err != nil {
@@ -1998,11 +2356,11 @@ func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
 		client, err = iaas.NewAPIClient(
-			config.WithRegion("eu01"),
+			stackitSdkConfig.WithRegion("eu01"),
 		)
 	} else {
 		client, err = iaas.NewAPIClient(
-			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
 	if err != nil {
@@ -2053,11 +2411,11 @@ func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 
 	if testutil.IaaSCustomEndpoint == "" {
 		client, err = iaas.NewAPIClient(
-			config.WithRegion("eu01"),
+			stackitSdkConfig.WithRegion("eu01"),
 		)
 	} else {
 		client, err = iaas.NewAPIClient(
-			config.WithEndpoint(testutil.IaaSCustomEndpoint),
+			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
 	if err != nil {
