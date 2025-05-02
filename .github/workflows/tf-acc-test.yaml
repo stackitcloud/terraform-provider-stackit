@@ -2,26 +2,57 @@ name: TF Acceptance Tests Workflow
 
 on:
   push:
-    branches:
-      - master
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
   main:
     name: Acceptance Tests
     runs-on: ubuntu-latest
+    environment: Acceptance tests
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: "loadbalancer"
+            # TODO: place proper project id, organization id, ... here
+            project-id: "66b03760-125b-4c63-9624-741e8a418c02"
+            organization-id: "d83100e9-9be4-45ad-b874-28166786ec0c"
+            parent-container-id: "developer-tools-test-DueErq1"
+            parent-uuid: "d83100e9-9be4-45ad-b874-28166786ec0c"
+          - service: "iaas"
+            # TODO: place proper project id, organization id, ... here
+            project-id: "66b03760-125b-4c63-9624-741e8a418c02"
+            organization-id: "d83100e9-9be4-45ad-b874-28166786ec0c"
+            parent-container-id: "developer-tools-test-DueErq1"
+            parent-uuid: "d83100e9-9be4-45ad-b874-28166786ec0c"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+    
+      - name: Install Go ${{ inputs.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version }}
+      
       - name: Install project tools and dependencies
         run: make project-tools
-      - name: Run tests
-        run: |
-          make test-acceptance-tf TF_ACC_PROJECT_ID=$${{ secrets.TF_ACC_PROJECT_ID }} TF_ACC_ORGANIZATION_ID=$${{ secrets.TF_ACC_ORGANIZATION_ID }} TF_ACC_REGION="eu01"
+      
+      - name: Run acc test
+        run: go test -timeout=30m ./stackit/internal/services/${{ matrix.service }}/${{ matrix.service }}_acc_test.go 
         env:
-          STACKIT_SERVICE_ACCOUNT_TOKEN: ${{ secrets.TF_ACC_SERVICE_ACCOUNT_TOKEN }}
+          TF_ACC: 1
+          TF_ACC_REGION: "eu01"
+          TF_ACC_PROJECT_ID: "${{ matrix.project-id }}"
+          #TF_ACC_PROJECT_ID: "${{ secrets.TF_ACC_PROJECT_ID }}"
+          TF_ACC_ORGANIZATION_ID: "${{ matrix.organization-id }}"
+          #TF_ACC_ORGANIZATION_ID: "${{ secrets.TF_ACC_ORGANIZATION_ID }}"
+          TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID: "${{ matrix.parent-container-id }}"
+          #TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID: "${{ secrets.TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID }}"
+          TF_ACC_TEST_PROJECT_PARENT_UUID: "${{ matrix.parent-container-id }}" 
+          #TF_ACC_TEST_PROJECT_PARENT_UUID: "${{ secrets.TF_ACC_TEST_PROJECT_PARENT_UUID }}"
           TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL: ${{ secrets.TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL }}
           TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN: ${{ secrets.TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN }}
-          TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID: ${{ secrets.TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID }}
-          TF_ACC_TEST_PROJECT_PARENT_UUID: ${{ secrets.TF_ACC_TEST_PROJECT_PARENT_UUID }}
           TF_ACC_TEST_PROJECT_USER_EMAIL: ${{ secrets.TF_ACC_TEST_PROJECT_USER_EMAIL }}
+          STACKIT_SERVICE_ACCOUNT_TOKEN: ${{ secrets.TF_ACC_SERVICE_ACCOUNT_TOKEN }}
