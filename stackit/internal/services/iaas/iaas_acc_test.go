@@ -36,6 +36,12 @@ var resourceImageMinConfig string
 //go:embed testfiles/resource-image-max.tf
 var resourceImageMaxConfig string
 
+//go:embed testfiles/resource-key-pair-min.tf
+var resourceKeyPairMinConfig string
+
+//go:embed testfiles/resource-key-pair-max.tf
+var resourceKeyPairMaxConfig string
+
 const (
 	serverMachineType        = "t1.1"
 	updatedServerMachineType = "t1.2"
@@ -193,7 +199,7 @@ var testConfigImageVarsMax = func() config.Variables {
 		"min_disk_size":            config.IntegerVariable(20),
 		"min_ram":                  config.IntegerVariable(2048),
 		"label":                    config.StringVariable("label"),
-		"boot_menu":                config.BoolVariable(true),
+		"boot_menu":                config.BoolVariable(false),
 		"cdrom_bus":                config.StringVariable("scsi"),
 		"disk_bus":                 config.StringVariable("scsi"),
 		"nic_model":                config.StringVariable("e1000"),
@@ -234,19 +240,31 @@ var testConfigImageVarsMaxUpdated = func() config.Variables {
 	return updatedConfig
 }()
 
+var testConfigKeyPairMin = config.Variables{
+	"name":       config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+	"public_key": config.StringVariable("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIDsPd27M449akqCtdFg2+AmRVJz6eWio0oMP9dVg7XZ"),
+}
+
+var testConfigKeyPairMax = config.Variables{
+	"name":       config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+	"public_key": config.StringVariable("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIDsPd27M449akqCtdFg2+AmRVJz6eWio0oMP9dVg7XZ"),
+	"label":      config.StringVariable("label"),
+}
+
+var testConfigKeyPairMaxUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	for k, v := range testConfigKeyPairMax {
+		updatedConfig[k] = v
+	}
+	updatedConfig["label"] = config.StringVariable("updated")
+	return updatedConfig
+}()
+
 // Public IP resource data
 var publicIpResource = map[string]string{
 	"project_id":           testutil.ProjectId,
 	"label1":               "value",
 	"network_interface_id": "stackit_network_interface.network_interface.network_interface_id",
-}
-
-// Key pair resource data
-var keyPairResource = map[string]string{
-	"name":           "key-pair-name",
-	"public_key":     `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIDsPd27M449akqCtdFg2+AmRVJz6eWio0oMP9dVg7XZ`,
-	"label1":         "value1",
-	"label1-updated": "value1-updated",
 }
 
 // if no local file is provided the test should create a default file and work with this instead of failing
@@ -473,13 +491,6 @@ func testAccPublicIpConfig(nameNetwork, nameservers, nicTfName, nameNetworkInter
 		networkResourceConfigRouted(nameNetwork, nameservers),
 		networkInterfaceResourceConfig(nicTfName, nameNetworkInterface),
 		publicIpResourceConfig,
-	)
-}
-
-func testAccKeyPairConfig(keyPairResourceConfig string) string {
-	return fmt.Sprintf("%s\n\n%s",
-		testutil.IaaSProviderConfig(),
-		keyPairResourceConfig,
 	)
 }
 
@@ -1877,66 +1888,39 @@ func TestAccPublicIp(t *testing.T) {
 	})
 }
 
-func TestAccKeyPair(t *testing.T) {
+func TestAccKeyPairMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckIaaSKeyPairDestroy,
 		Steps: []resource.TestStep{
-
 			// Creation
 			{
-				Config: testAccKeyPairConfig(
-					fmt.Sprintf(`
-						resource "stackit_key_pair" "key_pair" {
-							name = "%s"
-							public_key = "%s"
-							labels = {
-								"label1" = "%s"
-							}
-						}
-					`,
-						keyPairResource["name"],
-						keyPairResource["public_key"],
-						keyPairResource["label1"],
-					),
-				),
+				ConfigVariables: testConfigKeyPairMin,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceKeyPairMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "name", keyPairResource["name"]),
-					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "labels.label1", keyPairResource["label1"]),
-					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "public_key", keyPairResource["public_key"]),
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "name", testutil.ConvertConfigVariable(testConfigKeyPairMin["name"])),
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "public_key", testutil.ConvertConfigVariable(testConfigKeyPairMin["public_key"])),
 					resource.TestCheckResourceAttrSet("stackit_key_pair.key_pair", "fingerprint"),
 				),
 			},
 			// Data source
 			{
+				ConfigVariables: testConfigKeyPairMin,
 				Config: fmt.Sprintf(`
+					%s
 					%s
 
 					data "stackit_key_pair" "key_pair" {
 						name = stackit_key_pair.key_pair.name
 					}
 					`,
-					testAccKeyPairConfig(
-						fmt.Sprintf(`
-							resource "stackit_key_pair" "key_pair" {
-								name = "%s"
-								public_key = "%s"
-								labels = {
-									"label1" = "%s"
-								}
-						}
-						`,
-							keyPairResource["name"],
-							keyPairResource["public_key"],
-							keyPairResource["label1"],
-						),
-					),
+					testutil.IaaSProviderConfig(), resourceKeyPairMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("data.stackit_key_pair.key_pair", "name", keyPairResource["name"]),
-					resource.TestCheckResourceAttr("data.stackit_key_pair.key_pair", "public_key", keyPairResource["public_key"]),
-					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "labels.label1", keyPairResource["label1"]),
+					resource.TestCheckResourceAttr("data.stackit_key_pair.key_pair", "name", testutil.ConvertConfigVariable(testConfigKeyPairMin["name"])),
+					resource.TestCheckResourceAttr("data.stackit_key_pair.key_pair", "public_key", testutil.ConvertConfigVariable(testConfigKeyPairMin["public_key"])),
+					resource.TestCheckResourceAttrSet("data.stackit_key_pair.key_pair", "fingerprint"),
 					resource.TestCheckResourceAttrPair(
 						"stackit_key_pair.key_pair", "fingerprint",
 						"data.stackit_key_pair.key_pair", "fingerprint",
@@ -1945,7 +1929,8 @@ func TestAccKeyPair(t *testing.T) {
 			},
 			// Import
 			{
-				ResourceName: "stackit_key_pair.key_pair",
+				ConfigVariables: testConfigKeyPairMin,
+				ResourceName:    "stackit_key_pair.key_pair",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_key_pair.key_pair"]
 					if !ok {
@@ -1960,26 +1945,78 @@ func TestAccKeyPair(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
-			// Update
+			// In this minimal setup, no update can be performed
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccKeyPairMax(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckIaaSKeyPairDestroy,
+		Steps: []resource.TestStep{
+			// Creation
 			{
-				Config: testAccKeyPairConfig(
-					fmt.Sprintf(`
-							resource "stackit_key_pair" "key_pair" {
-								name = "%s"
-								public_key = "%s"
-								labels = {
-									"label1" = "%s"
-								}
-						}
-						`,
-						keyPairResource["name"],
-						keyPairResource["public_key"],
-						keyPairResource["label1-updated"],
-					),
+				ConfigVariables: testConfigKeyPairMax,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceKeyPairMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "name", testutil.ConvertConfigVariable(testConfigKeyPairMax["name"])),
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "public_key", testutil.ConvertConfigVariable(testConfigKeyPairMax["public_key"])),
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "labels.acc-test", testutil.ConvertConfigVariable(testConfigKeyPairMax["label"])),
+					resource.TestCheckResourceAttrSet("stackit_key_pair.key_pair", "fingerprint"),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigKeyPairMax,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+
+					data "stackit_key_pair" "key_pair" {
+						name = stackit_key_pair.key_pair.name
+					}
+					`,
+					testutil.IaaSProviderConfig(), resourceKeyPairMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "name", keyPairResource["name"]),
-					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "labels.label1", keyPairResource["label1-updated"]),
+					// Instance
+					resource.TestCheckResourceAttr("data.stackit_key_pair.key_pair", "name", testutil.ConvertConfigVariable(testConfigKeyPairMax["name"])),
+					resource.TestCheckResourceAttr("data.stackit_key_pair.key_pair", "public_key", testutil.ConvertConfigVariable(testConfigKeyPairMax["public_key"])),
+					resource.TestCheckResourceAttr("data.stackit_key_pair.key_pair", "labels.acc-test", testutil.ConvertConfigVariable(testConfigKeyPairMax["label"])),
+					resource.TestCheckResourceAttrSet("data.stackit_key_pair.key_pair", "fingerprint"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_key_pair.key_pair", "fingerprint",
+						"data.stackit_key_pair.key_pair", "fingerprint",
+					),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigKeyPairMax,
+				ResourceName:    "stackit_key_pair.key_pair",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_key_pair.key_pair"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_key_pair.key_pair")
+					}
+					keyPairName, ok := r.Primary.Attributes["name"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return keyPairName, nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ConfigVariables: testConfigKeyPairMaxUpdated,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceKeyPairMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "name", testutil.ConvertConfigVariable(testConfigKeyPairMaxUpdated["name"])),
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "public_key", testutil.ConvertConfigVariable(testConfigKeyPairMaxUpdated["public_key"])),
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "labels.acc-test", testutil.ConvertConfigVariable(testConfigKeyPairMaxUpdated["label"])),
 					resource.TestCheckResourceAttrSet("stackit_key_pair.key_pair", "fingerprint"),
 				),
 			},
