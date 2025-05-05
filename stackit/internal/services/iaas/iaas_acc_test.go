@@ -30,6 +30,12 @@ var resourceSecurityGroupMinConfig string
 //go:embed testfiles/resource-security-group-max.tf
 var resourceSecurityGroupMaxConfig string
 
+//go:embed testfiles/resource-image-min.tf
+var resourceImageMinConfig string
+
+//go:embed testfiles/resource-image-max.tf
+var resourceImageMaxConfig string
+
 const (
 	serverMachineType        = "t1.1"
 	updatedServerMachineType = "t1.2"
@@ -142,6 +148,92 @@ func testConfigSecurityGroupsVarsMaxUpdated() config.Variables {
 	return updatedConfig
 }
 
+var testConfigImageVarsMin = func() config.Variables {
+	localFilePath := testutil.TestImageLocalFilePath
+	if localFilePath == "default" {
+		localFileForIaasImage = testutil.CreateDefaultLocalFile()
+		filePath, err := filepath.Abs(localFileForIaasImage.Name())
+		if err != nil {
+			fmt.Println("Absolute path for localFileForIaasImage could not be retrieved.")
+		}
+		localFilePath = filePath
+	}
+	return config.Variables{
+		"project_id":      config.StringVariable(testutil.ProjectId),
+		"name":            config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+		"disk_format":     config.StringVariable("qcow2"),
+		"local_file_path": config.StringVariable(localFilePath),
+	}
+}()
+
+var testConfigImageVarsMinUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	for k, v := range testConfigImageVarsMin {
+		updatedConfig[k] = v
+	}
+	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
+	return updatedConfig
+}()
+
+var testConfigImageVarsMax = func() config.Variables {
+	localFilePath := testutil.TestImageLocalFilePath
+	if localFilePath == "default" {
+		localFileForIaasImage = testutil.CreateDefaultLocalFile()
+		filePath, err := filepath.Abs(localFileForIaasImage.Name())
+		if err != nil {
+			fmt.Println("Absolute path for localFileForIaasImage could not be retrieved.")
+		}
+		localFilePath = filePath
+	}
+	return config.Variables{
+		"project_id":               config.StringVariable(testutil.ProjectId),
+		"name":                     config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+		"disk_format":              config.StringVariable("qcow2"),
+		"local_file_path":          config.StringVariable(localFilePath),
+		"min_disk_size":            config.IntegerVariable(20),
+		"min_ram":                  config.IntegerVariable(2048),
+		"label":                    config.StringVariable("label"),
+		"boot_menu":                config.BoolVariable(true),
+		"cdrom_bus":                config.StringVariable("scsi"),
+		"disk_bus":                 config.StringVariable("scsi"),
+		"nic_model":                config.StringVariable("e1000"),
+		"operating_system":         config.StringVariable("linux"),
+		"operating_system_distro":  config.StringVariable("ubuntu"),
+		"operating_system_version": config.StringVariable("16.04"),
+		"rescue_bus":               config.StringVariable("sata"),
+		"rescue_device":            config.StringVariable("cdrom"),
+		"secure_boot":              config.BoolVariable(true),
+		"uefi":                     config.BoolVariable(true),
+		"video_model":              config.StringVariable("vga"),
+		"virtio_scsi":              config.BoolVariable(true),
+	}
+}()
+
+var testConfigImageVarsMaxUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	for k, v := range testConfigImageVarsMax {
+		updatedConfig[k] = v
+	}
+	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
+	updatedConfig["min_disk_size"] = config.IntegerVariable(25)
+	updatedConfig["min_ram"] = config.IntegerVariable(4096)
+	updatedConfig["label"] = config.StringVariable("updated")
+	updatedConfig["boot_menu"] = config.BoolVariable(false)
+	updatedConfig["cdrom_bus"] = config.StringVariable("usb")
+	updatedConfig["disk_bus"] = config.StringVariable("usb")
+	updatedConfig["nic_model"] = config.StringVariable("virtio")
+	updatedConfig["operating_system"] = config.StringVariable("windows")
+	updatedConfig["operating_system_distro"] = config.StringVariable("debian")
+	updatedConfig["operating_system_version"] = config.StringVariable("18.04")
+	updatedConfig["rescue_bus"] = config.StringVariable("usb")
+	updatedConfig["rescue_device"] = config.StringVariable("disk")
+	updatedConfig["secure_boot"] = config.BoolVariable(false)
+	updatedConfig["uefi"] = config.BoolVariable(false)
+	updatedConfig["video_model"] = config.StringVariable("virtio")
+	updatedConfig["virtio_scsi"] = config.BoolVariable(false)
+	return updatedConfig
+}()
+
 // Public IP resource data
 var publicIpResource = map[string]string{
 	"project_id":           testutil.ProjectId,
@@ -155,18 +247,6 @@ var keyPairResource = map[string]string{
 	"public_key":     `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIDsPd27M449akqCtdFg2+AmRVJz6eWio0oMP9dVg7XZ`,
 	"label1":         "value1",
 	"label1-updated": "value1-updated",
-}
-
-// Image resource data
-var imageResource = map[string]string{
-	"project_id":      testutil.ProjectId,
-	"name":            fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha)),
-	"disk_format":     "qcow2",
-	"local_file_path": testutil.TestImageLocalFilePath,
-	"min_disk_size":   "1",
-	"min_ram":         "1",
-	"label1":          "value1",
-	"boot_menu":       "true",
 }
 
 // if no local file is provided the test should create a default file and work with this instead of failing
@@ -345,42 +425,6 @@ func serviceAccountAttachmentResourceConfig() string {
 	)
 }
 
-func imageResourceConfig(name string) string {
-	if imageResource["local_file_path"] == "default" {
-		localFileForIaasImage = testutil.CreateDefaultLocalFile()
-		filePath, err := filepath.Abs(localFileForIaasImage.Name())
-		if err != nil {
-			fmt.Println("Absolute path for localFileForIaasImage could not be retrieved.")
-		}
-		imageResource["local_file_path"] = filePath
-	}
-	return fmt.Sprintf(`
-				resource "stackit_image" "image" {
-					project_id = "%s"
-					name = "%s"
-					disk_format = "%s"
-					local_file_path = "%s"
-					min_disk_size = %s
-					min_ram = %s
-					labels = {
-						"label1" = "%s"
-					}
-					config = {
-						boot_menu = %s
-					}
-				}
-				`,
-		imageResource["project_id"],
-		name,
-		imageResource["disk_format"],
-		imageResource["local_file_path"],
-		imageResource["min_disk_size"],
-		imageResource["min_ram"],
-		imageResource["label1"],
-		imageResource["boot_menu"],
-	)
-}
-
 func networkInterfaceAttachmentResourceConfig(nicTfName string) string {
 	return fmt.Sprintf(`
 				resource "stackit_server_network_interface_attach" "attach_nic" {
@@ -436,13 +480,6 @@ func testAccKeyPairConfig(keyPairResourceConfig string) string {
 	return fmt.Sprintf("%s\n\n%s",
 		testutil.IaaSProviderConfig(),
 		keyPairResourceConfig,
-	)
-}
-
-func testAccImageConfig(name string) string {
-	return fmt.Sprintf("%s\n\n%s",
-		testutil.IaaSProviderConfig(),
-		imageResourceConfig(name),
 	)
 }
 
@@ -1951,7 +1988,7 @@ func TestAccKeyPair(t *testing.T) {
 	})
 }
 
-func TestAccImage(t *testing.T) {
+func TestAccImageMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckIaaSImageDestroy,
@@ -1959,25 +1996,27 @@ func TestAccImage(t *testing.T) {
 
 			// Creation
 			{
-				Config: testAccImageConfig(imageResource["name"]),
+				ConfigVariables: testConfigImageVarsMin,
+				Config:          fmt.Sprintf("%s\n%s", resourceImageMinConfig, testutil.IaaSProviderConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_image.image", "project_id", imageResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMin["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
-					resource.TestCheckResourceAttr("stackit_image.image", "name", imageResource["name"]),
-					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", imageResource["disk_format"]),
-					resource.TestCheckResourceAttr("stackit_image.image", "min_disk_size", imageResource["min_disk_size"]),
-					resource.TestCheckResourceAttr("stackit_image.image", "min_ram", imageResource["min_ram"]),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "local_file_path"),
-					resource.TestCheckResourceAttr("stackit_image.image", "local_file_path", imageResource["local_file_path"]),
-					resource.TestCheckResourceAttr("stackit_image.image", "labels.label1", imageResource["label1"]),
-					resource.TestCheckResourceAttr("stackit_image.image", "config.boot_menu", imageResource["boot_menu"]),
+					resource.TestCheckResourceAttr("stackit_image.image", "name", testutil.ConvertConfigVariable(testConfigImageVarsMin["name"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", testutil.ConvertConfigVariable(testConfigImageVarsMin["disk_format"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "local_file_path", testutil.ConvertConfigVariable(testConfigImageVarsMin["local_file_path"])),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "protected"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 				),
 			},
 			// Data source
 			{
+				ConfigVariables: testConfigImageVarsMin,
 				Config: fmt.Sprintf(`
+					%s
 					%s
 
 					data "stackit_image" "image" {
@@ -1985,23 +2024,29 @@ func TestAccImage(t *testing.T) {
 						image_id = stackit_image.image.image_id
 					}
 					`,
-					testAccImageConfig(imageResource["name"]),
+					resourceImageMinConfig, testutil.IaaSProviderConfig(),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("data.stackit_image.image", "project_id", imageResource["project_id"]),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMin["project_id"])),
 					resource.TestCheckResourceAttrPair("data.stackit_image.image", "image_id", "stackit_image.image", "image_id"),
 					resource.TestCheckResourceAttrPair("data.stackit_image.image", "name", "stackit_image.image", "name"),
 					resource.TestCheckResourceAttrPair("data.stackit_image.image", "disk_format", "stackit_image.image", "disk_format"),
 					resource.TestCheckResourceAttrPair("data.stackit_image.image", "min_disk_size", "stackit_image.image", "min_disk_size"),
 					resource.TestCheckResourceAttrPair("data.stackit_image.image", "min_ram", "stackit_image.image", "min_ram"),
 					resource.TestCheckResourceAttrPair("data.stackit_image.image", "protected", "stackit_image.image", "protected"),
-					resource.TestCheckResourceAttrPair("data.stackit_image.image", "labels.label1", "stackit_image.image", "labels.label1"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
 				),
 			},
 			// Import
 			{
-				ResourceName: "stackit_image.image",
+				ConfigVariables: testConfigImageVarsMin,
+				ResourceName:    "stackit_image.image",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_image.image"]
 					if !ok {
@@ -2019,11 +2064,166 @@ func TestAccImage(t *testing.T) {
 			},
 			// Update
 			{
-				Config: testAccImageConfig(fmt.Sprintf("%s-updated", imageResource["name"])),
+				ConfigVariables: testConfigImageVarsMinUpdated,
+				Config:          fmt.Sprintf("%s\n%s", resourceImageMinConfig, testutil.IaaSProviderConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_image.image", "name", fmt.Sprintf("%s-updated", imageResource["name"])),
-					resource.TestCheckResourceAttr("stackit_image.image", "project_id", imageResource["project_id"]),
-					resource.TestCheckResourceAttr("stackit_image.image", "labels.label1", imageResource["label1"]),
+					resource.TestCheckResourceAttr("stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
+					resource.TestCheckResourceAttr("stackit_image.image", "name", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["name"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["disk_format"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "local_file_path", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["local_file_path"])),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "protected"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccImageMax(t *testing.T) {
+	fmt.Printf("Image name: %s\n", testutil.ConvertConfigVariable(testConfigImageVarsMax["name"]))
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckIaaSImageDestroy,
+		Steps: []resource.TestStep{
+
+			// Creation
+			{
+				ConfigVariables: testConfigImageVarsMax,
+				Config:          fmt.Sprintf("%s\n%s", resourceImageMaxConfig, testutil.IaaSProviderConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
+					resource.TestCheckResourceAttr("stackit_image.image", "name", testutil.ConvertConfigVariable(testConfigImageVarsMax["name"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", testutil.ConvertConfigVariable(testConfigImageVarsMax["disk_format"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "local_file_path", testutil.ConvertConfigVariable(testConfigImageVarsMax["local_file_path"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "min_disk_size", testutil.ConvertConfigVariable(testConfigImageVarsMax["min_disk_size"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "min_ram", testutil.ConvertConfigVariable(testConfigImageVarsMax["min_ram"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "labels.acc-test", testutil.ConvertConfigVariable(testConfigImageVarsMax["label"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.boot_menu", testutil.ConvertConfigVariable(testConfigImageVarsMax["boot_menu"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.cdrom_bus", testutil.ConvertConfigVariable(testConfigImageVarsMax["cdrom_bus"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.disk_bus", testutil.ConvertConfigVariable(testConfigImageVarsMax["disk_bus"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.nic_model", testutil.ConvertConfigVariable(testConfigImageVarsMax["nic_model"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.operating_system", testutil.ConvertConfigVariable(testConfigImageVarsMax["operating_system"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.operating_system_distro", testutil.ConvertConfigVariable(testConfigImageVarsMax["operating_system_distro"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.operating_system_version", testutil.ConvertConfigVariable(testConfigImageVarsMax["operating_system_version"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.rescue_bus", testutil.ConvertConfigVariable(testConfigImageVarsMax["rescue_bus"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.rescue_device", testutil.ConvertConfigVariable(testConfigImageVarsMax["rescue_device"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.secure_boot", testutil.ConvertConfigVariable(testConfigImageVarsMax["secure_boot"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.uefi", testutil.ConvertConfigVariable(testConfigImageVarsMax["uefi"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.video_model", testutil.ConvertConfigVariable(testConfigImageVarsMax["video_model"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.virtio_scsi", testutil.ConvertConfigVariable(testConfigImageVarsMax["virtio_scsi"])),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "protected"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigImageVarsMax,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+
+					data "stackit_image" "image" {
+						project_id = stackit_image.image.project_id
+						image_id = stackit_image.image.image_id
+					}
+					`,
+					resourceImageMaxConfig, testutil.IaaSProviderConfig(),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("data.stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "image_id", "stackit_image.image", "image_id"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "name", "stackit_image.image", "name"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "disk_format", "stackit_image.image", "disk_format"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "min_disk_size", "stackit_image.image", "min_disk_size"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "min_ram", "stackit_image.image", "min_ram"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "protected", "stackit_image.image", "protected"),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "min_disk_size", testutil.ConvertConfigVariable(testConfigImageVarsMax["min_disk_size"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "min_ram", testutil.ConvertConfigVariable(testConfigImageVarsMax["min_ram"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "labels.acc-test", testutil.ConvertConfigVariable(testConfigImageVarsMax["label"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "config.boot_menu", testutil.ConvertConfigVariable(testConfigImageVarsMax["boot_menu"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "config.cdrom_bus", testutil.ConvertConfigVariable(testConfigImageVarsMax["cdrom_bus"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "config.disk_bus", testutil.ConvertConfigVariable(testConfigImageVarsMax["disk_bus"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "config.nic_model", testutil.ConvertConfigVariable(testConfigImageVarsMax["nic_model"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "config.operating_system", testutil.ConvertConfigVariable(testConfigImageVarsMax["operating_system"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "config.operating_system_distro", testutil.ConvertConfigVariable(testConfigImageVarsMax["operating_system_distro"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "config.operating_system_version", testutil.ConvertConfigVariable(testConfigImageVarsMax["operating_system_version"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "config.rescue_bus", testutil.ConvertConfigVariable(testConfigImageVarsMax["rescue_bus"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "config.rescue_device", testutil.ConvertConfigVariable(testConfigImageVarsMax["rescue_device"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "config.secure_boot", testutil.ConvertConfigVariable(testConfigImageVarsMax["secure_boot"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "config.uefi", testutil.ConvertConfigVariable(testConfigImageVarsMax["uefi"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "config.video_model", testutil.ConvertConfigVariable(testConfigImageVarsMax["video_model"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "config.virtio_scsi", testutil.ConvertConfigVariable(testConfigImageVarsMax["virtio_scsi"])),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigImageVarsMax,
+				ResourceName:    "stackit_image.image",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_image.image"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_image.image")
+					}
+					imageId, ok := r.Primary.Attributes["image_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute image_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, imageId), nil
+				},
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"local_file_path"},
+			},
+			// Update
+			{
+				ConfigVariables: testConfigImageVarsMaxUpdated,
+				Config:          fmt.Sprintf("%s\n%s", resourceImageMaxConfig, testutil.IaaSProviderConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
+					resource.TestCheckResourceAttr("stackit_image.image", "name", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["name"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["disk_format"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "local_file_path", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["local_file_path"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "min_disk_size", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["min_disk_size"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "min_ram", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["min_ram"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "labels.acc-test", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["label"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.boot_menu", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["boot_menu"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.cdrom_bus", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["cdrom_bus"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.disk_bus", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["disk_bus"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.nic_model", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["nic_model"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.operating_system", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["operating_system"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.operating_system_distro", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["operating_system_distro"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.operating_system_version", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["operating_system_version"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.rescue_bus", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["rescue_bus"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.rescue_device", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["rescue_device"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.secure_boot", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["secure_boot"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.uefi", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["uefi"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.video_model", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["video_model"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "config.virtio_scsi", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["virtio_scsi"])),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "protected"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 				),
 			},
 			// Deletion is done by the framework implicitly

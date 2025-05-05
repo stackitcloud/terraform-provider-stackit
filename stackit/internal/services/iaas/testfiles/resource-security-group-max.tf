@@ -59,8 +59,8 @@ resource "stackit_security_group_rule" "security_group_rule_icmp" {
 }
 
 resource "stackit_security_group" "security_group_remote" {
-  project_id  = var.project_id
-  name        = var.name_remote
+  project_id = var.project_id
+  name       = var.name_remote
 }
 
 resource "stackit_security_group_rule" "security_group_rule_remote_security_group" {
