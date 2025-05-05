@@ -175,6 +175,7 @@ func (a *alertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			"interval": schema.StringAttribute{
 				Description: descriptions["interval"],
 				Optional:    true,
+				Computed:    true,
 				Validators: []validator.String{
 					validate.ValidDurationString(),
 				},
