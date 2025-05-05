@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"maps"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -95,7 +96,33 @@ func TestAccDnsMinResource(t *testing.T) {
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDnsDestroy,
 		Steps: []resource.TestStep{
-			// Creation
+			// Creation fail
+			{
+				Config:          resourceMinConfig,
+				ConfigVariables: configVarsInvalid(testConfigVarsMin),
+				ExpectError: regexp.MustCompile(`not a valid dns name. Need at least two levels`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Zone data
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "zone_id"),
+					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "state"),
+
+					// Record set data
+					resource.TestCheckResourceAttrPair(
+						"stackit_dns_record_set.record_set", "project_id",
+						"stackit_dns_zone.zone", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_dns_record_set.record_set", "zone_id",
+						"stackit_dns_zone.zone", "zone_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_dns_record_set.record_set", "record_set_id"),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", unwrap(testConfigVarsMin["record_name"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.#", "1"),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", unwrap(testConfigVarsMin["record_record1"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", unwrap(testConfigVarsMin["record_type"])),
+				),
+			},
 			{
 				Config:          resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
