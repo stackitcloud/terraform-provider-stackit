@@ -157,9 +157,9 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 	name := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "name", name)
 
-	payload := &cdn.PutCustomDomainPayload{IntentId: cdn.PtrString(uuid.NewString())}
+	payload := cdn.PutCustomDomainPayload{IntentId: cdn.PtrString(uuid.NewString())}
 
-	_, err := r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(*payload).Execute()
+	_, err := r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -294,6 +294,9 @@ func mapCustomDomainFields(customDomain *cdn.CustomDomain, model *CustomDomainMo
 	customDomainErrors := []attr.Value{}
 	if customDomain.Errors != nil {
 		for _, e := range *customDomain.Errors {
+			if e.En == nil {
+				return fmt.Errorf("Error description missing")
+			}
 			customDomainErrors = append(customDomainErrors, types.StringValue(*e.En))
 		}
 	}
