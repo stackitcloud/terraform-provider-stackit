@@ -12,7 +12,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -42,11 +41,6 @@ func (r *serviceAccountDataSource) Configure(ctx context.Context, req datasource
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
-		return
-	}
-
-	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_service_account", "datasource")
-	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -90,7 +84,7 @@ func (r *serviceAccountDataSource) Schema(_ context.Context, _ datasource.Schema
 	// The datasource schema differs slightly from the resource schema.
 	// In this case, the email attribute is required to read the service account data from the API.
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Service account data source schema."),
+		MarkdownDescription: "Service account data source schema.",
 		Description:         "Service account data source schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
