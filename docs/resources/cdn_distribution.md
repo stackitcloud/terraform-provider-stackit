@@ -40,7 +40,7 @@ resource "stackit_cdn_distribution" "example_distribution" {
 ### Read-Only
 
 - `created_at` (String) Time when the distribution was created
-- `distribution_id` (String) STACKIT project ID associated with the distribution
+- `distribution_id` (String) CDN distribution ID
 - `domains` (Attributes List) List of configured domains for the distribution (see [below for nested schema](#nestedatt--domains))
 - `errors` (List of String) List of distribution errors
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`distribution_id`".

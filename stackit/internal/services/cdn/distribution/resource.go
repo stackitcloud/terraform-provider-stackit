@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -154,7 +155,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 				Computed:    true,
 			},
 			"distribution_id": schema.StringAttribute{
-				Description: schemaDescriptions["project_id"],
+				Description: schemaDescriptions["distribution_id"],
 				Computed:    true,
 				Validators:  []validator.String{validate.UUID()},
 				PlanModifiers: []planmodifier.String{
@@ -266,7 +267,7 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	waitResp, err := wait.CreateDistributionPoolWaitHandler(ctx, r.client, projectId, *createResp.Distribution.Id).WaitWithContext(ctx)
+	waitResp, err := wait.CreateDistributionPoolWaitHandler(ctx, r.client, projectId, *createResp.Distribution.Id).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Waiting for create: %v", err))
 		return

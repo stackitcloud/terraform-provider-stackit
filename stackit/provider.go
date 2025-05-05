@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
+	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
 	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
@@ -476,6 +477,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 	return []func() datasource.DataSource{
 		alertGroup.NewAlertGroupDataSource,
 		cdn.NewDistributionDataSource,
+		cdnCustomDomain.NewCustomDomainDataSource,
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
 		iaasAffinityGroup.NewAffinityGroupDatasource,
@@ -532,6 +534,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{
 		alertGroup.NewAlertGroupResource,
 		cdn.NewDistributionResource,
+		cdnCustomDomain.NewCustomDomainResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
 		iaasAffinityGroup.NewAffinityGroupResource,
