@@ -228,7 +228,7 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.Int64{
-					int64validator.AtLeast(22),
+					int64validator.AtLeast(8),
 					int64validator.AtMost(29),
 				},
 				Default: int64default.StaticInt64(24),
