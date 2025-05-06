@@ -215,7 +215,7 @@ func TestAccSecretsManagerMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_user.user", "password"),
 				),
 			},
-			
+
 			// Deletion is done by the framework implicitly
 		},
 	})

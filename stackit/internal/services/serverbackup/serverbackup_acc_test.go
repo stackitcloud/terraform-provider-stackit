@@ -172,7 +172,6 @@ func TestAccServerBackupScheduleMinResource(t *testing.T) {
 	})
 }
 
-
 func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 	if testutil.ServerId == "" {
 		fmt.Println("TF_ACC_SERVER_ID not set, skipping test")

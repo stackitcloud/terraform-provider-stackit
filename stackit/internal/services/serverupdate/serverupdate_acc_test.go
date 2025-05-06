@@ -108,7 +108,6 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "name", unwrap(testConfigVarsMin["schedule_name"])),
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "rrule", unwrap(testConfigVarsMin["rrule"])),
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "enabled", unwrap(testConfigVarsMin["enabled"])),
-				//resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "region", testutil.Region),
 				),
 			},
 			// data source

@@ -100,7 +100,7 @@ func TestAccDnsMinResource(t *testing.T) {
 			{
 				Config:          resourceMinConfig,
 				ConfigVariables: configVarsInvalid(testConfigVarsMin),
-				ExpectError: regexp.MustCompile(`not a valid dns name. Need at least two levels`),
+				ExpectError:     regexp.MustCompile(`not a valid dns name. Need at least two levels`),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Zone data
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "project_id", testutil.ProjectId),
@@ -285,7 +285,7 @@ func TestAccDnsMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "description", unwrap(testConfigVarsMax["description"])),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "expire_time", unwrap(testConfigVarsMax["expire_time"])),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "is_reverse_zone", unwrap(testConfigVarsMax["is_reverse_zone"])),
-					//resource.TestCheckResourceAttr("stackit_dns_zone.zone", "negative_cache", unwrap(testConfigVarsMax["negative_cache"])),
+					// resource.TestCheckResourceAttr("stackit_dns_zone.zone", "negative_cache", unwrap(testConfigVarsMax["negative_cache"])),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "primaries.#", "1"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "primaries.0"),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "refresh_time", unwrap(testConfigVarsMax["refresh_time"])),
@@ -333,7 +333,7 @@ func TestAccDnsMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "description", unwrap(testConfigVarsMax["description"])),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "expire_time", unwrap(testConfigVarsMax["expire_time"])),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "is_reverse_zone", unwrap(testConfigVarsMax["is_reverse_zone"])),
-					//resource.TestCheckResourceAttr("stackit_dns_zone.zone", "negative_cache", unwrap(testConfigVarsMax["negative_cache"])),
+					// resource.TestCheckResourceAttr("stackit_dns_zone.zone", "negative_cache", unwrap(testConfigVarsMax["negative_cache"])),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "primaries.#", "1"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "primaries.0"),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "refresh_time", unwrap(testConfigVarsMax["refresh_time"])),
@@ -410,7 +410,7 @@ func TestAccDnsMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "description", unwrap(testConfigVarsMax["description"])),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "expire_time", unwrap(testConfigVarsMax["expire_time"])),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "is_reverse_zone", unwrap(testConfigVarsMax["is_reverse_zone"])),
-					//resource.TestCheckResourceAttr("stackit_dns_zone.zone", "negative_cache", unwrap(testConfigVarsMax["negative_cache"])),
+					// resource.TestCheckResourceAttr("stackit_dns_zone.zone", "negative_cache", unwrap(testConfigVarsMax["negative_cache"])),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "primaries.#", "1"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "primaries.0"),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "refresh_time", unwrap(testConfigVarsMax["refresh_time"])),
