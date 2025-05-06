@@ -20,13 +20,13 @@ resource "stackit_network_area" "network_area" {
       prefix = var.network_ranges_prefix
     }
   ]
-  transfer_network = var.transfer_network
-  default_nameservers = [var.default_nameservers]
+  transfer_network      = var.transfer_network
+  default_nameservers   = [var.default_nameservers]
   default_prefix_length = var.default_prefix_length
-  max_prefix_length = var.max_prefix_length
-  min_prefix_length = var.min_prefix_length
+  max_prefix_length     = var.max_prefix_length
+  min_prefix_length     = var.min_prefix_length
   labels = {
-    "acc-test": var.label
+    "acc-test" : var.label
   }
 }
 
@@ -36,6 +36,6 @@ resource "stackit_network_area_route" "network_area_route" {
   prefix          = var.route_prefix
   next_hop        = var.route_next_hop
   labels = {
-    "acc-test": var.label
+    "acc-test" : var.label
   }
 }

@@ -8,8 +8,8 @@ variable "route_prefix" {}
 variable "route_next_hop" {}
 
 resource "stackit_network_area" "network_area" {
-  organization_id = var.organization_id
-  name            = var.name
+  organization_id  = var.organization_id
+  name             = var.name
   transfer_network = var.transfer_network
   network_ranges = [
     {
