@@ -53,7 +53,7 @@ This guide outlines the process of creating a STACKIT CDN distribution and confi
     resource "stackit_cdn_custom_domain" "example" {
       project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       distribution_id = stackit_cdn_distribution.example_distribution.distribution_id
-      name            = "${stackit_dns_record_set.example.name}.${stackit_dns_zone.dns_name}"
+      name            = "${stackit_dns_record_set.example.name}.${stackit_dns_zone.example_zone.dns_name}"
     }
     ```
     
