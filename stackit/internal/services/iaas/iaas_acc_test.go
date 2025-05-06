@@ -54,6 +54,12 @@ var resourceNetworkMinConfig string
 //go:embed testfiles/resource-network-max.tf
 var resourceNetworkMaxConfig string
 
+//go:embed testfiles/resource-volume-min.tf
+var resourceVolumeMinConfig string
+
+//go:embed testfiles/resource-volume-max.tf
+var resourceVolumeMaxConfig string
+
 const (
 	serverMachineType        = "t1.1"
 	updatedServerMachineType = "t1.2"
@@ -72,6 +78,43 @@ var networkResource = map[string]string{
 	"routed":             "false",
 	"name_updated":       fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 }
+
+var testConfigVolumeVarsMin = config.Variables{
+	"project_id":        config.StringVariable(testutil.ProjectId),
+	"availability_zone": config.StringVariable("eu01-1"),
+	"size":              config.IntegerVariable(16),
+}
+
+var testConfigVolumeVarsMinUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	for k, v := range testConfigVolumeVarsMin {
+		updatedConfig[k] = v
+	}
+	updatedConfig["size"] = config.IntegerVariable(20)
+	return updatedConfig
+}()
+
+var testConfigVolumeVarsMax = config.Variables{
+	"project_id":        config.StringVariable(testutil.ProjectId),
+	"availability_zone": config.StringVariable("eu01-1"),
+	"name":              config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"size":              config.IntegerVariable(16),
+	"description":       config.StringVariable("description"),
+	"performance_class": config.StringVariable("storage_premium_perf0"),
+	"label":             config.StringVariable("label"),
+}
+
+var testConfigVolumeVarsMaxUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	for k, v := range testConfigVolumeVarsMax {
+		updatedConfig[k] = v
+	}
+	updatedConfig["size"] = config.IntegerVariable(20)
+	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["name"])))
+	updatedConfig["description"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["description"])))
+	updatedConfig["label"] = config.StringVariable("updated")
+	return updatedConfig
+}()
 
 var testConfigNetworkVarsMin = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
@@ -490,13 +533,6 @@ func networkInterfaceAttachmentResourceConfig(nicTfName string) string {
 			`,
 		testutil.ProjectId,
 		nicTfName,
-	)
-}
-
-func testAccVolumeConfig(name, size string) string {
-	return fmt.Sprintf("%s\n\n%s",
-		testutil.IaaSProviderConfig(),
-		volumeResourceConfig(name, size),
 	)
 }
 
@@ -1036,56 +1072,213 @@ func TestAccNetworkAreaMax(t *testing.T) {
 	})
 }
 
-func TestAccVolume(t *testing.T) {
+func TestAccVolumeMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckIaaSVolumeDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: testAccVolumeConfig(volumeResource["name"], volumeResource["size"]),
+				ConfigVariables: testConfigVolumeVarsMin,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceVolumeMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_volume.volume", "project_id", volumeResource["project_id"]),
-					resource.TestCheckResourceAttrSet("stackit_volume.volume", "volume_id"),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "name", volumeResource["name"]),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "availability_zone", volumeResource["availability_zone"]),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "labels.label1", volumeResource["label1"]),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "description", volumeResource["description"]),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "performance_class", volumeResource["performance_class"]),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "size", volumeResource["size"]),
+					// Volume size
+					resource.TestCheckResourceAttr("stackit_volume.volume_size", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_size", "volume_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_size", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["availability_zone"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume_size", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["size"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_size", "performance_class"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_size", "server_id"),
+
+					// Volume source
+					resource.TestCheckResourceAttr("stackit_volume.volume_source", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_source", "volume_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_source", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["availability_zone"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume_source", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["size"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_source", "performance_class"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_volume.volume_source", "source.id",
+						"stackit_volume.volume_size", "volume_id",
+					),
+					resource.TestCheckResourceAttr("stackit_volume.volume_source", "source.type", "volume"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_source", "server_id"),
 				),
 			},
 			// Data source
 			{
+				ConfigVariables: testConfigVolumeVarsMin,
 				Config: fmt.Sprintf(`
+					%s
+					%s
+			
+					data "stackit_volume" "volume_size" {
+						project_id  = stackit_volume.volume_size.project_id
+						volume_id = stackit_volume.volume_size.volume_id
+					}
+
+					data "stackit_volume" "volume_source" {
+						project_id  = stackit_volume.volume_source.project_id
+						volume_id = stackit_volume.volume_source.volume_id
+					}
+					`,
+					testutil.IaaSProviderConfig(), resourceVolumeMinConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Volume size
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_size", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_volume.volume_size", "volume_id",
+						"data.stackit_volume.volume_size", "volume_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_size", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["availability_zone"])),
+					resource.TestCheckResourceAttrSet("data.stackit_volume.volume_size", "performance_class"),
+					resource.TestCheckNoResourceAttr("data.stackit_volume.volume_size", "server_id"),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_size", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["size"])),
+
+					// Volume source
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_source", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_volume.volume_source", "volume_id",
+						"data.stackit_volume.volume_source", "volume_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_source", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["availability_zone"])),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_source", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["size"])),
+					resource.TestCheckResourceAttrSet("data.stackit_volume.volume_source", "performance_class"),
+					resource.TestCheckNoResourceAttr("data.stackit_volume.volume_source", "server_id"),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_volume.volume_source", "source.id",
+						"data.stackit_volume.volume_size", "volume_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_source", "source.type", "volume"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigVolumeVarsMin,
+				ResourceName:    "stackit_volume.volume_size",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_volume.volume_size"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_volume.volume_size")
+					}
+					volumeId, ok := r.Primary.Attributes["volume_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute volume_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, volumeId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ConfigVariables: testConfigVolumeVarsMin,
+				ResourceName:    "stackit_volume.volume_source",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_volume.volume_source"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_volume.volume")
+					}
+					volumeId, ok := r.Primary.Attributes["volume_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute volume_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, volumeId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				ConfigVariables: testConfigVolumeVarsMinUpdated,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceVolumeMinConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Volume size
+					resource.TestCheckResourceAttr("stackit_volume.volume_size", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMinUpdated["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_size", "volume_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_size", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMinUpdated["availability_zone"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume_size", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMinUpdated["size"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_size", "performance_class"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_size", "server_id"),
+
+					// Volume source
+					resource.TestCheckResourceAttr("stackit_volume.volume_source", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMinUpdated["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_source", "volume_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_source", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMinUpdated["availability_zone"])),
+					// Volume from source doesn't change size. So here the initial size will be used
+					resource.TestCheckResourceAttr("stackit_volume.volume_source", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["size"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_source", "performance_class"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_volume.volume_source", "source.id",
+						"stackit_volume.volume_size", "volume_id",
+					),
+					resource.TestCheckResourceAttr("stackit_volume.volume_source", "source.type", "volume"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_source", "server_id"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccVolumeMax(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckIaaSVolumeDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigVolumeVarsMax,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceVolumeMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Volume
+					resource.TestCheckResourceAttr("stackit_volume.volume", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume", "volume_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["availability_zone"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["size"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "description", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["description"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "performance_class", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["performance_class"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "name", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["name"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "labels.acc-test", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["label"])),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume", "server_id"),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigVolumeVarsMax,
+				Config: fmt.Sprintf(`
+					%s
 					%s
 			
 					data "stackit_volume" "volume" {
 						project_id  = stackit_volume.volume.project_id
 						volume_id = stackit_volume.volume.volume_id
 					}
+
 					`,
-					testAccVolumeConfig(volumeResource["name"], volumeResource["size"]),
+					testutil.IaaSProviderConfig(), resourceVolumeMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Instance
-					resource.TestCheckResourceAttr("data.stackit_volume.volume", "project_id", networkResource["project_id"]),
+					// Volume
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["project_id"])),
 					resource.TestCheckResourceAttrPair(
 						"stackit_volume.volume", "volume_id",
 						"data.stackit_volume.volume", "volume_id",
 					),
-					resource.TestCheckResourceAttr("data.stackit_volume.volume", "name", volumeResource["name"]),
-					resource.TestCheckResourceAttr("data.stackit_volume.volume", "availability_zone", volumeResource["availability_zone"]),
-					resource.TestCheckResourceAttr("data.stackit_volume.volume", "availability_zone", volumeResource["availability_zone"]),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "labels.label1", volumeResource["label1"]),
-					resource.TestCheckResourceAttr("data.stackit_volume.volume", "description", volumeResource["description"]),
-					resource.TestCheckResourceAttr("data.stackit_volume.volume", "performance_class", volumeResource["performance_class"]),
-					resource.TestCheckResourceAttr("data.stackit_volume.volume", "size", volumeResource["size"]),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["availability_zone"])),
+					resource.TestCheckNoResourceAttr("data.stackit_volume.volume", "server_id"),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["size"])),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "description", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["description"])),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "performance_class", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["performance_class"])),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "name", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["name"])),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume", "labels.acc-test", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["label"])),
 				),
 			},
 			// Import
 			{
-				ResourceName: "stackit_volume.volume",
+				ConfigVariables: testConfigVolumeVarsMax,
+				ResourceName:    "stackit_volume.volume",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_volume.volume"]
 					if !ok {
@@ -1102,19 +1295,20 @@ func TestAccVolume(t *testing.T) {
 			},
 			// Update
 			{
-				Config: testAccVolumeConfig(
-					fmt.Sprintf("%s-updated", volumeResource["name"]),
-					"10",
-				),
+				ConfigVariables: testConfigVolumeVarsMaxUpdated,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceVolumeMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_volume.volume", "project_id", volumeResource["project_id"]),
+					// Volume
+					resource.TestCheckResourceAttr("stackit_volume.volume", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_volume.volume", "volume_id"),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "name", fmt.Sprintf("%s-updated", volumeResource["name"])),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "availability_zone", volumeResource["availability_zone"]),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "labels.label1", volumeResource["label1"]),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "description", volumeResource["description"]),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "performance_class", volumeResource["performance_class"]),
-					resource.TestCheckResourceAttr("stackit_volume.volume", "size", "10"),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["availability_zone"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["size"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "description", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["description"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "performance_class", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["performance_class"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "name", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["name"])),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume", "server_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_volume.volume", "labels.acc-test", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["label"])),
 				),
 			},
 			// Deletion is done by the framework implicitly

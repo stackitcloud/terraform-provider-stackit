@@ -167,7 +167,6 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"server_id": schema.StringAttribute{
 				Description: "The server ID of the server to which the volume is attached to.",
 				Computed:    true,
-				Optional:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -234,6 +233,7 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"size": schema.Int64Attribute{
 				Description: "The size of the volume in GB. It can only be updated to a larger value than the current size. Either `size` or `source` must be provided",
 				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.Int64{
 					volumeResizeModifier{},
 				},
@@ -575,6 +575,10 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model) error
 	model.AvailabilityZone = types.StringPointerValue(volumeResp.AvailabilityZone)
 	model.Description = types.StringPointerValue(volumeResp.Description)
 	model.Name = types.StringPointerValue(volumeResp.Name)
+	// Workaround for volumes with no names which return an empty string instead of nil
+	if name := volumeResp.Name; name != nil && *name == "" {
+		model.Name = types.StringNull()
+	}
 	model.Labels = labels
 	model.PerformanceClass = types.StringPointerValue(volumeResp.PerformanceClass)
 	model.ServerId = types.StringPointerValue(volumeResp.ServerId)
