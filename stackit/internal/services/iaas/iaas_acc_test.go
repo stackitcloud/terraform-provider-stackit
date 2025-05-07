@@ -24,40 +24,41 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-//go:embed testfiles/resource-security-group-min.tf
+//go:embed testdata/resource-security-group-min.tf
 var resourceSecurityGroupMinConfig string
 
-//go:embed testfiles/resource-security-group-max.tf
+//go:embed testdata/resource-security-group-max.tf
 var resourceSecurityGroupMaxConfig string
 
-//go:embed testfiles/resource-image-min.tf
+//go:embed testdata/resource-image-min.tf
 var resourceImageMinConfig string
 
-//go:embed testfiles/resource-image-max.tf
+//go:embed testdata/resource-image-max.tf
 var resourceImageMaxConfig string
 
-//go:embed testfiles/resource-key-pair-min.tf
+//go:embed testdata/resource-key-pair-min.tf
 var resourceKeyPairMinConfig string
 
-//go:embed testfiles/resource-key-pair-max.tf
+//go:embed testdata/resource-key-pair-max.tf
 var resourceKeyPairMaxConfig string
 
-//go:embed testfiles/resource-network-area-min.tf
+//go:embed testdata/resource-network-area-min.tf
 var resourceNetworkAreaMinConfig string
 
-//go:embed testfiles/resource-network-area-max.tf
+//go:embed testdata/resource-network-area-max.tf
 var resourceNetworkAreaMaxConfig string
 
-//go:embed testfiles/resource-network-min.tf
+//go:embed testdata/resource-network-min.tf
 var resourceNetworkMinConfig string
 
-//go:embed testfiles/resource-network-max.tf
+//go:embed testdata/resource-network-max.tf
 var resourceNetworkMaxConfig string
 
 //go:embed testfiles/resource-volume-min.tf
+//go:embed testdata/resource-volume-min.tf
 var resourceVolumeMinConfig string
 
-//go:embed testfiles/resource-volume-max.tf
+//go:embed testdata/resource-volume-max.tf
 var resourceVolumeMaxConfig string
 
 const (
