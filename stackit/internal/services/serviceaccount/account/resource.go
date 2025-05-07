@@ -20,7 +20,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -60,11 +59,6 @@ func (r *serviceAccountResource) Configure(ctx context.Context, req resource.Con
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
-		return
-	}
-
-	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_service_account", "resource")
-	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -108,7 +102,7 @@ func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 	}
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Service account resource schema."),
+		MarkdownDescription: "Service account resource schema.",
 		Description:         "Service account resource schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

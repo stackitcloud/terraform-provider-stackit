@@ -25,7 +25,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -70,11 +69,6 @@ func (r *serviceAccountTokenResource) Configure(ctx context.Context, req resourc
 	providerData, ok := req.ProviderData.(core.ProviderData)
 	if !ok {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
-		return
-	}
-
-	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_service_account_access_token", "resource")
-	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -124,7 +118,7 @@ func (r *serviceAccountTokenResource) Schema(_ context.Context, _ resource.Schem
 		"valid_until":           "Estimated expiration timestamp of the access token. For precise validity, check the JWT details.",
 	}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: fmt.Sprintf("%s%s", features.AddBetaDescription(descriptions["main"]), markdownDescription),
+		MarkdownDescription: fmt.Sprintf("%s%s", descriptions["main"], markdownDescription),
 		Description:         descriptions["main"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
