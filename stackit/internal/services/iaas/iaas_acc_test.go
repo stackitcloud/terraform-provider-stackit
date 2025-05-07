@@ -66,6 +66,9 @@ var resourceVolumeMinConfig string
 //go:embed testdata/resource-volume-max.tf
 var resourceVolumeMaxConfig string
 
+//go:embed testdata/resource-affinity-group-min.tf
+var resourceAffinityGroupMinConfig string
+
 const (
 	serverMachineType        = "t1.1"
 	updatedServerMachineType = "t1.2"
@@ -83,6 +86,12 @@ var networkResource = map[string]string{
 	"ipv4_prefix":        "10.2.2.0/24",
 	"routed":             "false",
 	"name_updated":       fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
+}
+
+var testConfigAffinityGroupVarsMin = config.Variables{
+	"project_id": config.StringVariable(testutil.ProjectId),
+	"name":       config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"policy":     config.StringVariable("hard-affinity"),
 }
 
 var testConfigNetworkInterfaceVarsMin = config.Variables{
@@ -1757,6 +1766,70 @@ func TestAccServer(t *testing.T) {
 	})
 }
 
+func TestAccAffinityGroupMin(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckAffinityGroupDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigAffinityGroupVarsMin,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceAffinityGroupMinConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "project_id", testutil.ConvertConfigVariable(testConfigAffinityGroupVarsMin["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_affinity_group.affinity_group", "affinity_group_id"),
+					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "name", testutil.ConvertConfigVariable(testConfigAffinityGroupVarsMin["name"])),
+					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "policy", testutil.ConvertConfigVariable(testConfigAffinityGroupVarsMin["policy"])),
+					resource.TestCheckNoResourceAttr("stackit_affinity_group.affinity_group", "members.#"),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigAffinityGroupVarsMin,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+			
+					data "stackit_affinity_group" "affinity_group" {
+						project_id  = stackit_affinity_group.affinity_group.project_id
+						affinity_group_id = stackit_affinity_group.affinity_group.affinity_group_id
+					}
+					`,
+					testutil.IaaSProviderConfig(), resourceAffinityGroupMinConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_affinity_group.affinity_group", "project_id", testutil.ConvertConfigVariable(testConfigAffinityGroupVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_affinity_group.affinity_group", "affinity_group_id",
+						"data.stackit_affinity_group.affinity_group", "affinity_group_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_affinity_group.affinity_group", "name", testutil.ConvertConfigVariable(testConfigAffinityGroupVarsMin["name"])),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigAffinityGroupVarsMin,
+				ResourceName:    "stackit_affinity_group.affinity_group",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_affinity_group.affinity_group"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_affinity_group.affinity_group")
+					}
+					affinityGroupId, ok := r.Primary.Attributes["affinity_group_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute affinity_group_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, affinityGroupId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// In this minimal setup, no update can be performed
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
 func TestAccIaaSSecurityGroupMin(t *testing.T) {
 	t.Logf("Security group name: %s", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMin["name"]))
 	resource.ParallelTest(t, resource.TestCase{
@@ -3341,6 +3414,53 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		}
 	}
 
+	return nil
+}
+
+func testAccCheckAffinityGroupDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var client *iaas.APIClient
+	var err error
+	if testutil.IaaSCustomEndpoint == "" {
+		client, err = iaas.NewAPIClient(
+			stackitSdkConfig.WithRegion("eu01"),
+		)
+	} else {
+		client, err = iaas.NewAPIClient(
+			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	affinityGroupsToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_affinity_group" {
+			continue
+		}
+		// affinity group terraform ID: "[project_id],[affinity_group_id]"
+		affinityGroupId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		affinityGroupsToDestroy = append(affinityGroupsToDestroy, affinityGroupId)
+	}
+
+	affinityGroupsResp, err := client.ListAffinityGroupsExecute(ctx, testutil.ProjectId)
+	if err != nil {
+		return fmt.Errorf("getting securityGroupsResp: %w", err)
+	}
+
+	affinityGroups := *affinityGroupsResp.Items
+	for i := range affinityGroups {
+		if affinityGroups[i].Id == nil {
+			continue
+		}
+		if utils.Contains(affinityGroupsToDestroy, *affinityGroups[i].Id) {
+			err := client.DeleteAffinityGroupExecute(ctx, testutil.ProjectId, *affinityGroups[i].Id)
+			if err != nil {
+				return fmt.Errorf("destroying affinity group %s during CheckDestroy: %w", *affinityGroups[i].Id, err)
+			}
+		}
+	}
 	return nil
 }
 
