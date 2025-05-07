@@ -175,6 +175,7 @@ func (l *logAlertGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 			"interval": schema.StringAttribute{
 				Description: descriptions["interval"],
 				Optional:    true,
+				Computed:    true,
 				Validators: []validator.String{
 					validate.ValidDurationString(),
 				},
