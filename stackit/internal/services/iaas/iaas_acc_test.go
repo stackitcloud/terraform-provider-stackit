@@ -69,10 +69,14 @@ var resourceVolumeMaxConfig string
 //go:embed testdata/resource-affinity-group-min.tf
 var resourceAffinityGroupMinConfig string
 
+//go:embed testdata/resource-server-min.tf
+var resourceServerMinConfig string
+
+//go:embed testdata/resource-server-max.tf
+var resourceServerMaxConfig string
+
 const (
-	serverMachineType        = "t1.1"
-	updatedServerMachineType = "t1.2"
-	nicAttachTfName          = "second_network_interface"
+	keypairPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIDsPd27M449akqCtdFg2+AmRVJz6eWio0oMP9dVg7XZ"
 )
 
 // Network resource data
@@ -87,6 +91,49 @@ var networkResource = map[string]string{
 	"routed":             "false",
 	"name_updated":       fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 }
+
+var testConfigServerVarsMin = config.Variables{
+	"project_id":   config.StringVariable(testutil.ProjectId),
+	"name":         config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"machine_type": config.StringVariable("t1.1"),
+	"image_id":     config.StringVariable("a2c127b2-b1b5-4aee-986f-41cd11b41279"),
+}
+
+var testConfigServerVarsMinUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	for k, v := range testConfigServerVarsMin {
+		updatedConfig[k] = v
+	}
+	updatedConfig["name"] = config.StringVariable(testutil.ProjectId)
+	updatedConfig["machine_type"] = config.StringVariable("t1.2")
+	return updatedConfig
+}()
+
+var testConfigServerVarsMax = config.Variables{
+	"project_id":           config.StringVariable(testutil.ProjectId),
+	"name":                 config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"name_not_updated":     config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"machine_type":         config.StringVariable("t1.1"),
+	"image_id":             config.StringVariable("a2c127b2-b1b5-4aee-986f-41cd11b41279"),
+	"availability_zone":    config.StringVariable("eu01-1"),
+	"label":                config.StringVariable("label"),
+	"user_data":            config.StringVariable("#!/bin/bash"),
+	"policy":               config.StringVariable("soft-affinity"),
+	"size":                 config.IntegerVariable(16),
+	"service_account_mail": config.StringVariable(testutil.TestProjectServiceAccountEmail),
+	"public_key":           config.StringVariable(keypairPublicKey),
+}
+
+var testConfigServerVarsMaxUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	for k, v := range testConfigServerVarsMax {
+		updatedConfig[k] = v
+	}
+	updatedConfig["name"] = config.StringVariable(testutil.ProjectId)
+	updatedConfig["machine_type"] = config.StringVariable("t1.2")
+	updatedConfig["label"] = config.StringVariable("updated")
+	return updatedConfig
+}()
 
 var testConfigAffinityGroupVarsMin = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
@@ -242,31 +289,6 @@ var networkInterfaceResource = map[string]string{
 	"tfName":     "network_interface",
 }
 
-// Volume resource data
-var volumeResource = map[string]string{
-	"project_id":        testutil.ProjectId,
-	"availability_zone": "eu01-1",
-	"name":              fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha)),
-	"description":       "description",
-	"size":              "1",
-	"label1":            "value",
-	"performance_class": "storage_premium_perf1",
-}
-
-// Server resource data
-var serverResource = map[string]string{
-	"project_id":            testutil.ProjectId,
-	"availability_zone":     "eu01-1",
-	"size":                  "64",
-	"source_type":           "image",
-	"source_id":             testutil.IaaSImageId,
-	"name":                  fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha)),
-	"machine_type":          serverMachineType,
-	"label1":                "value",
-	"user_data":             "#!/bin/bash",
-	"delete_on_termination": "true",
-}
-
 var testConfigSecurityGroupsVarsMin = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
 	"name":       config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
@@ -400,12 +422,12 @@ var testConfigImageVarsMaxUpdated = func() config.Variables {
 
 var testConfigKeyPairMin = config.Variables{
 	"name":       config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
-	"public_key": config.StringVariable("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIDsPd27M449akqCtdFg2+AmRVJz6eWio0oMP9dVg7XZ"),
+	"public_key": config.StringVariable(keypairPublicKey),
 }
 
 var testConfigKeyPairMax = config.Variables{
 	"name":       config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
-	"public_key": config.StringVariable("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIDsPd27M449akqCtdFg2+AmRVJz6eWio0oMP9dVg7XZ"),
+	"public_key": config.StringVariable(keypairPublicKey),
 	"label":      config.StringVariable("label"),
 }
 
@@ -427,28 +449,6 @@ var publicIpResource = map[string]string{
 
 // if no local file is provided the test should create a default file and work with this instead of failing
 var localFileForIaasImage os.File
-
-func networkResourceConfig(name, nameservers string) string {
-	return fmt.Sprintf(`
-				resource "stackit_network" "network" {
-					project_id = "%s"
-					name       = "%s"
-					ipv4_prefix_length = "%s"
-					ipv4_nameservers = %s
-					ipv4_gateway = "%s"
-					ipv4_prefix = "%s"
-					routed = "%s"
-				}
-				`,
-		networkResource["project_id"],
-		name,
-		networkResource["ipv4_prefix_length"],
-		nameservers,
-		networkResource["ipv4_gateway"],
-		networkResource["ipv4_prefix"],
-		networkResource["routed"],
-	)
-}
 
 // routed: true, gateway not present
 func networkResourceConfigRouted(name, nameservers string) string {
@@ -480,115 +480,6 @@ func networkInterfaceResourceConfig(resourceName, name string) string {
 				`,
 		resourceName,
 		name,
-	)
-}
-
-func volumeResourceConfig(name, size string) string {
-	return fmt.Sprintf(`
-				resource "stackit_volume" "volume" {
-					project_id = "%s"
-					availability_zone = "%s"
-					name = "%s"
-					description = "%s"
-					size = %s
-					labels = {
-						"label1" = "%s"
-					}
-					performance_class = "%s"
-				}
-				`,
-		volumeResource["project_id"],
-		volumeResource["availability_zone"],
-		name,
-		volumeResource["description"],
-		size,
-		volumeResource["label1"],
-		volumeResource["performance_class"],
-	)
-}
-
-func serverResourceConfig(name, machineType string) string {
-	return fmt.Sprintf(`
-				resource "stackit_server" "server" {
-					project_id = "%s"
-					availability_zone = "%s"
-					name = "%s"
-					machine_type = "%s"
-					boot_volume = {
-						size = %s
-						source_type = "%s"
-						source_id = "%s"
-						delete_on_termination = "%s"
-					}
-					network_interfaces = [stackit_network_interface.network_interface.network_interface_id]
-					labels = {
-						"label1" = "%s"
-					}
-					user_data = "%s"
-				}
-				`,
-		serverResource["project_id"],
-		serverResource["availability_zone"],
-		name,
-		machineType,
-		serverResource["size"],
-		serverResource["source_type"],
-		serverResource["source_id"],
-		serverResource["delete_on_termination"],
-		serverResource["label1"],
-		serverResource["user_data"],
-	)
-}
-
-func volumeAttachmentResourceConfig() string {
-	return fmt.Sprintf(`
-				resource "stackit_server_volume_attach" "attach_volume" {
-					project_id 		  = "%s"
-					server_id = stackit_server.server.server_id
-					volume_id = stackit_volume.volume.volume_id
-				}
-				`,
-		testutil.ProjectId,
-	)
-}
-
-func serviceAccountAttachmentResourceConfig() string {
-	return fmt.Sprintf(`
-				resource "stackit_server_service_account_attach" "attach_sa" {
-					project_id 		  = "%s"
-					server_id = stackit_server.server.server_id
-					service_account_email = "%s"
-				}
-				`,
-		testutil.ProjectId,
-		testutil.TestProjectServiceAccountEmail,
-	)
-}
-
-func networkInterfaceAttachmentResourceConfig(nicTfName string) string {
-	return fmt.Sprintf(`
-				resource "stackit_server_network_interface_attach" "attach_nic" {
-					project_id = "%s"
-					server_id = stackit_server.server.server_id
-					network_interface_id = stackit_network_interface.%s.network_interface_id
-				}
-			`,
-		testutil.ProjectId,
-		nicTfName,
-	)
-}
-
-func testAccServerConfig(name, nameservers, serverName, machineType, nicTfName, interfacename string) string {
-	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
-		testutil.IaaSProviderConfig(),
-		networkResourceConfig(name, nameservers),
-		serverResourceConfig(serverName, machineType),
-		volumeResourceConfig(volumeResource["name"], volumeResource["size"]),
-		networkInterfaceResourceConfig(nicTfName, interfacename),
-		networkInterfaceResourceConfig(nicAttachTfName, fmt.Sprintf("%s-%s", interfacename, nicAttachTfName)),
-		networkInterfaceAttachmentResourceConfig(nicAttachTfName),
-		volumeAttachmentResourceConfig(),
-		serviceAccountAttachmentResourceConfig(),
 	)
 }
 
@@ -1358,197 +1249,398 @@ func TestAccVolumeMax(t *testing.T) {
 	})
 }
 
-func TestAccServer(t *testing.T) {
-	networkInterfaceSecSchemaName := fmt.Sprintf("stackit_network_interface.%s", nicAttachTfName)
-	resource.Test(t, resource.TestCase{
+func TestAccServerMin(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckServerDestroy,
 		Steps: []resource.TestStep{
-
 			// Creation
 			{
-				Config: testAccServerConfig(
-					networkResource["name"],
-					fmt.Sprintf(
-						"[%q]",
-						networkResource["nameserver0"],
-					),
-					serverResource["name"],
-					serverResource["machine_type"],
-					networkInterfaceResource["tfName"],
-					networkInterfaceResource["name"],
-				),
+				ConfigVariables: testConfigServerVarsMin,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceServerMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-
-					// Network
-					resource.TestCheckResourceAttr("stackit_network.network", "project_id", networkResource["project_id"]),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
-					resource.TestCheckResourceAttr("stackit_network.network", "name", networkResource["name"]),
-					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.#", "1"),
-					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_prefix", networkResource["ipv4_prefix"]),
-					resource.TestCheckResourceAttr("stackit_network.network", "routed", networkResource["routed"]),
-
 					// Server
-					resource.TestCheckResourceAttr("stackit_server.server", "project_id", serverResource["project_id"]),
-					resource.TestCheckResourceAttrSet("stackit_server.server", "server_id"),
-					resource.TestCheckResourceAttr("stackit_server.server", "name", serverResource["name"]),
-					resource.TestCheckResourceAttr("stackit_server.server", "availability_zone", serverResource["availability_zone"]),
-					resource.TestCheckResourceAttr("stackit_server.server", "machine_type", serverResource["machine_type"]),
-					resource.TestCheckResourceAttr("stackit_server.server", "labels.label1", serverResource["label1"]),
-					resource.TestCheckResourceAttr("stackit_server.server", "user_data", serverResource["user_data"]),
-					resource.TestCheckResourceAttrSet("stackit_server.server", "network_interfaces.0"),
-					// The network interface which was attached by "stackit_server_network_interface_attach" should not appear here
-					resource.TestCheckResourceAttr("stackit_server.server", "network_interfaces.#", "1"),
-					resource.TestCheckNoResourceAttr("stackit_server.server", "network_interfaces.1"),
+					resource.TestCheckResourceAttr("stackit_server.server", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "name", testutil.ConvertConfigVariable(testConfigServerVarsMin["name"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "machine_type", testutil.ConvertConfigVariable(testConfigServerVarsMin["machine_type"])),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.%"),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", "image"),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_id", testutil.ConvertConfigVariable(testConfigServerVarsMin["image_id"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.delete_on_termination", "true"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "boot_volume.performance_class"),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.size"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.id"),
-					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.size", serverResource["size"]),
-					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", serverResource["source_type"]),
-					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_id", serverResource["source_id"]),
-					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.delete_on_termination", serverResource["delete_on_termination"]),
-
-					// Network Interface
-					resource.TestCheckResourceAttrPair(
-						"stackit_network_interface.network_interface", "project_id",
-						"stackit_network.network", "project_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_network_interface.network_interface", "network_id",
-						"stackit_network.network", "network_id",
-					),
-					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_interface_id"),
-					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "name", networkInterfaceResource["name"]),
-
-					// Network Interface second
-					resource.TestCheckResourceAttrPair(
-						networkInterfaceSecSchemaName, "project_id",
-						"stackit_network.network", "project_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						networkInterfaceSecSchemaName, "network_id",
-						"stackit_network.network", "network_id",
-					),
-					resource.TestCheckResourceAttrSet(networkInterfaceSecSchemaName, "network_interface_id"),
-					resource.TestCheckResourceAttr(
-						networkInterfaceSecSchemaName, "name",
-						fmt.Sprintf("%s-%s", networkInterfaceResource["name"], nicAttachTfName),
-					),
-
-					// Network Interface Attachment
-					resource.TestCheckResourceAttrPair(
-						"stackit_server_network_interface_attach.attach_nic", "project_id",
-						"stackit_network.network", "project_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_server_network_interface_attach.attach_nic", "server_id",
-						"stackit_server.server", "server_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_server_network_interface_attach.attach_nic", "network_interface_id",
-						networkInterfaceSecSchemaName, "network_interface_id",
-					),
-
-					// Volume attachment
-					resource.TestCheckResourceAttrPair(
-						"stackit_server_volume_attach.attach_volume", "project_id",
-						"stackit_server.server", "project_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_server_volume_attach.attach_volume", "server_id",
-						"stackit_server.server", "server_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_server_volume_attach.attach_volume", "volume_id",
-						"stackit_volume.volume", "volume_id",
-					),
-
-					// Service account attachment
-					resource.TestCheckResourceAttrPair(
-						"stackit_server_service_account_attach.attach_sa", "project_id",
-						"stackit_server.server", "project_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_server_service_account_attach.attach_sa", "server_id",
-						"stackit_server.server", "server_id",
-					),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", "image"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "image_id"),
+					resource.TestCheckResourceAttr("stackit_server.server", "labels.%", "0"),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "server_id"),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "availability_zone"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "desired_status"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "user_data"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "keypair_name"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "network_interfaces"),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "created_at"),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "launched_at"),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "updated_at"),
 				),
 			},
 			// Data source
 			{
+				ConfigVariables: testConfigServerVarsMin,
 				Config: fmt.Sprintf(`
 						%s
-
-						data "stackit_network" "network" {
-							project_id  = stackit_network.network.project_id
-							network_id = stackit_network.network.network_id
-						}
+						%s
 
 						data "stackit_server" "server" {
 							project_id  = stackit_server.server.project_id
 							server_id = stackit_server.server.server_id
 						}
-
-						data "stackit_network_interface" "network_interface" {
-							project_id  	     = stackit_network.network.project_id
-							network_id  	     = stackit_network.network.network_id
-							network_interface_id = stackit_network_interface.network_interface.network_interface_id
-						}
 						`,
-					testAccServerConfig(
-						networkResource["name"],
-						fmt.Sprintf(
-							"[%q]",
-							networkResource["nameserver0"],
-						),
-						serverResource["name"],
-						serverResource["machine_type"],
-						networkInterfaceResource["tfName"],
-						networkInterfaceResource["name"],
-					),
+					testutil.IaaSProviderConfig(), resourceServerMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Instance
-					resource.TestCheckResourceAttr("data.stackit_network.network", "project_id", networkResource["project_id"]),
-					resource.TestCheckResourceAttrPair(
-						"stackit_network.network", "network_id",
-						"data.stackit_network.network", "network_id",
-					),
-					resource.TestCheckResourceAttr("data.stackit_network.network", "name", networkResource["name"]),
-					resource.TestCheckResourceAttr("data.stackit_network.network", "nameservers.0", networkResource["nameserver0"]),
-					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
-					resource.TestCheckResourceAttr("data.stackit_network.network", "routed", networkResource["routed"]),
-
 					// Server
-					resource.TestCheckResourceAttr("data.stackit_server.server", "project_id", serverResource["project_id"]),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "name", testutil.ConvertConfigVariable(testConfigServerVarsMin["name"])),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "machine_type", testutil.ConvertConfigVariable(testConfigServerVarsMin["machine_type"])),
+					resource.TestCheckResourceAttrSet("data.stackit_server.server", "boot_volume.%"),
+					// boot_volume.attributes are unknown in the datasource. only boot_volume.id and boot_volume.delete_on_termination are returned from the api
+					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.source_type"),
+					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.source_id"),
+					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.size"),
+					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.performance_class"),
+					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.source_type"),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "boot_volume.delete_on_termination", "true"),
 					resource.TestCheckResourceAttrPair(
-						"stackit_server.server", "server_id",
+						"data.stackit_server.server", "boot_volume.id",
+						"stackit_server.server", "boot_volume.id",
+					),
+					resource.TestCheckResourceAttrPair(
 						"data.stackit_server.server", "server_id",
+						"stackit_server.server", "server_id",
 					),
-					resource.TestCheckResourceAttr("data.stackit_server.server", "name", serverResource["name"]),
-					resource.TestCheckResourceAttr("data.stackit_server.server", "availability_zone", serverResource["availability_zone"]),
-					resource.TestCheckResourceAttr("data.stackit_server.server", "machine_type", serverResource["machine_type"]),
-					resource.TestCheckResourceAttr("data.stackit_server.server", "labels.label1", serverResource["label1"]),
-
-					// Network Interface
-					resource.TestCheckResourceAttrPair(
-						"stackit_network_interface.network_interface", "project_id",
-						"stackit_network.network", "project_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_network_interface.network_interface", "network_id",
-						"stackit_network.network", "network_id",
-					),
-					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_interface_id"),
-					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "name", networkInterfaceResource["name"]),
-					// Boot volume
-					resource.TestCheckResourceAttrSet("data.stackit_server.server", "boot_volume.id"),
-					resource.TestCheckResourceAttr("data.stackit_server.server", "boot_volume.delete_on_termination", serverResource["delete_on_termination"]),
+					resource.TestCheckNoResourceAttr("data.stackit_server.server", "image_id"),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "labels.%", "0"),
+					resource.TestCheckResourceAttrSet("data.stackit_server.server", "server_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_server.server", "availability_zone"),
+					resource.TestCheckNoResourceAttr("data.stackit_server.server", "desired_status"),
+					resource.TestCheckNoResourceAttr("data.stackit_server.server", "user_data"),
+					resource.TestCheckNoResourceAttr("data.stackit_server.server", "keypair_name"),
+					resource.TestCheckNoResourceAttr("data.stackit_server.server", "network_interfaces"),
+					resource.TestCheckResourceAttrSet("data.stackit_server.server", "created_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_server.server", "launched_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_server.server", "updated_at"),
 				),
 			},
 			// Import
 			{
-				ResourceName: "stackit_network.network",
+				ConfigVariables: testConfigServerVarsMin,
+				ResourceName:    "stackit_server.server",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_server.server"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_server.server")
+					}
+					serverId, ok := r.Primary.Attributes["server_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute server_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, serverId), nil
+				},
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"boot_volume", "user_data", "network_interfaces"}, // Field is not mapped as it is only relevant on creation
+			},
+			// Update
+			{
+				ConfigVariables: testConfigServerVarsMinUpdated,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceServerMinConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Server
+					resource.TestCheckResourceAttr("stackit_server.server", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMinUpdated["project_id"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "name", testutil.ConvertConfigVariable(testConfigServerVarsMinUpdated["name"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "machine_type", testutil.ConvertConfigVariable(testConfigServerVarsMinUpdated["machine_type"])),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.%"),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", "image"),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_id", testutil.ConvertConfigVariable(testConfigServerVarsMinUpdated["image_id"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.delete_on_termination", "true"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "boot_volume.performance_class"),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.size"),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.id"),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", "image"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "image_id"),
+					resource.TestCheckResourceAttr("stackit_server.server", "labels.%", "0"),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "server_id"),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "availability_zone"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "desired_status"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "user_data"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "keypair_name"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "network_interfaces"),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "created_at"),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "launched_at"),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "updated_at"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccServerMax(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckServerDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigServerVarsMax,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceServerMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Affinity group
+					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "name", testutil.ConvertConfigVariable(testConfigServerVarsMax["name_not_updated"])),
+					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "policy", testutil.ConvertConfigVariable(testConfigServerVarsMax["policy"])),
+					resource.TestCheckResourceAttrSet("stackit_affinity_group.affinity_group", "affinity_group_id"),
+
+					// Volume base
+					resource.TestCheckResourceAttr("stackit_volume.base_volume", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("stackit_volume.base_volume", "availability_zone", testutil.ConvertConfigVariable(testConfigServerVarsMax["availability_zone"])),
+					resource.TestCheckResourceAttr("stackit_volume.base_volume", "size", testutil.ConvertConfigVariable(testConfigServerVarsMax["size"])),
+					resource.TestCheckResourceAttr("stackit_volume.base_volume", "source.id", testutil.ConvertConfigVariable(testConfigServerVarsMax["image_id"])),
+					resource.TestCheckResourceAttr("stackit_volume.base_volume", "source.type", "image"),
+					resource.TestCheckResourceAttrSet("stackit_volume.base_volume", "volume_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_volume.base_volume", "volume_id",
+						"stackit_server.server", "boot_volume.source_id",
+					),
+
+					// Volume data
+					resource.TestCheckResourceAttr("stackit_volume.data_volume", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("stackit_volume.data_volume", "availability_zone", testutil.ConvertConfigVariable(testConfigServerVarsMax["availability_zone"])),
+					resource.TestCheckResourceAttr("stackit_volume.data_volume", "size", testutil.ConvertConfigVariable(testConfigServerVarsMax["size"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.data_volume", "volume_id"),
+
+					// Volume data attach
+					resource.TestCheckResourceAttr("stackit_server_volume_attach.data_volume_attachment", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_server_volume_attach.data_volume_attachment", "server_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_volume_attach.data_volume_attachment", "server_id",
+						"stackit_server.server", "server_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_server_volume_attach.data_volume_attachment", "volume_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_volume.data_volume", "volume_id",
+						"stackit_server_volume_attach.data_volume_attachment", "volume_id",
+					),
+
+					// Network
+					resource.TestCheckResourceAttr("stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
+					resource.TestCheckResourceAttr("stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigServerVarsMax["name"])),
+
+					// Network interface init
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface_init", "project_id",
+						"stackit_network.network", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface_init", "network_id",
+						"stackit_network.network", "network_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface_init", "network_interface_id"),
+
+					// Network interface second
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface_second", "project_id",
+						"stackit_network.network", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface_second", "network_id",
+						"stackit_network.network", "network_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface_second", "network_interface_id"),
+
+					// Network interface attachment
+					resource.TestCheckResourceAttr("stackit_server_network_interface_attach.network_interface_second_attachment", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMax["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_network_interface_attach.network_interface_second_attachment", "network_interface_id",
+						"stackit_network_interface.network_interface_second", "network_interface_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_network_interface_attach.network_interface_second_attachment", "server_id",
+						"stackit_server.server", "server_id",
+					),
+
+					// Keypair
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "name", testutil.ConvertConfigVariable(testConfigServerVarsMax["name_not_updated"])),
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "public_key", testutil.ConvertConfigVariable(testConfigServerVarsMax["public_key"])),
+
+					// Service account attachment
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_service_account_attach.attached_service_account", "project_id",
+						"stackit_server.server", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_service_account_attach.attached_service_account", "server_id",
+						"stackit_server.server", "server_id",
+					),
+					resource.TestCheckResourceAttr(
+						"stackit_server_service_account_attach.attached_service_account", "service_account_email",
+						testutil.ConvertConfigVariable(testConfigServerVarsMax["service_account_mail"]),
+					),
+
+					// Server
+					resource.TestCheckResourceAttr("stackit_server.server", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server.server", "name", testutil.ConvertConfigVariable(testConfigServerVarsMax["name"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "machine_type", testutil.ConvertConfigVariable(testConfigServerVarsMax["machine_type"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server.server", "affinity_group",
+						"stackit_affinity_group.affinity_group", "affinity_group_id",
+					),
+					resource.TestCheckResourceAttr("stackit_server.server", "availability_zone", testutil.ConvertConfigVariable(testConfigServerVarsMax["availability_zone"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_key_pair.key_pair", "name",
+						"stackit_server.server", "keypair_name",
+					),
+					// The network interface which was attached by "stackit_server_network_interface_attach" should not appear here
+					resource.TestCheckResourceAttr("stackit_server.server", "network_interfaces.#", "1"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server.server", "network_interfaces.0",
+						"stackit_network_interface.network_interface_init", "network_interface_id",
+					),
+					resource.TestCheckResourceAttr("stackit_server.server", "user_data", testutil.ConvertConfigVariable(testConfigServerVarsMax["user_data"])),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.id"),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", "volume"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server.server", "boot_volume.source_id",
+						"stackit_volume.base_volume", "volume_id",
+					),
+					resource.TestCheckResourceAttr("stackit_server.server", "labels.acc-test", testutil.ConvertConfigVariable(testConfigServerVarsMax["label"])),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigServerVarsMax,
+				Config: fmt.Sprintf(`
+						%s
+						%s
+
+						data "stackit_server" "server" {
+							project_id  = stackit_server.server.project_id
+							server_id = stackit_server.server.server_id
+						}
+						`,
+					testutil.IaaSProviderConfig(), resourceServerMaxConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Server
+					resource.TestCheckResourceAttr("data.stackit_server.server", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_server.server", "server_id"),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "name", testutil.ConvertConfigVariable(testConfigServerVarsMax["name"])),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "machine_type", testutil.ConvertConfigVariable(testConfigServerVarsMax["machine_type"])),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_server.server", "affinity_group",
+						"stackit_affinity_group.affinity_group", "affinity_group_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "availability_zone", testutil.ConvertConfigVariable(testConfigServerVarsMax["availability_zone"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_key_pair.key_pair", "name",
+						"data.stackit_server.server", "keypair_name",
+					),
+					// All network interface which was are attached appear here
+					resource.TestCheckResourceAttr("data.stackit_server.server", "network_interfaces.#", "2"),
+					resource.TestCheckTypeSetElemAttrPair(
+						"data.stackit_server.server", "network_interfaces.*",
+						"stackit_network_interface.network_interface_init", "network_interface_id",
+					),
+					resource.TestCheckTypeSetElemAttrPair(
+						"data.stackit_server.server", "network_interfaces.*",
+						"stackit_network_interface.network_interface_second", "network_interface_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "user_data", testutil.ConvertConfigVariable(testConfigServerVarsMax["user_data"])),
+					resource.TestCheckResourceAttrSet("data.stackit_server.server", "boot_volume.id"),
+					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.source_type"),
+					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.source_id"),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "labels.acc-test", testutil.ConvertConfigVariable(testConfigServerVarsMax["label"])),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigServerVarsMax,
+				ResourceName:    "stackit_affinity_group.affinity_group",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_affinity_group.affinity_group"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_affinity_group.affinity_group")
+					}
+					affinityGroupId, ok := r.Primary.Attributes["affinity_group_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute affinity_group_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, affinityGroupId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ConfigVariables: testConfigServerVarsMax,
+				ResourceName:    "stackit_volume.base_volume",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_volume.base_volume"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_volume.base_volume")
+					}
+					volumeId, ok := r.Primary.Attributes["volume_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute volume_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, volumeId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ConfigVariables: testConfigServerVarsMax,
+				ResourceName:    "stackit_volume.data_volume",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_volume.data_volume"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_volume.data_volume")
+					}
+					volumeId, ok := r.Primary.Attributes["volume_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute volume_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, volumeId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ConfigVariables: testConfigServerVarsMax,
+				ResourceName:    "stackit_server_volume_attach.data_volume_attachment",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_server_volume_attach.data_volume_attachment"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_server_volume_attach.data_volume_attachment")
+					}
+					serverId, ok := r.Primary.Attributes["server_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute server_id")
+					}
+					volumeId, ok := r.Primary.Attributes["volume_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute volume_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, serverId, volumeId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: false,
+			},
+			{
+				ConfigVariables: testConfigServerVarsMax,
+				ResourceName:    "stackit_network.network",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_network.network"]
 					if !ok {
@@ -1565,28 +1657,12 @@ func TestAccServer(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"ipv4_prefix_length", "ipv4_prefix"}, // Field is not returned by the API
 			},
 			{
-				ResourceName: "stackit_server.server",
+				ConfigVariables: testConfigServerVarsMax,
+				ResourceName:    "stackit_network_interface.network_interface_init",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_server.server"]
+					r, ok := s.RootModule().Resources["stackit_network_interface.network_interface_init"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_server.server")
-					}
-					serverId, ok := r.Primary.Attributes["server_id"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find attribute server_id")
-					}
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, serverId), nil
-				},
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"boot_volume", "user_data", "network_interfaces"}, // Field is not mapped as it is only relevant on creation
-			},
-			{
-				ResourceName: "stackit_network_interface.network_interface",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_network_interface.network_interface"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_network_interface.network_interface")
+						return "", fmt.Errorf("couldn't find resource stackit_network_interface.network_interface_init")
 					}
 					networkId, ok := r.Primary.Attributes["network_id"]
 					if !ok {
@@ -1602,11 +1678,12 @@ func TestAccServer(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				ResourceName: networkInterfaceSecSchemaName,
+				ConfigVariables: testConfigServerVarsMax,
+				ResourceName:    "stackit_network_interface.network_interface_second",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources[networkInterfaceSecSchemaName]
+					r, ok := s.RootModule().Resources["stackit_network_interface.network_interface_second"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_network_interface.%s", nicAttachTfName)
+						return "", fmt.Errorf("couldn't find resource stackit_network_interface.network_interface_second")
 					}
 					networkId, ok := r.Primary.Attributes["network_id"]
 					if !ok {
@@ -1622,11 +1699,12 @@ func TestAccServer(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				ResourceName: "stackit_server_network_interface_attach.attach_nic",
+				ConfigVariables: testConfigServerVarsMax,
+				ResourceName:    "stackit_server_network_interface_attach.network_interface_second_attachment",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_server_network_interface_attach.attach_nic"]
+					r, ok := s.RootModule().Resources["stackit_server_network_interface_attach.network_interface_second_attachment"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_network_interface.%s", nicAttachTfName)
+						return "", fmt.Errorf("couldn't find resource stackit_server_network_interface_attach.network_interface_second_attachment")
 					}
 					serverId, ok := r.Primary.Attributes["server_id"]
 					if !ok {
@@ -1642,31 +1720,29 @@ func TestAccServer(t *testing.T) {
 				ImportStateVerify: false,
 			},
 			{
-				ResourceName: "stackit_server_volume_attach.attach_volume",
+				ConfigVariables: testConfigServerVarsMax,
+				ResourceName:    "stackit_key_pair.key_pair",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_server_volume_attach.attach_volume"]
+					r, ok := s.RootModule().Resources["stackit_key_pair.key_pair"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_server_volume_attach.attach_volume")
+						return "", fmt.Errorf("couldn't find resource stackit_key_pair.key_pair")
 					}
-					serverId, ok := r.Primary.Attributes["server_id"]
+					keyPairName, ok := r.Primary.Attributes["name"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find attribute server_id")
+						return "", fmt.Errorf("couldn't find attribute name")
 					}
-					volumeId, ok := r.Primary.Attributes["volume_id"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find attribute volume_id")
-					}
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, serverId, volumeId), nil
+					return keyPairName, nil
 				},
 				ImportState:       true,
-				ImportStateVerify: false,
+				ImportStateVerify: true,
 			},
 			{
-				ResourceName: "stackit_server_service_account_attach.attach_sa",
+				ConfigVariables: testConfigServerVarsMax,
+				ResourceName:    "stackit_server_service_account_attach.attached_service_account",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_server_service_account_attach.attach_sa"]
+					r, ok := s.RootModule().Resources["stackit_server_service_account_attach.attached_service_account"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_server_service_account_attach.attach_sa")
+						return "", fmt.Errorf("couldn't find resource stackit_server_service_account_attach.attached_service_account")
 					}
 					serverId, ok := r.Primary.Attributes["server_id"]
 					if !ok {
@@ -1681,84 +1757,150 @@ func TestAccServer(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: false,
 			},
+			{
+				ConfigVariables: testConfigServerVarsMax,
+				ResourceName:    "stackit_server.server",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_server.server"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_server.server")
+					}
+					serverId, ok := r.Primary.Attributes["server_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute server_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, serverId), nil
+				},
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"boot_volume", "network_interfaces"}, // Field is not mapped as it is only relevant on creation
+			},
 			// Update
 			{
-				Config: testAccServerConfig(
-					fmt.Sprintf("%s-updated", networkResource["name"]),
-					fmt.Sprintf(
-						"[%q, %q]",
-						networkResource["nameserver0"],
-						networkResource["nameserver1"],
-					),
-					fmt.Sprintf("%s-updated", serverResource["name"]),
-					updatedServerMachineType,
-					networkInterfaceResource["tfName"],
-					fmt.Sprintf("%s-updated", networkInterfaceResource["name"]),
-				),
+				ConfigVariables: testConfigServerVarsMaxUpdated,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceServerMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Network
-					resource.TestCheckResourceAttr("stackit_network.network", "project_id", networkResource["project_id"]),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
-					resource.TestCheckResourceAttr("stackit_network.network", "name", fmt.Sprintf("%s-updated", networkResource["name"])),
-					resource.TestCheckResourceAttr("stackit_network.network", "nameservers.#", "2"),
-					resource.TestCheckTypeSetElemAttr("stackit_network.network", "nameservers.*", networkResource["nameserver0"]),
-					resource.TestCheckTypeSetElemAttr("stackit_network.network", "nameservers.*", networkResource["nameserver1"]),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_gateway", networkResource["ipv4_gateway"]),
+					// Affinity group
+					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["project_id"])),
+					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "name", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["name_not_updated"])),
+					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "policy", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["policy"])),
+					resource.TestCheckResourceAttrSet("stackit_affinity_group.affinity_group", "affinity_group_id"),
 
-					// Server
-					resource.TestCheckResourceAttr("stackit_server.server", "project_id", serverResource["project_id"]),
-					resource.TestCheckResourceAttrSet("stackit_server.server", "server_id"),
-					resource.TestCheckResourceAttr("stackit_server.server", "name", fmt.Sprintf("%s-updated", serverResource["name"])),
-					resource.TestCheckResourceAttr("stackit_server.server", "availability_zone", serverResource["availability_zone"]),
-					resource.TestCheckResourceAttr("stackit_server.server", "machine_type", updatedServerMachineType),
-					resource.TestCheckResourceAttr("stackit_server.server", "labels.label1", serverResource["label1"]),
-					resource.TestCheckResourceAttr("stackit_server.server", "user_data", serverResource["user_data"]),
-					resource.TestCheckResourceAttrSet("stackit_server.server", "network_interfaces.0"),
-					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.size", serverResource["size"]),
-					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", serverResource["source_type"]),
-					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_id", serverResource["source_id"]),
-					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.delete_on_termination", serverResource["delete_on_termination"]),
-
-					// Network interface
+					// Volume base
+					resource.TestCheckResourceAttr("stackit_volume.base_volume", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["project_id"])),
+					resource.TestCheckResourceAttr("stackit_volume.base_volume", "availability_zone", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["availability_zone"])),
+					resource.TestCheckResourceAttr("stackit_volume.base_volume", "size", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["size"])),
+					resource.TestCheckResourceAttr("stackit_volume.base_volume", "source.id", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["image_id"])),
+					resource.TestCheckResourceAttr("stackit_volume.base_volume", "source.type", "image"),
+					resource.TestCheckResourceAttrSet("stackit_volume.base_volume", "volume_id"),
 					resource.TestCheckResourceAttrPair(
-						"stackit_network_interface.network_interface", "project_id",
-						"stackit_network.network", "project_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_network_interface.network_interface", "network_id",
-						"stackit_network.network", "network_id",
-					),
-					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_interface_id"),
-					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "name", fmt.Sprintf("%s-updated", networkInterfaceResource["name"])),
-
-					// Network Interface second
-					resource.TestCheckResourceAttrPair(
-						networkInterfaceSecSchemaName, "project_id",
-						"stackit_network.network", "project_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						networkInterfaceSecSchemaName, "network_id",
-						"stackit_network.network", "network_id",
-					),
-					resource.TestCheckResourceAttrSet(networkInterfaceSecSchemaName, "network_interface_id"),
-					resource.TestCheckResourceAttr(
-						networkInterfaceSecSchemaName, "name",
-						fmt.Sprintf("%s-%s", fmt.Sprintf("%s-updated", networkInterfaceResource["name"]), nicAttachTfName),
+						"stackit_volume.base_volume", "volume_id",
+						"stackit_server.server", "boot_volume.source_id",
 					),
 
-					// Network Interface Attachment
+					// Volume data
+					resource.TestCheckResourceAttr("stackit_volume.data_volume", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["project_id"])),
+					resource.TestCheckResourceAttr("stackit_volume.data_volume", "availability_zone", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["availability_zone"])),
+					resource.TestCheckResourceAttr("stackit_volume.data_volume", "size", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["size"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.data_volume", "volume_id"),
+
+					// Volume data attach
+					resource.TestCheckResourceAttr("stackit_server_volume_attach.data_volume_attachment", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_server_volume_attach.data_volume_attachment", "server_id"),
 					resource.TestCheckResourceAttrPair(
-						"stackit_server_network_interface_attach.attach_nic", "project_id",
-						networkInterfaceSecSchemaName, "project_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_server_network_interface_attach.attach_nic", "server_id",
+						"stackit_server_volume_attach.data_volume_attachment", "server_id",
 						"stackit_server.server", "server_id",
 					),
+					resource.TestCheckResourceAttrSet("stackit_server_volume_attach.data_volume_attachment", "volume_id"),
 					resource.TestCheckResourceAttrPair(
-						"stackit_server_network_interface_attach.attach_nic", "network_interface_id",
-						networkInterfaceSecSchemaName, "network_interface_id",
+						"stackit_volume.data_volume", "volume_id",
+						"stackit_server_volume_attach.data_volume_attachment", "volume_id",
 					),
+
+					// Network
+					resource.TestCheckResourceAttr("stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
+					resource.TestCheckResourceAttr("stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["name"])),
+
+					// Network interface init
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface_init", "project_id",
+						"stackit_network.network", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface_init", "network_id",
+						"stackit_network.network", "network_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface_init", "network_interface_id"),
+
+					// Network interface second
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface_second", "project_id",
+						"stackit_network.network", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface_second", "network_id",
+						"stackit_network.network", "network_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface_second", "network_interface_id"),
+
+					// Network interface attachment
+					resource.TestCheckResourceAttr("stackit_server_network_interface_attach.network_interface_second_attachment", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_network_interface_attach.network_interface_second_attachment", "network_interface_id",
+						"stackit_network_interface.network_interface_second", "network_interface_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_network_interface_attach.network_interface_second_attachment", "server_id",
+						"stackit_server.server", "server_id",
+					),
+
+					// Keypair
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "name", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["name_not_updated"])),
+					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "public_key", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["public_key"])),
+
+					// Service account attachment
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_service_account_attach.attached_service_account", "project_id",
+						"stackit_server.server", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server_service_account_attach.attached_service_account", "server_id",
+						"stackit_server.server", "server_id",
+					),
+					resource.TestCheckResourceAttr(
+						"stackit_server_service_account_attach.attached_service_account", "service_account_email",
+						testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["service_account_mail"]),
+					),
+
+					// Server
+					resource.TestCheckResourceAttr("stackit_server.server", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server.server", "name", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["name"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "machine_type", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["machine_type"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server.server", "affinity_group",
+						"stackit_affinity_group.affinity_group", "affinity_group_id",
+					),
+					resource.TestCheckResourceAttr("stackit_server.server", "availability_zone", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["availability_zone"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_key_pair.key_pair", "name",
+						"stackit_server.server", "keypair_name",
+					),
+					// The network interface which was attached by "stackit_server_network_interface_attach" should not appear here
+					resource.TestCheckResourceAttr("stackit_server.server", "network_interfaces.#", "1"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server.server", "network_interfaces.0",
+						"stackit_network_interface.network_interface_init", "network_interface_id",
+					),
+					resource.TestCheckResourceAttr("stackit_server.server", "user_data", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["user_data"])),
+					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.id"),
+					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", "volume"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_server.server", "boot_volume.source_id",
+						"stackit_volume.base_volume", "volume_id",
+					),
+					resource.TestCheckResourceAttr("stackit_server.server", "labels.acc-test", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["label"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
