@@ -313,3 +313,34 @@ func ValidDurationString() *Validator {
 		},
 	}
 }
+
+// ValidNoTrailingNewline returns a Validator that checks if the input string has no trailing newline
+// character ("\n" or "\r\n"). If a trailing newline is present, a diagnostic error will be appended.
+func ValidNoTrailingNewline() *Validator {
+	description := `The value must not have a trailing newline character ("\n" or "\r\n"). You can remove a trailing newline by using Terraform's built-in chomp() function.`
+
+	return &Validator{
+		description: description,
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			val := req.ConfigValue.ValueString()
+			if val == "" {
+				return
+			}
+			if len(val) >= 2 && val[len(val)-2:] == "\r\n" {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					val,
+				))
+				return
+			}
+			if val[len(val)-1] == '\n' {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					val,
+				))
+			}
+		},
+	}
+}
