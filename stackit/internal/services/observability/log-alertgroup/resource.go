@@ -206,6 +206,10 @@ func (l *logAlertGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 							Required:    true,
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(1, 600),
+								// The API currently accepts expressions with trailing newlines but does not return them,
+								// leading to inconsistent Terraform results. This issue has been reported to the Obs team.
+								// Until it is resolved, we proactively notify users if their input contains a trailing newline.
+								validate.ValidNoTrailingNewline(),
 							},
 						},
 						"for": schema.StringAttribute{

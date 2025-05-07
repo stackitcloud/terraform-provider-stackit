@@ -845,3 +845,74 @@ func TestValidTtlDuration(t *testing.T) {
 		})
 	}
 }
+
+func TestValidNoTrailingNewline(t *testing.T) {
+	tests := []struct {
+		description string
+		input       string
+		isValid     bool
+	}{
+		{
+			"string with no trailing newline",
+			"abc",
+			true,
+		},
+		{
+			"string with trailing \\n",
+			"abc\n",
+			false,
+		},
+		{
+			"string with trailing \\r\\n",
+			"abc\r\n",
+			false,
+		},
+		{
+			"string with internal newlines but not trailing",
+			"abc\ndef\nghi",
+			true,
+		},
+		{
+			"empty string",
+			"",
+			true,
+		},
+		{
+			"string that is just \\n",
+			"\n",
+			false,
+		},
+		{
+			"string that is just \\r\\n",
+			"\r\n",
+			false,
+		},
+		{
+			"string with multiple newlines, trailing",
+			"abc\n\n",
+			false,
+		},
+		{
+			"string with newlines but ends with character",
+			"abc\ndef\n",
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			r := validator.StringResponse{}
+			va := ValidNoTrailingNewline()
+			va.ValidateString(context.Background(), validator.StringRequest{
+				ConfigValue: types.StringValue(tt.input),
+			}, &r)
+
+			if !tt.isValid && !r.Diagnostics.HasError() {
+				t.Fatalf("Expected validation to fail for input: %q", tt.input)
+			}
+			if tt.isValid && r.Diagnostics.HasError() {
+				t.Fatalf("Expected validation to succeed for input: %q, but got errors: %v", tt.input, r.Diagnostics.Errors())
+			}
+		})
+	}
+}

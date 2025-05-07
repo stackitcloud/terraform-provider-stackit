@@ -997,7 +997,7 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 			if v.IsNull() || v.IsUnknown() {
 				continue
 			}
-			s, err := conversion.ToString(context.TODO(), v)
+			s, err := conversion.ToString(ctx, v)
 			if err != nil {
 				continue
 			}
