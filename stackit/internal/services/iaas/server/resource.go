@@ -960,6 +960,10 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 	if serverResp.Status != nil && *serverResp.Status != wait.ServerDeallocatedStatus {
 		model.AvailabilityZone = types.StringPointerValue(serverResp.AvailabilityZone)
 	}
+
+	if serverResp.UserData != nil && len(*serverResp.UserData) > 0 {
+		model.UserData = types.StringValue(string(*serverResp.UserData))
+	}
 	model.Name = types.StringPointerValue(serverResp.Name)
 	model.Labels = labels
 	model.ImageId = types.StringPointerValue(serverResp.ImageId)
