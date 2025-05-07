@@ -4,7 +4,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"log"
 	"maps"
 	"regexp"
 	"strings"
@@ -28,14 +27,6 @@ var (
 	//go:embed testdata/resource-max.tf
 	resourceMaxConfig string
 )
-
-func unwrap(v config.Variable) string {
-	tmp, err := v.MarshalJSON()
-	if err != nil {
-		log.Panicf("cannot marshal variable %v: %v", v, err)
-	}
-	return strings.Trim(string(tmp), `"`)
-}
 
 var testConfigVarsMin = config.Variables{
 	"project_id":       config.StringVariable(testutil.ProjectId),
@@ -89,9 +80,9 @@ func TestAccSecretsManagerMin(t *testing.T) {
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "project_id", unwrap(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", unwrap(testConfigVarsMin["instance_name"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMin["instance_name"])),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.#", "0"),
 
 					// User
@@ -104,8 +95,8 @@ func TestAccSecretsManagerMin(t *testing.T) {
 						"stackit_secretsmanager_instance.instance", "instance_id",
 					),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_user.user", "user_id"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "description", unwrap(testConfigVarsMin["user_description"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "write_enabled", unwrap(testConfigVarsMin["write_enabled"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "description", testutil.ConvertConfigVariable(testConfigVarsMin["user_description"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "write_enabled", testutil.ConvertConfigVariable(testConfigVarsMin["write_enabled"])),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_user.user", "username"),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_user.user", "password"),
 				),
@@ -116,12 +107,12 @@ func TestAccSecretsManagerMin(t *testing.T) {
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "project_id", unwrap(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttrPair(
 						"stackit_secretsmanager_instance.instance", "instance_id",
 						"data.stackit_secretsmanager_instance.instance", "instance_id",
 					),
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "name", unwrap(testConfigVarsMin["instance_name"])),
+					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMin["instance_name"])),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.#", "0"),
 
 					// User
@@ -137,8 +128,8 @@ func TestAccSecretsManagerMin(t *testing.T) {
 						"stackit_secretsmanager_user.user", "user_id",
 						"data.stackit_secretsmanager_user.user", "user_id",
 					),
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_user.user", "description", unwrap(testConfigVarsMin["user_description"])),
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_user.user", "write_enabled", unwrap(testConfigVarsMin["write_enabled"])),
+					resource.TestCheckResourceAttr("data.stackit_secretsmanager_user.user", "description", testutil.ConvertConfigVariable(testConfigVarsMin["user_description"])),
+					resource.TestCheckResourceAttr("data.stackit_secretsmanager_user.user", "write_enabled", testutil.ConvertConfigVariable(testConfigVarsMin["write_enabled"])),
 					resource.TestCheckResourceAttrPair(
 						"stackit_secretsmanager_user.user", "username",
 						"data.stackit_secretsmanager_user.user", "username",
@@ -194,9 +185,9 @@ func TestAccSecretsManagerMin(t *testing.T) {
 				ConfigVariables: configVarsMinUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "project_id", unwrap(configVarsMinUpdated()["project_id"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "project_id", testutil.ConvertConfigVariable(configVarsMinUpdated()["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", unwrap(configVarsMinUpdated()["instance_name"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", testutil.ConvertConfigVariable(configVarsMinUpdated()["instance_name"])),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.#", "0"),
 
 					// User
@@ -209,8 +200,8 @@ func TestAccSecretsManagerMin(t *testing.T) {
 						"stackit_secretsmanager_instance.instance", "instance_id",
 					),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_user.user", "user_id"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "description", unwrap(configVarsMinUpdated()["user_description"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "write_enabled", unwrap(configVarsMinUpdated()["write_enabled"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "description", testutil.ConvertConfigVariable(configVarsMinUpdated()["user_description"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "write_enabled", testutil.ConvertConfigVariable(configVarsMinUpdated()["write_enabled"])),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_user.user", "username"),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_user.user", "password"),
 				),
@@ -238,12 +229,12 @@ func TestAccSecretsManagerMax(t *testing.T) {
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "project_id", unwrap(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", unwrap(testConfigVarsMax["instance_name"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMax["instance_name"])),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.#", "2"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.0", unwrap(testConfigVarsMax["acl1"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", unwrap(testConfigVarsMax["acl2"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.0", testutil.ConvertConfigVariable(testConfigVarsMax["acl1"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", testutil.ConvertConfigVariable(testConfigVarsMax["acl2"])),
 
 					// User
 					resource.TestCheckResourceAttrPair(
@@ -255,8 +246,8 @@ func TestAccSecretsManagerMax(t *testing.T) {
 						"stackit_secretsmanager_instance.instance", "instance_id",
 					),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_user.user", "user_id"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "description", unwrap(testConfigVarsMax["user_description"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "write_enabled", unwrap(testConfigVarsMax["write_enabled"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "description", testutil.ConvertConfigVariable(testConfigVarsMax["user_description"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "write_enabled", testutil.ConvertConfigVariable(testConfigVarsMax["write_enabled"])),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_user.user", "username"),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_user.user", "password"),
 				),
@@ -267,15 +258,15 @@ func TestAccSecretsManagerMax(t *testing.T) {
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "project_id", unwrap(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttrPair(
 						"stackit_secretsmanager_instance.instance", "instance_id",
 						"data.stackit_secretsmanager_instance.instance", "instance_id",
 					),
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "name", unwrap(testConfigVarsMax["instance_name"])),
+					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMax["instance_name"])),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.#", "2"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.0", unwrap(testConfigVarsMax["acl1"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", unwrap(testConfigVarsMax["acl2"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.0", testutil.ConvertConfigVariable(testConfigVarsMax["acl1"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", testutil.ConvertConfigVariable(testConfigVarsMax["acl2"])),
 
 					// User
 					resource.TestCheckResourceAttrPair(
@@ -290,8 +281,8 @@ func TestAccSecretsManagerMax(t *testing.T) {
 						"stackit_secretsmanager_user.user", "user_id",
 						"data.stackit_secretsmanager_user.user", "user_id",
 					),
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_user.user", "description", unwrap(testConfigVarsMax["user_description"])),
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_user.user", "write_enabled", unwrap(testConfigVarsMax["write_enabled"])),
+					resource.TestCheckResourceAttr("data.stackit_secretsmanager_user.user", "description", testutil.ConvertConfigVariable(testConfigVarsMax["user_description"])),
+					resource.TestCheckResourceAttr("data.stackit_secretsmanager_user.user", "write_enabled", testutil.ConvertConfigVariable(testConfigVarsMax["write_enabled"])),
 					resource.TestCheckResourceAttrPair(
 						"stackit_secretsmanager_user.user", "username",
 						"data.stackit_secretsmanager_user.user", "username",
@@ -347,12 +338,12 @@ func TestAccSecretsManagerMax(t *testing.T) {
 				ConfigVariables: configVarsMaxUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "project_id", unwrap(configVarsMaxUpdated()["project_id"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "project_id", testutil.ConvertConfigVariable(configVarsMaxUpdated()["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_instance.instance", "instance_id"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", unwrap(configVarsMaxUpdated()["instance_name"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["instance_name"])),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.#", "2"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.0", unwrap(configVarsMaxUpdated()["acl1"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", unwrap(configVarsMaxUpdated()["acl2"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["acl1"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", testutil.ConvertConfigVariable(configVarsMaxUpdated()["acl2"])),
 
 					// User
 					resource.TestCheckResourceAttrPair(
@@ -364,8 +355,8 @@ func TestAccSecretsManagerMax(t *testing.T) {
 						"stackit_secretsmanager_instance.instance", "instance_id",
 					),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_user.user", "user_id"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "description", unwrap(configVarsMaxUpdated()["user_description"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "write_enabled", unwrap(configVarsMaxUpdated()["write_enabled"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "description", testutil.ConvertConfigVariable(configVarsMaxUpdated()["user_description"])),
+					resource.TestCheckResourceAttr("stackit_secretsmanager_user.user", "write_enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["write_enabled"])),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_user.user", "username"),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_user.user", "password"),
 				),

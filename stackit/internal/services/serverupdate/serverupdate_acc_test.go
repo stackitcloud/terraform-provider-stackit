@@ -30,14 +30,6 @@ var (
 	resourceMaxConfig string
 )
 
-func unwrap(v config.Variable) string {
-	tmp, err := v.MarshalJSON()
-	if err != nil {
-		log.Panicf("cannot marshal variable %v: %v", v, err)
-	}
-	return strings.Trim(string(tmp), `"`)
-}
-
 var testConfigVarsMin = config.Variables{
 	"project_id":         config.StringVariable(testutil.ProjectId),
 	"server_name":        config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
@@ -101,13 +93,13 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 				Config:          resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", unwrap(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "server_id"),
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "update_schedule_id"),
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "id"),
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "name", unwrap(testConfigVarsMin["schedule_name"])),
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "rrule", unwrap(testConfigVarsMin["rrule"])),
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "enabled", unwrap(testConfigVarsMin["enabled"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "name", testutil.ConvertConfigVariable(testConfigVarsMin["schedule_name"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "rrule", testutil.ConvertConfigVariable(testConfigVarsMin["rrule"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "enabled", testutil.ConvertConfigVariable(testConfigVarsMin["enabled"])),
 				),
 			},
 			// data source
@@ -116,16 +108,16 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server update schedule data
-					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "project_id", unwrap(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_server_update_schedule.test_schedule", "update_schedule_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_server_update_schedule.test_schedule", "id"),
-					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "name", unwrap(testConfigVarsMin["schedule_name"])),
-					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "rrule", unwrap(testConfigVarsMin["rrule"])),
-					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "enabled", unwrap(testConfigVarsMin["enabled"])),
+					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "name", testutil.ConvertConfigVariable(testConfigVarsMin["schedule_name"])),
+					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "rrule", testutil.ConvertConfigVariable(testConfigVarsMin["rrule"])),
+					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "enabled", testutil.ConvertConfigVariable(testConfigVarsMin["enabled"])),
 
 					// Server update schedules data
-					resource.TestCheckResourceAttr("data.stackit_server_update_schedules.schedules_data_test", "project_id", unwrap(testConfigVarsMin["project_id"])),
-					resource.TestCheckResourceAttr("data.stackit_server_update_schedules.schedules_data_test", "server_id", unwrap(testConfigVarsMin["server_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_update_schedules.schedules_data_test", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_update_schedules.schedules_data_test", "server_id", testutil.ConvertConfigVariable(testConfigVarsMin["server_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_server_update_schedules.schedules_data_test", "id"),
 				),
 			},
@@ -153,13 +145,13 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", unwrap(configVarsMinUpdated()["project_id"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(configVarsMinUpdated()["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "update_schedule_id"),
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "id"),
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "name", unwrap(configVarsMinUpdated()["schedule_name"])),
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "rrule", unwrap(configVarsMinUpdated()["rrule"])),
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "enabled", unwrap(configVarsMinUpdated()["enabled"])),
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "maintenance_window", unwrap(configVarsMinUpdated()["maintenance_window"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "name", testutil.ConvertConfigVariable(configVarsMinUpdated()["schedule_name"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "rrule", testutil.ConvertConfigVariable(configVarsMinUpdated()["rrule"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "enabled", testutil.ConvertConfigVariable(configVarsMinUpdated()["enabled"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "maintenance_window", testutil.ConvertConfigVariable(configVarsMinUpdated()["maintenance_window"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -188,13 +180,13 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 				Config:          resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", unwrap(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "server_id"),
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "update_schedule_id"),
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "id"),
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "name", unwrap(testConfigVarsMax["schedule_name"])),
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "rrule", unwrap(testConfigVarsMax["rrule"])),
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "enabled", unwrap(testConfigVarsMax["enabled"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "name", testutil.ConvertConfigVariable(testConfigVarsMax["schedule_name"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "rrule", testutil.ConvertConfigVariable(testConfigVarsMax["rrule"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "enabled", testutil.ConvertConfigVariable(testConfigVarsMax["enabled"])),
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "region", testutil.Region),
 				),
 			},
@@ -204,16 +196,16 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server update schedule data
-					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "project_id", unwrap(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_server_update_schedule.test_schedule", "update_schedule_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_server_update_schedule.test_schedule", "id"),
-					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "name", unwrap(testConfigVarsMax["schedule_name"])),
-					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "rrule", unwrap(testConfigVarsMax["rrule"])),
-					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "enabled", unwrap(testConfigVarsMax["enabled"])),
+					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "name", testutil.ConvertConfigVariable(testConfigVarsMax["schedule_name"])),
+					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "rrule", testutil.ConvertConfigVariable(testConfigVarsMax["rrule"])),
+					resource.TestCheckResourceAttr("data.stackit_server_update_schedule.test_schedule", "enabled", testutil.ConvertConfigVariable(testConfigVarsMax["enabled"])),
 
 					// Server update schedules data
-					resource.TestCheckResourceAttr("data.stackit_server_update_schedules.schedules_data_test", "project_id", unwrap(testConfigVarsMax["project_id"])),
-					resource.TestCheckResourceAttr("data.stackit_server_update_schedules.schedules_data_test", "server_id", unwrap(testConfigVarsMax["server_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_update_schedules.schedules_data_test", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_update_schedules.schedules_data_test", "server_id", testutil.ConvertConfigVariable(testConfigVarsMax["server_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_server_update_schedules.schedules_data_test", "id"),
 				),
 			},
@@ -241,12 +233,12 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", unwrap(configVarsMinUpdated()["project_id"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(configVarsMinUpdated()["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "update_schedule_id"),
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "id"),
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "rrule", unwrap(configVarsMinUpdated()["rrule"])),
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "enabled", unwrap(configVarsMinUpdated()["enabled"])),
-					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "maintenance_window", unwrap(configVarsMinUpdated()["maintenance_window"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "rrule", testutil.ConvertConfigVariable(configVarsMinUpdated()["rrule"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "enabled", testutil.ConvertConfigVariable(configVarsMinUpdated()["enabled"])),
+					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "maintenance_window", testutil.ConvertConfigVariable(configVarsMinUpdated()["maintenance_window"])),
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "region", testutil.Region),
 				),
 			},

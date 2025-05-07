@@ -4,7 +4,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"log"
 	"maps"
 	"regexp"
 	"strings"
@@ -83,14 +82,6 @@ func configVarsMaxUpdated() config.Variables {
 	return tempConfig
 }
 
-func unwrap(v config.Variable) string {
-	tmp, err := v.MarshalJSON()
-	if err != nil {
-		log.Panicf("cannot marshal variable %v: %v", v, err)
-	}
-	return strings.Trim(string(tmp), `"`)
-}
-
 func TestAccDnsMinResource(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -117,10 +108,10 @@ func TestAccDnsMinResource(t *testing.T) {
 						"stackit_dns_zone.zone", "zone_id",
 					),
 					resource.TestCheckResourceAttrSet("stackit_dns_record_set.record_set", "record_set_id"),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", unwrap(testConfigVarsMin["record_name"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", testutil.ConvertConfigVariable(testConfigVarsMin["record_name"])),
 					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.#", "1"),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", unwrap(testConfigVarsMin["record_record1"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", unwrap(testConfigVarsMin["record_type"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", testutil.ConvertConfigVariable(testConfigVarsMin["record_record1"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", testutil.ConvertConfigVariable(testConfigVarsMin["record_type"])),
 				),
 			},
 			{
@@ -142,10 +133,10 @@ func TestAccDnsMinResource(t *testing.T) {
 						"stackit_dns_zone.zone", "zone_id",
 					),
 					resource.TestCheckResourceAttrSet("stackit_dns_record_set.record_set", "record_set_id"),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", unwrap(testConfigVarsMin["record_name"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", testutil.ConvertConfigVariable(testConfigVarsMin["record_name"])),
 					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.#", "1"),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", unwrap(testConfigVarsMin["record_record1"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", unwrap(testConfigVarsMin["record_type"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", testutil.ConvertConfigVariable(testConfigVarsMin["record_record1"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", testutil.ConvertConfigVariable(testConfigVarsMin["record_type"])),
 				),
 			},
 			// Data sources
@@ -174,10 +165,10 @@ func TestAccDnsMinResource(t *testing.T) {
 
 					// Record set data
 					resource.TestCheckResourceAttrSet("data.stackit_dns_record_set.record_set", "record_set_id"),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", unwrap(testConfigVarsMin["record_name"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", testutil.ConvertConfigVariable(testConfigVarsMin["record_name"])),
 					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.#", "1"),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", unwrap(testConfigVarsMin["record_record1"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", unwrap(testConfigVarsMin["record_type"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", testutil.ConvertConfigVariable(testConfigVarsMin["record_record1"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", testutil.ConvertConfigVariable(testConfigVarsMin["record_type"])),
 				),
 			},
 			// Import
@@ -243,10 +234,10 @@ func TestAccDnsMinResource(t *testing.T) {
 						"stackit_dns_zone.zone", "zone_id",
 					),
 					resource.TestCheckResourceAttrSet("stackit_dns_record_set.record_set", "record_set_id"),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", unwrap(testConfigVarsMin["record_name"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", testutil.ConvertConfigVariable(testConfigVarsMin["record_name"])),
 					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.#", "1"),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", unwrap(configVarsMinUpdated()["record_record1"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", unwrap(testConfigVarsMin["record_type"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", testutil.ConvertConfigVariable(configVarsMinUpdated()["record_record1"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", testutil.ConvertConfigVariable(testConfigVarsMin["record_type"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -278,28 +269,28 @@ func TestAccDnsMaxResource(t *testing.T) {
 						"stackit_dns_record_set.record_set", "zone_id",
 						"stackit_dns_zone.zone", "zone_id",
 					),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "acl", unwrap(testConfigVarsMax["acl"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "active", unwrap(testConfigVarsMax["active"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "contact_email", unwrap(testConfigVarsMax["contact_email"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "default_ttl", unwrap(testConfigVarsMax["default_ttl"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "description", unwrap(testConfigVarsMax["description"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "expire_time", unwrap(testConfigVarsMax["expire_time"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "is_reverse_zone", unwrap(testConfigVarsMax["is_reverse_zone"])),
-					// resource.TestCheckResourceAttr("stackit_dns_zone.zone", "negative_cache", unwrap(testConfigVarsMax["negative_cache"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "acl", testutil.ConvertConfigVariable(testConfigVarsMax["acl"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "active", testutil.ConvertConfigVariable(testConfigVarsMax["active"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "contact_email", testutil.ConvertConfigVariable(testConfigVarsMax["contact_email"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "default_ttl", testutil.ConvertConfigVariable(testConfigVarsMax["default_ttl"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "description", testutil.ConvertConfigVariable(testConfigVarsMax["description"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "expire_time", testutil.ConvertConfigVariable(testConfigVarsMax["expire_time"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "is_reverse_zone", testutil.ConvertConfigVariable(testConfigVarsMax["is_reverse_zone"])),
+					// resource.TestCheckResourceAttr("stackit_dns_zone.zone", "negative_cache", testutil.ConvertConfigVariable(testConfigVarsMax["negative_cache"])),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "primaries.#", "1"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "primaries.0"),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "refresh_time", unwrap(testConfigVarsMax["refresh_time"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "retry_time", unwrap(testConfigVarsMax["retry_time"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "type", unwrap(testConfigVarsMax["type"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "refresh_time", testutil.ConvertConfigVariable(testConfigVarsMax["refresh_time"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "retry_time", testutil.ConvertConfigVariable(testConfigVarsMax["retry_time"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "type", testutil.ConvertConfigVariable(testConfigVarsMax["type"])),
 
 					resource.TestCheckResourceAttrSet("stackit_dns_record_set.record_set", "record_set_id"),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", unwrap(testConfigVarsMax["record_name"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", testutil.ConvertConfigVariable(testConfigVarsMax["record_name"])),
 					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.#", "1"),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", unwrap(testConfigVarsMax["record_record1"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "active", unwrap(testConfigVarsMax["record_active"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "comment", unwrap(testConfigVarsMax["record_comment"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "ttl", unwrap(testConfigVarsMax["record_ttl"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", unwrap(testConfigVarsMax["record_type"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", testutil.ConvertConfigVariable(testConfigVarsMax["record_record1"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "active", testutil.ConvertConfigVariable(testConfigVarsMax["record_active"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "comment", testutil.ConvertConfigVariable(testConfigVarsMax["record_comment"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "ttl", testutil.ConvertConfigVariable(testConfigVarsMax["record_ttl"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", testutil.ConvertConfigVariable(testConfigVarsMax["record_type"])),
 				),
 			},
 			// Data sources
@@ -326,29 +317,29 @@ func TestAccDnsMaxResource(t *testing.T) {
 						"stackit_dns_record_set.record_set", "project_id",
 					),
 
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "acl", unwrap(testConfigVarsMax["acl"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "active", unwrap(testConfigVarsMax["active"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "contact_email", unwrap(testConfigVarsMax["contact_email"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "default_ttl", unwrap(testConfigVarsMax["default_ttl"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "description", unwrap(testConfigVarsMax["description"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "expire_time", unwrap(testConfigVarsMax["expire_time"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "is_reverse_zone", unwrap(testConfigVarsMax["is_reverse_zone"])),
-					// resource.TestCheckResourceAttr("stackit_dns_zone.zone", "negative_cache", unwrap(testConfigVarsMax["negative_cache"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "acl", testutil.ConvertConfigVariable(testConfigVarsMax["acl"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "active", testutil.ConvertConfigVariable(testConfigVarsMax["active"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "contact_email", testutil.ConvertConfigVariable(testConfigVarsMax["contact_email"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "default_ttl", testutil.ConvertConfigVariable(testConfigVarsMax["default_ttl"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "description", testutil.ConvertConfigVariable(testConfigVarsMax["description"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "expire_time", testutil.ConvertConfigVariable(testConfigVarsMax["expire_time"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "is_reverse_zone", testutil.ConvertConfigVariable(testConfigVarsMax["is_reverse_zone"])),
+					// resource.TestCheckResourceAttr("stackit_dns_zone.zone", "negative_cache", testutil.ConvertConfigVariable(testConfigVarsMax["negative_cache"])),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "primaries.#", "1"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "primaries.0"),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "refresh_time", unwrap(testConfigVarsMax["refresh_time"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "retry_time", unwrap(testConfigVarsMax["retry_time"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "type", unwrap(testConfigVarsMax["type"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "refresh_time", testutil.ConvertConfigVariable(testConfigVarsMax["refresh_time"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "retry_time", testutil.ConvertConfigVariable(testConfigVarsMax["retry_time"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "type", testutil.ConvertConfigVariable(testConfigVarsMax["type"])),
 
 					// Record set data
 					resource.TestCheckResourceAttrSet("data.stackit_dns_record_set.record_set", "record_set_id"),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", unwrap(testConfigVarsMax["record_name"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", testutil.ConvertConfigVariable(testConfigVarsMax["record_name"])),
 					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.#", "1"),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", unwrap(testConfigVarsMax["record_record1"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "active", unwrap(testConfigVarsMax["record_active"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "comment", unwrap(testConfigVarsMax["record_comment"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "ttl", unwrap(testConfigVarsMax["record_ttl"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", unwrap(testConfigVarsMax["record_type"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", testutil.ConvertConfigVariable(testConfigVarsMax["record_record1"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "active", testutil.ConvertConfigVariable(testConfigVarsMax["record_active"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "comment", testutil.ConvertConfigVariable(testConfigVarsMax["record_comment"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "ttl", testutil.ConvertConfigVariable(testConfigVarsMax["record_ttl"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", testutil.ConvertConfigVariable(testConfigVarsMax["record_type"])),
 				),
 			},
 			// Import
@@ -403,19 +394,19 @@ func TestAccDnsMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "zone_id"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "state"),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "acl", unwrap(testConfigVarsMax["acl"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "active", unwrap(testConfigVarsMax["active"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "contact_email", unwrap(testConfigVarsMax["contact_email"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "default_ttl", unwrap(testConfigVarsMax["default_ttl"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "description", unwrap(testConfigVarsMax["description"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "expire_time", unwrap(testConfigVarsMax["expire_time"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "is_reverse_zone", unwrap(testConfigVarsMax["is_reverse_zone"])),
-					// resource.TestCheckResourceAttr("stackit_dns_zone.zone", "negative_cache", unwrap(testConfigVarsMax["negative_cache"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "acl", testutil.ConvertConfigVariable(testConfigVarsMax["acl"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "active", testutil.ConvertConfigVariable(testConfigVarsMax["active"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "contact_email", testutil.ConvertConfigVariable(testConfigVarsMax["contact_email"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "default_ttl", testutil.ConvertConfigVariable(testConfigVarsMax["default_ttl"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "description", testutil.ConvertConfigVariable(testConfigVarsMax["description"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "expire_time", testutil.ConvertConfigVariable(testConfigVarsMax["expire_time"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "is_reverse_zone", testutil.ConvertConfigVariable(testConfigVarsMax["is_reverse_zone"])),
+					// resource.TestCheckResourceAttr("stackit_dns_zone.zone", "negative_cache", testutil.ConvertConfigVariable(testConfigVarsMax["negative_cache"])),
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "primaries.#", "1"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "primaries.0"),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "refresh_time", unwrap(testConfigVarsMax["refresh_time"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "retry_time", unwrap(testConfigVarsMax["retry_time"])),
-					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "type", unwrap(testConfigVarsMax["type"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "refresh_time", testutil.ConvertConfigVariable(testConfigVarsMax["refresh_time"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "retry_time", testutil.ConvertConfigVariable(testConfigVarsMax["retry_time"])),
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "type", testutil.ConvertConfigVariable(testConfigVarsMax["type"])),
 
 					// Record set data
 					resource.TestCheckResourceAttrPair(
@@ -427,13 +418,13 @@ func TestAccDnsMaxResource(t *testing.T) {
 						"stackit_dns_zone.zone", "zone_id",
 					),
 					resource.TestCheckResourceAttrSet("stackit_dns_record_set.record_set", "record_set_id"),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", unwrap(testConfigVarsMax["record_name"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", testutil.ConvertConfigVariable(testConfigVarsMax["record_name"])),
 					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.#", "1"),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", unwrap(configVarsMaxUpdated()["record_record1"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "active", unwrap(testConfigVarsMax["record_active"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "comment", unwrap(testConfigVarsMax["record_comment"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "ttl", unwrap(testConfigVarsMax["record_ttl"])),
-					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", unwrap(testConfigVarsMax["record_type"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "records.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["record_record1"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "active", testutil.ConvertConfigVariable(testConfigVarsMax["record_active"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "comment", testutil.ConvertConfigVariable(testConfigVarsMax["record_comment"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "ttl", testutil.ConvertConfigVariable(testConfigVarsMax["record_ttl"])),
+					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", testutil.ConvertConfigVariable(testConfigVarsMax["record_type"])),
 				),
 			},
 			// Deletion is done by the framework implicitly

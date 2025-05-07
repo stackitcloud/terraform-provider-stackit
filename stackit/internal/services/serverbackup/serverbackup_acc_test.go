@@ -4,7 +4,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"log"
 	"maps"
 	"regexp"
 	"strconv"
@@ -29,14 +28,6 @@ var (
 	//go:embed testdata/resource-max.tf
 	resourceMaxConfig string
 )
-
-func unwrap(v config.Variable) string {
-	tmp, err := v.MarshalJSON()
-	if err != nil {
-		log.Panicf("cannot marshal variable %v: %v", v, err)
-	}
-	return strings.Trim(string(tmp), `"`)
-}
 
 var testConfigVarsMin = config.Variables{
 	"project_id":       config.StringVariable(testutil.ProjectId),
@@ -101,14 +92,14 @@ func TestAccServerBackupScheduleMinResource(t *testing.T) {
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Backup schedule data
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "project_id", unwrap(testConfigVarsMin["project_id"])),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "server_id", unwrap(testConfigVarsMin["server_id"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "server_id", testutil.ConvertConfigVariable(testConfigVarsMin["server_id"])),
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "backup_schedule_id"),
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "id"),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "name", unwrap(testConfigVarsMin["schedule_name"])),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "rrule", unwrap(testConfigVarsMin["rrule"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "name", testutil.ConvertConfigVariable(testConfigVarsMin["schedule_name"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "rrule", testutil.ConvertConfigVariable(testConfigVarsMin["rrule"])),
 					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "enabled", strconv.FormatBool(true)),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.name", unwrap(testConfigVarsMin["backup_name"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.name", testutil.ConvertConfigVariable(testConfigVarsMin["backup_name"])),
 				),
 			},
 			// data source
@@ -117,18 +108,18 @@ func TestAccServerBackupScheduleMinResource(t *testing.T) {
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server backup schedule data
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "project_id", unwrap(testConfigVarsMin["project_id"])),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "server_id", unwrap(testConfigVarsMin["server_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "server_id", testutil.ConvertConfigVariable(testConfigVarsMin["server_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedule.schedule_data_test", "backup_schedule_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedule.schedule_data_test", "id"),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "name", unwrap(testConfigVarsMin["schedule_name"])),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "rrule", unwrap(testConfigVarsMin["rrule"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "name", testutil.ConvertConfigVariable(testConfigVarsMin["schedule_name"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "rrule", testutil.ConvertConfigVariable(testConfigVarsMin["rrule"])),
 					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "enabled", strconv.FormatBool(true)),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "backup_properties.name", unwrap(testConfigVarsMin["backup_name"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "backup_properties.name", testutil.ConvertConfigVariable(testConfigVarsMin["backup_name"])),
 
 					// Server backup schedules data
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "project_id", unwrap(testConfigVarsMin["project_id"])),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "server_id", unwrap(testConfigVarsMin["server_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "server_id", testutil.ConvertConfigVariable(testConfigVarsMin["server_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedules.schedules_data_test", "id"),
 				),
 			},
@@ -156,15 +147,15 @@ func TestAccServerBackupScheduleMinResource(t *testing.T) {
 				ConfigVariables: configVarsMinUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Backup schedule data
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "project_id", unwrap(configVarsMinUpdated()["project_id"])),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "server_id", unwrap(configVarsMinUpdated()["server_id"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(configVarsMinUpdated()["project_id"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "server_id", testutil.ConvertConfigVariable(configVarsMinUpdated()["server_id"])),
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "backup_schedule_id"),
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "id"),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "name", unwrap(configVarsMinUpdated()["schedule_name"])),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "rrule", unwrap(configVarsMinUpdated()["rrule"])),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "enabled", unwrap(configVarsMinUpdated()["enabled"])),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.retention_period", unwrap(configVarsMinUpdated()["retention_period"])),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.name", unwrap(configVarsMinUpdated()["backup_name"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "name", testutil.ConvertConfigVariable(configVarsMinUpdated()["schedule_name"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "rrule", testutil.ConvertConfigVariable(configVarsMinUpdated()["rrule"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "enabled", testutil.ConvertConfigVariable(configVarsMinUpdated()["enabled"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.retention_period", testutil.ConvertConfigVariable(configVarsMinUpdated()["retention_period"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.name", testutil.ConvertConfigVariable(configVarsMinUpdated()["backup_name"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -193,14 +184,14 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Backup schedule data
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "project_id", unwrap(testConfigVarsMax["project_id"])),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "server_id", unwrap(testConfigVarsMax["server_id"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "server_id", testutil.ConvertConfigVariable(testConfigVarsMax["server_id"])),
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "backup_schedule_id"),
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "id"),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "name", unwrap(testConfigVarsMax["schedule_name"])),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "rrule", unwrap(testConfigVarsMax["rrule"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "name", testutil.ConvertConfigVariable(testConfigVarsMax["schedule_name"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "rrule", testutil.ConvertConfigVariable(testConfigVarsMax["rrule"])),
 					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "enabled", strconv.FormatBool(true)),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.name", unwrap(testConfigVarsMax["backup_name"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.name", testutil.ConvertConfigVariable(testConfigVarsMax["backup_name"])),
 				),
 			},
 			// data source
@@ -209,18 +200,18 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server backup schedule data
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "project_id", unwrap(testConfigVarsMax["project_id"])),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "server_id", unwrap(testConfigVarsMax["server_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "server_id", testutil.ConvertConfigVariable(testConfigVarsMax["server_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedule.schedule_data_test", "backup_schedule_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedule.schedule_data_test", "id"),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "name", unwrap(testConfigVarsMax["schedule_name"])),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "rrule", unwrap(testConfigVarsMax["rrule"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "name", testutil.ConvertConfigVariable(testConfigVarsMax["schedule_name"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "rrule", testutil.ConvertConfigVariable(testConfigVarsMax["rrule"])),
 					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "enabled", strconv.FormatBool(true)),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "backup_properties.name", unwrap(testConfigVarsMax["backup_name"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedule.schedule_data_test", "backup_properties.name", testutil.ConvertConfigVariable(testConfigVarsMax["backup_name"])),
 
 					// Server backup schedules data
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "project_id", unwrap(testConfigVarsMax["project_id"])),
-					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "server_id", unwrap(testConfigVarsMax["server_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "server_id", testutil.ConvertConfigVariable(testConfigVarsMax["server_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedules.schedules_data_test", "id"),
 				),
 			},
@@ -248,15 +239,15 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 				ConfigVariables: configVarsMaxUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Backup schedule data
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "project_id", unwrap(configVarsMaxUpdated()["project_id"])),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "server_id", unwrap(configVarsMaxUpdated()["server_id"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(configVarsMaxUpdated()["project_id"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "server_id", testutil.ConvertConfigVariable(configVarsMaxUpdated()["server_id"])),
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "backup_schedule_id"),
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "id"),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "name", unwrap(configVarsMaxUpdated()["schedule_name"])),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "rrule", unwrap(configVarsMaxUpdated()["rrule"])),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "enabled", unwrap(configVarsMaxUpdated()["enabled"])),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.retention_period", unwrap(configVarsMaxUpdated()["retention_period"])),
-					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.name", unwrap(configVarsMaxUpdated()["backup_name"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["schedule_name"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "rrule", testutil.ConvertConfigVariable(configVarsMaxUpdated()["rrule"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["enabled"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.retention_period", testutil.ConvertConfigVariable(configVarsMaxUpdated()["retention_period"])),
+					resource.TestCheckResourceAttr("stackit_server_backup_schedule.test_schedule", "backup_properties.name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["backup_name"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
