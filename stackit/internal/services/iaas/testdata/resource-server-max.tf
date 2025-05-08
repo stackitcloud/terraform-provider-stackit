@@ -6,6 +6,7 @@ variable "image_id" {}
 variable "availability_zone" {}
 variable "label" {}
 variable "user_data" {}
+variable "desired_status" {}
 
 variable "policy" {}
 variable "size" {}
@@ -34,11 +35,6 @@ resource "stackit_volume" "data_volume" {
   size              = var.size
 }
 
-resource "stackit_server_volume_attach" "data_volume_attachment" {
-  project_id = var.project_id
-  server_id  = stackit_server.server.server_id
-  volume_id  = stackit_volume.data_volume.volume_id
-}
 
 resource "stackit_network" "network" {
   project_id = var.project_id
@@ -53,12 +49,6 @@ resource "stackit_network_interface" "network_interface_init" {
 resource "stackit_network_interface" "network_interface_second" {
   project_id = var.project_id
   network_id = stackit_network.network.network_id
-}
-
-resource "stackit_server_network_interface_attach" "network_interface_second_attachment" {
-  project_id           = var.project_id
-  network_interface_id = stackit_network_interface.network_interface_second.network_interface_id
-  server_id            = stackit_server.server.server_id
 }
 
 resource "stackit_key_pair" "key_pair" {
@@ -79,6 +69,7 @@ resource "stackit_server" "server" {
   affinity_group     = stackit_affinity_group.affinity_group.affinity_group_id
   availability_zone  = var.availability_zone
   keypair_name       = stackit_key_pair.key_pair.name
+  desired_status     = var.desired_status
   network_interfaces = [stackit_network_interface.network_interface_init.network_interface_id]
   user_data          = var.user_data
   boot_volume = {
