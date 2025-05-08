@@ -31,6 +31,7 @@ resource "stackit_dns_record_set" "example" {
 - `name` (String) Name of the record which should be a valid domain according to rfc1035 Section 2.3.4. E.g. `example.com`
 - `project_id` (String) STACKIT project ID to which the dns record set is associated.
 - `records` (List of String) Records.
+- `type` (String) The record set type. E.g. `A` or `CNAME`
 - `zone_id` (String) The zone ID to which is dns record set is associated.
 
 ### Optional
@@ -38,7 +39,6 @@ resource "stackit_dns_record_set" "example" {
 - `active` (Boolean) Specifies if the record set is active or not. Defaults to `true`
 - `comment` (String) Comment.
 - `ttl` (Number) Time to live. E.g. 3600
-- `type` (String) The record set type. E.g. `A` or `CNAME`
 
 ### Read-Only
 
