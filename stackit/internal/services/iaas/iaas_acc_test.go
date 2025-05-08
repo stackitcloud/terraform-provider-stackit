@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
@@ -437,9 +438,10 @@ var testConfigKeyPairMaxUpdated = func() config.Variables {
 var localFileForIaasImage os.File
 
 func TestAccNetworkMin(t *testing.T) {
+	t.Logf("TestAccNetworkMin name: %s", testutil.ConvertConfigVariable(testConfigNetworkVarsMin["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckNetworkDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -510,9 +512,10 @@ func TestAccNetworkMin(t *testing.T) {
 }
 
 func TestAccNetworkMax(t *testing.T) {
+	t.Logf("TestAccNetworkMax name: %s", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckNetworkDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 
 			// Creation
@@ -622,9 +625,10 @@ func TestAccNetworkMax(t *testing.T) {
 }
 
 func TestAccNetworkAreaMin(t *testing.T) {
+	t.Logf("TestAccNetworkAreaMin name: %s", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMin["name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckNetworkAreaDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -776,9 +780,10 @@ func TestAccNetworkAreaMin(t *testing.T) {
 }
 
 func TestAccNetworkAreaMax(t *testing.T) {
+	t.Logf("TestAccNetworkAreaMax name: %s", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckNetworkAreaDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -950,9 +955,10 @@ func TestAccNetworkAreaMax(t *testing.T) {
 }
 
 func TestAccVolumeMin(t *testing.T) {
-	resource.Test(t, resource.TestCase{
+	t.Logf("TestAccVolumeMin name: null")
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckIaaSVolumeDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -1098,9 +1104,10 @@ func TestAccVolumeMin(t *testing.T) {
 }
 
 func TestAccVolumeMax(t *testing.T) {
-	resource.Test(t, resource.TestCase{
+	t.Logf("TestAccVolumeMax name: %s", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["name"]))
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckIaaSVolumeDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -1194,9 +1201,10 @@ func TestAccVolumeMax(t *testing.T) {
 }
 
 func TestAccServerMin(t *testing.T) {
+	t.Logf("TestAccServerMin name: %s", testutil.ConvertConfigVariable(testConfigServerVarsMin["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckServerDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -1331,9 +1339,10 @@ func TestAccServerMin(t *testing.T) {
 }
 
 func TestAccServerMax(t *testing.T) {
+	t.Logf("TestAccServerMax name: %s", testutil.ConvertConfigVariable(testConfigServerVarsMax["name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckServerDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -1853,9 +1862,10 @@ func TestAccServerMax(t *testing.T) {
 }
 
 func TestAccAffinityGroupMin(t *testing.T) {
+	t.Logf("TestAccAffinityGroupMin name: %s", testutil.ConvertConfigVariable(testConfigAffinityGroupVarsMin["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckAffinityGroupDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -1917,10 +1927,10 @@ func TestAccAffinityGroupMin(t *testing.T) {
 }
 
 func TestAccIaaSSecurityGroupMin(t *testing.T) {
-	t.Logf("Security group name: %s", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMin["name"]))
+	t.Logf("TestAccIaaSSecurityGroupMin name: %s", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMin["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckIaaSSecurityGroupDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 
 			// Creation
@@ -2058,10 +2068,10 @@ func TestAccIaaSSecurityGroupMin(t *testing.T) {
 }
 
 func TestAccIaaSSecurityGroupMax(t *testing.T) {
-	t.Logf("Security group name: %s", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["name"]))
+	t.Logf("TestAccIaaSSecurityGroupMax name: %s", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckIaaSSecurityGroupDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 
 			// Creation
@@ -2414,9 +2424,10 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 }
 
 func TestAccNetworkInterfaceMin(t *testing.T) {
+	t.Logf("TestAccNetworkInterfaceMin name: %s", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckNetworkInterfaceDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -2575,13 +2586,13 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 			// Deletion is done by the framework implicitly
 		},
 	})
-
 }
 
 func TestAccNetworkInterfaceMax(t *testing.T) {
+	t.Logf("TestAccNetworkInterfaceMax name: %s", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckNetworkInterfaceDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -2967,13 +2978,13 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 			// Deletion is done by the framework implicitly
 		},
 	})
-
 }
 
 func TestAccKeyPairMin(t *testing.T) {
+	t.Logf("TestAccKeyPairMin name: %s", testutil.ConvertConfigVariable(testConfigKeyPairMin["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckIaaSKeyPairDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -3034,9 +3045,10 @@ func TestAccKeyPairMin(t *testing.T) {
 }
 
 func TestAccKeyPairMax(t *testing.T) {
+	t.Logf("TestAccKeyPairMax name: %s", testutil.ConvertConfigVariable(testConfigKeyPairMax["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckIaaSKeyPairDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -3108,9 +3120,10 @@ func TestAccKeyPairMax(t *testing.T) {
 }
 
 func TestAccImageMin(t *testing.T) {
-	resource.Test(t, resource.TestCase{
+	t.Logf("TestAccImageMin name: %s", testutil.ConvertConfigVariable(testConfigImageVarsMin["name"]))
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckIaaSImageDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 
 			// Creation
@@ -3205,10 +3218,10 @@ func TestAccImageMin(t *testing.T) {
 }
 
 func TestAccImageMax(t *testing.T) {
-	fmt.Printf("Image name: %s\n", testutil.ConvertConfigVariable(testConfigImageVarsMax["name"]))
-	resource.Test(t, resource.TestCase{
+	t.Logf("TestAccImageMax name: %s", testutil.ConvertConfigVariable(testConfigImageVarsMax["name"]))
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckIaaSImageDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 
 			// Creation
@@ -3350,6 +3363,37 @@ func TestAccImageMax(t *testing.T) {
 	})
 }
 
+func testAccCheckDestroy(s *terraform.State) error {
+	checkFunctions := []func(s *terraform.State) error{
+		testAccCheckNetworkDestroy,
+		testAccCheckNetworkInterfaceDestroy,
+		testAccCheckNetworkAreaDestroy,
+		testAccCheckIaaSVolumeDestroy,
+		testAccCheckServerDestroy,
+		testAccCheckAffinityGroupDestroy,
+		testAccCheckIaaSSecurityGroupDestroy,
+		testAccCheckIaaSPublicIpDestroy,
+		testAccCheckIaaSKeyPairDestroy,
+		testAccCheckIaaSImageDestroy,
+	}
+	var errs []error
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(checkFunctions))
+
+	for _, f := range checkFunctions {
+		go func() {
+			err := f(s)
+			if err != nil {
+				errs = append(errs, err)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+	return errors.Join(errs...)
+}
+
 func testAccCheckNetworkDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *iaas.APIClient
@@ -3432,12 +3476,6 @@ func testAccCheckNetworkInterfaceDestroy(s *terraform.State) error {
 		if err != nil {
 			errs = append(errs, fmt.Errorf("cannot delete network interface %q: %w", networkInterfaceId, err))
 		}
-	}
-
-	// delete networks
-	err = testAccCheckNetworkDestroy(s)
-	if err != nil {
-		errs = append(errs, err)
 	}
 
 	return errors.Join(errs...)
@@ -3816,14 +3854,6 @@ func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *iaas.APIClient
 	var err error
-
-	if _, err := os.Stat(localFileForIaasImage.Name()); err == nil {
-		// file exists, delete it
-		err := os.Remove(localFileForIaasImage.Name())
-		if err != nil {
-			return fmt.Errorf("Error deleting localFileForIaasImage file: %w", err)
-		}
-	}
 
 	if testutil.IaaSCustomEndpoint == "" {
 		client, err = iaas.NewAPIClient(
