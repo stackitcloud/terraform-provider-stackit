@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -436,7 +435,7 @@ func ServiceAccountProviderConfig() string {
 }
 
 func GitProviderConfig() string {
-	if ServiceAccountCustomEndpoint == "" {
+	if GitCustomEndpoint == "" {
 		return `
 		provider "stackit" {
 			default_region = "eu01"
@@ -448,7 +447,7 @@ func GitProviderConfig() string {
 			git_custom_endpoint = "%s"
 			enable_beta_resources = true
 		}`,
-		ServiceAccountCustomEndpoint,
+		GitCustomEndpoint,
 	)
 }
 
@@ -457,23 +456,6 @@ func ResourceNameWithDateTime(name string) string {
 	// Remove timezone to have a smaller datetime
 	dateTimeTrimmed, _, _ := strings.Cut(dateTime, "+")
 	return fmt.Sprintf("tf-acc-%s-%s", name, dateTimeTrimmed)
-}
-
-// GenerateRandomString creates a random string of the specified length
-func GenerateRandomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
-	randomBytes := make([]byte, length)
-
-	_, err := rand.Read(randomBytes)
-	if err != nil {
-		return ""
-	}
-
-	for i, b := range randomBytes {
-		randomBytes[i] = charset[b%byte(len(charset))]
-	}
-
-	return string(randomBytes)
 }
 
 func getTestProjectServiceAccountToken(path string) string {

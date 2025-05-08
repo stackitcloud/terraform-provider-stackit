@@ -245,6 +245,7 @@ func (g *gitResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	// Set the updated state.
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+	tflog.Info(ctx, fmt.Sprintf("read git instance %s", instanceId))
 }
 
 // Update attempts to update the resource. In this case, git instances cannot be updated.
@@ -277,6 +278,12 @@ func (g *gitResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	err := g.client.DeleteInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting git instance", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	_, err = wait.DeleteGitInstanceWaitHandler(ctx, g.client, projectId, instanceId).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error waiting for instance deletion", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
 

@@ -158,4 +158,5 @@ func (g *gitDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	// Set the updated state.
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+	tflog.Info(ctx, fmt.Sprintf("read git instance %s", instanceId))
 }

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
@@ -21,8 +22,8 @@ import (
 //go:embed testdata/resource.tf
 var resourceConfig string
 
-var name = fmt.Sprintf("git-%s-instance", testutil.GenerateRandomString(5))
-var nameUpdated = fmt.Sprintf("git-%s-instance", testutil.GenerateRandomString(5))
+var name = fmt.Sprintf("git-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+var nameUpdated = fmt.Sprintf("git-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
 
 var testConfigVars = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
@@ -50,7 +51,6 @@ func TestGitInstance(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVars["project_id"])),
 					resource.TestCheckResourceAttr("stackit_git.git", "name", testutil.ConvertConfigVariable(testConfigVars["name"])),
-					resource.TestCheckResourceAttrSet("stackit_git.git", "name"),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "url"),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "version"),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "instance_id"),
@@ -118,7 +118,6 @@ func TestGitInstance(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVars["project_id"])),
 					resource.TestCheckResourceAttr("stackit_git.git", "name", testutil.ConvertConfigVariable(testConfigVarsUpdated()["name"])),
-					resource.TestCheckResourceAttrSet("stackit_git.git", "name"),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "url"),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "version"),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "instance_id"),
