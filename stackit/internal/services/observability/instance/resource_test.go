@@ -2,8 +2,11 @@ package observability
 
 import (
 	"context"
+	_ "embed"
+	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -15,6 +18,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
+)
+
+var (
+	//go:embed alertconfig-template.yaml
+	alertConfigTemplate string
+	//go:embed alertconfig-template.json
+	alertConfigTemplateJson string
 )
 
 func fixtureEmailConfigsModel() basetypes.ListValue {
@@ -1559,4 +1569,14 @@ func toTerraformStringMapMust(ctx context.Context, m map[string]string) basetype
 		return types.MapNull(types.StringType)
 	}
 	return res
+}
+
+func TestUnmarshal(t *testing.T) {
+	decoder := yaml.NewDecoder(strings.NewReader(alertConfigTemplateJson), yaml.UseJSONUnmarshaler())
+	var target observability.UpdateAlertConfigsPayload
+
+	if err := decoder.Decode(&target); err != nil {
+		t.Fatalf("cannot unmarshal template: %v", err)
+	}
+	t.Logf("%#v", target)
 }

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/goccy/go-yaml"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -26,11 +27,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	core_utils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -73,6 +75,7 @@ type Model struct {
 	OtlpTracesURL                      types.String `tfsdk:"otlp_traces_url"`
 	ZipkinSpansURL                     types.String `tfsdk:"zipkin_spans_url"`
 	ACL                                types.Set    `tfsdk:"acl"`
+	AlertConfigDef                     types.String `tfsdk:"alert_config_def"`
 	AlertConfig                        types.Object `tfsdk:"alert_config"`
 }
 
@@ -575,6 +578,13 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					),
 				},
 			},
+			"alert_config_def": schema.StringAttribute{
+				Optional:    true,
+				Description: "textual representation of the alert configuration, possibly from a file",
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(path.MatchRoot("alert_config")),
+				},
+			},
 			"alert_config": schema.SingleNestedAttribute{
 				Description: "Alert configuration for the instance.",
 				Optional:    true,
@@ -584,6 +594,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Required:    true,
 						Validators: []validator.List{
 							listvalidator.SizeAtLeast(1),
+							listvalidator.ExactlyOneOf(path.MatchRoot("alert_config_def")),
 						},
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
@@ -796,15 +807,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays5mDownsampling)
 	metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays1hDownsampling)
 
-	alertConfig := alertConfigModel{}
-	if !(model.AlertConfig.IsNull() || model.AlertConfig.IsUnknown()) {
-		diags = model.AlertConfig.As(ctx, &alertConfig, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
@@ -914,21 +916,10 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	// Alert Config
-	if model.AlertConfig.IsUnknown() || model.AlertConfig.IsNull() {
-		alertConfig, err = getMockAlertConfig(ctx)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Getting mock alert config: %v", err))
-			return
-		}
-	}
-
-	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, &alertConfig)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building alert config payload: %v", err))
+	alertConfigPayload := createAlertConfigPayload(ctx, &model, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	if alertConfigPayload != nil {
 		_, err = r.client.UpdateAlertConfigs(ctx, *instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
 		if err != nil {
@@ -959,6 +950,47 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	tflog.Info(ctx, "Observability instance created")
+}
+
+func createAlertConfigPayload(ctx context.Context, model *Model, diags *diag.Diagnostics) (target *observability.UpdateAlertConfigsPayload) {
+
+	alertConfig := alertConfigModel{}
+	if !(model.AlertConfig.IsNull() || model.AlertConfig.IsUnknown()) {
+		diags.Append(model.AlertConfig.As(ctx, &alertConfig, basetypes.ObjectAsOptions{})...)
+		if diags.HasError() {
+			return nil
+		}
+	}
+
+	var err error
+	// Alert Config
+	if model.AlertConfig.IsUnknown() || model.AlertConfig.IsNull() {
+		alertConfig, err = getMockAlertConfig(ctx)
+		if err != nil {
+			core.LogAndAddError(ctx, diags, "Error creating instance", fmt.Sprintf("Getting mock alert config: %v", err))
+			return nil
+		}
+	}
+
+	if utils.IsUndefined(model.AlertConfigDef) {
+		target, err = toUpdateAlertConfigPayload(ctx, &alertConfig)
+		if err != nil {
+			core.LogAndAddError(ctx, diags, "Error creating instance", fmt.Sprintf("Building alert config payload: %v", err))
+			return nil
+		}
+	} else {
+		config := model.AlertConfigDef.ValueString()
+		var unmarshalled observability.UpdateAlertConfigsPayload
+		decoder := yaml.NewDecoder(strings.NewReader(config), yaml.UseJSONUnmarshaler())
+		if err := decoder.Decode(&unmarshalled); err != nil {
+			core.LogAndAddError(ctx, diags, "Error unmarshalling alertconfig", fmt.Sprintf("Building alert config payload: %v", err))
+			return nil
+
+		}
+		target = &unmarshalled
+	}
+
+	return target
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -1091,14 +1123,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays5mDownsampling)
 	metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays1hDownsampling)
 
-	alertConfig := alertConfigModel{}
-	if !(model.AlertConfig.IsNull() || model.AlertConfig.IsUnknown()) {
-		diags = model.AlertConfig.As(ctx, &alertConfig, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
 
 	err := r.loadPlanId(ctx, &model)
 	if err != nil {
@@ -1201,18 +1225,8 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	// Alert Config
-	if model.AlertConfig.IsUnknown() || model.AlertConfig.IsNull() {
-		alertConfig, err = getMockAlertConfig(ctx)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Getting mock alert config: %v", err))
-			return
-		}
-	}
-
-	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, &alertConfig)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building alert config payload: %v", err))
+	alertConfigPayload := createAlertConfigPayload(ctx, &model, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -1593,19 +1607,19 @@ func mapGlobalConfigToAttributes(respGlobalConfigs *observability.Global, global
 	if globalConfigsTF != nil {
 		if respGlobalConfigs.SmtpSmarthost == nil &&
 			!globalConfigsTF.SmtpSmartHost.IsNull() && !globalConfigsTF.SmtpSmartHost.IsUnknown() {
-			smtpSmartHost = utils.Ptr(globalConfigsTF.SmtpSmartHost.ValueString())
+			smtpSmartHost = core_utils.Ptr(globalConfigsTF.SmtpSmartHost.ValueString())
 		}
 		if respGlobalConfigs.SmtpAuthIdentity == nil &&
 			!globalConfigsTF.SmtpAuthIdentity.IsNull() && !globalConfigsTF.SmtpAuthIdentity.IsUnknown() {
-			smtpAuthIdentity = utils.Ptr(globalConfigsTF.SmtpAuthIdentity.ValueString())
+			smtpAuthIdentity = core_utils.Ptr(globalConfigsTF.SmtpAuthIdentity.ValueString())
 		}
 		if respGlobalConfigs.SmtpAuthPassword == nil &&
 			!globalConfigsTF.SmtpAuthPassword.IsNull() && !globalConfigsTF.SmtpAuthPassword.IsUnknown() {
-			smtpAuthPassword = utils.Ptr(globalConfigsTF.SmtpAuthPassword.ValueString())
+			smtpAuthPassword = core_utils.Ptr(globalConfigsTF.SmtpAuthPassword.ValueString())
 		}
 		if respGlobalConfigs.SmtpAuthUsername == nil &&
 			!globalConfigsTF.SmtpAuthUsername.IsNull() && !globalConfigsTF.SmtpAuthUsername.IsUnknown() {
-			smtpAuthUsername = utils.Ptr(globalConfigsTF.SmtpAuthUsername.ValueString())
+			smtpAuthUsername = core_utils.Ptr(globalConfigsTF.SmtpAuthUsername.ValueString())
 		}
 	}
 
@@ -1898,7 +1912,7 @@ func toUpdateMetricsStorageRetentionPayload(retentionDaysRaw, retentionDays5m, r
 
 func updateACL(ctx context.Context, projectId, instanceId string, acl []string, client *observability.APIClient) error {
 	payload := observability.UpdateACLPayload{
-		Acl: utils.Ptr(acl),
+		Acl: core_utils.Ptr(acl),
 	}
 
 	_, err := client.UpdateACL(ctx, instanceId, projectId).UpdateACLPayload(payload).Execute()
@@ -1929,6 +1943,7 @@ func toUpdateAlertConfigPayload(ctx context.Context, model *alertConfigModel) (*
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if model.Receivers.IsNull() || model.Receivers.IsUnknown() {
 		return nil, fmt.Errorf("receivers in the model are null or unknown")
 	}

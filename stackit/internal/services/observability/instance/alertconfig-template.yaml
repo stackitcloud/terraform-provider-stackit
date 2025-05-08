@@ -1,0 +1,96 @@
+global:
+  opsgenieApiKey: api-key
+  opsgenieApiUrl: /some/example/url
+  resolveTimeout: 7m
+  smtpAuthIdentity: smtp-identiy
+  smtpAuthPassword: top-secret!
+  smtpAuthUsername: smtp-username
+  smtpFrom: test-sender@example.com
+  smtpSmarthost: my.smtp-host
+inhibitRules:
+  equal:
+    - alert-tag
+  sourceMatch:
+    sourceMatch1: value1
+    sourceMatch2: value2
+    sourceMatch3: value3
+  sourceMatchRe:
+    sourceMatchRe1: value1
+    sourceMatchRe2: value2
+    sourceMatchRe3: value3
+  targetMatch:
+    targetMatch1: value1
+    targetMatch2: value2
+    targetMatch3: value3
+  targetMatchRe:
+    targetMatchRe1: value1
+    targetMatchRe2: value2
+    targetMatchRe3: value3
+receivers:
+  - emailConfigs:
+      - authIdentity: receiver-identity
+        authPassword: top-secret!
+        authUsername: receiver-username
+        from: sender@example.com
+        smarthost: my.example.host
+        to: receiver@example.com
+    name: rule1
+    opsgenieConfigs:
+      - apiKey: apikey
+        apiUrl: /some/test/url
+        tags: tag1,tag2,tag3
+    webHookConfigs:
+      - msTeams: true
+        url: /test/url1/
+      - msTeams: false
+        url: /test/url2/
+      - msTeams: true
+        url: /test/url3/
+route:
+  groupBy:
+    - groupKey
+  groupInterval: 7m
+  groupWait: 42s
+  match:
+    foo1: bar1
+    foo2: bar2
+    foo3: bar3
+  matchRe:
+    re1: bar1
+    re2: bar2
+    re3: bar3
+  matchers:
+    - matcher1
+    - matcher2
+    - matcher3
+  receiver: receiver
+  repeatInterval: 4h
+  routes:
+    - groupBy:
+        - groupKey1
+      groupInterval: 5s
+      groupWait: 30s
+      match:
+        foo1: bar1
+        foo2: bar2
+        foo3: bar3
+      matchRe:
+        re1: bar1
+        re2: bar2
+        re3: bar3
+      receiver: receiver1
+      repeatInterval: 60s
+      routes:
+        - groupBy: groupKey1
+          groupInterval: 5s
+          groupWait: 30s
+          match:
+            foo1: bar1
+            foo2: bar2
+            foo3: bar3
+          matchRe:
+            re1: bar1
+            re2: bar2
+            re3: bar3
+          receiver: receiver1
+          repeatInterval: 60s
