@@ -282,13 +282,6 @@ var testConfigNetworkAreaVarsMaxUpdated = func() config.Variables {
 	return updatedConfig
 }()
 
-var networkInterfaceResource = map[string]string{
-	"project_id": testutil.ProjectId,
-	"network_id": networkResource["network_id"],
-	"name":       "name",
-	"tfName":     "network_interface",
-}
-
 var testConfigSecurityGroupsVarsMin = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
 	"name":       config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
@@ -440,57 +433,8 @@ var testConfigKeyPairMaxUpdated = func() config.Variables {
 	return updatedConfig
 }()
 
-// Public IP resource data
-var publicIpResource = map[string]string{
-	"project_id":           testutil.ProjectId,
-	"label1":               "value",
-	"network_interface_id": "stackit_network_interface.network_interface.network_interface_id",
-}
-
 // if no local file is provided the test should create a default file and work with this instead of failing
 var localFileForIaasImage os.File
-
-// routed: true, gateway not present
-func networkResourceConfigRouted(name, nameservers string) string {
-	return fmt.Sprintf(`
-				resource "stackit_network" "network" {
-					project_id = "%s"
-					name       = "%s"
-					ipv4_prefix_length = "%s"
-					ipv4_nameservers = %s
-					ipv4_prefix = "%s"
-					routed = "true"
-				}
-				`,
-		networkResource["project_id"],
-		name,
-		networkResource["ipv4_prefix_length"],
-		nameservers,
-		networkResource["ipv4_prefix"],
-	)
-}
-
-func networkInterfaceResourceConfig(resourceName, name string) string {
-	return fmt.Sprintf(`
-				resource "stackit_network_interface" "%s" {
-					project_id = stackit_network.network.project_id
-					network_id = stackit_network.network.network_id
-					name       = "%s"
-				}
-				`,
-		resourceName,
-		name,
-	)
-}
-
-func testAccPublicIpConfig(nameNetwork, nameservers, nicTfName, nameNetworkInterface, publicIpResourceConfig string) string {
-	return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s",
-		testutil.IaaSProviderConfig(),
-		networkResourceConfigRouted(nameNetwork, nameservers),
-		networkInterfaceResourceConfig(nicTfName, nameNetworkInterface),
-		publicIpResourceConfig,
-	)
-}
 
 func TestAccNetworkMin(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
@@ -2481,6 +2425,7 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network interface instance
 					resource.TestCheckNoResourceAttr("stackit_network_interface.network_interface", "name"),
+					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "ipv4"),
 					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "allowed_addresses.#"),
 					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "security", "true"),
@@ -2489,6 +2434,10 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "mac"),
 					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_interface_id"),
 					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "type"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface", "network_id",
+						"stackit_network.network", "network_id",
+					),
 
 					// Network instance
 					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
@@ -2497,6 +2446,13 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv4_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
+
+					// Public ip
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip", "public_ip_id"),
+					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip", "ip"),
+					resource.TestCheckNoResourceAttr("stackit_public_ip.public_ip", "network_interface_id"),
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.%", "0"),
 				),
 			},
 			// Data source
@@ -2515,6 +2471,11 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 					data "stackit_network" "network" {
 						project_id  = stackit_network.network.project_id
 						network_id  = stackit_network.network.network_id
+					}
+
+					data "stackit_public_ip" "public_ip" {
+						project_id   = stackit_public_ip.public_ip.project_id
+						public_ip_id = stackit_public_ip.public_ip.public_ip_id
 					}
 					`,
 					testutil.IaaSProviderConfig(), resourceNetworkInterfaceMinConfig,
@@ -2538,6 +2499,19 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "ipv4_prefixes.#"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "public_ip"),
+
+					// Public ip
+					resource.TestCheckResourceAttr("data.stackit_public_ip.public_ip", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_public_ip.public_ip", "public_ip_id",
+						"stackit_public_ip.public_ip", "public_ip_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_public_ip.public_ip", "ip",
+						"stackit_public_ip.public_ip", "ip",
+					),
+					resource.TestCheckNoResourceAttr("data.stackit_public_ip.public_ip", "network_interface_id"),
+					resource.TestCheckResourceAttr("data.stackit_public_ip.public_ip", "labels.%", "0"),
 				),
 			},
 
@@ -2551,18 +2525,17 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 						return "", fmt.Errorf("couldn't find resource stackit_network_interface.network_interface")
 					}
 					networkId, ok := r.Primary.Attributes["network_id"]
-					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_interface_id")
+					}
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, networkId, networkInterfaceId), nil
 				},
-				ImportState: true,
-				Check: resource.ComposeAggregateTestCheckFunc(
-					// Network instance
-					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_id"),
-					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["project_id"])),
-				),
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			{
 				ConfigVariables: testConfigNetworkInterfaceVarsMin,
@@ -2578,16 +2551,25 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 					}
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, networkId), nil
 				},
-				ImportState: true,
-				Check: resource.ComposeAggregateTestCheckFunc(
-					// Network instance
-					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
-					resource.TestCheckResourceAttr("stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["project_id"])),
-					resource.TestCheckResourceAttr("stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["name"])),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv4_prefixes.#"),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv6_prefixes.#"),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
-				),
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ConfigVariables: testConfigNetworkInterfaceVarsMin,
+				ResourceName:    "stackit_public_ip.public_ip",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_public_ip.public_ip"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_public_ip.public_ip")
+					}
+					publicIpId, ok := r.Primary.Attributes["public_ip_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute public_ip_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, publicIpId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			// In this minimal setup, no update can be performed
 			// Deletion is done by the framework implicitly
@@ -2617,6 +2599,10 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["label"])),
 					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "security_group_ids.#", "1"),
 					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface", "network_id",
+						"stackit_network.network", "network_id",
+					),
+					resource.TestCheckResourceAttrPair(
 						"stackit_network_interface.network_interface", "security_group_ids.0",
 						"stackit_security_group.security_group", "security_group_id",
 					),
@@ -2631,6 +2617,43 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv4_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
+
+					// Public ip
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip", "public_ip_id"),
+					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip", "ip"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_public_ip.public_ip", "network_interface_id",
+						"stackit_network_interface.network_interface", "network_interface_id",
+					),
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["label"])),
+
+					// Network interface simple
+					resource.TestCheckResourceAttr("stackit_network_interface.network_interface_simple", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface_simple", "network_interface_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface_simple", "network_id",
+						"stackit_network.network", "network_id",
+					),
+
+					// Public ip simple
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip_simple", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip_simple", "public_ip_id"),
+					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip_simple", "ip"),
+					resource.TestCheckNoResourceAttr("stackit_public_ip.public_ip_simple", "network_interface_id"),
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip_simple", "labels.%", "0"),
+
+					// Nic and public ip attach
+					resource.TestCheckResourceAttr("stackit_public_ip_associate.nic_public_ip_attach", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_public_ip_associate.nic_public_ip_attach", "public_ip_id",
+						"stackit_public_ip.public_ip_simple", "public_ip_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_public_ip_associate.nic_public_ip_attach", "network_interface_id",
+						"stackit_network_interface.network_interface_simple", "network_interface_id",
+					),
 				),
 			},
 			// Data source
@@ -2649,6 +2672,22 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					data "stackit_network" "network" {
 						project_id  = stackit_network.network.project_id
 						network_id  = stackit_network.network.network_id
+					}
+
+					data "stackit_public_ip" "public_ip" {
+						project_id   = stackit_public_ip.public_ip.project_id
+						public_ip_id = stackit_public_ip.public_ip.public_ip_id
+					}
+
+					data "stackit_network_interface" "network_interface_simple" {
+						project_id = stackit_network_interface.network_interface_simple.project_id
+						network_id = stackit_network_interface.network_interface_simple.network_id
+						network_interface_id = stackit_network_interface.network_interface_simple.network_interface_id
+					}
+
+					data "stackit_public_ip" "public_ip_simple" {
+						project_id   = stackit_public_ip.public_ip_simple.project_id
+						public_ip_id = stackit_public_ip.public_ip_simple.public_ip_id
 					}
 					`,
 					testutil.IaaSProviderConfig(), resourceNetworkInterfaceMaxConfig,
@@ -2687,9 +2726,52 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "ipv4_prefixes.#"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "public_ip"),
+
+					// Public ip
+					resource.TestCheckResourceAttr("data.stackit_public_ip.public_ip", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_public_ip.public_ip", "public_ip_id",
+						"stackit_public_ip.public_ip", "public_ip_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_public_ip.public_ip", "ip",
+						"stackit_public_ip.public_ip", "ip",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_public_ip.public_ip", "network_interface_id",
+						"data.stackit_network_interface.network_interface", "network_interface_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_public_ip.public_ip", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_public_ip.public_ip", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["label"])),
+
+					// Network interface simple
+					resource.TestCheckNoResourceAttr("data.stackit_network_interface.network_interface_simple", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_network_interface.network_interface_simple", "ipv4"),
+					resource.TestCheckNoResourceAttr("data.stackit_network_interface.network_interface_simple", "allowed_addresses.#"),
+					resource.TestCheckResourceAttr("data.stackit_network_interface.network_interface_simple", "security", "true"),
+					resource.TestCheckResourceAttr("data.stackit_network_interface.network_interface_simple", "labels.#", "0"),
+					resource.TestCheckResourceAttr("data.stackit_network_interface.network_interface_simple", "security_group_ids.#", "0"),
+					resource.TestCheckResourceAttrSet("data.stackit_network_interface.network_interface_simple", "mac"),
+					resource.TestCheckResourceAttrSet("data.stackit_network_interface.network_interface_simple", "network_interface_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_network_interface.network_interface_simple", "type"),
+
+					// Public ip simple
+					resource.TestCheckResourceAttr("data.stackit_public_ip.public_ip_simple", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_public_ip.public_ip_simple", "public_ip_id",
+						"stackit_public_ip.public_ip_simple", "public_ip_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_public_ip.public_ip_simple", "ip",
+						"stackit_public_ip.public_ip_simple", "ip",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_public_ip.public_ip_simple", "network_interface_id",
+						"data.stackit_network_interface.network_interface_simple", "network_interface_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_public_ip.public_ip_simple", "labels.%", "0"),
 				),
 			},
-
 			// Import
 			{
 				ConfigVariables: testConfigNetworkInterfaceVarsMax,
@@ -2700,18 +2782,17 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 						return "", fmt.Errorf("couldn't find resource stackit_network_interface.network_interface")
 					}
 					networkId, ok := r.Primary.Attributes["network_id"]
-					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_interface_id")
+					}
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, networkId, networkInterfaceId), nil
 				},
-				ImportState: true,
-				Check: resource.ComposeAggregateTestCheckFunc(
-					// Network instance
-					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_id"),
-					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["project_id"])),
-				),
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			{
 				ConfigVariables: testConfigNetworkInterfaceVarsMax,
@@ -2727,15 +2808,93 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					}
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, networkId), nil
 				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ConfigVariables: testConfigNetworkInterfaceVarsMax,
+				ResourceName:    "stackit_public_ip.public_ip",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_public_ip.public_ip"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_public_ip.public_ip")
+					}
+					publicIpId, ok := r.Primary.Attributes["public_ip_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute public_ip_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, publicIpId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ConfigVariables: testConfigNetworkInterfaceVarsMax,
+				ResourceName:    "stackit_network_interface.network_interface_simple",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_network_interface.network_interface_simple"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_network_interface.network_interface_simple")
+					}
+					networkId, ok := r.Primary.Attributes["network_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_id")
+					}
+					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_interface_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, networkId, networkInterfaceId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ConfigVariables: testConfigNetworkInterfaceVarsMax,
+				ResourceName:    "stackit_public_ip.public_ip_simple",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_public_ip.public_ip_simple"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_public_ip.public_ip_simple")
+					}
+					publicIpId, ok := r.Primary.Attributes["public_ip_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute public_ip_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, publicIpId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ConfigVariables: testConfigNetworkInterfaceVarsMax,
+				ResourceName:    "stackit_public_ip_associate.nic_public_ip_attach",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_public_ip.public_ip"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_public_ip.public_ip")
+					}
+					publicIpId, ok := r.Primary.Attributes["public_ip_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute public_ip_id")
+					}
+					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_interface_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, publicIpId, networkInterfaceId), nil
+				},
 				ImportState: true,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Network instance
-					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
-					resource.TestCheckResourceAttr("stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["project_id"])),
-					resource.TestCheckResourceAttr("stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["name"])),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv4_prefixes.#"),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv6_prefixes.#"),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
+					resource.TestCheckResourceAttr("stackit_public_ip_associate.nic_public_ip_attach", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_public_ip_associate.nic_public_ip_attach", "public_ip_id",
+						"stackit_public_ip.public_ip_simple", "public_ip_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_public_ip_associate.nic_public_ip_attach", "network_interface_id",
+						"stackit_network_interface.network_interface_simple", "network_interface_id",
+					),
 				),
 			},
 			// Update
@@ -2763,145 +2922,52 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv4_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
-				),
-			},
-			// Deletion is done by the framework implicitly
-		},
-	})
 
-}
-
-func TestAccPublicIp(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckIaaSPublicIpDestroy,
-		Steps: []resource.TestStep{
-
-			// Creation
-			{
-				Config: testAccPublicIpConfig(
-					networkResource["name"],
-					fmt.Sprintf(
-						"[%q]",
-						networkResource["nameserver0"],
-					),
-					networkInterfaceResource["tfName"],
-					networkInterfaceResource["name"],
-					fmt.Sprintf(`
-						resource "stackit_public_ip" "public_ip" {
-							project_id = "%s"
-							labels = {
-								"label1" = "%s"
-							}
-							network_interface_id = %s
-						}
-					`,
-						publicIpResource["project_id"],
-						publicIpResource["label1"],
-						publicIpResource["network_interface_id"],
-					),
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "project_id", publicIpResource["project_id"]),
+					// Public ip
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMaxUpdated["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip", "public_ip_id"),
-					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.label1", publicIpResource["label1"]),
-					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "network_interface_id"),
-				),
-			},
-
-			// Data source
-			{
-				Config: fmt.Sprintf(`
-						%s
-
-						data "stackit_public_ip" "public_ip" {
-							project_id   		 = stackit_public_ip.public_ip.project_id
-							public_ip_id 		 = stackit_public_ip.public_ip.public_ip_id
-						}
-						`,
-					testAccPublicIpConfig(
-						networkResource["name"],
-						fmt.Sprintf(
-							"[%q]",
-							networkResource["nameserver0"],
-						),
-						networkInterfaceResource["tfName"],
-						networkInterfaceResource["name"],
-						fmt.Sprintf(`
-								resource "stackit_public_ip" "public_ip" {
-									project_id = "%s"
-									labels = {
-										"label1" = "%s"
-									}
-									network_interface_id = %s
-								}
-							`,
-							publicIpResource["project_id"],
-							publicIpResource["label1"],
-							publicIpResource["network_interface_id"],
-						),
-					),
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					// Instance
-					resource.TestCheckResourceAttr("data.stackit_public_ip.public_ip", "project_id", publicIpResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip", "ip"),
 					resource.TestCheckResourceAttrPair(
-						"stackit_public_ip.public_ip", "public_ip_id",
-						"data.stackit_public_ip.public_ip", "public_ip_id",
+						"stackit_public_ip.public_ip", "network_interface_id",
+						"stackit_network_interface.network_interface", "network_interface_id",
 					),
-					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.label1", publicIpResource["label1"]),
-					resource.TestCheckResourceAttrSet("data.stackit_public_ip.public_ip", "network_interface_id"),
-				),
-			},
-			// Import
-			{
-				ResourceName: "stackit_public_ip.public_ip",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_public_ip.public_ip"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_public_ip.public_ip")
-					}
-					publicIpId, ok := r.Primary.Attributes["public_ip_id"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find attribute public_ip_id")
-					}
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, publicIpId), nil
-				},
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			// Update
-			{
-				Config: testAccPublicIpConfig(
-					networkResource["name"],
-					fmt.Sprintf(
-						"[%q]",
-						networkResource["nameserver0"],
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMaxUpdated["label"])),
+
+					// Network interface simple
+					resource.TestCheckResourceAttr("stackit_network_interface.network_interface_simple", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMaxUpdated["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface_simple", "network_interface_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_interface.network_interface_simple", "network_id",
+						"stackit_network.network", "network_id",
 					),
-					networkInterfaceResource["tfName"],
-					networkInterfaceResource["name"],
-					fmt.Sprintf(`
-								resource "stackit_public_ip" "public_ip" {
-									project_id = "%s"
-									labels = {
-										"label1" = "%s"
-									}
-								}
-							`,
-						publicIpResource["project_id"],
-						publicIpResource["label1"],
+
+					// Public ip simple
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip_simple", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMaxUpdated["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip_simple", "public_ip_id"),
+					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip_simple", "ip"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_public_ip.public_ip_simple", "network_interface_id",
+						"stackit_network_interface.network_interface_simple", "network_interface_id",
 					),
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "project_id", publicIpResource["project_id"]),
-					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip", "public_ip_id"),
-					resource.TestCheckResourceAttr("stackit_public_ip.public_ip", "labels.label1", publicIpResource["label1"]),
-					resource.TestCheckNoResourceAttr("stackit_public_ip.public_ip", "network_interface_id"),
+					resource.TestCheckResourceAttr("stackit_public_ip.public_ip_simple", "labels.%", "0"),
+
+					// Nic and public ip attach
+					resource.TestCheckResourceAttr("stackit_public_ip_associate.nic_public_ip_attach", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMaxUpdated["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_public_ip_associate.nic_public_ip_attach", "public_ip_id",
+						"stackit_public_ip.public_ip_simple", "public_ip_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_public_ip_associate.nic_public_ip_attach", "network_interface_id",
+						"stackit_network_interface.network_interface_simple", "network_interface_id",
+					),
 				),
 			},
 			// Deletion is done by the framework implicitly
 		},
 	})
+
 }
 
 func TestAccKeyPairMin(t *testing.T) {
