@@ -83,7 +83,8 @@ This guide explains how to configure the STACKIT Loadbalancer product to send me
    # Create a key pair for accessing the server instance
    resource "stackit_key_pair" "keypair" {
      name       = "example-key-pair"
-     public_key = chomp(file("/home/Ruben.Hoenle@stackit.cloud/.ssh/demo/id_ed25519.pub"))
+     # set the path of your public key file here
+     public_key = chomp(file("/home/bob/.ssh/id_ed25519.pub"))
    }
 
    # Create a server instance
