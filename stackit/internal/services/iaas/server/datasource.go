@@ -323,6 +323,10 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 		model.BootVolume = types.ObjectNull(bootVolumeDataTypes)
 	}
 
+	if serverResp.UserData != nil && len(*serverResp.UserData) > 0 {
+		model.UserData = types.StringValue(string(*serverResp.UserData))
+	}
+
 	model.AvailabilityZone = types.StringPointerValue(serverResp.AvailabilityZone)
 	model.ServerId = types.StringValue(serverId)
 	model.MachineType = types.StringPointerValue(serverResp.MachineType)

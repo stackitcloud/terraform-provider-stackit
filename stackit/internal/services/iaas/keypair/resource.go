@@ -107,6 +107,7 @@ func (r *keyPairResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "The name of the SSH key pair.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
