@@ -16,7 +16,6 @@ CDN distribution data source schema.
 ## Example Usage
 
 ```terraform
-# Create a CDN distribution
 resource "stackit_cdn_distribution" "example_distribution" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   config = {
