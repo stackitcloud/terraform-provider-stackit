@@ -32,6 +32,7 @@ func TestToCreatePayload(t *testing.T) {
 						AllowedSourceRanges: nil,
 					},
 					PrivateNetworkOnly: nil,
+					Observability:      &loadbalancer.LoadbalancerOptionObservability{},
 				},
 				TargetPools: nil,
 			},
@@ -76,6 +77,16 @@ func TestToCreatePayload(t *testing.T) {
 							types.StringType,
 							[]attr.Value{types.StringValue("cidr")}),
 						"private_network_only": types.BoolValue(true),
+						"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+							"logs": types.ObjectValueMust(observabilityOptionTypes, map[string]attr.Value{
+								"credentials_ref": types.StringValue("logs-credentials_ref"),
+								"push_url":        types.StringValue("logs-push_url"),
+							}),
+							"metrics": types.ObjectValueMust(observabilityOptionTypes, map[string]attr.Value{
+								"credentials_ref": types.StringValue("metrics-credentials_ref"),
+								"push_url":        types.StringValue("metrics-push_url"),
+							}),
+						}),
 					},
 				),
 				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
@@ -132,6 +143,16 @@ func TestToCreatePayload(t *testing.T) {
 						AllowedSourceRanges: &[]string{"cidr"},
 					},
 					PrivateNetworkOnly: utils.Ptr(true),
+					Observability: &loadbalancer.LoadbalancerOptionObservability{
+						Logs: &loadbalancer.LoadbalancerOptionLogs{
+							CredentialsRef: utils.Ptr("logs-credentials_ref"),
+							PushUrl:        utils.Ptr("logs-push_url"),
+						},
+						Metrics: &loadbalancer.LoadbalancerOptionMetrics{
+							CredentialsRef: utils.Ptr("metrics-credentials_ref"),
+							PushUrl:        utils.Ptr("metrics-push_url"),
+						},
+					},
 				},
 				TargetPools: &[]loadbalancer.TargetPool{
 					{
@@ -290,6 +311,10 @@ func TestMapFields(t *testing.T) {
 						AllowedSourceRanges: nil,
 					},
 					PrivateNetworkOnly: nil,
+					Observability: &loadbalancer.LoadbalancerOptionObservability{
+						Logs:    &loadbalancer.LoadbalancerOptionLogs{},
+						Metrics: &loadbalancer.LoadbalancerOptionMetrics{},
+					},
 				},
 				TargetPools: nil,
 			},
@@ -305,6 +330,16 @@ func TestMapFields(t *testing.T) {
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
 					"acl":                  types.SetNull(types.StringType),
 					"private_network_only": types.BoolNull(),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"logs": types.ObjectValueMust(observabilityOptionTypes, map[string]attr.Value{
+							"credentials_ref": types.StringNull(),
+							"push_url":        types.StringNull(),
+						}),
+						"metrics": types.ObjectValueMust(observabilityOptionTypes, map[string]attr.Value{
+							"credentials_ref": types.StringNull(),
+							"push_url":        types.StringNull(),
+						}),
+					}),
 				}),
 				PrivateAddress: types.StringNull(),
 				TargetPools:    types.ListNull(types.ObjectType{AttrTypes: targetPoolTypes}),
@@ -342,6 +377,16 @@ func TestMapFields(t *testing.T) {
 				}),
 				Options: utils.Ptr(loadbalancer.LoadBalancerOptions{
 					PrivateNetworkOnly: utils.Ptr(true),
+					Observability: &loadbalancer.LoadbalancerOptionObservability{
+						Logs: &loadbalancer.LoadbalancerOptionLogs{
+							CredentialsRef: utils.Ptr("logs_credentials_ref"),
+							PushUrl:        utils.Ptr("logs_push_url"),
+						},
+						Metrics: &loadbalancer.LoadbalancerOptionMetrics{
+							CredentialsRef: utils.Ptr("metrics_credentials_ref"),
+							PushUrl:        utils.Ptr("metrics_push_url"),
+						},
+					},
 				}),
 				TargetPools: utils.Ptr([]loadbalancer.TargetPool{
 					{
@@ -405,6 +450,16 @@ func TestMapFields(t *testing.T) {
 					map[string]attr.Value{
 						"private_network_only": types.BoolValue(true),
 						"acl":                  types.SetNull(types.StringType),
+						"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+							"logs": types.ObjectValueMust(observabilityOptionTypes, map[string]attr.Value{
+								"credentials_ref": types.StringValue("logs_credentials_ref"),
+								"push_url":        types.StringValue("logs_push_url"),
+							}),
+							"metrics": types.ObjectValueMust(observabilityOptionTypes, map[string]attr.Value{
+								"credentials_ref": types.StringValue("metrics_credentials_ref"),
+								"push_url":        types.StringValue("metrics_push_url"),
+							}),
+						}),
 					},
 				),
 				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
@@ -466,6 +521,16 @@ func TestMapFields(t *testing.T) {
 						AllowedSourceRanges: utils.Ptr([]string{"cidr"}),
 					},
 					PrivateNetworkOnly: nil, // API sets this to nil if it's false in the request
+					Observability: &loadbalancer.LoadbalancerOptionObservability{
+						Logs: &loadbalancer.LoadbalancerOptionLogs{
+							CredentialsRef: utils.Ptr("logs_credentials_ref"),
+							PushUrl:        utils.Ptr("logs_push_url"),
+						},
+						Metrics: &loadbalancer.LoadbalancerOptionMetrics{
+							CredentialsRef: utils.Ptr("metrics_credentials_ref"),
+							PushUrl:        utils.Ptr("metrics_push_url"),
+						},
+					},
 				}),
 				TargetPools: utils.Ptr([]loadbalancer.TargetPool{
 					{
@@ -531,6 +596,16 @@ func TestMapFields(t *testing.T) {
 							types.StringType,
 							[]attr.Value{types.StringValue("cidr")}),
 						"private_network_only": types.BoolValue(false),
+						"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+							"logs": types.ObjectValueMust(observabilityOptionTypes, map[string]attr.Value{
+								"credentials_ref": types.StringValue("logs_credentials_ref"),
+								"push_url":        types.StringValue("logs_push_url"),
+							}),
+							"metrics": types.ObjectValueMust(observabilityOptionTypes, map[string]attr.Value{
+								"credentials_ref": types.StringValue("metrics_credentials_ref"),
+								"push_url":        types.StringValue("metrics_push_url"),
+							}),
+						}),
 					},
 				),
 				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
@@ -585,6 +660,16 @@ func TestMapFields(t *testing.T) {
 				model.Options = types.ObjectValueMust(optionsTypes, map[string]attr.Value{
 					"private_network_only": types.BoolValue(*tt.modelPrivateNetworkOnly),
 					"acl":                  types.SetNull(types.StringType),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"logs": types.ObjectValueMust(observabilityOptionTypes, map[string]attr.Value{
+							"credentials_ref": types.StringNull(),
+							"push_url":        types.StringNull(),
+						}),
+						"metrics": types.ObjectValueMust(observabilityOptionTypes, map[string]attr.Value{
+							"credentials_ref": types.StringNull(),
+							"push_url":        types.StringNull(),
+						}),
+					}),
 				})
 			}
 			err := mapFields(context.Background(), tt.input, model, tt.region)

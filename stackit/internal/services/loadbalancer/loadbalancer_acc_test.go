@@ -67,6 +67,15 @@ var testConfigVarsMax = config.Variables{
 	"use_source_ip_address":           config.StringVariable("true"),
 	"private_network_only":            config.StringVariable("false"),
 	"acl":                             config.StringVariable("192.168.0.0/24"),
+
+	"observability_logs_push_url":               config.StringVariable("https://logs.observability.dummy.stackit.cloud"),
+	"observability_metrics_push_url":            config.StringVariable("https://metrics.observability.dummy.stackit.cloud"),
+	"observability_credential_logs_name":        config.StringVariable(fmt.Sprintf("tf-acc-l%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"observability_credential_logs_username":    config.StringVariable("obs-cred-logs-username"),
+	"observability_credential_logs_password":    config.StringVariable("obs-cred-logs-password"),
+	"observability_credential_metrics_name":     config.StringVariable(fmt.Sprintf("tf-acc-m%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"observability_credential_metrics_username": config.StringVariable("obs-cred-metrics-username"),
+	"observability_credential_metrics_password": config.StringVariable("obs-cred-metrics-password"),
 }
 
 func configVarsMinUpdated() config.Variables {
@@ -93,7 +102,7 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 				ConfigVariables: testConfigVarsMin,
 				Config:          testutil.LoadBalancerProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Load balancer instance
+					// Load balancer instance resource
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "name", testutil.ConvertConfigVariable(testConfigVarsMin["loadbalancer_name"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.name", testutil.ConvertConfigVariable(testConfigVarsMin["target_pool_name"])),
@@ -107,12 +116,17 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "networks.0.network_id"),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "networks.0.role", testutil.ConvertConfigVariable(testConfigVarsMin["network_role"])),
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "external_address"),
+					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.logs.credentials_ref"),
+					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.logs.push_url"),
+					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
+					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.metrics.push_url"),
 
-					// observability credentials
+					// Loadbalancer observability credentials resource
 					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.obs_credential", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.obs_credential", "display_name", testutil.ConvertConfigVariable(testConfigVarsMin["obs_display_name"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.obs_credential", "username", testutil.ConvertConfigVariable(testConfigVarsMin["obs_username"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.obs_credential", "password", testutil.ConvertConfigVariable(testConfigVarsMin["obs_password"])),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer_observability_credential.obs_credential", "credentials_ref"),
 				),
 			},
 			// Data source
@@ -151,6 +165,10 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "networks.0.network_id"),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "networks.0.role", testutil.ConvertConfigVariable(testConfigVarsMin["network_role"])),
 					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "external_address"),
+					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.logs.credentials_ref"),
+					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.logs.push_url"),
+					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
+					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.metrics.push_url"),
 				)},
 			// Import
 			{
@@ -197,7 +215,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 				ConfigVariables: testConfigVarsMax,
 				Config:          testutil.LoadBalancerProviderConfig() + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Load balancer instance
+					// Load balancer instance resource
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "name", testutil.ConvertConfigVariable(testConfigVarsMax["loadbalancer_name"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.name", testutil.ConvertConfigVariable(testConfigVarsMax["target_pool_name"])),
@@ -222,6 +240,25 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.session_persistence.use_source_ip_address", testutil.ConvertConfigVariable(testConfigVarsMax["use_source_ip_address"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "options.private_network_only", testutil.ConvertConfigVariable(testConfigVarsMax["private_network_only"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "options.acl.0", testutil.ConvertConfigVariable(testConfigVarsMax["acl"])),
+
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "options.observability.logs.credentials_ref"),
+					resource.TestCheckResourceAttrPair("stackit_loadbalancer_observability_credential.logs", "credentials_ref", "stackit_loadbalancer.loadbalancer", "options.observability.logs.credentials_ref"),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.logs.push_url", testutil.ConvertConfigVariable(testConfigVarsMax["observability_logs_push_url"])),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
+					resource.TestCheckResourceAttrPair("stackit_loadbalancer_observability_credential.metrics", "credentials_ref", "stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.metrics.push_url", testutil.ConvertConfigVariable(testConfigVarsMax["observability_metrics_push_url"])),
+
+					// Loadbalancer observability credential resource
+					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.logs", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.logs", "display_name", testutil.ConvertConfigVariable(testConfigVarsMax["observability_credential_logs_name"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.logs", "username", testutil.ConvertConfigVariable(testConfigVarsMax["observability_credential_logs_username"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.logs", "password", testutil.ConvertConfigVariable(testConfigVarsMax["observability_credential_logs_password"])),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer_observability_credential.logs", "credentials_ref"),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.metrics", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.metrics", "display_name", testutil.ConvertConfigVariable(testConfigVarsMax["observability_credential_metrics_name"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.metrics", "username", testutil.ConvertConfigVariable(testConfigVarsMax["observability_credential_metrics_username"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.metrics", "password", testutil.ConvertConfigVariable(testConfigVarsMax["observability_credential_metrics_password"])),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer_observability_credential.metrics", "credentials_ref"),
 				),
 			},
 			// Data source
@@ -271,6 +308,13 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.session_persistence.use_source_ip_address", testutil.ConvertConfigVariable(testConfigVarsMax["use_source_ip_address"])),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.acl.0", testutil.ConvertConfigVariable(testConfigVarsMax["acl"])),
+
+					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "options.observability.logs.credentials_ref"),
+					resource.TestCheckResourceAttrPair("stackit_loadbalancer_observability_credential.logs", "credentials_ref", "data.stackit_loadbalancer.loadbalancer", "options.observability.logs.credentials_ref"),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.logs.push_url", testutil.ConvertConfigVariable(testConfigVarsMax["observability_logs_push_url"])),
+					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
+					resource.TestCheckResourceAttrPair("stackit_loadbalancer_observability_credential.metrics", "credentials_ref", "data.stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.metrics.push_url", testutil.ConvertConfigVariable(testConfigVarsMax["observability_metrics_push_url"])),
 				)},
 			// Import
 			{

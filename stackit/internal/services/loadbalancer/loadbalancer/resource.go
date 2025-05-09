@@ -100,14 +100,36 @@ var networkTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.Options
 type options struct {
-	ACL                types.Set  `tfsdk:"acl"`
-	PrivateNetworkOnly types.Bool `tfsdk:"private_network_only"`
+	ACL                types.Set    `tfsdk:"acl"`
+	PrivateNetworkOnly types.Bool   `tfsdk:"private_network_only"`
+	Observability      types.Object `tfsdk:"observability"`
 }
 
 // Types corresponding to options
 var optionsTypes = map[string]attr.Type{
 	"acl":                  types.SetType{ElemType: types.StringType},
 	"private_network_only": types.BoolType,
+	"observability":        types.ObjectType{AttrTypes: observabilityTypes},
+}
+
+type observability struct {
+	Logs    types.Object `tfsdk:"logs"`
+	Metrics types.Object `tfsdk:"metrics"`
+}
+
+var observabilityTypes = map[string]attr.Type{
+	"logs":    types.ObjectType{AttrTypes: observabilityOptionTypes},
+	"metrics": types.ObjectType{AttrTypes: observabilityOptionTypes},
+}
+
+type observabilityOption struct {
+	CredentialsRef types.String `tfsdk:"credentials_ref"`
+	PushUrl        types.String `tfsdk:"push_url"`
+}
+
+var observabilityOptionTypes = map[string]attr.Type{
+	"credentials_ref": types.StringType,
+	"push_url":        types.StringType,
 }
 
 // Struct corresponding to Model.TargetPools[i]
@@ -257,38 +279,45 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 	roleOptions := []string{"ROLE_UNSPECIFIED", "ROLE_LISTENERS_AND_TARGETS", "ROLE_LISTENERS", "ROLE_TARGETS"}
 
 	descriptions := map[string]string{
-		"main":                        "Load Balancer resource schema.",
-		"id":                          "Terraform's internal resource ID. It is structured as \"`project_id`\",\"region\",\"`name`\".",
-		"project_id":                  "STACKIT project ID to which the Load Balancer is associated.",
-		"external_address":            "External Load Balancer IP address where this Load Balancer is exposed.",
-		"listeners":                   "List of all listeners which will accept traffic. Limited to 20.",
-		"port":                        "Port number where we listen for traffic.",
-		"protocol":                    "Protocol is the highest network protocol we understand to load balance. " + utils.SupportedValuesDocumentation(protocolOptions),
-		"target_pool":                 "Reference target pool by target pool name.",
-		"name":                        "Load balancer name.",
-		"networks":                    "List of networks that listeners and targets reside in.",
-		"network_id":                  "Openstack network ID.",
-		"role":                        "The role defines how the load balancer is using the network. " + utils.SupportedValuesDocumentation(roleOptions),
-		"options":                     "Defines any optional functionality you want to have enabled on your load balancer.",
-		"acl":                         "Load Balancer is accessible only from an IP address in this range.",
-		"private_network_only":        "If true, Load Balancer is accessible only via a private network IP address.",
-		"session_persistence":         "Here you can setup various session persistence options, so far only \"`use_source_ip_address`\" is supported.",
-		"use_source_ip_address":       "If true then all connections from one source IP address are redirected to the same target. This setting changes the load balancing algorithm to Maglev.",
-		"server_name_indicators":      "A list of domain names to match in order to pass TLS traffic to the target pool in the current listener",
-		"server_name_indicators.name": "A domain name to match in order to pass TLS traffic to the target pool in the current listener",
-		"private_address":             "Transient private Load Balancer IP address. It can change any time.",
-		"target_pools":                "List of all target pools which will be used in the Load Balancer. Limited to 20.",
-		"healthy_threshold":           "Healthy threshold of the health checking.",
-		"interval":                    "Interval duration of health checking in seconds.",
-		"interval_jitter":             "Interval duration threshold of the health checking in seconds.",
-		"timeout":                     "Active health checking timeout duration in seconds.",
-		"unhealthy_threshold":         "Unhealthy threshold of the health checking.",
-		"target_pools.name":           "Target pool name.",
-		"target_port":                 "Identical port number where each target listens for traffic.",
-		"targets":                     "List of all targets which will be used in the pool. Limited to 1000.",
-		"targets.display_name":        "Target display name",
-		"ip":                          "Target IP",
-		"region":                      "The resource region. If not defined, the provider region is used.",
+		"main":                                  "Load Balancer resource schema.",
+		"id":                                    "Terraform's internal resource ID. It is structured as \"`project_id`\",\"region\",\"`name`\".",
+		"project_id":                            "STACKIT project ID to which the Load Balancer is associated.",
+		"external_address":                      "External Load Balancer IP address where this Load Balancer is exposed.",
+		"listeners":                             "List of all listeners which will accept traffic. Limited to 20.",
+		"port":                                  "Port number where we listen for traffic.",
+		"protocol":                              "Protocol is the highest network protocol we understand to load balance. " + utils.SupportedValuesDocumentation(protocolOptions),
+		"target_pool":                           "Reference target pool by target pool name.",
+		"name":                                  "Load balancer name.",
+		"networks":                              "List of networks that listeners and targets reside in.",
+		"network_id":                            "Openstack network ID.",
+		"role":                                  "The role defines how the load balancer is using the network. " + utils.SupportedValuesDocumentation(roleOptions),
+		"observability":                         "We offer Load Balancer metrics observability via ARGUS or external solutions. Not changeable after creation.",
+		"observability_logs":                    "Observability logs configuration. Not changeable after creation.",
+		"observability_logs_credentials_ref":    "Credentials reference for logs. Not changeable after creation.",
+		"observability_logs_push_url":           "The ARGUS/Loki remote write Push URL to ship the logs to. Not changeable after creation.",
+		"observability_metrics":                 "Observability metrics configuration. Not changeable after creation.",
+		"observability_metrics_credentials_ref": "Credentials reference for metrics. Not changeable after creation.",
+		"observability_metrics_push_url":        "The ARGUS/Prometheus remote write Push URL to ship the metrics to. Not changeable after creation.",
+		"options":                               "Defines any optional functionality you want to have enabled on your load balancer.",
+		"acl":                                   "Load Balancer is accessible only from an IP address in this range.",
+		"private_network_only":                  "If true, Load Balancer is accessible only via a private network IP address.",
+		"session_persistence":                   "Here you can setup various session persistence options, so far only \"`use_source_ip_address`\" is supported.",
+		"use_source_ip_address":                 "If true then all connections from one source IP address are redirected to the same target. This setting changes the load balancing algorithm to Maglev.",
+		"server_name_indicators":                "A list of domain names to match in order to pass TLS traffic to the target pool in the current listener",
+		"server_name_indicators.name":           "A domain name to match in order to pass TLS traffic to the target pool in the current listener",
+		"private_address":                       "Transient private Load Balancer IP address. It can change any time.",
+		"target_pools":                          "List of all target pools which will be used in the Load Balancer. Limited to 20.",
+		"healthy_threshold":                     "Healthy threshold of the health checking.",
+		"interval":                              "Interval duration of health checking in seconds.",
+		"interval_jitter":                       "Interval duration threshold of the health checking in seconds.",
+		"timeout":                               "Active health checking timeout duration in seconds.",
+		"unhealthy_threshold":                   "Unhealthy threshold of the health checking.",
+		"target_pools.name":                     "Target pool name.",
+		"target_port":                           "Identical port number where each target listens for traffic.",
+		"targets":                               "List of all targets which will be used in the pool. Limited to 1000.",
+		"targets.display_name":                  "Target display name",
+		"ip":                                    "Target IP",
+		"region":                                "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -464,6 +493,51 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 						PlanModifiers: []planmodifier.Bool{
 							boolplanmodifier.RequiresReplace(),
 							boolplanmodifier.UseStateForUnknown(),
+						},
+					},
+					"observability": schema.SingleNestedAttribute{
+						Description: descriptions["observability"],
+						Optional:    true,
+						Computed:    true,
+						PlanModifiers: []planmodifier.Object{
+							// API docs says observability options are not changeable after creation
+							objectplanmodifier.RequiresReplace(),
+						},
+						Attributes: map[string]schema.Attribute{
+							"logs": schema.SingleNestedAttribute{
+								Description: descriptions["observability_logs"],
+								Optional:    true,
+								Computed:    true,
+								Attributes: map[string]schema.Attribute{
+									"credentials_ref": schema.StringAttribute{
+										Description: descriptions["observability_logs_credentials_ref"],
+										Optional:    true,
+										Computed:    true,
+									},
+									"push_url": schema.StringAttribute{
+										Description: descriptions["observability_logs_credentials_ref"],
+										Optional:    true,
+										Computed:    true,
+									},
+								},
+							},
+							"metrics": schema.SingleNestedAttribute{
+								Description: descriptions["observability_metrics"],
+								Optional:    true,
+								Computed:    true,
+								Attributes: map[string]schema.Attribute{
+									"credentials_ref": schema.StringAttribute{
+										Description: descriptions["observability_metrics_credentials_ref"],
+										Optional:    true,
+										Computed:    true,
+									},
+									"push_url": schema.StringAttribute{
+										Description: descriptions["observability_metrics_credentials_ref"],
+										Optional:    true,
+										Computed:    true,
+									},
+								},
+							},
 						},
 					},
 				},
@@ -903,6 +977,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 	if model.Options.IsNull() || model.Options.IsUnknown() {
 		return &loadbalancer.LoadBalancerOptions{
 			AccessControl: &loadbalancer.LoadbalancerOptionAccessControl{},
+			Observability: &loadbalancer.LoadbalancerOptionObservability{},
 		}, nil
 	}
 
@@ -922,8 +997,40 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 		accessControlPayload.AllowedSourceRanges = &aclModel
 	}
 
+	observabilityPayload := &loadbalancer.LoadbalancerOptionObservability{}
+	if !(optionsModel.Observability.IsNull() || optionsModel.Observability.IsUnknown()) {
+		observabilityModel := observability{}
+		diags := optionsModel.Observability.As(ctx, &observabilityModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting observability: %w", core.DiagsToError(diags))
+		}
+
+		// observability logs
+		observabilityLogsModel := observabilityOption{}
+		diags = observabilityModel.Logs.As(ctx, &observabilityLogsModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting observability logs: %w", core.DiagsToError(diags))
+		}
+		observabilityPayload.Logs = &loadbalancer.LoadbalancerOptionLogs{
+			CredentialsRef: observabilityLogsModel.CredentialsRef.ValueStringPointer(),
+			PushUrl:        observabilityLogsModel.PushUrl.ValueStringPointer(),
+		}
+
+		// observability metrics
+		observabilityMetricsModel := observabilityOption{}
+		diags = observabilityModel.Metrics.As(ctx, &observabilityMetricsModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting observability metrics: %w", core.DiagsToError(diags))
+		}
+		observabilityPayload.Metrics = &loadbalancer.LoadbalancerOptionMetrics{
+			CredentialsRef: observabilityMetricsModel.CredentialsRef.ValueStringPointer(),
+			PushUrl:        observabilityMetricsModel.PushUrl.ValueStringPointer(),
+		}
+	}
+
 	payload := loadbalancer.LoadBalancerOptions{
 		AccessControl:      accessControlPayload,
+		Observability:      observabilityPayload,
 		PrivateNetworkOnly: conversion.BoolValueToPointer(optionsModel.PrivateNetworkOnly),
 	}
 
@@ -1248,6 +1355,42 @@ func mapOptions(ctx context.Context, loadBalancerResp *loadbalancer.LoadBalancer
 	if err != nil {
 		return fmt.Errorf("mapping field ACL: %w", err)
 	}
+
+	observabilityLogsMap := map[string]attr.Value{
+		"credentials_ref": types.StringNull(),
+		"push_url":        types.StringNull(),
+	}
+	if loadBalancerResp.Options.HasObservability() && loadBalancerResp.Options.Observability.HasLogs() {
+		observabilityLogsMap["credentials_ref"] = types.StringPointerValue(loadBalancerResp.Options.Observability.Logs.CredentialsRef)
+		observabilityLogsMap["push_url"] = types.StringPointerValue(loadBalancerResp.Options.Observability.Logs.PushUrl)
+	}
+	observabilityLogsTF, diags := types.ObjectValue(observabilityOptionTypes, observabilityLogsMap)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	observabilityMetricsMap := map[string]attr.Value{
+		"credentials_ref": types.StringNull(),
+		"push_url":        types.StringNull(),
+	}
+	if loadBalancerResp.Options.HasObservability() && loadBalancerResp.Options.Observability.HasMetrics() {
+		observabilityMetricsMap["credentials_ref"] = types.StringPointerValue(loadBalancerResp.Options.Observability.Metrics.CredentialsRef)
+		observabilityMetricsMap["push_url"] = types.StringPointerValue(loadBalancerResp.Options.Observability.Metrics.PushUrl)
+	}
+	observabilityMetricsTF, diags := types.ObjectValue(observabilityOptionTypes, observabilityMetricsMap)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	observabilityMap := map[string]attr.Value{
+		"logs":    observabilityLogsTF,
+		"metrics": observabilityMetricsTF,
+	}
+	observabilityTF, diags := types.ObjectValue(observabilityTypes, observabilityMap)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+	optionsMap["observability"] = observabilityTF
 
 	optionsTF, diags := types.ObjectValue(optionsTypes, optionsMap)
 	if diags.HasError() {

@@ -218,4 +218,30 @@ Optional:
 Optional:
 
 - `acl` (Set of String) Load Balancer is accessible only from an IP address in this range.
+- `observability` (Attributes) We offer Load Balancer metrics observability via ARGUS or external solutions. Not changeable after creation. (see [below for nested schema](#nestedatt--options--observability))
 - `private_network_only` (Boolean) If true, Load Balancer is accessible only via a private network IP address.
+
+<a id="nestedatt--options--observability"></a>
+### Nested Schema for `options.observability`
+
+Optional:
+
+- `logs` (Attributes) Observability logs configuration. Not changeable after creation. (see [below for nested schema](#nestedatt--options--observability--logs))
+- `metrics` (Attributes) Observability metrics configuration. Not changeable after creation. (see [below for nested schema](#nestedatt--options--observability--metrics))
+
+<a id="nestedatt--options--observability--logs"></a>
+### Nested Schema for `options.observability.logs`
+
+Optional:
+
+- `credentials_ref` (String) Credentials reference for logs. Not changeable after creation.
+- `push_url` (String) Credentials reference for logs. Not changeable after creation.
+
+
+<a id="nestedatt--options--observability--metrics"></a>
+### Nested Schema for `options.observability.metrics`
+
+Optional:
+
+- `credentials_ref` (String) Credentials reference for metrics. Not changeable after creation.
+- `push_url` (String) Credentials reference for metrics. Not changeable after creation.

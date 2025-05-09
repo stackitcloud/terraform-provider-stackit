@@ -22,6 +22,15 @@ variable "use_source_ip_address" {}
 variable "private_network_only" {}
 variable "acl" {}
 
+variable "observability_logs_push_url" {}
+variable "observability_metrics_push_url" {}
+variable "observability_credential_logs_name" {}
+variable "observability_credential_logs_username" {}
+variable "observability_credential_logs_password" {}
+variable "observability_credential_metrics_name" {}
+variable "observability_credential_metrics_username" {}
+variable "observability_credential_metrics_password" {}
+
 resource "stackit_network" "network" {
   project_id       = var.project_id
   name             = var.network_name
@@ -108,6 +117,31 @@ resource "stackit_loadbalancer" "loadbalancer" {
   options = {
     private_network_only = var.private_network_only
     acl                  = [var.acl]
+    observability = {
+    	logs = {
+    		credentials_ref = stackit_loadbalancer_observability_credential.logs.credentials_ref
+    		push_url = var.observability_logs_push_url
+    	}
+    	metrics = {
+    		credentials_ref = stackit_loadbalancer_observability_credential.metrics.credentials_ref
+    		push_url = var.observability_metrics_push_url
+    	}
+    }
   }
   external_address = stackit_public_ip.public_ip.ip
 }
+
+resource "stackit_loadbalancer_observability_credential" "logs" {
+  project_id   = var.project_id
+  display_name = var.observability_credential_logs_name
+  username     = var.observability_credential_logs_username
+  password     = var.observability_credential_logs_password
+}
+
+resource "stackit_loadbalancer_observability_credential" "metrics" {
+  project_id   = var.project_id
+  display_name = var.observability_credential_metrics_name
+  username     = var.observability_credential_metrics_username
+  password     = var.observability_credential_metrics_password
+}
+
