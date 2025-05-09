@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit"
 )
 
@@ -519,4 +520,89 @@ func ConvertConfigVariable(variable config.Variable) string {
 		return string(tmpByteArray[1 : len(tmpByteArray)-1])
 	}
 	return string(tmpByteArray)
+}
+
+func convertToVariable(val any) config.Variable {
+	if val == nil {
+		return nil
+	}
+
+	switch t := val.(type) {
+	case string:
+		return config.StringVariable(t)
+	case float32:
+		return config.FloatVariable(t)
+	case float64:
+		return config.FloatVariable(t)
+	case int:
+		return config.IntegerVariable(t)
+	case int8:
+		return config.IntegerVariable(t)
+	case int16:
+		return config.IntegerVariable(t)
+	case int32:
+		return config.IntegerVariable(t)
+	case int64:
+		return config.IntegerVariable(t)
+	case uint:
+		return config.IntegerVariable(t)
+	case uint8:
+		return config.IntegerVariable(t)
+	case uint16:
+		return config.IntegerVariable(t)
+	case uint32:
+		return config.IntegerVariable(t)
+	case uint64:
+		return config.IntegerVariable(t)
+	case bool:
+		return config.BoolVariable(t)
+	case map[string]any:
+		result := make(map[string]config.Variable)
+		for k, v := range t {
+			result[k] = convertToVariable(v)
+		}
+		return config.MapVariable(result)
+
+	case []any:
+		vals := make([]config.Variable, len(t))
+		for i, l := 0, len(t); i < l; i++ {
+			vals[i] = convertToVariable(t[i])
+		}
+		return config.ListVariable(vals...)
+	case []string:
+		vals := make([]config.Variable, len(t))
+		for i, l := 0, len(t); i < l; i++ {
+			vals[i] = convertToVariable(t[i])
+		}
+		return config.ListVariable(vals...)
+	default:
+		panic(fmt.Sprintf("cannot convert var of type %T", val))
+	}
+}
+
+func ConvertToVariables(val map[string]any) config.Variables {
+	if val == nil {
+		return nil
+	}
+	result := config.Variables{}
+	for k, v := range val {
+		result[k] = convertToVariable(v)
+	}
+	return result
+}
+
+func TestCheckResourceAttr(name, key string, val any) resource.TestCheckFunc {
+	var v string
+	if val != nil {
+
+		switch t := val.(type) {
+		case string:
+			v = t
+		case fmt.Stringer:
+			v = t.String()
+		default:
+			v = fmt.Sprintf("%v", val)
+		}
+	}
+	return resource.TestCheckResourceAttr(name, key, v)
 }
