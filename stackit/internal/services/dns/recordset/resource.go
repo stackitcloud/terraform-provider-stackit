@@ -176,8 +176,7 @@ func (r *recordSetResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			},
 			"type": schema.StringAttribute{
 				Description: "The record set type. E.g. `A` or `CNAME`",
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
