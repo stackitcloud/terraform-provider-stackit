@@ -53,6 +53,7 @@ var (
 	ArgusCustomEndpoint           = os.Getenv("TF_ACC_ARGUS_CUSTOM_ENDPOINT")
 	CdnCustomEndpoint             = os.Getenv("TF_ACC_CDN_CUSTOM_ENDPOINT")
 	DnsCustomEndpoint             = os.Getenv("TF_ACC_DNS_CUSTOM_ENDPOINT")
+	GitCustomEndpoint             = os.Getenv("TF_ACC_GIT_CUSTOM_ENDPOINT")
 	IaaSCustomEndpoint            = os.Getenv("TF_ACC_IAAS_CUSTOM_ENDPOINT")
 	LoadBalancerCustomEndpoint    = os.Getenv("TF_ACC_LOADBALANCER_CUSTOM_ENDPOINT")
 	LogMeCustomEndpoint           = os.Getenv("TF_ACC_LOGME_CUSTOM_ENDPOINT")
@@ -430,6 +431,23 @@ func ServiceAccountProviderConfig() string {
 			enable_beta_resources = true
 		}`,
 		ServiceAccountCustomEndpoint,
+	)
+}
+
+func GitProviderConfig() string {
+	if GitCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			default_region = "eu01"
+			enable_beta_resources = true
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			git_custom_endpoint = "%s"
+			enable_beta_resources = true
+		}`,
+		GitCustomEndpoint,
 	)
 }
 

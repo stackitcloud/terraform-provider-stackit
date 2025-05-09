@@ -158,6 +158,8 @@ github.com/stackitcloud/stackit-sdk-go/services/cdn v1.0.1 h1:fWCWCefwgPTJ0BIbFQ
 github.com/stackitcloud/stackit-sdk-go/services/cdn v1.0.1/go.mod h1:Gd+M/UZR0rIaHRXhJzkb0r7kl/nDRmpcmqnOPN5fCSQ=
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.13.2 h1:6rb3EM0yXuMIBd1U6WsJoMzEiVaHC3WQFWFvT23OE4Y=
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.13.2/go.mod h1:PMHoavoIaRZpkI9BA0nsnRjGoHASVSBon45XB3QyhMA=
+github.com/stackitcloud/stackit-sdk-go/services/git v0.3.2 h1:AguA1s9FuwLmSyvGNv4I/O9u7c/x7cMwyCsrM6Tm2SU=
+github.com/stackitcloud/stackit-sdk-go/services/git v0.3.2/go.mod h1:XhXHJpOVC9Rpwyf1G+EpMbprBafH9aZb8vWBdR+z0WM=
 github.com/stackitcloud/stackit-sdk-go/services/iaas v0.22.1 h1:JXcLcbVesTtwVVb+jJjU3o0FmSpXBRnOw6PVETaeK+E=
 github.com/stackitcloud/stackit-sdk-go/services/iaas v0.22.1/go.mod h1:QNH50Pq0Hu21lLDOwa02PIjRjTl0LfEdHoz5snGQRn8=
 github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.0.2 h1:5rVt3n7kDJvJQxFCtxfx8uZI9PGkvJY9fVJ4yar10Uc=

@@ -173,7 +173,7 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	model.Name = types.StringValue(serviceAccountName)
 	err = mapFields(serviceAccountResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account", fmt.Sprintf("Processing API response: %v", err))
 		return
 	}
 
