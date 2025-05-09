@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	gitUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/git/utils"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -16,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/git"
 	"github.com/stackitcloud/stackit-sdk-go/services/git/wait"
@@ -64,15 +66,8 @@ var descriptions = map[string]string{
 
 // Configure sets up the API client for the git instance resource.
 func (g *gitResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	// Prevent potential panics if the provider is not properly configured.
-	if req.ProviderData == nil {
-		return
-	}
-
-	// Validate provider data type before proceeding.
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -81,27 +76,10 @@ func (g *gitResource) Configure(ctx context.Context, req resource.ConfigureReque
 		return
 	}
 
-	// Initialize the API client with the appropriate authentication and endpoint settings.
-	var apiClient *git.APIClient
-	var err error
-	if providerData.GitCustomEndpoint != "" {
-		apiClient, err = git.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.GitCustomEndpoint),
-		)
-	} else {
-		apiClient, err = git.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-		)
-	}
-
-	// Handle API client initialization errors.
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+	apiClient := gitUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	// Store the initialized client.
 	g.client = apiClient
 	tflog.Info(ctx, "git client configured")
 }
