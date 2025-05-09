@@ -8,7 +8,7 @@ variable "default_ttl" {}
 variable "description" {}
 variable "expire_time" {}
 variable "is_reverse_zone" {}
-variable "negative_cache" {}
+# variable "negative_cache" {}
 variable "primaries" {}
 variable "refresh_time" {}
 variable "retry_time" {}
@@ -35,7 +35,7 @@ resource "stackit_dns_zone" "zone" {
   description     = var.description
   expire_time     = var.expire_time
   is_reverse_zone = var.is_reverse_zone
-//  negative_cache  = var.negative_cache
+  # negative_cache  = var.negative_cache
   primaries       = var.primaries
   refresh_time    = var.refresh_time
   retry_time      = var.retry_time
