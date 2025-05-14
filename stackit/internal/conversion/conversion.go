@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -166,4 +168,18 @@ func ToJSONMapPartialUpdatePayload(ctx context.Context, current, desired types.M
 		}
 	}
 	return mapPayload, nil
+}
+
+func ParseProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (core.ProviderData, bool) {
+	// Prevent panic if the provider has not been configured.
+	if providerData == nil {
+		return core.ProviderData{}, false
+	}
+
+	stackitProviderData, ok := providerData.(core.ProviderData)
+	if !ok {
+		core.LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", providerData))
+		return core.ProviderData{}, false
+	}
+	return stackitProviderData, true
 }
