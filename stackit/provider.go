@@ -439,6 +439,8 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	providerData.RoundTripper = roundTripper
 	resp.DataSourceData = providerData
 	resp.ResourceData = providerData
+
+	providerData.Version = p.version
 }
 
 // DataSources defines the data sources implemented in the provider.

@@ -46,6 +46,8 @@ type ProviderData struct {
 	ServiceAccountCustomEndpoint    string
 	EnableBetaResources             bool
 	Experiments                     []string
+
+	Version string // version of the STACKIT Terraform provider
 }
 
 // GetRegion returns the effective region for the provider, falling back to the deprecated _region_ attribute
