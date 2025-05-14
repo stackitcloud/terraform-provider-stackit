@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -34,34 +36,18 @@ func NewCustomDomainDataSource() datasource.DataSource {
 }
 
 func (d *customDomainDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
+
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_cdn_custom_domain", "datasource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var apiClient *cdn.APIClient
-	var err error
-	if providerData.CdnCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "cdn_custom_endpoint", providerData.CdnCustomEndpoint)
-		apiClient, err = cdn.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.CdnCustomEndpoint),
-		)
-	} else {
-		apiClient, err = cdn.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-		)
-	}
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+	apiClient := cdnUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 	d.client = apiClient
