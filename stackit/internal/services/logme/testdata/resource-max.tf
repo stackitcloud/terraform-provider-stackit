@@ -52,7 +52,6 @@ resource "stackit_logme_instance" "instance" {
     max_disk_threshold      = var.params_max_disk_threshold
     metrics_frequency       = var.params_metrics_frequency
     metrics_prefix          = var.params_metrics_prefix
-    #    monitoring_instance_id   = var.params_monitoring_instance_id
     opensearch_tls_ciphers   = [var.params_opensearch_tls_cipher1, var.params_opensearch_tls_cipher2]
     opensearch_tls_protocols = [var.params_opensearch_tls_protocol1, var.params_opensearch_tls_protocol2]
     sgw_acl                  = var.params_sgw_acl

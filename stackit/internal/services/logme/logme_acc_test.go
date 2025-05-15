@@ -37,7 +37,7 @@ var (
 var testConfigVarsMin = config.Variables{
 	"project_id":    config.StringVariable(testutil.ProjectId),
 	"name":          config.StringVariable(minTestName),
-	"plan_id":       config.StringVariable("7a54492c-8a2e-4d3c-b6c2-a4f20cb65912"), // stackit-logme2-1.4.10-singl)
+	"plan_id":       config.StringVariable("7a54492c-8a2e-4d3c-b6c2-a4f20cb65912"), // stackit-logme2-1.4.10-single
 	"plan_name":     config.StringVariable("stackit-logme2-1.4.10-single"),
 	"logme_version": config.StringVariable("2"),
 }
@@ -45,7 +45,7 @@ var testConfigVarsMin = config.Variables{
 var testConfigVarsMax = config.Variables{
 	"project_id":    config.StringVariable(testutil.ProjectId),
 	"name":          config.StringVariable(maxTestName),
-	"plan_id":       config.StringVariable("7a54492c-8a2e-4d3c-b6c2-a4f20cb65912"), // stackit-logme2-1.4.10-singl)
+	"plan_id":       config.StringVariable("7a54492c-8a2e-4d3c-b6c2-a4f20cb65912"), // stackit-logme2-1.4.10-single
 	"logme_version": config.StringVariable("2"),
 
 	"plan_name":                       config.StringVariable("stackit-logme2-1.4.10-single"),
@@ -111,7 +111,7 @@ func TestAccLogMeMinResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "plan_name", testutil.ConvertConfigVariable(testConfigVarsMin["plan_name"])),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "version", testutil.ConvertConfigVariable(testConfigVarsMin["logme_version"])),
 
-					// // Credential data
+					// Credential data
 					resource.TestCheckResourceAttrPair(
 						"stackit_logme_credential.credential", "project_id",
 						"stackit_logme_instance.instance", "project_id",
