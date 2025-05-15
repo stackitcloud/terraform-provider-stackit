@@ -15,7 +15,7 @@ This project is the official [Terraform Provider](https://registry.terraform.io/
 
 To install the [STACKIT Terraform Provider](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs), copy and paste this code into your Terraform configuration. Then, run `terraform init`.
 
-```
+```hcl
 terraform {
   required_providers {
     stackit = {
@@ -124,7 +124,7 @@ To do so, you need an Object Storage [S3 bucket](https://docs.stackit.cloud/stac
 
 Once you have everything setup, you can configure the backend by adding the following block to your Terraform configuration:
 
-```
+```hcl
 terraform {
   backend "s3" {
     bucket = "BUCKET_NAME"
