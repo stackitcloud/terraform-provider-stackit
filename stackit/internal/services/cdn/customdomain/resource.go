@@ -8,6 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
+
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -18,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn/wait"
@@ -52,8 +54,7 @@ type CustomDomainModel struct {
 }
 
 type customDomainResource struct {
-	client       *cdn.APIClient
-	providerData core.ProviderData
+	client *cdn.APIClient
 }
 
 func NewCustomDomainResource() resource.Resource {
@@ -61,31 +62,18 @@ func NewCustomDomainResource() resource.Resource {
 }
 
 func (r *customDomainResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
+	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	if !ok {
 		return
 	}
-	var ok bool
-	if r.providerData, ok = req.ProviderData.(core.ProviderData); !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
-		return
-	}
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_cdn_custom_domain", "resource")
 
-	var apiClient *cdn.APIClient
-	var err error
-	if r.providerData.CdnCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "cdn_custom_endpoint", r.providerData.CdnCustomEndpoint)
-		apiClient, err = cdn.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithEndpoint(r.providerData.CdnCustomEndpoint),
-		)
-	} else {
-		apiClient, err = cdn.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-		)
+	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_cdn_custom_domain", "resource")
+	if resp.Diagnostics.HasError() {
+		return
 	}
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+
+	apiClient := cdnUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 	r.client = apiClient
