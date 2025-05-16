@@ -289,12 +289,12 @@ func testAccCheckOpenSearchDestroy(s *terraform.State) error {
 }
 
 func checkInstanceDeleteSuccess(i *opensearch.Instance) bool {
-	if *i.LastOperation.Type != wait.InstanceOperationTypeDelete {
+	if *i.LastOperation.Type != opensearch.INSTANCELASTOPERATIONTYPE_DELETE {
 		return false
 	}
 
-	if *i.LastOperation.Type == wait.InstanceOperationTypeDelete {
-		if *i.LastOperation.State != wait.InstanceOperationStateSucceeded {
+	if *i.LastOperation.Type == opensearch.INSTANCELASTOPERATIONTYPE_DELETE {
+		if *i.LastOperation.State != opensearch.INSTANCELASTOPERATIONSTATE_SUCCEEDED {
 			return false
 		} else if strings.Contains(*i.LastOperation.Description, "DeleteFailed") || strings.Contains(*i.LastOperation.Description, "failed") {
 			return false

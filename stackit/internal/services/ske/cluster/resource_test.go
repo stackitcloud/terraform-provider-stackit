@@ -118,7 +118,7 @@ func TestMapFields(t *testing.T) {
 						AllowSystemComponents: utils.Ptr(true),
 						AvailabilityZones:     &[]string{"z1", "z2"},
 						Cri: &ske.CRI{
-							Name: utils.Ptr("cri"),
+							Name: ske.CRINAME_DOCKER.Ptr(),
 						},
 						Labels: &map[string]string{"k": "v"},
 						Machine: &ske.Machine{
@@ -135,7 +135,7 @@ func TestMapFields(t *testing.T) {
 						Name:           utils.Ptr("node"),
 						Taints: &[]ske.Taint{
 							{
-								Effect: utils.Ptr("effect"),
+								Effect: ske.TAINTEFFECT_NO_EXECUTE.Ptr(),
 								Key:    utils.Ptr("key"),
 								Value:  utils.Ptr("value"),
 							},
@@ -198,14 +198,14 @@ func TestMapFields(t *testing.T) {
 										types.ObjectValueMust(
 											taintTypes,
 											map[string]attr.Value{
-												"effect": types.StringValue("effect"),
+												"effect": types.StringValue(string(ske.TAINTEFFECT_NO_EXECUTE)),
 												"key":    types.StringValue("key"),
 												"value":  types.StringValue("value"),
 											},
 										),
 									},
 								),
-								"cri": types.StringValue("cri"),
+								"cri": types.StringValue(string(ske.CRINAME_DOCKER)),
 								"availability_zones": types.ListValueMust(
 									types.StringType,
 									[]attr.Value{
@@ -502,7 +502,7 @@ func TestMapFields(t *testing.T) {
 								},
 							),
 							"taints": types.ListValueMust(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{}),
-							"cri":    types.StringValue("cri"),
+							"cri":    types.StringValue(string(ske.CRINAME_DOCKER)),
 							"availability_zones": types.ListValueMust(
 								types.StringType,
 								[]attr.Value{
@@ -561,7 +561,7 @@ func TestMapFields(t *testing.T) {
 					{
 						AvailabilityZones: &[]string{"z1", "z2"},
 						Cri: &ske.CRI{
-							Name: utils.Ptr("cri"),
+							Name: ske.CRINAME_DOCKER.Ptr(),
 						},
 						Labels: &map[string]string{"k": "v"},
 						Machine: &ske.Machine{
@@ -623,7 +623,7 @@ func TestMapFields(t *testing.T) {
 									},
 								),
 								"taints": types.ListValueMust(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{}),
-								"cri":    types.StringValue("cri"),
+								"cri":    types.StringValue(string(ske.CRINAME_DOCKER)),
 								"availability_zones": types.ListValueMust(
 									types.StringType,
 									[]attr.Value{

@@ -896,7 +896,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Cluster creation waiting: %v", err))
 		return
 	}
-	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == skeWait.InvalidArgusInstanceErrorCode {
+	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == ske.RUNTIMEERRORCODE_ARGUS_INSTANCE_NOT_FOUND {
 		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid argus instance id, the cluster is usable but metrics won't be forwarded: %s", *waitResp.Status.Error.Message))
 	}
 
@@ -934,7 +934,7 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 		ts := []ske.Taint{}
 		for _, v := range taintsModel {
 			t := ske.Taint{
-				Effect: conversion.StringValueToPointer(v.Effect),
+				Effect: ske.TaintGetEffectAttributeType(conversion.StringValueToPointer(v.Effect)),
 				Key:    conversion.StringValueToPointer(v.Key),
 				Value:  conversion.StringValueToPointer(v.Value),
 			}
@@ -972,7 +972,7 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 		}
 
 		cn := ske.CRI{
-			Name: conversion.StringValueToPointer(nodePool.CRI),
+			Name: ske.CRIGetNameAttributeType(conversion.StringValueToPointer(nodePool.CRI)),
 		}
 
 		providedVersionMin := conversion.StringValueToPointer(nodePool.OSVersionMin)
@@ -1462,7 +1462,7 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		}
 
 		if nodePoolResp.Cri != nil {
-			nodePool["cri"] = types.StringPointerValue(nodePoolResp.Cri.Name)
+			nodePool["cri"] = types.StringValue(string(nodePoolResp.Cri.GetName()))
 		}
 
 		taintsInModel := false
@@ -1526,7 +1526,7 @@ func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value, existInModel bool
 
 	for i, taintResp := range *t {
 		taint := map[string]attr.Value{
-			"effect": types.StringPointerValue(taintResp.Effect),
+			"effect": types.StringValue(string(taintResp.GetEffect())),
 			"key":    types.StringPointerValue(taintResp.Key),
 			"value":  types.StringPointerValue(taintResp.Value),
 		}

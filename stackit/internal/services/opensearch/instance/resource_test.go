@@ -16,7 +16,7 @@ var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]a
 	"sgw_acl":                types.StringValue("acl"),
 	"enable_monitoring":      types.BoolValue(true),
 	"graphite":               types.StringValue("graphite"),
-	"java_garbage_collector": types.StringValue("gc"),
+	"java_garbage_collector": types.StringValue(string(opensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC)),
 	"java_heapspace":         types.Int64Value(10),
 	"java_maxmetaspace":      types.Int64Value(10),
 	"max_disk_threshold":     types.Int64Value(10),
@@ -35,7 +35,7 @@ var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]a
 		types.StringValue("cipher"),
 		types.StringValue("cipher2"),
 	}),
-	"tls_protocols": types.StringValue("protocol"),
+	"tls_protocols": types.StringValue(string(opensearch.INSTANCEPARAMETERSTLS_PROTOCOLS__2)),
 })
 
 var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[string]attr.Value{
@@ -59,7 +59,7 @@ var fixtureInstanceParameters = opensearch.InstanceParameters{
 	SgwAcl:               utils.Ptr("acl"),
 	EnableMonitoring:     utils.Ptr(true),
 	Graphite:             utils.Ptr("graphite"),
-	JavaGarbageCollector: utils.Ptr("gc"),
+	JavaGarbageCollector: opensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC.Ptr(),
 	JavaHeapspace:        utils.Ptr(int64(10)),
 	JavaMaxmetaspace:     utils.Ptr(int64(10)),
 	MaxDiskThreshold:     utils.Ptr(int64(10)),
@@ -69,7 +69,7 @@ var fixtureInstanceParameters = opensearch.InstanceParameters{
 	Plugins:              &[]string{"plugin", "plugin2"},
 	Syslog:               &[]string{"syslog", "syslog2"},
 	TlsCiphers:           &[]string{"cipher", "cipher2"},
-	TlsProtocols:         utils.Ptr("protocol"),
+	TlsProtocols:         opensearch.INSTANCEPARAMETERSTLS_PROTOCOLS__2.Ptr(),
 }
 
 func TestMapFields(t *testing.T) {
@@ -113,7 +113,7 @@ func TestMapFields(t *testing.T) {
 					"sgw_acl":                "acl",
 					"enable_monitoring":      true,
 					"graphite":               "graphite",
-					"java_garbage_collector": "gc",
+					"java_garbage_collector": string(opensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC),
 					"java_heapspace":         int64(10),
 					"java_maxmetaspace":      int64(10),
 					"max_disk_threshold":     int64(10),
@@ -123,7 +123,7 @@ func TestMapFields(t *testing.T) {
 					"plugins":                []string{"plugin", "plugin2"},
 					"syslog":                 []string{"syslog", "syslog2"},
 					"tls-ciphers":            []string{"cipher", "cipher2"},
-					"tls-protocols":          "protocol",
+					"tls-protocols":          string(opensearch.INSTANCEPARAMETERSTLS_PROTOCOLS__2),
 				},
 			},
 			Model{

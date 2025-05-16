@@ -104,7 +104,7 @@ func TestMapFields(t *testing.T) {
 					Id:       utils.Ptr("iid"),
 					Name:     utils.Ptr("name"),
 					Replicas: utils.Ptr(int64(56)),
-					Status:   utils.Ptr("status"),
+					Status:   mongodbflex.INSTANCESTATUS_READY.Ptr(),
 					Storage: &mongodbflex.Storage{
 						Class: utils.Ptr("class"),
 						Size:  utils.Ptr(int64(78)),
@@ -177,7 +177,7 @@ func TestMapFields(t *testing.T) {
 					Id:             utils.Ptr("iid"),
 					Name:           utils.Ptr("name"),
 					Replicas:       utils.Ptr(int64(56)),
-					Status:         utils.Ptr("status"),
+					Status:         mongodbflex.INSTANCESTATUS_READY.Ptr(),
 					Storage:        nil,
 					Options: &map[string]string{
 						"type":                           "type",
@@ -260,7 +260,7 @@ func TestMapFields(t *testing.T) {
 					Id:             utils.Ptr("iid"),
 					Name:           utils.Ptr("name"),
 					Replicas:       utils.Ptr(int64(56)),
-					Status:         utils.Ptr("status"),
+					Status:         mongodbflex.INSTANCESTATUS_READY.Ptr(),
 					Storage:        nil,
 					Options: &map[string]string{
 						"type":                           "type",
