@@ -1018,7 +1018,7 @@ func testAccCheckObservabilityDestroy(s *terraform.State) error {
 	instances := *instancesResp.Instances
 	for i := range instances {
 		if utils.Contains(instancesToDestroy, *instances[i].Id) {
-			if *instances[i].Status != wait.DeleteSuccess {
+			if *instances[i].Status != observability.PROJECTINSTANCEFULLSTATUS_DELETE_SUCCEEDED {
 				_, err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *instances[i].Id)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].Id, err)

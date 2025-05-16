@@ -984,7 +984,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	if instanceResp != nil && instanceResp.Status != nil && *instanceResp.Status == wait.DeleteSuccess {
+	if instanceResp != nil && instanceResp.Status != nil && *instanceResp.Status == observability.GETINSTANCERESPONSESTATUS_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		return
 	}

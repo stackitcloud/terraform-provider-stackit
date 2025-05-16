@@ -257,12 +257,12 @@ func TestAccRedisResource(t *testing.T) {
 }
 
 func checkInstanceDeleteSuccess(i *redis.Instance) bool {
-	if *i.LastOperation.Type != wait.InstanceOperationTypeDelete {
+	if *i.LastOperation.Type != redis.INSTANCELASTOPERATIONTYPE_DELETE {
 		return false
 	}
 
-	if *i.LastOperation.Type == wait.InstanceOperationTypeDelete {
-		if *i.LastOperation.State != wait.InstanceOperationStateSucceeded {
+	if *i.LastOperation.Type == redis.INSTANCELASTOPERATIONTYPE_DELETE {
+		if *i.LastOperation.State != redis.INSTANCELASTOPERATIONSTATE_SUCCEEDED {
 			return false
 		} else if strings.Contains(*i.LastOperation.Description, "DeleteFailed") || strings.Contains(*i.LastOperation.Description, "failed") {
 			return false

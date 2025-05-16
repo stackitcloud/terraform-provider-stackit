@@ -615,7 +615,7 @@ func mapCreateResponse(tokenCreateResp *modelserving.CreateTokenResponse, waitRe
 	)
 	model.TokenId = types.StringPointerValue(token.Id)
 	model.Name = types.StringPointerValue(token.Name)
-	model.State = types.StringPointerValue(waitResp.Token.State)
+	model.State = types.StringValue(string(waitResp.Token.GetState()))
 	model.ValidUntil = validUntil
 	model.Token = types.StringPointerValue(token.Content)
 	model.Description = types.StringPointerValue(token.Description)
@@ -645,7 +645,7 @@ func mapGetResponse(tokenGetResp *modelserving.GetTokenResponse, model *Model) e
 	model.Id = types.StringValue(strings.Join(idParts, core.Separator))
 	model.TokenId = types.StringPointerValue(tokenGetResp.Token.Id)
 	model.Name = types.StringPointerValue(tokenGetResp.Token.Name)
-	model.State = types.StringPointerValue(tokenGetResp.Token.State)
+	model.State = types.StringValue(string(tokenGetResp.Token.GetState()))
 	model.ValidUntil = validUntil
 	model.Description = types.StringPointerValue(tokenGetResp.Token.Description)
 

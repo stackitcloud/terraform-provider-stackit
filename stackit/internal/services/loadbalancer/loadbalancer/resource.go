@@ -915,7 +915,7 @@ func toListenersPayload(ctx context.Context, model *Model) (*[]loadbalancer.List
 		payload = append(payload, loadbalancer.Listener{
 			DisplayName:          conversion.StringValueToPointer(listenerModel.DisplayName),
 			Port:                 conversion.Int64ValueToPointer(listenerModel.Port),
-			Protocol:             conversion.StringValueToPointer(listenerModel.Protocol),
+			Protocol:             loadbalancer.ListenerGetProtocolAttributeType(conversion.StringValueToPointer(listenerModel.Protocol)),
 			ServerNameIndicators: serverNameIndicatorsPayload,
 			TargetPool:           conversion.StringValueToPointer(listenerModel.TargetPool),
 		})
@@ -966,7 +966,7 @@ func toNetworksPayload(ctx context.Context, model *Model) (*[]loadbalancer.Netwo
 		networkModel := networksModel[i]
 		payload = append(payload, loadbalancer.Network{
 			NetworkId: conversion.StringValueToPointer(networkModel.NetworkId),
-			Role:      conversion.StringValueToPointer(networkModel.Role),
+			Role:      loadbalancer.NetworkGetRoleAttributeType(conversion.StringValueToPointer(networkModel.Role)),
 		})
 	}
 
@@ -1232,7 +1232,7 @@ func mapListeners(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 		listenerMap := map[string]attr.Value{
 			"display_name": types.StringPointerValue(listenerResp.DisplayName),
 			"port":         types.Int64PointerValue(listenerResp.Port),
-			"protocol":     types.StringPointerValue(listenerResp.Protocol),
+			"protocol":     types.StringValue(string(listenerResp.GetProtocol())),
 			"target_pool":  types.StringPointerValue(listenerResp.TargetPool),
 		}
 
@@ -1303,7 +1303,7 @@ func mapNetworks(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 	for i, networkResp := range *loadBalancerResp.Networks {
 		networkMap := map[string]attr.Value{
 			"network_id": types.StringPointerValue(networkResp.NetworkId),
-			"role":       types.StringPointerValue(networkResp.Role),
+			"role":       types.StringValue(string(networkResp.GetRole())),
 		}
 
 		networkTF, diags := types.ObjectValue(networkTypes, networkMap)

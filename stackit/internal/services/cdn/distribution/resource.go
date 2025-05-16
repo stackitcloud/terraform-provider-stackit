@@ -462,7 +462,7 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 	model.ID = types.StringValue(id)
 	model.DistributionId = types.StringValue(*distribution.Id)
 	model.ProjectId = types.StringValue(*distribution.ProjectId)
-	model.Status = types.StringValue(*distribution.Status)
+	model.Status = types.StringValue(string(distribution.GetStatus()))
 	model.CreatedAt = types.StringValue(distribution.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(distribution.UpdatedAt.String())
 
@@ -538,7 +538,7 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 			modelDomain, diags := types.ObjectValue(domainTypes, map[string]attr.Value{
 				"name":   types.StringValue(*d.Name),
 				"status": types.StringValue(string(*d.Status)),
-				"type":   types.StringValue(*d.Type),
+				"type":   types.StringValue(string(*d.Type)),
 				"errors": modelDomainErrors,
 			})
 			if diags.HasError() {

@@ -236,12 +236,12 @@ func TestMapFields(t *testing.T) {
 				{
 					Name:   cdn.PtrString("test.stackit-cdn.com"),
 					Status: cdn.DOMAINSTATUS_ACTIVE.Ptr(),
-					Type:   cdn.PtrString("managed"),
+					Type:   cdn.DOMAINTYPE_MANAGED.Ptr(),
 				},
 			},
 			Id:        cdn.PtrString("test-distribution-id"),
 			ProjectId: cdn.PtrString("test-project-id"),
-			Status:    cdn.PtrString("ACTIVE"),
+			Status:    cdn.DISTRIBUTIONSTATUS_ACTIVE.Ptr(),
 			UpdatedAt: &updatedAt,
 		}
 		for _, mod := range mods {
@@ -264,7 +264,7 @@ func TestMapFields(t *testing.T) {
 				m.Status = types.StringValue("ERROR")
 			}),
 			Input: distributionFixture(func(d *cdn.Distribution) {
-				d.Status = cdn.PtrString("ERROR")
+				d.Status = cdn.DISTRIBUTIONSTATUS_ERROR.Ptr()
 			}),
 			IsValid: true,
 		},
@@ -290,12 +290,12 @@ func TestMapFields(t *testing.T) {
 					{
 						Name:   cdn.PtrString("test.stackit-cdn.com"),
 						Status: cdn.DOMAINSTATUS_ACTIVE.Ptr(),
-						Type:   cdn.PtrString("managed"),
+						Type:   cdn.DOMAINTYPE_MANAGED.Ptr(),
 					},
 					{
 						Name:   cdn.PtrString("mycoolapp.info"),
 						Status: cdn.DOMAINSTATUS_ACTIVE.Ptr(),
-						Type:   cdn.PtrString("custom"),
+						Type:   cdn.DOMAINTYPE_CUSTOM.Ptr(),
 					},
 				}
 			}),

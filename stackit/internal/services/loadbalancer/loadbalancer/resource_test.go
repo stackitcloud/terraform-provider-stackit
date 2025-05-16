@@ -46,7 +46,7 @@ func TestToCreatePayload(t *testing.T) {
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
 						"port":         types.Int64Value(80),
-						"protocol":     types.StringValue("protocol"),
+						"protocol":     types.StringValue(string(loadbalancer.LISTENERPROTOCOL_TCP)),
 						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
 							types.ObjectValueMust(
 								serverNameIndicatorTypes,
@@ -63,11 +63,11 @@ func TestToCreatePayload(t *testing.T) {
 				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id"),
-						"role":       types.StringValue("role"),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					}),
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id_2"),
-						"role":       types.StringValue("role_2"),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					}),
 				}),
 				Options: types.ObjectValueMust(
@@ -118,7 +118,7 @@ func TestToCreatePayload(t *testing.T) {
 					{
 						DisplayName: utils.Ptr("display_name"),
 						Port:        utils.Ptr(int64(80)),
-						Protocol:    utils.Ptr("protocol"),
+						Protocol:    loadbalancer.LISTENERPROTOCOL_TCP.Ptr(),
 						ServerNameIndicators: &[]loadbalancer.ServerNameIndicator{
 							{
 								Name: utils.Ptr("domain.com"),
@@ -131,11 +131,11 @@ func TestToCreatePayload(t *testing.T) {
 				Networks: &[]loadbalancer.Network{
 					{
 						NetworkId: utils.Ptr("network_id"),
-						Role:      utils.Ptr("role"),
+						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
 					},
 					{
 						NetworkId: utils.Ptr("network_id_2"),
-						Role:      utils.Ptr("role_2"),
+						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
 					},
 				},
 				Options: &loadbalancer.LoadBalancerOptions{
@@ -355,7 +355,7 @@ func TestMapFields(t *testing.T) {
 					{
 						DisplayName: utils.Ptr("display_name"),
 						Port:        utils.Ptr(int64(80)),
-						Protocol:    utils.Ptr("protocol"),
+						Protocol:    loadbalancer.LISTENERPROTOCOL_TCP.Ptr(),
 						ServerNameIndicators: &[]loadbalancer.ServerNameIndicator{
 							{
 								Name: utils.Ptr("domain.com"),
@@ -368,11 +368,11 @@ func TestMapFields(t *testing.T) {
 				Networks: utils.Ptr([]loadbalancer.Network{
 					{
 						NetworkId: utils.Ptr("network_id"),
-						Role:      utils.Ptr("role"),
+						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
 					},
 					{
 						NetworkId: utils.Ptr("network_id_2"),
-						Role:      utils.Ptr("role_2"),
+						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
 					},
 				}),
 				Options: utils.Ptr(loadbalancer.LoadBalancerOptions{
@@ -421,7 +421,7 @@ func TestMapFields(t *testing.T) {
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
 						"port":         types.Int64Value(80),
-						"protocol":     types.StringValue("protocol"),
+						"protocol":     types.StringValue(string(loadbalancer.LISTENERPROTOCOL_TCP)),
 						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
 							types.ObjectValueMust(
 								serverNameIndicatorTypes,
@@ -438,11 +438,11 @@ func TestMapFields(t *testing.T) {
 				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id"),
-						"role":       types.StringValue("role"),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					}),
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id_2"),
-						"role":       types.StringValue("role_2"),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					}),
 				}),
 				Options: types.ObjectValueMust(
@@ -496,7 +496,7 @@ func TestMapFields(t *testing.T) {
 					{
 						DisplayName: utils.Ptr("display_name"),
 						Port:        utils.Ptr(int64(80)),
-						Protocol:    utils.Ptr("protocol"),
+						Protocol:    loadbalancer.LISTENERPROTOCOL_TCP.Ptr(),
 						ServerNameIndicators: &[]loadbalancer.ServerNameIndicator{
 							{
 								Name: utils.Ptr("domain.com"),
@@ -509,11 +509,11 @@ func TestMapFields(t *testing.T) {
 				Networks: utils.Ptr([]loadbalancer.Network{
 					{
 						NetworkId: utils.Ptr("network_id"),
-						Role:      utils.Ptr("role"),
+						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
 					},
 					{
 						NetworkId: utils.Ptr("network_id_2"),
-						Role:      utils.Ptr("role_2"),
+						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
 					},
 				}),
 				Options: utils.Ptr(loadbalancer.LoadBalancerOptions{
@@ -565,7 +565,7 @@ func TestMapFields(t *testing.T) {
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
 						"port":         types.Int64Value(80),
-						"protocol":     types.StringValue("protocol"),
+						"protocol":     types.StringValue(string(loadbalancer.LISTENERPROTOCOL_TCP)),
 						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
 							types.ObjectValueMust(
 								serverNameIndicatorTypes,
@@ -582,11 +582,11 @@ func TestMapFields(t *testing.T) {
 				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id"),
-						"role":       types.StringValue("role"),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					}),
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id_2"),
-						"role":       types.StringValue("role_2"),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					}),
 				}),
 				Options: types.ObjectValueMust(

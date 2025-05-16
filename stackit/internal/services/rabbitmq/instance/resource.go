@@ -750,7 +750,7 @@ func toInstanceParams(parameters *parametersModel) (*rabbitmq.InstanceParameters
 	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
 	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
 	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
-	payloadParams.TlsProtocols = conversion.StringValueToPointer(parameters.TlsProtocols)
+	payloadParams.TlsProtocols = rabbitmq.InstanceParametersGetTlsProtocolsAttributeType(conversion.StringValueToPointer(parameters.TlsProtocols))
 
 	var err error
 	payloadParams.Plugins, err = conversion.StringListToPointer(parameters.Plugins)
