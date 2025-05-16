@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	serverbackupUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/utils"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -17,7 +20,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
 )
 
@@ -49,15 +51,9 @@ func (r *scheduleDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 // Configure adds the provider configured client to the data source.
 func (r *scheduleDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	// Prevent panic if the provider has not been configured.
-	if req.ProviderData == nil {
-		return
-	}
-
 	var ok bool
-	r.providerData, ok = req.ProviderData.(core.ProviderData)
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -69,25 +65,10 @@ func (r *scheduleDataSource) Configure(ctx context.Context, req datasource.Confi
 		scheduleDataSourceBetaCheckDone = true
 	}
 
-	var apiClient *serverbackup.APIClient
-	var err error
-	if r.providerData.ServerBackupCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "server_backup_custom_endpoint", r.providerData.ServerBackupCustomEndpoint)
-		apiClient, err = serverbackup.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithEndpoint(r.providerData.ServerBackupCustomEndpoint),
-		)
-	} else {
-		apiClient, err = serverbackup.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-		)
-	}
-
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the data source configuration", err))
+	apiClient := serverbackupUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	r.client = apiClient
 	tflog.Info(ctx, "Server backup client configured")
 }
