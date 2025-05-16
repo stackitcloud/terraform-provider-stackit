@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	rabbitmqUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/utils"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -14,7 +17,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq"
 )
 
@@ -40,36 +42,15 @@ func (r *credentialDataSource) Metadata(_ context.Context, req datasource.Metada
 
 // Configure adds the provider configured client to the data source.
 func (r *credentialDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	// Prevent panic if the provider has not been configured.
-	if req.ProviderData == nil {
-		return
-	}
-
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
-	var apiClient *rabbitmq.APIClient
-	var err error
-	if providerData.RabbitMQCustomEndpoint != "" {
-		apiClient, err = rabbitmq.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.RabbitMQCustomEndpoint),
-		)
-	} else {
-		apiClient, err = rabbitmq.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithRegion(providerData.GetRegion()),
-		)
-	}
-
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the data source configuration", err))
+	apiClient := rabbitmqUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	r.client = apiClient
 	tflog.Info(ctx, "RabbitMQ credential client configured")
 }
