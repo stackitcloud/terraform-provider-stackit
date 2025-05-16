@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -20,7 +22,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -60,39 +61,15 @@ type serviceAccountTokenResource struct {
 
 // Configure sets up the API client for the service account resource.
 func (r *serviceAccountTokenResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	// Prevent potential panics if the provider is not properly configured.
-	if req.ProviderData == nil {
-		return
-	}
-
-	// Validate provider data type before proceeding.
-	providerData, ok := req.ProviderData.(core.ProviderData)
+	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
-	// Initialize the API client with the appropriate authentication and endpoint settings.
-	var apiClient *serviceaccount.APIClient
-	var err error
-	if providerData.ServiceAccountCustomEndpoint != "" {
-		apiClient, err = serviceaccount.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-			config.WithEndpoint(providerData.ServiceAccountCustomEndpoint),
-		)
-	} else {
-		apiClient, err = serviceaccount.NewAPIClient(
-			config.WithCustomAuth(providerData.RoundTripper),
-		)
-	}
-
-	// Handle API client initialization errors.
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+	apiClient := serviceaccountUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	// Store the initialized client.
 	r.client = apiClient
 	tflog.Info(ctx, "Service Account client configured")
 }
