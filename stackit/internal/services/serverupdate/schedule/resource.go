@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	serverupdateUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/utils"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -25,7 +27,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/serverupdate"
 )
@@ -98,15 +99,9 @@ func (r *scheduleResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 // Configure adds the provider configured client to the resource.
 func (r *scheduleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	// Prevent panic if the provider has not been configured.
-	if req.ProviderData == nil {
-		return
-	}
-
 	var ok bool
-	r.providerData, ok = req.ProviderData.(core.ProviderData)
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", req.ProviderData))
 		return
 	}
 
@@ -115,25 +110,10 @@ func (r *scheduleResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	var apiClient *serverupdate.APIClient
-	var err error
-	if r.providerData.ServerUpdateCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "server_update_custom_endpoint", r.providerData.ServerUpdateCustomEndpoint)
-		apiClient, err = serverupdate.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithEndpoint(r.providerData.ServerUpdateCustomEndpoint),
-		)
-	} else {
-		apiClient, err = serverupdate.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-		)
-	}
-
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+	apiClient := serverupdateUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	r.client = apiClient
 	tflog.Info(ctx, "Server update client configured.")
 }
