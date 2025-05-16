@@ -67,7 +67,7 @@ func (r *customDomainResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_cdn_custom_domain", "datasource")
+	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_cdn_custom_domain", "resource")
 	if resp.Diagnostics.HasError() {
 		return
 	}

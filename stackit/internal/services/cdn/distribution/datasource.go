@@ -38,7 +38,7 @@ func (d *distributionDataSource) Configure(ctx context.Context, req datasource.C
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_cdn_distribution", "resource")
+	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_cdn_distribution", "datasource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
