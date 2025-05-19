@@ -21,17 +21,41 @@ import (
 )
 
 var (
-	maxTestName = "acc-" + acctest.RandStringFromCharSet(4, acctest.CharSetAlpha)
+	minTestName = "acc-min" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
+	maxTestName = "acc-max" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
 )
 
 var (
+	//go:embed testdata/resource-min.tf
+	resourceMin string
+
 	//go:embed testdata/resource-max.tf
 	resourceMax string
 )
+
+var testConfigVarsMin = config.Variables{
+	"project_id":                  config.StringVariable(testutil.ProjectId),
+	"organization_id":             config.StringVariable(testutil.OrganizationId),
+	"name":                        config.StringVariable(maxTestName),
+	"nodepool_availability_zone1": config.StringVariable("eu01-m"),
+	"nodepool_machine_type":       config.StringVariable("g1.2"),
+	"nodepool_minimum":            config.StringVariable("1"),
+	"nodepool_maximum":            config.StringVariable("2"),
+	"nodepool_name":               config.StringVariable("np-acc-test"),
+	"kubernetes_version_min":      config.StringVariable("1.31.8"),
+	"maintenance_enable_machine_image_version_updates": config.StringVariable("true"),
+	"maintenance_enable_kubernetes_version_updates":    config.StringVariable("true"),
+	"maintenance_start": config.StringVariable("02:00:00+01:00"),
+	"maintenance_end":   config.StringVariable("04:00:00+01:00"),
+	"region":            config.StringVariable("eu01"),
+	"dns_zone_name":     config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha)),
+	"dns_name":          config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha) + ".test"),
+}
+
 var testConfigVarsMax = config.Variables{
 	"project_id":                                       config.StringVariable(testutil.ProjectId),
 	"organization_id":                                  config.StringVariable(testutil.OrganizationId),
-	"name":                                             config.StringVariable(maxTestName),
+	"name":                                             config.StringVariable(minTestName),
 	"nodepool_availability_zone1":                      config.StringVariable("eu01-m"),
 	"nodepool_machine_type":                            config.StringVariable("g1.2"),
 	"nodepool_minimum":                                 config.StringVariable("1"),
@@ -68,6 +92,13 @@ var testConfigVarsMax = config.Variables{
 	"dns_name":                                         config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha) + ".test"),
 }
 
+func configVarsMinUpdated() config.Variables {
+	updatedConfig := maps.Clone(testConfigVarsMax)
+	updatedConfig["kubernetes_version_min"] = config.StringVariable("1.31")
+
+	return updatedConfig
+}
+
 func configVarsMaxUpdated() config.Variables {
 	updatedConfig := maps.Clone(testConfigVarsMax)
 	updatedConfig["kubernetes_version_min"] = config.StringVariable("1.31")
@@ -76,6 +107,121 @@ func configVarsMaxUpdated() config.Variables {
 
 	return updatedConfig
 }
+func TestAccSKEMin(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckSKEDestroy,
+		Steps: []resource.TestStep{
+
+			// 1) Creation
+			{
+				Config:          testutil.SKEProviderConfig() + "\n" + resourceMin,
+				ConfigVariables: testConfigVarsMin,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// cluster data
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", testutil.ConvertConfigVariable(testConfigVarsMin["name"])),
+
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.#", "1"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.availability_zones.0", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_availability_zone1"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.machine_type", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_machine_type"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.maximum", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_maximum"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.minimum", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_minimum"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.name", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_name"])),
+					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "node_pools.0.os_version_used"),
+					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "region"),
+
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "egress_address_ranges.#", "1"),
+					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "egress_address_ranges.0"),
+					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
+
+					// Kubeconfig
+					resource.TestCheckResourceAttrPair(
+						"stackit_ske_kubeconfig.kubeconfig", "project_id",
+						"stackit_ske_cluster.cluster", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_ske_kubeconfig.kubeconfig", "cluster_name",
+						"stackit_ske_cluster.cluster", "name",
+					),
+				),
+			},
+			// 2) Data source
+			{
+				Config:          resourceMin,
+				ConfigVariables: testConfigVarsMin,
+				Check: resource.ComposeAggregateTestCheckFunc(
+
+					// cluster data
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "id", fmt.Sprintf("%s,%s,%s",
+						testutil.ConvertConfigVariable(testConfigVarsMin["project_id"]),
+						testutil.Region,
+						testutil.ConvertConfigVariable(testConfigVarsMin["name"]),
+					)),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.availability_zones.0", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_availability_zone1"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.machine_type", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_machine_type"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.maximum", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_maximum"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.minimum", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_minimum"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.name", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_name"])),
+
+					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kubernetes_version_used"),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "egress_address_ranges.#", "1"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "egress_address_ranges.0"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kubernetes_version_used"),
+				),
+			},
+			// 3) Import cluster
+			{
+				ResourceName:    "stackit_ske_cluster.cluster",
+				ConfigVariables: testConfigVarsMin,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_ske_cluster.cluster"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_ske_cluster.cluster")
+					}
+					_, ok = r.Primary.Attributes["project_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute project_id")
+					}
+					name, ok := r.Primary.Attributes["name"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+				// The fields are not provided in the SKE API when disabled, although set actively.
+				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "node_pools.0.os_version_min", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled"},
+			},
+			// 4) Update kubernetes version, OS version and maintenance end, downgrade of kubernetes version
+			{
+				Config:          resourceMin,
+				ConfigVariables: configVarsMinUpdated(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// cluster data
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.availability_zones.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.availability_zones.0", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_availability_zone1"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.machine_type", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_machine_type"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.maximum", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_maximum"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.minimum", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_minimum"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.name", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_name"])),
+
+					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kubernetes_version_used"),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "egress_address_ranges.#", "1"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "egress_address_ranges.0"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kubernetes_version_used"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
 func TestAccSKEMax(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -234,11 +380,11 @@ func TestAccSKEMax(t *testing.T) {
 			},
 			// 4) Update kubernetes version, OS version and maintenance end, downgrade of kubernetes version
 			{
-				Config: resourceMax,
+				Config:          resourceMax,
 				ConfigVariables: configVarsMaxUpdated(),
-				Check:  resource.ComposeAggregateTestCheckFunc(
-				// cluster data
-				resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", testutil.ConvertConfigVariable(configVarsMaxUpdated()["project_id"])),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// cluster data
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", testutil.ConvertConfigVariable(configVarsMaxUpdated()["project_id"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["name"])),
 
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.#", "1"),
