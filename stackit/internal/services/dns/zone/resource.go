@@ -343,7 +343,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	if zoneResp != nil && zoneResp.Zone.State != nil && *zoneResp.Zone.State == wait.DeleteSuccess {
+	if zoneResp != nil && zoneResp.Zone.State != nil && *zoneResp.Zone.State == dns.ZONESTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -529,9 +529,9 @@ func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) er
 	model.RefreshTime = types.Int64PointerValue(z.RefreshTime)
 	model.RetryTime = types.Int64PointerValue(z.RetryTime)
 	model.SerialNumber = types.Int64PointerValue(z.SerialNumber)
-	model.State = types.StringPointerValue(z.State)
-	model.Type = types.StringPointerValue(z.Type)
-	model.Visibility = types.StringPointerValue(z.Visibility)
+	model.State = types.StringValue(string(z.GetState()))
+	model.Type = types.StringValue(string(z.GetType()))
+	model.Visibility = types.StringValue(string(z.GetVisibility()))
 	return nil
 }
 
@@ -554,7 +554,7 @@ func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
 		ContactEmail:  conversion.StringValueToPointer(model.ContactEmail),
 		Description:   conversion.StringValueToPointer(model.Description),
 		Acl:           conversion.StringValueToPointer(model.Acl),
-		Type:          conversion.StringValueToPointer(model.Type),
+		Type:          dns.CreateZonePayloadGetTypeAttributeType(conversion.StringValueToPointer(model.Type)),
 		DefaultTTL:    conversion.Int64ValueToPointer(model.DefaultTTL),
 		ExpireTime:    conversion.Int64ValueToPointer(model.ExpireTime),
 		RefreshTime:   conversion.Int64ValueToPointer(model.RefreshTime),

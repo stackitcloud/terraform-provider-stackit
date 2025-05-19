@@ -730,14 +730,14 @@ func toInstanceParams(parameters *parametersModel) (*opensearch.InstanceParamete
 	payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
 	payloadParams.EnableMonitoring = conversion.BoolValueToPointer(parameters.EnableMonitoring)
 	payloadParams.Graphite = conversion.StringValueToPointer(parameters.Graphite)
-	payloadParams.JavaGarbageCollector = conversion.StringValueToPointer(parameters.JavaGarbageCollector)
+	payloadParams.JavaGarbageCollector = opensearch.InstanceParametersGetJavaGarbageCollectorAttributeType(conversion.StringValueToPointer(parameters.JavaGarbageCollector))
 	payloadParams.JavaHeapspace = conversion.Int64ValueToPointer(parameters.JavaHeapspace)
 	payloadParams.JavaMaxmetaspace = conversion.Int64ValueToPointer(parameters.JavaMaxmetaspace)
 	payloadParams.MaxDiskThreshold = conversion.Int64ValueToPointer(parameters.MaxDiskThreshold)
 	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
 	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
 	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
-	payloadParams.TlsProtocols = conversion.StringValueToPointer(parameters.TlsProtocols)
+	payloadParams.TlsProtocols = opensearch.InstanceParametersGetTlsProtocolsAttributeType(conversion.StringValueToPointer(parameters.TlsProtocols))
 
 	var err error
 	payloadParams.Plugins, err = conversion.StringListToPointer(parameters.Plugins)

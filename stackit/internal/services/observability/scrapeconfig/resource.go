@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	DefaultScheme                   = "https" // API default is "http"
+	DefaultScheme                   = observability.CREATESCRAPECONFIGPAYLOADSCHEME_HTTP // API default is "http"
 	DefaultScrapeInterval           = "5m"
 	DefaultScrapeTimeout            = "2m"
 	DefaultSampleLimit              = int64(5000)
@@ -187,7 +187,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 				Description: "Specifies the http scheme. Defaults to `https`.",
 				Optional:    true,
 				Computed:    true,
-				Default:     stringdefault.StaticString(DefaultScheme),
+				Default:     stringdefault.StaticString(string(DefaultScheme)),
 			},
 			"scrape_interval": schema.StringAttribute{
 				Description: "Specifies the scrape interval as duration string. Defaults to `5m`.",
@@ -556,7 +556,7 @@ func mapFields(ctx context.Context, sc *observability.Job, model *Model) error {
 	model.Name = types.StringValue(scName)
 
 	model.MetricsPath = types.StringPointerValue(sc.MetricsPath)
-	model.Scheme = types.StringPointerValue(sc.Scheme)
+	model.Scheme = types.StringValue(string(sc.GetScheme()))
 	model.ScrapeInterval = types.StringPointerValue(sc.ScrapeInterval)
 	model.ScrapeTimeout = types.StringPointerValue(sc.ScrapeTimeout)
 	model.SampleLimit = types.Int64PointerValue(sc.SampleLimit)
@@ -695,7 +695,7 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
 		// potentially lossy conversion, depending on the allowed range for sample_limit
 		SampleLimit: utils.Ptr(float64(model.SampleLimit.ValueInt64())),
-		Scheme:      conversion.StringValueToPointer(model.Scheme),
+		Scheme:      observability.CreateScrapeConfigPayloadGetSchemeAttributeType(conversion.StringValueToPointer(model.Scheme)),
 	}
 	setDefaultsCreateScrapeConfig(&sc, model, saml2Model)
 
@@ -747,7 +747,7 @@ func setDefaultsCreateScrapeConfig(sc *observability.CreateScrapeConfigPayload, 
 		return
 	}
 	if model.Scheme.IsNull() || model.Scheme.IsUnknown() {
-		sc.Scheme = utils.Ptr(DefaultScheme)
+		sc.Scheme = DefaultScheme.Ptr()
 	}
 	if model.ScrapeInterval.IsNull() || model.ScrapeInterval.IsUnknown() {
 		sc.ScrapeInterval = utils.Ptr(DefaultScrapeInterval)
@@ -784,7 +784,7 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
 		// potentially lossy conversion, depending on the allowed range for sample_limit
 		SampleLimit: utils.Ptr(float64(model.SampleLimit.ValueInt64())),
-		Scheme:      conversion.StringValueToPointer(model.Scheme),
+		Scheme:      observability.UpdateScrapeConfigPayloadGetSchemeAttributeType(conversion.StringValueToPointer(model.Scheme)),
 	}
 	setDefaultsUpdateScrapeConfig(&sc, model)
 
@@ -836,7 +836,7 @@ func setDefaultsUpdateScrapeConfig(sc *observability.UpdateScrapeConfigPayload, 
 		return
 	}
 	if model.Scheme.IsNull() || model.Scheme.IsUnknown() {
-		sc.Scheme = utils.Ptr(DefaultScheme)
+		sc.Scheme = observability.UpdateScrapeConfigPayloadGetSchemeAttributeType(DefaultScheme.Ptr())
 	}
 	if model.ScrapeInterval.IsNull() || model.ScrapeInterval.IsUnknown() {
 		sc.ScrapeInterval = utils.Ptr(DefaultScrapeInterval)

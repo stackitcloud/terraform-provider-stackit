@@ -58,7 +58,7 @@ func TestMapGetTokenFields(t *testing.T) {
 					ValidUntil: utils.Ptr(
 						time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 					),
-					State:       utils.Ptr("active"),
+					State:       modelserving.TOKENSTATE_ACTIVE.Ptr(),
 					Name:        utils.Ptr("name"),
 					Description: utils.Ptr("desc"),
 					Region:      utils.Ptr("eu01"),
@@ -71,7 +71,7 @@ func TestMapGetTokenFields(t *testing.T) {
 				TokenId:           types.StringValue("tid"),
 				Name:              types.StringValue("name"),
 				Description:       types.StringValue("desc"),
-				State:             types.StringValue("active"),
+				State:             types.StringValue(string(modelserving.TOKENSTATE_ACTIVE)),
 				ValidUntil:        types.StringValue("2099-01-01T00:00:00Z"),
 				RotateWhenChanged: types.MapNull(types.StringType),
 			},
@@ -153,7 +153,7 @@ func TestMapCreateTokenFields(t *testing.T) {
 					ValidUntil: utils.Ptr(
 						time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 					),
-					State:       utils.Ptr("active"),
+					State:       modelserving.TOKENCREATEDSTATE_ACTIVE.Ptr(),
 					Name:        utils.Ptr("name"),
 					Description: utils.Ptr("desc"),
 					Region:      utils.Ptr("eu01"),
@@ -178,7 +178,7 @@ func TestMapCreateTokenFields(t *testing.T) {
 					ValidUntil: utils.Ptr(
 						time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 					),
-					State:       utils.Ptr("active"),
+					State:       modelserving.TOKENCREATEDSTATE_ACTIVE.Ptr(),
 					Name:        utils.Ptr("name"),
 					Description: utils.Ptr("desc"),
 					Region:      utils.Ptr("eu01"),
@@ -187,7 +187,7 @@ func TestMapCreateTokenFields(t *testing.T) {
 			},
 			inputGetTokenResponse: &modelserving.GetTokenResponse{
 				Token: &modelserving.Token{
-					State: utils.Ptr("active"),
+					State: modelserving.TOKENSTATE_ACTIVE.Ptr(),
 				},
 			},
 			expected: Model{
@@ -197,7 +197,7 @@ func TestMapCreateTokenFields(t *testing.T) {
 				TokenId:           types.StringValue("tid"),
 				Name:              types.StringValue("name"),
 				Description:       types.StringValue("desc"),
-				State:             types.StringValue("active"),
+				State:             types.StringValue(string(modelserving.TOKENSTATE_ACTIVE)),
 				ValidUntil:        types.StringValue("2099-01-01T00:00:00Z"),
 				Token:             types.StringValue("content"),
 				RotateWhenChanged: types.MapNull(types.StringType),

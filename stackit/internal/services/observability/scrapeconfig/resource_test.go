@@ -29,7 +29,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId:     types.StringValue("iid"),
 				Name:           types.StringValue("name"),
 				MetricsPath:    types.StringNull(),
-				Scheme:         types.StringNull(),
+				Scheme:         types.StringValue(""),
 				ScrapeInterval: types.StringNull(),
 				ScrapeTimeout:  types.StringNull(),
 				SAML2:          types.ObjectNull(saml2Types),
@@ -48,7 +48,7 @@ func TestMapFields(t *testing.T) {
 					Username: utils.Ptr("u"),
 				},
 				Params:         &map[string][]string{"saml2": {"disabled"}, "x": {"y", "z"}},
-				Scheme:         utils.Ptr("scheme"),
+				Scheme:         observability.JOBSCHEME_HTTP.Ptr(),
 				ScrapeInterval: utils.Ptr("1"),
 				ScrapeTimeout:  utils.Ptr("2"),
 				SampleLimit:    utils.Ptr(int64(17)),
@@ -73,7 +73,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId:     types.StringValue("iid"),
 				Name:           types.StringValue("name"),
 				MetricsPath:    types.StringValue("/m"),
-				Scheme:         types.StringValue("scheme"),
+				Scheme:         types.StringValue(string(observability.JOBSCHEME_HTTP)),
 				ScrapeInterval: types.StringValue("1"),
 				ScrapeTimeout:  types.StringValue("2"),
 				SampleLimit:    types.Int64Value(17),
@@ -163,7 +163,7 @@ func TestToCreatePayload(t *testing.T) {
 			&observability.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
-				Scheme:         utils.Ptr("https"),
+				Scheme:         observability.CREATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
@@ -188,7 +188,7 @@ func TestToCreatePayload(t *testing.T) {
 				JobName:     utils.Ptr("Name"),
 				Params:      &map[string]any{"saml2": []string{"disabled"}},
 				// Defaults
-				Scheme:         utils.Ptr("https"),
+				Scheme:         observability.CREATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
@@ -212,7 +212,7 @@ func TestToCreatePayload(t *testing.T) {
 				JobName:     utils.Ptr("Name"),
 				Params:      &map[string]any{"saml2": []string{"enabled"}},
 				// Defaults
-				Scheme:         utils.Ptr("https"),
+				Scheme:         observability.CREATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
@@ -240,7 +240,7 @@ func TestToCreatePayload(t *testing.T) {
 					Password: utils.Ptr("p"),
 				},
 				// Defaults
-				Scheme:         utils.Ptr("https"),
+				Scheme:         observability.CREATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
@@ -289,7 +289,7 @@ func TestToCreatePayload(t *testing.T) {
 					},
 				},
 				// Defaults
-				Scheme:         utils.Ptr("https"),
+				Scheme:         observability.CREATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
@@ -347,7 +347,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&observability.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
-				Scheme:         utils.Ptr("https"),
+				Scheme:         observability.UPDATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
@@ -369,7 +369,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&observability.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
-				Scheme:         utils.Ptr("http"),
+				Scheme:         observability.UPDATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
@@ -392,7 +392,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&observability.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				// Defaults
-				Scheme:         utils.Ptr("http"),
+				Scheme:         observability.UPDATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
@@ -420,7 +420,7 @@ func TestToUpdatePayload(t *testing.T) {
 					Password: utils.Ptr("p"),
 				},
 				// Defaults
-				Scheme:         utils.Ptr("https"),
+				Scheme:         observability.UPDATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
@@ -467,7 +467,7 @@ func TestToUpdatePayload(t *testing.T) {
 					},
 				},
 				// Defaults
-				Scheme:         utils.Ptr("https"),
+				Scheme:         observability.UPDATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),

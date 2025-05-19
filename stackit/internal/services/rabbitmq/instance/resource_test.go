@@ -37,7 +37,7 @@ var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]a
 		types.StringValue("ciphers1"),
 		types.StringValue("ciphers2"),
 	}),
-	"tls_protocols": types.StringValue("protocol1"),
+	"tls_protocols": types.StringValue(string(rabbitmq.INSTANCEPARAMETERSTLS_PROTOCOLS__2)),
 })
 
 var fixtureInstanceParameters = rabbitmq.InstanceParameters{
@@ -53,7 +53,7 @@ var fixtureInstanceParameters = rabbitmq.InstanceParameters{
 	Roles:                &[]string{"role1", "role2"},
 	Syslog:               &[]string{"syslog", "syslog2"},
 	TlsCiphers:           &[]string{"ciphers1", "ciphers2"},
-	TlsProtocols:         utils.Ptr("protocol1"),
+	TlsProtocols:         rabbitmq.INSTANCEPARAMETERSTLS_PROTOCOLS__2.Ptr(),
 }
 
 func TestMapFields(t *testing.T) {
@@ -105,7 +105,7 @@ func TestMapFields(t *testing.T) {
 					"roles":                  []string{"role1", "role2"},
 					"syslog":                 []string{"syslog", "syslog2"},
 					"tls-ciphers":            []string{"ciphers1", "ciphers2"},
-					"tls-protocols":          "protocol1",
+					"tls-protocols":          string(rabbitmq.INSTANCEPARAMETERSTLS_PROTOCOLS__2),
 				},
 			},
 			Model{
