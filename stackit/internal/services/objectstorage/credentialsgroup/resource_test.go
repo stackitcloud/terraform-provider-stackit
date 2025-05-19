@@ -35,6 +35,8 @@ func (c *objectStorageClientMocked) ListCredentialsGroupsExecute(_ context.Conte
 }
 
 func TestMapFields(t *testing.T) {
+	const testRegion = "eu01"
+	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "cid")
 	tests := []struct {
 		description string
 		input       *objectstorage.CreateCredentialsGroupResponse
@@ -47,7 +49,7 @@ func TestMapFields(t *testing.T) {
 				CredentialsGroup: &objectstorage.CredentialsGroup{},
 			},
 			Model{
-				Id:                 types.StringValue("pid,cid"),
+				Id:                 types.StringValue(id),
 				Name:               types.StringNull(),
 				ProjectId:          types.StringValue("pid"),
 				CredentialsGroupId: types.StringValue("cid"),
@@ -65,7 +67,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                 types.StringValue("pid,cid"),
+				Id:                 types.StringValue(id),
 				Name:               types.StringValue("name"),
 				ProjectId:          types.StringValue("pid"),
 				CredentialsGroupId: types.StringValue("cid"),
@@ -83,7 +85,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                 types.StringValue("pid,cid"),
+				Id:                 types.StringValue(id),
 				Name:               types.StringValue(""),
 				ProjectId:          types.StringValue("pid"),
 				CredentialsGroupId: types.StringValue("cid"),
@@ -162,6 +164,8 @@ func TestEnableProject(t *testing.T) {
 }
 
 func TestReadCredentialsGroups(t *testing.T) {
+	const testRegion = "eu01"
+	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "cid")
 	tests := []struct {
 		description               string
 		mockedResp                *objectstorage.ListCredentialsGroupsResponse
@@ -183,7 +187,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                 types.StringValue("pid,cid"),
+				Id:                 types.StringValue(id),
 				Name:               types.StringNull(),
 				ProjectId:          types.StringValue("pid"),
 				CredentialsGroupId: types.StringValue("cid"),
@@ -210,7 +214,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                 types.StringValue("pid,cid"),
+				Id:                 types.StringValue(id),
 				Name:               types.StringValue("name"),
 				ProjectId:          types.StringValue("pid"),
 				CredentialsGroupId: types.StringValue("cid"),

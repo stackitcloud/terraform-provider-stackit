@@ -32,7 +32,8 @@ func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, proj
 
 func TestMapFields(t *testing.T) {
 	now := time.Now()
-
+	const testRegion = "eu01"
+	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "cgid,cid")
 	tests := []struct {
 		description string
 		input       *objectstorage.CreateAccessKeyResponse
@@ -43,7 +44,7 @@ func TestMapFields(t *testing.T) {
 			"default_values",
 			&objectstorage.CreateAccessKeyResponse{},
 			Model{
-				Id:                  types.StringValue("pid,cgid,cid"),
+				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),
@@ -64,7 +65,7 @@ func TestMapFields(t *testing.T) {
 				SecretAccessKey: utils.Ptr("secret-key"),
 			},
 			Model{
-				Id:                  types.StringValue("pid,cgid,cid"),
+				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),
@@ -84,7 +85,7 @@ func TestMapFields(t *testing.T) {
 				SecretAccessKey: utils.Ptr(""),
 			},
 			Model{
-				Id:                  types.StringValue("pid,cgid,cid"),
+				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),
@@ -102,7 +103,7 @@ func TestMapFields(t *testing.T) {
 				Expires: utils.Ptr(now.Format(time.RFC3339Nano)),
 			},
 			Model{
-				Id:                  types.StringValue("pid,cgid,cid"),
+				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),
@@ -153,6 +154,8 @@ func TestMapFields(t *testing.T) {
 }
 
 func TestEnableProject(t *testing.T) {
+	const testRegion = "eu01"
+	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "cgid,cid")
 	tests := []struct {
 		description string
 		expected    Model
@@ -162,7 +165,7 @@ func TestEnableProject(t *testing.T) {
 		{
 			"default_values",
 			Model{
-				Id:                  types.StringValue("pid,cgid,cid"),
+				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),
@@ -177,7 +180,7 @@ func TestEnableProject(t *testing.T) {
 		{
 			"error_response",
 			Model{
-				Id:                  types.StringValue("pid,cgid,cid"),
+				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),
@@ -213,7 +216,8 @@ func TestEnableProject(t *testing.T) {
 
 func TestReadCredentials(t *testing.T) {
 	now := time.Now()
-
+	const testRegion = "eu01"
+	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "cgid,cid")
 	tests := []struct {
 		description         string
 		mockedResp          *objectstorage.ListAccessKeysResponse
@@ -238,7 +242,7 @@ func TestReadCredentials(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                  types.StringValue("pid,cgid,cid"),
+				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),
@@ -274,7 +278,7 @@ func TestReadCredentials(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                  types.StringValue("pid,cgid,cid"),
+				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),
@@ -310,7 +314,7 @@ func TestReadCredentials(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                  types.StringValue("pid,cgid,cid"),
+				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),

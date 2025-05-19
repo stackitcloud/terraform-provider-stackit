@@ -36,5 +36,5 @@ data "stackit_objectstorage_credential" "example" {
 ### Read-Only
 
 - `expiration_timestamp` (String)
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`credentials_group_id`,`credential_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`credentials_group_id`,`credential_id`".
 - `name` (String)

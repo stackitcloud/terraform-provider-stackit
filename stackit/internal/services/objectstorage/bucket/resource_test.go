@@ -27,6 +27,8 @@ func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, proj
 }
 
 func TestMapFields(t *testing.T) {
+	const testRegion = "eu01"
+	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "bname")
 	tests := []struct {
 		description string
 		input       *objectstorage.GetBucketResponse
@@ -39,7 +41,7 @@ func TestMapFields(t *testing.T) {
 				Bucket: &objectstorage.Bucket{},
 			},
 			Model{
-				Id:                    types.StringValue("pid,bname"),
+				Id:                    types.StringValue(id),
 				Name:                  types.StringValue("bname"),
 				ProjectId:             types.StringValue("pid"),
 				URLPathStyle:          types.StringNull(),
@@ -57,7 +59,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                    types.StringValue("pid,bname"),
+				Id:                    types.StringValue(id),
 				Name:                  types.StringValue("bname"),
 				ProjectId:             types.StringValue("pid"),
 				URLPathStyle:          types.StringValue("url/path/style"),
@@ -75,7 +77,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                    types.StringValue("pid,bname"),
+				Id:                    types.StringValue(id),
 				Name:                  types.StringValue("bname"),
 				ProjectId:             types.StringValue("pid"),
 				URLPathStyle:          types.StringValue(""),

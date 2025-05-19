@@ -109,7 +109,7 @@ func (r *credentialsGroupResource) Configure(ctx context.Context, req resource.C
 func (r *credentialsGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                 "ObjectStorage credentials group resource schema. Must have a `region` specified in the provider configuration. If you are creating `credentialsgroup` and `bucket` resources simultaneously, please include the `depends_on` field so that they are created sequentially. This prevents errors from concurrent calls to the service enablement that is done in the background.",
-		"id":                   "Terraform's internal data source identifier. It is structured as \"`project_id`,`credentials_group_id`\".",
+		"id":                   "Terraform's internal data source identifier. It is structured as \"`project_id`,`region`,`credentials_group_id`\".",
 		"credentials_group_id": "The credentials group ID",
 		"name":                 "The credentials group's display name.",
 		"project_id":           "Project ID to which the credentials group is associated.",
@@ -291,16 +291,17 @@ func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.Dele
 // The expected format of the resource import identifier is: project_id, credentials_group_id
 func (r *credentialsGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing credentialsGroup",
-			fmt.Sprintf("Expected import identifier with format [project_id],[credentials_group_id], got %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format [project_id],[region],[credentials_group_id], got %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials_group_id"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials_group_id"), idParts[2])...)
 	tflog.Info(ctx, "ObjectStorage credentials group state imported")
 }
 
@@ -316,7 +317,7 @@ func mapFields(credentialsGroupResp *objectstorage.CreateCredentialsGroupRespons
 	}
 	credentialsGroup := credentialsGroupResp.CredentialsGroup
 
-	err := mapCredentialsGroup(*credentialsGroup, model)
+	err := mapCredentialsGroup(*credentialsGroup, model, region)
 	if err != nil {
 		return err
 	}
@@ -324,7 +325,7 @@ func mapFields(credentialsGroupResp *objectstorage.CreateCredentialsGroupRespons
 	return nil
 }
 
-func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model *Model) error {
+func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model *Model, region string) error {
 	var credentialsGroupId string
 	if !coreutils.IsUndefined(model.CredentialsGroupId) {
 		credentialsGroupId = model.CredentialsGroupId.ValueString()
@@ -336,6 +337,7 @@ func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model 
 
 	idParts := []string{
 		model.ProjectId.ValueString(),
+		region,
 		credentialsGroupId,
 	}
 	model.Id = types.StringValue(
@@ -392,7 +394,7 @@ func readCredentialsGroups(ctx context.Context, model *Model, region string, cli
 			continue
 		}
 		found = true
-		err = mapCredentialsGroup(credentialsGroup, model)
+		err = mapCredentialsGroup(credentialsGroup, model, region)
 		if err != nil {
 			return found, err
 		}
