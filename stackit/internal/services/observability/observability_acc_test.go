@@ -69,7 +69,6 @@ var testConfigVarsMax = config.Variables{
 	"alert_annotation": config.StringVariable("annotation1"),
 	"alert_interval":   config.StringVariable("5h"),
 	// max instance
-	// "instance_parameters":                    config.StringVariable("param1"), -> not working right now
 	"metrics_retention_days":                 config.StringVariable("30"),
 	"metrics_retention_days_5m_downsampling": config.StringVariable("10"),
 	"metrics_retention_days_1h_downsampling": config.StringVariable("5"),

@@ -11,7 +11,6 @@ variable "alert_interval" {}
 
 variable "instance_name" {}
 variable "plan_name" {}
-##variable "instance_parameters" {}
 variable "metrics_retention_days" {}
 variable "metrics_retention_days_5m_downsampling" {}
 variable "metrics_retention_days_1h_downsampling" {}
