@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	loadbalancerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/utils"
 
 	"github.com/google/uuid"
@@ -237,6 +238,16 @@ func (r *loadBalancerResource) ModifyPlan(ctx context.Context, req resource.Modi
 	}
 }
 
+// ConfigValidators validates the resource configuration
+func (r *loadBalancerResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		resourcevalidator.AtLeastOneOf(
+			path.MatchRoot("external_address"),
+			path.MatchRoot("options").AtName("private_network_only"),
+		),
+	}
+}
+
 // Configure adds the provider configured client to the resource.
 func (r *loadBalancerResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
@@ -327,7 +338,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 			},
 			"external_address": schema.StringAttribute{
 				Description: descriptions["external_address"],
-				Required:    true,
+				Optional:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
