@@ -60,7 +60,7 @@ func (r *bucketDataSource) Configure(ctx context.Context, req datasource.Configu
 func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                     "ObjectStorage bucket data source schema. Must have a `region` specified in the provider configuration.",
-		"id":                       "Terraform's internal data source identifier. It is structured as \"`project_id`,`name`\".",
+		"id":                       "Terraform's internal data source identifier. It is structured as \"`project_id`,`region`,`name`\".",
 		"name":                     "The bucket name. It must be DNS conform.",
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
 		"url_path_style":           "URL in path style.",

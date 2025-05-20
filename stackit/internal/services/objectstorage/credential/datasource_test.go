@@ -1,6 +1,7 @@
 package objectstorage
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 func TestMapDatasourceFields(t *testing.T) {
 	now := time.Now()
 
+	const testRegion = "eu01"
+	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "cgid,cid")
 	tests := []struct {
 		description string
 		input       *objectstorage.AccessKey
@@ -23,7 +26,7 @@ func TestMapDatasourceFields(t *testing.T) {
 			"default_values",
 			&objectstorage.AccessKey{},
 			DataSourceModel{
-				Id:                  types.StringValue("pid,cgid,cid"),
+				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),
@@ -40,7 +43,7 @@ func TestMapDatasourceFields(t *testing.T) {
 				Expires:     utils.Ptr(now.Format(time.RFC3339)),
 			},
 			DataSourceModel{
-				Id:                  types.StringValue("pid,cgid,cid"),
+				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),
@@ -56,7 +59,7 @@ func TestMapDatasourceFields(t *testing.T) {
 				DisplayName: utils.Ptr(""),
 			},
 			DataSourceModel{
-				Id:                  types.StringValue("pid,cgid,cid"),
+				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),
@@ -72,7 +75,7 @@ func TestMapDatasourceFields(t *testing.T) {
 				Expires: utils.Ptr(now.Format(time.RFC3339Nano)),
 			},
 			DataSourceModel{
-				Id:                  types.StringValue("pid,cgid,cid"),
+				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),

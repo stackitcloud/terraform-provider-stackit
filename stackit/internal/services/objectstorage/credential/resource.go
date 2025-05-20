@@ -152,7 +152,7 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                 "ObjectStorage credential resource schema. Must have a `region` specified in the provider configuration.",
-		"id":                   "Terraform's internal resource identifier. It is structured as \"`project_id`,`credentials_group_id`,`credential_id`\".",
+		"id":                   "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`credentials_group_id`,`credential_id`\".",
 		"credential_id":        "The credential ID.",
 		"credentials_group_id": "The credential group ID.",
 		"project_id":           "STACKIT Project ID to which the credential group is associated.",
@@ -424,17 +424,18 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 // The expected format of the resource import identifier is: project_id,credentials_group_id,credential_id
 func (r *credentialResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing credential",
-			fmt.Sprintf("Expected import identifier with format [project_id],[credentials_group_id],[credential_id], got %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format [project_id],[region],[credentials_group_id],[credential_id], got %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials_group_id"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credential_id"), idParts[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials_group_id"), idParts[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credential_id"), idParts[3])...)
 	tflog.Info(ctx, "ObjectStorage credential state imported")
 }
 
@@ -507,6 +508,7 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 
 	idParts := []string{
 		model.ProjectId.ValueString(),
+		region,
 		model.CredentialsGroupId.ValueString(),
 		credentialId,
 	}
@@ -551,6 +553,7 @@ func readCredentials(ctx context.Context, model *Model, region string, client *o
 
 		idParts := []string{
 			projectId,
+			region,
 			credentialsGroupId,
 			credentialId,
 		}

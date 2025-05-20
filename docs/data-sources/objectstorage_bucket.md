@@ -33,6 +33,6 @@ data "stackit_objectstorage_bucket" "example" {
 
 ### Read-Only
 
-- `id` (String) Terraform's internal data source identifier. It is structured as "`project_id`,`name`".
+- `id` (String) Terraform's internal data source identifier. It is structured as "`project_id`,`region`,`name`".
 - `url_path_style` (String)
 - `url_virtual_hosted_style` (String)

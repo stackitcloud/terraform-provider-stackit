@@ -71,7 +71,7 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                 "ObjectStorage credential data source schema. Must have a `region` specified in the provider configuration.",
-		"id":                   "Terraform's internal resource identifier. It is structured as \"`project_id`,`credentials_group_id`,`credential_id`\".",
+		"id":                   "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`credentials_group_id`,`credential_id`\".",
 		"credential_id":        "The credential ID.",
 		"credentials_group_id": "The credential group ID.",
 		"project_id":           "STACKIT Project ID to which the credential group is associated.",
@@ -208,6 +208,7 @@ func mapDataSourceFields(credentialResp *objectstorage.AccessKey, model *DataSou
 
 	idParts := []string{
 		model.ProjectId.ValueString(),
+		region,
 		model.CredentialsGroupId.ValueString(),
 		credentialId,
 	}

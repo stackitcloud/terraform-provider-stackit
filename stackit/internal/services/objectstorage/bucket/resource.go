@@ -109,7 +109,7 @@ func (r *bucketResource) Configure(ctx context.Context, req resource.ConfigureRe
 func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                     "ObjectStorage bucket resource schema. Must have a `region` specified in the provider configuration. If you are creating `credentialsgroup` and `bucket` resources simultaneously, please include the `depends_on` field so that they are created sequentially. This prevents errors from concurrent calls to the service enablement that is done in the background.",
-		"id":                       "Terraform's internal resource identifier. It is structured as \"`project_id`,`name`\".",
+		"id":                       "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`name`\".",
 		"name":                     "The bucket name. It must be DNS conform.",
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
 		"url_path_style":           "URL in path style.",
@@ -304,16 +304,17 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 // The expected format of the resource import identifier is: project_id,name
 func (r *bucketResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing bucket",
-			fmt.Sprintf("Expected import identifier with format [project_id],[name], got %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format [project_id],[region],[name], got %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[2])...)
 	tflog.Info(ctx, "ObjectStorage bucket state imported")
 }
 
@@ -331,6 +332,7 @@ func mapFields(bucketResp *objectstorage.GetBucketResponse, model *Model, region
 
 	idParts := []string{
 		model.ProjectId.ValueString(),
+		region,
 		model.Name.ValueString(),
 	}
 	model.Id = types.StringValue(

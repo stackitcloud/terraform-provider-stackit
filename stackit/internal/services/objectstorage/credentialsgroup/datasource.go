@@ -60,7 +60,7 @@ func (r *credentialsGroupDataSource) Configure(ctx context.Context, req datasour
 func (r *credentialsGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                 "ObjectStorage credentials group data source schema. Must have a `region` specified in the provider configuration.",
-		"id":                   "Terraform's internal data source identifier. It is structured as \"`project_id`,`credentials_group_id`\".",
+		"id":                   "Terraform's internal data source identifier. It is structured as \"`project_id`,`region`,`credentials_group_id`\".",
 		"credentials_group_id": "The credentials group ID.",
 		"name":                 "The credentials group's display name.",
 		"project_id":           "Object Storage Project ID to which the credentials group is associated.",
@@ -77,8 +77,7 @@ func (r *credentialsGroupDataSource) Schema(_ context.Context, _ datasource.Sche
 			},
 			"credentials_group_id": schema.StringAttribute{
 				Description: descriptions["credentials_group_id"],
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
 			},
 			"project_id": schema.StringAttribute{
 				Description: descriptions["project_id"],
@@ -90,7 +89,6 @@ func (r *credentialsGroupDataSource) Schema(_ context.Context, _ datasource.Sche
 			},
 			"name": schema.StringAttribute{
 				Description: descriptions["name"],
-				Optional:    true,
 				Computed:    true,
 			},
 			"urn": schema.StringAttribute{
