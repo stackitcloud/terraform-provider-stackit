@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -264,6 +265,41 @@ func TestIsLegacyProjectRole(t *testing.T) {
 			output := IsLegacyProjectRole(tt.role)
 			if output != tt.expected {
 				t.Fatalf("Data does not match: %v", output)
+			}
+		})
+	}
+}
+
+func TestFormatPossibleValues(t *testing.T) {
+	gotPrefix := "Possible values are:"
+
+	type args struct {
+		values []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "single string value",
+			args: args{
+				values: []string{"foo"},
+			},
+			want: fmt.Sprintf("%s `foo`.", gotPrefix),
+		},
+		{
+			name: "multiple string value",
+			args: args{
+				values: []string{"foo", "bar", "trololol"},
+			},
+			want: fmt.Sprintf("%s `foo`, `bar`, `trololol`.", gotPrefix),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FormatPossibleValues(tt.args.values); got != tt.want {
+				t.Errorf("FormatPossibleValues() = %v, want %v", got, tt.want)
 			}
 		})
 	}
