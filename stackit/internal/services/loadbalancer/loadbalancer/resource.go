@@ -52,6 +52,7 @@ type Model struct {
 	ExternalAddress types.String `tfsdk:"external_address"`
 	Listeners       types.List   `tfsdk:"listeners"`
 	Name            types.String `tfsdk:"name"`
+	PlanId          types.String `tfsdk:"plan_id"`
 	Networks        types.List   `tfsdk:"networks"`
 	Options         types.Object `tfsdk:"options"`
 	PrivateAddress  types.String `tfsdk:"private_address"`
@@ -268,6 +269,7 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 		"protocol":                              "Protocol is the highest network protocol we understand to load balance. " + utils.SupportedValuesDocumentation(protocolOptions),
 		"target_pool":                           "Reference target pool by target pool name.",
 		"name":                                  "Load balancer name.",
+		"plan_id":                               "The service plan ID. Defaults to p10. See the API docs for a list of available plans at: https://docs.api.stackit.cloud/documentation/load-balancer/version/v1#tag/APIService/operation/APIService_ListPlans",
 		"networks":                              "List of networks that listeners and targets reside in.",
 		"network_id":                            "Openstack network ID.",
 		"role":                                  "The role defines how the load balancer is using the network. " + utils.SupportedValuesDocumentation(roleOptions),
@@ -328,6 +330,14 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 			"external_address": schema.StringAttribute{
 				Description: descriptions["external_address"],
 				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"plan_id": schema.StringAttribute{
+				Description: descriptions["plan_id"],
+				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -864,6 +874,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoa
 		ExternalAddress: conversion.StringValueToPointer(model.ExternalAddress),
 		Listeners:       listenersPayload,
 		Name:            conversion.StringValueToPointer(model.Name),
+		PlanId:          conversion.StringValueToPointer(model.PlanId),
 		Networks:        networksPayload,
 		Options:         optionsPayload,
 		TargetPools:     targetPoolsPayload,
@@ -1178,6 +1189,7 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, reg
 		strings.Join(idParts, core.Separator),
 	)
 
+	m.PlanId = types.StringPointerValue(lb.PlanId)
 	m.ExternalAddress = types.StringPointerValue(lb.ExternalAddress)
 	m.PrivateAddress = types.StringPointerValue(lb.PrivateAddress)
 
