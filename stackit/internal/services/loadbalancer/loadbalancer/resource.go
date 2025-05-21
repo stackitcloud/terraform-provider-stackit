@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	loadbalancerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/utils"
 
 	"github.com/google/uuid"
@@ -239,12 +238,34 @@ func (r *loadBalancerResource) ModifyPlan(ctx context.Context, req resource.Modi
 }
 
 // ConfigValidators validates the resource configuration
-func (r *loadBalancerResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
-	return []resource.ConfigValidator{
-		resourcevalidator.AtLeastOneOf(
-			path.MatchRoot("external_address"),
-			path.MatchRoot("options").AtName("private_network_only"),
-		),
+func (r *loadBalancerResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var model Model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	externalAddressIsSet := !utils.IsUndefined(model.ExternalAddress)
+
+	lbOptions, err := toOptionsPayload(ctx, &model)
+	if err != nil || lbOptions == nil {
+		// private_network_only is not set and external_address is not set
+		if !externalAddressIsSet {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring load balancer", fmt.Sprintf("You need to provide either the `options.private_network_only = true` or `external_address` field. %v", err))
+		}
+		return
+	}
+	if lbOptions.PrivateNetworkOnly == nil || *lbOptions.PrivateNetworkOnly == false {
+		// private_network_only is not set or false and external_address is not set
+		if !externalAddressIsSet {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring load balancer", fmt.Sprintf("You need to provide either the `options.private_network_only = true` or `external_address` field."))
+		}
+		return
+	}
+
+	// Both are set
+	if *lbOptions.PrivateNetworkOnly && externalAddressIsSet {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring load balancer", fmt.Sprintf("You need to provide either the `options.private_network_only = true` or `external_address` field."))
 	}
 }
 
