@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
 
@@ -37,6 +39,16 @@ type zoneDataSource struct {
 // Metadata returns the data source type name.
 func (d *zoneDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_dns_zone"
+}
+
+// ConfigValidators validates the resource configuration
+func (d *zoneDataSource) ConfigValidators(_ context.Context) []datasource.ConfigValidator {
+	return []datasource.ConfigValidator{
+		datasourcevalidator.ExactlyOneOf(
+			path.MatchRoot("zone_id"),
+			path.MatchRoot("dns_name"),
+		),
+	}
 }
 
 func (d *zoneDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -72,7 +84,7 @@ func (d *zoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"zone_id": schema.StringAttribute{
 				Description: "The zone ID.",
-				Required:    true,
+				Optional:    true,
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
@@ -84,7 +96,7 @@ func (d *zoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"dns_name": schema.StringAttribute{
 				Description: "The zone name. E.g. `example.com`",
-				Computed:    true,
+				Optional:    true,
 			},
 			"description": schema.StringAttribute{
 				Description: "Description of the zone.",
@@ -169,24 +181,62 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	}
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
+	dnsName := model.DnsName.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
+	ctx = tflog.SetField(ctx, "dnsName", dnsName)
 
-	zoneResp, err := d.client.GetZone(ctx, projectId, zoneId).Execute()
-	if err != nil {
-		utils.LogError(
-			ctx,
-			&resp.Diagnostics,
-			err,
-			"Reading zone",
-			fmt.Sprintf("Zone with ID %q does not exist in project %q.", zoneId, projectId),
-			map[int]string{
-				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
-			},
-		)
-		resp.State.RemoveResource(ctx)
-		return
+	var zoneResp *dns.ZoneResponse
+	var err error
+
+	if zoneId != "" {
+		zoneResp, err = d.client.GetZone(ctx, projectId, zoneId).Execute()
+		if err != nil {
+			utils.LogError(
+				ctx,
+				&resp.Diagnostics,
+				err,
+				"Reading zone",
+				fmt.Sprintf("Zone with ID %q does not exist in project %q.", zoneId, projectId),
+				map[int]string{
+					http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+				},
+			)
+			resp.State.RemoveResource(ctx)
+			return
+		}
+	} else {
+		listZoneResp, err := d.client.ListZones(ctx, projectId).DnsNameEq(dnsName).Execute()
+		if err != nil {
+			utils.LogError(
+				ctx,
+				&resp.Diagnostics,
+				err,
+				"Reading zone",
+				fmt.Sprintf("Zone with DNS name %q does not exist in project %q.", dnsName, projectId),
+				map[int]string{
+					http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+				},
+			)
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		if *listZoneResp.TotalItems != 1 {
+			utils.LogError(
+				ctx,
+				&resp.Diagnostics,
+				fmt.Errorf("zone with DNS name %q does not exist in project %q", dnsName, projectId),
+				"Reading zone",
+				fmt.Sprintf("Zone with DNS name %q does not exist in project %q.", dnsName, projectId),
+				nil,
+			)
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		zones := *listZoneResp.Zones
+		zoneResp = dns.NewZoneResponse(zones[0])
 	}
+
 	if zoneResp != nil && zoneResp.Zone.State != nil && *zoneResp.Zone.State == dns.ZONESTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", "Zone was deleted successfully")

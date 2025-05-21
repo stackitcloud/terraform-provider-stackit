@@ -29,6 +29,11 @@ data "stackit_dns_zone" "zone" {
   zone_id    = stackit_dns_zone.zone.zone_id
 }
 
+data "stackit_dns_zone" "zone_name" {
+  project_id = var.project_id
+  dns_name   = stackit_dns_zone.zone.dns_name
+}
+
 data "stackit_dns_record_set" "record_set" {
   project_id    = var.project_id
   zone_id       = stackit_dns_zone.zone.zone_id
