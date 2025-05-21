@@ -255,17 +255,17 @@ func (r *loadBalancerResource) ValidateConfig(ctx context.Context, req resource.
 		}
 		return
 	}
-	if lbOptions.PrivateNetworkOnly == nil || *lbOptions.PrivateNetworkOnly == false {
+	if lbOptions.PrivateNetworkOnly == nil || !*lbOptions.PrivateNetworkOnly {
 		// private_network_only is not set or false and external_address is not set
 		if !externalAddressIsSet {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring load balancer", fmt.Sprintf("You need to provide either the `options.private_network_only = true` or `external_address` field."))
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring load balancer", "You need to provide either the `options.private_network_only = true` or `external_address` field.")
 		}
 		return
 	}
 
 	// Both are set
 	if *lbOptions.PrivateNetworkOnly && externalAddressIsSet {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring load balancer", fmt.Sprintf("You need to provide either the `options.private_network_only = true` or `external_address` field."))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring load balancer", "You need to provide either the `options.private_network_only = true` or `external_address` field.")
 	}
 }
 
