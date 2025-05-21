@@ -1,5 +1,4 @@
 variable "project_id" {}
-variable "organization_id" {}
 variable "name" {}
 variable "nodepool_availability_zone1" {}
 variable "nodepool_machine_type" {}

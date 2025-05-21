@@ -1,5 +1,4 @@
 variable "project_id" {}
-variable "organization_id" {}
 variable "name" {}
 variable "nodepool_availability_zone1" {}
 variable "nodepool_machine_type" {}
@@ -12,8 +11,6 @@ variable "maintenance_enable_machine_image_version_updates" {}
 variable "maintenance_start" {}
 variable "maintenance_end" {}
 variable "region" {}
-variable "dns_zone_name" {}
-variable "dns_name" {}
 
 
 resource "stackit_ske_cluster" "cluster" {
@@ -26,9 +23,6 @@ resource "stackit_ske_cluster" "cluster" {
     maximum            = var.nodepool_maximum
     minimum            = var.nodepool_minimum
     name               = var.nodepool_name
-    # os_name         = var.nodepool_os_name
-    # os_version_min  = var.nodepool_os_version_min
-
     }
   ]
   kubernetes_version_min = var.kubernetes_version_min
@@ -54,9 +48,4 @@ data "stackit_ske_cluster" "cluster" {
   name       = stackit_ske_cluster.cluster.name
 }
 
-resource "stackit_dns_zone" "dns-zone" {
-  project_id = var.project_id
-  name       = var.dns_zone_name
-  dns_name   = var.dns_name
-}
 

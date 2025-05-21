@@ -35,8 +35,7 @@ var (
 
 var testConfigVarsMin = config.Variables{
 	"project_id":                  config.StringVariable(testutil.ProjectId),
-	"organization_id":             config.StringVariable(testutil.OrganizationId),
-	"name":                        config.StringVariable(maxTestName),
+	"name":                        config.StringVariable(minTestName),
 	"nodepool_availability_zone1": config.StringVariable("eu01-m"),
 	"nodepool_machine_type":       config.StringVariable("g1.2"),
 	"nodepool_minimum":            config.StringVariable("1"),
@@ -48,14 +47,12 @@ var testConfigVarsMin = config.Variables{
 	"maintenance_start": config.StringVariable("02:00:00+01:00"),
 	"maintenance_end":   config.StringVariable("04:00:00+01:00"),
 	"region":            config.StringVariable("eu01"),
-	"dns_zone_name":     config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha)),
-	"dns_name":          config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha) + ".test"),
 }
 
 var testConfigVarsMax = config.Variables{
 	"project_id":                                       config.StringVariable(testutil.ProjectId),
 	"organization_id":                                  config.StringVariable(testutil.OrganizationId),
-	"name":                                             config.StringVariable(minTestName),
+	"name":                                             config.StringVariable(maxTestName),
 	"nodepool_availability_zone1":                      config.StringVariable("eu01-m"),
 	"nodepool_machine_type":                            config.StringVariable("g1.2"),
 	"nodepool_minimum":                                 config.StringVariable("1"),
@@ -89,7 +86,7 @@ var testConfigVarsMax = config.Variables{
 	"expiration":                                       config.StringVariable("3600"),
 	"refresh":                                          config.StringVariable("true"),
 	"dns_zone_name":                                    config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha)),
-	"dns_name":                                         config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha) + ".test"),
+	"dns_name":                                         config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha) + ".runs.onstackit.cloud"),
 }
 
 func configVarsMinUpdated() config.Variables {
@@ -130,10 +127,11 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.minimum", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_minimum"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.name", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_name"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "node_pools.0.os_version_used"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_kubernetes_version_updates", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_enable_kubernetes_version_updates"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_enable_machine_image_version_updates"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_start"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_end"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "region"),
-
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "egress_address_ranges.#", "1"),
-					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "egress_address_ranges.0"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
 
 					// Kubeconfig
@@ -168,8 +166,11 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.name", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_name"])),
 
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kubernetes_version_used"),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "egress_address_ranges.#", "1"),
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "egress_address_ranges.0"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_kubernetes_version_updates", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_enable_kubernetes_version_updates"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_enable_machine_image_version_updates"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_start"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_end"])),
+					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "region"),
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kubernetes_version_used"),
 				),
 			},
@@ -212,9 +213,12 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "node_pools.0.name", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_name"])),
 
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kubernetes_version_used"),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "egress_address_ranges.#", "1"),
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "egress_address_ranges.0"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_kubernetes_version_updates", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_enable_kubernetes_version_updates"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_enable_machine_image_version_updates"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_start"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_end"])),
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kubernetes_version_used"),
+					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "region"),
 				),
 			},
 			// Deletion is done by the framework implicitly
