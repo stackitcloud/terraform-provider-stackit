@@ -245,7 +245,7 @@ func (r *loadBalancerResource) ValidateConfig(ctx context.Context, req resource.
 		return
 	}
 
-	externalAddressIsSet := !utils.IsUndefined(model.ExternalAddress)
+	externalAddressIsSet := !model.ExternalAddress.IsNull()
 
 	lbOptions, err := toOptionsPayload(ctx, &model)
 	if err != nil || lbOptions == nil {
