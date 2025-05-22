@@ -206,7 +206,10 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			return
 		}
 	} else {
-		listZoneResp, err := d.client.ListZones(ctx, projectId).DnsNameEq(dnsName).Execute()
+		listZoneResp, err := d.client.ListZones(ctx, projectId).
+			DnsNameEq(dnsName).
+			ActiveEq(true).
+			Execute()
 		if err != nil {
 			utils.LogError(
 				ctx,
