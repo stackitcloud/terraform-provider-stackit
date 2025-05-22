@@ -184,7 +184,7 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	dnsName := model.DnsName.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
-	ctx = tflog.SetField(ctx, "dnsName", dnsName)
+	ctx = tflog.SetField(ctx, "dns_name", dnsName)
 
 	var zoneResp *dns.ZoneResponse
 	var err error
