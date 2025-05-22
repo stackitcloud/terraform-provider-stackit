@@ -28,8 +28,8 @@ resource "stackit_mongodbflex_instance" "example" {
   }
   version = "7.0"
   options = {
-    type                    = "Single"
-    snapshot_retention_days = 3
+    type                       = "Single"
+    snapshot_retention_days    = 3
     point_in_time_window_hours = 30
   }
   backup_schedule = "0 0 * * *"
