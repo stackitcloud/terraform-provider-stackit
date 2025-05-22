@@ -25,6 +25,10 @@ data "stackit_dns_zone" "example" {
 ### Required
 
 - `project_id` (String) STACKIT project ID to which the dns zone is associated.
+
+### Optional
+
+- `dns_name` (String) The zone name. E.g. `example.com`
 - `zone_id` (String) The zone ID.
 
 ### Read-Only
@@ -34,7 +38,6 @@ data "stackit_dns_zone" "example" {
 - `contact_email` (String) A contact e-mail for the zone.
 - `default_ttl` (Number) Default time to live.
 - `description` (String) Description of the zone.
-- `dns_name` (String) The zone name. E.g. `example.com`
 - `expire_time` (Number) Expire time.
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`zone_id`".
 - `is_reverse_zone` (Boolean) Specifies, if the zone is a reverse zone or not.
