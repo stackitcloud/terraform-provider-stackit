@@ -696,7 +696,8 @@ func TestMapFields(t *testing.T) {
 
 func Test_validateConfig(t *testing.T) {
 	type args struct {
-		model Model
+		ExternalAddress    *string
+		PrivateNetworkOnly *bool
 	}
 	tests := []struct {
 		name    string
@@ -706,84 +707,48 @@ func Test_validateConfig(t *testing.T) {
 		{
 			name: "happy case 1: private_network_only is not set and external_address is set",
 			args: args{
-				model: Model{
-					ExternalAddress: types.StringValue(testExternalAddress),
-					Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-						"acl":                  types.SetNull(types.StringType),
-						"observability":        types.ObjectNull(observabilityTypes),
-						"private_network_only": types.BoolNull(),
-					}),
-				},
+				ExternalAddress:    utils.Ptr(testExternalAddress),
+				PrivateNetworkOnly: nil,
 			},
 			wantErr: false,
 		},
 		{
 			name: "happy case 2: private_network_only is set to false and external_address is set",
 			args: args{
-				model: Model{
-					ExternalAddress: types.StringValue(testExternalAddress),
-					Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-						"acl":                  types.SetNull(types.StringType),
-						"observability":        types.ObjectNull(observabilityTypes),
-						"private_network_only": types.BoolValue(false),
-					}),
-				},
+				ExternalAddress:    utils.Ptr(testExternalAddress),
+				PrivateNetworkOnly: utils.Ptr(false),
 			},
 			wantErr: false,
 		},
 		{
 			name: "happy case 3: private_network_only is set to true and external_address is not set",
 			args: args{
-				model: Model{
-					ExternalAddress: types.StringNull(),
-					Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-						"acl":                  types.SetNull(types.StringType),
-						"observability":        types.ObjectNull(observabilityTypes),
-						"private_network_only": types.BoolValue(true),
-					}),
-				},
+				ExternalAddress:    nil,
+				PrivateNetworkOnly: utils.Ptr(true),
 			},
 			wantErr: false,
 		},
 		{
 			name: "error case 1: private_network_only and external_address are set",
 			args: args{
-				model: Model{
-					ExternalAddress: types.StringValue(testExternalAddress),
-					Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-						"acl":                  types.SetNull(types.StringType),
-						"observability":        types.ObjectNull(observabilityTypes),
-						"private_network_only": types.BoolValue(true),
-					}),
-				},
+				ExternalAddress:    utils.Ptr(testExternalAddress),
+				PrivateNetworkOnly: utils.Ptr(true),
 			},
 			wantErr: true,
 		},
 		{
 			name: "error case 2: private_network_only is not set and external_address is not set",
 			args: args{
-				model: Model{
-					ExternalAddress: types.StringNull(),
-					Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-						"acl":                  types.SetNull(types.StringType),
-						"observability":        types.ObjectNull(observabilityTypes),
-						"private_network_only": types.BoolNull(),
-					}),
-				},
+				ExternalAddress:    nil,
+				PrivateNetworkOnly: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "error case 3: private_network_only is set to false and external_address is not set",
 			args: args{
-				model: Model{
-					ExternalAddress: types.StringNull(),
-					Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-						"acl":                  types.SetNull(types.StringType),
-						"observability":        types.ObjectNull(observabilityTypes),
-						"private_network_only": types.BoolValue(false),
-					}),
-				},
+				ExternalAddress:    nil,
+				PrivateNetworkOnly: utils.Ptr(false),
 			},
 			wantErr: true,
 		},
@@ -792,7 +757,16 @@ func Test_validateConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			diags := diag.Diagnostics{}
-			validateConfig(ctx, &diags, &tt.args.model)
+			model := &Model{
+				ExternalAddress: types.StringPointerValue(tt.args.ExternalAddress),
+				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+					"acl":                  types.SetNull(types.StringType),
+					"observability":        types.ObjectNull(observabilityTypes),
+					"private_network_only": types.BoolPointerValue(tt.args.PrivateNetworkOnly),
+				}),
+			}
+
+			validateConfig(ctx, &diags, model)
 
 			if diags.HasError() != tt.wantErr {
 				t.Errorf("validateConfig() = %v, want %v", diags.HasError(), tt.wantErr)
