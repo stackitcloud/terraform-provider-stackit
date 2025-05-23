@@ -39,6 +39,7 @@ var instanceResource = map[string]string{
 	"snapshot_retention_days":         "4",
 	"snapshot_retention_days_updated": "3",
 	"daily_snapshot_retention_days":   "1",
+	"point_in_time_window_hours":      "30",
 }
 
 // User resource data
@@ -71,6 +72,7 @@ func configResources(version, backupSchedule, snapshotRetentionDays string) stri
 						type = "%s"
 						snapshot_retention_days = %s
 						daily_snapshot_retention_days = %s
+						point_in_time_window_hours = %s
 					}
 					backup_schedule = "%s"
 				}
@@ -96,6 +98,7 @@ func configResources(version, backupSchedule, snapshotRetentionDays string) stri
 		instanceResource["options_type"],
 		snapshotRetentionDays,
 		instanceResource["daily_snapshot_retention_days"],
+		instanceResource["point_in_time_window_hours"],
 		backupSchedule,
 		userResource["username"],
 		userResource["role"],
@@ -129,6 +132,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.type", instanceResource["options_type"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.snapshot_retention_days", instanceResource["snapshot_retention_days"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.daily_snapshot_retention_days", instanceResource["daily_snapshot_retention_days"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.point_in_time_window_hours", instanceResource["point_in_time_window_hours"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
 
 					// User
@@ -191,6 +195,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "options.type", instanceResource["options_type"]),
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "options.snapshot_retention_days", instanceResource["snapshot_retention_days"]),
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "options.daily_snapshot_retention_days", instanceResource["daily_snapshot_retention_days"]),
+					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "options.point_in_time_window_hours", instanceResource["point_in_time_window_hours"]),
 					resource.TestCheckResourceAttr("data.stackit_mongodbflex_instance.instance", "backup_schedule", instanceResource["backup_schedule_read"]),
 
 					// User data
@@ -274,6 +279,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "version", instanceResource["version_updated"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.type", instanceResource["options_type"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.snapshot_retention_days", instanceResource["snapshot_retention_days_updated"]),
+					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "options.point_in_time_window_hours", instanceResource["point_in_time_window_hours"]),
 					resource.TestCheckResourceAttr("stackit_mongodbflex_instance.instance", "backup_schedule", instanceResource["backup_schedule_updated"]),
 				),
 			},

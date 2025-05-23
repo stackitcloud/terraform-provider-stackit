@@ -291,8 +291,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 					"point_in_time_window_hours": schema.Int64Attribute{
 						Description: descriptions["point_in_time_window_hours"],
-						Optional:    true,
-						Computed:    true,
+						Required:    true,
 						PlanModifiers: []planmodifier.Int64{
 							int64planmodifier.UseStateForUnknown(),
 						},
