@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -245,27 +246,32 @@ func (r *loadBalancerResource) ValidateConfig(ctx context.Context, req resource.
 		return
 	}
 
+	// validation is done in extracted func so it's easier to unit-test it
+	validateConfig(ctx, &resp.Diagnostics, &model)
+}
+
+func validateConfig(ctx context.Context, diags *diag.Diagnostics, model *Model) {
 	externalAddressIsSet := !model.ExternalAddress.IsNull()
 
-	lbOptions, err := toOptionsPayload(ctx, &model)
+	lbOptions, err := toOptionsPayload(ctx, model)
 	if err != nil || lbOptions == nil {
 		// private_network_only is not set and external_address is not set
 		if !externalAddressIsSet {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring load balancer", fmt.Sprintf("You need to provide either the `options.private_network_only = true` or `external_address` field. %v", err))
+			core.LogAndAddError(ctx, diags, "Error configuring load balancer", fmt.Sprintf("You need to provide either the `options.private_network_only = true` or `external_address` field. %v", err))
 		}
 		return
 	}
 	if lbOptions.PrivateNetworkOnly == nil || !*lbOptions.PrivateNetworkOnly {
 		// private_network_only is not set or false and external_address is not set
 		if !externalAddressIsSet {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring load balancer", "You need to provide either the `options.private_network_only = true` or `external_address` field.")
+			core.LogAndAddError(ctx, diags, "Error configuring load balancer", "You need to provide either the `options.private_network_only = true` or `external_address` field.")
 		}
 		return
 	}
 
 	// Both are set
 	if *lbOptions.PrivateNetworkOnly && externalAddressIsSet {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring load balancer", "You need to provide either the `options.private_network_only = true` or `external_address` field.")
+		core.LogAndAddError(ctx, diags, "Error configuring load balancer", "You need to provide either the `options.private_network_only = true` or `external_address` field.")
 	}
 }
 
