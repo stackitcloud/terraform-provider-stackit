@@ -32,3 +32,15 @@ jobs:
       
       - name: Test
         run: make test
+
+  config:
+    name: Check GoReleaser config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          args: check
