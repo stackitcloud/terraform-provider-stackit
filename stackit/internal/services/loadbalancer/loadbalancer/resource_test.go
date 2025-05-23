@@ -7,9 +7,14 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
+)
+
+const (
+	testExternalAddress = "95.46.74.109"
 )
 
 func TestToCreatePayload(t *testing.T) {
@@ -684,6 +689,113 @@ func TestMapFields(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
+			}
+		})
+	}
+}
+
+func Test_validateConfig(t *testing.T) {
+	type args struct {
+		model Model
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "happy case 1: private_network_only is not set and external_address is set",
+			args: args{
+				model: Model{
+					ExternalAddress: types.StringValue(testExternalAddress),
+					Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+						"acl":                  types.SetNull(types.StringType),
+						"observability":        types.ObjectNull(observabilityTypes),
+						"private_network_only": types.BoolNull(),
+					}),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "happy case 2: private_network_only is set to false and external_address is set",
+			args: args{
+				model: Model{
+					ExternalAddress: types.StringValue(testExternalAddress),
+					Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+						"acl":                  types.SetNull(types.StringType),
+						"observability":        types.ObjectNull(observabilityTypes),
+						"private_network_only": types.BoolValue(false),
+					}),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "happy case 3: private_network_only is set to true and external_address is not set",
+			args: args{
+				model: Model{
+					ExternalAddress: types.StringNull(),
+					Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+						"acl":                  types.SetNull(types.StringType),
+						"observability":        types.ObjectNull(observabilityTypes),
+						"private_network_only": types.BoolValue(true),
+					}),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "error case 1: private_network_only and external_address are set",
+			args: args{
+				model: Model{
+					ExternalAddress: types.StringValue(testExternalAddress),
+					Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+						"acl":                  types.SetNull(types.StringType),
+						"observability":        types.ObjectNull(observabilityTypes),
+						"private_network_only": types.BoolValue(true),
+					}),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "error case 2: private_network_only is not set and external_address is not set",
+			args: args{
+				model: Model{
+					ExternalAddress: types.StringNull(),
+					Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+						"acl":                  types.SetNull(types.StringType),
+						"observability":        types.ObjectNull(observabilityTypes),
+						"private_network_only": types.BoolNull(),
+					}),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "error case 3: private_network_only is set to false and external_address is not set",
+			args: args{
+				model: Model{
+					ExternalAddress: types.StringNull(),
+					Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+						"acl":                  types.SetNull(types.StringType),
+						"observability":        types.ObjectNull(observabilityTypes),
+						"private_network_only": types.BoolValue(false),
+					}),
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			diags := diag.Diagnostics{}
+			validateConfig(ctx, &diags, &tt.args.model)
+
+			if diags.HasError() != tt.wantErr {
+				t.Errorf("validateConfig() = %v, want %v", diags.HasError(), tt.wantErr)
 			}
 		})
 	}
