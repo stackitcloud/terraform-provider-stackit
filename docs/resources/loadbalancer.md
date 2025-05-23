@@ -119,7 +119,6 @@ resource "stackit_loadbalancer" "example" {
 
 ### Required
 
-- `external_address` (String) External Load Balancer IP address where this Load Balancer is exposed.
 - `listeners` (Attributes List) List of all listeners which will accept traffic. Limited to 20. (see [below for nested schema](#nestedatt--listeners))
 - `name` (String) Load balancer name.
 - `networks` (Attributes List) List of networks that listeners and targets reside in. (see [below for nested schema](#nestedatt--networks))
@@ -128,6 +127,7 @@ resource "stackit_loadbalancer" "example" {
 
 ### Optional
 
+- `external_address` (String) External Load Balancer IP address where this Load Balancer is exposed.
 - `options` (Attributes) Defines any optional functionality you want to have enabled on your load balancer. (see [below for nested schema](#nestedatt--options))
 - `region` (String) The resource region. If not defined, the provider region is used.
 
