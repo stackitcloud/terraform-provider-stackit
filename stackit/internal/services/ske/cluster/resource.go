@@ -1407,13 +1407,13 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model, region string) er
 	return nil
 }
 
-func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
+func mapNodePools(ctx context.Context, cl *ske.Cluster, model *Model) error {
 	modelNodePoolOSVersion := map[string]basetypes.StringValue{}
 	modelNodePoolOSVersionMin := map[string]basetypes.StringValue{}
 
 	modelNodePools := []nodePool{}
-	if !m.NodePools.IsNull() && !m.NodePools.IsUnknown() {
-		diags := m.NodePools.ElementsAs(ctx, &modelNodePools, false)
+	if !model.NodePools.IsNull() && !model.NodePools.IsUnknown() {
+		diags := model.NodePools.ElementsAs(ctx, &modelNodePools, false)
 		if diags.HasError() {
 			return core.DiagsToError(diags)
 		}
@@ -1428,7 +1428,7 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	}
 
 	if cl.Nodepools == nil {
-		m.NodePools = types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes})
+		model.NodePools = types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes})
 		return nil
 	}
 
@@ -1504,7 +1504,7 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
-	m.NodePools = nodePoolsTF
+	model.NodePools = nodePoolsTF
 	return nil
 }
 
