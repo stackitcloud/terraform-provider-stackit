@@ -290,6 +290,11 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	// Delete existing bucket
 	_, err := r.client.DeleteBucket(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusUnprocessableEntity {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", "Bucket isn't empty and cannot be deleted")
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", fmt.Sprintf("Calling API: %v", err))
 	}
 	_, err = wait.DeleteBucketWaitHandler(ctx, r.client, projectId, region, bucketName).WaitWithContext(ctx)
