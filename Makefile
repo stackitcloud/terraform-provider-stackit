@@ -29,6 +29,7 @@ build:
 
 fmt:
 	@gofmt -s -w .
+	@go tool goimports -w .
 	@cd $(ROOT_DIR)/examples && terraform fmt -recursive && cd $(ROOT_DIR)
 
 # TEST
