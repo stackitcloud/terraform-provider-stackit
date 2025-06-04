@@ -8,7 +8,6 @@ import (
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -326,20 +325,11 @@ func mapFields(ctx context.Context, keyPairResp *iaas.Keypair, model *Model) err
 	model.PublicKey = types.StringPointerValue(keyPairResp.PublicKey)
 	model.Fingerprint = types.StringPointerValue(keyPairResp.Fingerprint)
 
-	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
-	if diags.HasError() {
-		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
+	var err error
+	model.Labels, err = iaasUtils.MapLabels(ctx, keyPairResp.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
-	if keyPairResp.Labels != nil && len(*keyPairResp.Labels) != 0 {
-		var diags diag.Diagnostics
-		labels, diags = types.MapValueFrom(ctx, types.StringType, *keyPairResp.Labels)
-		if diags.HasError() {
-			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-		}
-	} else if model.Labels.IsNull() {
-		labels = types.MapNull(types.StringType)
-	}
-	model.Labels = labels
 
 	return nil
 }

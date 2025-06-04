@@ -8,7 +8,6 @@ import (
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -380,18 +379,9 @@ func mapFields(ctx context.Context, networkAreaRoute *iaas.Route, model *Model) 
 		strings.Join(idParts, core.Separator),
 	)
 
-	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
-	if diags.HasError() {
-		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-	}
-	if networkAreaRoute.Labels != nil && len(*networkAreaRoute.Labels) != 0 {
-		var diags diag.Diagnostics
-		labels, diags = types.MapValueFrom(ctx, types.StringType, *networkAreaRoute.Labels)
-		if diags.HasError() {
-			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-		}
-	} else if model.Labels.IsNull() {
-		labels = types.MapNull(types.StringType)
+	labels, err := iaasUtils.MapLabels(ctx, networkAreaRoute.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
 
 	model.NetworkAreaRouteId = types.StringValue(networkAreaRouteId)

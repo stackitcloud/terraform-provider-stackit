@@ -521,18 +521,9 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model) error
 		strings.Join(idParts, core.Separator),
 	)
 
-	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
-	if diags.HasError() {
-		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-	}
-	if volumeResp.Labels != nil && len(*volumeResp.Labels) != 0 {
-		var diags diag.Diagnostics
-		labels, diags = types.MapValueFrom(ctx, types.StringType, *volumeResp.Labels)
-		if diags.HasError() {
-			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-		}
-	} else if model.Labels.IsNull() {
-		labels = types.MapNull(types.StringType)
+	labels, err := iaasUtils.MapLabels(ctx, volumeResp.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
 
 	var sourceValues map[string]attr.Value
@@ -544,6 +535,7 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model) error
 			"type": types.StringPointerValue(volumeResp.Source.Type),
 			"id":   types.StringPointerValue(volumeResp.Source.Id),
 		}
+		var diags diag.Diagnostics
 		sourceObject, diags = types.ObjectValue(sourceTypes, sourceValues)
 		if diags.HasError() {
 			return fmt.Errorf("creating source: %w", core.DiagsToError(diags))
