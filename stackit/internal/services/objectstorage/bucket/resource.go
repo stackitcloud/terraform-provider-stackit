@@ -335,14 +335,7 @@ func mapFields(bucketResp *objectstorage.GetBucketResponse, model *Model, region
 	}
 	bucket := bucketResp.Bucket
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.Name.ValueString(),
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.Name.ValueString())
 	model.URLPathStyle = types.StringPointerValue(bucket.UrlPathStyle)
 	model.URLVirtualHostedStyle = types.StringPointerValue(bucket.UrlVirtualHostedStyle)
 	model.Region = types.StringValue(region)

@@ -153,3 +153,7 @@ func FormatPossibleValues(values []string) string {
 	}
 	return fmt.Sprintf("Possible values are: %s.", strings.Join(formattedValues, ", "))
 }
+
+func BuildInternalTerraformId(idParts ...string) types.String {
+	return types.StringValue(strings.Join(idParts, core.Separator))
+}

@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
 
@@ -344,8 +345,7 @@ func mapCreateResponse(resp *serviceaccount.AccessToken, model *Model) error {
 		validUntil = types.StringValue(validUntilValue.Format(time.RFC3339))
 	}
 
-	idParts := []string{model.ProjectId.ValueString(), model.ServiceAccountEmail.ValueString(), *resp.Id}
-	model.Id = types.StringValue(strings.Join(idParts, core.Separator))
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.ServiceAccountEmail.ValueString(), *resp.Id)
 	model.AccessTokenId = types.StringPointerValue(resp.Id)
 	model.Token = types.StringPointerValue(resp.Token)
 	model.Active = types.BoolPointerValue(resp.Active)
@@ -379,8 +379,7 @@ func mapListResponse(resp *serviceaccount.AccessTokenMetadata, model *Model) err
 		validUntil = types.StringValue(validUntilValue.Format(time.RFC3339))
 	}
 
-	idParts := []string{model.ProjectId.ValueString(), model.ServiceAccountEmail.ValueString(), *resp.Id}
-	model.Id = types.StringValue(strings.Join(idParts, core.Separator))
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.ServiceAccountEmail.ValueString(), *resp.Id)
 	model.AccessTokenId = types.StringPointerValue(resp.Id)
 	model.CreatedAt = createdAt
 	model.ValidUntil = validUntil

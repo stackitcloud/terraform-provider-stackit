@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -24,7 +26,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
 )
 
@@ -361,13 +363,7 @@ func mapFields(instance *secretsmanager.Instance, aclList *secretsmanager.ListAC
 		return fmt.Errorf("instance id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		instanceId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), instanceId)
 	model.InstanceId = types.StringValue(instanceId)
 	model.Name = types.StringPointerValue(instance.Name)
 
@@ -441,7 +437,7 @@ func updateACLs(ctx context.Context, projectId, instanceId string, acls []string
 	for cidr, state := range aclsState {
 		if state.isInModel && !state.isCreated {
 			payload := secretsmanager.CreateACLPayload{
-				Cidr: utils.Ptr(cidr),
+				Cidr: sdkUtils.Ptr(cidr),
 			}
 			_, err := client.CreateACL(ctx, projectId, instanceId).CreateACLPayload(payload).Execute()
 			if err != nil {

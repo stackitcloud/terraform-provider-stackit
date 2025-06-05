@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	authorizationUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/utils"
 
@@ -281,15 +283,7 @@ func mapListMembersResponse(resp *authorization.ListMembersResponse, model *Mode
 		return fmt.Errorf("model input is nil")
 	}
 
-	idParts := []string{
-		model.ResourceId.ValueString(),
-		model.Role.ValueString(),
-		model.Subject.ValueString(),
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
-
+	model.Id = utils.BuildInternalTerraformId(model.ResourceId.ValueString(), model.Role.ValueString(), model.Subject.ValueString())
 	model.ResourceId = types.StringPointerValue(resp.ResourceId)
 
 	for _, m := range *resp.Members {

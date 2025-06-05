@@ -503,13 +503,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model) err
 		return fmt.Errorf("network id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		networkId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), networkId)
 
 	labels, err := iaasUtils.MapLabels(ctx, networkResp.Labels, model.Labels)
 	if err != nil {

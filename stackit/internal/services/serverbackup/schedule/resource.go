@@ -444,14 +444,9 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 	}
 
 	model.BackupScheduleId = types.Int64PointerValue(schedule.Id)
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.ServerId.ValueString(),
+	model.ID = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), region, model.ServerId.ValueString(),
 		strconv.FormatInt(model.BackupScheduleId.ValueInt64(), 10),
-	}
-	model.ID = types.StringValue(
-		strings.Join(idParts, core.Separator),
 	)
 	model.Name = types.StringPointerValue(schedule.Name)
 	model.Rrule = types.StringPointerValue(schedule.Rrule)

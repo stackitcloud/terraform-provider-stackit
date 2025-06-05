@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	coreutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -22,7 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
 )
 
@@ -73,7 +73,7 @@ func (r *credentialsGroupResource) ModifyPlan(ctx context.Context, req resource.
 		return
 	}
 
-	coreutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -185,7 +185,7 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 	ctx = tflog.SetField(ctx, "region", region)
 
 	createCredentialsGroupPayload := objectstorage.CreateCredentialsGroupPayload{
-		DisplayName: utils.Ptr(credentialsGroupName),
+		DisplayName: sdkUtils.Ptr(credentialsGroupName),
 	}
 
 	// Handle project init
@@ -324,7 +324,7 @@ func mapFields(credentialsGroupResp *objectstorage.CreateCredentialsGroupRespons
 
 func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model *Model, region string) error {
 	var credentialsGroupId string
-	if !coreutils.IsUndefined(model.CredentialsGroupId) {
+	if !utils.IsUndefined(model.CredentialsGroupId) {
 		credentialsGroupId = model.CredentialsGroupId.ValueString()
 	} else if credentialsGroup.CredentialsGroupId != nil {
 		credentialsGroupId = *credentialsGroup.CredentialsGroupId
@@ -332,14 +332,7 @@ func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model 
 		return fmt.Errorf("credential id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		credentialsGroupId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, credentialsGroupId)
 	model.CredentialsGroupId = types.StringValue(credentialsGroupId)
 	model.URN = types.StringPointerValue(credentialsGroup.Urn)
 	model.Name = types.StringPointerValue(credentialsGroup.DisplayName)

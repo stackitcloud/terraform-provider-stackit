@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
@@ -142,14 +144,7 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 		return
 	}
 
-	idParts := []string{
-		projectId,
-		serverId,
-		networkInterfaceId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(projectId, serverId, networkInterfaceId)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -330,13 +332,7 @@ func mapFields(ctx context.Context, publicIpResp *iaas.PublicIp, model *Model) e
 		return fmt.Errorf("public IP id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		publicIpId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), publicIpId)
 
 	labels, err := iaasUtils.MapLabels(ctx, publicIpResp.Labels, model.Labels)
 	if err != nil {

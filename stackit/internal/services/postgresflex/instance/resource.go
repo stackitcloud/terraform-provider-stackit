@@ -610,14 +610,7 @@ func mapFields(ctx context.Context, resp *postgresflex.InstanceResponse, model *
 		return fmt.Errorf("creating storage: %w", core.DiagsToError(diags))
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		instanceId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId)
 	model.InstanceId = types.StringValue(instanceId)
 	model.Name = types.StringPointerValue(instance.Name)
 	model.ACL = aclList

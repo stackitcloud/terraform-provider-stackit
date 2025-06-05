@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -239,13 +238,7 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 		return fmt.Errorf("server id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		serverId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), serverId)
 
 	labels, err := iaasUtils.MapLabels(ctx, serverResp.Labels, model.Labels)
 	if err != nil {

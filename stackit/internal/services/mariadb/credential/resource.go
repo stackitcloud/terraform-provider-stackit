@@ -322,13 +322,10 @@ func mapFields(ctx context.Context, credentialsResp *mariadb.CredentialsResponse
 		return fmt.Errorf("credentials id not present")
 	}
 
-	idParts := []string{
+	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(),
 		model.InstanceId.ValueString(),
 		credentialId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
 	)
 
 	modelHosts, err := utils.ListValuetoStringSlice(model.Hosts)

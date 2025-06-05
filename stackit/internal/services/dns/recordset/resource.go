@@ -420,13 +420,8 @@ func mapFields(ctx context.Context, recordSetResp *dns.RecordSetResponse, model 
 
 		model.Records = recordsTF
 	}
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		model.ZoneId.ValueString(),
-		recordSetId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), model.ZoneId.ValueString(), recordSetId,
 	)
 	model.RecordSetId = types.StringPointerValue(recordSet.Id)
 	model.Active = types.BoolPointerValue(recordSet.Active)

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	logmeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/utils"
 
@@ -312,14 +314,7 @@ func mapFields(credentialsResp *logme.CredentialsResponse, model *Model) error {
 		return fmt.Errorf("credentials id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		model.InstanceId.ValueString(),
-		credentialId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), credentialId)
 	model.CredentialId = types.StringValue(credentialId)
 	if credentials != nil {
 		model.Host = types.StringPointerValue(credentials.Host)
