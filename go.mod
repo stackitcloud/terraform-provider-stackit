@@ -15,7 +15,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.2.1
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.15.1
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.5.1
-	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.23.0
+	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.24.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.2.1
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.24.1
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.24.1
@@ -36,7 +36,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/ske v0.24.1
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.2.0
 	github.com/teambition/rrule-go v1.8.2
-	golang.org/x/mod v0.24.0
+	golang.org/x/mod v0.25.0
 )
 
 require github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
@@ -46,7 +46,7 @@ require (
 	github.com/agext/levenshtein v1.2.2 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/cloudflare/circl v1.6.0 // indirect
-	github.com/fatih/color v1.16.0 // indirect
+	github.com/fatih/color v1.18.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -66,7 +66,7 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.37.0 // indirect
 	github.com/hashicorp/terraform-registry-address v0.2.5 // indirect
 	github.com/hashicorp/terraform-svchost v0.1.1 // indirect
-	github.com/hashicorp/yamux v0.1.1 // indirect
+	github.com/hashicorp/yamux v0.1.2 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -90,8 +90,8 @@ require (
 	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/tools v0.33.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a // indirect
-	google.golang.org/grpc v1.72.1 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250603155806-513f23925822 // indirect
+	google.golang.org/grpc v1.73.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
