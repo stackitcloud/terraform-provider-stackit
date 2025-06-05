@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -830,19 +829,11 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 		strings.Join(idParts, core.Separator),
 	)
 
-	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
-	if diags.HasError() {
-		return fmt.Errorf("convert labels to StringValue map: %w", core.DiagsToError(diags))
+	labels, err := iaasUtils.MapLabels(ctx, serverResp.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
-	if serverResp.Labels != nil && len(*serverResp.Labels) != 0 {
-		var diags diag.Diagnostics
-		labels, diags = types.MapValueFrom(ctx, types.StringType, *serverResp.Labels)
-		if diags.HasError() {
-			return fmt.Errorf("convert labels to StringValue map: %w", core.DiagsToError(diags))
-		}
-	} else if model.Labels.IsNull() {
-		labels = types.MapNull(types.StringType)
-	}
+
 	var createdAt basetypes.StringValue
 	if serverResp.CreatedAt != nil {
 		createdAtValue := *serverResp.CreatedAt

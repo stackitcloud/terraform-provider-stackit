@@ -484,18 +484,9 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 		model.SecurityGroupIds = securityGroupsTF
 	}
 
-	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
-	if diags.HasError() {
-		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-	}
-	if networkInterfaceResp.Labels != nil && len(*networkInterfaceResp.Labels) != 0 {
-		var diags diag.Diagnostics
-		labels, diags = types.MapValueFrom(ctx, types.StringType, *networkInterfaceResp.Labels)
-		if diags.HasError() {
-			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-		}
-	} else if model.Labels.IsNull() {
-		labels = types.MapNull(types.StringType)
+	labels, err := iaasUtils.MapLabels(ctx, networkInterfaceResp.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
 
 	networkInterfaceName := types.StringNull()
