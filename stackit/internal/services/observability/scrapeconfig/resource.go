@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -28,7 +30,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -545,16 +547,8 @@ func mapFields(ctx context.Context, sc *observability.Job, model *Model) error {
 		return fmt.Errorf("scrape config name not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		model.InstanceId.ValueString(),
-		scName,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), scName)
 	model.Name = types.StringValue(scName)
-
 	model.MetricsPath = types.StringPointerValue(sc.MetricsPath)
 	model.Scheme = types.StringValue(string(sc.GetScheme()))
 	model.ScrapeInterval = types.StringPointerValue(sc.ScrapeInterval)
@@ -694,7 +688,7 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ScrapeInterval: conversion.StringValueToPointer(model.ScrapeInterval),
 		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
 		// potentially lossy conversion, depending on the allowed range for sample_limit
-		SampleLimit: utils.Ptr(float64(model.SampleLimit.ValueInt64())),
+		SampleLimit: sdkUtils.Ptr(float64(model.SampleLimit.ValueInt64())),
 		Scheme:      observability.CreateScrapeConfigPayloadGetSchemeAttributeType(conversion.StringValueToPointer(model.Scheme)),
 	}
 	setDefaultsCreateScrapeConfig(&sc, model, saml2Model)
@@ -750,13 +744,13 @@ func setDefaultsCreateScrapeConfig(sc *observability.CreateScrapeConfigPayload, 
 		sc.Scheme = DefaultScheme.Ptr()
 	}
 	if model.ScrapeInterval.IsNull() || model.ScrapeInterval.IsUnknown() {
-		sc.ScrapeInterval = utils.Ptr(DefaultScrapeInterval)
+		sc.ScrapeInterval = sdkUtils.Ptr(DefaultScrapeInterval)
 	}
 	if model.ScrapeTimeout.IsNull() || model.ScrapeTimeout.IsUnknown() {
-		sc.ScrapeTimeout = utils.Ptr(DefaultScrapeTimeout)
+		sc.ScrapeTimeout = sdkUtils.Ptr(DefaultScrapeTimeout)
 	}
 	if model.SampleLimit.IsNull() || model.SampleLimit.IsUnknown() {
-		sc.SampleLimit = utils.Ptr(float64(DefaultSampleLimit))
+		sc.SampleLimit = sdkUtils.Ptr(float64(DefaultSampleLimit))
 	}
 	// Make the API default more explicit by setting the field.
 	if saml2Model.EnableURLParameters.IsNull() || saml2Model.EnableURLParameters.IsUnknown() {
@@ -783,7 +777,7 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ScrapeInterval: conversion.StringValueToPointer(model.ScrapeInterval),
 		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
 		// potentially lossy conversion, depending on the allowed range for sample_limit
-		SampleLimit: utils.Ptr(float64(model.SampleLimit.ValueInt64())),
+		SampleLimit: sdkUtils.Ptr(float64(model.SampleLimit.ValueInt64())),
 		Scheme:      observability.UpdateScrapeConfigPayloadGetSchemeAttributeType(conversion.StringValueToPointer(model.Scheme)),
 	}
 	setDefaultsUpdateScrapeConfig(&sc, model)
@@ -839,12 +833,12 @@ func setDefaultsUpdateScrapeConfig(sc *observability.UpdateScrapeConfigPayload, 
 		sc.Scheme = observability.UpdateScrapeConfigPayloadGetSchemeAttributeType(DefaultScheme.Ptr())
 	}
 	if model.ScrapeInterval.IsNull() || model.ScrapeInterval.IsUnknown() {
-		sc.ScrapeInterval = utils.Ptr(DefaultScrapeInterval)
+		sc.ScrapeInterval = sdkUtils.Ptr(DefaultScrapeInterval)
 	}
 	if model.ScrapeTimeout.IsNull() || model.ScrapeTimeout.IsUnknown() {
-		sc.ScrapeTimeout = utils.Ptr(DefaultScrapeTimeout)
+		sc.ScrapeTimeout = sdkUtils.Ptr(DefaultScrapeTimeout)
 	}
 	if model.SampleLimit.IsNull() || model.SampleLimit.IsUnknown() {
-		sc.SampleLimit = utils.Ptr(float64(DefaultSampleLimit))
+		sc.SampleLimit = sdkUtils.Ptr(float64(DefaultSampleLimit))
 	}
 }

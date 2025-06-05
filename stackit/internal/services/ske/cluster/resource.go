@@ -1360,14 +1360,8 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model, region string) er
 		return fmt.Errorf("name not present")
 	}
 	m.Name = types.StringValue(name)
-	idParts := []string{
-		m.ProjectId.ValueString(),
-		region,
-		name,
-	}
-	m.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+
+	m.Id = utils.BuildInternalTerraformId(m.ProjectId.ValueString(), region, name)
 	m.Region = types.StringValue(region)
 
 	if cl.Kubernetes != nil {

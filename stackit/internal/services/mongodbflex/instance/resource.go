@@ -785,13 +785,7 @@ func mapFields(ctx context.Context, resp *mongodbflex.GetInstanceResponse, model
 		model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		instanceId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), instanceId)
 	model.InstanceId = types.StringValue(instanceId)
 	model.Name = types.StringPointerValue(instance.Name)
 	model.ACL = aclList

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
@@ -265,13 +264,7 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 		return fmt.Errorf("image id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		imageId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), imageId)
 
 	// Map config
 	var configModel = &configModel{}

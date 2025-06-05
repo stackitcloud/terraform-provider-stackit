@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -378,14 +380,7 @@ func mapFields(user *secretsmanager.User, model *Model) error {
 		return fmt.Errorf("user id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		model.InstanceId.ValueString(),
-		userId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), userId)
 	model.UserId = types.StringValue(userId)
 	model.Description = types.StringPointerValue(user.Description)
 	model.WriteEnabled = types.BoolPointerValue(user.Write)

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -300,6 +301,39 @@ func TestFormatPossibleValues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := FormatPossibleValues(tt.args.values); got != tt.want {
 				t.Errorf("FormatPossibleValues() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildInternalTerraformId(t *testing.T) {
+	type args struct {
+		idParts []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want types.String
+	}{
+		{
+			name: "no id parts",
+			args: args{
+				idParts: []string{},
+			},
+			want: types.StringValue(""),
+		},
+		{
+			name: "multiple id parts",
+			args: args{
+				idParts: []string{"abc", "foo", "bar", "xyz"},
+			},
+			want: types.StringValue("abc,foo,bar,xyz"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := BuildInternalTerraformId(tt.args.idParts...); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("BuildInternalTerraformId() = %v, want %v", got, tt.want)
 			}
 		})
 	}

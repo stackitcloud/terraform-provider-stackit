@@ -477,13 +477,7 @@ func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, networkAr
 		return fmt.Errorf("network area id not present")
 	}
 
-	idParts := []string{
-		model.OrganizationId.ValueString(),
-		networkAreaId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.OrganizationId.ValueString(), networkAreaId)
 
 	if networkAreaResp.Ipv4 == nil || networkAreaResp.Ipv4.DefaultNameservers == nil {
 		model.DefaultNameservers = types.ListNull(types.StringType)

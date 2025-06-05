@@ -336,13 +336,8 @@ func mapFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsRespons
 		return fmt.Errorf("credentials id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		model.InstanceId.ValueString(),
-		credentialId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), model.InstanceId.ValueString(), credentialId,
 	)
 	model.CredentialId = types.StringValue(credentialId)
 

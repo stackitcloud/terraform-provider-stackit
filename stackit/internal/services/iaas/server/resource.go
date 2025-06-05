@@ -821,13 +821,7 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 		return fmt.Errorf("server id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		serverId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), serverId)
 
 	labels, err := iaasUtils.MapLabels(ctx, serverResp.Labels, model.Labels)
 	if err != nil {

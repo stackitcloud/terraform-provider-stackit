@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -370,14 +372,7 @@ func mapFields(ctx context.Context, networkAreaRoute *iaas.Route, model *Model) 
 		return fmt.Errorf("network area route id not present")
 	}
 
-	idParts := []string{
-		model.OrganizationId.ValueString(),
-		model.NetworkAreaId.ValueString(),
-		networkAreaRouteId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.OrganizationId.ValueString(), model.NetworkAreaId.ValueString(), networkAreaRouteId)
 
 	labels, err := iaasUtils.MapLabels(ctx, networkAreaRoute.Labels, model.Labels)
 	if err != nil {

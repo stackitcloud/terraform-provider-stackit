@@ -458,14 +458,8 @@ func mapFieldsCreate(userResp *postgresflex.CreateUserResponse, model *Model, re
 		return fmt.Errorf("user id not present")
 	}
 	userId := *user.Id
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.InstanceId.ValueString(),
-		userId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId,
 	)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)
@@ -512,14 +506,8 @@ func mapFields(userResp *postgresflex.GetUserResponse, model *Model, region stri
 	} else {
 		return fmt.Errorf("user id not present")
 	}
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.InstanceId.ValueString(),
-		userId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId,
 	)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
@@ -165,13 +164,8 @@ func mapFields(r *observability.Credentials, model *Model) error {
 	} else {
 		return fmt.Errorf("username id not present")
 	}
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		model.InstanceId.ValueString(),
-		userName,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), model.InstanceId.ValueString(), userName,
 	)
 	model.Username = types.StringPointerValue(r.Username)
 	model.Password = types.StringPointerValue(r.Password)
