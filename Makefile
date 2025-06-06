@@ -35,12 +35,7 @@ fmt:
 # TEST
 test:
 	@echo "Running tests for the terraform provider"
-	@cd $(ROOT_DIR)/stackit && go test ./... -count=1 && cd $(ROOT_DIR)
-
-# Test coverage
-coverage:
-	@echo ">> Creating test coverage report for the terraform provider"
-	@cd $(ROOT_DIR)/stackit && (go test ./... -count=1 -coverprofile=coverage.out || true) && cd $(ROOT_DIR)
+	@cd $(ROOT_DIR)/stackit && (go test ./... -count=1 -coverprofile=coverage.out) && cd $(ROOT_DIR)
 	@cd $(ROOT_DIR)/stackit && go tool cover -html=coverage.out -o coverage.html && cd $(ROOT_DIR)
 
 test-acceptance-tf:

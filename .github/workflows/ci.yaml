@@ -4,6 +4,8 @@ on: [pull_request, workflow_dispatch]
 
 env:
   GO_VERSION: "1.24"
+  CODE_COVERAGE_FILE_NAME: "coverage.out" # must be the same as in Makefile
+  CODE_COVERAGE_ARTIFACT_NAME: "code-coverage"
 
 jobs:
   main:
@@ -29,9 +31,37 @@ jobs:
 
       - name: Lint
         run: make lint
-      
+
+      # note: test make task creates the coverage.out file
       - name: Test
         run: make test
+
+      - name: Move code coverage report
+        if: ${{ github.event_name == 'pull_request' }}
+        run: mv stackit/${{env.CODE_COVERAGE_FILE_NAME}} .
+
+      - name: Upload code coverage results
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.CODE_COVERAGE_ARTIFACT_NAME }}
+          path: ${{ env.CODE_COVERAGE_FILE_NAME }}
+
+  code_coverage:
+    name: "Code coverage report"
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    needs: [main]
+    permissions:
+      contents: read
+      actions: read  # to download code coverage results from "test" job
+      pull-requests: write # write permission needed to comment on PR
+    steps:
+      - name: Add code coverage report comment to PR
+        uses: fgrosse/go-coverage-report@v1.2.0
+        with:
+          coverage-artifact-name: ${{ env.CODE_COVERAGE_ARTIFACT_NAME }}
+          coverage-file-name: ${{ env.CODE_COVERAGE_FILE_NAME }}
 
   config:
     name: Check GoReleaser config
