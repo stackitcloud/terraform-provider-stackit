@@ -723,10 +723,7 @@ func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 	}
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = r.providerData.GetRegion()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)

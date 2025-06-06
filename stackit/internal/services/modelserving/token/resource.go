@@ -240,12 +240,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	projectId := model.ProjectId.ValueString()
 
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -339,13 +334,7 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	projectId := model.ProjectId.ValueString()
 	tokenId := model.TokenId.ValueString()
-
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "token_id", tokenId)
@@ -412,12 +401,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	projectId := state.ProjectId.ValueString()
 	tokenId := state.TokenId.ValueString()
 
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "token_id", tokenId)
@@ -500,12 +484,7 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	projectId := model.ProjectId.ValueString()
 	tokenId := model.TokenId.ValueString()
 
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "token_id", tokenId)

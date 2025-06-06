@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/types"
+
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -59,6 +61,13 @@ func (pd *ProviderData) GetRegion() string {
 	}
 	// final fallback
 	return "eu01"
+}
+
+func (pd *ProviderData) GetRegionWithOverride(overrideRegion types.String) string {
+	if overrideRegion.IsUnknown() || overrideRegion.IsNull() {
+		return pd.GetRegion()
+	}
+	return overrideRegion.ValueString()
 }
 
 // DiagsToError Converts TF diagnostics' errors into an error with a human-readable description.
