@@ -30,7 +30,8 @@ func NewRoutingTableDataSource() datasource.DataSource {
 
 // routingTableDataSource is the data source implementation.
 type routingTableDataSource struct {
-	client *iaasalpha.APIClient
+	client       *iaasalpha.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -72,7 +73,12 @@ func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	organizationId := model.OrganizationId.ValueString()
-	region := model.Region.ValueString()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = d.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)

@@ -53,7 +53,8 @@ func NewRoutingTableResource() resource.Resource {
 
 // routingTableResource is the resource implementation.
 type routingTableResource struct {
-	client *iaasalpha.APIClient
+	client       *iaasalpha.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -215,6 +216,9 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 
 	organizationId := model.OrganizationId.ValueString()
 	region := model.Region.ValueString()
+	if region == "" {
+		region = r.providerData.GetRegion()
+	}
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)

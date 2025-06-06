@@ -40,6 +40,8 @@ import (
 	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
 	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
 	iaasVolumeAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volumeattach"
+	iaasAlphaRoutingTable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable"
+	iaasAlphaRoutingTables "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtables"
 	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
 	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
@@ -458,6 +460,8 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasServer.NewServerDataSource,
 		iaasSecurityGroup.NewSecurityGroupDataSource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
+		iaasAlphaRoutingTable.NewRoutingTableDataSource,
+		iaasAlphaRoutingTables.NewRoutingTablesDataSource,
 		loadBalancer.NewLoadBalancerDataSource,
 		logMeInstance.NewInstanceDataSource,
 		logMeCredential.NewCredentialDataSource,
@@ -503,6 +507,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
 		gitInstance.NewGitResource,
+		iaasAlphaRoutingTable.NewRoutingTableResource,
 		iaasAffinityGroup.NewAffinityGroupResource,
 		iaasImage.NewImageResource,
 		iaasNetwork.NewNetworkResource,

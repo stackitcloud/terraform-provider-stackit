@@ -84,6 +84,11 @@ var datasourceGetAttributes = map[string]schema.Attribute{
 			validate.NoSeparator(),
 		},
 	},
+	"region": schema.StringAttribute{
+		Description: "The resource region. If not defined, the provider region is used.",
+		// the region cannot be found, so it has to be passed
+		Optional: true,
+	},
 }
 
 var RoutingTableResponseAttributes = map[string]schema.Attribute{

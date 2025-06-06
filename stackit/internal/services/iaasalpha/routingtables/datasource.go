@@ -24,7 +24,7 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ datasource.DataSource = &routingTableDataSource{}
+	_ datasource.DataSource = &routingTablesDataSource{}
 )
 
 type DataSourceModelTables struct {
@@ -39,22 +39,23 @@ var dataSourceModelTablesTypes = map[string]attr.Type{
 	"items": types.ObjectType{AttrTypes: shared.DataSourceTypes},
 }
 
-// NewRoutingTableDataSource is a helper function to simplify the provider implementation.
-func NewRoutingTableDataSource() datasource.DataSource {
-	return &routingTableDataSource{}
+// NewRoutingTablesDataSource is a helper function to simplify the provider implementation.
+func NewRoutingTablesDataSource() datasource.DataSource {
+	return &routingTablesDataSource{}
 }
 
-// routingTableDataSource is the data source implementation.
-type routingTableDataSource struct {
-	client *iaasalpha.APIClient
+// routingTablesDataSource is the data source implementation.
+type routingTablesDataSource struct {
+	client       *iaasalpha.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
-func (d *routingTableDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_routing_table"
+func (d *routingTablesDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_routing_tables"
 }
 
-func (d *routingTableDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *routingTablesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -69,7 +70,7 @@ func (d *routingTableDataSource) Configure(ctx context.Context, req datasource.C
 }
 
 // Schema defines the schema for the data source.
-func (d *routingTableDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *routingTablesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Routing table datasource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		Description:         description,
@@ -108,7 +109,7 @@ func (d *routingTableDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var model DataSourceModelTables
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -117,7 +118,12 @@ func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	organizationId := model.OrganizationId.ValueString()
-	region := model.Region.ValueString()
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = d.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
 	networkAreaId := model.NetworkAreaId.ValueString()
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
