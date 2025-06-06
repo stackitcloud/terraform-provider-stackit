@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -306,15 +308,9 @@ func mapFields(publicIpResp *iaas.PublicIp, model *Model) error {
 		model.NetworkInterfaceId = types.StringNull()
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		publicIpId,
-		model.NetworkInterfaceId.ValueString(),
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), publicIpId, model.NetworkInterfaceId.ValueString(),
 	)
-
 	model.PublicIpId = types.StringValue(publicIpId)
 	model.Ip = types.StringPointerValue(publicIpResp.Ip)
 

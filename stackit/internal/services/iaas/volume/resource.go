@@ -513,13 +513,7 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model) error
 		return fmt.Errorf("Volume id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		volumeId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), volumeId)
 
 	labels, err := iaasUtils.MapLabels(ctx, volumeResp.Labels, model.Labels)
 	if err != nil {

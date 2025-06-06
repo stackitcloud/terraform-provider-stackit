@@ -487,13 +487,7 @@ func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) er
 		return fmt.Errorf("zone id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		zoneId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), zoneId)
 
 	if z.Primaries == nil {
 		model.Primaries = types.ListNull(types.StringType)

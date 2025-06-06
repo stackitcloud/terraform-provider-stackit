@@ -423,14 +423,7 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 		return fmt.Errorf("network interface id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		model.NetworkId.ValueString(),
-		networkInterfaceId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.NetworkId.ValueString(), networkInterfaceId)
 
 	respAllowedAddresses := []string{}
 	var diags diag.Diagnostics

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	logmeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -614,13 +616,7 @@ func mapFields(instance *logme.Instance, model *Model) error {
 		return fmt.Errorf("instance id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		instanceId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), instanceId)
 	model.InstanceId = types.StringValue(instanceId)
 	model.PlanId = types.StringPointerValue(instance.PlanId)
 	model.CfGuid = types.StringPointerValue(instance.CfGuid)
