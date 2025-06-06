@@ -346,12 +346,7 @@ func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)

@@ -161,12 +161,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 

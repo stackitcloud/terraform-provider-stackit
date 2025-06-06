@@ -2055,10 +2055,7 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 	projectId := state.ProjectId.ValueString()
 	name := state.Name.ValueString()
-	region := state.Region.ValueString()
-	if region == "" {
-		region = r.providerData.GetRegion()
-	}
+	region := r.providerData.GetRegionWithOverride(state.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)

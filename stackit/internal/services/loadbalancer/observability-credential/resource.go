@@ -235,10 +235,7 @@ func (r *observabilityCredentialResource) Read(ctx context.Context, req resource
 	}
 	projectId := model.ProjectId.ValueString()
 	credentialsRef := model.CredentialsRef.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = r.providerData.GetRegion()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "credentials_ref", credentialsRef)
 	ctx = tflog.SetField(ctx, "region", region)

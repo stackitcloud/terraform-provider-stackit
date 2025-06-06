@@ -304,3 +304,43 @@ func TestFormatPossibleValues(t *testing.T) {
 		})
 	}
 }
+
+func TestIsUndefined(t *testing.T) {
+	type args struct {
+		val value
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "undefined value",
+			args: args{
+				val: types.StringNull(),
+			},
+			want: true,
+		},
+		{
+			name: "unknown value",
+			args: args{
+				val: types.StringUnknown(),
+			},
+			want: true,
+		},
+		{
+			name: "string value",
+			args: args{
+				val: types.StringValue(""),
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsUndefined(tt.args.val); got != tt.want {
+				t.Errorf("IsUndefined() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

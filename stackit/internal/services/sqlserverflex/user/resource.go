@@ -277,14 +277,11 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
-	region := model.Region.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 	ctx = tflog.SetField(ctx, "region", region)
-	if region == "" {
-		region = r.providerData.GetRegion()
-	}
 
 	recordSetResp, err := r.client.GetUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {

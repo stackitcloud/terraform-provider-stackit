@@ -230,10 +230,7 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 	projectId := model.ProjectId.ValueString()
 	bucketName := model.Name.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = r.providerData.GetRegion()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", bucketName)
