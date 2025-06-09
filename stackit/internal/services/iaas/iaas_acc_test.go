@@ -32,6 +32,9 @@ var (
 	//go:embed testdata/resource-security-group-max.tf
 	resourceSecurityGroupMaxConfig string
 
+	//go:embed testdata/datasource-image-variants.tf
+	dataSourceImageVariants string
+
 	//go:embed testdata/resource-image-min.tf
 	resourceImageMinConfig string
 
@@ -3329,29 +3332,46 @@ func TestAccImageMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-
-					data "stackit_image" "image" {
+					
+					data "stackit_image" "image_id_match" {
 						project_id = stackit_image.image.project_id
 						image_id = stackit_image.image.image_id
+					}
+
+					data "stackit_image" "exact_match" {
+					  project_id = var.project_id
+					  name       = "Ubuntu 22.04"
+					}
+
+					data "stackit_image" "ubuntu_latest" {
+					  project_id       = stackit_image.image.project_id
+					  name_regex       = "^Ubuntu .*"
+					  sort_descending  = true
+					}
+				
+					data "stackit_image" "ubuntu_oldest" {
+					  project_id       = stackit_image.image.project_id
+					  name_regex       = "^Ubuntu .*"
+					  sort_descending  = false
 					}
 					`,
 					resourceImageMinConfig, testutil.IaaSProviderConfig(),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("data.stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMin["project_id"])),
-					resource.TestCheckResourceAttrPair("data.stackit_image.image", "image_id", "stackit_image.image", "image_id"),
-					resource.TestCheckResourceAttrPair("data.stackit_image.image", "name", "stackit_image.image", "name"),
-					resource.TestCheckResourceAttrPair("data.stackit_image.image", "disk_format", "stackit_image.image", "disk_format"),
-					resource.TestCheckResourceAttrPair("data.stackit_image.image", "min_disk_size", "stackit_image.image", "min_disk_size"),
-					resource.TestCheckResourceAttrPair("data.stackit_image.image", "min_ram", "stackit_image.image", "min_ram"),
-					resource.TestCheckResourceAttrPair("data.stackit_image.image", "protected", "stackit_image.image", "protected"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image", "protected"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image", "scope"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
+					resource.TestCheckResourceAttr("data.stackit_image.image_id_match", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image_id_match", "image_id", "stackit_image.image", "image_id"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image_id_match", "name", "stackit_image.image", "name"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image_id_match", "disk_format", "stackit_image.image", "disk_format"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image_id_match", "min_disk_size", "stackit_image.image", "min_disk_size"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image_id_match", "min_ram", "stackit_image.image", "min_ram"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image_id_match", "protected", "stackit_image.image", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image_id_match", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image_id_match", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image_id_match", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image_id_match", "checksum.digest"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image_id_match", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image_id_match", "checksum.digest"),
 				),
 			},
 			// Import
@@ -3538,6 +3558,100 @@ func TestAccImageMax(t *testing.T) {
 				),
 			},
 			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccImageDatasourceSearchVariants(t *testing.T) {
+	t.Log("TestDataSource Image Variants")
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: config.Variables{"project_id": config.StringVariable(testutil.ProjectId)},
+				Config:          fmt.Sprintf("%s\n%s", dataSourceImageVariants, testutil.IaaSProviderConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_image.name_match_ubuntu_22_04", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_match_ubuntu_22_04", "image_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_match_ubuntu_22_04", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_match_ubuntu_22_04", "min_disk_size"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_match_ubuntu_22_04", "min_ram"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_match_ubuntu_22_04", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_match_ubuntu_22_04", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_match_ubuntu_22_04", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_match_ubuntu_22_04", "checksum.digest"),
+
+					resource.TestCheckResourceAttr("data.stackit_image.regex_match_ubuntu_22_04", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_image.regex_match_ubuntu_22_04", "image_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.regex_match_ubuntu_22_04", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.regex_match_ubuntu_22_04", "min_disk_size"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.regex_match_ubuntu_22_04", "min_ram"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.regex_match_ubuntu_22_04", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.regex_match_ubuntu_22_04", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.regex_match_ubuntu_22_04", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.regex_match_ubuntu_22_04", "checksum.digest"),
+
+					resource.TestCheckResourceAttr("data.stackit_image.filter_debian_11", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_debian_11", "image_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_debian_11", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_debian_11", "min_disk_size"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_debian_11", "min_ram"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_debian_11", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_debian_11", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_debian_11", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_debian_11", "checksum.digest"),
+
+					resource.TestCheckResourceAttr("data.stackit_image.filter_uefi_ubuntu", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_uefi_ubuntu", "image_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_uefi_ubuntu", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_uefi_ubuntu", "min_disk_size"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_uefi_ubuntu", "min_ram"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_uefi_ubuntu", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_uefi_ubuntu", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_uefi_ubuntu", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.filter_uefi_ubuntu", "checksum.digest"),
+
+					resource.TestCheckResourceAttr("data.stackit_image.name_regex_and_filter_rhel_9_1", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_regex_and_filter_rhel_9_1", "image_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_regex_and_filter_rhel_9_1", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_regex_and_filter_rhel_9_1", "min_disk_size"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_regex_and_filter_rhel_9_1", "min_ram"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_regex_and_filter_rhel_9_1", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_regex_and_filter_rhel_9_1", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_regex_and_filter_rhel_9_1", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_regex_and_filter_rhel_9_1", "checksum.digest"),
+
+					resource.TestCheckResourceAttr("data.stackit_image.name_windows_2022_standard", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_windows_2022_standard", "image_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_windows_2022_standard", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_windows_2022_standard", "min_disk_size"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_windows_2022_standard", "min_ram"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_windows_2022_standard", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_windows_2022_standard", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_windows_2022_standard", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.name_windows_2022_standard", "checksum.digest"),
+
+					resource.TestCheckResourceAttr("data.stackit_image.ubuntu_arm64_latest", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_latest", "image_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_latest", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_latest", "min_disk_size"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_latest", "min_ram"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_latest", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_latest", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_latest", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_latest", "checksum.digest"),
+
+					resource.TestCheckResourceAttr("data.stackit_image.ubuntu_arm64_oldest", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_oldest", "image_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_oldest", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_oldest", "min_disk_size"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_oldest", "min_ram"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_oldest", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_oldest", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_oldest", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_oldest", "checksum.digest")),
+			},
 		},
 	})
 }

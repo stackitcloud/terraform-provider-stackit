@@ -35,9 +35,6 @@ var (
 	Region    = os.Getenv("TF_ACC_REGION")
 	// ServerId is the id of a server used for some tests
 	ServerId = getenv("TF_ACC_SERVER_ID", "")
-	// IaaSImageId is the id of an image used for IaaS acceptance tests.
-	// Default image is ubuntu 24.04
-	IaaSImageId = getenv("TF_ACC_IMAGE_ID", "59838a89-51b1-4892-b57f-b3caf598ee2f")
 	// TestProjectParentContainerID is the container id of the parent resource under which projects are created as part of the resource-manager acceptance tests
 	TestProjectParentContainerID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID")
 	// TestProjectParentUUID is the uuid of the parent resource under which projects are created as part of the resource-manager acceptance tests
@@ -508,8 +505,7 @@ func getenv(key, defaultValue string) string {
 	return val
 }
 
-// helper for local_file_path
-// no real data is created
+// CreateDefaultLocalFile is a helper for local_file_path. No real data is created
 func CreateDefaultLocalFile() os.File {
 	// Define the file name and size
 	fileName := "test-512k.img"
