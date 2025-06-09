@@ -4,9 +4,17 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
+	"sort"
+	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -16,10 +24,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
+
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -28,10 +34,14 @@ var (
 )
 
 type DataSourceModel struct {
-	Id          types.String `tfsdk:"id"` // needed by TF
-	ProjectId   types.String `tfsdk:"project_id"`
-	ImageId     types.String `tfsdk:"image_id"`
-	Name        types.String `tfsdk:"name"`
+	Id             types.String `tfsdk:"id"` // needed by TF
+	ProjectId      types.String `tfsdk:"project_id"`
+	ImageId        types.String `tfsdk:"image_id"`
+	Name           types.String `tfsdk:"name"`
+	NameRegex      types.String `tfsdk:"name_regex"`
+	SortDescending types.Bool   `tfsdk:"sort_descending"`
+	Filter         types.Object `tfsdk:"filter"`
+
 	DiskFormat  types.String `tfsdk:"disk_format"`
 	MinDiskSize types.Int64  `tfsdk:"min_disk_size"`
 	MinRAM      types.Int64  `tfsdk:"min_ram"`
@@ -40,6 +50,14 @@ type DataSourceModel struct {
 	Config      types.Object `tfsdk:"config"`
 	Checksum    types.Object `tfsdk:"checksum"`
 	Labels      types.Map    `tfsdk:"labels"`
+}
+
+type Filter struct {
+	OS         types.String `tfsdk:"os"`
+	Distro     types.String `tfsdk:"distro"`
+	Version    types.String `tfsdk:"version"`
+	UEFI       types.Bool   `tfsdk:"uefi"`
+	SecureBoot types.Bool   `tfsdk:"secure_boot"`
 }
 
 // NewImageDataSource is a helper function to simplify the provider implementation.
@@ -62,17 +80,33 @@ func (d *imageDataSource) Configure(ctx context.Context, req datasource.Configur
 	if !ok {
 		return
 	}
-
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	d.client = apiClient
 	tflog.Info(ctx, "iaas client configured")
 }
 
+func (d *imageDataSource) ConfigValidators(_ context.Context) []datasource.ConfigValidator {
+	return []datasource.ConfigValidator{
+		datasourcevalidator.Conflicting(
+			path.MatchRoot("name"),
+			path.MatchRoot("name_regex"),
+			path.MatchRoot("image_id"),
+		),
+		datasourcevalidator.AtLeastOneOf(
+			path.MatchRoot("name"),
+			path.MatchRoot("name_regex"),
+			path.MatchRoot("image_id"),
+			path.MatchRoot("filter"),
+		),
+	}
+}
+
 // Schema defines the schema for the datasource.
-func (r *imageDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *imageDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Image datasource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
@@ -91,16 +125,50 @@ func (r *imageDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 				},
 			},
 			"image_id": schema.StringAttribute{
-				Description: "The image ID.",
-				Required:    true,
+				Description: "Image ID to fetch directly",
+				Optional:    true,
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
 			},
 			"name": schema.StringAttribute{
-				Description: "The name of the image.",
-				Computed:    true,
+				Description: "Exact image name to match. Optionally applies a `filter` block to further refine results in case multiple images share the same name. The first match is returned, optionally sorted by name in descending order. Cannot be used together with `name_regex`.",
+				Optional:    true,
+			},
+			"name_regex": schema.StringAttribute{
+				Description: "Regular expression to match against image names. Optionally applies a `filter` block to narrow down results when multiple image names match the regex. The first match is returned, optionally sorted by name in descending order. Cannot be used together with `name`.",
+				Optional:    true,
+			},
+			"sort_descending": schema.BoolAttribute{
+				Description: "If set to `true`, images are sorted in descending lexicographical order by image name before selecting the first match. Defaults to `false` (ascending).",
+				Optional:    true,
+			},
+			"filter": schema.SingleNestedAttribute{
+				Optional:    true,
+				Description: "Additional filtering options based on image properties. Can be used independently or in conjunction with `name` or `name_regex`.",
+				Attributes: map[string]schema.Attribute{
+					"os": schema.StringAttribute{
+						Optional:    true,
+						Description: "Filter images by operating system type, such as `linux` or `windows`.",
+					},
+					"distro": schema.StringAttribute{
+						Optional:    true,
+						Description: "Filter images by operating system distribution. For example: `ubuntu`, `ubuntu-arm64`, `debian`, `rhel`, etc.",
+					},
+					"version": schema.StringAttribute{
+						Optional:    true,
+						Description: "Filter images by OS distribution version, such as `22.04`, `11`, or `9.1`.",
+					},
+					"uefi": schema.BoolAttribute{
+						Optional:    true,
+						Description: "Filter images based on UEFI support. Set to `true` to match images that support UEFI.",
+					},
+					"secure_boot": schema.BoolAttribute{
+						Optional:    true,
+						Description: "Filter images with Secure Boot support. Set to `true` to match images that support Secure Boot.",
+					},
+				},
 			},
 			"disk_format": schema.StringAttribute{
 				Description: "The disk format of the image.",
@@ -203,47 +271,134 @@ func (r *imageDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 	}
 }
 
-// // Read refreshes the Terraform state with the latest data.
-func (r *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+// Read refreshes the Terraform state with the latest data.
+func (d *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	projectId := model.ProjectId.ValueString()
-	imageId := model.ImageId.ValueString()
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "image_id", imageId)
 
-	imageResp, err := r.client.GetImage(ctx, projectId, imageId).Execute()
-	if err != nil {
-		utils.LogError(
-			ctx,
-			&resp.Diagnostics,
-			err,
-			"Reading image",
-			fmt.Sprintf("Image with ID %q does not exist in project %q.", imageId, projectId),
-			map[int]string{
-				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
-			},
-		)
-		resp.State.RemoveResource(ctx)
-		return
+	projectID := model.ProjectId.ValueString()
+	imageID := model.ImageId.ValueString()
+	name := model.Name.ValueString()
+	nameRegex := model.NameRegex.ValueString()
+	sortDescending := model.SortDescending.ValueBool()
+
+	var filter Filter
+	if !model.Filter.IsNull() && !model.Filter.IsUnknown() {
+		if diagnostics := model.Filter.As(ctx, &filter, basetypes.ObjectAsOptions{}); diagnostics.HasError() {
+			resp.Diagnostics.Append(diagnostics...)
+			return
+		}
 	}
 
-	// Map response body to schema
+	ctx = tflog.SetField(ctx, "project_id", projectID)
+	ctx = tflog.SetField(ctx, "image_id", imageID)
+	ctx = tflog.SetField(ctx, "name", name)
+	ctx = tflog.SetField(ctx, "name_regex", nameRegex)
+	ctx = tflog.SetField(ctx, "sort_descending", sortDescending)
+
+	var imageResp *iaas.Image
+	var err error
+
+	// Case 1: Direct lookup by image ID
+	if imageID != "" {
+		imageResp, err = d.client.GetImage(ctx, projectID, imageID).Execute()
+		if err != nil {
+			utils.LogError(ctx, &resp.Diagnostics, err, "Reading image",
+				fmt.Sprintf("Image with ID %q does not exist in project %q.", imageID, projectID),
+				map[int]string{
+					http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectID),
+				})
+			resp.State.RemoveResource(ctx)
+			return
+		}
+	} else {
+		// Case 2: Lookup by name or name_regex
+
+		// Compile regex
+		var compiledRegex *regexp.Regexp
+		if nameRegex != "" {
+			compiledRegex, err = regexp.Compile(nameRegex)
+			if err != nil {
+				core.LogAndAddWarning(ctx, &resp.Diagnostics, "Invalid name_regex", err.Error())
+				return
+			}
+		}
+
+		// Fetch all available images
+		imageList, err := d.client.ListImages(ctx, projectID).Execute()
+		if err != nil {
+			utils.LogError(ctx, &resp.Diagnostics, err, "List images", "Unable to fetch images", nil)
+			return
+		}
+
+		// Step 1: Match images by name or regular expression (name or name_regex, if provided)
+		var matchedImages []*iaas.Image
+		for _, img := range *imageList.Items {
+			if name != "" && img.Name != nil && *img.Name == name {
+				matchedImages = append(matchedImages, &img)
+			}
+			if compiledRegex != nil && img.Name != nil && compiledRegex.MatchString(*img.Name) {
+				matchedImages = append(matchedImages, &img)
+			}
+			// If neither name nor name_regex is specified, include all images for filter evaluation later
+			if name == "" && nameRegex == "" {
+				matchedImages = append(matchedImages, &img)
+			}
+		}
+
+		// Step 2: Sort matched images by name (optional, based on sortDescending flag)
+		if len(matchedImages) > 1 {
+			sort.SliceStable(matchedImages, func(i, j int) bool {
+				a, b := matchedImages[i].Name, matchedImages[j].Name
+				if a == nil {
+					return false
+				}
+				if b == nil {
+					return true
+				}
+				if sortDescending {
+					return *a > *b
+				}
+				return *a < *b
+			})
+		}
+
+		// Step 3: Apply additional filtering based on OS, distro, version, UEFI, secure boot, etc.
+		filteredImages := make([]*iaas.Image, 0, len(matchedImages))
+		for _, img := range matchedImages {
+			if imageMatchesFilter(img, &filter) {
+				filteredImages = append(filteredImages, img)
+			}
+		}
+
+		// Check if any images passed all filters; warn if no matching image was found
+		if len(filteredImages) == 0 {
+			core.LogAndAddWarning(ctx, &resp.Diagnostics, "No match",
+				"No matching image found using name, name_regex, and filter criteria.")
+			return
+		}
+
+		// Step 4: Use the first image from the filtered and sorted result list
+		imageResp = filteredImages[0]
+	}
+
 	err = mapDataSourceFields(ctx, imageResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading image", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "image read")
 }
 
@@ -341,4 +496,52 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	model.Config = configObject
 	model.Checksum = checksumObject
 	return nil
+}
+
+// imageMatchesFilter checks whether a given image matches all specified filter conditions.
+// It returns true only if all non-null fields in the filter match corresponding fields in the image's config.
+func imageMatchesFilter(img *iaas.Image, filter *Filter) bool {
+	if filter == nil {
+		return true
+	}
+
+	if img.Config == nil {
+		return false
+	}
+
+	cfg := img.Config
+
+	if !filter.OS.IsNull() {
+		if cfg.OperatingSystem == nil || filter.OS.ValueString() != *cfg.OperatingSystem {
+			return false
+		}
+	}
+
+	if !filter.Distro.IsNull() {
+		if cfg.OperatingSystemDistro == nil || cfg.OperatingSystemDistro.Get() == nil ||
+			filter.Distro.ValueString() != *cfg.OperatingSystemDistro.Get() {
+			return false
+		}
+	}
+
+	if !filter.Version.IsNull() {
+		if cfg.OperatingSystemVersion == nil || cfg.OperatingSystemVersion.Get() == nil ||
+			filter.Version.ValueString() != *cfg.OperatingSystemVersion.Get() {
+			return false
+		}
+	}
+
+	if !filter.UEFI.IsNull() {
+		if cfg.Uefi == nil || filter.UEFI.ValueBool() != *cfg.Uefi {
+			return false
+		}
+	}
+
+	if !filter.SecureBoot.IsNull() {
+		if cfg.SecureBoot == nil || filter.SecureBoot.ValueBool() != *cfg.SecureBoot {
+			return false
+		}
+	}
+
+	return true
 }
