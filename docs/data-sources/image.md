@@ -13,9 +13,34 @@ Image datasource schema. Must have a `region` specified in the provider configur
 ## Example Usage
 
 ```terraform
-data "stackit_image" "example" {
+data "stackit_image" "default" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   image_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+
+data "stackit_image" "name_match" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "Ubuntu 22.04"
+}
+
+data "stackit_image" "name_regex_latest" {
+  project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name_regex      = "^Ubuntu .*"
+  sort_descending = true
+}
+
+data "stackit_image" "name_regex_oldest" {
+  project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name_regex      = "^Ubuntu .*"
+  sort_descending = false
+}
+
+data "stackit_image" "filter_distro_version" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  filter = {
+    distro  = "debian"
+    version = "11"
+  }
 }
 ```
 
@@ -24,8 +49,15 @@ data "stackit_image" "example" {
 
 ### Required
 
-- `image_id` (String) The image ID.
 - `project_id` (String) STACKIT project ID to which the image is associated.
+
+### Optional
+
+- `filter` (Attributes) Additional filtering options based on image properties. Can be used independently or in conjunction with `name` or `name_regex`. (see [below for nested schema](#nestedatt--filter))
+- `image_id` (String) Image ID to fetch directly
+- `name` (String) Exact image name to match. Optionally applies a `filter` block to further refine results in case multiple images share the same name. The first match is returned, optionally sorted by name in descending order. Cannot be used together with `name_regex`.
+- `name_regex` (String) Regular expression to match against image names. Optionally applies a `filter` block to narrow down results when multiple image names match the regex. The first match is returned, optionally sorted by name in descending order. Cannot be used together with `name`.
+- `sort_descending` (Boolean) If set to `true`, images are sorted in descending lexicographical order by image name before selecting the first match. Defaults to `false` (ascending).
 
 ### Read-Only
 
@@ -36,9 +68,20 @@ data "stackit_image" "example" {
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `min_disk_size` (Number) The minimum disk size of the image in GB.
 - `min_ram` (Number) The minimum RAM of the image in MB.
-- `name` (String) The name of the image.
 - `protected` (Boolean) Whether the image is protected.
 - `scope` (String) The scope of the image.
+
+<a id="nestedatt--filter"></a>
+### Nested Schema for `filter`
+
+Optional:
+
+- `distro` (String) Filter images by operating system distribution. For example: `ubuntu`, `ubuntu-arm64`, `debian`, `rhel`, etc.
+- `os` (String) Filter images by operating system type, such as `linux` or `windows`.
+- `secure_boot` (Boolean) Filter images with Secure Boot support. Set to `true` to match images that support Secure Boot.
+- `uefi` (Boolean) Filter images based on UEFI support. Set to `true` to match images that support UEFI.
+- `version` (String) Filter images by OS distribution version, such as `22.04`, `11`, or `9.1`.
+
 
 <a id="nestedatt--checksum"></a>
 ### Nested Schema for `checksum`
