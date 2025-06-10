@@ -34,13 +34,13 @@ var (
 )
 
 type DataSourceModel struct {
-	Id             types.String `tfsdk:"id"` // needed by TF
-	ProjectId      types.String `tfsdk:"project_id"`
-	ImageId        types.String `tfsdk:"image_id"`
-	Name           types.String `tfsdk:"name"`
-	NameRegex      types.String `tfsdk:"name_regex"`
-	SortDescending types.Bool   `tfsdk:"sort_descending"`
-	Filter         types.Object `tfsdk:"filter"`
+	Id            types.String `tfsdk:"id"` // needed by TF
+	ProjectId     types.String `tfsdk:"project_id"`
+	ImageId       types.String `tfsdk:"image_id"`
+	Name          types.String `tfsdk:"name"`
+	NameRegex     types.String `tfsdk:"name_regex"`
+	SortAscending types.Bool   `tfsdk:"sort_ascending"`
+	Filter        types.Object `tfsdk:"filter"`
 
 	DiskFormat  types.String `tfsdk:"disk_format"`
 	MinDiskSize types.Int64  `tfsdk:"min_disk_size"`
@@ -133,15 +133,15 @@ func (d *imageDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 				},
 			},
 			"name": schema.StringAttribute{
-				Description: "Exact image name to match. Optionally applies a `filter` block to further refine results in case multiple images share the same name. The first match is returned, optionally sorted by name in descending order. Cannot be used together with `name_regex`.",
+				Description: "Exact image name to match. Optionally applies a `filter` block to further refine results in case multiple images share the same name. The first match is returned, optionally sorted by name in ascending order. Cannot be used together with `name_regex`.",
 				Optional:    true,
 			},
 			"name_regex": schema.StringAttribute{
-				Description: "Regular expression to match against image names. Optionally applies a `filter` block to narrow down results when multiple image names match the regex. The first match is returned, optionally sorted by name in descending order. Cannot be used together with `name`.",
+				Description: "Regular expression to match against image names. Optionally applies a `filter` block to narrow down results when multiple image names match the regex. The first match is returned, optionally sorted by name in ascending order. Cannot be used together with `name`.",
 				Optional:    true,
 			},
-			"sort_descending": schema.BoolAttribute{
-				Description: "If set to `true`, images are sorted in descending lexicographical order by image name before selecting the first match. Defaults to `false` (ascending).",
+			"sort_ascending": schema.BoolAttribute{
+				Description: "If set to `true`, images are sorted in ascending lexicographical order by image name (such as `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`) before selecting the first match. Defaults to `false` (descending such as `Ubuntu 22.04`, `Ubuntu 20.04`, `Ubuntu 18.04`).",
 				Optional:    true,
 			},
 			"filter": schema.SingleNestedAttribute{
@@ -284,7 +284,7 @@ func (d *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	imageID := model.ImageId.ValueString()
 	name := model.Name.ValueString()
 	nameRegex := model.NameRegex.ValueString()
-	sortDescending := model.SortDescending.ValueBool()
+	sortAscending := model.SortAscending.ValueBool()
 
 	var filter Filter
 	if !model.Filter.IsNull() && !model.Filter.IsUnknown() {
@@ -298,7 +298,7 @@ func (d *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	ctx = tflog.SetField(ctx, "image_id", imageID)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "name_regex", nameRegex)
-	ctx = tflog.SetField(ctx, "sort_descending", sortDescending)
+	ctx = tflog.SetField(ctx, "sort_ascending", sortAscending)
 
 	var imageResp *iaas.Image
 	var err error
@@ -350,21 +350,9 @@ func (d *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 			}
 		}
 
-		// Step 2: Sort matched images by name (optional, based on sortDescending flag)
+		// Step 2: Sort matched images by name (optional, based on sortAscending flag)
 		if len(matchedImages) > 1 {
-			sort.SliceStable(matchedImages, func(i, j int) bool {
-				a, b := matchedImages[i].Name, matchedImages[j].Name
-				if a == nil {
-					return false
-				}
-				if b == nil {
-					return true
-				}
-				if sortDescending {
-					return *a > *b
-				}
-				return *a < *b
-			})
+			sortImagesByName(matchedImages, sortAscending)
 		}
 
 		// Step 3: Apply additional filtering based on OS, distro, version, UEFI, secure boot, etc.
@@ -511,37 +499,56 @@ func imageMatchesFilter(img *iaas.Image, filter *Filter) bool {
 
 	cfg := img.Config
 
-	if !filter.OS.IsNull() {
-		if cfg.OperatingSystem == nil || filter.OS.ValueString() != *cfg.OperatingSystem {
-			return false
-		}
+	if !filter.OS.IsNull() &&
+		(cfg.OperatingSystem == nil || filter.OS.ValueString() != *cfg.OperatingSystem) {
+		return false
 	}
 
-	if !filter.Distro.IsNull() {
-		if cfg.OperatingSystemDistro == nil || cfg.OperatingSystemDistro.Get() == nil ||
-			filter.Distro.ValueString() != *cfg.OperatingSystemDistro.Get() {
-			return false
-		}
+	if !filter.Distro.IsNull() &&
+		(cfg.OperatingSystemDistro == nil || cfg.OperatingSystemDistro.Get() == nil ||
+			filter.Distro.ValueString() != *cfg.OperatingSystemDistro.Get()) {
+		return false
 	}
 
-	if !filter.Version.IsNull() {
-		if cfg.OperatingSystemVersion == nil || cfg.OperatingSystemVersion.Get() == nil ||
-			filter.Version.ValueString() != *cfg.OperatingSystemVersion.Get() {
-			return false
-		}
+	if !filter.Version.IsNull() &&
+		(cfg.OperatingSystemVersion == nil || cfg.OperatingSystemVersion.Get() == nil ||
+			filter.Version.ValueString() != *cfg.OperatingSystemVersion.Get()) {
+		return false
 	}
 
-	if !filter.UEFI.IsNull() {
-		if cfg.Uefi == nil || filter.UEFI.ValueBool() != *cfg.Uefi {
-			return false
-		}
+	if !filter.UEFI.IsNull() &&
+		(cfg.Uefi == nil || filter.UEFI.ValueBool() != *cfg.Uefi) {
+		return false
 	}
 
-	if !filter.SecureBoot.IsNull() {
-		if cfg.SecureBoot == nil || filter.SecureBoot.ValueBool() != *cfg.SecureBoot {
-			return false
-		}
+	if !filter.SecureBoot.IsNull() &&
+		(cfg.SecureBoot == nil || filter.SecureBoot.ValueBool() != *cfg.SecureBoot) {
+		return false
 	}
 
 	return true
+}
+
+// sortImagesByName sorts a slice of images by name, respecting nils and order direction.
+func sortImagesByName(images []*iaas.Image, sortAscending bool) {
+	if len(images) <= 1 {
+		return
+	}
+
+	sort.SliceStable(images, func(i, j int) bool {
+		a, b := images[i].Name, images[j].Name
+
+		switch {
+		case a == nil && b == nil:
+			return false // Equal
+		case a == nil:
+			return false // Nil goes after non-nil
+		case b == nil:
+			return true // Non-nil goes before nil
+		case sortAscending:
+			return *a < *b
+		default:
+			return *a > *b
+		}
+	})
 }

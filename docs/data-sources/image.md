@@ -24,15 +24,14 @@ data "stackit_image" "name_match" {
 }
 
 data "stackit_image" "name_regex_latest" {
-  project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name_regex      = "^Ubuntu .*"
-  sort_descending = true
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name_regex = "^Ubuntu .*"
 }
 
 data "stackit_image" "name_regex_oldest" {
-  project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name_regex      = "^Ubuntu .*"
-  sort_descending = false
+  project_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name_regex     = "^Ubuntu .*"
+  sort_ascending = true
 }
 
 data "stackit_image" "filter_distro_version" {
@@ -55,9 +54,9 @@ data "stackit_image" "filter_distro_version" {
 
 - `filter` (Attributes) Additional filtering options based on image properties. Can be used independently or in conjunction with `name` or `name_regex`. (see [below for nested schema](#nestedatt--filter))
 - `image_id` (String) Image ID to fetch directly
-- `name` (String) Exact image name to match. Optionally applies a `filter` block to further refine results in case multiple images share the same name. The first match is returned, optionally sorted by name in descending order. Cannot be used together with `name_regex`.
-- `name_regex` (String) Regular expression to match against image names. Optionally applies a `filter` block to narrow down results when multiple image names match the regex. The first match is returned, optionally sorted by name in descending order. Cannot be used together with `name`.
-- `sort_descending` (Boolean) If set to `true`, images are sorted in descending lexicographical order by image name before selecting the first match. Defaults to `false` (ascending).
+- `name` (String) Exact image name to match. Optionally applies a `filter` block to further refine results in case multiple images share the same name. The first match is returned, optionally sorted by name in ascending order. Cannot be used together with `name_regex`.
+- `name_regex` (String) Regular expression to match against image names. Optionally applies a `filter` block to narrow down results when multiple image names match the regex. The first match is returned, optionally sorted by name in ascending order. Cannot be used together with `name`.
+- `sort_ascending` (Boolean) If set to `true`, images are sorted in ascending lexicographical order by image name (such as `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`) before selecting the first match. Defaults to `false` (descending such as `Ubuntu 22.04`, `Ubuntu 20.04`, `Ubuntu 18.04`).
 
 ### Read-Only
 
