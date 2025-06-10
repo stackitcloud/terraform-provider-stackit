@@ -5,6 +5,11 @@ data "stackit_image" "name_match_ubuntu_22_04" {
   name       = "Ubuntu 22.04"
 }
 
+data "stackit_image" "ubuntu_by_image_id" {
+  project_id = var.project_id
+  image_id   = data.stackit_image.name_match_ubuntu_22_04.image_id
+}
+
 data "stackit_image" "regex_match_ubuntu_22_04" {
   project_id = var.project_id
   name_regex = "(?i)^ubuntu 22.04$"
@@ -46,7 +51,6 @@ data "stackit_image" "ubuntu_arm64_latest" {
   filter = {
     distro = "ubuntu-arm64"
   }
-  sort_descending = true
 }
 
 data "stackit_image" "ubuntu_arm64_oldest" {
@@ -54,5 +58,5 @@ data "stackit_image" "ubuntu_arm64_oldest" {
   filter = {
     distro = "ubuntu-arm64"
   }
-  sort_descending = false
+  sort_ascending = true
 }
