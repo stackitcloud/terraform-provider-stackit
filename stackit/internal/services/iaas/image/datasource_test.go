@@ -384,3 +384,88 @@ func TestImageMatchesFilter(t *testing.T) {
 		})
 	}
 }
+
+func TestSortImagesByName(t *testing.T) {
+	tests := []struct {
+		desc       string
+		input      []*iaas.Image
+		ascending  bool
+		wantSorted []string
+	}{
+		{
+			desc:      "ascending by name",
+			ascending: true,
+			input: []*iaas.Image{
+				{Name: utils.Ptr("Ubuntu 22.04")},
+				{Name: utils.Ptr("Ubuntu 18.04")},
+				{Name: utils.Ptr("Ubuntu 20.04")},
+			},
+			wantSorted: []string{"Ubuntu 18.04", "Ubuntu 20.04", "Ubuntu 22.04"},
+		},
+		{
+			desc:      "descending by name",
+			ascending: false,
+			input: []*iaas.Image{
+				{Name: utils.Ptr("Ubuntu 22.04")},
+				{Name: utils.Ptr("Ubuntu 18.04")},
+				{Name: utils.Ptr("Ubuntu 20.04")},
+			},
+			wantSorted: []string{"Ubuntu 22.04", "Ubuntu 20.04", "Ubuntu 18.04"},
+		},
+		{
+			desc:      "nil names go last ascending",
+			ascending: true,
+			input: []*iaas.Image{
+				{Name: nil},
+				{Name: utils.Ptr("Ubuntu 18.04")},
+				{Name: nil},
+				{Name: utils.Ptr("Ubuntu 20.04")},
+			},
+			wantSorted: []string{"Ubuntu 18.04", "Ubuntu 20.04", "<nil>", "<nil>"},
+		},
+		{
+			desc:      "nil names go last descending",
+			ascending: false,
+			input: []*iaas.Image{
+				{Name: nil},
+				{Name: utils.Ptr("Ubuntu 18.04")},
+				{Name: utils.Ptr("Ubuntu 20.04")},
+				{Name: nil},
+			},
+			wantSorted: []string{"Ubuntu 20.04", "Ubuntu 18.04", "<nil>", "<nil>"},
+		},
+		{
+			desc:       "empty slice",
+			ascending:  true,
+			input:      []*iaas.Image{},
+			wantSorted: []string{},
+		},
+		{
+			desc:      "single element slice",
+			ascending: true,
+			input: []*iaas.Image{
+				{Name: utils.Ptr("Ubuntu 22.04")},
+			},
+			wantSorted: []string{"Ubuntu 22.04"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			sortImagesByName(tc.input, tc.ascending)
+
+			gotNames := make([]string, len(tc.input))
+			for i, img := range tc.input {
+				if img.Name == nil {
+					gotNames[i] = "<nil>"
+				} else {
+					gotNames[i] = *img.Name
+				}
+			}
+
+			if diff := cmp.Diff(tc.wantSorted, gotNames); diff != "" {
+				t.Fatalf("incorrect sort order (-want +got):\n%s", diff)
+			}
+		})
+	}
+}

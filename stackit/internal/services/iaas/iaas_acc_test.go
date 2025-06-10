@@ -3812,46 +3812,29 @@ func TestAccImageMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-					
-					data "stackit_image" "image_id_match" {
+
+					data "stackit_image" "image" {
 						project_id = stackit_image.image.project_id
 						image_id = stackit_image.image.image_id
-					}
-
-					data "stackit_image" "exact_match" {
-					  project_id = var.project_id
-					  name       = "Ubuntu 22.04"
-					}
-
-					data "stackit_image" "ubuntu_latest" {
-					  project_id       = stackit_image.image.project_id
-					  name_regex       = "^Ubuntu .*"
-					  sort_descending  = true
-					}
-				
-					data "stackit_image" "ubuntu_oldest" {
-					  project_id       = stackit_image.image.project_id
-					  name_regex       = "^Ubuntu .*"
-					  sort_descending  = false
 					}
 					`,
 					resourceImageMinConfig, testutil.IaaSProviderConfig(),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("data.stackit_image.image_id_match", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMin["project_id"])),
-					resource.TestCheckResourceAttrPair("data.stackit_image.image_id_match", "image_id", "stackit_image.image", "image_id"),
-					resource.TestCheckResourceAttrPair("data.stackit_image.image_id_match", "name", "stackit_image.image", "name"),
-					resource.TestCheckResourceAttrPair("data.stackit_image.image_id_match", "disk_format", "stackit_image.image", "disk_format"),
-					resource.TestCheckResourceAttrPair("data.stackit_image.image_id_match", "min_disk_size", "stackit_image.image", "min_disk_size"),
-					resource.TestCheckResourceAttrPair("data.stackit_image.image_id_match", "min_ram", "stackit_image.image", "min_ram"),
-					resource.TestCheckResourceAttrPair("data.stackit_image.image_id_match", "protected", "stackit_image.image", "protected"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image_id_match", "protected"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image_id_match", "scope"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image_id_match", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image_id_match", "checksum.digest"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image_id_match", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image_id_match", "checksum.digest"),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "image_id", "stackit_image.image", "image_id"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "name", "stackit_image.image", "name"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "disk_format", "stackit_image.image", "disk_format"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "min_disk_size", "stackit_image.image", "min_disk_size"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "min_ram", "stackit_image.image", "min_ram"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image", "protected", "stackit_image.image", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
 				),
 			},
 			// Import
@@ -4062,6 +4045,16 @@ func TestAccImageDatasourceSearchVariants(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_image.name_match_ubuntu_22_04", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.name_match_ubuntu_22_04", "checksum.digest"),
 
+					resource.TestCheckResourceAttr("data.stackit_image.ubuntu_by_image_id", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_by_image_id", "image_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_by_image_id", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_by_image_id", "min_disk_size"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_by_image_id", "min_ram"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_by_image_id", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_by_image_id", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_by_image_id", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_by_image_id", "checksum.digest"),
+
 					resource.TestCheckResourceAttr("data.stackit_image.regex_match_ubuntu_22_04", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_image.regex_match_ubuntu_22_04", "image_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.regex_match_ubuntu_22_04", "name"),
@@ -4130,7 +4123,30 @@ func TestAccImageDatasourceSearchVariants(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_oldest", "protected"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_oldest", "scope"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_oldest", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_oldest", "checksum.digest")),
+					resource.TestCheckResourceAttrSet("data.stackit_image.ubuntu_arm64_oldest", "checksum.digest"),
+
+					// e2e test that ascending sort is working
+					func(s *terraform.State) error {
+						latest := s.RootModule().Resources["data.stackit_image.ubuntu_arm64_latest"]
+						oldest := s.RootModule().Resources["data.stackit_image.ubuntu_arm64_oldest"]
+
+						if latest == nil {
+							return fmt.Errorf("datasource 'data.stackit_image.ubuntu_arm64_latest' not found")
+						}
+						if oldest == nil {
+							return fmt.Errorf("datasource 'data.stackit_image.ubuntu_arm64_oldest' not found")
+						}
+
+						nameLatest := latest.Primary.Attributes["name"]
+						nameOldest := oldest.Primary.Attributes["name"]
+
+						if nameLatest == nameOldest {
+							return fmt.Errorf("expected image names to differ, but both are %q", nameLatest)
+						}
+
+						return nil
+					},
+				),
 			},
 		},
 	})

@@ -9,15 +9,14 @@ data "stackit_image" "name_match" {
 }
 
 data "stackit_image" "name_regex_latest" {
-  project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name_regex      = "^Ubuntu .*"
-  sort_descending = true
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name_regex = "^Ubuntu .*"
 }
 
 data "stackit_image" "name_regex_oldest" {
-  project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name_regex      = "^Ubuntu .*"
-  sort_descending = false
+  project_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name_regex     = "^Ubuntu .*"
+  sort_ascending = true
 }
 
 data "stackit_image" "filter_distro_version" {
