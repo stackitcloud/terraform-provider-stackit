@@ -162,8 +162,8 @@ github.com/stackitcloud/stackit-sdk-go/services/git v0.5.1 h1:xs8CMY7t8nULQvZr5+
 github.com/stackitcloud/stackit-sdk-go/services/git v0.5.1/go.mod h1:agI7SONeLR/IZL3TOgn1tDzfS63O2rWKQE8+huRjEzU=
 github.com/stackitcloud/stackit-sdk-go/services/iaas v0.24.0 h1:aLlZmcsDHqqc7KPsevvs+W6EPZFT51u/dx5TcVQsE6g=
 github.com/stackitcloud/stackit-sdk-go/services/iaas v0.24.0/go.mod h1:TaMx7kukGpRm0BkNCmS7u2x12q1pgfbD55DAnLIjOIQ=
-github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.2.1 h1:AN8rN13biq3vcJzi2GqGLx84AsuMdnBlPgQj1i83Lmo=
-github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.2.1/go.mod h1:FiVhDlw9+yuTiUmnyGLn2qpsLW26w9OC4TS1y78czvg=
+github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.3.0 h1:ELclQQLM8pd/60WNC506XeECwu5GupIldvvJOqwZvGw=
+github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.3.0/go.mod h1:FiVhDlw9+yuTiUmnyGLn2qpsLW26w9OC4TS1y78czvg=
 github.com/stackitcloud/stackit-sdk-go/services/logme v0.24.1 h1:hfnILDJGBwwqUIs4xt/7Jj4LBe+JsSdHy+Md2ynUg4Y=
 github.com/stackitcloud/stackit-sdk-go/services/logme v0.24.1/go.mod h1:XjDMHhAQogFXsVR+o138CPYG1FOe0/Nl2Vm+fAgzx2A=
 github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.24.1 h1:7nN7ZCuWSbJMy5KqoOqSbp5JKIOvyuDqVRtxVvT1iyE=
@@ -196,8 +196,8 @@ github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.8.1 h1:01AIQQt
 github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.8.1/go.mod h1:t77MA8uyEU9KZd1On5JpnxI3xhVPKIS8WutStqvU8Cw=
 github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.1 h1:h1TsWatlsexLeKdkb3L8chcxaXJOy/cLXctsRxhb4xg=
 github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.1/go.mod h1:M4xZ2BnmROvLV2MrAP6A8o9BnyT0CkvpEcP8lBOfRs8=
-github.com/stackitcloud/stackit-sdk-go/services/ske v0.24.1 h1:X1Q/uHa7voS8mrZZYeJm8TWJ7bW78OMIsHXDd+IB79M=
-github.com/stackitcloud/stackit-sdk-go/services/ske v0.24.1/go.mod h1:V09NmPahuUiuZEogVPgxuVqqti0th5B7TVAjuiM09mE=
+github.com/stackitcloud/stackit-sdk-go/services/ske v0.25.0 h1:9ufUW3J/d29TizLd32Kt4b+4RUN1FRod9Q3X1HbTg58=
+github.com/stackitcloud/stackit-sdk-go/services/ske v0.25.0/go.mod h1:V09NmPahuUiuZEogVPgxuVqqti0th5B7TVAjuiM09mE=
 github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.2.0 h1:WvPLO1c7oT/MWmCRTt7jRyxus2g3DIluIW5iAsUpSFM=
 github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.2.0/go.mod h1:CyYJqR0tZWs2r5bGz69j4bmvhxdsd4QLCm1Uf+LouB0=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
