@@ -7,6 +7,11 @@ description: |-
   Example Usage
   With key pair
   
+  data "stackit_image" "image" {
+    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    name       = "Ubuntu 22.04"
+  }
+  
   resource "stackit_key_pair" "keypair" {
     name       = "example-key-pair"
     public_key = chomp(file("path/to/id_rsa.pub"))
@@ -17,7 +22,7 @@ description: |-
     boot_volume = {
       size        = 64
       source_type = "image"
-      source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      source_id   = data.stackit_image.image.id
     }
     name         = "example-server"
     machine_type = "g1.1"
@@ -28,13 +33,18 @@ description: |-
   
   Boot from volume
   
+  data "stackit_image" "image" {
+    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    name       = "Ubuntu 22.04"
+  }
+  
   resource "stackit_server" "boot-from-volume" {
     project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     name       = "example-server"
     boot_volume = {
       size        = 64
       source_type = "image"
-      source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      source_id   = data.stackit_image.image.id
     }
     availability_zone = "eu01-1"
     machine_type      = "g1.1"
@@ -44,12 +54,17 @@ description: |-
   
   Boot from existing volume
   
+  data "stackit_image" "image" {
+    project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    name       = "Ubuntu 22.04"
+  }
+  
   resource "stackit_volume" "example-volume" {
     project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     size       = 12
     source = {
       type = "image"
-      id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      id   = data.stackit_image.image.id
     }
     name              = "example-volume"
     availability_zone = "eu01-1"
@@ -188,6 +203,11 @@ Server resource schema. Must have a region specified in the provider configurati
 
 ### With key pair
 ```terraform
+data "stackit_image" "image" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "Ubuntu 22.04"
+}
+
 resource "stackit_key_pair" "keypair" {
   name       = "example-key-pair"
   public_key = chomp(file("path/to/id_rsa.pub"))
@@ -198,7 +218,7 @@ resource "stackit_server" "user-data-from-file" {
   boot_volume = {
     size        = 64
     source_type = "image"
-    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    source_id   = data.stackit_image.image.id
   }
   name         = "example-server"
   machine_type = "g1.1"
@@ -210,13 +230,18 @@ resource "stackit_server" "user-data-from-file" {
 
 ### Boot from volume
 ```terraform
+data "stackit_image" "image" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "Ubuntu 22.04"
+}
+
 resource "stackit_server" "boot-from-volume" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name       = "example-server"
   boot_volume = {
     size        = 64
     source_type = "image"
-    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    source_id   = data.stackit_image.image.id
   }
   availability_zone = "eu01-1"
   machine_type      = "g1.1"
@@ -227,12 +252,17 @@ resource "stackit_server" "boot-from-volume" {
 
 ### Boot from existing volume
 ```terraform
+data "stackit_image" "image" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "Ubuntu 22.04"
+}
+
 resource "stackit_volume" "example-volume" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   size       = 12
   source = {
     type = "image"
-    id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    id   = data.stackit_image.image.id
   }
   name              = "example-volume"
   availability_zone = "eu01-1"
