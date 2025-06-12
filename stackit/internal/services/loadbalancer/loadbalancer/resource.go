@@ -1204,14 +1204,7 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, reg
 	}
 	m.Region = types.StringValue(region)
 	m.Name = types.StringValue(name)
-	idParts := []string{
-		m.ProjectId.ValueString(),
-		m.Region.ValueString(),
-		name,
-	}
-	m.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	m.Id = utils.BuildInternalTerraformId(m.ProjectId.ValueString(), m.Region.ValueString(), name)
 
 	m.ExternalAddress = types.StringPointerValue(lb.ExternalAddress)
 	m.PrivateAddress = types.StringPointerValue(lb.PrivateAddress)

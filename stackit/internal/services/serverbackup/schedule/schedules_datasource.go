@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	serverbackupUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/utils"
@@ -223,10 +222,7 @@ func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverbackup.G
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 
-	idParts := []string{projectId, region, serverId}
-	model.ID = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.ID = utils.BuildInternalTerraformId(projectId, region, serverId)
 	model.Region = types.StringValue(region)
 
 	for _, schedule := range *schedules.Items {

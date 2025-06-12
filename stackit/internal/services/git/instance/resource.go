@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	gitUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/git/utils"
 
@@ -306,8 +308,7 @@ func mapFields(resp *git.Instance, model *Model) error {
 	}
 
 	// Build the ID by combining the project ID and instance id and assign the model's fields.
-	idParts := []string{model.ProjectId.ValueString(), *resp.Id}
-	model.Id = types.StringValue(strings.Join(idParts, core.Separator))
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), *resp.Id)
 	model.Url = types.StringPointerValue(resp.Url)
 	model.Name = types.StringPointerValue(resp.Name)
 	model.InstanceId = types.StringPointerValue(resp.Id)

@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -27,7 +29,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -1290,13 +1292,7 @@ func mapFields(ctx context.Context, r *observability.GetInstanceResponse, model 
 		return fmt.Errorf("instance id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		instanceId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), instanceId)
 	model.InstanceId = types.StringValue(instanceId)
 	model.PlanName = types.StringPointerValue(r.PlanName)
 	model.PlanId = types.StringPointerValue(r.PlanId)
@@ -1573,19 +1569,19 @@ func mapGlobalConfigToAttributes(respGlobalConfigs *observability.Global, global
 	if globalConfigsTF != nil {
 		if respGlobalConfigs.SmtpSmarthost == nil &&
 			!globalConfigsTF.SmtpSmartHost.IsNull() && !globalConfigsTF.SmtpSmartHost.IsUnknown() {
-			smtpSmartHost = utils.Ptr(globalConfigsTF.SmtpSmartHost.ValueString())
+			smtpSmartHost = sdkUtils.Ptr(globalConfigsTF.SmtpSmartHost.ValueString())
 		}
 		if respGlobalConfigs.SmtpAuthIdentity == nil &&
 			!globalConfigsTF.SmtpAuthIdentity.IsNull() && !globalConfigsTF.SmtpAuthIdentity.IsUnknown() {
-			smtpAuthIdentity = utils.Ptr(globalConfigsTF.SmtpAuthIdentity.ValueString())
+			smtpAuthIdentity = sdkUtils.Ptr(globalConfigsTF.SmtpAuthIdentity.ValueString())
 		}
 		if respGlobalConfigs.SmtpAuthPassword == nil &&
 			!globalConfigsTF.SmtpAuthPassword.IsNull() && !globalConfigsTF.SmtpAuthPassword.IsUnknown() {
-			smtpAuthPassword = utils.Ptr(globalConfigsTF.SmtpAuthPassword.ValueString())
+			smtpAuthPassword = sdkUtils.Ptr(globalConfigsTF.SmtpAuthPassword.ValueString())
 		}
 		if respGlobalConfigs.SmtpAuthUsername == nil &&
 			!globalConfigsTF.SmtpAuthUsername.IsNull() && !globalConfigsTF.SmtpAuthUsername.IsUnknown() {
-			smtpAuthUsername = utils.Ptr(globalConfigsTF.SmtpAuthUsername.ValueString())
+			smtpAuthUsername = sdkUtils.Ptr(globalConfigsTF.SmtpAuthUsername.ValueString())
 		}
 	}
 
@@ -1878,7 +1874,7 @@ func toUpdateMetricsStorageRetentionPayload(retentionDaysRaw, retentionDays5m, r
 
 func updateACL(ctx context.Context, projectId, instanceId string, acl []string, client *observability.APIClient) error {
 	payload := observability.UpdateACLPayload{
-		Acl: utils.Ptr(acl),
+		Acl: sdkUtils.Ptr(acl),
 	}
 
 	_, err := client.UpdateACL(ctx, instanceId, projectId).UpdateACLPayload(payload).Execute()

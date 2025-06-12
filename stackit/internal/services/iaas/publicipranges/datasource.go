@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-	"strings"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
@@ -175,8 +174,7 @@ func mapPublicIpRanges(_ context.Context, publicIpRanges *[]iaas.PublicNetwork, 
 	// Sort to prevent unnecessary recreation of dependent resources due to order changes.
 	sort.Strings(apiIpRanges)
 
-	modelId := strings.Join(apiIpRanges, ",")
-	model.Id = types.StringValue(modelId)
+	model.Id = utils.BuildInternalTerraformId(apiIpRanges...)
 
 	var ipRangesList []attr.Value
 	for _, cidr := range apiIpRanges {

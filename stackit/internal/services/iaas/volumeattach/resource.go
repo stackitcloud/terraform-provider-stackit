@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
@@ -18,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -140,7 +142,7 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 	// Create new Volume attachment
 
 	payload := iaas.AddVolumeToServerPayload{
-		DeleteOnTermination: utils.Ptr(false),
+		DeleteOnTermination: sdkUtils.Ptr(false),
 	}
 	_, err := r.client.AddVolumeToServer(ctx, projectId, serverId, volumeId).AddVolumeToServerPayload(payload).Execute()
 	if err != nil {
@@ -154,14 +156,7 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	idParts := []string{
-		projectId,
-		serverId,
-		volumeId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(projectId, serverId, volumeId)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)

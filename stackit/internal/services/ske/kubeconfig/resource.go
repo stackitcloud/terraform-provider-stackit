@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
@@ -348,13 +347,8 @@ func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model, creationTime time.T
 		return fmt.Errorf("model input is nil")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		model.ClusterName.ValueString(),
-		model.KubeconfigId.ValueString(),
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), model.ClusterName.ValueString(), model.KubeconfigId.ValueString(),
 	)
 
 	if kubeconfigResp.Kubeconfig == nil {

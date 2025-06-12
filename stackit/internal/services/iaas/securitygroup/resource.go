@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -349,13 +351,7 @@ func mapFields(ctx context.Context, securityGroupResp *iaas.SecurityGroup, model
 		return fmt.Errorf("security group id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		securityGroupId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), securityGroupId)
 
 	labels, err := iaasUtils.MapLabels(ctx, securityGroupResp.Labels, model.Labels)
 	if err != nil {

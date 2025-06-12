@@ -357,14 +357,10 @@ func mapFields(cred *loadbalancer.CredentialsResponse, m *Model, region string) 
 	}
 	m.Username = types.StringValue(username)
 	m.Region = types.StringValue(region)
-
-	idParts := []string{
+	m.Id = utils.BuildInternalTerraformId(
 		m.ProjectId.ValueString(),
 		m.Region.ValueString(),
 		m.CredentialsRef.ValueString(),
-	}
-	m.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
 	)
 
 	return nil

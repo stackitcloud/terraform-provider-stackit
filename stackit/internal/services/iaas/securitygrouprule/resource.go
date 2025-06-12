@@ -572,15 +572,7 @@ func mapFields(securityGroupRuleResp *iaas.SecurityGroupRule, model *Model) erro
 		return fmt.Errorf("security group rule id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		model.SecurityGroupId.ValueString(),
-		securityGroupRuleId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
-
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.SecurityGroupId.ValueString(), securityGroupRuleId)
 	model.SecurityGroupRuleId = types.StringValue(securityGroupRuleId)
 	model.Direction = types.StringPointerValue(securityGroupRuleResp.Direction)
 	model.Description = types.StringPointerValue(securityGroupRuleResp.Description)

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	modelservingUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelserving/utils"
@@ -538,10 +537,7 @@ func mapCreateResponse(tokenCreateResp *modelserving.CreateTokenResponse, waitRe
 		return fmt.Errorf("response input is nil")
 	}
 
-	idParts := []string{model.ProjectId.ValueString(), region, *tokenCreateResp.Token.Id}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, *tokenCreateResp.Token.Id)
 	model.TokenId = types.StringPointerValue(token.Id)
 	model.Name = types.StringPointerValue(token.Name)
 	model.State = types.StringValue(string(waitResp.Token.GetState()))
@@ -570,8 +566,7 @@ func mapGetResponse(tokenGetResp *modelserving.GetTokenResponse, model *Model) e
 		validUntil = types.StringValue(tokenGetResp.Token.ValidUntil.Format(time.RFC3339))
 	}
 
-	idParts := []string{model.ProjectId.ValueString(), model.Region.ValueString(), model.TokenId.ValueString()}
-	model.Id = types.StringValue(strings.Join(idParts, core.Separator))
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.Region.ValueString(), model.TokenId.ValueString())
 	model.TokenId = types.StringPointerValue(tokenGetResp.Token.Id)
 	model.Name = types.StringPointerValue(tokenGetResp.Token.Name)
 	model.State = types.StringValue(string(tokenGetResp.Token.GetState()))

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -301,8 +303,7 @@ func mapFields(resp *serviceaccount.ServiceAccount, model *Model) error {
 	}
 
 	// Build the ID by combining the project ID and email and assign the model's fields.
-	idParts := []string{model.ProjectId.ValueString(), *resp.Email}
-	model.Id = types.StringValue(strings.Join(idParts, core.Separator))
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), *resp.Email)
 	model.Email = types.StringPointerValue(resp.Email)
 	model.ProjectId = types.StringPointerValue(resp.ProjectId)
 

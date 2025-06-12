@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -201,14 +200,8 @@ func mapDataSourceFields(credentialResp *objectstorage.AccessKey, model *DataSou
 		model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.CredentialsGroupId.ValueString(),
-		credentialId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), region, model.CredentialsGroupId.ValueString(), credentialId,
 	)
 	model.CredentialId = types.StringValue(credentialId)
 	model.Name = types.StringPointerValue(credentialResp.DisplayName)

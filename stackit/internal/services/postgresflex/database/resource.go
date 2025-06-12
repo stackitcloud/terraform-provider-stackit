@@ -364,14 +364,8 @@ func mapFields(databaseResp *postgresflex.InstanceDatabase, model *Model, region
 	} else {
 		return fmt.Errorf("database id not present")
 	}
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.InstanceId.ValueString(),
-		databaseId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), databaseId,
 	)
 	model.DatabaseId = types.StringValue(databaseId)
 	model.Name = types.StringPointerValue(databaseResp.Name)
