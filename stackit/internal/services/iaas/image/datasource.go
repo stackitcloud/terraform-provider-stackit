@@ -107,7 +107,27 @@ func (d *imageDataSource) ConfigValidators(_ context.Context) []datasource.Confi
 
 // Schema defines the schema for the datasource.
 func (d *imageDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	description := "Image datasource schema. Must have a `region` specified in the provider configuration."
+	description := fmt.Sprintf(
+		"%s\n\n~> %s",
+		"Image datasource schema. Must have a `region` specified in the provider configuration.",
+		"Important: When using the `name`, `name_regex`, or `filter` attributes to select images dynamically, be aware that image IDs may change frequently. Each OS patch or update results in a new unique image ID. If this data source is used to populate fields like `boot_volume.source_id` in a server resource, it may cause Terraform to detect changes and recreate the associated resource.\n\n"+
+			"To avoid unintended updates or resource replacements:\n"+
+			" - Prefer using a static `image_id` to pin a specific image version.\n"+
+			" - If you accept automatic image updates but wish to suppress resource changes, use a `lifecycle` block to ignore relevant changes. For example:\n\n"+
+			"```hcl\n"+
+			"resource \"stackit_server\" \"example\" {\n"+
+			"  boot_volume = {\n"+
+			"    size        = 64\n"+
+			"    source_type = \"image\"\n"+
+			"    source_id   = data.stackit_image.latest.id\n"+
+			"  }\n"+
+			"\n"+
+			"  lifecycle {\n"+
+			"    ignore_changes = [boot_volume[0].source_id]\n"+
+			"  }\n"+
+			"}\n"+
+			"```",
+	)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
