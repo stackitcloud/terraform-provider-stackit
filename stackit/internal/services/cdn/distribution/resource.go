@@ -447,9 +447,7 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 		return fmt.Errorf("Status missing in response")
 	}
 
-	id := *distribution.ProjectId + core.Separator + *distribution.Id
-
-	model.ID = types.StringValue(id)
+	model.ID = utils.BuildInternalTerraformId(*distribution.ProjectId, *distribution.Id)
 	model.DistributionId = types.StringValue(*distribution.Id)
 	model.ProjectId = types.StringValue(*distribution.ProjectId)
 	model.Status = types.StringValue(string(distribution.GetStatus()))
