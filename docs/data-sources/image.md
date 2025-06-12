@@ -4,11 +4,46 @@ page_title: "stackit_image Data Source - stackit"
 subcategory: ""
 description: |-
   Image datasource schema. Must have a region specified in the provider configuration.
+  ~> Important: When using the name, name_regex, or filter attributes to select images dynamically, be aware that image IDs may change frequently. Each OS patch or update results in a new unique image ID. If this data source is used to populate fields like boot_volume.source_id in a server resource, it may cause Terraform to detect changes and recreate the associated resource.
+  To avoid unintended updates or resource replacements:
+  Prefer using a static image_id to pin a specific image version.If you accept automatic image updates but wish to suppress resource changes, use a lifecycle block to ignore relevant changes. For example:
+  
+  resource "stackit_server" "example" {
+    boot_volume = {
+      size        = 64
+      source_type = "image"
+      source_id   = data.stackit_image.latest.id
+    }
+  
+    lifecycle {
+      ignore_changes = [boot_volume[0].source_id]
+    }
+  }
 ---
 
 # stackit_image (Data Source)
 
 Image datasource schema. Must have a `region` specified in the provider configuration.
+
+~> Important: When using the `name`, `name_regex`, or `filter` attributes to select images dynamically, be aware that image IDs may change frequently. Each OS patch or update results in a new unique image ID. If this data source is used to populate fields like `boot_volume.source_id` in a server resource, it may cause Terraform to detect changes and recreate the associated resource.
+
+To avoid unintended updates or resource replacements:
+ - Prefer using a static `image_id` to pin a specific image version.
+ - If you accept automatic image updates but wish to suppress resource changes, use a `lifecycle` block to ignore relevant changes. For example:
+
+```hcl
+resource "stackit_server" "example" {
+  boot_volume = {
+    size        = 64
+    source_type = "image"
+    source_id   = data.stackit_image.latest.id
+  }
+
+  lifecycle {
+    ignore_changes = [boot_volume[0].source_id]
+  }
+}
+```
 
 ## Example Usage
 
