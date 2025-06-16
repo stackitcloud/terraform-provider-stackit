@@ -61,13 +61,9 @@ resource "stackit_server" "boot-from-image" {
   availability_zone = "xxxx-x"
   machine_type      = "g1.1"
   keypair_name      = stackit_key_pair.keypair.name
-}
-
-# Attach the network interface to the server
-resource "stackit_server_network_interface_attach" "nic-attachment" {
-  project_id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  server_id            = stackit_server.boot-from-image.server_id
-  network_interface_id = stackit_network_interface.nic.network_interface_id
+  network_interfaces = [
+    stackit_network_interface.nic.network_interface_id
+  ]
 }
 
 # Create a load balancer

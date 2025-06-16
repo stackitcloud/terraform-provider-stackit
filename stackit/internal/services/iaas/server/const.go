@@ -69,18 +69,6 @@ resource "stackit_server" "boot-from-volume" {
 
 ### Network setup` + "\n" +
 	"```terraform" + `
-resource "stackit_server" "server-with-network" {
-  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name         = "example-server"
-  boot_volume = {
-    size        = 64
-    source_type = "image"
-    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  }
-  machine_type = "g1.1"
-  keypair_name = stackit_key_pair.keypair.name
-}
-
 resource "stackit_network" "network" {
   project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name               = "example-network"
@@ -107,14 +95,23 @@ resource "stackit_network_interface" "nic" {
   security_group_ids = [stackit_security_group.sec-group.security_group_id]
 }
 
-resource "stackit_public_ip" "public-ip" {
-  project_id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  network_interface_id = stackit_network_interface.nic.network_interface_id
+resource "stackit_server" "server-with-network" {
+  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name         = "example-server"
+  boot_volume = {
+    size        = 64
+    source_type = "image"
+    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+  machine_type = "g1.1"
+  keypair_name = stackit_key_pair.keypair.name
+  network_interfaces = [
+    stackit_network_interface.nic.network_interface_id
+  ]	
 }
 
-resource "stackit_server_network_interface_attach" "nic-attachment" {
+resource "stackit_public_ip" "public-ip" {
   project_id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  server_id            = stackit_server.server-with-network.server_id
   network_interface_id = stackit_network_interface.nic.network_interface_id
 }
 ` + "\n```" + `
