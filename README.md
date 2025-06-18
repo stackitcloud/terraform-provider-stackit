@@ -42,7 +42,7 @@ To authenticate, you will need a [service account](https://docs.stackit.cloud/st
 When setting up authentication, the provider will always try to use the key flow first and search for credentials in several locations, following a specific order:
 
 1. Explicit configuration, e.g. by setting the field `service_account_key_path` in the provider block (see example below)
-2. Environment variable, e.g. by setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH`
+2. Environment variable, e.g. by setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH` or `STACKIT_SERVICE_ACCOUNT_KEY`
 3. Credentials file
 
    The provider will check the credentials file located in the path defined by the `STACKIT_CREDENTIALS_PATH` env var, if specified,
@@ -99,13 +99,15 @@ To configure the key flow, follow this steps:
 3. Configure the service account key for authentication in the provider by following one of the alternatives below:
 
    - setting the fields in the provider block: `service_account_key` or `service_account_key_path`
-   - setting the environment variable: `STACKIT_SERVICE_ACCOUNT_KEY_PATH`
+   - setting the environment variable: `STACKIT_SERVICE_ACCOUNT_KEY_PATH` or `STACKIT_SERVICE_ACCOUNT_KEY`
+     - ensure the set the service account key in `STACKIT_SERVICE_ACCOUNT_KEY` is correctly formatted. Use e.g.
+       `$ export STACKIT_SERVICE_ACCOUNT_KEY=$(cat ./service-account-key.json)`
    - setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH` in the credentials file (see above)
 
 > **Optionally, only if you have provided your own RSA key-pair when creating the service account key**, you also need to configure your private key (takes precedence over the one included in the service account key, if present). **The private key must be PEM encoded** and can be provided using one of the options below:
 >
 > - setting the field in the provider block: `private_key` or `private_key_path`
-> - setting the environment variable: `STACKIT_PRIVATE_KEY_PATH`
+> - setting the environment variable: `STACKIT_PRIVATE_KEY_PATH` or `STACKIT_PRIVATE_KEY`
 > - setting `STACKIT_PRIVATE_KEY_PATH` in the credentials file (see above)
 
 ### Token flow
