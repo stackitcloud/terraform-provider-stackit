@@ -4,18 +4,77 @@ page_title: "stackit_image Data Source - stackit"
 subcategory: ""
 description: |-
   Image datasource schema. Must have a region specified in the provider configuration.
+  ~> Important: When using the name, name_regex, or filter attributes to select images dynamically, be aware that image IDs may change frequently. Each OS patch or update results in a new unique image ID. If this data source is used to populate fields like boot_volume.source_id in a server resource, it may cause Terraform to detect changes and recreate the associated resource.
+  To avoid unintended updates or resource replacements:
+  Prefer using a static image_id to pin a specific image version.If you accept automatic image updates but wish to suppress resource changes, use a lifecycle block to ignore relevant changes. For example:
+  
+  resource "stackit_server" "example" {
+    boot_volume = {
+      size        = 64
+      source_type = "image"
+      source_id   = data.stackit_image.latest.id
+    }
+  
+    lifecycle {
+      ignore_changes = [boot_volume[0].source_id]
+    }
+  }
 ---
 
 # stackit_image (Data Source)
 
 Image datasource schema. Must have a `region` specified in the provider configuration.
 
+~> Important: When using the `name`, `name_regex`, or `filter` attributes to select images dynamically, be aware that image IDs may change frequently. Each OS patch or update results in a new unique image ID. If this data source is used to populate fields like `boot_volume.source_id` in a server resource, it may cause Terraform to detect changes and recreate the associated resource.
+
+To avoid unintended updates or resource replacements:
+ - Prefer using a static `image_id` to pin a specific image version.
+ - If you accept automatic image updates but wish to suppress resource changes, use a `lifecycle` block to ignore relevant changes. For example:
+
+```hcl
+resource "stackit_server" "example" {
+  boot_volume = {
+    size        = 64
+    source_type = "image"
+    source_id   = data.stackit_image.latest.id
+  }
+
+  lifecycle {
+    ignore_changes = [boot_volume[0].source_id]
+  }
+}
+```
+
 ## Example Usage
 
 ```terraform
-data "stackit_image" "example" {
+data "stackit_image" "default" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   image_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+
+data "stackit_image" "name_match" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "Ubuntu 22.04"
+}
+
+data "stackit_image" "name_regex_latest" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name_regex = "^Ubuntu .*"
+}
+
+data "stackit_image" "name_regex_oldest" {
+  project_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name_regex     = "^Ubuntu .*"
+  sort_ascending = true
+}
+
+data "stackit_image" "filter_distro_version" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  filter = {
+    distro  = "debian"
+    version = "11"
+  }
 }
 ```
 
@@ -24,8 +83,15 @@ data "stackit_image" "example" {
 
 ### Required
 
-- `image_id` (String) The image ID.
 - `project_id` (String) STACKIT project ID to which the image is associated.
+
+### Optional
+
+- `filter` (Attributes) Additional filtering options based on image properties. Can be used independently or in conjunction with `name` or `name_regex`. (see [below for nested schema](#nestedatt--filter))
+- `image_id` (String) Image ID to fetch directly
+- `name` (String) Exact image name to match. Optionally applies a `filter` block to further refine results in case multiple images share the same name. The first match is returned, optionally sorted by name in ascending order. Cannot be used together with `name_regex`.
+- `name_regex` (String) Regular expression to match against image names. Optionally applies a `filter` block to narrow down results when multiple image names match the regex. The first match is returned, optionally sorted by name in ascending order. Cannot be used together with `name`.
+- `sort_ascending` (Boolean) If set to `true`, images are sorted in ascending lexicographical order by image name (such as `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`) before selecting the first match. Defaults to `false` (descending such as `Ubuntu 22.04`, `Ubuntu 20.04`, `Ubuntu 18.04`).
 
 ### Read-Only
 
@@ -36,9 +102,20 @@ data "stackit_image" "example" {
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `min_disk_size` (Number) The minimum disk size of the image in GB.
 - `min_ram` (Number) The minimum RAM of the image in MB.
-- `name` (String) The name of the image.
 - `protected` (Boolean) Whether the image is protected.
 - `scope` (String) The scope of the image.
+
+<a id="nestedatt--filter"></a>
+### Nested Schema for `filter`
+
+Optional:
+
+- `distro` (String) Filter images by operating system distribution. For example: `ubuntu`, `ubuntu-arm64`, `debian`, `rhel`, etc.
+- `os` (String) Filter images by operating system type, such as `linux` or `windows`.
+- `secure_boot` (Boolean) Filter images with Secure Boot support. Set to `true` to match images that support Secure Boot.
+- `uefi` (Boolean) Filter images based on UEFI support. Set to `true` to match images that support UEFI.
+- `version` (String) Filter images by OS distribution version, such as `22.04`, `11`, or `9.1`.
+
 
 <a id="nestedatt--checksum"></a>
 ### Nested Schema for `checksum`
