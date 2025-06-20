@@ -19,46 +19,74 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-//go:embed testdata/resource.tf
-var resourceConfig string
+//go:embed testdata/resource-min.tf
+var resourceMin string
 
-var name = fmt.Sprintf("git-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
-var nameUpdated = fmt.Sprintf("git-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+//go:embed testdata/resource-max.tf
+var resourceMax string
 
-var testConfigVars = config.Variables{
+var nameMin = fmt.Sprintf("git-min-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+var nameMinUpdated = fmt.Sprintf("git-min-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+var nameMax = fmt.Sprintf("git-max-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+var nameMaxUpdated = fmt.Sprintf("git-max-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+var aclUpdated = "192.168.0.0/32"
+
+var testConfigVarsMin = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
-	"name":       config.StringVariable(name),
+	"name":       config.StringVariable(nameMin),
 }
 
-func testConfigVarsUpdated() config.Variables {
-	tempConfig := make(config.Variables, len(testConfigVars))
-	maps.Copy(tempConfig, testConfigVars)
+var testConfigVarsMax = config.Variables{
+	"project_id": config.StringVariable(testutil.ProjectId),
+	"name":       config.StringVariable(nameMax),
+	"acl":        config.StringVariable("192.168.0.0/16"),
+	"flavor":     config.StringVariable("git-100"),
+}
+
+func testConfigVarsMinUpdated() config.Variables {
+	tempConfig := make(config.Variables, len(testConfigVarsMin))
+	maps.Copy(tempConfig, testConfigVarsMin)
 	// update git instance to a new name
 	// should trigger creating a new instance
-	tempConfig["name"] = config.StringVariable(nameUpdated)
+	tempConfig["name"] = config.StringVariable(nameMinUpdated)
 	return tempConfig
 }
 
-func TestGitInstance(t *testing.T) {
+func testConfigVarsMaxUpdated() config.Variables {
+	tempConfig := make(config.Variables, len(testConfigVarsMin))
+	maps.Copy(tempConfig, testConfigVarsMin)
+	// update git instance to a new name
+	// should trigger creating a new instance
+	tempConfig["name"] = config.StringVariable(nameMaxUpdated)
+	tempConfig["acl"] = config.StringVariable(aclUpdated)
+
+	return tempConfig
+}
+
+func TestAccGitMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckGitInstanceDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				ConfigVariables: testConfigVars,
-				Config:          testutil.GitProviderConfig() + resourceConfig,
+				ConfigVariables: testConfigVarsMin,
+				Config:          testutil.GitProviderConfig() + resourceMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVars["project_id"])),
-					resource.TestCheckResourceAttr("stackit_git.git", "name", testutil.ConvertConfigVariable(testConfigVars["name"])),
+					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_git.git", "name", testutil.ConvertConfigVariable(testConfigVarsMin["name"])),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "url"),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "version"),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "instance_id"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "created"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "consumed_object_storage"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "consumed_disk"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "flavor"),
 				),
 			},
 			// Data source
 			{
-				ConfigVariables: testConfigVars,
+				ConfigVariables: testConfigVarsMin,
 				Config: fmt.Sprintf(`
 					%s
 
@@ -66,11 +94,11 @@ func TestGitInstance(t *testing.T) {
 						project_id  = stackit_git.git.project_id
 						instance_id = stackit_git.git.instance_id
 					}
-					`, testutil.GitProviderConfig()+resourceConfig,
+					`, testutil.GitProviderConfig()+resourceMin,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("data.stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVars["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttrPair(
 						"stackit_git.git", "project_id",
 						"data.stackit_git.git", "project_id",
@@ -91,11 +119,27 @@ func TestGitInstance(t *testing.T) {
 						"stackit_git.git", "version",
 						"data.stackit_git.git", "version",
 					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_git.git", "created",
+						"data.stackit_git.git", "created",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_git.git", "consumed_object_storage",
+						"data.stackit_git.git", "consumed_object_storage",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_git.git", "consumed_disk",
+						"data.stackit_git.git", "consumed_disk",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_git.git", "flavor",
+						"data.stackit_git.git", "flavor",
+					),
 				),
 			},
 			// Import
 			{
-				ConfigVariables: testConfigVars,
+				ConfigVariables: testConfigVarsMin,
 				ResourceName:    "stackit_git.git",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_git.git"]
@@ -113,14 +157,137 @@ func TestGitInstance(t *testing.T) {
 			},
 			// Update
 			{
-				ConfigVariables: testConfigVarsUpdated(),
-				Config:          testutil.GitProviderConfig() + resourceConfig,
+				ConfigVariables: testConfigVarsMinUpdated(),
+				Config:          testutil.GitProviderConfig() + resourceMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVars["project_id"])),
-					resource.TestCheckResourceAttr("stackit_git.git", "name", testutil.ConvertConfigVariable(testConfigVarsUpdated()["name"])),
+					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_git.git", "name", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["name"])),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "url"),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "version"),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "instance_id"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "created"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "consumed_object_storage"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "consumed_disk"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "flavor"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccGitMax(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckGitInstanceDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigVarsMax,
+				Config:          testutil.GitProviderConfig() + resourceMax,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("stackit_git.git", "name", testutil.ConvertConfigVariable(testConfigVarsMax["name"])),
+					resource.TestCheckResourceAttr("stackit_git.git", "flavor", testutil.ConvertConfigVariable(testConfigVarsMax["flavor"])),
+					resource.TestCheckResourceAttr("stackit_git.git", "acl.0", testutil.ConvertConfigVariable(testConfigVarsMax["acl"])),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "url"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "version"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "instance_id"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "created"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "consumed_object_storage"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "consumed_disk"),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigVarsMax,
+				Config: fmt.Sprintf(`
+					%s
+
+					data "stackit_git" "git" {
+						project_id  = stackit_git.git.project_id
+						instance_id = stackit_git.git.instance_id
+					}
+					`, testutil.GitProviderConfig()+resourceMin,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("data.stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_git.git", "project_id",
+						"data.stackit_git.git", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_git.git", "instance_id",
+						"data.stackit_git.git", "instance_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_git.git", "name",
+						"data.stackit_git.git", "name",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_git.git", "url",
+						"data.stackit_git.git", "url",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_git.git", "version",
+						"data.stackit_git.git", "version",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_git.git", "created",
+						"data.stackit_git.git", "created",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_git.git", "consumed_object_storage",
+						"data.stackit_git.git", "consumed_object_storage",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_git.git", "consumed_disk",
+						"data.stackit_git.git", "consumed_disk",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_git.git", "flavor",
+						"data.stackit_git.git", "flavor",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_git.git", "acl",
+						"data.stackit_git.git", "acl",
+					),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigVarsMax,
+				ResourceName:    "stackit_git.git",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_git.git"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_git.git")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				ConfigVariables: testConfigVarsMaxUpdated(),
+				Config:          testutil.GitProviderConfig() + resourceMax,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("stackit_git.git", "name", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["name"])),
+					resource.TestCheckResourceAttr("stackit_git.git", "flavor", testutil.ConvertConfigVariable(testConfigVarsMax["flavor"])),
+					resource.TestCheckResourceAttr("stackit_git.git", "acl.0", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["acl"])),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "url"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "version"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "instance_id"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "created"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "consumed_object_storage"),
+					resource.TestCheckResourceAttrSet("stackit_git.git", "consumed_disk"),
 				),
 			},
 			// Deletion is done by the framework implicitly

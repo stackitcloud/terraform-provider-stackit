@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/git"
@@ -86,6 +87,27 @@ func (g *gitDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 					validate.NoSeparator(),
 				},
 			},
+			"acl": schema.ListAttribute{
+				Description: descriptions["acl"],
+				Computed:    true,
+				ElementType: types.StringType,
+			},
+			"consumed_disk": schema.StringAttribute{
+				Description: descriptions["consumed_disk"],
+				Computed:    true,
+			},
+			"consumed_object_storage": schema.StringAttribute{
+				Description: descriptions["consumed_object_storage"],
+				Computed:    true,
+			},
+			"created": schema.StringAttribute{
+				Description: descriptions["created"],
+				Computed:    true,
+			},
+			"flavor": schema.StringAttribute{
+				Description: descriptions["flavor"],
+				Computed:    true,
+			},
 			"name": schema.StringAttribute{
 				Description: descriptions["name"],
 				Computed:    true,
@@ -127,7 +149,7 @@ func (g *gitDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		return
 	}
 
-	err = mapFields(gitInstanceResp, &model)
+	err = mapFields(ctx, gitInstanceResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading git instance", fmt.Sprintf("Processing API response: %v", err))
 		return

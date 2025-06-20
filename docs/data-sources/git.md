@@ -32,6 +32,11 @@ data "stackit_git" "git" {
 
 ### Read-Only
 
+- `acl` (List of String) Restricted ACL for instance access.
+- `consumed_disk` (String) How many bytes of disk space is consumed.
+- `consumed_object_storage` (String) How many bytes of Object Storage is consumed.
+- `created` (String) Instance creation timestamp in RFC3339 format.
+- `flavor` (String) Instance flavor. Defaults to git-100 if not specified
 - `id` (String) Terraform's internal resource ID, structured as "`project_id`,`instance_id`".
 - `name` (String) Unique name linked to the git instance.
 - `url` (String) Url linked to the git instance.

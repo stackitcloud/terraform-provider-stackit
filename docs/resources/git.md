@@ -4,14 +4,14 @@ page_title: "stackit_git Resource - stackit"
 subcategory: ""
 description: |-
   Git Instance resource schema.
-  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
+  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources. This resource currently does not support updates. Changing the ACLs, flavor, or name will trigger resource recreation. Update functionality will be added soon. In the meantime, please proceed with caution. To update these attributes, please open a support ticket.
 ---
 
 # stackit_git (Resource)
 
 Git Instance resource schema.
 
-~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
+~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources. This resource currently does not support updates. Changing the ACLs, flavor, or name will trigger resource recreation. Update functionality will be added soon. In the meantime, please proceed with caution. To update these attributes, please open a support ticket.
 
 ## Example Usage
 
@@ -19,6 +19,15 @@ Git Instance resource schema.
 resource "stackit_git" "git" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name       = "git-example-instance"
+}
+
+resource "stackit_git" "git" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "git-example-instance"
+  acl = [
+    "0.0.0.0/0"
+  ]
+  flavor = "git-100"
 }
 ```
 
@@ -30,8 +39,16 @@ resource "stackit_git" "git" {
 - `name` (String) Unique name linked to the git instance.
 - `project_id` (String) STACKIT project ID to which the git instance is associated.
 
+### Optional
+
+- `acl` (List of String) Restricted ACL for instance access.
+- `flavor` (String) Instance flavor. Defaults to git-100 if not specified
+
 ### Read-Only
 
+- `consumed_disk` (String) How many bytes of disk space is consumed.
+- `consumed_object_storage` (String) How many bytes of Object Storage is consumed.
+- `created` (String) Instance creation timestamp in RFC3339 format.
 - `id` (String) Terraform's internal resource ID, structured as "`project_id`,`instance_id`".
 - `instance_id` (String) ID linked to the git instance.
 - `url` (String) Url linked to the git instance.
