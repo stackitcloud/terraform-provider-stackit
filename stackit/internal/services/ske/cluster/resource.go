@@ -83,6 +83,7 @@ type Model struct {
 	Hibernations              types.List   `tfsdk:"hibernations"`
 	Extensions                types.Object `tfsdk:"extensions"`
 	EgressAddressRanges       types.List   `tfsdk:"egress_address_ranges"`
+	PodAddressRanges          types.List   `tfsdk:"pod_address_ranges"`
 	Region                    types.String `tfsdk:"region"`
 }
 
@@ -381,6 +382,11 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"egress_address_ranges": schema.ListAttribute{
 				Description: "The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
+			"pod_address_ranges": schema.ListAttribute{
+				Description: "The network ranges (in CIDR notation) used by pods of the cluster.",
 				Computed:    true,
 				ElementType: types.StringType,
 			},
@@ -1375,6 +1381,15 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model, region string) er
 		m.EgressAddressRanges, diags = types.ListValueFrom(ctx, types.StringType, cl.Status.EgressAddressRanges)
 		if diags.HasError() {
 			return fmt.Errorf("map egressAddressRanges: %w", core.DiagsToError(diags))
+		}
+	}
+
+	m.PodAddressRanges = types.ListNull(types.StringType)
+	if cl.Status != nil {
+		var diags diag.Diagnostics
+		m.PodAddressRanges, diags = types.ListValueFrom(ctx, types.StringType, cl.Status.PodAddressRanges)
+		if diags.HasError() {
+			return fmt.Errorf("map podAddressRanges: %w", core.DiagsToError(diags))
 		}
 	}
 
