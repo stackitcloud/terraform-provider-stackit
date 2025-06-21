@@ -98,6 +98,11 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed:    true,
 				ElementType: types.StringType,
 			},
+			"pod_address_ranges": schema.ListAttribute{
+				Description: "The network ranges (in CIDR notation) used by pods of the cluster.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
 			"node_pools": schema.ListNestedAttribute{
 				Description: "One or more `node_pool` block as defined below.",
 				Computed:    true,
