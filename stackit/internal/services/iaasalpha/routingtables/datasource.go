@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/iaasalpha"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -14,13 +15,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/shared"
 	iaasalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
-
-// TODO: add alpha/beta/experimental check
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -35,16 +35,12 @@ type DataSourceModelTables struct {
 	Items          types.List   `tfsdk:"items"`
 }
 
-var dataSourceModelTablesTypes = map[string]attr.Type{
-	"items": types.ObjectType{AttrTypes: shared.DataSourceTypes},
-}
-
 // NewRoutingTablesDataSource is a helper function to simplify the provider implementation.
 func NewRoutingTablesDataSource() datasource.DataSource {
 	return &routingTablesDataSource{}
 }
 
-// routingTablesDataSource is the data source implementation.
+// routingTableDataSource is the data source implementation.
 type routingTablesDataSource struct {
 	client       *iaasalpha.APIClient
 	providerData core.ProviderData
@@ -56,12 +52,18 @@ func (d *routingTablesDataSource) Metadata(_ context.Context, req datasource.Met
 }
 
 func (d *routingTablesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasalphaUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_routing_tables", "datasource")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	apiClient := iaasalphaUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -74,8 +76,12 @@ func (d *routingTablesDataSource) Schema(_ context.Context, _ datasource.SchemaR
 	description := "Routing table datasource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		Description:         description,
-		MarkdownDescription: description,
+		MarkdownDescription: features.AddBetaDescription(description),
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Description: "Terraform's internal datasource ID. It is structured as \"`organization_id`,`region`,`network_area_id`\".",
+				Computed:    true,
+			},
 			"organization_id": schema.StringAttribute{
 				Description: "STACKIT organization ID to which the routing table is associated.",
 				Required:    true,
@@ -101,7 +107,7 @@ func (d *routingTablesDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				Description: "List of routing tables.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
-					Attributes: shared.RoutingTableResponseAttributes,
+					Attributes: shared.RoutingTableResponseAttributes(),
 				},
 			},
 		},
@@ -109,7 +115,7 @@ func (d *routingTablesDataSource) Schema(_ context.Context, _ datasource.SchemaR
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModelTables
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -118,6 +124,7 @@ func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadR
 	}
 
 	organizationId := model.OrganizationId.ValueString()
+	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
 	var region string
 	if utils.IsUndefined(model.Region) {
 		region = d.providerData.GetRegion()
@@ -156,10 +163,8 @@ func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 	tflog.Info(ctx, "Routing table read")
-
 }
 
-// TODO: extend when routes are implemented
 func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaasalpha.RoutingTableListResponse, model *DataSourceModelTables, region string) error {
 	if routingTables == nil {
 		return fmt.Errorf("response input is nil")
@@ -171,39 +176,43 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaasalpha.Ro
 		return fmt.Errorf("items input is nil")
 	}
 
-	itemsListAttr := []attr.Value{}
-	for i, item := range *routingTables.Items {
-		dataSourceModel := &shared.DataSourceModel{}
-		if err := shared.MapDataSourceFields(ctx, &item, dataSourceModel, region); err != nil {
-			return fmt.Errorf("mapping of routing table failed")
+	organizationId := model.OrganizationId.ValueString()
+	networkAreaId := model.NetworkAreaId.ValueString()
+
+	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/869)
+	idParts := []string{organizationId, region, networkAreaId}
+	model.Id = types.StringValue(
+		strings.Join(idParts, core.Separator),
+	)
+
+	itemsList := []attr.Value{}
+	for i, routingTable := range *routingTables.Items {
+		var routingTableModel shared.RoutingTableReadModel
+		err := shared.MapRoutingTableReadModel(ctx, &routingTable, &routingTableModel)
+		if err != nil {
+			return fmt.Errorf("mapping routes: %w", err)
 		}
 
-		itemsListAttrMap := map[string]attr.Value{
-			"routing_table_id":   types.StringValue(dataSourceModel.RoutingTableId.ValueString()),
-			"name":               types.StringValue(dataSourceModel.Name.ValueString()),
-			"description":        types.StringValue(dataSourceModel.Description.ValueString()),
-			"region":             types.StringValue(dataSourceModel.Region.ValueString()),
-			"main_routing_table": types.BoolValue(dataSourceModel.MainRoutingTable.ValueBool()),
-			"system_routes":      types.BoolValue(dataSourceModel.SystemRoutes.ValueBool()),
-			"created_at":         types.StringValue(dataSourceModel.CreatedAt.ValueString()),
-			"updated_at":         types.StringValue(dataSourceModel.UpdatedAt.ValueString()),
-			"labels":             dataSourceModel.Labels,
-			// TODO: extend when routes are implemented
-			"routes": types.ListNull(types.StringType),
+		routingTableMap := map[string]attr.Value{
+			"routing_table_id":   routingTableModel.RoutingTableId,
+			"name":               routingTableModel.Name,
+			"description":        routingTableModel.Description,
+			"labels":             routingTableModel.Labels,
+			"created_at":         routingTableModel.CreatedAt,
+			"updated_at":         routingTableModel.UpdatedAt,
+			"main_routing_table": routingTableModel.MainRoutingTable,
+			"system_routes":      routingTableModel.SystemRoutes,
+			"routes":             routingTableModel.Routes,
 		}
 
-		itemsListAttrTF, diags := types.ObjectValue(shared.DataSourceTypes, itemsListAttrMap)
+		routingTableTF, diags := types.ObjectValue(shared.RoutingTableReadModelTypes(), routingTableMap)
 		if diags.HasError() {
 			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
 		}
-
-		itemsListAttr = append(itemsListAttr, itemsListAttrTF)
+		itemsList = append(itemsList, routingTableTF)
 	}
 
-	itemsListTF, diags := types.ListValue(
-		types.ObjectType{AttrTypes: shared.DataSourceTypes},
-		itemsListAttr,
-	)
+	itemsListTF, diags := types.ListValue(types.ObjectType{AttrTypes: shared.RoutingTableReadModelTypes()}, itemsList)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}

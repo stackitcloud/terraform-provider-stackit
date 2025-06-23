@@ -1,4 +1,4 @@
-package routingtable
+package routingtable_route
 
 import (
 	"context"
@@ -19,33 +19,33 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ datasource.DataSource = &routingTableDataSource{}
+	_ datasource.DataSource = &routingTableRouteDataSource{}
 )
 
-// NewRoutingTableDataSource is a helper function to simplify the provider implementation.
-func NewRoutingTableDataSource() datasource.DataSource {
-	return &routingTableDataSource{}
+// NewRoutingTableRouteDataSource is a helper function to simplify the provider implementation.
+func NewRoutingTableRouteDataSource() datasource.DataSource {
+	return &routingTableRouteDataSource{}
 }
 
-// routingTableDataSource is the data source implementation.
-type routingTableDataSource struct {
+// routingTableRouteDataSource is the data source implementation.
+type routingTableRouteDataSource struct {
 	client       *iaasalpha.APIClient
 	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
-func (d *routingTableDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_routing_table"
+func (d *routingTableRouteDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_routing_table_route"
 }
 
-func (d *routingTableDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *routingTableRouteDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
 	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_routing_table", "datasource")
+	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_routing_table_route", "datasource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -59,18 +59,18 @@ func (d *routingTableDataSource) Configure(ctx context.Context, req datasource.C
 }
 
 // Schema defines the schema for the data source.
-func (d *routingTableDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	description := "Routing table datasource schema. Must have a `region` specified in the provider configuration."
+func (d *routingTableRouteDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	description := "Routing table route datasource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddBetaDescription(description),
-		Attributes:          shared.GetDatasourceGetAttributes(),
+		Attributes:          shared.GetRouteDataSourceAttributes(),
 	}
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model shared.RoutingTableDataSourceModel
+func (d *routingTableRouteDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+	var model shared.RouteModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -78,6 +78,7 @@ func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	organizationId := model.OrganizationId.ValueString()
+	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
 	var region string
 	if utils.IsUndefined(model.Region) {
 		region = d.providerData.GetRegion()
@@ -86,19 +87,21 @@ func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+	routeId := model.RouteId.ValueString()
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
+	ctx = tflog.SetField(ctx, "route_id", routeId)
 
-	routingTableResp, err := d.client.GetRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
+	routeResp, err := d.client.GetRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
 			err,
-			"Reading routing table",
-			fmt.Sprintf("Routing table with ID %q or network area with ID %q does not exist in organization %q.", routingTableId, networkAreaId, organizationId),
+			"Reading routing table route",
+			fmt.Sprintf("Routing table route with ID %q, routing table with ID %q or network area with ID %q does not exist in organization %q.", routeId, routingTableId, networkAreaId, organizationId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Organization with ID %q not found or forbidden access", organizationId),
 			},
@@ -107,9 +110,9 @@ func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	err = shared.MapDataSourceFields(ctx, routingTableResp, &model, region)
+	err = shared.MapRouteModel(ctx, routeResp, &model, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table route", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
@@ -117,5 +120,5 @@ func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Routing table read")
+	tflog.Info(ctx, "Routing table route read")
 }

@@ -6,15 +6,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	iaasalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
 	"dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/iaasalpha"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -22,11 +18,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-
-	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	iaasalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
-
-// TODO: add alpha/beta/experimental check
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -59,17 +56,23 @@ type routingTableResource struct {
 
 // Metadata returns the resource type name.
 func (r *routingTableResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_routing_tables"
+	resp.TypeName = req.ProviderTypeName + "_routing_table"
 }
 
 // Configure adds the provider configured client to the resource.
 func (r *routingTableResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasalphaUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_routing_table", "resource")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	apiClient := iaasalphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -81,10 +84,10 @@ func (r *routingTableResource) Schema(_ context.Context, _ resource.SchemaReques
 	description := "Routing table resource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		Description:         description,
-		MarkdownDescription: description,
+		MarkdownDescription: features.AddBetaDescription(description),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`organization_id`,`region`,`routing_table_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`organization_id`,`region`,`network_area_id`,`routing_table_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -157,11 +160,10 @@ func (r *routingTableResource) Schema(_ context.Context, _ resource.SchemaReques
 			},
 		},
 	}
-
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *routingTableResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *routingTableResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -171,8 +173,15 @@ func (r *routingTableResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	organizationId := model.OrganizationId.ValueString()
-	region := model.Region.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
@@ -206,7 +215,7 @@ func (r *routingTableResource) Create(ctx context.Context, req resource.CreateRe
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *routingTableResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *routingTableResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -215,12 +224,16 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	organizationId := model.OrganizationId.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = r.providerData.GetRegion()
-	}
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
@@ -258,7 +271,7 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -268,9 +281,17 @@ func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	organizationId := model.OrganizationId.ValueString()
-	region := model.Region.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+
+	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
@@ -310,11 +331,10 @@ func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 	tflog.Info(ctx, "Routing table updated")
-
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
@@ -324,7 +344,13 @@ func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	organizationId := model.OrganizationId.ValueString()
-	region := model.Region.ValueString()
+	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
+	var region string
+	if utils.IsUndefined(model.Region) {
+		region = r.providerData.GetRegion()
+	} else {
+		region = model.Region.ValueString()
+	}
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
@@ -347,23 +373,26 @@ func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRe
 func (r *routingTableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing routing table",
-			fmt.Sprintf("Expected import identifier with format: [organization_id],[region],[routing_table_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [organization_id],[region],[network_area_id],[routing_table_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
 	organizationId := idParts[0]
 	region := idParts[1]
-	routingTableId := idParts[2]
+	networkAreaId := idParts[2]
+	routingTableId := idParts[3]
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("organization_id"), organizationId)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), region)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_area_id"), networkAreaId)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("routing_table_id"), routingTableId)...)
 	tflog.Info(ctx, "Routing table state imported")
 }
@@ -385,9 +414,11 @@ func mapFields(ctx context.Context, routingTable *iaasalpha.RoutingTable, model 
 		return fmt.Errorf("routing table id not present")
 	}
 
+	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/869)
 	idParts := []string{
 		model.OrganizationId.ValueString(),
 		region,
+		model.NetworkAreaId.ValueString(),
 		routingTableId,
 	}
 	model.Id = types.StringValue(

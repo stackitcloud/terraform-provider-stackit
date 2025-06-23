@@ -14,7 +14,7 @@ import (
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
-	id := fmt.Sprintf("%s,%s,%s", "oid", testRegion, "rtid")
+	id := fmt.Sprintf("%s,%s,%s,%s", "oid", testRegion, "aid", "rtid")
 	tests := []struct {
 		description string
 		state       Model

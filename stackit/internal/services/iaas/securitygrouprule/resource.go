@@ -333,7 +333,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				},
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						Description: fmt.Sprintf("The protocol name which the rule should match. Either `name` or `number` must be provided. %s", utils.FormatPossibleValues(protocolsPossibleValues)),
+						Description: fmt.Sprintf("The protocol name which the rule should match. Either `name` or `number` must be provided. %s", utils.FormatPossibleValues(protocolsPossibleValues...)),
 						Optional:    true,
 						Computed:    true,
 						Validators: []validator.String{

@@ -3,6 +3,7 @@ module github.com/stackitcloud/terraform-provider-stackit
 go 1.24
 
 require (
+	dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/iaasalpha v0.0.0-20250522070610-23c0a47905b2
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
@@ -39,11 +40,11 @@ require (
 	golang.org/x/mod v0.25.0
 )
 
-require (
-	dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/iaas v0.2.1-0.20250521112320-9a2a3cd9122a // indirect
-	dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/iaasalpha v0.0.0-20250522070610-23c0a47905b2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
-)
+require github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
+
+replace dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/iaas => ../stackit-sdk-generator/sdk-repo-updated/services/iaas
+
+replace dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/iaasalpha => ../stackit-sdk-generator/sdk-repo-updated/services/iaasalpha
 
 require (
 	github.com/ProtonMail/go-crypto v1.1.6 // indirect

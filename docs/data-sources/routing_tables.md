@@ -4,11 +4,14 @@ page_title: "stackit_routing_tables Data Source - stackit"
 subcategory: ""
 description: |-
   Routing table datasource schema. Must have a region specified in the provider configuration.
+  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_routing_tables (Data Source)
 
 Routing table datasource schema. Must have a `region` specified in the provider configuration.
+
+~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 
@@ -33,30 +36,21 @@ data "stackit_routing_tables" "example" {
 
 ### Read-Only
 
+- `id` (String) Terraform's internal datasource ID. It is structured as "`organization_id`,`region`,`network_area_id`".
 - `items` (Attributes List) List of routing tables. (see [below for nested schema](#nestedatt--items))
 
 <a id="nestedatt--items"></a>
 ### Nested Schema for `items`
 
-Required:
-
-- `network_area_id` (String) The network area ID to which the routing table is associated.
-- `organization_id` (String) STACKIT organization ID to which the routing table is associated.
-- `routing_table_id` (String) The routing tables ID.
-
-Optional:
-
-- `region` (String) The resource region. If not defined, the provider region is used.
-
 Read-Only:
 
 - `created_at` (String) Date-time when the routing table was created
 - `description` (String) Description of the routing table.
-- `id` (String) Terraform's internal datasource ID. It is structured as "`organization_id`,`region`,`routing_table_id`".
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `main_routing_table` (Boolean) Sets the routing table as main routing table.
 - `name` (String) The name of the routing table.
 - `routes` (Attributes List) List of routes. (see [below for nested schema](#nestedatt--items--routes))
+- `routing_table_id` (String) The routing tables ID.
 - `system_routes` (Boolean) TODO: ask what this does
 - `updated_at` (String) Date-time when the routing table was updated
 
@@ -67,9 +61,9 @@ Read-Only:
 
 - `created_at` (String) Date-time when the route was created
 - `destination` (Attributes) Destination of the route. (see [below for nested schema](#nestedatt--items--routes--destination))
-- `id` (String) Route ID.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `next_hop` (Attributes) Next hop destination. (see [below for nested schema](#nestedatt--items--routes--next_hop))
+- `route_id` (String) Route ID.
 - `updated_at` (String) Date-time when the route was updated
 
 <a id="nestedatt--items--routes--destination"></a>
@@ -77,7 +71,7 @@ Read-Only:
 
 Read-Only:
 
-- `type` (String) CIDRV type.
+- `type` (String) CIDRV type. Possible values are: `cidrv4`, `cidrv6`.
 - `value` (String) An CIDR string.
 
 
@@ -86,5 +80,5 @@ Read-Only:
 
 Read-Only:
 
-- `type` (String) Can be either blackhole, internet, ipv4 or ipv6.
+- `type` (String) Possible values are: `blackhole`, `internet`, `ipv4`, `ipv6`.
 - `value` (String) Either IPv4 or IPv6 (not set for blackhole and internet).

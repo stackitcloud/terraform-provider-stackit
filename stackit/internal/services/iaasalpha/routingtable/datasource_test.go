@@ -7,100 +7,189 @@ import (
 
 	"dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/iaasalpha"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/shared"
 )
 
-// TODO: adjust and extend when Route Model is present
+const (
+	testRegion = "eu01"
+)
+
+var (
+	organizationId = uuid.New()
+	networkAreaId  = uuid.New()
+	routingTableId = uuid.New()
+	route1Id       = uuid.New()
+	route2Id       = uuid.New()
+)
+
 func TestMapDataFields(t *testing.T) {
-	const testRegion = "eu01"
-	id := fmt.Sprintf("%s,%s,%s", "oid", testRegion, "rtid")
+	id := fmt.Sprintf("%s,%s,%s,%s", organizationId.String(), testRegion, networkAreaId.String(), routingTableId.String())
+
 	tests := []struct {
 		description string
-		state       shared.DataSourceModel
+		state       shared.RoutingTableDataSourceModel
 		input       *iaasalpha.RoutingTable
-		expected    shared.DataSourceModel
+		expected    shared.RoutingTableDataSourceModel
 		isValid     bool
 	}{
 		{
 			"default_values",
-			shared.DataSourceModel{
-				OrganizationId: types.StringValue("oid"),
-				NetworkAreaId:  types.StringValue("aid"),
-				Routes:         types.ListNull(types.StringType),
+			shared.RoutingTableDataSourceModel{
+				OrganizationId: types.StringValue(organizationId.String()),
+				NetworkAreaId:  types.StringValue(networkAreaId.String()),
+				RoutingTableReadModel: shared.RoutingTableReadModel{
+					Routes: types.ListNull(types.StringType),
+				},
 			},
 			&iaasalpha.RoutingTable{
-				Id:   utils.Ptr("rtid"),
+				Id:   utils.Ptr(routingTableId.String()),
 				Name: utils.Ptr("default_values"),
 			},
-			shared.DataSourceModel{
+			shared.RoutingTableDataSourceModel{
 				Id:             types.StringValue(id),
-				OrganizationId: types.StringValue("oid"),
-				RoutingTableId: types.StringValue("rtid"),
-				Name:           types.StringValue("default_values"),
-				NetworkAreaId:  types.StringValue("aid"),
-				Labels:         types.MapNull(types.StringType),
+				OrganizationId: types.StringValue(organizationId.String()),
+				NetworkAreaId:  types.StringValue(networkAreaId.String()),
 				Region:         types.StringValue(testRegion),
-				Routes:         types.ListNull(types.StringType),
+				RoutingTableReadModel: shared.RoutingTableReadModel{
+					RoutingTableId: types.StringValue(routingTableId.String()),
+					Name:           types.StringValue("default_values"),
+					Labels:         types.MapNull(types.StringType),
+					Routes: types.ListValueMust(
+						types.ObjectType{AttrTypes: shared.RouteReadModelTypes()}, []attr.Value{},
+					),
+				},
 			},
 			true,
 		},
 		{
 			"values_ok",
-			shared.DataSourceModel{
-				OrganizationId: types.StringValue("oid"),
-				NetworkAreaId:  types.StringValue("aid"),
-				Routes:         types.ListNull(types.StringType),
+			shared.RoutingTableDataSourceModel{
+				OrganizationId: types.StringValue(organizationId.String()),
+				NetworkAreaId:  types.StringValue(networkAreaId.String()),
+				RoutingTableReadModel: shared.RoutingTableReadModel{
+					Routes: types.ListValueMust(
+						types.ObjectType{AttrTypes: shared.RouteReadModelTypes()}, []attr.Value{},
+					),
+				},
 			},
 			&iaasalpha.RoutingTable{
-				Id:          utils.Ptr("rtid"),
+				Id:          utils.Ptr(routingTableId.String()),
 				Name:        utils.Ptr("values_ok"),
 				Description: utils.Ptr("Description"),
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
+				Routes: &[]iaasalpha.Route{
+					{
+						Id: utils.Ptr(route1Id.String()),
+						Labels: &map[string]interface{}{
+							"route1-key": "route1-value",
+						},
+						Destination: utils.Ptr(iaasalpha.DestinationCIDRv4AsRouteDestination(
+							iaasalpha.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
+						)),
+						Nexthop: utils.Ptr(
+							iaasalpha.NexthopIPv4AsRouteNexthop(iaasalpha.NewNexthopIPv4("ipv4", "10.20.42.2")),
+						),
+						CreatedAt: nil,
+						UpdatedAt: nil,
+					},
+					{
+						Id: utils.Ptr(route2Id.String()),
+						Labels: &map[string]interface{}{
+							"route2-key": "route2-value",
+						},
+						Destination: utils.Ptr(iaasalpha.DestinationCIDRv6AsRouteDestination(
+							iaasalpha.NewDestinationCIDRv6("cidrv6", "2001:0db8:3c4d:1a2b::/64"),
+						)),
+						Nexthop: utils.Ptr(iaasalpha.NexthopIPv6AsRouteNexthop(
+							iaasalpha.NewNexthopIPv6("ipv6", "172b:f881:46fe:d89a:9332:90f7:3485:236d"),
+						)),
+						CreatedAt: nil,
+						UpdatedAt: nil,
+					},
+				},
 			},
-			shared.DataSourceModel{
+			shared.RoutingTableDataSourceModel{
 				Id:             types.StringValue(id),
-				OrganizationId: types.StringValue("oid"),
-				RoutingTableId: types.StringValue("rtid"),
-				Name:           types.StringValue("values_ok"),
-				Description:    types.StringValue("Description"),
-				NetworkAreaId:  types.StringValue("aid"),
+				OrganizationId: types.StringValue(organizationId.String()),
+				NetworkAreaId:  types.StringValue(networkAreaId.String()),
 				Region:         types.StringValue(testRegion),
-				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
-					"key": types.StringValue("value"),
-				}),
-				Routes: types.ListNull(types.StringType),
+				RoutingTableReadModel: shared.RoutingTableReadModel{
+					RoutingTableId: types.StringValue(routingTableId.String()),
+					Name:           types.StringValue("values_ok"),
+					Description:    types.StringValue("Description"),
+					Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+						"key": types.StringValue("value"),
+					}),
+					Routes: types.ListValueMust(
+						types.ObjectType{AttrTypes: shared.RouteReadModelTypes()}, []attr.Value{
+							types.ObjectValueMust(shared.RouteReadModelTypes(), map[string]attr.Value{
+								"route_id":   types.StringValue(route1Id.String()),
+								"created_at": types.StringNull(),
+								"updated_at": types.StringNull(),
+								"labels": types.MapValueMust(types.StringType, map[string]attr.Value{
+									"route1-key": types.StringValue("route1-value"),
+								}),
+								"destination": types.ObjectValueMust(shared.RouteDestinationTypes, map[string]attr.Value{
+									"type":  types.StringValue("cidrv4"),
+									"value": types.StringValue("58.251.236.138/32"),
+								}),
+								"next_hop": types.ObjectValueMust(shared.RouteNextHopTypes, map[string]attr.Value{
+									"type":  types.StringValue("ipv4"),
+									"value": types.StringValue("10.20.42.2"),
+								}),
+							}),
+							types.ObjectValueMust(shared.RouteReadModelTypes(), map[string]attr.Value{
+								"route_id":   types.StringValue(route2Id.String()),
+								"created_at": types.StringNull(),
+								"updated_at": types.StringNull(),
+								"labels": types.MapValueMust(types.StringType, map[string]attr.Value{
+									"route2-key": types.StringValue("route2-value"),
+								}),
+								"destination": types.ObjectValueMust(shared.RouteDestinationTypes, map[string]attr.Value{
+									"type":  types.StringValue("cidrv6"),
+									"value": types.StringValue("2001:0db8:3c4d:1a2b::/64"),
+								}),
+								"next_hop": types.ObjectValueMust(shared.RouteNextHopTypes, map[string]attr.Value{
+									"type":  types.StringValue("ipv6"),
+									"value": types.StringValue("172b:f881:46fe:d89a:9332:90f7:3485:236d"),
+								}),
+							}),
+						},
+					),
+				},
 			},
 			true,
 		},
 		{
 			"response_fields_nil_fail",
-			shared.DataSourceModel{},
+			shared.RoutingTableDataSourceModel{},
 			&iaasalpha.RoutingTable{
 				Id: nil,
 			},
-			shared.DataSourceModel{},
+			shared.RoutingTableDataSourceModel{},
 			false,
 		},
 		{
 			"response_nil_fail",
-			shared.DataSourceModel{},
+			shared.RoutingTableDataSourceModel{},
 			nil,
-			shared.DataSourceModel{},
+			shared.RoutingTableDataSourceModel{},
 			false,
 		},
 		{
 			"no_resource_id",
-			shared.DataSourceModel{
+			shared.RoutingTableDataSourceModel{
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("naid"),
 			},
 			&iaasalpha.RoutingTable{},
-			shared.DataSourceModel{},
+			shared.RoutingTableDataSourceModel{},
 			false,
 		},
 	}
