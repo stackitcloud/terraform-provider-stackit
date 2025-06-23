@@ -71,7 +71,8 @@ jobs:
       actions: read  # to download code coverage results from "main" job
       pull-requests: write # write permission needed to comment on PR
     steps:
-      - uses: fgrosse/go-coverage-report@v1.2.0
+      - name: Check new code coverage
+        uses: fgrosse/go-coverage-report@v1.2.0
         with:
           coverage-artifact-name: ${{ env.CODE_COVERAGE_ARTIFACT_NAME }}
           coverage-file-name: ${{ env.CODE_COVERAGE_FILE_NAME }}
