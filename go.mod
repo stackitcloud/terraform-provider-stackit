@@ -33,7 +33,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.8.1
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.1
-	github.com/stackitcloud/stackit-sdk-go/services/ske v0.25.0
+	github.com/stackitcloud/stackit-sdk-go/services/ske v0.27.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.2.0
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.25.0
