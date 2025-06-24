@@ -299,7 +299,7 @@ func RedisProviderConfig() string {
 }
 
 func ResourceManagerProviderConfig() string {
-	token := getTestProjectServiceAccountToken("")
+	token := GetTestProjectServiceAccountToken("")
 	if ResourceManagerCustomEndpoint == "" || AuthorizationCustomEndpoint == "" {
 		return fmt.Sprintf(`
 		provider "stackit" {
@@ -458,7 +458,7 @@ func ResourceNameWithDateTime(name string) string {
 	return fmt.Sprintf("tf-acc-%s-%s", name, dateTimeTrimmed)
 }
 
-func getTestProjectServiceAccountToken(path string) string {
+func GetTestProjectServiceAccountToken(path string) string {
 	var err error
 	token, tokenSet := os.LookupEnv("TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN")
 	if !tokenSet || token == "" {
