@@ -42,7 +42,7 @@ resource "stackit_git" "git" {
 ### Optional
 
 - `acl` (List of String) Restricted ACL for instance access.
-- `flavor` (String) Instance flavor. Defaults to git-100 if not specified
+- `flavor` (String) Instance flavor. If not provided, defaults to git-100. For a list of available flavors, refer to our API documentation: `https://docs.api.stackit.cloud/documentation/git/version/v1beta`
 
 ### Read-Only
 

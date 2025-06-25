@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/git"
@@ -69,7 +68,7 @@ var descriptions = map[string]string{
 	"consumed_disk":           "How many bytes of disk space is consumed.",
 	"consumed_object_storage": "How many bytes of Object Storage is consumed.",
 	"created":                 "Instance creation timestamp in RFC3339 format.",
-	"flavor":                  "Instance flavor. Defaults to git-100 if not specified",
+	"flavor":                  "Instance flavor. If not provided, defaults to git-100. For a list of available flavors, refer to our API documentation: `https://docs.api.stackit.cloud/documentation/git/version/v1beta`",
 	"instance_id":             "ID linked to the git instance.",
 	"name":                    "Unique name linked to the git instance.",
 	"project_id":              "STACKIT project ID to which the git instance is associated.",
@@ -202,7 +201,7 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_name", instanceName)
 
-	payload, diags := createPayloadFromModel(ctx, &model)
+	payload, diags := toCreatePayload(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -357,20 +356,17 @@ func mapFields(ctx context.Context, resp *git.Instance, model *Model) error {
 		return fmt.Errorf("git instance id not present")
 	}
 
-	var aclList basetypes.ListValue
+	aclList := types.ListNull(types.StringType)
 	var diags diag.Diagnostics
-	if model.ACL.IsUnknown() || model.ACL.IsNull() {
-		aclList = types.ListNull(types.StringType)
-	} else {
+	if resp.Acl != nil && len(*resp.Acl) > 0 {
 		aclList, diags = types.ListValueFrom(ctx, types.StringType, resp.Acl)
 		if diags.HasError() {
 			return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
 		}
 	}
 
-	if model.Created.IsUnknown() || model.Created.IsNull() {
-		model.Created = types.StringNull()
-	} else {
+	model.Created = types.StringNull()
+	if resp.Created != nil && resp.Created.String() != "" {
 		model.Created = types.StringValue(resp.Created.String())
 	}
 
@@ -388,8 +384,8 @@ func mapFields(ctx context.Context, resp *git.Instance, model *Model) error {
 	return nil
 }
 
-// createPayloadFromModel creates the payload to create a git instance
-func createPayloadFromModel(ctx context.Context, model *Model) (git.CreateInstancePayload, diag.Diagnostics) {
+// toCreatePayload creates the payload to create a git instance
+func toCreatePayload(ctx context.Context, model *Model) (git.CreateInstancePayload, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 
 	if model == nil {

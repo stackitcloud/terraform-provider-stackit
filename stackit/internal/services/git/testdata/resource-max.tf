@@ -6,7 +6,7 @@ variable "flavor" {}
 
 resource "stackit_git" "git" {
   project_id = var.project_id
-  name = var.name
+  name       = var.name
   acl = [
     var.acl
   ]
