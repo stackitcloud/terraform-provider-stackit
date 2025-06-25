@@ -1,9 +1,11 @@
-package routingtable_routes
+package routes
 
 import (
 	"context"
 	"fmt"
 	"testing"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
@@ -11,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/shared"
 )
 
 const (

@@ -1,9 +1,11 @@
-package routingtable_route
+package route
 
 import (
 	"context"
 	"fmt"
 	"net/http"
+
+	shared2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -12,7 +14,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/shared"
 	iaasalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -64,13 +65,13 @@ func (d *routingTableRouteDataSource) Schema(_ context.Context, _ datasource.Sch
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddBetaDescription(description),
-		Attributes:          shared.GetRouteDataSourceAttributes(),
+		Attributes:          shared2.GetRouteDataSourceAttributes(),
 	}
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (d *routingTableRouteDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model shared.RouteModel
+	var model shared2.RouteModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -104,7 +105,7 @@ func (d *routingTableRouteDataSource) Read(ctx context.Context, req datasource.R
 		return
 	}
 
-	err = shared.MapRouteModel(ctx, routeResp, &model, region)
+	err = shared2.MapRouteModel(ctx, routeResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table route", fmt.Sprintf("Processing API payload: %v", err))
 		return

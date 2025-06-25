@@ -1,10 +1,12 @@
-package routingtable_routes
+package routes
 
 import (
 	"context"
 	"fmt"
 	"net/http"
 	"strings"
+
+	shared2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -15,7 +17,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/shared"
 	iaasalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -76,7 +77,7 @@ func (d *routingTableRoutesDataSource) Schema(_ context.Context, _ datasource.Sc
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddBetaDescription(description),
-		Attributes:          shared.GetRoutesDataSourceAttributes(),
+		Attributes:          shared2.GetRoutesDataSourceAttributes(),
 	}
 }
 
@@ -149,8 +150,8 @@ func mapDataSourceRoutingTableRoutes(ctx context.Context, routes *iaasalpha.Rout
 
 	itemsList := []attr.Value{}
 	for i, route := range *routes.Items {
-		var routeModel shared.RouteReadModel
-		err := shared.MapRouteReadModel(ctx, &route, &routeModel)
+		var routeModel shared2.RouteReadModel
+		err := shared2.MapRouteReadModel(ctx, &route, &routeModel)
 		if err != nil {
 			return fmt.Errorf("mapping route: %w", err)
 		}
@@ -164,14 +165,14 @@ func mapDataSourceRoutingTableRoutes(ctx context.Context, routes *iaasalpha.Rout
 			"updated_at":  routeModel.UpdatedAt,
 		}
 
-		routeTF, diags := types.ObjectValue(shared.RouteReadModelTypes(), routeMap)
+		routeTF, diags := types.ObjectValue(shared2.RouteReadModelTypes(), routeMap)
 		if diags.HasError() {
 			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
 		}
 		itemsList = append(itemsList, routeTF)
 	}
 
-	routesListTF, diags := types.ListValue(types.ObjectType{AttrTypes: shared.RouteReadModelTypes()}, itemsList)
+	routesListTF, diags := types.ListValue(types.ObjectType{AttrTypes: shared2.RouteReadModelTypes()}, itemsList)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
