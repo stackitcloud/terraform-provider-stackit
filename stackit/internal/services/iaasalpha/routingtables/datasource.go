@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -124,13 +123,7 @@ func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadR
 	}
 
 	organizationId := model.OrganizationId.ValueString()
-	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = d.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	networkAreaId := model.NetworkAreaId.ValueString()
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -179,11 +172,7 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaasalpha.Ro
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 
-	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/869)
-	idParts := []string{organizationId, region, networkAreaId}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(organizationId, region, networkAreaId)
 
 	itemsList := []attr.Value{}
 	for i, routingTable := range *routingTables.Items {
@@ -194,15 +183,15 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaasalpha.Ro
 		}
 
 		routingTableMap := map[string]attr.Value{
-			"routing_table_id":   routingTableModel.RoutingTableId,
-			"name":               routingTableModel.Name,
-			"description":        routingTableModel.Description,
-			"labels":             routingTableModel.Labels,
-			"created_at":         routingTableModel.CreatedAt,
-			"updated_at":         routingTableModel.UpdatedAt,
-			"main_routing_table": routingTableModel.MainRoutingTable,
-			"system_routes":      routingTableModel.SystemRoutes,
-			"routes":             routingTableModel.Routes,
+			"routing_table_id": routingTableModel.RoutingTableId,
+			"name":             routingTableModel.Name,
+			"description":      routingTableModel.Description,
+			"labels":           routingTableModel.Labels,
+			"created_at":       routingTableModel.CreatedAt,
+			"updated_at":       routingTableModel.UpdatedAt,
+			"default":          routingTableModel.Default,
+			"system_routes":    routingTableModel.SystemRoutes,
+			"routes":           routingTableModel.Routes,
 		}
 
 		routingTableTF, diags := types.ObjectValue(shared.RoutingTableReadModelTypes(), routingTableMap)

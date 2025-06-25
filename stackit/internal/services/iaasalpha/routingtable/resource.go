@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"strings"
 
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -174,13 +175,7 @@ func (r *routingTableResource) Create(ctx context.Context, req resource.CreateRe
 
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
-	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -226,13 +221,7 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 	organizationId := model.OrganizationId.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
-	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -283,14 +272,7 @@ func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRe
 	organizationId := model.OrganizationId.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
-
-	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -344,13 +326,7 @@ func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	organizationId := model.OrganizationId.ValueString()
-	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
@@ -414,30 +390,11 @@ func mapFields(ctx context.Context, routingTable *iaasalpha.RoutingTable, model 
 		return fmt.Errorf("routing table id not present")
 	}
 
-	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/869)
-	idParts := []string{
-		model.OrganizationId.ValueString(),
-		region,
-		model.NetworkAreaId.ValueString(),
-		routingTableId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.OrganizationId.ValueString(), region, model.NetworkAreaId.ValueString(), routingTableId)
 
-	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
-	if diags.HasError() {
-		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-	}
-
-	if routingTable.Labels != nil && len(*routingTable.Labels) != 0 {
-		var diags diag.Diagnostics
-		labels, diags = types.MapValueFrom(ctx, types.StringType, *routingTable.Labels)
-		if diags.HasError() {
-			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-		}
-	} else if model.Labels.IsNull() {
-		labels = types.MapNull(types.StringType)
+	labels, err := iaasUtils.MapLabels(ctx, routingTable.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
 
 	model.RoutingTableId = types.StringValue(routingTableId)

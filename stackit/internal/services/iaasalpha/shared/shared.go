@@ -6,9 +6,10 @@ import (
 	"maps"
 	"strings"
 
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
@@ -208,9 +209,10 @@ func RoutingTableResponseAttributes() map[string]schema.Attribute {
 			Computed:    true,
 		},
 		"default": schema.BoolAttribute{
-			Description: "This is the default routing table for this area. It can't be deleted and is used if the user does not specify it otherwise.",
+			Description: "When true this is the default routing table for this network area. It can't be deleted and is used if the user does not specify it otherwise.",
 			Computed:    true,
 		},
+		// TODO
 		"system_routes": schema.BoolAttribute{
 			Description: "TODO: ask what this does",
 			Computed:    true,
@@ -317,19 +319,9 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaasalpha.Routi
 		return core.DiagsToError(diags)
 	}
 
-	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
-	if diags.HasError() {
-		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-	}
-
-	if routingTable.Labels != nil && len(*routingTable.Labels) != 0 {
-		var diags diag.Diagnostics
-		labels, diags = types.MapValueFrom(ctx, types.StringType, *routingTable.Labels)
-		if diags.HasError() {
-			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-		}
-	} else if model.Labels.IsNull() {
-		labels = types.MapNull(types.StringType)
+	labels, err := iaasUtils.MapLabels(ctx, routingTable.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
 
 	model.RoutingTableId = types.StringValue(routingTableId)

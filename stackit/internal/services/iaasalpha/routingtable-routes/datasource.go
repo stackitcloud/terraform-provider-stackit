@@ -90,13 +90,7 @@ func (d *routingTableRoutesDataSource) Read(ctx context.Context, req datasource.
 	}
 
 	organizationId := model.OrganizationId.ValueString()
-	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = d.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	networkAreaId := model.NetworkAreaId.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)

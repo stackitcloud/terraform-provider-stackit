@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 )
 
 type RouteReadModel struct {
@@ -121,19 +121,9 @@ func MapRouteReadModel(ctx context.Context, route *iaasalpha.Route, model *Route
 		return fmt.Errorf("routing table route id not present")
 	}
 
-	// TODO: use new util method from refactoring for labels mapping
-	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
-	if diags.HasError() {
-		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-	}
-	if route.Labels != nil && len(*route.Labels) != 0 {
-		var diags diag.Diagnostics
-		labels, diags = types.MapValueFrom(ctx, types.StringType, *route.Labels)
-		if diags.HasError() {
-			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-		}
-	} else if model.Labels.IsNull() {
-		labels = types.MapNull(types.StringType)
+	labels, err := iaasUtils.MapLabels(ctx, route.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
 
 	// created at and updated at
@@ -148,7 +138,6 @@ func MapRouteReadModel(ctx context.Context, route *iaasalpha.Route, model *Route
 	}
 
 	// destination
-	var err error
 	model.Destination, err = MapRouteDestination(route)
 	if err != nil {
 		return fmt.Errorf("error mapping route destination: %w", err)

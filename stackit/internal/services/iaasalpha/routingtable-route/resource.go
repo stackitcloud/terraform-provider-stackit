@@ -200,14 +200,7 @@ func (r *routeResource) Create(ctx context.Context, req resource.CreateRequest, 
 	organizationId := model.OrganizationId.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
-
-	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
@@ -255,14 +248,7 @@ func (r *routeResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	routeId := model.RouteId.ValueString()
-
-	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
@@ -306,14 +292,7 @@ func (r *routeResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	routeId := model.RouteId.ValueString()
-
-	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
@@ -370,14 +349,7 @@ func (r *routeResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	routeId := model.RouteId.ValueString()
-
-	// TODO: use util func from refactoring (https://github.com/stackitcloud/terraform-provider-stackit/pull/872)
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
