@@ -29,7 +29,7 @@ var nameMin = fmt.Sprintf("git-min-%s-instance", acctest.RandStringFromCharSet(5
 var nameMinUpdated = fmt.Sprintf("git-min-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
 var nameMax = fmt.Sprintf("git-max-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
 var nameMaxUpdated = fmt.Sprintf("git-max-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
-var aclUpdated = "192.168.0.0/32"
+var aclUpdated = "192.168.1.0/32"
 
 var testConfigVarsMin = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
@@ -53,8 +53,8 @@ func testConfigVarsMinUpdated() config.Variables {
 }
 
 func testConfigVarsMaxUpdated() config.Variables {
-	tempConfig := make(config.Variables, len(testConfigVarsMin))
-	maps.Copy(tempConfig, testConfigVarsMin)
+	tempConfig := make(config.Variables, len(testConfigVarsMax))
+	maps.Copy(tempConfig, testConfigVarsMax)
 	// update git instance to a new name
 	// should trigger creating a new instance
 	tempConfig["name"] = config.StringVariable(nameMaxUpdated)
@@ -160,7 +160,7 @@ func TestAccGitMin(t *testing.T) {
 				ConfigVariables: testConfigVarsMinUpdated(),
 				Config:          testutil.GitProviderConfig() + resourceMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["project_id"])),
 					resource.TestCheckResourceAttr("stackit_git.git", "name", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["name"])),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "url"),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "version"),
@@ -208,11 +208,11 @@ func TestAccGitMax(t *testing.T) {
 						project_id  = stackit_git.git.project_id
 						instance_id = stackit_git.git.instance_id
 					}
-					`, testutil.GitProviderConfig()+resourceMin,
+					`, testutil.GitProviderConfig()+resourceMax,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("data.stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttrPair(
 						"stackit_git.git", "project_id",
 						"data.stackit_git.git", "project_id",
@@ -278,9 +278,9 @@ func TestAccGitMax(t *testing.T) {
 				ConfigVariables: testConfigVarsMaxUpdated(),
 				Config:          testutil.GitProviderConfig() + resourceMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["project_id"])),
 					resource.TestCheckResourceAttr("stackit_git.git", "name", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["name"])),
-					resource.TestCheckResourceAttr("stackit_git.git", "flavor", testutil.ConvertConfigVariable(testConfigVarsMax["flavor"])),
+					resource.TestCheckResourceAttr("stackit_git.git", "flavor", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["flavor"])),
 					resource.TestCheckResourceAttr("stackit_git.git", "acl.0", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["acl"])),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "url"),
 					resource.TestCheckResourceAttrSet("stackit_git.git", "version"),

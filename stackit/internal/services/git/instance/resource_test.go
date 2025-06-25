@@ -3,6 +3,7 @@ package instance
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -12,84 +13,134 @@ import (
 )
 
 func TestMapFields(t *testing.T) {
+	createdTime, err := time.Parse("2006-01-02 15:04:05 -0700 MST", "2025-01-01 00:00:00 +0000 UTC")
+	if err != nil {
+		t.Fatalf("failed to parse test time: %v", err)
+	}
+
 	tests := []struct {
 		description string
 		input       *git.Instance
-		expected    Model
+		expected    *Model
 		isValid     bool
 	}{
 		{
-			"default_values",
-			&git.Instance{
-				Acl:                   nil,
-				ConsumedDisk:          utils.Ptr("foo"),
-				ConsumedObjectStorage: utils.Ptr("foo"),
-				Created:               nil,
-				Flavor:                utils.Ptr("foo"),
-				Id:                    utils.Ptr("id"),
-				Name:                  utils.Ptr("foo"),
-				Url:                   utils.Ptr("https://foo.com"),
-				Version:               utils.Ptr("v0.0.1"),
+			description: "minimal_input_description_only",
+			input: &git.Instance{
+				Id:   utils.Ptr("11111111-1111-1111-1111-111111111111"),
+				Name: utils.Ptr("git-min-instance"),
 			},
-			Model{
+			expected: &Model{
+				Id:                    types.StringValue("00000000-0000-0000-0000-000000000000,11111111-1111-1111-1111-111111111111"),
+				ProjectId:             types.StringValue("00000000-0000-0000-0000-000000000000"),
+				InstanceId:            types.StringValue("11111111-1111-1111-1111-111111111111"),
+				Name:                  types.StringValue("git-min-instance"),
 				ACL:                   types.ListNull(types.StringType),
-				ConsumedDisk:          types.StringValue("foo"),
-				ConsumedObjectStorage: types.StringValue("foo"),
+				Flavor:                types.StringNull(),
+				Url:                   types.StringNull(),
+				Version:               types.StringNull(),
 				Created:               types.StringNull(),
-				Flavor:                types.StringValue("foo"),
-				Id:                    types.StringValue("pid,id"),
-				InstanceId:            types.StringValue("id"),
-				Name:                  types.StringValue("foo"),
-				ProjectId:             types.StringValue("pid"),
-				Url:                   types.StringValue("https://foo.com"),
-				Version:               types.StringValue("v0.0.1"),
+				ConsumedDisk:          types.StringNull(),
+				ConsumedObjectStorage: types.StringNull(),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_response",
-			nil,
-			Model{},
-			false,
-		},
-		{
-			"nil_response_2",
-			&git.Instance{},
-			Model{},
-			false,
-		},
-		{
-			"no_id",
-			&git.Instance{
-				Name: utils.Ptr("foo"),
+			description: "full_input_with_acl_and_flavor",
+			input: &git.Instance{
+				Acl:                   &[]string{"192.168.0.0/24"},
+				ConsumedDisk:          utils.Ptr("1.00 GB"),
+				ConsumedObjectStorage: utils.Ptr("2.00 GB"),
+				Created:               &createdTime,
+				Flavor:                utils.Ptr("git-100"),
+				Id:                    utils.Ptr("11111111-1111-1111-1111-111111111111"),
+				Name:                  utils.Ptr("git-full-instance"),
+				Url:                   utils.Ptr("https://git-full-instance.git.onstackit.cloud"),
+				Version:               utils.Ptr("v1.9.1"),
 			},
-			Model{},
-			false,
+			expected: &Model{
+				Id:                    types.StringValue("00000000-0000-0000-0000-000000000000,11111111-1111-1111-1111-111111111111"),
+				ProjectId:             types.StringValue("00000000-0000-0000-0000-000000000000"),
+				InstanceId:            types.StringValue("11111111-1111-1111-1111-111111111111"),
+				Name:                  types.StringValue("git-full-instance"),
+				ACL:                   types.ListValueMust(types.StringType, []attr.Value{types.StringValue("192.168.0.0/24")}),
+				Flavor:                types.StringValue("git-100"),
+				Url:                   types.StringValue("https://git-full-instance.git.onstackit.cloud"),
+				Version:               types.StringValue("v1.9.1"),
+				Created:               types.StringValue("2025-01-01 00:00:00 +0000 UTC"),
+				ConsumedDisk:          types.StringValue("1.00 GB"),
+				ConsumedObjectStorage: types.StringValue("2.00 GB"),
+			},
+			isValid: true,
+		},
+		{
+			description: "empty_acls",
+			input: &git.Instance{
+				Id:   utils.Ptr("11111111-1111-1111-1111-111111111111"),
+				Name: utils.Ptr("git-empty-acl"),
+				Acl:  &[]string{},
+			},
+			expected: &Model{
+				Id:                    types.StringValue("00000000-0000-0000-0000-000000000000,11111111-1111-1111-1111-111111111111"),
+				ProjectId:             types.StringValue("00000000-0000-0000-0000-000000000000"),
+				InstanceId:            types.StringValue("11111111-1111-1111-1111-111111111111"),
+				Name:                  types.StringValue("git-empty-acl"),
+				ACL:                   types.ListNull(types.StringType),
+				Flavor:                types.StringNull(),
+				Url:                   types.StringNull(),
+				Version:               types.StringNull(),
+				Created:               types.StringNull(),
+				ConsumedDisk:          types.StringNull(),
+				ConsumedObjectStorage: types.StringNull(),
+			},
+			isValid: true,
+		},
+		{
+			description: "nil_instance",
+			input:       nil,
+			expected:    nil,
+			isValid:     false,
+		},
+		{
+			description: "empty_instance",
+			input:       &git.Instance{},
+			expected:    nil,
+			isValid:     false,
+		},
+		{
+			description: "missing_id",
+			input: &git.Instance{
+				Name: utils.Ptr("git-missing-id"),
+			},
+			expected: nil,
+			isValid:  false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			state := &Model{
-				ProjectId: tt.expected.ProjectId,
+			state := &Model{}
+			if tt.expected != nil {
+				state.ProjectId = tt.expected.ProjectId
 			}
 			err := mapFields(context.Background(), tt.input, state)
-			if !tt.isValid && err == nil {
-				t.Fatalf("Should have failed")
-			}
+
 			if tt.isValid && err != nil {
-				t.Fatalf("Should not have failed: %v", err)
+				t.Fatalf("expected success, got error: %v", err)
+			}
+			if !tt.isValid && err == nil {
+				t.Fatalf("expected error, got nil")
 			}
 			if tt.isValid {
-				diff := cmp.Diff(state, &tt.expected)
-				if diff != "" {
-					t.Fatalf("Data does not match: %s", diff)
+				if diff := cmp.Diff(tt.expected, state); diff != "" {
+					t.Errorf("unexpected diff (-want +got):\n%s", diff)
 				}
 			}
 		})
 	}
 }
 
-func TestCreatePayloadFromModel(t *testing.T) {
+func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
@@ -149,7 +200,7 @@ func TestCreatePayloadFromModel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, diags := createPayloadFromModel(context.Background(), tt.input)
+			output, diags := toCreatePayload(context.Background(), tt.input)
 
 			if tt.expectError && !diags.HasError() {
 				t.Fatalf("expected diagnostics error but got none")
