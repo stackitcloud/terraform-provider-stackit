@@ -27,7 +27,6 @@ type RoutingTableReadModel struct {
 	UpdatedAt      types.String `tfsdk:"updated_at"`
 	Default        types.Bool   `tfsdk:"default"`
 	SystemRoutes   types.Bool   `tfsdk:"system_routes"`
-	Routes         types.List   `tfsdk:"routes"`
 }
 
 func RoutingTableReadModelTypes() map[string]attr.Type {
@@ -40,7 +39,6 @@ func RoutingTableReadModelTypes() map[string]attr.Type {
 		"updated_at":       types.StringType,
 		"default":          types.BoolType,
 		"system_routes":    types.BoolType,
-		"routes":           types.ListType{ElemType: types.ObjectType{AttrTypes: RouteReadModelTypes()}},
 	}
 }
 
@@ -225,13 +223,6 @@ func RoutingTableResponseAttributes() map[string]schema.Attribute {
 			Description: "Date-time when the routing table was updated",
 			Computed:    true,
 		},
-		"routes": schema.ListNestedAttribute{
-			Description: "List of routes.",
-			Computed:    true,
-			NestedObject: schema.NestedAttributeObject{
-				Attributes: RouteResponseAttributes(),
-			},
-		},
 	}
 }
 
@@ -288,37 +279,6 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaasalpha.Routi
 		return fmt.Errorf("routing table id not present")
 	}
 
-	routesList := []attr.Value{}
-	for i, route := range routingTable.GetRoutes() {
-		var routeModel RouteReadModel
-		err := MapRouteReadModel(ctx, &route, &routeModel)
-		if err != nil {
-			return fmt.Errorf("mapping routes: %w", err)
-		}
-
-		routeMap := map[string]attr.Value{
-			"destination": routeModel.Destination,
-			"next_hop":    routeModel.NextHop,
-			"labels":      routeModel.Labels,
-			"route_id":    routeModel.RouteId,
-			"created_at":  routeModel.CreatedAt,
-			"updated_at":  routeModel.UpdatedAt,
-		}
-
-		routeTF, diags := types.ObjectValue(RouteReadModelTypes(), routeMap)
-		if diags.HasError() {
-			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
-		}
-		routesList = append(routesList, routeTF)
-	}
-	routesTF, diags := types.ListValue(
-		types.ObjectType{AttrTypes: RouteReadModelTypes()},
-		routesList,
-	)
-	if diags.HasError() {
-		return core.DiagsToError(diags)
-	}
-
 	labels, err := iaasUtils.MapLabels(ctx, routingTable.Labels, model.Labels)
 	if err != nil {
 		return err
@@ -330,6 +290,5 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaasalpha.Routi
 	model.Default = types.BoolPointerValue(routingTable.Default)
 	model.SystemRoutes = types.BoolPointerValue(routingTable.SystemRoutes)
 	model.Labels = labels
-	model.Routes = routesTF
 	return nil
 }

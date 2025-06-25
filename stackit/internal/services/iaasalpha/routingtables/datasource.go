@@ -191,7 +191,6 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaasalpha.Ro
 			"updated_at":       routingTableModel.UpdatedAt,
 			"default":          routingTableModel.Default,
 			"system_routes":    routingTableModel.SystemRoutes,
-			"routes":           routingTableModel.Routes,
 		}
 
 		routingTableTF, diags := types.ObjectValue(shared.RoutingTableReadModelTypes(), routingTableMap)

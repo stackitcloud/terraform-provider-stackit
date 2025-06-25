@@ -24,8 +24,6 @@ var (
 	networkAreaId        = uuid.New()
 	routingTableId       = uuid.New()
 	secondRoutingTableId = uuid.New()
-	testRouteId1         = uuid.NewString()
-	testRouteId2         = uuid.NewString()
 )
 
 func TestMapDataFields(t *testing.T) {
@@ -73,9 +71,6 @@ func TestMapDataFields(t *testing.T) {
 						"created_at":       types.StringNull(),
 						"updated_at":       types.StringNull(),
 						"labels":           types.MapNull(types.StringType),
-						"routes": types.ListValueMust(
-							types.ObjectType{AttrTypes: shared.RouteReadModelTypes()}, []attr.Value{},
-						),
 					}),
 				}),
 			},
@@ -98,36 +93,6 @@ func TestMapDataFields(t *testing.T) {
 						CreatedAt:    &time.Time{},
 						UpdatedAt:    &time.Time{},
 						SystemRoutes: utils.Ptr(false),
-						Routes: &[]iaasalpha.Route{
-							{
-								Id: utils.Ptr(testRouteId1),
-								Destination: utils.Ptr(iaasalpha.DestinationCIDRv4AsRouteDestination(
-									iaasalpha.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
-								)),
-								Nexthop: utils.Ptr(iaasalpha.NexthopIPv4AsRouteNexthop(
-									iaasalpha.NewNexthopIPv4("ipv4", "10.20.42.2"),
-								)),
-								Labels: &map[string]interface{}{
-									"foo": "bar",
-								},
-								CreatedAt: nil,
-								UpdatedAt: nil,
-							},
-							{
-								Id: utils.Ptr(testRouteId2),
-								Destination: utils.Ptr(iaasalpha.DestinationCIDRv6AsRouteDestination(
-									iaasalpha.NewDestinationCIDRv6("cidrv6", "2001:0db8:3c4d:1a2b::/64"),
-								)),
-								Nexthop: utils.Ptr(iaasalpha.NexthopIPv6AsRouteNexthop(
-									iaasalpha.NewNexthopIPv6("ipv6", "172b:f881:46fe:d89a:9332:90f7:3485:236d"),
-								)),
-								Labels: &map[string]interface{}{
-									"key": "value",
-								},
-								CreatedAt: nil,
-								UpdatedAt: nil,
-							},
-						},
 					},
 					{
 						Id:           utils.Ptr(secondRoutingTableId.String()),
@@ -155,42 +120,6 @@ func TestMapDataFields(t *testing.T) {
 						"created_at":       types.StringNull(),
 						"updated_at":       types.StringNull(),
 						"labels":           types.MapNull(types.StringType),
-						"routes": types.ListValueMust(
-							types.ObjectType{AttrTypes: shared.RouteReadModelTypes()}, []attr.Value{
-								types.ObjectValueMust(shared.RouteReadModelTypes(), map[string]attr.Value{
-									"route_id":   types.StringValue(testRouteId1),
-									"created_at": types.StringNull(),
-									"updated_at": types.StringNull(),
-									"labels": types.MapValueMust(types.StringType, map[string]attr.Value{
-										"foo": types.StringValue("bar"),
-									}),
-									"destination": types.ObjectValueMust(shared.RouteDestinationTypes, map[string]attr.Value{
-										"type":  types.StringValue("cidrv4"),
-										"value": types.StringValue("58.251.236.138/32"),
-									}),
-									"next_hop": types.ObjectValueMust(shared.RouteNextHopTypes, map[string]attr.Value{
-										"type":  types.StringValue("ipv4"),
-										"value": types.StringValue("10.20.42.2"),
-									}),
-								}),
-								types.ObjectValueMust(shared.RouteReadModelTypes(), map[string]attr.Value{
-									"route_id":   types.StringValue(testRouteId2),
-									"created_at": types.StringNull(),
-									"updated_at": types.StringNull(),
-									"labels": types.MapValueMust(types.StringType, map[string]attr.Value{
-										"key": types.StringValue("value"),
-									}),
-									"destination": types.ObjectValueMust(shared.RouteDestinationTypes, map[string]attr.Value{
-										"type":  types.StringValue("cidrv6"),
-										"value": types.StringValue("2001:0db8:3c4d:1a2b::/64"),
-									}),
-									"next_hop": types.ObjectValueMust(shared.RouteNextHopTypes, map[string]attr.Value{
-										"type":  types.StringValue("ipv6"),
-										"value": types.StringValue("172b:f881:46fe:d89a:9332:90f7:3485:236d"),
-									}),
-								}),
-							},
-						),
 					}),
 					types.ObjectValueMust(shared.RoutingTableReadModelTypes(), map[string]attr.Value{
 						"routing_table_id": types.StringValue(secondRoutingTableId.String()),
@@ -201,9 +130,6 @@ func TestMapDataFields(t *testing.T) {
 						"created_at":       types.StringNull(),
 						"updated_at":       types.StringNull(),
 						"labels":           types.MapNull(types.StringType),
-						"routes": types.ListValueMust(
-							types.ObjectType{AttrTypes: shared.RouteReadModelTypes()}, []attr.Value{},
-						),
 					}),
 				}),
 			},
