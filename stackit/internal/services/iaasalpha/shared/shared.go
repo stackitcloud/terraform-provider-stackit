@@ -6,12 +6,12 @@ import (
 	"maps"
 	"strings"
 
-	"dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/iaasalpha"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -24,23 +24,22 @@ type RoutingTableReadModel struct {
 	Labels         types.Map    `tfsdk:"labels"`
 	CreatedAt      types.String `tfsdk:"created_at"`
 	UpdatedAt      types.String `tfsdk:"updated_at"`
-	// TODO: rename to "main"?? (it's also named Main in the SDK now)
-	MainRoutingTable types.Bool `tfsdk:"main_routing_table"`
-	SystemRoutes     types.Bool `tfsdk:"system_routes"`
-	Routes           types.List `tfsdk:"routes"`
+	Default        types.Bool   `tfsdk:"default"`
+	SystemRoutes   types.Bool   `tfsdk:"system_routes"`
+	Routes         types.List   `tfsdk:"routes"`
 }
 
 func RoutingTableReadModelTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"routing_table_id":   types.StringType,
-		"name":               types.StringType,
-		"description":        types.StringType,
-		"labels":             types.MapType{ElemType: types.StringType},
-		"created_at":         types.StringType,
-		"updated_at":         types.StringType,
-		"main_routing_table": types.BoolType,
-		"system_routes":      types.BoolType,
-		"routes":             types.ListType{ElemType: types.ObjectType{AttrTypes: RouteReadModelTypes()}},
+		"routing_table_id": types.StringType,
+		"name":             types.StringType,
+		"description":      types.StringType,
+		"labels":           types.MapType{ElemType: types.StringType},
+		"created_at":       types.StringType,
+		"updated_at":       types.StringType,
+		"default":          types.BoolType,
+		"system_routes":    types.BoolType,
+		"routes":           types.ListType{ElemType: types.ObjectType{AttrTypes: RouteReadModelTypes()}},
 	}
 }
 
@@ -208,11 +207,10 @@ func RoutingTableResponseAttributes() map[string]schema.Attribute {
 			ElementType: types.StringType,
 			Computed:    true,
 		},
-		"main_routing_table": schema.BoolAttribute{
-			Description: "Sets the routing table as main routing table.",
+		"default": schema.BoolAttribute{
+			Description: "This is the default routing table for this area. It can't be deleted and is used if the user does not specify it otherwise.",
 			Computed:    true,
 		},
-		// TODO: add meaningful description
 		"system_routes": schema.BoolAttribute{
 			Description: "TODO: ask what this does",
 			Computed:    true,
@@ -337,7 +335,7 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaasalpha.Routi
 	model.RoutingTableId = types.StringValue(routingTableId)
 	model.Name = types.StringPointerValue(routingTable.Name)
 	model.Description = types.StringPointerValue(routingTable.Description)
-	model.MainRoutingTable = types.BoolPointerValue(routingTable.Main)
+	model.Default = types.BoolPointerValue(routingTable.Default)
 	model.SystemRoutes = types.BoolPointerValue(routingTable.SystemRoutes)
 	model.Labels = labels
 	model.Routes = routesTF

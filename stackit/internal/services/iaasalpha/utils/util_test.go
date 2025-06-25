@@ -6,10 +6,10 @@ import (
 	"reflect"
 	"testing"
 
-	"dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/iaasalpha"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )

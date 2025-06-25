@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"testing"
 
-	"dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/iaasalpha"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/shared"
 )
 
