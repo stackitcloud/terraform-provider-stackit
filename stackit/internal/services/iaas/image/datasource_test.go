@@ -161,3 +161,311 @@ func TestMapDataSourceFields(t *testing.T) {
 		})
 	}
 }
+
+func TestImageMatchesFilter(t *testing.T) {
+	testCases := []struct {
+		name     string
+		img      *iaas.Image
+		filter   *Filter
+		expected bool
+	}{
+		{
+			name:     "nil filter - always match",
+			img:      &iaas.Image{Config: &iaas.ImageConfig{}},
+			filter:   nil,
+			expected: true,
+		},
+		{
+			name:     "nil config - always false",
+			img:      &iaas.Image{Config: nil},
+			filter:   &Filter{},
+			expected: false,
+		},
+		{
+			name: "all fields match",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					OperatingSystem:        utils.Ptr("linux"),
+					OperatingSystemDistro:  iaas.NewNullableString(utils.Ptr("ubuntu")),
+					OperatingSystemVersion: iaas.NewNullableString(utils.Ptr("22.04")),
+					Uefi:                   utils.Ptr(true),
+					SecureBoot:             utils.Ptr(true),
+				},
+			},
+			filter: &Filter{
+				OS:         types.StringValue("linux"),
+				Distro:     types.StringValue("ubuntu"),
+				Version:    types.StringValue("22.04"),
+				UEFI:       types.BoolValue(true),
+				SecureBoot: types.BoolValue(true),
+			},
+			expected: true,
+		},
+		{
+			name: "OS mismatch",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					OperatingSystem: utils.Ptr("windows"),
+				},
+			},
+			filter: &Filter{
+				OS: types.StringValue("linux"),
+			},
+			expected: false,
+		},
+		{
+			name: "Distro mismatch",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					OperatingSystemDistro: iaas.NewNullableString(utils.Ptr("debian")),
+				},
+			},
+			filter: &Filter{
+				Distro: types.StringValue("ubuntu"),
+			},
+			expected: false,
+		},
+		{
+			name: "Version mismatch",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					OperatingSystemVersion: iaas.NewNullableString(utils.Ptr("20.04")),
+				},
+			},
+			filter: &Filter{
+				Version: types.StringValue("22.04"),
+			},
+			expected: false,
+		},
+		{
+			name: "UEFI mismatch",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					Uefi: utils.Ptr(false),
+				},
+			},
+			filter: &Filter{
+				UEFI: types.BoolValue(true),
+			},
+			expected: false,
+		},
+		{
+			name: "SecureBoot mismatch",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					SecureBoot: utils.Ptr(false),
+				},
+			},
+			filter: &Filter{
+				SecureBoot: types.BoolValue(true),
+			},
+			expected: false,
+		},
+		{
+			name: "SecureBoot match - true",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					SecureBoot: utils.Ptr(true),
+				},
+			},
+			filter: &Filter{
+				SecureBoot: types.BoolValue(true),
+			},
+			expected: true,
+		},
+		{
+			name: "SecureBoot match - false",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					SecureBoot: utils.Ptr(false),
+				},
+			},
+			filter: &Filter{
+				SecureBoot: types.BoolValue(false),
+			},
+			expected: true,
+		},
+		{
+			name: "SecureBoot field missing in image but required in filter",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					SecureBoot: nil,
+				},
+			},
+			filter: &Filter{
+				SecureBoot: types.BoolValue(true),
+			},
+			expected: false,
+		},
+		{
+			name: "partial filter match - only distro set and match",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					OperatingSystemDistro: iaas.NewNullableString(utils.Ptr("ubuntu")),
+				},
+			},
+			filter: &Filter{
+				Distro: types.StringValue("ubuntu"),
+			},
+			expected: true,
+		},
+		{
+			name: "partial filter match - distro mismatch",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					OperatingSystemDistro: iaas.NewNullableString(utils.Ptr("centos")),
+				},
+			},
+			filter: &Filter{
+				Distro: types.StringValue("ubuntu"),
+			},
+			expected: false,
+		},
+		{
+			name: "filter provided but attribute is null in image",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					OperatingSystemDistro: nil,
+				},
+			},
+			filter: &Filter{
+				Distro: types.StringValue("ubuntu"),
+			},
+			expected: false,
+		},
+		{
+			name: "image has valid config, but filter has null values",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					OperatingSystem:        utils.Ptr("linux"),
+					OperatingSystemDistro:  iaas.NewNullableString(utils.Ptr("ubuntu")),
+					OperatingSystemVersion: iaas.NewNullableString(utils.Ptr("22.04")),
+					Uefi:                   utils.Ptr(false),
+					SecureBoot:             utils.Ptr(false),
+				},
+			},
+			filter: &Filter{
+				OS:         types.StringNull(),
+				Distro:     types.StringNull(),
+				Version:    types.StringNull(),
+				UEFI:       types.BoolNull(),
+				SecureBoot: types.BoolNull(),
+			},
+			expected: true,
+		},
+		{
+			name: "image has nil fields in config, filter expects values",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					OperatingSystem:        nil,
+					OperatingSystemDistro:  nil,
+					OperatingSystemVersion: nil,
+					Uefi:                   nil,
+					SecureBoot:             nil,
+				},
+			},
+			filter: &Filter{
+				OS:         types.StringValue("linux"),
+				Distro:     types.StringValue("ubuntu"),
+				Version:    types.StringValue("22.04"),
+				UEFI:       types.BoolValue(true),
+				SecureBoot: types.BoolValue(true),
+			},
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := imageMatchesFilter(tc.img, tc.filter)
+			if result != tc.expected {
+				t.Errorf("Expected match = %v, got %v", tc.expected, result)
+			}
+		})
+	}
+}
+
+func TestSortImagesByName(t *testing.T) {
+	tests := []struct {
+		desc       string
+		input      []*iaas.Image
+		ascending  bool
+		wantSorted []string
+	}{
+		{
+			desc:      "ascending by name",
+			ascending: true,
+			input: []*iaas.Image{
+				{Name: utils.Ptr("Ubuntu 22.04")},
+				{Name: utils.Ptr("Ubuntu 18.04")},
+				{Name: utils.Ptr("Ubuntu 20.04")},
+			},
+			wantSorted: []string{"Ubuntu 18.04", "Ubuntu 20.04", "Ubuntu 22.04"},
+		},
+		{
+			desc:      "descending by name",
+			ascending: false,
+			input: []*iaas.Image{
+				{Name: utils.Ptr("Ubuntu 22.04")},
+				{Name: utils.Ptr("Ubuntu 18.04")},
+				{Name: utils.Ptr("Ubuntu 20.04")},
+			},
+			wantSorted: []string{"Ubuntu 22.04", "Ubuntu 20.04", "Ubuntu 18.04"},
+		},
+		{
+			desc:      "nil names go last ascending",
+			ascending: true,
+			input: []*iaas.Image{
+				{Name: nil},
+				{Name: utils.Ptr("Ubuntu 18.04")},
+				{Name: nil},
+				{Name: utils.Ptr("Ubuntu 20.04")},
+			},
+			wantSorted: []string{"Ubuntu 18.04", "Ubuntu 20.04", "<nil>", "<nil>"},
+		},
+		{
+			desc:      "nil names go last descending",
+			ascending: false,
+			input: []*iaas.Image{
+				{Name: nil},
+				{Name: utils.Ptr("Ubuntu 18.04")},
+				{Name: utils.Ptr("Ubuntu 20.04")},
+				{Name: nil},
+			},
+			wantSorted: []string{"Ubuntu 20.04", "Ubuntu 18.04", "<nil>", "<nil>"},
+		},
+		{
+			desc:       "empty slice",
+			ascending:  true,
+			input:      []*iaas.Image{},
+			wantSorted: []string{},
+		},
+		{
+			desc:      "single element slice",
+			ascending: true,
+			input: []*iaas.Image{
+				{Name: utils.Ptr("Ubuntu 22.04")},
+			},
+			wantSorted: []string{"Ubuntu 22.04"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			sortImagesByName(tc.input, tc.ascending)
+
+			gotNames := make([]string, len(tc.input))
+			for i, img := range tc.input {
+				if img.Name == nil {
+					gotNames[i] = "<nil>"
+				} else {
+					gotNames[i] = *img.Name
+				}
+			}
+
+			if diff := cmp.Diff(tc.wantSorted, gotNames); diff != "" {
+				t.Fatalf("incorrect sort order (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
