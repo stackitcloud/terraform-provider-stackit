@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"fmt"
 	"maps"
-	"os"
 	"strings"
 	"testing"
 
@@ -512,8 +511,8 @@ type SkeProviderOptions struct {
 
 // NewSkeProviderOptions fetches the latest available options from SKE.
 func NewSkeProviderOptions(nodePoolOs string) *SkeProviderOptions {
-	// skip if TF_ACC is not set
-	if os.Getenv("TF_ACC") == "" {
+	// skip if TF_ACC=1 is not set
+	if !testutil.E2ETestsEnabled {
 		return &SkeProviderOptions{
 			options:        nil,
 			nodePoolOsName: nodePoolOs,
