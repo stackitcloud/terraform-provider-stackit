@@ -50,7 +50,6 @@ var (
 	// TestImageLocalFilePath is the local path to an image file used for image acceptance tests
 	TestImageLocalFilePath = getenv("TF_ACC_TEST_IMAGE_LOCAL_FILE_PATH", "default")
 
-	ArgusCustomEndpoint           = os.Getenv("TF_ACC_ARGUS_CUSTOM_ENDPOINT")
 	CdnCustomEndpoint             = os.Getenv("TF_ACC_CDN_CUSTOM_ENDPOINT")
 	DnsCustomEndpoint             = os.Getenv("TF_ACC_DNS_CUSTOM_ENDPOINT")
 	GitCustomEndpoint             = os.Getenv("TF_ACC_GIT_CUSTOM_ENDPOINT")
@@ -75,22 +74,6 @@ var (
 	ServiceAccountCustomEndpoint  = os.Getenv("TF_ACC_SERVICE_ACCOUNT_CUSTOM_ENDPOINT")
 	SKECustomEndpoint             = os.Getenv("TF_ACC_SKE_CUSTOM_ENDPOINT")
 )
-
-// Provider config helper functions
-
-func ArgusProviderConfig() string {
-	if ArgusCustomEndpoint == "" {
-		return `provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			argus_custom_endpoint = "%s"
-		}`,
-		ArgusCustomEndpoint,
-	)
-}
 
 // Provider config helper functions
 
@@ -299,7 +282,7 @@ func RedisProviderConfig() string {
 }
 
 func ResourceManagerProviderConfig() string {
-	token := getTestProjectServiceAccountToken("")
+	token := GetTestProjectServiceAccountToken("")
 	if ResourceManagerCustomEndpoint == "" || AuthorizationCustomEndpoint == "" {
 		return fmt.Sprintf(`
 		provider "stackit" {
@@ -458,7 +441,7 @@ func ResourceNameWithDateTime(name string) string {
 	return fmt.Sprintf("tf-acc-%s-%s", name, dateTimeTrimmed)
 }
 
-func getTestProjectServiceAccountToken(path string) string {
+func GetTestProjectServiceAccountToken(path string) string {
 	var err error
 	token, tokenSet := os.LookupEnv("TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN")
 	if !tokenSet || token == "" {
