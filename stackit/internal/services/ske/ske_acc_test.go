@@ -545,64 +545,15 @@ func NewSkeProviderOptions(nodePoolOs string) *SkeProviderOptions {
 	}
 }
 
-// GetCreateK8sVersion returns the first supported Kubernetes version (used for create).
-func (s *SkeProviderOptions) GetCreateK8sVersion() string {
-	if s.options == nil || s.options.KubernetesVersions == nil {
+// getMachineVersionAt returns the N-th supported version for the specified machine image.
+func (s *SkeProviderOptions) getMachineVersionAt(position int) string {
+	// skip if TF_ACC=1 is not set
+	if !testutil.E2ETestsEnabled {
 		return ""
 	}
 
-	for _, v := range *s.options.KubernetesVersions {
-		if v.State != nil && *v.State == "supported" && v.Version != nil {
-			return *v.Version
-		}
-	}
-
-	return ""
-}
-
-// GetUpdateK8sVersion returns the next supported Kubernetes version after the create version (used for update).
-func (s *SkeProviderOptions) GetUpdateK8sVersion() string {
-	if s.options == nil || s.options.KubernetesVersions == nil {
-		return ""
-	}
-
-	supportedCount := 0
-
-	for _, v := range *s.options.KubernetesVersions {
-		if v.State != nil && *v.State == "supported" && v.Version != nil {
-			supportedCount++
-			if supportedCount == 2 {
-				return *v.Version
-			}
-		}
-	}
-
-	return ""
-}
-
-// GetCreateMachineVersion returns the first supported machine image version (used for create).
-func (s *SkeProviderOptions) GetCreateMachineVersion() string {
 	if s.options == nil || s.options.MachineImages == nil {
-		return ""
-	}
-
-	for _, mi := range *s.options.MachineImages {
-		if mi.Name != nil && *mi.Name == s.nodePoolOsName && mi.Versions != nil {
-			for _, v := range *mi.Versions {
-				if v.State != nil && *v.State == "supported" && v.Version != nil {
-					return *v.Version
-				}
-			}
-		}
-	}
-
-	return ""
-}
-
-// GetUpdateMachineVersion returns the next supported version after the create version (used for update).
-func (s *SkeProviderOptions) GetUpdateMachineVersion() string {
-	if s.options == nil || s.options.MachineImages == nil {
-		return ""
+		panic(fmt.Sprintf("no supported machine version found at position %d", position))
 	}
 
 	for _, mi := range *s.options.MachineImages {
@@ -610,14 +561,54 @@ func (s *SkeProviderOptions) GetUpdateMachineVersion() string {
 			count := 0
 			for _, v := range *mi.Versions {
 				if v.State != nil && v.Version != nil {
-					count++
-					if count == 2 {
+					if count == position {
 						return *v.Version
 					}
+					count++
 				}
 			}
 		}
 	}
 
-	return ""
+	panic(fmt.Sprintf("no supported machine version found at position %d", position))
+}
+
+// getK8sVersionAt returns the N-th supported Kubernetes version.
+func (s *SkeProviderOptions) getK8sVersionAt(position int) string {
+	// skip if TF_ACC=1 is not set
+	if !testutil.E2ETestsEnabled {
+		return ""
+	}
+
+	if s.options == nil || s.options.KubernetesVersions == nil {
+		panic(fmt.Sprintf("no supported k8s version found at position %d", position))
+	}
+
+	count := 0
+	for _, v := range *s.options.KubernetesVersions {
+		if v.State != nil && *v.State == "supported" && v.Version != nil {
+			if count == position {
+				return *v.Version
+			}
+			count++
+		}
+	}
+
+	panic(fmt.Sprintf("no supported k8s version found at position %d", position))
+}
+
+func (s *SkeProviderOptions) GetCreateMachineVersion() string {
+	return s.getMachineVersionAt(0)
+}
+
+func (s *SkeProviderOptions) GetUpdateMachineVersion() string {
+	return s.getMachineVersionAt(1)
+}
+
+func (s *SkeProviderOptions) GetCreateK8sVersion() string {
+	return s.getK8sVersionAt(0)
+}
+
+func (s *SkeProviderOptions) GetUpdateK8sVersion() string {
+	return s.getK8sVersionAt(1)
 }
