@@ -10,7 +10,6 @@ provider "stackit" {
   private_key_path                   = ""
   private_key                        = ""
   service_account_email              = "abc@abc.de"
-  argus_custom_endpoint              = "https://argus.api.eu01.stackit.cloud"
   cdn_custom_endpoint                = "https://cdn.api.eu01.stackit.cloud"
   dns_custom_endpoint                = "https://dns.api.stackit.cloud"
   git_custom_endpoint                = "https://git.api.stackit.cloud"

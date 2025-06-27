@@ -21,7 +21,6 @@ type ProviderData struct {
 	// Deprecated: Use DefaultRegion instead
 	Region                          string
 	DefaultRegion                   string
-	ArgusCustomEndpoint             string
 	AuthorizationCustomEndpoint     string
 	CdnCustomEndpoint               string
 	DnsCustomEndpoint               string
