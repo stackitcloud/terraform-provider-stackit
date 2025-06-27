@@ -66,6 +66,7 @@ Deprecated as of Kubernetes 1.25 and later
 - `egress_address_ranges` (List of String) The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`name`".
 - `kubernetes_version_used` (String) Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html).
+- `pod_address_ranges` (List of String) The network ranges (in CIDR notation) used by pods of the cluster.
 
 <a id="nestedatt--node_pools"></a>
 ### Nested Schema for `node_pools`

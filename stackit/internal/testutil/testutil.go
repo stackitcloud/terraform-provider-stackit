@@ -28,6 +28,9 @@ var (
 		"stackit": providerserver.NewProtocol6WithError(stackit.New("test-version")()),
 	}
 
+	// E2ETestsEnabled checks if end-to-end tests should be run.
+	// It is enabled when the TF_ACC environment variable is set to "1".
+	E2ETestsEnabled = os.Getenv("TF_ACC") == "1"
 	// OrganizationId is the id of organization used for tests
 	OrganizationId = os.Getenv("TF_ACC_ORGANIZATION_ID")
 	// ProjectId is the id of project used for tests
