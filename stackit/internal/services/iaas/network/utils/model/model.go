@@ -25,4 +25,5 @@ type Model struct {
 	NoIPv4Gateway    types.Bool   `tfsdk:"no_ipv4_gateway"`
 	NoIPv6Gateway    types.Bool   `tfsdk:"no_ipv6_gateway"`
 	Region           types.String `tfsdk:"region"`
+	RoutingTableID   types.String `tfsdk:"routing_table_id"`
 }

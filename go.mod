@@ -40,7 +40,10 @@ require (
 	golang.org/x/mod v0.25.0
 )
 
-require github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
+require (
+	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
+	github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.18-alpha // indirect
+)
 
 require (
 	github.com/ProtonMail/go-crypto v1.1.6 // indirect

@@ -22,6 +22,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network/utils/model"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network/utils/v1network"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network/utils/v2network"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	iaasAlphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -90,6 +91,10 @@ func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureR
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
 func (r *networkResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	// If the v1 api is used, it's not required to get the fallback region because it isn't used
+	if !r.isExperimental {
+		return
+	}
 	var configModel model.Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
@@ -310,6 +315,13 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					boolplanmodifier.RequiresReplace(),
 				},
 			},
+			"routing_table_id": schema.StringAttribute{
+				Description: "The ID of the routing table associated with the network.",
+				Optional:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"region": schema.StringAttribute{
 				Optional: true,
 				// must be computed to allow for storing the override value from the provider
@@ -329,7 +341,7 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 		v1network.Create(ctx, req, resp, r.client)
 		return
 	}
-	// TODO: Add v2alpha
+	v2network.Create(ctx, req, resp, r.alphaClient)
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -337,7 +349,7 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if !r.isExperimental {
 		v1network.Read(ctx, req, resp, r.client)
 	}
-	// TODO: Add v2alpha
+	v2network.Read(ctx, req, resp, r.alphaClient, r.providerData)
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -345,7 +357,7 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	if !r.isExperimental {
 		v1network.Update(ctx, req, resp, r.client)
 	}
-	// TODO: Add v2alpha
+	v2network.Update(ctx, req, resp, r.alphaClient)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -353,7 +365,7 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 	if !r.isExperimental {
 		v1network.Delete(ctx, req, resp, r.client)
 	}
-	// TODO: Add v2alpha
+	v2network.Delete(ctx, req, resp, r.alphaClient)
 }
 
 // ImportState imports a resource into the Terraform state on success.
