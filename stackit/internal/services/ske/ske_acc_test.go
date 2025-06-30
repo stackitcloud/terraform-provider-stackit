@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	core_config "github.com/stackitcloud/stackit-sdk-go/core/config"
+	coreConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
@@ -33,27 +33,29 @@ var (
 	resourceMax string
 )
 
+var skeProviderOptions = NewSkeProviderOptions("flatcar")
+
 var testConfigVarsMin = config.Variables{
 	"project_id":                  config.StringVariable(testutil.ProjectId),
 	"name":                        config.StringVariable(minTestName),
-	"nodepool_availability_zone1": config.StringVariable("eu01-m"),
+	"nodepool_availability_zone1": config.StringVariable(fmt.Sprintf("%s-1", testutil.Region)),
 	"nodepool_machine_type":       config.StringVariable("g1.2"),
 	"nodepool_minimum":            config.StringVariable("1"),
 	"nodepool_maximum":            config.StringVariable("2"),
 	"nodepool_name":               config.StringVariable("np-acc-test"),
-	"kubernetes_version_min":      config.StringVariable("1.31.8"),
+	"kubernetes_version_min":      config.StringVariable(skeProviderOptions.GetCreateK8sVersion()),
 	"maintenance_enable_machine_image_version_updates": config.StringVariable("true"),
 	"maintenance_enable_kubernetes_version_updates":    config.StringVariable("true"),
 	"maintenance_start": config.StringVariable("02:00:00+01:00"),
 	"maintenance_end":   config.StringVariable("04:00:00+01:00"),
-	"region":            config.StringVariable("eu01"),
+	"region":            config.StringVariable(testutil.Region),
 }
 
 var testConfigVarsMax = config.Variables{
 	"project_id":                                       config.StringVariable(testutil.ProjectId),
 	"organization_id":                                  config.StringVariable(testutil.OrganizationId),
 	"name":                                             config.StringVariable(maxTestName),
-	"nodepool_availability_zone1":                      config.StringVariable("eu01-m"),
+	"nodepool_availability_zone1":                      config.StringVariable(fmt.Sprintf("%s-1", testutil.Region)),
 	"nodepool_machine_type":                            config.StringVariable("g1.2"),
 	"nodepool_minimum":                                 config.StringVariable("1"),
 	"nodepool_maximum":                                 config.StringVariable("2"),
@@ -63,8 +65,8 @@ var testConfigVarsMax = config.Variables{
 	"nodepool_label_value":                             config.StringVariable("value"),
 	"nodepool_max_surge":                               config.StringVariable("1"),
 	"nodepool_max_unavailable":                         config.StringVariable("1"),
-	"nodepool_os_name":                                 config.StringVariable("flatcar"),
-	"nodepool_os_version_min":                          config.StringVariable("4152.2.1"),
+	"nodepool_os_name":                                 config.StringVariable(skeProviderOptions.nodePoolOsName),
+	"nodepool_os_version_min":                          config.StringVariable(skeProviderOptions.GetCreateMachineVersion()),
 	"nodepool_taints_effect":                           config.StringVariable("PreferNoSchedule"),
 	"nodepool_taints_key":                              config.StringVariable("tkey"),
 	"nodepool_taints_value":                            config.StringVariable("tvalue"),
@@ -77,12 +79,12 @@ var testConfigVarsMax = config.Variables{
 	"nodepool_hibernations1_start":                     config.StringVariable("0 18 * * *"),
 	"nodepool_hibernations1_end":                       config.StringVariable("59 23 * * *"),
 	"nodepool_hibernations1_timezone":                  config.StringVariable("Europe/Berlin"),
-	"kubernetes_version_min":                           config.StringVariable("1.31.8"),
+	"kubernetes_version_min":                           config.StringVariable(skeProviderOptions.GetCreateK8sVersion()),
 	"maintenance_enable_machine_image_version_updates": config.StringVariable("true"),
 	"maintenance_enable_kubernetes_version_updates":    config.StringVariable("true"),
 	"maintenance_start":                                config.StringVariable("02:00:00+01:00"),
 	"maintenance_end":                                  config.StringVariable("04:00:00+01:00"),
-	"region":                                           config.StringVariable("eu01"),
+	"region":                                           config.StringVariable(testutil.Region),
 	"expiration":                                       config.StringVariable("3600"),
 	"refresh":                                          config.StringVariable("true"),
 	"dns_zone_name":                                    config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha)),
@@ -90,20 +92,21 @@ var testConfigVarsMax = config.Variables{
 }
 
 func configVarsMinUpdated() config.Variables {
-	updatedConfig := maps.Clone(testConfigVarsMax)
-	updatedConfig["kubernetes_version_min"] = config.StringVariable("1.31")
+	updatedConfig := maps.Clone(testConfigVarsMin)
+	updatedConfig["kubernetes_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateK8sVersion())
 
 	return updatedConfig
 }
 
 func configVarsMaxUpdated() config.Variables {
 	updatedConfig := maps.Clone(testConfigVarsMax)
-	updatedConfig["kubernetes_version_min"] = config.StringVariable("1.31")
-	updatedConfig["nodepool_os_version_min"] = config.StringVariable("4152.2.1")
+	updatedConfig["kubernetes_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateK8sVersion())
+	updatedConfig["nodepool_os_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateMachineVersion())
 	updatedConfig["maintenance_end"] = config.StringVariable("03:03:03+00:00")
 
 	return updatedConfig
 }
+
 func TestAccSKEMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -285,6 +288,8 @@ func TestAccSKEMax(t *testing.T) {
 
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "egress_address_ranges.#", "1"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "egress_address_ranges.0"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "pod_address_ranges.#", "1"),
+					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "pod_address_ranges.0"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
 
 					// Kubeconfig
@@ -355,6 +360,9 @@ func TestAccSKEMax(t *testing.T) {
 
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "egress_address_ranges.#", "1"),
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "egress_address_ranges.0"),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "pod_address_ranges.#", "1"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "pod_address_ranges.0"),
+
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kubernetes_version_used"),
 				),
 			},
@@ -435,6 +443,8 @@ func TestAccSKEMax(t *testing.T) {
 
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "egress_address_ranges.#", "1"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "egress_address_ranges.0"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "pod_address_ranges.#", "1"),
+					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "pod_address_ranges.0"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
 				),
 			},
@@ -449,11 +459,11 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 	var err error
 	if testutil.SKECustomEndpoint == "" {
 		client, err = ske.NewAPIClient(
-			core_config.WithRegion("eu01"),
+			coreConfig.WithRegion(testutil.Region),
 		)
 	} else {
 		client, err = ske.NewAPIClient(
-			core_config.WithEndpoint(testutil.SKECustomEndpoint),
+			coreConfig.WithEndpoint(testutil.SKECustomEndpoint),
 		)
 	}
 	if err != nil {
@@ -492,4 +502,113 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 		}
 	}
 	return nil
+}
+
+type SkeProviderOptions struct {
+	options        *ske.ProviderOptions
+	nodePoolOsName string
+}
+
+// NewSkeProviderOptions fetches the latest available options from SKE.
+func NewSkeProviderOptions(nodePoolOs string) *SkeProviderOptions {
+	// skip if TF_ACC=1 is not set
+	if !testutil.E2ETestsEnabled {
+		return &SkeProviderOptions{
+			options:        nil,
+			nodePoolOsName: nodePoolOs,
+		}
+	}
+
+	ctx := context.Background()
+
+	var client *ske.APIClient
+	var err error
+
+	if testutil.SKECustomEndpoint == "" {
+		client, err = ske.NewAPIClient(coreConfig.WithRegion("eu01"))
+	} else {
+		client, err = ske.NewAPIClient(coreConfig.WithEndpoint(testutil.SKECustomEndpoint))
+	}
+
+	if err != nil {
+		panic("failed to create SKE client: " + err.Error())
+	}
+
+	options, err := client.ListProviderOptions(ctx).Execute()
+	if err != nil {
+		panic("failed to fetch SKE provider options: " + err.Error())
+	}
+
+	return &SkeProviderOptions{
+		options:        options,
+		nodePoolOsName: nodePoolOs,
+	}
+}
+
+// getMachineVersionAt returns the N-th supported version for the specified machine image.
+func (s *SkeProviderOptions) getMachineVersionAt(position int) string {
+	// skip if TF_ACC=1 is not set
+	if !testutil.E2ETestsEnabled {
+		return ""
+	}
+
+	if s.options == nil || s.options.MachineImages == nil {
+		panic(fmt.Sprintf("no supported machine version found at position %d", position))
+	}
+
+	for _, mi := range *s.options.MachineImages {
+		if mi.Name != nil && *mi.Name == s.nodePoolOsName && mi.Versions != nil {
+			count := 0
+			for _, v := range *mi.Versions {
+				if v.State != nil && v.Version != nil {
+					if count == position {
+						return *v.Version
+					}
+					count++
+				}
+			}
+		}
+	}
+
+	panic(fmt.Sprintf("no supported machine version found at position %d", position))
+}
+
+// getK8sVersionAt returns the N-th supported Kubernetes version.
+func (s *SkeProviderOptions) getK8sVersionAt(position int) string {
+	// skip if TF_ACC=1 is not set
+	if !testutil.E2ETestsEnabled {
+		return ""
+	}
+
+	if s.options == nil || s.options.KubernetesVersions == nil {
+		panic(fmt.Sprintf("no supported k8s version found at position %d", position))
+	}
+
+	count := 0
+	for _, v := range *s.options.KubernetesVersions {
+		if v.State != nil && *v.State == "supported" && v.Version != nil {
+			if count == position {
+				return *v.Version
+			}
+			count++
+		}
+	}
+
+	panic(fmt.Sprintf("no supported k8s version found at position %d", position))
+}
+
+func (s *SkeProviderOptions) GetCreateMachineVersion() string {
+	return s.getMachineVersionAt(0)
+}
+
+func (s *SkeProviderOptions) GetUpdateMachineVersion() string {
+	return s.getMachineVersionAt(1)
+}
+
+func (s *SkeProviderOptions) GetCreateK8sVersion() string {
+	return s.getK8sVersionAt(0)
+}
+
+func (s *SkeProviderOptions) GetUpdateK8sVersion() string {
+	return s.getK8sVersionAt(1)
 }
