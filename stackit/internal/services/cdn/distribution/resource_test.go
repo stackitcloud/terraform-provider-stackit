@@ -273,16 +273,17 @@ func TestMapFields(t *testing.T) {
 	}
 	distributionFixture := func(mods ...func(*cdn.Distribution)) *cdn.Distribution {
 		distribution := &cdn.Distribution{
-			Config: &cdn.Config{Backend: &cdn.ConfigBackend{
-				HttpBackend: &cdn.HttpBackend{
-					OriginRequestHeaders: &map[string]string{
-						"testHeader0": "testHeaderValue0",
-						"testHeader1": "testHeaderValue1",
+			Config: &cdn.Config{
+				Backend: &cdn.ConfigBackend{
+					HttpBackend: &cdn.HttpBackend{
+						OriginRequestHeaders: &map[string]string{
+							"testHeader0": "testHeaderValue0",
+							"testHeader1": "testHeaderValue1",
+						},
+						OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
+						Type:      cdn.PtrString("http"),
 					},
-					OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
-					Type:      cdn.PtrString("http"),
 				},
-			},
 				Regions:   &[]cdn.Region{"EU", "US"},
 				Optimizer: nil,
 			},
