@@ -56,7 +56,7 @@ Required:
 
 Optional:
 
-- `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience (see [below for nested schema](#nestedatt--config--optimizer))
+- `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
 
 <a id="nestedatt--config--backend"></a>
 ### Nested Schema for `config.backend`

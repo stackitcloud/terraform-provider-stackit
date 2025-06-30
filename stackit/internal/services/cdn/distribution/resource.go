@@ -53,7 +53,7 @@ var schemaDescriptions = map[string]string{
 	"config_backend":                        "The configured backend for the distribution",
 	"config_regions":                        "The configured regions where content will be hosted",
 	"config_backend_type":                   "The configured backend type. ",
-	"config_optimizer":                      "Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience",
+	"config_optimizer":                      "Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience.",
 	"config_backend_origin_url":             "The configured backend type for the distribution",
 	"config_backend_origin_request_headers": "The configured origin request headers for the backend",
 	"domain_name":                           "The name of the domain",
