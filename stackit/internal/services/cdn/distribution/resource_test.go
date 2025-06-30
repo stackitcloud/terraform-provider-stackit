@@ -24,9 +24,13 @@ func TestToCreatePayload(t *testing.T) {
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
+	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{
+		"enabled": types.BoolValue(true),
+	})
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
-		"backend": backend,
-		"regions": regionsFixture,
+		"backend":   backend,
+		"regions":   regionsFixture,
+		"optimizer": types.ObjectNull(optimizerTypes),
 	})
 	modelFixture := func(mods ...func(*Model)) *Model {
 		model := &Model{
@@ -53,6 +57,25 @@ func TestToCreatePayload(t *testing.T) {
 				},
 				OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
 				Regions:   &[]cdn.Region{"EU", "US"},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_optimizer": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+					"backend":   backend,
+					"regions":   regionsFixture,
+					"optimizer": optimizer,
+				})
+			}),
+			Expected: &cdn.CreateDistributionPayload{
+				OriginRequestHeaders: &map[string]string{
+					"testHeader0": "testHeaderValue0",
+					"testHeader1": "testHeaderValue1",
+				},
+				OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
+				Regions:   &[]cdn.Region{"EU", "US"},
+				Optimizer: cdn.NewOptimizer(true),
 			},
 			IsValid: true,
 		},
@@ -104,9 +127,11 @@ func TestConvertConfig(t *testing.T) {
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
+	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{"enabled": types.BoolValue(true)})
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
-		"backend": backend,
-		"regions": regionsFixture,
+		"backend":   backend,
+		"regions":   regionsFixture,
+		"optimizer": types.ObjectNull(optimizerTypes),
 	})
 	modelFixture := func(mods ...func(*Model)) *Model {
 		model := &Model{
@@ -138,6 +163,30 @@ func TestConvertConfig(t *testing.T) {
 					},
 				},
 				Regions: &[]cdn.Region{"EU", "US"},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_optimizer": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+					"backend":   backend,
+					"regions":   regionsFixture,
+					"optimizer": optimizer,
+				})
+			}),
+			Expected: &cdn.Config{
+				Backend: &cdn.ConfigBackend{
+					HttpBackend: &cdn.HttpBackend{
+						OriginRequestHeaders: &map[string]string{
+							"testHeader0": "testHeaderValue0",
+							"testHeader1": "testHeaderValue1",
+						},
+						OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
+						Type:      cdn.PtrString("http"),
+					},
+				},
+				Regions:   &[]cdn.Region{"EU", "US"},
+				Optimizer: cdn.NewOptimizer(true),
 			},
 			IsValid: true,
 		},
@@ -188,10 +237,15 @@ func TestMapFields(t *testing.T) {
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
-	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
-		"backend": backend,
-		"regions": regionsFixture,
+	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{
+		"enabled": types.BoolValue(true),
 	})
+	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
+		"backend":   backend,
+		"regions":   regionsFixture,
+		"optimizer": types.ObjectNull(optimizerTypes),
+	})
+
 	emtpyErrorsList := types.ListValueMust(types.StringType, []attr.Value{})
 	managedDomain := types.ObjectValueMust(domainTypes, map[string]attr.Value{
 		"name":   types.StringValue("test.stackit-cdn.com"),
@@ -229,7 +283,8 @@ func TestMapFields(t *testing.T) {
 					Type:      cdn.PtrString("http"),
 				},
 			},
-				Regions: &[]cdn.Region{"EU", "US"},
+				Regions:   &[]cdn.Region{"EU", "US"},
+				Optimizer: nil,
 			},
 			CreatedAt: &createdAt,
 			Domains: &[]cdn.Domain{
@@ -258,6 +313,21 @@ func TestMapFields(t *testing.T) {
 			Expected: expectedModel(),
 			Input:    distributionFixture(),
 			IsValid:  true,
+		},
+		"happy_path_with_optimizer": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+					"backend":   backend,
+					"regions":   regionsFixture,
+					"optimizer": optimizer,
+				})
+			}),
+			Input: distributionFixture(func(d *cdn.Distribution) {
+				d.Config.Optimizer = &cdn.Optimizer{
+					Enabled: cdn.PtrBool(true),
+				}
+			}),
+			IsValid: true,
 		},
 		"happy_path_status_error": {
 			Expected: expectedModel(func(m *Model) {

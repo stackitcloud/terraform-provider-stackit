@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -52,6 +53,7 @@ var schemaDescriptions = map[string]string{
 	"config_backend":                        "The configured backend for the distribution",
 	"config_regions":                        "The configured regions where content will be hosted",
 	"config_backend_type":                   "The configured backend type. ",
+	"config_optimizer":                      "The Image Optimizer is a paid feature that automatically optimizer your images for faster delivery",
 	"config_backend_origin_url":             "The configured backend type for the distribution",
 	"config_backend_origin_request_headers": "The configured origin request headers for the backend",
 	"domain_name":                           "The name of the domain",
@@ -73,10 +75,13 @@ type Model struct {
 }
 
 type distributionConfig struct {
-	Backend backend   `tfsdk:"backend"` // The backend associated with the distribution
-	Regions *[]string `tfsdk:"regions"` // The regions in which data will be cached
+	Backend   backend          `tfsdk:"backend"`   // The backend associated with the distribution
+	Regions   *[]string        `tfsdk:"regions"`   // The regions in which data will be cached
+	Optimizer *optimizerConfig `tfsdk:"optimizer"` // The optimizer configuration
 }
-
+type optimizerConfig struct {
+	Enabled types.Bool `tfsdk:"enabled"`
+}
 type backend struct {
 	Type                 string             `tfsdk:"type"`                   // The type of the backend. Currently, only "http" backend is supported
 	OriginURL            string             `tfsdk:"origin_url"`             // The origin URL of the backend
@@ -86,6 +91,13 @@ type backend struct {
 var configTypes = map[string]attr.Type{
 	"backend": types.ObjectType{AttrTypes: backendTypes},
 	"regions": types.ListType{ElemType: types.StringType},
+	"optimizer": types.ObjectType{
+		AttrTypes: map[string]attr.Type{"enabled": types.BoolType},
+	},
+}
+
+var optimizerTypes = map[string]attr.Type{
+	"enabled": types.BoolType,
 }
 
 var backendTypes = map[string]attr.Type{
@@ -206,6 +218,16 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 				Required:    true,
 				Description: schemaDescriptions["config"],
 				Attributes: map[string]schema.Attribute{
+					"optimizer": schema.SingleNestedAttribute{
+						Description: schemaDescriptions["config_optimizer"],
+						Optional:    true,
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Required: true,
+							},
+						},
+					},
 					"backend": schema.SingleNestedAttribute{
 						Required:    true,
 						Description: schemaDescriptions["config_backend"],
@@ -230,7 +252,8 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						Required:    true,
 						Description: schemaDescriptions["config_regions"],
 						ElementType: types.StringType,
-					}},
+					},
+				},
 			},
 		},
 	}
@@ -340,6 +363,12 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
+	var optimizer *cdn.OptimizerPatch
+	if !model.Config.IsUnknown() && !model.Config.IsNull() && configModel.Optimizer != nil {
+		optimizer = &cdn.OptimizerPatch{}
+		optimizer.SetEnabled(configModel.Optimizer.Enabled.ValueBool())
+	}
+
 	regions := []cdn.Region{}
 	for _, r := range *configModel.Regions {
 		regionEnum, err := cdn.NewRegionFromValue(r)
@@ -358,7 +387,8 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 					Type:                 &configModel.Backend.Type,
 				},
 			},
-			Regions: &regions,
+			Regions:   &regions,
+			Optimizer: optimizer,
 		},
 		IntentId: cdn.PtrString(uuid.NewString()),
 	}).Execute()
@@ -495,9 +525,24 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
+	optimizerVal := types.ObjectNull(optimizerTypes)
+	if o := distribution.Config.Optimizer; o != nil {
+		optimizerEnabled, ok := o.GetEnabledOk()
+		if ok {
+			var diags diag.Diagnostics
+			optimizerVal, diags = types.ObjectValue(optimizerTypes, map[string]attr.Value{
+				"enabled": types.BoolValue(optimizerEnabled),
+			})
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
+		}
+	}
 	cfg, diags := types.ObjectValue(configTypes, map[string]attr.Value{
-		"backend": backend,
-		"regions": modelRegions,
+		"backend":   backend,
+		"regions":   modelRegions,
+		"optimizer": optimizerVal,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -553,11 +598,17 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 	if err != nil {
 		return nil, err
 	}
+	var optimizer *cdn.Optimizer
+	if cfg.Optimizer != nil {
+		optimizer = cdn.NewOptimizer(cfg.Optimizer.GetEnabled())
+	}
+
 	payload := &cdn.CreateDistributionPayload{
 		IntentId:             cdn.PtrString(uuid.NewString()),
 		OriginUrl:            cfg.Backend.HttpBackend.OriginUrl,
 		Regions:              cfg.Regions,
 		OriginRequestHeaders: cfg.Backend.HttpBackend.OriginRequestHeaders,
+		Optimizer:            optimizer,
 	}
 
 	return payload, nil
@@ -593,6 +644,12 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 			originRequestHeaders[k] = v
 		}
 	}
+
+	var optimizer *cdn.Optimizer
+	if configModel.Optimizer != nil && !configModel.Optimizer.Enabled.IsNull() && !configModel.Optimizer.Enabled.IsUnknown() {
+		optimizer = cdn.NewOptimizer(configModel.Optimizer.Enabled.ValueBool())
+	}
+
 	return &cdn.Config{
 		Backend: &cdn.ConfigBackend{
 			HttpBackend: &cdn.HttpBackend{
@@ -601,6 +658,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 				Type:                 &configModel.Backend.Type,
 			},
 		},
-		Regions: &regions,
+		Regions:   &regions,
+		Optimizer: optimizer,
 	}, nil
 }
