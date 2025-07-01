@@ -69,7 +69,7 @@ type parametersModel struct {
 	Plugins              types.List   `tfsdk:"plugins"`
 	Syslog               types.List   `tfsdk:"syslog"`
 	TlsCiphers           types.List   `tfsdk:"tls_ciphers"`
-	TlsProtocols         types.String `tfsdk:"tls_protocols"`
+	TlsProtocols         types.List   `tfsdk:"tls_protocols"`
 }
 
 // Types corresponding to parametersModel
@@ -87,7 +87,7 @@ var parametersTypes = map[string]attr.Type{
 	"plugins":                basetypes.ListType{ElemType: types.StringType},
 	"syslog":                 basetypes.ListType{ElemType: types.StringType},
 	"tls_ciphers":            basetypes.ListType{ElemType: types.StringType},
-	"tls_protocols":          basetypes.StringType{},
+	"tls_protocols":          basetypes.ListType{ElemType: types.StringType},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -278,7 +278,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"tls_protocols": schema.StringAttribute{
+					"tls_protocols": schema.ListAttribute{
+						ElementType: types.StringType,
 						Description: parametersDescriptions["tls_protocols"],
 						Optional:    true,
 						Computed:    true,
@@ -733,7 +734,6 @@ func toInstanceParams(parameters *parametersModel) (*opensearch.InstanceParamete
 	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
 	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
 	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
-	payloadParams.TlsProtocols = opensearch.InstanceParametersGetTlsProtocolsAttributeType(conversion.StringValueToPointer(parameters.TlsProtocols))
 
 	var err error
 	payloadParams.Plugins, err = conversion.StringListToPointer(parameters.Plugins)
@@ -749,6 +749,11 @@ func toInstanceParams(parameters *parametersModel) (*opensearch.InstanceParamete
 	payloadParams.TlsCiphers, err = conversion.StringListToPointer(parameters.TlsCiphers)
 	if err != nil {
 		return nil, fmt.Errorf("convert tls_ciphers: %w", err)
+	}
+
+	payloadParams.TlsProtocols, err = conversion.StringListToPointer(parameters.TlsProtocols)
+	if err != nil {
+		return nil, fmt.Errorf("convert tls_protocols: %w", err)
 	}
 
 	return payloadParams, nil
