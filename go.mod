@@ -17,6 +17,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.7.1
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.27.1
 	github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.21-alpha
+	github.com/stackitcloud/stackit-sdk-go/services/kms v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.5.1
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.1
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.25.1
@@ -36,6 +37,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.2
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.3.1
+	github.com/stackitcloud/stackit-sdk-go/core v0.17.2
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.26.0
 )
