@@ -76,7 +76,7 @@ func (r *routingTableResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_routing_table", "resource")
+	features.CheckExperimentEnabled(ctx, &r.providerData, features.RoutingTablesExperiment, "stackit_routing_table", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -93,7 +93,7 @@ func (r *routingTableResource) Schema(_ context.Context, _ resource.SchemaReques
 	description := "Routing table resource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		Description:         description,
-		MarkdownDescription: features.AddBetaDescription(description),
+		MarkdownDescription: features.AddExperimentDescription(description, features.RoutingTablesExperiment, core.Resource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`organization_id`,`region`,`network_area_id`,`routing_table_id`\".",

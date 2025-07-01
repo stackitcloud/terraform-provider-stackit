@@ -46,7 +46,7 @@ func (d *routingTableRouteDataSource) Configure(ctx context.Context, req datasou
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_routing_table_route", "datasource")
+	features.CheckExperimentEnabled(ctx, &d.providerData, features.RoutingTablesExperiment, "stackit_routing_table_route", core.Datasource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -64,7 +64,7 @@ func (d *routingTableRouteDataSource) Schema(_ context.Context, _ datasource.Sch
 	description := "Routing table route datasource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		Description:         description,
-		MarkdownDescription: features.AddBetaDescription(description),
+		MarkdownDescription: features.AddExperimentDescription(description, features.RoutingTablesExperiment, core.Datasource),
 		Attributes:          shared2.GetRouteDataSourceAttributes(),
 	}
 }

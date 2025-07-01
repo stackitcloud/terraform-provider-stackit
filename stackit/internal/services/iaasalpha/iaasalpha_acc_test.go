@@ -789,7 +789,7 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 					continue
 				}
 				if oapiErr.StatusCode == http.StatusInternalServerError {
-					// TODO
+					// TODO: this is just a workaround for an existing issue on IaaS side, remove before merge
 					continue
 				}
 			}
@@ -832,7 +832,7 @@ func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 					continue
 				}
 				if oapiErr.StatusCode == http.StatusInternalServerError {
-					// TODO
+					// TODO: this is just a workaround for an existing issue on IaaS side, remove before merge
 					continue
 				}
 			}

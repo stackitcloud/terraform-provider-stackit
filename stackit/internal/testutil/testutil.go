@@ -122,12 +122,13 @@ func IaaSProviderConfig() string {
 		return `
 		provider "stackit" {
 			default_region = "eu01"
-			enable_beta_resources = true
+			experiments = ["routing-tables"]
 		}`
 	}
 	return fmt.Sprintf(`
 		provider "stackit" {
 			iaas_custom_endpoint = "%s"
+			experiments = ["routing-tables"]
 		}`,
 		IaaSCustomEndpoint,
 	)

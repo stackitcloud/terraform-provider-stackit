@@ -76,7 +76,7 @@ func (r *schedulesDataSource) Configure(ctx context.Context, req datasource.Conf
 func (r *schedulesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         "Server backup schedules datasource schema. Must have a `region` specified in the provider configuration.",
-		MarkdownDescription: features.AddBetaDescription("Server backup schedules datasource schema. Must have a `region` specified in the provider configuration."),
+		MarkdownDescription: features.AddBetaDescription("Server backup schedules datasource schema. Must have a `region` specified in the provider configuration.", core.Datasource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source identifier. It is structured as \"`project_id`,`server_id`\".",

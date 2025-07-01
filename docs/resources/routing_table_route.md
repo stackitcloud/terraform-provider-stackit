@@ -4,14 +4,14 @@ page_title: "stackit_routing_table_route Resource - stackit"
 subcategory: ""
 description: |-
   Routing table route resource schema. Must have a region specified in the provider configuration.
-  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
+  ~> This resource is part of the routing-tables experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_routing_table_route (Resource)
 
 Routing table route resource schema. Must have a `region` specified in the provider configuration.
 
-~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
+~> This resource is part of the routing-tables experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 
 ## Example Usage
 
@@ -52,10 +52,10 @@ resource "stackit_routing_table_route" "example" {
 
 ### Read-Only
 
-- `created_at` (String) Date-time when the route was created
+- `created_at` (String) Date-time when the route was created.
 - `id` (String) Terraform's internal resource ID. It is structured as "`organization_id`,`region`,`network_area_id`,`routing_table_id`,`route_id`".
 - `route_id` (String) The ID of the route.
-- `updated_at` (String) Date-time when the route was updated
+- `updated_at` (String) Date-time when the route was updated.
 
 <a id="nestedatt--destination"></a>
 ### Nested Schema for `destination`

@@ -57,8 +57,7 @@ func (r *routeResource) Configure(ctx context.Context, req resource.ConfigureReq
 		return
 	}
 
-	// TODO: experiment instead of beta for all resource & datasources (see experiments.go)
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_routing_table_route", "resource")
+	features.CheckExperimentEnabled(ctx, &r.providerData, features.RoutingTablesExperiment, "stackit_routing_table_route", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -76,7 +75,7 @@ func (r *routeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 	description := "Routing table route resource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		Description:         description,
-		MarkdownDescription: features.AddBetaDescription(description),
+		MarkdownDescription: features.AddExperimentDescription(description, features.RoutingTablesExperiment, core.Resource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`organization_id`,`region`,`network_area_id`,`routing_table_id`,`route_id`\".",

@@ -94,7 +94,7 @@ func (g *gitResource) Metadata(_ context.Context, req resource.MetadataRequest, 
 // Schema defines the schema for the resource.
 func (g *gitResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Git Instance resource schema."),
+		MarkdownDescription: features.AddBetaDescription("Git Instance resource schema.", core.Resource),
 		Description:         "Git Instance resource schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
