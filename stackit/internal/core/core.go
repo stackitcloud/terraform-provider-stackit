@@ -26,6 +26,7 @@ type ProviderData struct {
 	DnsCustomEndpoint               string
 	GitCustomEndpoint               string
 	IaaSCustomEndpoint              string
+	KMSCustomEndpoint               string
 	LoadBalancerCustomEndpoint      string
 	LogMeCustomEndpoint             string
 	MariaDBCustomEndpoint           string

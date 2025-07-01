@@ -40,6 +40,7 @@ import (
 	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
 	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
 	iaasVolumeAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volumeattach"
+	kms "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/key-ring"
 	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
 	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
@@ -119,6 +120,7 @@ type providerModel struct {
 	DNSCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
 	GitCustomEndpoint               types.String `tfsdk:"git_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
+	KMSCustomEndpoint               types.List   `tfsdk:"kms_custom_endpoint"`
 	PostgresFlexCustomEndpoint      types.String `tfsdk:"postgresflex_custom_endpoint"`
 	MongoDBFlexCustomEndpoint       types.String `tfsdk:"mongodbflex_custom_endpoint"`
 	ModelServingCustomEndpoint      types.String `tfsdk:"modelserving_custom_endpoint"`
@@ -160,6 +162,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"dns_custom_endpoint":                "Custom endpoint for the DNS service",
 		"git_custom_endpoint":                "Custom endpoint for the Git service",
 		"iaas_custom_endpoint":               "Custom endpoint for the IaaS service",
+		"kms_custom_endpoint":                "Custom endpoint for the KMS service",
 		"mongodbflex_custom_endpoint":        "Custom endpoint for the MongoDB Flex service",
 		"modelserving_custom_endpoint":       "Custom endpoint for the AI Model Serving service",
 		"loadbalancer_custom_endpoint":       "Custom endpoint for the Load Balancer service",
@@ -246,6 +249,11 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"iaas_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["iaas_custom_endpoint"],
+			},
+			"kms_custom_endpoint": schema.ListAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Description: descriptions["kms_custom_endpoint"],
 			},
 			"postgresflex_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -412,6 +420,10 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.ServiceEnablementCustomEndpoint, func(v string) { providerData.ServiceEnablementCustomEndpoint = v })
 	setBoolField(providerConfig.EnableBetaResources, func(v bool) { providerData.EnableBetaResources = v })
 
+	if !(providerConfig.KMSCustomEndpoint.IsUnknown() || providerConfig.KMSCustomEndpoint.IsNull()) {
+		providerData.KMSCustomEndpoint = providerConfig.KMSCustomEndpoint.String()
+	}
+
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
 		var experimentValues []string
 		diags := providerConfig.Experiments.ElementsAs(ctx, &experimentValues, false)
@@ -458,6 +470,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasServer.NewServerDataSource,
 		iaasSecurityGroup.NewSecurityGroupDataSource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
+		kms.NewKeyRingDataSource,
 		loadBalancer.NewLoadBalancerDataSource,
 		logMeInstance.NewInstanceDataSource,
 		logMeCredential.NewCredentialDataSource,
@@ -519,6 +532,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasServer.NewServerResource,
 		iaasSecurityGroup.NewSecurityGroupResource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
+		kms.NewKeyRingResource,
 		loadBalancer.NewLoadBalancerResource,
 		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
 		logMeInstance.NewInstanceResource,
