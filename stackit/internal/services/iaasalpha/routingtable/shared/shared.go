@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"time"
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
@@ -89,6 +90,10 @@ func GetRoutesDataSourceAttributes() map[string]schema.Attribute {
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: RouteResponseAttributes(),
 		},
+	}
+	getAttributes["region"] = schema.StringAttribute{
+		Description: "The datasource region. If not defined, the provider region is used.",
+		Optional:    true,
 	}
 	return getAttributes
 }
@@ -235,13 +240,24 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaasalpha.Routi
 		return err
 	}
 
+	// created at and updated at
+	createdAtTF, updatedAtTF := types.StringNull(), types.StringNull()
+	if routingTable.CreatedAt != nil {
+		createdAtValue := *routingTable.CreatedAt
+		createdAtTF = types.StringValue(createdAtValue.Format(time.RFC3339))
+	}
+	if routingTable.UpdatedAt != nil {
+		updatedAtValue := *routingTable.UpdatedAt
+		updatedAtTF = types.StringValue(updatedAtValue.Format(time.RFC3339))
+	}
+
 	model.RoutingTableId = types.StringValue(routingTableId)
 	model.Name = types.StringPointerValue(routingTable.Name)
 	model.Description = types.StringPointerValue(routingTable.Description)
 	model.Default = types.BoolPointerValue(routingTable.Default)
 	model.SystemRoutes = types.BoolPointerValue(routingTable.SystemRoutes)
 	model.Labels = labels
-	model.CreatedAt = types.StringValue(routingTable.CreatedAt.String())
-	model.UpdatedAt = types.StringValue(routingTable.UpdatedAt.String())
+	model.CreatedAt = createdAtTF
+	model.UpdatedAt = updatedAtTF
 	return nil
 }

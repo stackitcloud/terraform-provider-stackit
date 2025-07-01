@@ -208,7 +208,7 @@ func Test_MapRouteDestination(t *testing.T) {
 
 func TestMapRouteModel(t *testing.T) {
 	createdAt := time.Now()
-	updatedAt := time.Now()
+	updatedAt := time.Now().Add(5 * time.Minute)
 
 	type args struct {
 		route  *iaasalpha.Route

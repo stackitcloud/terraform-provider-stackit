@@ -187,11 +187,11 @@ func (r *routeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"created_at": schema.StringAttribute{
-				Description: "Date-time when the route was created",
+				Description: "Date-time when the route was created.",
 				Computed:    true,
 			},
 			"updated_at": schema.StringAttribute{
-				Description: "Date-time when the route was updated",
+				Description: "Date-time when the route was updated.",
 				Computed:    true,
 			},
 		},
@@ -273,7 +273,7 @@ func (r *routeResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	// Map response body to schema
-	err = shared.MapRouteReadModel(ctx, routeResp, &model.RouteReadModel)
+	err = shared.MapRouteModel(ctx, routeResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table route", fmt.Sprintf("Processing API payload: %v", err))
 		return

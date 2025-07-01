@@ -369,7 +369,7 @@ func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRe
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: organization_id,region,routing_table_id
+// The expected format of the resource import identifier is: organization_id,region,network_area_id,routing_table_id
 func (r *routingTableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 

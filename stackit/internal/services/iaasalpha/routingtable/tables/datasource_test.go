@@ -29,6 +29,8 @@ var (
 
 func TestMapDataFields(t *testing.T) {
 	terraformId := fmt.Sprintf("%s,%s,%s", organizationId.String(), testRegion, networkAreaId.String())
+	createdAt := time.Now()
+	updatedAt := time.Now().Add(5 * time.Minute)
 
 	tests := []struct {
 		description string
@@ -51,8 +53,8 @@ func TestMapDataFields(t *testing.T) {
 						Name:         utils.Ptr("test"),
 						Description:  utils.Ptr("description"),
 						Default:      utils.Ptr(true),
-						CreatedAt:    &time.Time{},
-						UpdatedAt:    &time.Time{},
+						CreatedAt:    &createdAt,
+						UpdatedAt:    &updatedAt,
 						SystemRoutes: utils.Ptr(false),
 					},
 				},
@@ -69,8 +71,8 @@ func TestMapDataFields(t *testing.T) {
 						"description":      types.StringValue("description"),
 						"default":          types.BoolValue(true),
 						"system_routes":    types.BoolValue(false),
-						"created_at":       types.StringNull(),
-						"updated_at":       types.StringNull(),
+						"created_at":       types.StringValue(createdAt.Format(time.RFC3339)),
+						"updated_at":       types.StringValue(updatedAt.Format(time.RFC3339)),
 						"labels":           types.MapNull(types.StringType),
 					}),
 				}),
@@ -91,8 +93,8 @@ func TestMapDataFields(t *testing.T) {
 						Name:         utils.Ptr("test"),
 						Description:  utils.Ptr("description"),
 						Default:      utils.Ptr(true),
-						CreatedAt:    &time.Time{},
-						UpdatedAt:    &time.Time{},
+						CreatedAt:    &createdAt,
+						UpdatedAt:    &updatedAt,
 						SystemRoutes: utils.Ptr(false),
 					},
 					{
@@ -100,8 +102,8 @@ func TestMapDataFields(t *testing.T) {
 						Name:         utils.Ptr("test2"),
 						Description:  utils.Ptr("description2"),
 						Default:      utils.Ptr(false),
-						CreatedAt:    &time.Time{},
-						UpdatedAt:    &time.Time{},
+						CreatedAt:    &createdAt,
+						UpdatedAt:    &updatedAt,
 						SystemRoutes: utils.Ptr(false),
 					},
 				},
@@ -118,8 +120,8 @@ func TestMapDataFields(t *testing.T) {
 						"description":      types.StringValue("description"),
 						"default":          types.BoolValue(true),
 						"system_routes":    types.BoolValue(false),
-						"created_at":       types.StringNull(),
-						"updated_at":       types.StringNull(),
+						"created_at":       types.StringValue(createdAt.Format(time.RFC3339)),
+						"updated_at":       types.StringValue(updatedAt.Format(time.RFC3339)),
 						"labels":           types.MapNull(types.StringType),
 					}),
 					types.ObjectValueMust(shared.RoutingTableReadModelTypes(), map[string]attr.Value{
@@ -128,8 +130,8 @@ func TestMapDataFields(t *testing.T) {
 						"description":      types.StringValue("description2"),
 						"default":          types.BoolValue(false),
 						"system_routes":    types.BoolValue(false),
-						"created_at":       types.StringNull(),
-						"updated_at":       types.StringNull(),
+						"created_at":       types.StringValue(createdAt.Format(time.RFC3339)),
+						"updated_at":       types.StringValue(updatedAt.Format(time.RFC3339)),
 						"labels":           types.MapNull(types.StringType),
 					}),
 				}),
