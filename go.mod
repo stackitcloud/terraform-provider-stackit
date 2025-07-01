@@ -40,6 +40,8 @@ require (
 	golang.org/x/mod v0.25.0
 )
 
+replace github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.18-alpha => ../stackit-sdk-generator/sdk-repo-updated/services/iaasalpha
+
 require github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 
 require (

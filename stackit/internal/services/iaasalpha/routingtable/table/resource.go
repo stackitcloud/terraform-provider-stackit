@@ -5,6 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
@@ -42,6 +47,9 @@ type Model struct {
 	Description    types.String `tfsdk:"description"`
 	Labels         types.Map    `tfsdk:"labels"`
 	Region         types.String `tfsdk:"region"`
+	SystemRoutes   types.Bool   `tfsdk:"system_routes"`
+	CreatedAt      types.String `tfsdk:"created_at"`
+	UpdatedAt      types.String `tfsdk:"updated_at"`
 }
 
 // NewRoutingTableResource is a helper function to simplify the provider implementation.
@@ -158,6 +166,22 @@ func (r *routingTableResource) Schema(_ context.Context, _ resource.SchemaReques
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+			},
+			"system_routes": schema.BoolAttribute{
+				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(true),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+				},
+			},
+			"created_at": schema.StringAttribute{
+				Description: "Date-time when the routing table was created",
+				Computed:    true,
+			},
+			"updated_at": schema.StringAttribute{
+				Description: "Date-time when the routing table was updated",
+				Computed:    true,
 			},
 		},
 	}
@@ -397,11 +421,25 @@ func mapFields(ctx context.Context, routingTable *iaasalpha.RoutingTable, model 
 		return err
 	}
 
+	// created at and updated at
+	createdAtTF, updatedAtTF := types.StringNull(), types.StringNull()
+	if routingTable.CreatedAt != nil {
+		createdAtValue := *routingTable.CreatedAt
+		createdAtTF = types.StringValue(createdAtValue.Format(time.RFC3339))
+	}
+	if routingTable.UpdatedAt != nil {
+		updatedAtValue := *routingTable.UpdatedAt
+		updatedAtTF = types.StringValue(updatedAtValue.Format(time.RFC3339))
+	}
+
 	model.RoutingTableId = types.StringValue(routingTableId)
 	model.Name = types.StringPointerValue(routingTable.Name)
 	model.Description = types.StringPointerValue(routingTable.Description)
 	model.Labels = labels
 	model.Region = types.StringValue(region)
+	model.SystemRoutes = types.BoolPointerValue(routingTable.SystemRoutes)
+	model.CreatedAt = createdAtTF
+	model.UpdatedAt = updatedAtTF
 	return nil
 }
 
@@ -416,9 +454,10 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.AddRoutingTa
 	}
 
 	return &iaasalpha.AddRoutingTableToAreaPayload{
-		Description: conversion.StringValueToPointer(model.Description),
-		Name:        conversion.StringValueToPointer(model.Name),
-		Labels:      &labels,
+		Description:  conversion.StringValueToPointer(model.Description),
+		Name:         conversion.StringValueToPointer(model.Name),
+		Labels:       &labels,
+		SystemRoutes: conversion.BoolValueToPointer(model.SystemRoutes),
 	}, nil
 }
 

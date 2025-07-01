@@ -25,7 +25,7 @@ var (
 	routingTableId = uuid.New()
 )
 
-func TestMapDataFields(t *testing.T) {
+func Test_mapDatasourceFields(t *testing.T) {
 	id := fmt.Sprintf("%s,%s,%s,%s", organizationId.String(), testRegion, networkAreaId.String(), routingTableId.String())
 
 	tests := []struct {
@@ -118,7 +118,7 @@ func TestMapDataFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := shared.MapDataSourceFields(context.Background(), tt.input, &tt.state, testRegion)
+			err := mapDatasourceFields(context.Background(), tt.input, &tt.state, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

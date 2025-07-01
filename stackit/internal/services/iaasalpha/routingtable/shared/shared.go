@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"strings"
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -48,15 +46,6 @@ type RoutingTableDataSourceModel struct {
 	OrganizationId types.String `tfsdk:"organization_id"`
 	NetworkAreaId  types.String `tfsdk:"network_area_id"`
 	Region         types.String `tfsdk:"region"`
-}
-
-func RoutingTableDataSourceTypes() map[string]attr.Type {
-	typesTF := RoutingTableReadModelTypes()
-	typesTF["id"] = types.StringType
-	typesTF["organization_id"] = types.StringType
-	typesTF["network_area_id"] = types.StringType
-	typesTF["region"] = types.StringType
-	return typesTF
 }
 
 func GetDatasourceGetAttributes() map[string]schema.Attribute {
@@ -148,7 +137,7 @@ func RouteResponseAttributes() map[string]schema.Attribute {
 			Computed:    true,
 			Attributes: map[string]schema.Attribute{
 				"type": schema.StringAttribute{
-					Description: fmt.Sprintf("CIDRV type. %s", utils.FormatPossibleValues("cidrv4", "cidrv6")),
+					Description: fmt.Sprintf("CIDRV type. %s %s", utils.FormatPossibleValues("cidrv4", "cidrv6"), "Only `cidrv4` supported during experimental stage."),
 					Computed:    true,
 				},
 				"value": schema.StringAttribute{
@@ -162,11 +151,11 @@ func RouteResponseAttributes() map[string]schema.Attribute {
 			Computed:    true,
 			Attributes: map[string]schema.Attribute{
 				"type": schema.StringAttribute{
-					Description: utils.FormatPossibleValues("blackhole", "internet", "ipv4", "ipv6"),
+					Description: fmt.Sprintf("%s %s.", utils.FormatPossibleValues("blackhole", "internet", "ipv4", "ipv6"), "Only `cidrv4` supported during experimental stage."),
 					Computed:    true,
 				},
 				"value": schema.StringAttribute{
-					Description: "Either IPv4 or IPv6 (not set for blackhole and internet).",
+					Description: "Either IPv4 or IPv6 (not set for blackhole and internet). Only IPv4 supported during experimental stage.",
 					Computed:    true,
 				},
 			},
@@ -210,10 +199,8 @@ func RoutingTableResponseAttributes() map[string]schema.Attribute {
 			Description: "When true this is the default routing table for this network area. It can't be deleted and is used if the user does not specify it otherwise.",
 			Computed:    true,
 		},
-		// TODO
 		"system_routes": schema.BoolAttribute{
-			Description: "TODO: ask what this does",
-			Computed:    true,
+			Computed: true,
 		},
 		"created_at": schema.StringAttribute{
 			Description: "Date-time when the routing table was created",
@@ -224,42 +211,6 @@ func RoutingTableResponseAttributes() map[string]schema.Attribute {
 			Computed:    true,
 		},
 	}
-}
-
-func MapDataSourceFields(ctx context.Context, routingTable *iaasalpha.RoutingTable, model *RoutingTableDataSourceModel, region string) error {
-	if routingTable == nil {
-		return fmt.Errorf("response input is nil")
-	}
-	if model == nil {
-		return fmt.Errorf("model input is nil")
-	}
-
-	var routingTableId string
-	if model.RoutingTableId.ValueString() != "" {
-		routingTableId = model.RoutingTableId.ValueString()
-	} else if routingTable.Id != nil {
-		routingTableId = *routingTable.Id
-	} else {
-		return fmt.Errorf("routing table id not present")
-	}
-
-	idParts := []string{
-		model.OrganizationId.ValueString(),
-		region,
-		model.NetworkAreaId.ValueString(),
-		routingTableId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
-
-	err := MapRoutingTableReadModel(ctx, routingTable, &model.RoutingTableReadModel)
-	if err != nil {
-		return err
-	}
-
-	model.Region = types.StringValue(region)
-	return nil
 }
 
 func MapRoutingTableReadModel(ctx context.Context, routingTable *iaasalpha.RoutingTable, model *RoutingTableReadModel) error {
@@ -290,5 +241,7 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaasalpha.Routi
 	model.Default = types.BoolPointerValue(routingTable.Default)
 	model.SystemRoutes = types.BoolPointerValue(routingTable.SystemRoutes)
 	model.Labels = labels
+	model.CreatedAt = types.StringValue(routingTable.CreatedAt.String())
+	model.UpdatedAt = types.StringValue(routingTable.UpdatedAt.String())
 	return nil
 }

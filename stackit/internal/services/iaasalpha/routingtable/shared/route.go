@@ -133,7 +133,7 @@ func MapRouteReadModel(ctx context.Context, route *iaasalpha.Route, model *Route
 		createdAtTF = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
 	if route.UpdatedAt != nil {
-		updatedAtValue := *route.CreatedAt
+		updatedAtValue := *route.UpdatedAt
 		updatedAtTF = types.StringValue(updatedAtValue.Format(time.RFC3339))
 	}
 
@@ -164,16 +164,16 @@ func MapRouteNextHop(routeResp *iaasalpha.Route) (types.Object, error) {
 	nextHopMap := map[string]attr.Value{}
 	switch i := routeResp.Nexthop.GetActualInstance().(type) {
 	case *iaasalpha.NexthopIPv4:
-		nextHopMap["type"] = types.StringPointerValue(i.Type)
+		nextHopMap["type"] = types.StringValue(*i.Type)
 		nextHopMap["value"] = types.StringPointerValue(i.Value)
 	case *iaasalpha.NexthopIPv6:
-		nextHopMap["type"] = types.StringPointerValue(i.Type)
+		nextHopMap["type"] = types.StringValue(*i.Type)
 		nextHopMap["value"] = types.StringPointerValue(i.Value)
 	case *iaasalpha.NexthopBlackhole:
-		nextHopMap["type"] = types.StringPointerValue(i.Type)
+		nextHopMap["type"] = types.StringValue(*i.Type)
 		nextHopMap["value"] = types.StringNull()
 	case *iaasalpha.NexthopInternet:
-		nextHopMap["type"] = types.StringPointerValue(i.Type)
+		nextHopMap["type"] = types.StringValue(*i.Type)
 		nextHopMap["value"] = types.StringNull()
 	default:
 		return types.ObjectNull(RouteNextHopTypes), fmt.Errorf("unexpected Nexthop type: %T", i)
@@ -195,10 +195,10 @@ func MapRouteDestination(routeResp *iaasalpha.Route) (types.Object, error) {
 	destinationMap := map[string]attr.Value{}
 	switch i := routeResp.Destination.GetActualInstance().(type) {
 	case *iaasalpha.DestinationCIDRv4:
-		destinationMap["type"] = types.StringPointerValue(i.Type)
+		destinationMap["type"] = types.StringValue(*i.Type)
 		destinationMap["value"] = types.StringPointerValue(i.Value)
 	case *iaasalpha.DestinationCIDRv6:
-		destinationMap["type"] = types.StringPointerValue(i.Type)
+		destinationMap["type"] = types.StringValue(*i.Type)
 		destinationMap["value"] = types.StringPointerValue(i.Value)
 	default:
 		return types.ObjectNull(RouteDestinationTypes), fmt.Errorf("unexpected Destionation type: %T", i)

@@ -57,6 +57,7 @@ func (r *routeResource) Configure(ctx context.Context, req resource.ConfigureReq
 		return
 	}
 
+	// TODO: experiment instead of beta for all resource & datasources (see experiments.go)
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_routing_table_route", "resource")
 	if resp.Diagnostics.HasError() {
 		return
@@ -133,7 +134,7 @@ func (r *routeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Required:    true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						Description: fmt.Sprintf("CIDRV type. %s", utils.FormatPossibleValues("cidrv4", "cidrv6")),
+						Description: fmt.Sprintf("CIDRV type. %s %s", utils.FormatPossibleValues("cidrv4", "cidrv6"), "Only `cidrv4` supported during experimental stage."),
 						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
@@ -163,27 +164,35 @@ func (r *routeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"labels": schema.MapAttribute{
 				Description: "Labels are key-value string pairs which can be attached to a resource container",
 				ElementType: types.StringType,
-				Computed:    true,
+				Optional:    true,
 			},
 			"next_hop": schema.SingleNestedAttribute{
 				Description: "Next hop destination.",
 				Required:    true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						Description: utils.FormatPossibleValues("blackhole", "internet", "ipv4", "ipv6"),
+						Description: fmt.Sprintf("%s %s.", utils.FormatPossibleValues("blackhole", "internet", "ipv4", "ipv6"), "Only `cidrv4` supported during experimental stage."),
 						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
 					"value": schema.StringAttribute{
-						Description: "Either IPv4 or IPv6 (not set for blackhole and internet).",
+						Description: "Either IPv4 or IPv6 (not set for blackhole and internet). Only IPv4 supported during experimental stage.",
 						Optional:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
 				},
+			},
+			"created_at": schema.StringAttribute{
+				Description: "Date-time when the route was created",
+				Computed:    true,
+			},
+			"updated_at": schema.StringAttribute{
+				Description: "Date-time when the route was updated",
+				Computed:    true,
 			},
 		},
 	}
@@ -479,9 +488,7 @@ func toNextHopPayload(ctx context.Context, model *shared.RouteReadModel) (*iaasa
 	case "ipv4":
 		return sdkUtils.Ptr(iaasalpha.NexthopIPv4AsRouteNexthop(iaasalpha.NewNexthopIPv4("ipv4", nexthopModel.Value.ValueString()))), nil
 	case "ipv6":
-		return sdkUtils.Ptr(iaasalpha.NexthopIPv6AsRouteNexthop(
-			iaasalpha.NewNexthopIPv6("ipv6", nexthopModel.Value.ValueString()),
-		)), nil
+		return sdkUtils.Ptr(iaasalpha.NexthopIPv6AsRouteNexthop(iaasalpha.NewNexthopIPv6("ipv6", nexthopModel.Value.ValueString()))), nil
 	}
 	return nil, fmt.Errorf("unknown nexthop type: %s", nexthopModel.Type.ValueString())
 }

@@ -122,6 +122,7 @@ func IaaSProviderConfig() string {
 		return `
 		provider "stackit" {
 			default_region = "eu01"
+			enable_beta_resources = true
 		}`
 	}
 	return fmt.Sprintf(`

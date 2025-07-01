@@ -91,6 +91,7 @@ func (d *routingTableRouteDataSource) Read(ctx context.Context, req datasource.R
 
 	routeResp, err := d.client.GetRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
 	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, err.Error(), err.Error())
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,

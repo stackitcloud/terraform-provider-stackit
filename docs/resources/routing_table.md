@@ -40,6 +40,7 @@ resource "stackit_routing_table" "example" {
 - `description` (String) Description of the routing table.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `region` (String) The resource region. If not defined, the provider region is used.
+- `system_routes` (Boolean)
 
 ### Read-Only
 

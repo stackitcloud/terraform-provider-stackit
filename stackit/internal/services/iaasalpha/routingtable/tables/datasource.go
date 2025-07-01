@@ -206,6 +206,7 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaasalpha.Ro
 		return core.DiagsToError(diags)
 	}
 	model.Items = itemsListTF
+	model.Region = types.StringValue(region)
 
 	return nil
 }

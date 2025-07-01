@@ -11,7 +11,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
-var AvailableExperiments []string = []string{"iam"}
+const (
+	RoutingTablesExperiment = "routing-tables"
+)
+
+var AvailableExperiments []string = []string{"iam", RoutingTablesExperiment}
 
 // Check if an experiment is valid.
 func ValidExperiment(experiment string, diags *diag.Diagnostics) bool {
