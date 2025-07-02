@@ -133,7 +133,7 @@ func (r *routeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Required:    true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						Description: fmt.Sprintf("CIDRV type. %s %s", utils.FormatPossibleValues("cidrv4", "cidrv6"), "Only `cidrv4` supported during experimental stage."),
+						Description: fmt.Sprintf("CIDRV type. %s %s", utils.FormatPossibleValues("cidrv4", "cidrv6"), "Only `cidrv4` is supported during experimental stage."),
 						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
@@ -170,7 +170,7 @@ func (r *routeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Required:    true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						Description: fmt.Sprintf("%s %s.", utils.FormatPossibleValues("blackhole", "internet", "ipv4", "ipv6"), "Only `cidrv4` supported during experimental stage."),
+						Description: fmt.Sprintf("%s %s.", utils.FormatPossibleValues("blackhole", "internet", "ipv4", "ipv6"), "Only `cidrv4` is supported during experimental stage."),
 						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),

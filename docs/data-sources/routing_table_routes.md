@@ -58,7 +58,7 @@ Read-Only:
 
 Read-Only:
 
-- `type` (String) CIDRV type. Possible values are: `cidrv4`, `cidrv6`. Only `cidrv4` supported during experimental stage.
+- `type` (String) CIDRV type. Possible values are: `cidrv4`, `cidrv6`. Only `cidrv4` is supported during experimental stage.
 - `value` (String) An CIDR string.
 
 
@@ -67,5 +67,5 @@ Read-Only:
 
 Read-Only:
 
-- `type` (String) Possible values are: `blackhole`, `internet`, `ipv4`, `ipv6`. Only `cidrv4` supported during experimental stage..
+- `type` (String) Possible values are: `blackhole`, `internet`, `ipv4`, `ipv6`. Only `cidrv4` is supported during experimental stage..
 - `value` (String) Either IPv4 or IPv6 (not set for blackhole and internet). Only IPv4 supported during experimental stage.

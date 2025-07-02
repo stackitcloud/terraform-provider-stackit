@@ -62,7 +62,7 @@ resource "stackit_routing_table_route" "example" {
 
 Required:
 
-- `type` (String) CIDRV type. Possible values are: `cidrv4`, `cidrv6`. Only `cidrv4` supported during experimental stage.
+- `type` (String) CIDRV type. Possible values are: `cidrv4`, `cidrv6`. Only `cidrv4` is supported during experimental stage.
 - `value` (String) An CIDR string.
 
 
@@ -71,7 +71,7 @@ Required:
 
 Required:
 
-- `type` (String) Possible values are: `blackhole`, `internet`, `ipv4`, `ipv6`. Only `cidrv4` supported during experimental stage..
+- `type` (String) Possible values are: `blackhole`, `internet`, `ipv4`, `ipv6`. Only `cidrv4` is supported during experimental stage..
 
 Optional:
 

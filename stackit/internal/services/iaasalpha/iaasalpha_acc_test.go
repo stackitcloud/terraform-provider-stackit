@@ -19,6 +19,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 
+	"maps"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -49,9 +51,7 @@ var testConfigRoutingTableMin = config.Variables{
 
 var testConfigRoutingTableMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigRoutingTableMin {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigRoutingTableMin)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)))
 	return updatedConfig
 }()
@@ -89,9 +89,7 @@ var testConfigRoutingTableRouteMin = config.Variables{
 
 var testConfigRoutingTableRouteMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigRoutingTableRouteMin {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigRoutingTableRouteMin)
 	// nothing possible to update of the required attributes...
 	return updatedConfig
 }()
@@ -109,9 +107,7 @@ var testConfigRoutingTableRouteMax = config.Variables{
 
 var testConfigRoutingTableRouteMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigRoutingTableRouteMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigRoutingTableRouteMax)
 	updatedConfig["label"] = config.StringVariable("route-updated-label-01")
 	return updatedConfig
 }()
@@ -788,10 +784,6 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 				if oapiErr.StatusCode == http.StatusNotFound {
 					continue
 				}
-				if oapiErr.StatusCode == http.StatusInternalServerError {
-					// TODO: this is just a workaround for an existing issue on IaaS side, remove before merge
-					continue
-				}
 			}
 			errs = append(errs, fmt.Errorf("cannot trigger routing table deletion %q: %w", routingTableId, err))
 		}
@@ -829,10 +821,6 @@ func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) {
 				if oapiErr.StatusCode == http.StatusNotFound {
-					continue
-				}
-				if oapiErr.StatusCode == http.StatusInternalServerError {
-					// TODO: this is just a workaround for an existing issue on IaaS side, remove before merge
 					continue
 				}
 			}
