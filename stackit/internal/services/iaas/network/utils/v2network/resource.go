@@ -23,7 +23,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
-func Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse, client *iaasalpha.APIClient) {
+func Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse, client *iaasalpha.APIClient) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model networkModel.Model
 	diags := req.Plan.Get(ctx, &model)
@@ -62,7 +62,7 @@ func Create(ctx context.Context, req resource.CreateRequest, resp *resource.Crea
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 
 	// Map response body to schema
-	err = mapFields(ctx, network, &model)
+	err = mapFields(ctx, network, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -76,7 +76,7 @@ func Create(ctx context.Context, req resource.CreateRequest, resp *resource.Crea
 	tflog.Info(ctx, "Network created")
 }
 
-func Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse, client *iaasalpha.APIClient, providerData core.ProviderData) {
+func Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse, client *iaasalpha.APIClient, providerData core.ProviderData) { // nolint:gocritic // function signature required by Terraform
 	var model networkModel.Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -102,7 +102,7 @@ func Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResp
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, networkResp, &model)
+	err = mapFields(ctx, networkResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -116,7 +116,7 @@ func Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResp
 	tflog.Info(ctx, "Network read")
 }
 
-func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse, client *iaasalpha.APIClient) {
+func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse, client *iaasalpha.APIClient) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model networkModel.Model
 	diags := req.Plan.Get(ctx, &model)
@@ -157,7 +157,7 @@ func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.Upda
 		return
 	}
 
-	err = mapFields(ctx, waitResp, &model)
+	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -170,7 +170,7 @@ func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.Upda
 	tflog.Info(ctx, "Network updated")
 }
 
-func Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse, client *iaasalpha.APIClient) {
+func Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse, client *iaasalpha.APIClient) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model networkModel.Model
 	diags := req.State.Get(ctx, &model)
@@ -227,7 +227,7 @@ func ImportState(ctx context.Context, req resource.ImportStateRequest, resp *res
 	tflog.Info(ctx, "Network state imported")
 }
 
-func mapFields(ctx context.Context, networkResp *iaasalpha.Network, model *networkModel.Model) error {
+func mapFields(ctx context.Context, networkResp *iaasalpha.Network, model *networkModel.Model, region string) error {
 	if networkResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -244,7 +244,7 @@ func mapFields(ctx context.Context, networkResp *iaasalpha.Network, model *netwo
 		return fmt.Errorf("network id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), networkId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, networkId)
 
 	labels, err := iaasUtils.MapLabels(ctx, networkResp.Labels, model.Labels)
 	if err != nil {
@@ -254,117 +254,122 @@ func mapFields(ctx context.Context, networkResp *iaasalpha.Network, model *netwo
 	// IPv4
 	model.Nameservers = types.ListNull(types.StringType)
 	model.IPv4Nameservers = types.ListNull(types.StringType)
-	if networkResp.Ipv4 != nil {
-		respNameservers := *networkResp.Ipv4.Nameservers
-		modelNameservers, err := utils.ListValuetoStringSlice(model.Nameservers)
-		modelIPv4Nameservers, errIpv4 := utils.ListValuetoStringSlice(model.IPv4Nameservers)
-		if err != nil {
-			return fmt.Errorf("get current network nameservers from model: %w", err)
-		}
-		if errIpv4 != nil {
-			return fmt.Errorf("get current IPv4 network nameservers from model: %w", errIpv4)
-		}
-
-		reconciledNameservers := utils.ReconcileStringSlices(modelNameservers, respNameservers)
-		reconciledIPv4Nameservers := utils.ReconcileStringSlices(modelIPv4Nameservers, respNameservers)
-
-		nameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledNameservers)
-		ipv4NameserversTF, ipv4Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv4Nameservers)
-		if diags.HasError() {
-			return fmt.Errorf("map network nameservers: %w", core.DiagsToError(diags))
-		}
-		if ipv4Diags.HasError() {
-			return fmt.Errorf("map IPv4 network nameservers: %w", core.DiagsToError(ipv4Diags))
-		}
-
-		model.Nameservers = nameserversTF
-		model.IPv4Nameservers = ipv4NameserversTF
-	}
-
 	model.Prefixes = types.ListNull(types.StringType)
 	model.IPv4Prefixes = types.ListNull(types.StringType)
-	if networkResp.Ipv4 != nil && networkResp.Ipv4.Prefixes != nil {
-		respPrefixes := *networkResp.Ipv4.Prefixes
-		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
-		if diags.HasError() {
-			return fmt.Errorf("map network prefixes: %w", core.DiagsToError(diags))
-		}
-		if len(respPrefixes) > 0 {
-			model.IPv4Prefix = types.StringValue(respPrefixes[0])
-			_, netmask, err := net.ParseCIDR(respPrefixes[0])
-			if err != nil {
-				// silently ignore parsing error for the netmask
-				model.IPv4PrefixLength = types.Int64Null()
-			} else {
-				ones, _ := netmask.Mask.Size()
-				model.IPv4PrefixLength = types.Int64Value(int64(ones))
-			}
-		}
-
-		model.Prefixes = prefixesTF
-		model.IPv4Prefixes = prefixesTF
-	}
-
 	model.IPv4Gateway = types.StringNull()
-	if networkResp.Ipv4 != nil && networkResp.Ipv4.Gateway != nil {
-		model.IPv4Gateway = types.StringPointerValue(networkResp.Ipv4.GetGateway())
+	model.PublicIP = types.StringNull()
+	if networkResp.Ipv4 != nil {
+		if networkResp.Ipv4.Nameservers != nil {
+			respNameservers := *networkResp.Ipv4.Nameservers
+			modelNameservers, err := utils.ListValuetoStringSlice(model.Nameservers)
+			modelIPv4Nameservers, errIpv4 := utils.ListValuetoStringSlice(model.IPv4Nameservers)
+			if err != nil {
+				return fmt.Errorf("get current network nameservers from model: %w", err)
+			}
+			if errIpv4 != nil {
+				return fmt.Errorf("get current IPv4 network nameservers from model: %w", errIpv4)
+			}
+
+			reconciledNameservers := utils.ReconcileStringSlices(modelNameservers, respNameservers)
+			reconciledIPv4Nameservers := utils.ReconcileStringSlices(modelIPv4Nameservers, respNameservers)
+
+			nameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledNameservers)
+			ipv4NameserversTF, ipv4Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv4Nameservers)
+			if diags.HasError() {
+				return fmt.Errorf("map network nameservers: %w", core.DiagsToError(diags))
+			}
+			if ipv4Diags.HasError() {
+				return fmt.Errorf("map IPv4 network nameservers: %w", core.DiagsToError(ipv4Diags))
+			}
+
+			model.Nameservers = nameserversTF
+			model.IPv4Nameservers = ipv4NameserversTF
+		}
+
+		if networkResp.Ipv4.Prefixes != nil {
+			respPrefixes := *networkResp.Ipv4.Prefixes
+			prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
+			if diags.HasError() {
+				return fmt.Errorf("map network prefixes: %w", core.DiagsToError(diags))
+			}
+			if len(respPrefixes) > 0 {
+				model.IPv4Prefix = types.StringValue(respPrefixes[0])
+				_, netmask, err := net.ParseCIDR(respPrefixes[0])
+				if err != nil {
+					// silently ignore parsing error for the netmask
+					model.IPv4PrefixLength = types.Int64Null()
+				} else {
+					ones, _ := netmask.Mask.Size()
+					model.IPv4PrefixLength = types.Int64Value(int64(ones))
+				}
+			}
+
+			model.Prefixes = prefixesTF
+			model.IPv4Prefixes = prefixesTF
+		}
+
+		if networkResp.Ipv4.Gateway != nil {
+			model.IPv4Gateway = types.StringPointerValue(networkResp.Ipv4.GetGateway())
+		}
+
+		if networkResp.Ipv4.PublicIp != nil {
+			model.PublicIP = types.StringPointerValue(networkResp.Ipv4.PublicIp)
+		}
 	}
 
 	// IPv6
 
 	model.IPv6Nameservers = types.ListNull(types.StringType)
-	if networkResp.Ipv6 != nil && networkResp.Ipv6.Nameservers != nil {
-		respIPv6Nameservers := *networkResp.Ipv6.Nameservers
-		modelIPv6Nameservers, errIpv6 := utils.ListValuetoStringSlice(model.IPv6Nameservers)
-		if errIpv6 != nil {
-			return fmt.Errorf("get current IPv6 network nameservers from model: %w", errIpv6)
-		}
-
-		reconciledIPv6Nameservers := utils.ReconcileStringSlices(modelIPv6Nameservers, respIPv6Nameservers)
-
-		ipv6NameserversTF, ipv6Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv6Nameservers)
-		if ipv6Diags.HasError() {
-			return fmt.Errorf("map IPv6 network nameservers: %w", core.DiagsToError(ipv6Diags))
-		}
-
-		model.IPv6Nameservers = ipv6NameserversTF
-	}
-
 	model.IPv6Prefixes = types.ListNull(types.StringType)
-	if networkResp.Ipv6 != nil || networkResp.Ipv6.Prefixes != nil {
-		respPrefixesV6 := *networkResp.Ipv6.Prefixes
-		prefixesV6TF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixesV6)
-		if diags.HasError() {
-			return fmt.Errorf("map network IPv6 prefixes: %w", core.DiagsToError(diags))
-		}
-		if len(respPrefixesV6) > 0 {
-			model.IPv6Prefix = types.StringValue(respPrefixesV6[0])
-			_, netmask, err := net.ParseCIDR(respPrefixesV6[0])
-			if err != nil {
-				// silently ignore parsing error for the netmask
-				model.IPv6PrefixLength = types.Int64Null()
-			} else {
-				ones, _ := netmask.Mask.Size()
-				model.IPv6PrefixLength = types.Int64Value(int64(ones))
+	model.IPv6Gateway = types.StringNull()
+	if networkResp.Ipv6 != nil {
+		if networkResp.Ipv6.Nameservers != nil {
+			respIPv6Nameservers := *networkResp.Ipv6.Nameservers
+			modelIPv6Nameservers, errIpv6 := utils.ListValuetoStringSlice(model.IPv6Nameservers)
+			if errIpv6 != nil {
+				return fmt.Errorf("get current IPv6 network nameservers from model: %w", errIpv6)
 			}
+
+			reconciledIPv6Nameservers := utils.ReconcileStringSlices(modelIPv6Nameservers, respIPv6Nameservers)
+
+			ipv6NameserversTF, ipv6Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv6Nameservers)
+			if ipv6Diags.HasError() {
+				return fmt.Errorf("map IPv6 network nameservers: %w", core.DiagsToError(ipv6Diags))
+			}
+
+			model.IPv6Nameservers = ipv6NameserversTF
 		}
-		model.IPv6Prefixes = prefixesV6TF
+
+		if networkResp.Ipv6.Prefixes != nil {
+			respPrefixesV6 := *networkResp.Ipv6.Prefixes
+			prefixesV6TF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixesV6)
+			if diags.HasError() {
+				return fmt.Errorf("map network IPv6 prefixes: %w", core.DiagsToError(diags))
+			}
+			if len(respPrefixesV6) > 0 {
+				model.IPv6Prefix = types.StringValue(respPrefixesV6[0])
+				_, netmask, err := net.ParseCIDR(respPrefixesV6[0])
+				if err != nil {
+					// silently ignore parsing error for the netmask
+					model.IPv6PrefixLength = types.Int64Null()
+				} else {
+					ones, _ := netmask.Mask.Size()
+					model.IPv6PrefixLength = types.Int64Value(int64(ones))
+				}
+			}
+			model.IPv6Prefixes = prefixesV6TF
+		}
+
+		if networkResp.Ipv6.Gateway != nil {
+			model.IPv6Gateway = types.StringPointerValue(networkResp.Ipv6.GetGateway())
+		}
 	}
 
-	if networkResp.Ipv6 != nil && networkResp.Ipv6.Gateway != nil {
-		model.IPv6Gateway = types.StringPointerValue(networkResp.Ipv6.GetGateway())
-	} else {
-		model.IPv6Gateway = types.StringNull()
-	}
-
-	if networkResp.Ipv4 != nil && networkResp.Ipv4.PublicIp != nil {
-		model.PublicIP = types.StringPointerValue(networkResp.Ipv4.PublicIp)
-	}
 	model.NetworkId = types.StringValue(networkId)
 	model.Name = types.StringPointerValue(networkResp.Name)
 	model.Labels = labels
 	model.Routed = types.BoolPointerValue(networkResp.Routed)
-	model.Region = types.StringNull()
+	model.Region = types.StringValue(region)
 
 	return nil
 }
@@ -383,32 +388,29 @@ func toCreatePayload(ctx context.Context, model *networkModel.Model) (*iaasalpha
 		modelIPv6Nameservers = append(modelIPv6Nameservers, ipv6NameserverString.ValueString())
 	}
 
-	ipv6Body := &iaasalpha.CreateNetworkIPv6{}
-	if !model.IPv6Prefix.IsNull() || !model.IPv6PrefixLength.IsNull() || !model.IPv6Nameservers.IsNull() {
-		if !utils.IsUndefined(model.IPv6PrefixLength) {
-			ipv6Body = &iaasalpha.CreateNetworkIPv6{
-				CreateNetworkIPv6WithPrefixLength: &iaasalpha.CreateNetworkIPv6WithPrefixLength{
-					Nameservers:  &modelIPv6Nameservers,
-					PrefixLength: conversion.Int64ValueToPointer(model.IPv6PrefixLength),
-				},
-			}
-		} else {
-			var gateway *iaasalpha.NullableString
-			if model.NoIPv6Gateway.ValueBool() {
-				gateway = iaasalpha.NewNullableString(nil)
-			} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
-				gateway = iaasalpha.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
-			}
-
-			ipv6Body = &iaasalpha.CreateNetworkIPv6{
-				CreateNetworkIPv6WithPrefix: &iaasalpha.CreateNetworkIPv6WithPrefix{
-					Gateway:     gateway,
-					Nameservers: &modelIPv6Nameservers,
-					Prefix:      conversion.StringValueToPointer(model.IPv6Prefix),
-				},
-			}
+	var ipv6Body *iaasalpha.CreateNetworkIPv6
+	if !utils.IsUndefined(model.IPv6PrefixLength) {
+		ipv6Body = &iaasalpha.CreateNetworkIPv6{
+			CreateNetworkIPv6WithPrefixLength: &iaasalpha.CreateNetworkIPv6WithPrefixLength{
+				Nameservers:  &modelIPv6Nameservers,
+				PrefixLength: conversion.Int64ValueToPointer(model.IPv6PrefixLength),
+			},
+		}
+	} else if !utils.IsUndefined(model.IPv6Prefix) {
+		var gateway *iaasalpha.NullableString
+		if model.NoIPv6Gateway.ValueBool() {
+			gateway = iaasalpha.NewNullableString(nil)
+		} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
+			gateway = iaasalpha.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
 		}
 
+		ipv6Body = &iaasalpha.CreateNetworkIPv6{
+			CreateNetworkIPv6WithPrefix: &iaasalpha.CreateNetworkIPv6WithPrefix{
+				Gateway:     gateway,
+				Nameservers: &modelIPv6Nameservers,
+				Prefix:      conversion.StringValueToPointer(model.IPv6Prefix),
+			},
+		}
 	}
 
 	modelIPv4Nameservers := []string{}
@@ -428,30 +430,28 @@ func toCreatePayload(ctx context.Context, model *networkModel.Model) (*iaasalpha
 		modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
 	}
 
-	ipv4Body := &iaasalpha.CreateNetworkIPv4{}
-	if !model.IPv4Prefix.IsNull() || !model.IPv4PrefixLength.IsNull() || !model.IPv4Nameservers.IsNull() || !model.Nameservers.IsNull() {
-		if !utils.IsUndefined(model.IPv4PrefixLength) {
-			ipv4Body = &iaasalpha.CreateNetworkIPv4{
-				CreateNetworkIPv4WithPrefixLength: &iaasalpha.CreateNetworkIPv4WithPrefixLength{
-					Nameservers:  &modelIPv4Nameservers,
-					PrefixLength: conversion.Int64ValueToPointer(model.IPv4PrefixLength),
-				},
-			}
-		} else if !utils.IsUndefined(model.IPv4Prefix) {
-			var gateway *iaasalpha.NullableString
-			if model.NoIPv4Gateway.ValueBool() {
-				gateway = iaasalpha.NewNullableString(nil)
-			} else if !(model.IPv4Gateway.IsUnknown() || model.IPv4Gateway.IsNull()) {
-				gateway = iaasalpha.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway))
-			}
+	var ipv4Body *iaasalpha.CreateNetworkIPv4
+	if !utils.IsUndefined(model.IPv4PrefixLength) {
+		ipv4Body = &iaasalpha.CreateNetworkIPv4{
+			CreateNetworkIPv4WithPrefixLength: &iaasalpha.CreateNetworkIPv4WithPrefixLength{
+				Nameservers:  &modelIPv4Nameservers,
+				PrefixLength: conversion.Int64ValueToPointer(model.IPv4PrefixLength),
+			},
+		}
+	} else if !utils.IsUndefined(model.IPv4Prefix) {
+		var gateway *iaasalpha.NullableString
+		if model.NoIPv4Gateway.ValueBool() {
+			gateway = iaasalpha.NewNullableString(nil)
+		} else if !(model.IPv4Gateway.IsUnknown() || model.IPv4Gateway.IsNull()) {
+			gateway = iaasalpha.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway))
+		}
 
-			ipv4Body = &iaasalpha.CreateNetworkIPv4{
-				CreateNetworkIPv4WithPrefix: &iaasalpha.CreateNetworkIPv4WithPrefix{
-					Nameservers: &modelIPv4Nameservers,
-					Prefix:      conversion.StringValueToPointer(model.IPv4Prefix),
-					Gateway:     gateway,
-				},
-			}
+		ipv4Body = &iaasalpha.CreateNetworkIPv4{
+			CreateNetworkIPv4WithPrefix: &iaasalpha.CreateNetworkIPv4WithPrefix{
+				Nameservers: &modelIPv4Nameservers,
+				Prefix:      conversion.StringValueToPointer(model.IPv4Prefix),
+				Gateway:     gateway,
+			},
 		}
 	}
 

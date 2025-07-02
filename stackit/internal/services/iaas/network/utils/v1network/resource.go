@@ -22,7 +22,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
-func Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse, client *iaas.APIClient) {
+func Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse, client *iaas.APIClient) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model networkModel.Model
 	diags := req.Plan.Get(ctx, &model)
@@ -73,7 +73,7 @@ func Create(ctx context.Context, req resource.CreateRequest, resp *resource.Crea
 	tflog.Info(ctx, "Network created")
 }
 
-func Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse, client *iaas.APIClient) {
+func Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse, client *iaas.APIClient) { // nolint:gocritic // function signature required by Terraform
 	var model networkModel.Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -111,7 +111,7 @@ func Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResp
 	tflog.Info(ctx, "Network read")
 }
 
-func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse, client *iaas.APIClient) {
+func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse, client *iaas.APIClient) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model networkModel.Model
 	diags := req.Plan.Get(ctx, &model)
@@ -163,7 +163,7 @@ func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.Upda
 	tflog.Info(ctx, "Network updated")
 }
 
-func Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse, client *iaas.APIClient) {
+func Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse, client *iaas.APIClient) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model networkModel.Model
 	diags := req.State.Get(ctx, &model)

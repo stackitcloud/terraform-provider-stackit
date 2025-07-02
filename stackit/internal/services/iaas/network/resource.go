@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -66,7 +67,6 @@ func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureR
 		return
 	}
 
-	// TODO: check if this works like intended
 	r.isExperimental = features.CheckExperimentEnabledWithoutError(ctx, &r.providerData, experiment, "stackit_network", &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -132,6 +132,14 @@ func (r *networkResource) ValidateConfig(ctx context.Context, req resource.Valid
 	if !resourceModel.Nameservers.IsUnknown() && !resourceModel.IPv4Nameservers.IsUnknown() && !resourceModel.Nameservers.IsNull() && !resourceModel.IPv4Nameservers.IsNull() {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring network", "You cannot provide both the `nameservers` and `ipv4_nameservers` fields simultaneously. Please remove the deprecated `nameservers` field, and use `ipv4_nameservers` to configure nameservers for IPv4.")
 	}
+	if !r.isExperimental {
+		if !utils.IsUndefined(resourceModel.Region) {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring network", "Setting the `region` is not supported yet. This can only be configured when the experiments `network` is set.")
+		}
+		if !utils.IsUndefined(resourceModel.RoutingTableID) {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring network", "Setting the field `routing_table_id` is not supported yet. This can only be configured when the experiments `network` is set.")
+		}
+	}
 }
 
 // ConfigValidators validates the resource configuration
@@ -143,6 +151,22 @@ func (r *networkResource) ConfigValidators(_ context.Context) []resource.ConfigV
 		),
 		resourcevalidator.Conflicting(
 			path.MatchRoot("no_ipv6_gateway"),
+			path.MatchRoot("ipv6_gateway"),
+		),
+		resourcevalidator.Conflicting(
+			path.MatchRoot("ipv4_prefix"),
+			path.MatchRoot("ipv4_prefix_length"),
+		),
+		resourcevalidator.Conflicting(
+			path.MatchRoot("ipv6_prefix"),
+			path.MatchRoot("ipv6_prefix_length"),
+		),
+		resourcevalidator.Conflicting(
+			path.MatchRoot("ipv4_prefix_length"),
+			path.MatchRoot("ipv4_gateway"),
+		),
+		resourcevalidator.Conflicting(
+			path.MatchRoot("ipv6_prefix_length"),
 			path.MatchRoot("ipv6_gateway"),
 		),
 	}
@@ -233,6 +257,9 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "The IPv4 prefix length of the network.",
 				Computed:    true,
 				Optional:    true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.RequiresReplace(),
+				},
 			},
 			"prefixes": schema.ListAttribute{
 				Description:        "The prefixes of the network. This field is deprecated and will be removed soon, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
@@ -316,10 +343,14 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"routing_table_id": schema.StringAttribute{
-				Description: "The ID of the routing table associated with the network.",
+				Description: "Can only be used when experimental \"network\" is set.\nThe ID of the routing table associated with the network.",
 				Optional:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
 				},
 			},
 			"region": schema.StringAttribute{
@@ -339,33 +370,36 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	if !r.isExperimental {
 		v1network.Create(ctx, req, resp, r.client)
-		return
+	} else {
+		v2network.Create(ctx, req, resp, r.alphaClient)
 	}
-	v2network.Create(ctx, req, resp, r.alphaClient)
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	if !r.isExperimental {
 		v1network.Read(ctx, req, resp, r.client)
+	} else {
+		v2network.Read(ctx, req, resp, r.alphaClient, r.providerData)
 	}
-	v2network.Read(ctx, req, resp, r.alphaClient, r.providerData)
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	if !r.isExperimental {
 		v1network.Update(ctx, req, resp, r.client)
+	} else {
+		v2network.Update(ctx, req, resp, r.alphaClient)
 	}
-	v2network.Update(ctx, req, resp, r.alphaClient)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	if !r.isExperimental {
 		v1network.Delete(ctx, req, resp, r.client)
+	} else {
+		v2network.Delete(ctx, req, resp, r.alphaClient)
 	}
-	v2network.Delete(ctx, req, resp, r.alphaClient)
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -373,6 +407,7 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 func (r *networkResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	if !r.isExperimental {
 		v1network.ImportState(ctx, req, resp)
+	} else {
+		v2network.ImportState(ctx, req, resp)
 	}
-	// TODO: Add v2alpha
 }

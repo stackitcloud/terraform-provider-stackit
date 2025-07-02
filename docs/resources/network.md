@@ -66,7 +66,8 @@ resource "stackit_network" "example_non_routed_network" {
 - `region` (String) Can only be used when experimental "network" is set.
 The resource region. If not defined, the provider region is used.
 - `routed` (Boolean) If set to `true`, the network is routed and therefore accessible from other networks.
-- `routing_table_id` (String) The ID of the routing table associated with the network.
+- `routing_table_id` (String) Can only be used when experimental "network" is set.
+The ID of the routing table associated with the network.
 
 ### Read-Only
 
