@@ -45,7 +45,7 @@ func DatasourceRead(ctx context.Context, req datasource.ReadRequest, resp *datas
 		return
 	}
 
-	err = mapDataSourceFields(ctx, networkResp, &model)
+	err = mapDataSourceFields(ctx, networkResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -58,7 +58,7 @@ func DatasourceRead(ctx context.Context, req datasource.ReadRequest, resp *datas
 	tflog.Info(ctx, "Network read")
 }
 
-func mapDataSourceFields(ctx context.Context, networkResp *iaasalpha.Network, model *networkModel.DataSourceModel) error {
+func mapDataSourceFields(ctx context.Context, networkResp *iaasalpha.Network, model *networkModel.DataSourceModel, region string) error {
 	if networkResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -75,7 +75,7 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaasalpha.Network, mo
 		return fmt.Errorf("network id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), networkId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, networkId)
 
 	labels, err := iaasUtils.MapLabels(ctx, networkResp.Labels, model.Labels)
 	if err != nil {
@@ -197,10 +197,16 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaasalpha.Network, mo
 		}
 	}
 
+	model.RoutingTableID = types.StringNull()
+	if networkResp.RoutingTableId != nil {
+		model.RoutingTableID = types.StringValue(*networkResp.RoutingTableId)
+	}
+
 	model.NetworkId = types.StringValue(networkId)
 	model.Name = types.StringPointerValue(networkResp.Name)
 	model.Labels = labels
 	model.Routed = types.BoolPointerValue(networkResp.Routed)
+	model.Region = types.StringValue(region)
 
 	return nil
 }

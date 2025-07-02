@@ -47,7 +47,8 @@ func (d *networkDataSource) Metadata(_ context.Context, req datasource.MetadataR
 }
 
 func (d *networkDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -64,7 +65,7 @@ func (d *networkDataSource) Configure(ctx context.Context, req datasource.Config
 		}
 		d.alphaClient = alphaApiClient
 	} else {
-		apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+		apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return
 		}
