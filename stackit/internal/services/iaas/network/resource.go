@@ -247,7 +247,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					validate.CIDR(),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"ipv4_prefix_length": schema.Int64Attribute{
@@ -255,7 +255,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Computed:    true,
 				Optional:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+					int64planmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"prefixes": schema.ListAttribute{
@@ -342,6 +342,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"routing_table_id": schema.StringAttribute{
 				Description: "Can only be used when experimental \"network\" is set.\nThe ID of the routing table associated with the network.",
 				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -356,7 +357,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Computed:    true,
 				Description: "Can only be used when experimental \"network\" is set.\nThe resource region. If not defined, the provider region is used.",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 		},

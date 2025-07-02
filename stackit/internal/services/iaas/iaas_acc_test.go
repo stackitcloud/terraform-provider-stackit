@@ -776,6 +776,7 @@ func TestAccNetworkV2Min(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "region"),
+					resource.TestCheckResourceAttrSet("stackit_network.network", "routing_table_id"),
 				),
 			},
 			// Data source
@@ -800,6 +801,7 @@ func TestAccNetworkV2Min(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "public_ip"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "region"),
+					resource.TestCheckResourceAttrSet("data.stackit_network.network", "routing_table_id"),
 				),
 			},
 
@@ -831,6 +833,7 @@ func TestAccNetworkV2Min(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "region"),
+					resource.TestCheckResourceAttrSet("stackit_network.network", "routing_table_id"),
 				),
 			},
 			// Update
@@ -845,6 +848,7 @@ func TestAccNetworkV2Min(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "region"),
+					resource.TestCheckResourceAttrSet("stackit_network.network", "routing_table_id"),
 				),
 			},
 			// Deletion is done by the framework implicitly

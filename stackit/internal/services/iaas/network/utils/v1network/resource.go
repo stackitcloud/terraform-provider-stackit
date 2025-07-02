@@ -356,6 +356,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *networkMod
 	model.Labels = labels
 	model.Routed = types.BoolPointerValue(networkResp.Routed)
 	model.Region = types.StringNull()
+	model.RoutingTableID = types.StringNull()
 
 	return nil
 }

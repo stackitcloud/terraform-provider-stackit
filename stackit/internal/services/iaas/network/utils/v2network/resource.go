@@ -296,6 +296,7 @@ func mapFields(ctx context.Context, networkResp *iaasalpha.Network, model *netwo
 			model.IPv4Prefix = types.StringValue(respPrefixes[0])
 			_, netmask, err := net.ParseCIDR(respPrefixes[0])
 			if err != nil {
+				tflog.Error(ctx, fmt.Sprintf("ipv4_prefix_length: %+v", err))
 				// silently ignore parsing error for the netmask
 				model.IPv4PrefixLength = types.Int64Null()
 			} else {
@@ -367,6 +368,12 @@ func mapFields(ctx context.Context, networkResp *iaasalpha.Network, model *netwo
 		model.IPv6Gateway = types.StringNull()
 	} else {
 		model.IPv6Gateway = types.StringPointerValue(networkResp.Ipv6.GetGateway())
+	}
+
+	if networkResp.RoutingTableId != nil {
+		model.RoutingTableID = types.StringPointerValue(networkResp.RoutingTableId)
+	} else {
+		model.RoutingTableID = types.StringNull()
 	}
 
 	model.NetworkId = types.StringValue(networkId)

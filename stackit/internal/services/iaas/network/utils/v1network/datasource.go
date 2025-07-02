@@ -192,6 +192,7 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	model.PublicIP = types.StringPointerValue(networkResp.PublicIp)
 	model.Labels = labels
 	model.Routed = types.BoolPointerValue(networkResp.Routed)
+	model.RoutingTableID = types.StringNull()
 
 	return nil
 }
