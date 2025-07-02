@@ -13,7 +13,7 @@ import (
 
 const (
 	RoutingTablesExperiment = "routing-tables"
-	NetworkExperiment = "network"
+	NetworkExperiment       = "network"
 )
 
 var AvailableExperiments = []string{"iam", RoutingTablesExperiment, NetworkExperiment}
@@ -32,7 +32,7 @@ func ValidExperiment(experiment string, diags *diag.Diagnostics) bool {
 
 // Check if an experiment is enabled.
 func CheckExperimentEnabled(ctx context.Context, data *core.ProviderData, experiment, resourceName string, resourceType core.ResourceType, diags *diag.Diagnostics) {
-	if CheckExperimentEnabledWithoutError(ctx, data, experiment, resourceType, diags) {
+	if CheckExperimentEnabledWithoutError(ctx, data, experiment, resourceName, resourceType, diags) {
 		return
 	}
 	errTitle := fmt.Sprintf("%s is part of the %s experiment, which is currently disabled by default", resourceName, experiment)
@@ -41,7 +41,7 @@ func CheckExperimentEnabled(ctx context.Context, data *core.ProviderData, experi
 	diags.AddError(errTitle, errContent)
 }
 
-func CheckExperimentEnabledWithoutError(ctx context.Context, data *core.ProviderData, experiment, resourceType string, diags *diag.Diagnostics) bool {
+func CheckExperimentEnabledWithoutError(ctx context.Context, data *core.ProviderData, experiment, resourceName string, resourceType core.ResourceType, diags *diag.Diagnostics) bool {
 	if !ValidExperiment(experiment, diags) {
 		errTitle := fmt.Sprintf("The experiment %s does not exist.", experiment)
 		errContent := "This is a bug in the STACKIT Terraform Provider. Please open an issue here: https://github.com/stackitcloud/terraform-provider-stackit/issues"
@@ -53,8 +53,8 @@ func CheckExperimentEnabledWithoutError(ctx context.Context, data *core.Provider
 	})
 
 	if experimentActive {
-		warnTitle := fmt.Sprintf("%s is part of the %s experiment.", resourceType, experiment)
-		warnContent := fmt.Sprintf("This resource is part of the %s experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.", experiment)
+		warnTitle := fmt.Sprintf("%s is part of the %s experiment.", resourceName, experiment)
+		warnContent := fmt.Sprintf("This %s is part of the %s experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.", resourceType, experiment)
 		tflog.Warn(ctx, fmt.Sprintf("%s | %s", warnTitle, warnContent))
 		diags.AddWarning(warnTitle, warnContent)
 		return true

@@ -252,117 +252,121 @@ func mapFields(ctx context.Context, networkResp *iaasalpha.Network, model *netwo
 	}
 
 	// IPv4
-	model.Nameservers = types.ListNull(types.StringType)
-	model.IPv4Nameservers = types.ListNull(types.StringType)
-	model.Prefixes = types.ListNull(types.StringType)
-	model.IPv4Prefixes = types.ListNull(types.StringType)
-	model.IPv4Gateway = types.StringNull()
-	model.PublicIP = types.StringNull()
-	if networkResp.Ipv4 != nil {
-		if networkResp.Ipv4.Nameservers != nil {
-			respNameservers := *networkResp.Ipv4.Nameservers
-			modelNameservers, err := utils.ListValuetoStringSlice(model.Nameservers)
-			modelIPv4Nameservers, errIpv4 := utils.ListValuetoStringSlice(model.IPv4Nameservers)
+
+	if networkResp.Ipv4 == nil || networkResp.Ipv4.Nameservers == nil {
+		model.Nameservers = types.ListNull(types.StringType)
+		model.IPv4Nameservers = types.ListNull(types.StringType)
+	} else {
+		respNameservers := *networkResp.Ipv4.Nameservers
+		modelNameservers, err := utils.ListValuetoStringSlice(model.Nameservers)
+		modelIPv4Nameservers, errIpv4 := utils.ListValuetoStringSlice(model.IPv4Nameservers)
+		if err != nil {
+			return fmt.Errorf("get current network nameservers from model: %w", err)
+		}
+		if errIpv4 != nil {
+			return fmt.Errorf("get current IPv4 network nameservers from model: %w", errIpv4)
+		}
+
+		reconciledNameservers := utils.ReconcileStringSlices(modelNameservers, respNameservers)
+		reconciledIPv4Nameservers := utils.ReconcileStringSlices(modelIPv4Nameservers, respNameservers)
+
+		nameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledNameservers)
+		ipv4NameserversTF, ipv4Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv4Nameservers)
+		if diags.HasError() {
+			return fmt.Errorf("map network nameservers: %w", core.DiagsToError(diags))
+		}
+		if ipv4Diags.HasError() {
+			return fmt.Errorf("map IPv4 network nameservers: %w", core.DiagsToError(ipv4Diags))
+		}
+
+		model.Nameservers = nameserversTF
+		model.IPv4Nameservers = ipv4NameserversTF
+	}
+
+	if networkResp.Ipv4 == nil || networkResp.Ipv4.Prefixes == nil {
+		model.Prefixes = types.ListNull(types.StringType)
+		model.IPv4Prefixes = types.ListNull(types.StringType)
+	} else {
+		respPrefixes := *networkResp.Ipv4.Prefixes
+		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
+		if diags.HasError() {
+			return fmt.Errorf("map network prefixes: %w", core.DiagsToError(diags))
+		}
+		if len(respPrefixes) > 0 {
+			model.IPv4Prefix = types.StringValue(respPrefixes[0])
+			_, netmask, err := net.ParseCIDR(respPrefixes[0])
 			if err != nil {
-				return fmt.Errorf("get current network nameservers from model: %w", err)
+				// silently ignore parsing error for the netmask
+				model.IPv4PrefixLength = types.Int64Null()
+			} else {
+				ones, _ := netmask.Mask.Size()
+				model.IPv4PrefixLength = types.Int64Value(int64(ones))
 			}
-			if errIpv4 != nil {
-				return fmt.Errorf("get current IPv4 network nameservers from model: %w", errIpv4)
-			}
-
-			reconciledNameservers := utils.ReconcileStringSlices(modelNameservers, respNameservers)
-			reconciledIPv4Nameservers := utils.ReconcileStringSlices(modelIPv4Nameservers, respNameservers)
-
-			nameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledNameservers)
-			ipv4NameserversTF, ipv4Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv4Nameservers)
-			if diags.HasError() {
-				return fmt.Errorf("map network nameservers: %w", core.DiagsToError(diags))
-			}
-			if ipv4Diags.HasError() {
-				return fmt.Errorf("map IPv4 network nameservers: %w", core.DiagsToError(ipv4Diags))
-			}
-
-			model.Nameservers = nameserversTF
-			model.IPv4Nameservers = ipv4NameserversTF
 		}
 
-		if networkResp.Ipv4.Prefixes != nil {
-			respPrefixes := *networkResp.Ipv4.Prefixes
-			prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
-			if diags.HasError() {
-				return fmt.Errorf("map network prefixes: %w", core.DiagsToError(diags))
-			}
-			if len(respPrefixes) > 0 {
-				model.IPv4Prefix = types.StringValue(respPrefixes[0])
-				_, netmask, err := net.ParseCIDR(respPrefixes[0])
-				if err != nil {
-					// silently ignore parsing error for the netmask
-					model.IPv4PrefixLength = types.Int64Null()
-				} else {
-					ones, _ := netmask.Mask.Size()
-					model.IPv4PrefixLength = types.Int64Value(int64(ones))
-				}
-			}
+		model.Prefixes = prefixesTF
+		model.IPv4Prefixes = prefixesTF
+	}
 
-			model.Prefixes = prefixesTF
-			model.IPv4Prefixes = prefixesTF
-		}
+	if networkResp.Ipv4 == nil || networkResp.Ipv4.Gateway == nil {
+		model.IPv4Gateway = types.StringNull()
+	} else {
+		model.IPv4Gateway = types.StringPointerValue(networkResp.Ipv4.GetGateway())
+	}
 
-		if networkResp.Ipv4.Gateway != nil {
-			model.IPv4Gateway = types.StringPointerValue(networkResp.Ipv4.GetGateway())
-		}
-
-		if networkResp.Ipv4.PublicIp != nil {
-			model.PublicIP = types.StringPointerValue(networkResp.Ipv4.PublicIp)
-		}
+	if networkResp.Ipv4 == nil || networkResp.Ipv4.PublicIp == nil {
+		model.PublicIP = types.StringNull()
+	} else {
+		model.PublicIP = types.StringPointerValue(networkResp.Ipv4.PublicIp)
 	}
 
 	// IPv6
 
-	model.IPv6Nameservers = types.ListNull(types.StringType)
-	model.IPv6Prefixes = types.ListNull(types.StringType)
-	model.IPv6Gateway = types.StringNull()
-	if networkResp.Ipv6 != nil {
-		if networkResp.Ipv6.Nameservers != nil {
-			respIPv6Nameservers := *networkResp.Ipv6.Nameservers
-			modelIPv6Nameservers, errIpv6 := utils.ListValuetoStringSlice(model.IPv6Nameservers)
-			if errIpv6 != nil {
-				return fmt.Errorf("get current IPv6 network nameservers from model: %w", errIpv6)
-			}
-
-			reconciledIPv6Nameservers := utils.ReconcileStringSlices(modelIPv6Nameservers, respIPv6Nameservers)
-
-			ipv6NameserversTF, ipv6Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv6Nameservers)
-			if ipv6Diags.HasError() {
-				return fmt.Errorf("map IPv6 network nameservers: %w", core.DiagsToError(ipv6Diags))
-			}
-
-			model.IPv6Nameservers = ipv6NameserversTF
+	if networkResp.Ipv6 == nil || networkResp.Ipv6.Nameservers == nil {
+		model.IPv6Nameservers = types.ListNull(types.StringType)
+	} else {
+		respIPv6Nameservers := *networkResp.Ipv6.Nameservers
+		modelIPv6Nameservers, errIpv6 := utils.ListValuetoStringSlice(model.IPv6Nameservers)
+		if errIpv6 != nil {
+			return fmt.Errorf("get current IPv6 network nameservers from model: %w", errIpv6)
 		}
 
-		if networkResp.Ipv6.Prefixes != nil {
-			respPrefixesV6 := *networkResp.Ipv6.Prefixes
-			prefixesV6TF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixesV6)
-			if diags.HasError() {
-				return fmt.Errorf("map network IPv6 prefixes: %w", core.DiagsToError(diags))
-			}
-			if len(respPrefixesV6) > 0 {
-				model.IPv6Prefix = types.StringValue(respPrefixesV6[0])
-				_, netmask, err := net.ParseCIDR(respPrefixesV6[0])
-				if err != nil {
-					// silently ignore parsing error for the netmask
-					model.IPv6PrefixLength = types.Int64Null()
-				} else {
-					ones, _ := netmask.Mask.Size()
-					model.IPv6PrefixLength = types.Int64Value(int64(ones))
-				}
-			}
-			model.IPv6Prefixes = prefixesV6TF
+		reconciledIPv6Nameservers := utils.ReconcileStringSlices(modelIPv6Nameservers, respIPv6Nameservers)
+
+		ipv6NameserversTF, ipv6Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv6Nameservers)
+		if ipv6Diags.HasError() {
+			return fmt.Errorf("map IPv6 network nameservers: %w", core.DiagsToError(ipv6Diags))
 		}
 
-		if networkResp.Ipv6.Gateway != nil {
-			model.IPv6Gateway = types.StringPointerValue(networkResp.Ipv6.GetGateway())
+		model.IPv6Nameservers = ipv6NameserversTF
+	}
+
+	if networkResp.Ipv6 == nil || networkResp.Ipv6.Prefixes == nil {
+		model.IPv6Prefixes = types.ListNull(types.StringType)
+	} else {
+		respPrefixesV6 := *networkResp.Ipv6.Prefixes
+		prefixesV6TF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixesV6)
+		if diags.HasError() {
+			return fmt.Errorf("map network IPv6 prefixes: %w", core.DiagsToError(diags))
 		}
+		if len(respPrefixesV6) > 0 {
+			model.IPv6Prefix = types.StringValue(respPrefixesV6[0])
+			_, netmask, err := net.ParseCIDR(respPrefixesV6[0])
+			if err != nil {
+				// silently ignore parsing error for the netmask
+				model.IPv6PrefixLength = types.Int64Null()
+			} else {
+				ones, _ := netmask.Mask.Size()
+				model.IPv6PrefixLength = types.Int64Value(int64(ones))
+			}
+		}
+		model.IPv6Prefixes = prefixesV6TF
+	}
+
+	if networkResp.Ipv6 == nil || networkResp.Ipv6.Gateway == nil {
+		model.IPv6Gateway = types.StringNull()
+	} else {
+		model.IPv6Gateway = types.StringPointerValue(networkResp.Ipv6.GetGateway())
 	}
 
 	model.NetworkId = types.StringValue(networkId)

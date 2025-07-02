@@ -30,9 +30,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
-// This resource is part of the "network" experiment
-var experiment = "network"
-
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &networkResource{}
@@ -67,7 +64,7 @@ func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureR
 		return
 	}
 
-	r.isExperimental = features.CheckExperimentEnabledWithoutError(ctx, &r.providerData, experiment, "stackit_network", &resp.Diagnostics)
+	r.isExperimental = features.CheckExperimentEnabledWithoutError(ctx, &r.providerData, features.NetworkExperiment, "stackit_network", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

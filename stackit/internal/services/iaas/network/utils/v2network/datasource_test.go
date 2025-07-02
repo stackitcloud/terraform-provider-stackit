@@ -12,11 +12,16 @@ import (
 	networkModel "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network/utils/model"
 )
 
+const (
+	testRegion = "region"
+)
+
 func TestMapDataSourceFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       networkModel.DataSourceModel
 		input       *iaasalpha.Network
+		region      string
 		expected    networkModel.DataSourceModel
 		isValid     bool
 	}{
@@ -32,8 +37,9 @@ func TestMapDataSourceFields(t *testing.T) {
 					Gateway: iaasalpha.NewNullableString(nil),
 				},
 			},
+			testRegion,
 			networkModel.DataSourceModel{
-				Id:               types.StringValue("pid,nid"),
+				Id:               types.StringValue("pid,region,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
 				Name:             types.StringNull(),
@@ -52,6 +58,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				PublicIP:         types.StringNull(),
 				Labels:           types.MapNull(types.StringType),
 				Routed:           types.BoolNull(),
+				Region:           types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -92,8 +99,9 @@ func TestMapDataSourceFields(t *testing.T) {
 				},
 				Routed: utils.Ptr(true),
 			},
+			testRegion,
 			networkModel.DataSourceModel{
-				Id:        types.StringValue("pid,nid"),
+				Id:        types.StringValue("pid,region,nid"),
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Name:      types.StringValue("name"),
@@ -132,6 +140,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Routed:      types.BoolValue(true),
 				IPv4Gateway: types.StringValue("gateway"),
 				IPv6Gateway: types.StringValue("gateway"),
+				Region:      types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -158,8 +167,9 @@ func TestMapDataSourceFields(t *testing.T) {
 					},
 				},
 			},
+			testRegion,
 			networkModel.DataSourceModel{
-				Id:              types.StringValue("pid,nid"),
+				Id:              types.StringValue("pid,region,nid"),
 				ProjectId:       types.StringValue("pid"),
 				NetworkId:       types.StringValue("nid"),
 				Name:            types.StringNull(),
@@ -176,6 +186,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					types.StringValue("ns3"),
 				}),
 				Labels: types.MapNull(types.StringType),
+				Region: types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -198,8 +209,9 @@ func TestMapDataSourceFields(t *testing.T) {
 					},
 				},
 			},
+			testRegion,
 			networkModel.DataSourceModel{
-				Id:              types.StringValue("pid,nid"),
+				Id:              types.StringValue("pid,region,nid"),
 				ProjectId:       types.StringValue("pid"),
 				NetworkId:       types.StringValue("nid"),
 				Name:            types.StringNull(),
@@ -213,6 +225,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					types.StringValue("ns3"),
 				}),
 				Labels: types.MapNull(types.StringType),
+				Region: types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -235,8 +248,9 @@ func TestMapDataSourceFields(t *testing.T) {
 					},
 				},
 			},
+			testRegion,
 			networkModel.DataSourceModel{
-				Id:               types.StringValue("pid,nid"),
+				Id:               types.StringValue("pid,region,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
 				Name:             types.StringNull(),
@@ -256,6 +270,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					types.StringValue("10.100.20.0/16"),
 					types.StringValue("10.100.10.0/16"),
 				}),
+				Region: types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -278,8 +293,9 @@ func TestMapDataSourceFields(t *testing.T) {
 					},
 				},
 			},
+			testRegion,
 			networkModel.DataSourceModel{
-				Id:               types.StringValue("pid,nid"),
+				Id:               types.StringValue("pid,region,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
 				Name:             types.StringNull(),
@@ -296,6 +312,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					types.StringValue("fd12:3456:789a:3::/64"),
 					types.StringValue("fd12:3456:789a:4::/64"),
 				}),
+				Region: types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -308,8 +325,9 @@ func TestMapDataSourceFields(t *testing.T) {
 			&iaasalpha.Network{
 				Id: utils.Ptr("nid"),
 			},
+			testRegion,
 			networkModel.DataSourceModel{
-				Id:               types.StringValue("pid,nid"),
+				Id:               types.StringValue("pid,region,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
 				Name:             types.StringNull(),
@@ -326,6 +344,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				PublicIP:         types.StringNull(),
 				Labels:           types.MapNull(types.StringType),
 				Routed:           types.BoolNull(),
+				Region:           types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -333,6 +352,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			"response_nil_fail",
 			networkModel.DataSourceModel{},
 			nil,
+			testRegion,
 			networkModel.DataSourceModel{},
 			false,
 		},
@@ -342,13 +362,14 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 			},
 			&iaasalpha.Network{},
+			testRegion,
 			networkModel.DataSourceModel{},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapDataSourceFields(context.Background(), tt.input, &tt.state)
+			err := mapDataSourceFields(context.Background(), tt.input, &tt.state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

@@ -53,7 +53,7 @@ func (d *networkDataSource) Configure(ctx context.Context, req datasource.Config
 		return
 	}
 
-	d.isExperimental = features.CheckExperimentEnabledWithoutError(ctx, &d.providerData, experiment, "stackit_network", &resp.Diagnostics)
+	d.isExperimental = features.CheckExperimentEnabledWithoutError(ctx, &d.providerData, features.NetworkExperiment, "stackit_network", core.Datasource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
