@@ -63,7 +63,7 @@ func (g *gitDataSource) Metadata(_ context.Context, req datasource.MetadataReque
 // Schema defines the schema for the git data source.
 func (g *gitDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Git Instance datasource schema."),
+		MarkdownDescription: features.AddBetaDescription("Git Instance datasource schema.", core.Datasource),
 		Description:         "Git Instance datasource schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
