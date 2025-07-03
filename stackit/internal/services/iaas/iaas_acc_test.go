@@ -867,6 +867,7 @@ func TestAccNetworkV2Max(t *testing.T) {
 				ConfigVariables: testConfigNetworkV2VarsMax,
 				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceNetworkV2MaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					// TODO: enable test cases for prefix option, when the API works again
 					// Network with prefix
 					// resource.TestCheckResourceAttrSet("stackit_network.network_prefix", "network_id"),
 					// resource.TestCheckResourceAttr("stackit_network.network_prefix", "project_id", testutil.ConvertConfigVariable(testConfigNetworkV2VarsMax["project_id"])),
@@ -945,6 +946,7 @@ func TestAccNetworkV2Max(t *testing.T) {
 					testutil.IaaSProviderConfigWithExperiments(), resourceNetworkV2MaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					// TODO: enable test cases for prefix option, when the API works again
 					// Network with prefix
 					// resource.TestCheckResourceAttrSet("data.stackit_network.network_prefix", "network_id"),
 					// resource.TestCheckResourceAttr("data.stackit_network.network_prefix", "project_id", testutil.ConvertConfigVariable(testConfigNetworkV2VarsMax["project_id"])),
@@ -995,6 +997,7 @@ func TestAccNetworkV2Max(t *testing.T) {
 				),
 			},
 			// Import
+			// TODO: enable test cases for prefix option, when the API works again
 			//{
 			//	ConfigVariables: testConfigNetworkV2VarsMax,
 			//	ResourceName:    "stackit_network.network_prefix",
@@ -1064,6 +1067,7 @@ func TestAccNetworkV2Max(t *testing.T) {
 				ConfigVariables: testConfigNetworkV2VarsMaxUpdated,
 				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceNetworkV2MaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					// TODO: enable test cases for prefix option, when the API works again
 					//resource.TestCheckResourceAttrSet("stackit_network.network_prefix", "network_id"),
 					//resource.TestCheckResourceAttr("stackit_network.network_prefix", "project_id", testutil.ConvertConfigVariable(testConfigNetworkV2VarsMaxUpdated["project_id"])),
 					//resource.TestCheckResourceAttr("stackit_network.network_prefix", "name", testutil.ConvertConfigVariable(testConfigNetworkV2VarsMaxUpdated["name"])),

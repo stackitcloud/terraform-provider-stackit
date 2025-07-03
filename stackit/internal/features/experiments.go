@@ -14,9 +14,10 @@ import (
 const (
 	RoutingTablesExperiment = "routing-tables"
 	NetworkExperiment       = "network"
+	IamExperiment           = "iam"
 )
 
-var AvailableExperiments = []string{"iam", RoutingTablesExperiment, NetworkExperiment}
+var AvailableExperiments = []string{IamExperiment, RoutingTablesExperiment, NetworkExperiment}
 
 // Check if an experiment is valid.
 func ValidExperiment(experiment string, diags *diag.Diagnostics) bool {

@@ -83,9 +83,10 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 
 	// IPv4
 
-	model.Nameservers = types.ListNull(types.StringType)
-	model.IPv4Nameservers = types.ListNull(types.StringType)
-	if networkResp.Nameservers != nil {
+	if networkResp.Nameservers == nil {
+		model.Nameservers = types.ListNull(types.StringType)
+		model.IPv4Nameservers = types.ListNull(types.StringType)
+	} else {
 		respNameservers := *networkResp.Nameservers
 		modelNameservers, err := utils.ListValuetoStringSlice(model.Nameservers)
 		modelIPv4Nameservers, errIpv4 := utils.ListValuetoStringSlice(model.IPv4Nameservers)
@@ -112,9 +113,10 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 		model.IPv4Nameservers = ipv4NameserversTF
 	}
 
-	model.Prefixes = types.ListNull(types.StringType)
-	model.IPv4Prefixes = types.ListNull(types.StringType)
-	if networkResp.Prefixes != nil {
+	if networkResp.Prefixes == nil {
+		model.Prefixes = types.ListNull(types.StringType)
+		model.IPv4Prefixes = types.ListNull(types.StringType)
+	} else {
 		respPrefixes := *networkResp.Prefixes
 		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
 		if diags.HasError() {
@@ -143,8 +145,9 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 
 	// IPv6
 
-	model.IPv6Nameservers = types.ListNull(types.StringType)
-	if networkResp.NameserversV6 != nil {
+	if networkResp.NameserversV6 == nil {
+		model.IPv6Nameservers = types.ListNull(types.StringType)
+	} else {
 		respIPv6Nameservers := *networkResp.NameserversV6
 		modelIPv6Nameservers, errIpv6 := utils.ListValuetoStringSlice(model.IPv6Nameservers)
 		if errIpv6 != nil {
@@ -161,8 +164,9 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 		model.IPv6Nameservers = ipv6NameserversTF
 	}
 
-	model.IPv6Prefixes = types.ListNull(types.StringType)
-	if networkResp.PrefixesV6 != nil {
+	if networkResp.PrefixesV6 == nil {
+		model.IPv6Prefixes = types.ListNull(types.StringType)
+	} else {
 		respPrefixesV6 := *networkResp.PrefixesV6
 		prefixesV6TF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixesV6)
 		if diags.HasError() {
@@ -193,6 +197,7 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	model.Labels = labels
 	model.Routed = types.BoolPointerValue(networkResp.Routed)
 	model.RoutingTableID = types.StringNull()
+	model.Region = types.StringNull()
 
 	return nil
 }

@@ -21,7 +21,7 @@ func TestValidExperiment(t *testing.T) {
 		{
 			name: "valid",
 			args: args{
-				experiment: "iam",
+				experiment: IamExperiment,
 				diags:      &diag.Diagnostics{},
 			},
 			want: true,
@@ -64,9 +64,9 @@ func TestCheckExperimentEnabled(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				data: &core.ProviderData{
-					Experiments: []string{"iam"},
+					Experiments: []string{IamExperiment},
 				},
-				experiment:   "iam",
+				experiment:   IamExperiment,
 				resourceType: core.Resource,
 				diags:        &diag.Diagnostics{},
 			},
@@ -80,7 +80,7 @@ func TestCheckExperimentEnabled(t *testing.T) {
 				data: &core.ProviderData{
 					Experiments: []string{},
 				},
-				experiment:   "iam",
+				experiment:   IamExperiment,
 				resourceType: core.Resource,
 				diags:        &diag.Diagnostics{},
 			},
@@ -92,7 +92,7 @@ func TestCheckExperimentEnabled(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				data: &core.ProviderData{
-					Experiments: []string{"iam"},
+					Experiments: []string{IamExperiment},
 				},
 				experiment:   "foobar",
 				resourceType: core.Resource,

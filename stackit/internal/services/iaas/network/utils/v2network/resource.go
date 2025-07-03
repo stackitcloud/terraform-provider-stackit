@@ -2,7 +2,6 @@ package v2network
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -479,9 +478,6 @@ func toCreatePayload(ctx context.Context, model *networkModel.Model) (*iaasalpha
 		Ipv6:           ipv6Body,
 		RoutingTableId: conversion.StringValueToPointer(model.RoutingTableID),
 	}
-
-	payloadMap, _ := json.Marshal(payload)
-	tflog.Info(ctx, fmt.Sprintf("creating network resource: %+v", string(payloadMap)))
 
 	return &payload, nil
 }
