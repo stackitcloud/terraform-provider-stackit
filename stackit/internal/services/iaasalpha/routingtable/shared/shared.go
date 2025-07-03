@@ -205,7 +205,8 @@ func RoutingTableResponseAttributes() map[string]schema.Attribute {
 			Computed:    true,
 		},
 		"system_routes": schema.BoolAttribute{
-			Computed: true,
+			Description: "This controls whether we automatically create routes for project-to-project communication or not.",
+			Computed:    true,
 		},
 		"created_at": schema.StringAttribute{
 			Description: "Date-time when the routing table was created",
