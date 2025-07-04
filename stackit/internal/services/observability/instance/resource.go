@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
@@ -1094,19 +1095,40 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	// Update existing instance
-	_, err = r.client.UpdateInstance(ctx, instanceId, projectId).UpdateInstancePayload(*payload).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
+	var previousState Model
+	diags = req.State.Get(ctx, &previousState)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, instanceId, projectId).WaitWithContext(ctx)
+	previousStatePayload, err := toUpdatePayload(&previousState)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating previous state payload: %v", err))
 		return
+	}
+	var instance *observability.GetInstanceResponse
+	// This check is required, because when values should be updated, that needs to be updated via a different endpoint, the waiter will run into a timeout
+	if !cmp.Equal(previousStatePayload, payload) {
+		// Update existing instance
+		_, err = r.client.UpdateInstance(ctx, instanceId, projectId).UpdateInstancePayload(*payload).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
+			return
+		}
+		instance, err = wait.UpdateInstanceWaitHandler(ctx, r.client, instanceId, projectId).WaitWithContext(ctx)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
+			return
+		}
+	} else {
+		instance, err = r.client.GetInstanceExecute(ctx, instanceId, projectId)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance read: %v", err))
+			return
+		}
 	}
 
-	err = mapFields(ctx, waitResp, &model)
+	err = mapFields(ctx, instance, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
