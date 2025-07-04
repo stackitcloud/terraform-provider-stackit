@@ -44,5 +44,5 @@ data "stackit_routing_table" "example" {
 - `id` (String) Terraform's internal datasource ID. It is structured as "`organization_id`,`region`,`network_area_id`,`routing_table_id`".
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `name` (String) The name of the routing table.
-- `system_routes` (Boolean)
+- `system_routes` (Boolean) This controls whether we automatically create routes for project-to-project communication or not.
 - `updated_at` (String) Date-time when the routing table was updated
