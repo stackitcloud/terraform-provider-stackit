@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"strings"
 	"sync"
@@ -18,8 +19,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-
-	"maps"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -123,7 +122,7 @@ func TestAccRoutingTable(t *testing.T) {
 				// Creation
 				{
 					ConfigVariables: testConfigRoutingTableMin,
-					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceRoutingTableMinConfig),
+					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMinConfig),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						// Routing table
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMin["organization_id"])),
@@ -158,7 +157,7 @@ func TestAccRoutingTable(t *testing.T) {
 						network_area_id  = stackit_routing_table.routing_table.network_area_id
 					}
 					`,
-						testutil.IaaSProviderConfig(), resourceRoutingTableMinConfig,
+						testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMinConfig,
 					),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						// Routing table
@@ -232,7 +231,7 @@ func TestAccRoutingTable(t *testing.T) {
 				// Update
 				{
 					ConfigVariables: testConfigRoutingTableMinUpdated,
-					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceRoutingTableMinConfig),
+					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMinConfig),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						// Routing table
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMinUpdated["organization_id"])),
@@ -261,7 +260,7 @@ func TestAccRoutingTable(t *testing.T) {
 				// Creation
 				{
 					ConfigVariables: testConfigRoutingTableMax,
-					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceRoutingTableMaxConfig),
+					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMaxConfig),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						// Routing table
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMax["organization_id"])),
@@ -297,7 +296,7 @@ func TestAccRoutingTable(t *testing.T) {
 						network_area_id  = stackit_routing_table.routing_table.network_area_id
 					}
 					`,
-						testutil.IaaSProviderConfig(), resourceRoutingTableMaxConfig,
+						testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMaxConfig,
 					),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						// Routing table
@@ -373,7 +372,7 @@ func TestAccRoutingTable(t *testing.T) {
 				// Update
 				{
 					ConfigVariables: testConfigRoutingTableMaxUpdated,
-					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceRoutingTableMaxConfig),
+					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMaxConfig),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						// Routing table
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMaxUpdated["organization_id"])),
@@ -403,7 +402,7 @@ func TestAccRoutingTable(t *testing.T) {
 				// Creation
 				{
 					ConfigVariables: testConfigRoutingTableRouteMin,
-					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceRoutingTableRouteMinConfig),
+					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMinConfig),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						// Routing table
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["organization_id"])),
@@ -451,7 +450,7 @@ func TestAccRoutingTable(t *testing.T) {
 						routing_table_id = stackit_routing_table_route.route.routing_table_id
 					}
 					`,
-						testutil.IaaSProviderConfig(), resourceRoutingTableRouteMinConfig,
+						testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMinConfig,
 					),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						// Routing table route
@@ -529,7 +528,7 @@ func TestAccRoutingTable(t *testing.T) {
 				// Update
 				{
 					ConfigVariables: testConfigRoutingTableRouteMinUpdated,
-					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceRoutingTableRouteMinConfig),
+					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMinConfig),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						// Routing table
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMinUpdated["organization_id"])),
@@ -569,7 +568,7 @@ func TestAccRoutingTable(t *testing.T) {
 				// Creation
 				{
 					ConfigVariables: testConfigRoutingTableRouteMax,
-					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceRoutingTableRouteMaxConfig),
+					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMaxConfig),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						// Routing table
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["organization_id"])),
@@ -618,7 +617,7 @@ func TestAccRoutingTable(t *testing.T) {
 						routing_table_id = stackit_routing_table_route.route.routing_table_id
 					}
 					`,
-						testutil.IaaSProviderConfig(), resourceRoutingTableRouteMaxConfig,
+						testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMaxConfig,
 					),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						// Routing table route
@@ -698,7 +697,7 @@ func TestAccRoutingTable(t *testing.T) {
 				// Update
 				{
 					ConfigVariables: testConfigRoutingTableRouteMaxUpdated,
-					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceRoutingTableRouteMaxConfig),
+					Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMaxConfig),
 					Check: resource.ComposeAggregateTestCheckFunc(
 						// Routing table
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMaxUpdated["organization_id"])),
