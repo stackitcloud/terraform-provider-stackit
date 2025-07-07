@@ -23,7 +23,8 @@ resource "stackit_cdn_distribution" "example_distribution" {
       type       = "http"
       origin_url = "mybackend.onstackit.cloud"
     }
-    regions = ["EU", "US", "ASIA", "AF", "SA"]
+    regions           = ["EU", "US", "ASIA", "AF", "SA"]
+    blocked_countries = ["DE", "AT", "CH"]
   }
 }
 ```
@@ -53,6 +54,10 @@ Required:
 
 - `backend` (Attributes) The configured backend for the distribution (see [below for nested schema](#nestedatt--config--backend))
 - `regions` (List of String) The configured regions where content will be hosted
+
+Read-Only:
+
+- `blocked_countries` (List of String) The configured countries where distribution of content is blocked
 
 <a id="nestedatt--config--backend"></a>
 ### Nested Schema for `config.backend`
