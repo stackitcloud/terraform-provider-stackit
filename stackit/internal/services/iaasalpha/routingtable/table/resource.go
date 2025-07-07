@@ -168,7 +168,7 @@ func (r *routingTableResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 			"system_routes": schema.BoolAttribute{
-				Description: "This controls whether we automatically create routes for project-to-project communication or not.",
+				Description: "This controls whether the routes for project-to-project communication are created automatically or not.",
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
