@@ -168,9 +168,10 @@ func (r *routingTableResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 			"system_routes": schema.BoolAttribute{
-				Optional: true,
-				Computed: true,
-				Default:  booldefault.StaticBool(true),
+				Description: "This controls whether the routes for project-to-project communication are created automatically or not.",
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(true),
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
 				},
