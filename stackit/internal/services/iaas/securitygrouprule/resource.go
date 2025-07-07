@@ -34,10 +34,14 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_             resource.Resource                = &securityGroupRuleResource{}
-	_             resource.ResourceWithConfigure   = &securityGroupRuleResource{}
-	_             resource.ResourceWithImportState = &securityGroupRuleResource{}
-	icmpProtocols                                  = []string{"icmp", "ipv6-icmp"}
+	_                       resource.Resource                = &securityGroupRuleResource{}
+	_                       resource.ResourceWithConfigure   = &securityGroupRuleResource{}
+	_                       resource.ResourceWithImportState = &securityGroupRuleResource{}
+	icmpProtocols                                            = []string{"icmp", "ipv6-icmp"}
+	protocolsPossibleValues                                  = []string{
+		"ah", "dccp", "egp", "esp", "gre", "icmp", "igmp", "ipip", "ipv6-encap", "ipv6-frag", "ipv6-icmp",
+		"ipv6-nonxt", "ipv6-opts", "ipv6-route", "ospf", "pgm", "rsvp", "sctp", "tcp", "udp", "udplite", "vrrp",
+	}
 )
 
 type Model struct {
@@ -329,7 +333,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				},
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						Description: "The protocol name which the rule should match. Either `name` or `number` must be provided.",
+						Description: fmt.Sprintf("The protocol name which the rule should match. Either `name` or `number` must be provided. %s", utils.FormatPossibleValues(protocolsPossibleValues...)),
 						Optional:    true,
 						Computed:    true,
 						Validators: []validator.String{
@@ -568,15 +572,7 @@ func mapFields(securityGroupRuleResp *iaas.SecurityGroupRule, model *Model) erro
 		return fmt.Errorf("security group rule id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		model.SecurityGroupId.ValueString(),
-		securityGroupRuleId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
-
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.SecurityGroupId.ValueString(), securityGroupRuleId)
 	model.SecurityGroupRuleId = types.StringValue(securityGroupRuleId)
 	model.Direction = types.StringPointerValue(securityGroupRuleResp.Direction)
 	model.Description = types.StringPointerValue(securityGroupRuleResp.Description)

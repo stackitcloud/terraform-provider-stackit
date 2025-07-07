@@ -39,7 +39,7 @@ Defaulting to the provider feature flag.`, value)
 //
 // Should be called in the Configure method of a beta resource.
 // Then, check for Errors in the diags using the diags.HasError() method.
-func CheckBetaResourcesEnabled(ctx context.Context, data *core.ProviderData, diags *diag.Diagnostics, resourceName, resourceType string) {
+func CheckBetaResourcesEnabled(ctx context.Context, data *core.ProviderData, diags *diag.Diagnostics, resourceName string, resourceType core.ResourceType) {
 	if !BetaResourcesEnabled(ctx, data, diags) {
 		core.LogAndAddErrorBeta(ctx, diags, resourceName, resourceType)
 		return
@@ -47,11 +47,11 @@ func CheckBetaResourcesEnabled(ctx context.Context, data *core.ProviderData, dia
 	core.LogAndAddWarningBeta(ctx, diags, resourceName, resourceType)
 }
 
-func AddBetaDescription(description string) string {
+func AddBetaDescription(description string, resourceType core.ResourceType) string {
 	// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
 	return fmt.Sprintf("%s\n\n~> %s %s",
 		description,
-		"This resource is in beta and may be subject to breaking changes in the future. Use with caution.",
+		fmt.Sprintf("This %s is in beta and may be subject to breaking changes in the future. Use with caution.", resourceType),
 		"See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.",
 	)
 }

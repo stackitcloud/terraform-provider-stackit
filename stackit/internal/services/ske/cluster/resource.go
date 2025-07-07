@@ -83,6 +83,7 @@ type Model struct {
 	Hibernations              types.List   `tfsdk:"hibernations"`
 	Extensions                types.Object `tfsdk:"extensions"`
 	EgressAddressRanges       types.List   `tfsdk:"egress_address_ranges"`
+	PodAddressRanges          types.List   `tfsdk:"pod_address_ranges"`
 	Region                    types.String `tfsdk:"region"`
 }
 
@@ -381,6 +382,11 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"egress_address_ranges": schema.ListAttribute{
 				Description: "The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
+			"pod_address_ranges": schema.ListAttribute{
+				Description: "The network ranges (in CIDR notation) used by pods of the cluster.",
 				Computed:    true,
 				ElementType: types.StringType,
 			},
@@ -1360,14 +1366,8 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model, region string) er
 		return fmt.Errorf("name not present")
 	}
 	m.Name = types.StringValue(name)
-	idParts := []string{
-		m.ProjectId.ValueString(),
-		region,
-		name,
-	}
-	m.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+
+	m.Id = utils.BuildInternalTerraformId(m.ProjectId.ValueString(), region, name)
 	m.Region = types.StringValue(region)
 
 	if cl.Kubernetes != nil {
@@ -1381,6 +1381,15 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model, region string) er
 		m.EgressAddressRanges, diags = types.ListValueFrom(ctx, types.StringType, cl.Status.EgressAddressRanges)
 		if diags.HasError() {
 			return fmt.Errorf("map egressAddressRanges: %w", core.DiagsToError(diags))
+		}
+	}
+
+	m.PodAddressRanges = types.ListNull(types.StringType)
+	if cl.Status != nil {
+		var diags diag.Diagnostics
+		m.PodAddressRanges, diags = types.ListValueFrom(ctx, types.StringType, cl.Status.PodAddressRanges)
+		if diags.HasError() {
+			return fmt.Errorf("map podAddressRanges: %w", core.DiagsToError(diags))
 		}
 	}
 
@@ -1407,13 +1416,13 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model, region string) er
 	return nil
 }
 
-func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
+func mapNodePools(ctx context.Context, cl *ske.Cluster, model *Model) error {
 	modelNodePoolOSVersion := map[string]basetypes.StringValue{}
 	modelNodePoolOSVersionMin := map[string]basetypes.StringValue{}
 
 	modelNodePools := []nodePool{}
-	if !m.NodePools.IsNull() && !m.NodePools.IsUnknown() {
-		diags := m.NodePools.ElementsAs(ctx, &modelNodePools, false)
+	if !model.NodePools.IsNull() && !model.NodePools.IsUnknown() {
+		diags := model.NodePools.ElementsAs(ctx, &modelNodePools, false)
 		if diags.HasError() {
 			return core.DiagsToError(diags)
 		}
@@ -1428,7 +1437,7 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	}
 
 	if cl.Nodepools == nil {
-		m.NodePools = types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes})
+		model.NodePools = types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes})
 		return nil
 	}
 
@@ -1504,7 +1513,7 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
-	m.NodePools = nodePoolsTF
+	model.NodePools = nodePoolsTF
 	return nil
 }
 
@@ -2055,10 +2064,7 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 	projectId := state.ProjectId.ValueString()
 	name := state.Name.ValueString()
-	region := state.Region.ValueString()
-	if region == "" {
-		region = r.providerData.GetRegion()
-	}
+	region := r.providerData.GetRegionWithOverride(state.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)

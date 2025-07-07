@@ -151,14 +151,13 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 
 ### Optional
 
-- `argus_custom_endpoint` (String, Deprecated) Custom endpoint for the Argus service
 - `authorization_custom_endpoint` (String) Custom endpoint for the Membership service
 - `cdn_custom_endpoint` (String) Custom endpoint for the CDN service
 - `credentials_path` (String) Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.
 - `default_region` (String) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `dns_custom_endpoint` (String) Custom endpoint for the DNS service
 - `enable_beta_resources` (Boolean) Enable beta resources. Default is false.
-- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: [iam]
+- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: [iam routing-tables]
 - `git_custom_endpoint` (String) Custom endpoint for the Git service
 - `iaas_custom_endpoint` (String) Custom endpoint for the IaaS service
 - `loadbalancer_custom_endpoint` (String) Custom endpoint for the Load Balancer service

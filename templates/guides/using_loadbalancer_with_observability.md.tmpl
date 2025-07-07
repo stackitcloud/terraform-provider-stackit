@@ -23,7 +23,7 @@ This guide explains how to configure the STACKIT Loadbalancer product to send me
 
    ```hcl
    resource "stackit_observability_instance" "observability01" {
-     project_id                             = var.project_id_prod
+     project_id                             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
      name                                   = "example-instance"
      plan_name                              = "Observability-Monitoring-Medium-EU01"
      acl                                    = ["0.0.0.0/0"]
@@ -33,7 +33,7 @@ This guide explains how to configure the STACKIT Loadbalancer product to send me
    }
 
    resource "stackit_observability_credential" "observability01-credential" {
-     project_id                             = var.project_id_prod
+     project_id                             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
      instance_id = stackit_observability_instance.observability01.instance_id
    }
    ```
@@ -44,7 +44,7 @@ This guide explains how to configure the STACKIT Loadbalancer product to send me
 
    ```hcl
     resource "stackit_loadbalancer_observability_credential" "example" {
-      project_id   = var.project_id_prod
+      project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       display_name = "example-credentials"
       username     = stackit_observability_credential.observability01-credential.username
       password     = stackit_observability_credential.observability01-credential.password
@@ -56,7 +56,7 @@ This guide explains how to configure the STACKIT Loadbalancer product to send me
    ```hcl
    # Create a network
    resource "stackit_network" "example_network" {
-     project_id       = var.project_id_prod
+     project_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
      name             = "example-network"
      ipv4_nameservers = ["8.8.8.8"]
      ipv4_prefix      = "192.168.0.0/25"
@@ -68,13 +68,13 @@ This guide explains how to configure the STACKIT Loadbalancer product to send me
 
    # Create a network interface
    resource "stackit_network_interface" "nic" {
-     project_id   = var.project_id_prod
+     project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
      network_id = stackit_network.example_network.network_id
    }
 
    # Create a public IP for the load balancer
    resource "stackit_public_ip" "public-ip" {
-     project_id   = var.project_id_prod
+     project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
      lifecycle {
        ignore_changes = [network_interface_id]
      }
@@ -89,7 +89,7 @@ This guide explains how to configure the STACKIT Loadbalancer product to send me
 
    # Create a server instance
    resource "stackit_server" "boot-from-image" {
-     project_id   = var.project_id_prod
+     project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
      name       = "example-server"
      boot_volume = {
        size        = 64
@@ -99,18 +99,14 @@ This guide explains how to configure the STACKIT Loadbalancer product to send me
      availability_zone = "eu01-1"
      machine_type      = "g1.1"
      keypair_name      = stackit_key_pair.keypair.name
-   }
-
-   # Attach the network interface to the server
-   resource "stackit_server_network_interface_attach" "nic-attachment" {
-     project_id   = var.project_id_prod
-     server_id            = stackit_server.boot-from-image.server_id
-     network_interface_id = stackit_network_interface.nic.network_interface_id
+     network_interfaces = [
+         stackit_network_interface.nic.network_interface_id
+     ]
    }
 
    # Create a load balancer
    resource "stackit_loadbalancer" "example" {
-     project_id   = var.project_id_prod
+     project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
      name       = "example-load-balancer"
      target_pools = [
        {

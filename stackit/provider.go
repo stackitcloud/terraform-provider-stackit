@@ -40,6 +40,10 @@ import (
 	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
 	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
 	iaasVolumeAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volumeattach"
+	iaasalphaRoutingTableRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/route"
+	iaasalphaRoutingTableRoutes "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/routes"
+	iaasalphaRoutingTable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/table"
+	iaasalphaRoutingTables "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/tables"
 	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
 	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
@@ -115,7 +119,6 @@ type providerModel struct {
 	// Deprecated: Use DefaultRegion instead
 	Region                          types.String `tfsdk:"region"`
 	DefaultRegion                   types.String `tfsdk:"default_region"`
-	ArgusCustomEndpoint             types.String `tfsdk:"argus_custom_endpoint"`
 	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
 	DNSCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
 	GitCustomEndpoint               types.String `tfsdk:"git_custom_endpoint"`
@@ -157,7 +160,6 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"service_account_email":              "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.",
 		"region":                             "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"default_region":                     "Region will be used as the default location for regional services. Not all services require a region, some are global",
-		"argus_custom_endpoint":              "Custom endpoint for the Argus service",
 		"cdn_custom_endpoint":                "Custom endpoint for the CDN service",
 		"dns_custom_endpoint":                "Custom endpoint for the DNS service",
 		"git_custom_endpoint":                "Custom endpoint for the Git service",
@@ -232,11 +234,6 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Validators: []validator.String{
 					stringvalidator.ConflictsWith(path.MatchRoot("region")),
 				},
-			},
-			"argus_custom_endpoint": schema.StringAttribute{
-				Optional:           true,
-				Description:        descriptions["argus_custom_endpoint"],
-				DeprecationMessage: "Argus service has been deprecated and integration will be removed after February 26th 2025. Please use `observability_custom_endpoint` and `observability` resources instead, which offer the exact same functionality.",
 			},
 			"cdn_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -464,6 +461,10 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasKeyPair.NewKeyPairDataSource,
 		iaasServer.NewServerDataSource,
 		iaasSecurityGroup.NewSecurityGroupDataSource,
+		iaasalphaRoutingTable.NewRoutingTableDataSource,
+		iaasalphaRoutingTableRoute.NewRoutingTableRouteDataSource,
+		iaasalphaRoutingTables.NewRoutingTablesDataSource,
+		iaasalphaRoutingTableRoutes.NewRoutingTableRoutesDataSource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
 		loadBalancer.NewLoadBalancerDataSource,
 		logMeInstance.NewInstanceDataSource,
@@ -526,6 +527,8 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasServer.NewServerResource,
 		iaasSecurityGroup.NewSecurityGroupResource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
+		iaasalphaRoutingTable.NewRoutingTableResource,
+		iaasalphaRoutingTableRoute.NewRoutingTableRouteResource,
 		loadBalancer.NewLoadBalancerResource,
 		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
 		logMeInstance.NewInstanceResource,

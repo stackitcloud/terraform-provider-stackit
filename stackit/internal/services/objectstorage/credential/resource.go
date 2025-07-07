@@ -328,10 +328,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	credentialId := model.CredentialId.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = r.providerData.GetRegion()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
@@ -506,14 +503,8 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 		model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.CredentialsGroupId.ValueString(),
-		credentialId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), region, model.CredentialsGroupId.ValueString(), credentialId,
 	)
 	model.CredentialId = types.StringValue(credentialId)
 	model.Name = types.StringPointerValue(credentialResp.DisplayName)
@@ -551,15 +542,7 @@ func readCredentials(ctx context.Context, model *Model, region string, client *o
 
 		foundCredential = true
 
-		idParts := []string{
-			projectId,
-			region,
-			credentialsGroupId,
-			credentialId,
-		}
-		model.Id = types.StringValue(
-			strings.Join(idParts, core.Separator),
-		)
+		model.Id = utils.BuildInternalTerraformId(projectId, region, credentialsGroupId, credentialId)
 		model.Name = types.StringPointerValue(credential.DisplayName)
 
 		if credential.Expires == nil {

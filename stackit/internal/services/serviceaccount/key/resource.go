@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
@@ -325,8 +324,7 @@ func mapCreateResponse(resp *serviceaccount.CreateServiceAccountKeyResponse, mod
 		return fmt.Errorf("service account key id not present")
 	}
 
-	idParts := []string{model.ProjectId.ValueString(), model.ServiceAccountEmail.ValueString(), *resp.Id}
-	model.Id = types.StringValue(strings.Join(idParts, core.Separator))
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.ServiceAccountEmail.ValueString(), *resp.Id)
 	model.KeyId = types.StringPointerValue(resp.Id)
 
 	jsonData, err := json.Marshal(resp)

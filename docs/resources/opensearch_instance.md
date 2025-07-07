@@ -67,4 +67,4 @@ Optional:
 - `sgw_acl` (String) Comma separated list of IP networks in CIDR notation which are allowed to access this instance.
 - `syslog` (List of String) List of syslog servers to send logs to.
 - `tls_ciphers` (List of String) List of TLS ciphers to use.
-- `tls_protocols` (String) The TLS protocol to use.
+- `tls_protocols` (List of String) The TLS protocol to use.

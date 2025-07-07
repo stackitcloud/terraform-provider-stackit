@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -264,6 +266,114 @@ func TestIsLegacyProjectRole(t *testing.T) {
 			output := IsLegacyProjectRole(tt.role)
 			if output != tt.expected {
 				t.Fatalf("Data does not match: %v", output)
+			}
+		})
+	}
+}
+
+func TestFormatPossibleValues(t *testing.T) {
+	gotPrefix := "Possible values are:"
+
+	type args struct {
+		values []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "single string value",
+			args: args{
+				values: []string{"foo"},
+			},
+			want: fmt.Sprintf("%s `foo`.", gotPrefix),
+		},
+		{
+			name: "multiple string value",
+			args: args{
+				values: []string{"foo", "bar", "trololol"},
+			},
+			want: fmt.Sprintf("%s `foo`, `bar`, `trololol`.", gotPrefix),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FormatPossibleValues(tt.args.values...); got != tt.want {
+				t.Errorf("FormatPossibleValues() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsUndefined(t *testing.T) {
+	type args struct {
+		val value
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "undefined value",
+			args: args{
+				val: types.StringNull(),
+			},
+			want: true,
+		},
+		{
+			name: "unknown value",
+			args: args{
+				val: types.StringUnknown(),
+			},
+			want: true,
+		},
+		{
+			name: "string value",
+			args: args{
+				val: types.StringValue(""),
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsUndefined(tt.args.val); got != tt.want {
+				t.Errorf("IsUndefined() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildInternalTerraformId(t *testing.T) {
+	type args struct {
+		idParts []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want types.String
+	}{
+		{
+			name: "no id parts",
+			args: args{
+				idParts: []string{},
+			},
+			want: types.StringValue(""),
+		},
+		{
+			name: "multiple id parts",
+			args: args{
+				idParts: []string{"abc", "foo", "bar", "xyz"},
+			},
+			want: types.StringValue("abc,foo,bar,xyz"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := BuildInternalTerraformId(tt.args.idParts...); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("BuildInternalTerraformId() = %v, want %v", got, tt.want)
 			}
 		})
 	}

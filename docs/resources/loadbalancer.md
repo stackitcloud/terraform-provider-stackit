@@ -61,13 +61,9 @@ resource "stackit_server" "boot-from-image" {
   availability_zone = "xxxx-x"
   machine_type      = "g1.1"
   keypair_name      = stackit_key_pair.keypair.name
-}
-
-# Attach the network interface to the server
-resource "stackit_server_network_interface_attach" "nic-attachment" {
-  project_id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  server_id            = stackit_server.boot-from-image.server_id
-  network_interface_id = stackit_network_interface.nic.network_interface_id
+  network_interfaces = [
+    stackit_network_interface.nic.network_interface_id
+  ]
 }
 
 # Create a load balancer
@@ -120,7 +116,6 @@ resource "stackit_loadbalancer" "example" {
 
 ### Required
 
-- `external_address` (String) External Load Balancer IP address where this Load Balancer is exposed.
 - `listeners` (Attributes List) List of all listeners which will accept traffic. Limited to 20. (see [below for nested schema](#nestedatt--listeners))
 - `name` (String) Load balancer name.
 - `networks` (Attributes List) List of networks that listeners and targets reside in. (see [below for nested schema](#nestedatt--networks))
@@ -129,6 +124,7 @@ resource "stackit_loadbalancer" "example" {
 
 ### Optional
 
+- `external_address` (String) External Load Balancer IP address where this Load Balancer is exposed.
 - `options` (Attributes) Defines any optional functionality you want to have enabled on your load balancer. (see [below for nested schema](#nestedatt--options))
 - `plan_id` (String) The service plan ID. Defaults to p10. See the API docs for a list of available plans at: https://docs.api.stackit.cloud/documentation/load-balancer/version/v1#tag/APIService/operation/APIService_ListPlans
 - `region` (String) The resource region. If not defined, the provider region is used.

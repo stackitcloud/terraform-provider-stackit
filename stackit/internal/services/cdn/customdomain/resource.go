@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 
@@ -86,7 +88,7 @@ func (r *customDomainResource) Metadata(_ context.Context, req resource.Metadata
 
 func (r *customDomainResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema."),
+		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema.", core.Resource),
 		Description:         "CDN distribution data source schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -274,9 +276,7 @@ func mapCustomDomainFields(customDomain *cdn.CustomDomain, model *CustomDomainMo
 		return fmt.Errorf("Status missing in response")
 	}
 
-	id := model.ProjectId.ValueString() + core.Separator + model.DistributionId.ValueString() + core.Separator + *customDomain.Name
-
-	model.ID = types.StringValue(id)
+	model.ID = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.DistributionId.ValueString(), *customDomain.Name)
 	model.Status = types.StringValue(string(*customDomain.Status))
 
 	customDomainErrors := []attr.Value{}

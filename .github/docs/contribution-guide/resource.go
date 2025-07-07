@@ -13,11 +13,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	fooUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/foo/utils"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/stackitcloud/stackit-sdk-go/services/foo" // Import service "foo" from the STACKIT SDK for Go
 	// (...)
@@ -266,13 +265,7 @@ func mapFields(barResp *foo.GetBarResponse, model *Model) error {
 	bar := barResp.Bar
 	model.BarId = types.StringPointerValue(bar.BarId)
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		model.BarId.ValueString(),
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.BarId.ValueString())
 
 	model.MyRequiredField = types.StringPointerValue(bar.MyRequiredField)
 	model.MyOptionalField = types.StringPointerValue(bar.MyOptionalField)

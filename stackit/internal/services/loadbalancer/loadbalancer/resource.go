@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -238,6 +239,43 @@ func (r *loadBalancerResource) ModifyPlan(ctx context.Context, req resource.Modi
 	}
 }
 
+// ConfigValidators validates the resource configuration
+func (r *loadBalancerResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var model Model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// validation is done in extracted func so it's easier to unit-test it
+	validateConfig(ctx, &resp.Diagnostics, &model)
+}
+
+func validateConfig(ctx context.Context, diags *diag.Diagnostics, model *Model) {
+	externalAddressIsSet := !model.ExternalAddress.IsNull()
+
+	lbOptions, err := toOptionsPayload(ctx, model)
+	if err != nil || lbOptions == nil {
+		// private_network_only is not set and external_address is not set
+		if !externalAddressIsSet {
+			core.LogAndAddError(ctx, diags, "Error configuring load balancer", fmt.Sprintf("You need to provide either the `options.private_network_only = true` or `external_address` field. %v", err))
+		}
+		return
+	}
+	if lbOptions.PrivateNetworkOnly == nil || !*lbOptions.PrivateNetworkOnly {
+		// private_network_only is not set or false and external_address is not set
+		if !externalAddressIsSet {
+			core.LogAndAddError(ctx, diags, "Error configuring load balancer", "You need to provide either the `options.private_network_only = true` or `external_address` field.")
+		}
+		return
+	}
+
+	// Both are set
+	if *lbOptions.PrivateNetworkOnly && externalAddressIsSet {
+		core.LogAndAddError(ctx, diags, "Error configuring load balancer", "You need to provide either the `options.private_network_only = true` or `external_address` field.")
+	}
+}
+
 // Configure adds the provider configured client to the resource.
 func (r *loadBalancerResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
@@ -329,7 +367,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 			},
 			"external_address": schema.StringAttribute{
 				Description: descriptions["external_address"],
-				Required:    true,
+				Optional:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -695,10 +733,7 @@ func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 	}
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = r.providerData.GetRegion()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
@@ -1180,14 +1215,7 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, reg
 	}
 	m.Region = types.StringValue(region)
 	m.Name = types.StringValue(name)
-	idParts := []string{
-		m.ProjectId.ValueString(),
-		m.Region.ValueString(),
-		name,
-	}
-	m.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	m.Id = utils.BuildInternalTerraformId(m.ProjectId.ValueString(), m.Region.ValueString(), name)
 
 	m.PlanId = types.StringPointerValue(lb.PlanId)
 	m.ExternalAddress = types.StringPointerValue(lb.ExternalAddress)

@@ -122,7 +122,7 @@ func (r *scheduleResource) Configure(ctx context.Context, req resource.Configure
 func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         "Server update schedule resource schema. Must have a `region` specified in the provider configuration.",
-		MarkdownDescription: features.AddBetaDescription("Server update schedule resource schema. Must have a `region` specified in the provider configuration."),
+		MarkdownDescription: features.AddBetaDescription("Server update schedule resource schema. Must have a `region` specified in the provider configuration.", core.Resource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`server_id`,`update_schedule_id`\".",
@@ -273,10 +273,7 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	updateScheduleId := model.UpdateScheduleId.ValueInt64()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = r.providerData.GetRegion()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -418,14 +415,9 @@ func mapFields(schedule *serverupdate.UpdateSchedule, model *Model, region strin
 	}
 
 	model.UpdateScheduleId = types.Int64PointerValue(schedule.Id)
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.ServerId.ValueString(),
+	model.ID = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), region, model.ServerId.ValueString(),
 		strconv.FormatInt(model.UpdateScheduleId.ValueInt64(), 10),
-	}
-	model.ID = types.StringValue(
-		strings.Join(idParts, core.Separator),
 	)
 	model.Name = types.StringPointerValue(schedule.Name)
 	model.Rrule = types.StringPointerValue(schedule.Rrule)

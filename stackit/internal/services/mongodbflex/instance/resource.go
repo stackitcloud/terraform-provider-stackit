@@ -291,8 +291,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 					"point_in_time_window_hours": schema.Int64Attribute{
 						Description: descriptions["point_in_time_window_hours"],
-						Optional:    true,
-						Computed:    true,
+						Required:    true,
 						PlanModifiers: []planmodifier.Int64{
 							int64planmodifier.UseStateForUnknown(),
 						},
@@ -786,13 +785,7 @@ func mapFields(ctx context.Context, resp *mongodbflex.GetInstanceResponse, model
 		model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		instanceId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), instanceId)
 	model.InstanceId = types.StringValue(instanceId)
 	model.Name = types.StringPointerValue(instance.Name)
 	model.ACL = aclList

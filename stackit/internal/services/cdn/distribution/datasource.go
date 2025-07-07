@@ -58,7 +58,7 @@ func (r *distributionDataSource) Metadata(_ context.Context, req datasource.Meta
 func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	backendOptions := []string{"http"}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema."),
+		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema.", core.Datasource),
 		Description:         "CDN distribution data source schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

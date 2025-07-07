@@ -29,12 +29,13 @@ build:
 
 fmt:
 	@gofmt -s -w .
+	@go tool goimports -w .
 	@cd $(ROOT_DIR)/examples && terraform fmt -recursive && cd $(ROOT_DIR)
 
 # TEST
 test:
 	@echo "Running tests for the terraform provider"
-	@cd $(ROOT_DIR)/stackit && go test ./... -count=1 && cd $(ROOT_DIR)
+	@cd $(ROOT_DIR)/stackit && go test ./... -count=1 -coverprofile=coverage.out && cd $(ROOT_DIR)
 
 # Test coverage
 coverage:

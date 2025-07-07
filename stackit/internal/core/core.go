@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/types"
+
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -13,13 +15,19 @@ import (
 // Separator used for concatenation of TF-internal resource ID
 const Separator = ","
 
+type ResourceType string
+
+const (
+	Resource   ResourceType = "resource"
+	Datasource ResourceType = "datasource"
+)
+
 type ProviderData struct {
 	RoundTripper        http.RoundTripper
 	ServiceAccountEmail string // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025.
 	// Deprecated: Use DefaultRegion instead
 	Region                          string
 	DefaultRegion                   string
-	ArgusCustomEndpoint             string
 	AuthorizationCustomEndpoint     string
 	CdnCustomEndpoint               string
 	DnsCustomEndpoint               string
@@ -61,6 +69,13 @@ func (pd *ProviderData) GetRegion() string {
 	return "eu01"
 }
 
+func (pd *ProviderData) GetRegionWithOverride(overrideRegion types.String) string {
+	if overrideRegion.IsUnknown() || overrideRegion.IsNull() {
+		return pd.GetRegion()
+	}
+	return overrideRegion.ValueString()
+}
+
 // DiagsToError Converts TF diagnostics' errors into an error with a human-readable description.
 // If there are no errors, the output is nil
 func DiagsToError(diags diag.Diagnostics) error {
@@ -92,14 +107,14 @@ func LogAndAddWarning(ctx context.Context, diags *diag.Diagnostics, summary, det
 	diags.AddWarning(summary, detail)
 }
 
-func LogAndAddWarningBeta(ctx context.Context, diags *diag.Diagnostics, name, resourceType string) {
+func LogAndAddWarningBeta(ctx context.Context, diags *diag.Diagnostics, name string, resourceType ResourceType) {
 	warnTitle := fmt.Sprintf("The %s %q is in beta", resourceType, name)
 	warnContent := fmt.Sprintf("The %s %q is in beta and may be subject to breaking changes in the future. Use with caution.", resourceType, name)
 	tflog.Warn(ctx, fmt.Sprintf("%s | %s", warnTitle, warnContent))
 	diags.AddWarning(warnTitle, warnContent)
 }
 
-func LogAndAddErrorBeta(ctx context.Context, diags *diag.Diagnostics, name, resourceType string) {
+func LogAndAddErrorBeta(ctx context.Context, diags *diag.Diagnostics, name string, resourceType ResourceType) {
 	errTitle := fmt.Sprintf("The %s %q is in beta and beta is not enabled", resourceType, name)
 	errContent := fmt.Sprintf(`The %s %q is in beta and the beta functionality is currently not enabled. To enable it, set the environment variable STACKIT_TF_ENABLE_BETA_RESOURCES to "true" or set the "enable_beta_resources" provider field to true.`, resourceType, name)
 	tflog.Error(ctx, fmt.Sprintf("%s | %s", errTitle, errContent))

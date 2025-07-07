@@ -277,14 +277,11 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
-	region := model.Region.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 	ctx = tflog.SetField(ctx, "region", region)
-	if region == "" {
-		region = r.providerData.GetRegion()
-	}
 
 	recordSetResp, err := r.client.GetUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
@@ -383,15 +380,7 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model, r
 		return fmt.Errorf("user id not present")
 	}
 	userId := *user.Id
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.InstanceId.ValueString(),
-		userId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)
 
@@ -439,14 +428,11 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model, region str
 	} else {
 		return fmt.Errorf("user id not present")
 	}
-	idParts := []string{
+	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(),
 		region,
 		model.InstanceId.ValueString(),
 		userId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
 	)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)

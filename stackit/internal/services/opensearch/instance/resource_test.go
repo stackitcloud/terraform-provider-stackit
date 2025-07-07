@@ -35,7 +35,10 @@ var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]a
 		types.StringValue("cipher"),
 		types.StringValue("cipher2"),
 	}),
-	"tls_protocols": types.StringValue(string(opensearch.INSTANCEPARAMETERSTLS_PROTOCOLS__2)),
+	"tls_protocols": types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("TLSv1.2"),
+		types.StringValue("TLSv1.3"),
+	}),
 })
 
 var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[string]attr.Value{
@@ -52,7 +55,7 @@ var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[stri
 	"plugins":                types.ListNull(types.StringType),
 	"syslog":                 types.ListNull(types.StringType),
 	"tls_ciphers":            types.ListNull(types.StringType),
-	"tls_protocols":          types.StringNull(),
+	"tls_protocols":          types.ListNull(types.StringType),
 })
 
 var fixtureInstanceParameters = opensearch.InstanceParameters{
@@ -69,7 +72,7 @@ var fixtureInstanceParameters = opensearch.InstanceParameters{
 	Plugins:              &[]string{"plugin", "plugin2"},
 	Syslog:               &[]string{"syslog", "syslog2"},
 	TlsCiphers:           &[]string{"cipher", "cipher2"},
-	TlsProtocols:         opensearch.INSTANCEPARAMETERSTLS_PROTOCOLS__2.Ptr(),
+	TlsProtocols:         &[]string{"TLSv1.2", "TLSv1.3"},
 }
 
 func TestMapFields(t *testing.T) {
@@ -123,7 +126,7 @@ func TestMapFields(t *testing.T) {
 					"plugins":                []string{"plugin", "plugin2"},
 					"syslog":                 []string{"syslog", "syslog2"},
 					"tls-ciphers":            []string{"cipher", "cipher2"},
-					"tls-protocols":          string(opensearch.INSTANCEPARAMETERSTLS_PROTOCOLS__2),
+					"tls-protocols":          []string{"TLSv1.2", "TLSv1.3"},
 				},
 			},
 			Model{

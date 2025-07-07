@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -301,13 +303,7 @@ func mapFields(ctx context.Context, affinityGroupResp *iaas.AffinityGroup, model
 		return fmt.Errorf("affinity group id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		affinityGroupId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), affinityGroupId)
 
 	if affinityGroupResp.Members != nil && len(*affinityGroupResp.Members) > 0 {
 		members, diags := types.ListValueFrom(ctx, types.StringType, *affinityGroupResp.Members)

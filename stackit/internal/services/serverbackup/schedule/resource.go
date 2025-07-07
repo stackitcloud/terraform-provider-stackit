@@ -129,7 +129,7 @@ func (r *scheduleResource) Configure(ctx context.Context, req resource.Configure
 func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         "Server backup schedule resource schema. Must have a `region` specified in the provider configuration.",
-		MarkdownDescription: features.AddBetaDescription("Server backup schedule resource schema. Must have a `region` specified in the provider configuration."),
+		MarkdownDescription: features.AddBetaDescription("Server backup schedule resource schema. Must have a `region` specified in the provider configuration.", core.Resource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`server_id`,`backup_schedule_id`\".",
@@ -241,12 +241,7 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
@@ -297,12 +292,7 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
@@ -347,12 +337,7 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
@@ -397,12 +382,7 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
@@ -464,14 +444,9 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 	}
 
 	model.BackupScheduleId = types.Int64PointerValue(schedule.Id)
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.ServerId.ValueString(),
+	model.ID = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), region, model.ServerId.ValueString(),
 		strconv.FormatInt(model.BackupScheduleId.ValueInt64(), 10),
-	}
-	model.ID = types.StringValue(
-		strings.Join(idParts, core.Separator),
 	)
 	model.Name = types.StringPointerValue(schedule.Name)
 	model.Rrule = types.StringPointerValue(schedule.Rrule)
@@ -497,12 +472,7 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 func (r *scheduleResource) enableBackupsService(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	tflog.Debug(ctx, "Enabling server backup service")
 	request := r.client.EnableServiceResource(ctx, projectId, serverId, region).
@@ -525,12 +495,7 @@ func (r *scheduleResource) disableBackupsService(ctx context.Context, model *Mod
 
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	tflog.Debug(ctx, "Checking for existing backups")
 	backups, err := r.client.ListBackups(ctx, projectId, serverId, region).Execute()

@@ -494,8 +494,7 @@ func mapFields(ctx context.Context, alertGroup *observability.AlertGroup, model 
 	}
 
 	model.Name = types.StringValue(name)
-	idParts := []string{model.ProjectId.ValueString(), model.InstanceId.ValueString(), name}
-	model.Id = types.StringValue(strings.Join(idParts, core.Separator))
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), name)
 
 	var interval string
 	if !utils.IsUndefined(model.Interval) {

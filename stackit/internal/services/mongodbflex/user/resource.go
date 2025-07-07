@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	mongodbflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -396,14 +398,7 @@ func mapFieldsCreate(userResp *mongodbflex.CreateUserResponse, model *Model) err
 		return fmt.Errorf("user id not present")
 	}
 	userId := *user.Id
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		model.InstanceId.ValueString(),
-		userId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), userId)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)
 	model.Database = types.StringPointerValue(user.Database)
@@ -449,14 +444,7 @@ func mapFields(userResp *mongodbflex.GetUserResponse, model *Model) error {
 	} else {
 		return fmt.Errorf("user id not present")
 	}
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		model.InstanceId.ValueString(),
-		userId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), userId)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)
 	model.Database = types.StringPointerValue(user.Database)
