@@ -72,7 +72,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		"protocol":                              "Protocol is the highest network protocol we understand to load balance.",
 		"target_pool":                           "Reference target pool by target pool name.",
 		"name":                                  "Load balancer name.",
-		"plan_id":                               "The service plan ID. Defaults to p10. See the API docs for a list of available plans at: https://docs.api.stackit.cloud/documentation/load-balancer/version/v1#tag/APIService/operation/APIService_ListPlans",
+		"plan_id":                               "The service plan ID. See the API docs for a list of available plans at: https://docs.api.stackit.cloud/documentation/load-balancer/version/v1#tag/APIService/operation/APIService_ListPlans",
 		"networks":                              "List of networks that listeners and targets reside in.",
 		"network_id":                            "Openstack network ID.",
 		"role":                                  "The role defines how the load balancer is using the network.",
