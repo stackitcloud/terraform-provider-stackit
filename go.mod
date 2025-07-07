@@ -16,7 +16,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.26.0
-	github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.20-alpha
+	github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.21-alpha
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.25.0
