@@ -66,7 +66,7 @@ var (
 )
 
 type skeClient interface {
-	GetClusterExecute(ctx context.Context, projectId, clusterName string) (*ske.Cluster, error)
+	GetClusterExecute(ctx context.Context, projectId, region, clusterName string) (*ske.Cluster, error)
 }
 
 type Model struct {
@@ -185,16 +185,16 @@ var hibernationTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.Extensions
 type extensions struct {
-	Argus types.Object `tfsdk:"argus"`
-	ACL   types.Object `tfsdk:"acl"`
-	DNS   types.Object `tfsdk:"dns"`
+	Observability types.Object `tfsdk:"observability"`
+	ACL           types.Object `tfsdk:"acl"`
+	DNS           types.Object `tfsdk:"dns"`
 }
 
 // Types corresponding to extensions
 var extensionsTypes = map[string]attr.Type{
-	"argus": basetypes.ObjectType{AttrTypes: argusTypes},
-	"acl":   basetypes.ObjectType{AttrTypes: aclTypes},
-	"dns":   basetypes.ObjectType{AttrTypes: dnsTypes},
+	"observability": basetypes.ObjectType{AttrTypes: observabilityTypes},
+	"acl":           basetypes.ObjectType{AttrTypes: aclTypes},
+	"dns":           basetypes.ObjectType{AttrTypes: dnsTypes},
 }
 
 // Struct corresponding to extensions.ACL
@@ -210,15 +210,15 @@ var aclTypes = map[string]attr.Type{
 }
 
 // Struct corresponding to extensions.Argus
-type argus struct {
-	Enabled         types.Bool   `tfsdk:"enabled"`
-	ArgusInstanceId types.String `tfsdk:"argus_instance_id"`
+type observability struct {
+	Enabled    types.Bool   `tfsdk:"enabled"`
+	InstanceId types.String `tfsdk:"argus_instance_id"`
 }
 
 // Types corresponding to argus
-var argusTypes = map[string]attr.Type{
-	"enabled":           basetypes.BoolType{},
-	"argus_instance_id": basetypes.StringType{},
+var observabilityTypes = map[string]attr.Type{
+	"enabled":     basetypes.BoolType{},
+	"instance_id": basetypes.StringType{},
 }
 
 // Struct corresponding to extensions.DNS
@@ -748,7 +748,7 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	availableKubernetesVersions, availableMachines, err := r.loadAvailableVersions(ctx)
+	availableKubernetesVersions, availableMachines, err := r.loadAvailableVersions(ctx, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Loading available Kubernetes and machine image versions: %v", err))
 		return
@@ -795,9 +795,9 @@ func sortK8sVersions(versions []ske.KubernetesVersion) {
 // loadAvailableVersions loads the available k8s and machine versions from the API.
 // The k8s versions are sorted  descending order, i.e. the latest versions (including previews)
 // are listed first
-func (r *clusterResource) loadAvailableVersions(ctx context.Context) ([]ske.KubernetesVersion, []ske.MachineImage, error) {
+func (r *clusterResource) loadAvailableVersions(ctx context.Context, region string) ([]ske.KubernetesVersion, []ske.MachineImage, error) {
 	c := r.skeClient
-	res, err := c.ListProviderOptions(ctx).Execute()
+	res, err := c.ListProviderOptions(ctx, region).Execute()
 	if err != nil {
 		return nil, nil, fmt.Errorf("calling API: %w", err)
 	}
@@ -817,7 +817,7 @@ func (r *clusterResource) loadAvailableVersions(ctx context.Context) ([]ske.Kube
 // a map with the machine image for each nodepool, which can be used to check the current machine image versions.
 // if the cluster doesn't exist or some error occurs, returns nil for both
 func getCurrentVersions(ctx context.Context, c skeClient, m *Model) (kubernetesVersion *string, nodePoolMachineImages map[string]*ske.Image) {
-	res, err := c.GetClusterExecute(ctx, m.ProjectId.ValueString(), m.Name.ValueString())
+	res, err := c.GetClusterExecute(ctx, m.ProjectId.ValueString(), m.Region.ValueString(), m.Name.ValueString())
 	if err != nil || res == nil {
 		return nil, nil
 	}
@@ -891,18 +891,18 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		Network:     network,
 		Nodepools:   &nodePools,
 	}
-	_, err = r.skeClient.CreateOrUpdateCluster(ctx, projectId, name).CreateOrUpdateClusterPayload(payload).Execute()
+	_, err = r.skeClient.CreateOrUpdateCluster(ctx, projectId, region, name).CreateOrUpdateClusterPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	waitResp, err := skeWait.CreateOrUpdateClusterWaitHandler(ctx, r.skeClient, projectId, name).WaitWithContext(ctx)
+	waitResp, err := skeWait.CreateOrUpdateClusterWaitHandler(ctx, r.skeClient, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Cluster creation waiting: %v", err))
 		return
 	}
-	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == ske.RUNTIMEERRORCODE_ARGUS_INSTANCE_NOT_FOUND {
+	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == ske.RUNTIMEERRORCODE_OBSERVABILITY_INSTANCE_NOT_FOUND {
 		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid argus instance id, the cluster is usable but metrics won't be forwarded: %s", *waitResp.Status.Error.Message))
 	}
 
@@ -1242,18 +1242,18 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 		}
 	}
 
-	var skeArgus *ske.Argus
-	if !(ex.Argus.IsNull() || ex.Argus.IsUnknown()) {
-		argus := argus{}
-		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
+	var skeObservability *ske.Observability
+	if !(ex.Observability.IsNull() || ex.Observability.IsUnknown()) {
+		observability := observability{}
+		diags = ex.Observability.As(ctx, &observability, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
 		}
-		argusEnabled := conversion.BoolValueToPointer(argus.Enabled)
-		argusInstanceId := conversion.StringValueToPointer(argus.ArgusInstanceId)
-		skeArgus = &ske.Argus{
-			Enabled:         argusEnabled,
-			ArgusInstanceId: argusInstanceId,
+		observabilityEnabled := conversion.BoolValueToPointer(observability.Enabled)
+		observabilityInstanceId := conversion.StringValueToPointer(observability.InstanceId)
+		skeObservability = &ske.Observability{
+			Enabled:    observabilityEnabled,
+			InstanceId: observabilityInstanceId,
 		}
 	}
 
@@ -1278,9 +1278,9 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 	}
 
 	return &ske.Extension{
-		Acl:   skeAcl,
-		Argus: skeArgus,
-		Dns:   skeDNS,
+		Acl:           skeAcl,
+		Observability: skeObservability,
+		Dns:           skeDNS,
 	}, nil
 }
 
@@ -1372,7 +1372,6 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model, region string) er
 
 	if cl.Kubernetes != nil {
 		m.KubernetesVersionUsed = types.StringPointerValue(cl.Kubernetes.Version)
-		m.AllowPrivilegedContainers = types.BoolPointerValue(cl.Kubernetes.AllowPrivilegedContainers)
 	}
 
 	m.EgressAddressRanges = types.ListNull(types.StringType)
@@ -1718,11 +1717,11 @@ func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, a
 		}
 	}
 
-	argus := argus{}
-	if ex.Argus.IsNull() {
-		argus.Enabled = types.BoolValue(false)
+	observability := observability{}
+	if ex.Observability.IsNull() {
+		observability.Enabled = types.BoolValue(false)
 	} else {
-		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
+		diags = ex.Observability.As(ctx, &observability, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return false, false, false, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
 		}
@@ -1738,7 +1737,7 @@ func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, a
 		}
 	}
 
-	return !acl.Enabled.ValueBool(), !argus.Enabled.ValueBool(), !dns.Enabled.ValueBool(), nil
+	return !acl.Enabled.ValueBool(), !observability.Enabled.ValueBool(), !dns.Enabled.ValueBool(), nil
 }
 
 func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
@@ -1807,16 +1806,16 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		aclExtension = ex.ACL
 	}
 
-	argusExtension := types.ObjectNull(argusTypes)
-	if cl.Extensions.Argus != nil {
+	argusExtension := types.ObjectNull(observabilityTypes)
+	if cl.Extensions.Observability != nil {
 		enabled := types.BoolNull()
-		if cl.Extensions.Argus.Enabled != nil {
-			enabled = types.BoolValue(*cl.Extensions.Argus.Enabled)
+		if cl.Extensions.Observability.Enabled != nil {
+			enabled = types.BoolValue(*cl.Extensions.Observability.Enabled)
 		}
 
 		argusInstanceId := types.StringNull()
-		if cl.Extensions.Argus.ArgusInstanceId != nil {
-			argusInstanceId = types.StringValue(*cl.Extensions.Argus.ArgusInstanceId)
+		if cl.Extensions.Observability.InstanceId != nil {
+			argusInstanceId = types.StringValue(*cl.Extensions.Observability.InstanceId)
 		}
 
 		argusExtensionValues := map[string]attr.Value{
@@ -1824,12 +1823,12 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 			"argus_instance_id": argusInstanceId,
 		}
 
-		argusExtension, diags = types.ObjectValue(argusTypes, argusExtensionValues)
+		argusExtension, diags = types.ObjectValue(observabilityTypes, argusExtensionValues)
 		if diags.HasError() {
 			return fmt.Errorf("creating argus extension: %w", core.DiagsToError(diags))
 		}
-	} else if argusDisabled && !ex.Argus.IsNull() {
-		argusExtension = ex.Argus
+	} else if argusDisabled && !ex.Observability.IsNull() {
+		argusExtension = ex.Observability
 	}
 
 	dnsExtension := types.ObjectNull(dnsTypes)
@@ -1887,8 +1886,7 @@ func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion, cu
 	}
 
 	k := &ske.Kubernetes{
-		Version:                   versionUsed,
-		AllowPrivilegedContainers: conversion.BoolValueToPointer(m.AllowPrivilegedContainers),
+		Version: versionUsed,
 	}
 	return k, hasDeprecatedVersion, nil
 }
@@ -2069,7 +2067,7 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	clResp, err := r.skeClient.GetCluster(ctx, projectId, name).Execute()
+	clResp, err := r.skeClient.GetCluster(ctx, projectId, region, name).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -2121,7 +2119,7 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	ctx = tflog.SetField(ctx, "name", clName)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	availableKubernetesVersions, availableMachines, err := r.loadAvailableVersions(ctx)
+	availableKubernetesVersions, availableMachines, err := r.loadAvailableVersions(ctx, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating cluster", fmt.Sprintf("Loading available Kubernetes and machine image versions: %v", err))
 		return
@@ -2156,12 +2154,12 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "region", region)
 
 	c := r.skeClient
-	_, err := c.DeleteCluster(ctx, projectId, name).Execute()
+	_, err := c.DeleteCluster(ctx, projectId, region, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = skeWait.DeleteClusterWaitHandler(ctx, r.skeClient, projectId, name).WaitWithContext(ctx)
+	_, err = skeWait.DeleteClusterWaitHandler(ctx, r.skeClient, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Cluster deletion waiting: %v", err))
 		return

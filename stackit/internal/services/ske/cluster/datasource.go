@@ -331,7 +331,7 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
-	clusterResp, err := r.client.GetCluster(ctx, projectId, name).Execute()
+	clusterResp, err := r.client.GetCluster(ctx, projectId, region, name).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

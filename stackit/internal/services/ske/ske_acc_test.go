@@ -458,9 +458,7 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 	var client *ske.APIClient
 	var err error
 	if testutil.SKECustomEndpoint == "" {
-		client, err = ske.NewAPIClient(
-			coreConfig.WithRegion(testutil.Region),
-		)
+		client, err = ske.NewAPIClient()
 	} else {
 		client, err = ske.NewAPIClient(
 			coreConfig.WithEndpoint(testutil.SKECustomEndpoint),
@@ -480,7 +478,7 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 		clustersToDestroy = append(clustersToDestroy, clusterName)
 	}
 
-	clustersResp, err := client.ListClusters(ctx, testutil.ProjectId).Execute()
+	clustersResp, err := client.ListClusters(ctx, testutil.Region, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting clustersResp: %w", err)
 	}
@@ -491,11 +489,11 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 			continue
 		}
 		if utils.Contains(clustersToDestroy, *items[i].Name) {
-			_, err := client.DeleteClusterExecute(ctx, testutil.ProjectId, *items[i].Name)
+			_, err := client.DeleteClusterExecute(ctx, testutil.ProjectId, testutil.Region, *items[i].Name)
 			if err != nil {
 				return fmt.Errorf("destroying cluster %s during CheckDestroy: %w", *items[i].Name, err)
 			}
-			_, err = wait.DeleteClusterWaitHandler(ctx, client, testutil.ProjectId, *items[i].Name).WaitWithContext(ctx)
+			_, err = wait.DeleteClusterWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, *items[i].Name).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying cluster %s during CheckDestroy: waiting for deletion %w", *items[i].Name, err)
 			}
@@ -525,7 +523,7 @@ func NewSkeProviderOptions(nodePoolOs string) *SkeProviderOptions {
 	var err error
 
 	if testutil.SKECustomEndpoint == "" {
-		client, err = ske.NewAPIClient(coreConfig.WithRegion("eu01"))
+		client, err = ske.NewAPIClient()
 	} else {
 		client, err = ske.NewAPIClient(coreConfig.WithEndpoint(testutil.SKECustomEndpoint))
 	}
@@ -534,7 +532,7 @@ func NewSkeProviderOptions(nodePoolOs string) *SkeProviderOptions {
 		panic("failed to create SKE client: " + err.Error())
 	}
 
-	options, err := client.ListProviderOptions(ctx).Execute()
+	options, err := client.ListProviderOptions(ctx, testutil.Region).Execute()
 	if err != nil {
 		panic("failed to fetch SKE provider options: " + err.Error())
 	}

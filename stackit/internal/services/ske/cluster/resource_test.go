@@ -23,7 +23,9 @@ type skeClientMocked struct {
 	getClusterResp *ske.Cluster
 }
 
-func (c *skeClientMocked) GetClusterExecute(_ context.Context, _, _ string) (*ske.Cluster, error) {
+const testRegion = "region"
+
+func (c *skeClientMocked) GetClusterExecute(_ context.Context, _, _, _ string) (*ske.Cluster, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("get cluster failed")
 	}
@@ -33,7 +35,6 @@ func (c *skeClientMocked) GetClusterExecute(_ context.Context, _, _ string) (*sk
 
 func TestMapFields(t *testing.T) {
 	cs := ske.ClusterStatusState("OK")
-	const testRegion = "region"
 	tests := []struct {
 		description     string
 		stateExtensions types.Object
@@ -78,9 +79,9 @@ func TestMapFields(t *testing.T) {
 						AllowedCidrs: &[]string{"cidr1"},
 						Enabled:      utils.Ptr(true),
 					},
-					Argus: &ske.Argus{
-						ArgusInstanceId: utils.Ptr("aid"),
-						Enabled:         utils.Ptr(true),
+					Observability: &ske.Observability{
+						InstanceId: utils.Ptr("aid"),
+						Enabled:    utils.Ptr(true),
 					},
 					Dns: &ske.DNS{
 						Zones:   &[]string{"foo.onstackit.cloud"},
@@ -97,8 +98,7 @@ func TestMapFields(t *testing.T) {
 					},
 				},
 				Kubernetes: &ske.Kubernetes{
-					AllowPrivilegedContainers: utils.Ptr(true),
-					Version:                   utils.Ptr("1.2.3"),
+					Version: utils.Ptr("1.2.3"),
 				},
 				Maintenance: &ske.Maintenance{
 					AutoUpdate: &ske.MaintenanceAutoUpdate{
@@ -256,7 +256,7 @@ func TestMapFields(t *testing.T) {
 							types.StringValue("cidr1"),
 						}),
 					}),
-					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+					"argus": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 						"enabled":           types.BoolValue(true),
 						"argus_instance_id": types.StringValue("aid"),
 					}),
@@ -307,9 +307,9 @@ func TestMapFields(t *testing.T) {
 						AllowedCidrs: nil,
 						Enabled:      utils.Ptr(true),
 					},
-					Argus: &ske.Argus{
-						ArgusInstanceId: nil,
-						Enabled:         utils.Ptr(true),
+					Observability: &ske.Observability{
+						InstanceId: nil,
+						Enabled:    utils.Ptr(true),
 					},
 					Dns: &ske.DNS{
 						Zones:   nil,
@@ -335,7 +335,7 @@ func TestMapFields(t *testing.T) {
 						"enabled":       types.BoolValue(true),
 						"allowed_cidrs": types.ListNull(types.StringType),
 					}),
-					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+					"argus": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 						"enabled":           types.BoolValue(true),
 						"argus_instance_id": types.StringNull(),
 					}),
@@ -355,7 +355,7 @@ func TestMapFields(t *testing.T) {
 					"enabled":       types.BoolValue(false),
 					"allowed_cidrs": types.ListNull(types.StringType),
 				}),
-				"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+				"argus": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 					"enabled":           types.BoolValue(false),
 					"argus_instance_id": types.StringNull(),
 				}),
@@ -386,7 +386,7 @@ func TestMapFields(t *testing.T) {
 						"enabled":       types.BoolValue(false),
 						"allowed_cidrs": types.ListNull(types.StringType),
 					}),
-					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+					"argus": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 						"enabled":           types.BoolValue(false),
 						"argus_instance_id": types.StringNull(),
 					}),
@@ -408,7 +408,7 @@ func TestMapFields(t *testing.T) {
 						types.StringValue("cidr1"),
 					}),
 				}),
-				"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+				"argus": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 					"enabled":           types.BoolValue(false),
 					"argus_instance_id": types.StringValue("id"),
 				}),
@@ -450,7 +450,7 @@ func TestMapFields(t *testing.T) {
 							types.StringValue("cidr1"),
 						}),
 					}),
-					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+					"argus": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 						"enabled":           types.BoolValue(false),
 						"argus_instance_id": types.StringValue("id"),
 					}),
@@ -535,9 +535,9 @@ func TestMapFields(t *testing.T) {
 						AllowedCidrs: &[]string{"cidr1"},
 						Enabled:      utils.Ptr(true),
 					},
-					Argus: &ske.Argus{
-						ArgusInstanceId: utils.Ptr("aid"),
-						Enabled:         utils.Ptr(true),
+					Observability: &ske.Observability{
+						InstanceId: utils.Ptr("aid"),
+						Enabled:    utils.Ptr(true),
 					},
 					Dns: &ske.DNS{
 						Zones:   &[]string{"zone1"},
@@ -554,8 +554,7 @@ func TestMapFields(t *testing.T) {
 					},
 				},
 				Kubernetes: &ske.Kubernetes{
-					AllowPrivilegedContainers: utils.Ptr(true),
-					Version:                   utils.Ptr("1.2.3"),
+					Version: utils.Ptr("1.2.3"),
 				},
 				Maintenance: &ske.Maintenance{
 					AutoUpdate: &ske.MaintenanceAutoUpdate{
@@ -680,7 +679,7 @@ func TestMapFields(t *testing.T) {
 							types.StringValue("cidr1"),
 						}),
 					}),
-					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+					"argus": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 						"enabled":           types.BoolValue(true),
 						"argus_instance_id": types.StringValue("aid"),
 					}),

@@ -46,6 +46,7 @@ type Model struct {
 	Refresh      types.Bool   `tfsdk:"refresh"`
 	ExpiresAt    types.String `tfsdk:"expires_at"`
 	CreationTime types.String `tfsdk:"creation_time"`
+	Region       types.String `tfsdk:"region"`
 }
 
 // NewKubeconfigResource is a helper function to simplify the provider implementation.
@@ -55,7 +56,8 @@ func NewKubeconfigResource() resource.Resource {
 
 // kubeconfigResource is the resource implementation.
 type kubeconfigResource struct {
-	client *ske.APIClient
+	client       *ske.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -91,6 +93,7 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		"expires_at":     "Timestamp when the kubeconfig expires",
 		"refresh":        "If set to true, the provider will check if the kubeconfig has expired and will generated a new valid one in-place",
 		"creation_time":  "Date-time when the kubeconfig was created",
+		"region":         "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -172,6 +175,15 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -182,6 +194,31 @@ func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.Modify
 	if req.State.Raw.IsNull() {
 		// Planned to create a kubeconfig
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Planned to create kubeconfig", "Once this resource is created, you will no longer be able to use the deprecated credentials endpoints and the kube_config field on the cluster resource will be empty for this cluster. For more info check How to Rotate SKE Credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html)")
+	}
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 }
 
@@ -234,11 +271,13 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	projectId := model.ProjectId.ValueString()
 	clusterName := model.ClusterName.ValueString()
 	kubeconfigUUID := model.KubeconfigId.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
 	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	cluster, err := r.client.GetClusterExecute(ctx, projectId, clusterName)
+	cluster, err := r.client.GetClusterExecute(ctx, projectId, region, clusterName)
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -298,7 +337,7 @@ func (r *kubeconfigResource) createKubeconfig(ctx context.Context, model *Model)
 		return fmt.Errorf("creating API payload: %w", err)
 	}
 	// Create new kubeconfig
-	kubeconfigResp, err := r.client.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.ClusterName.ValueString()).CreateKubeconfigPayload(*payload).Execute()
+	kubeconfigResp, err := r.client.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Region.ValueString(), model.ClusterName.ValueString()).CreateKubeconfigPayload(*payload).Execute()
 	if err != nil {
 		return fmt.Errorf("calling API: %w", err)
 	}
