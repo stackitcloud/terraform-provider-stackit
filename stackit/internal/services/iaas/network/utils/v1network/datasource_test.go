@@ -1,4 +1,4 @@
-package network
+package v1network
 
 import (
 	"context"
@@ -9,19 +9,20 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	networkModel "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network/utils/model"
 )
 
 func TestMapDataSourceFields(t *testing.T) {
 	tests := []struct {
 		description string
-		state       DataSourceModel
+		state       networkModel.DataSourceModel
 		input       *iaas.Network
-		expected    DataSourceModel
+		expected    networkModel.DataSourceModel
 		isValid     bool
 	}{
 		{
 			"id_ok",
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 			},
@@ -29,7 +30,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				NetworkId: utils.Ptr("nid"),
 				Gateway:   iaas.NewNullableString(nil),
 			},
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				Id:               types.StringValue("pid,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
@@ -54,7 +55,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		},
 		{
 			"values_ok",
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 			},
@@ -85,7 +86,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Gateway:   iaas.NewNullableString(utils.Ptr("gateway")),
 				Gatewayv6: iaas.NewNullableString(utils.Ptr("gateway")),
 			},
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				Id:        types.StringValue("pid,nid"),
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
@@ -130,7 +131,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		},
 		{
 			"ipv4_nameservers_changed_outside_tf",
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Nameservers: types.ListValueMust(types.StringType, []attr.Value{
@@ -149,7 +150,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"ns3",
 				},
 			},
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				Id:              types.StringValue("pid,nid"),
 				ProjectId:       types.StringValue("pid"),
 				NetworkId:       types.StringValue("nid"),
@@ -172,7 +173,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		},
 		{
 			"ipv6_nameservers_changed_outside_tf",
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{
@@ -187,7 +188,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"ns3",
 				},
 			},
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				Id:              types.StringValue("pid,nid"),
 				ProjectId:       types.StringValue("pid"),
 				NetworkId:       types.StringValue("nid"),
@@ -207,7 +208,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		},
 		{
 			"ipv4_prefixes_changed_outside_tf",
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Prefixes: types.ListValueMust(types.StringType, []attr.Value{
@@ -222,7 +223,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"10.100.10.0/16",
 				},
 			},
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				Id:               types.StringValue("pid,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
@@ -248,7 +249,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		},
 		{
 			"ipv6_prefixes_changed_outside_tf",
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				IPv6Prefixes: types.ListValueMust(types.StringType, []attr.Value{
@@ -263,7 +264,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"fd12:3456:789a:4::/64",
 				},
 			},
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				Id:               types.StringValue("pid,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
@@ -286,14 +287,14 @@ func TestMapDataSourceFields(t *testing.T) {
 		},
 		{
 			"ipv4_ipv6_gateway_nil",
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 			},
 			&iaas.Network{
 				NetworkId: utils.Ptr("nid"),
 			},
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				Id:               types.StringValue("pid,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
@@ -316,18 +317,18 @@ func TestMapDataSourceFields(t *testing.T) {
 		},
 		{
 			"response_nil_fail",
-			DataSourceModel{},
+			networkModel.DataSourceModel{},
 			nil,
-			DataSourceModel{},
+			networkModel.DataSourceModel{},
 			false,
 		},
 		{
 			"no_resource_id",
-			DataSourceModel{
+			networkModel.DataSourceModel{
 				ProjectId: types.StringValue("pid"),
 			},
 			&iaas.Network{},
-			DataSourceModel{},
+			networkModel.DataSourceModel{},
 			false,
 		},
 	}

@@ -32,9 +32,6 @@ var roleTargets = []string{
 	"organization",
 }
 
-// This resource is part of the "iam" experiment
-var experiment = "iam"
-
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &roleAssignmentResource{}
@@ -84,7 +81,7 @@ func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.Con
 		return
 	}
 
-	features.CheckExperimentEnabled(ctx, &providerData, experiment, fmt.Sprintf("stackit_authorization_%s_role_assignment", r.apiName), core.Resource, &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &providerData, features.IamExperiment, fmt.Sprintf("stackit_authorization_%s_role_assignment", r.apiName), core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -100,7 +97,7 @@ func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.Con
 // Schema defines the schema for the resource.
 func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        features.AddExperimentDescription(fmt.Sprintf("%s Role Assignment resource schema.", r.apiName), experiment, core.Resource),
+		"main":        features.AddExperimentDescription(fmt.Sprintf("%s Role Assignment resource schema.", r.apiName), features.IamExperiment, core.Resource),
 		"id":          "Terraform's internal resource identifier. It is structured as \"[resource_id],[role],[subject]\".",
 		"resource_id": fmt.Sprintf("%s Resource to assign the role to.", r.apiName),
 		"role":        "Role to be assigned",
