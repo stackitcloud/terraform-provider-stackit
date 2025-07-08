@@ -185,6 +185,7 @@ var hibernationTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.Extensions
 type extensions struct {
+	Argus         types.Object `tfsdk:"argus"`
 	Observability types.Object `tfsdk:"observability"`
 	ACL           types.Object `tfsdk:"acl"`
 	DNS           types.Object `tfsdk:"dns"`
@@ -192,6 +193,7 @@ type extensions struct {
 
 // Types corresponding to extensions
 var extensionsTypes = map[string]attr.Type{
+	//	"argus":         basetypes.ObjectType{AttrTypes: argusTypes},
 	"observability": basetypes.ObjectType{AttrTypes: observabilityTypes},
 	"acl":           basetypes.ObjectType{AttrTypes: aclTypes},
 	"dns":           basetypes.ObjectType{AttrTypes: dnsTypes},
@@ -210,12 +212,24 @@ var aclTypes = map[string]attr.Type{
 }
 
 // Struct corresponding to extensions.Argus
-type observability struct {
-	Enabled    types.Bool   `tfsdk:"enabled"`
-	InstanceId types.String `tfsdk:"argus_instance_id"`
+type argus struct {
+	Enabled         types.Bool   `tfsdk:"enabled"`
+	ArgusInstanceId types.String `tfsdk:"argus_instance_id"`
 }
 
 // Types corresponding to argus
+var argusTypes = map[string]attr.Type{
+	"enabled":           basetypes.BoolType{},
+	"argus_instance_id": basetypes.StringType{},
+}
+
+// Struct corresponding to extensions.Observability
+type observability struct {
+	Enabled    types.Bool   `tfsdk:"enabled"`
+	InstanceId types.String `tfsdk:"instance_id"`
+}
+
+// Types corresponding to observability
 var observabilityTypes = map[string]attr.Type{
 	"enabled":     basetypes.BoolType{},
 	"instance_id": basetypes.StringType{},
@@ -607,8 +621,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 				Attributes: map[string]schema.Attribute{
 					"argus": schema.SingleNestedAttribute{
-						Description: "A single argus block as defined below.",
-						Optional:    true,
+						Description:        "A single argus block as defined below. This field is deprecated and will be removed 06 January 2026.",
+						DeprecationMessage: "Use observability instead.",
+						Optional:           true,
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Description: "Flag to enable/disable Argus extensions.",
@@ -616,6 +631,20 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							},
 							"argus_instance_id": schema.StringAttribute{
 								Description: "Argus instance ID to choose which Argus instance is used. Required when enabled is set to `true`.",
+								Optional:    true,
+							},
+						},
+					},
+					"observability": schema.SingleNestedAttribute{
+						Description: "A single observability block as defined below.",
+						Optional:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Description: "Flag to enable/disable Observability extensions.",
+								Required:    true,
+							},
+							"instance_id": schema.StringAttribute{
+								Description: "Observability instance ID to choose which Observability instance is used. Required when enabled is set to `true`.",
 								Optional:    true,
 							},
 						},
@@ -666,6 +695,30 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 		},
+	}
+}
+
+func (r *clusterResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var resourceModel Model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &resourceModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// If no extensions are configured, return without error.
+	if resourceModel.Extensions.IsNull() || resourceModel.Extensions.IsUnknown() {
+		return
+	}
+
+	extensions := &extensions{}
+	diags := resourceModel.Extensions.As(ctx, extensions, basetypes.ObjectAsOptions{})
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !extensions.Argus.IsUnknown() && !extensions.Observability.IsUnknown() && !extensions.Argus.IsNull() && !extensions.Observability.IsNull() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring cluster", "You cannot provide both the `argus` and `observability` extension fields simultaneously. Please remove the deprecated `argus` field, and use `observability`.")
 	}
 }
 
@@ -903,7 +956,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		return
 	}
 	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == ske.RUNTIMEERRORCODE_OBSERVABILITY_INSTANCE_NOT_FOUND {
-		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid argus instance id, the cluster is usable but metrics won't be forwarded: %s", *waitResp.Status.Error.Message))
+		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid observability instance id, the cluster is usable but metrics won't be forwarded: %s", *waitResp.Status.Error.Message))
 	}
 
 	err = mapFields(ctx, waitResp, model, region)
@@ -1243,11 +1296,23 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 	}
 
 	var skeObservability *ske.Observability
-	if !(ex.Observability.IsNull() || ex.Observability.IsUnknown()) {
+	if !(ex.Argus.IsNull() || ex.Argus.IsUnknown()) {
+		argus := argus{}
+		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
+		}
+		argusEnabled := conversion.BoolValueToPointer(argus.Enabled)
+		argusInstanceId := conversion.StringValueToPointer(argus.ArgusInstanceId)
+		skeObservability = &ske.Observability{
+			Enabled:    argusEnabled,
+			InstanceId: argusInstanceId,
+		}
+	} else if !(ex.Observability.IsNull() || ex.Observability.IsUnknown()) {
 		observability := observability{}
 		diags = ex.Observability.As(ctx, &observability, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return nil, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
+			return nil, fmt.Errorf("converting extensions.observability object: %v", diags.Errors())
 		}
 		observabilityEnabled := conversion.BoolValueToPointer(observability.Enabled)
 		observabilityInstanceId := conversion.StringValueToPointer(observability.InstanceId)
@@ -1705,7 +1770,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startT
 	return startTime, endTime, nil
 }
 
-func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, argusDisabled, dnsDisabled bool, err error) {
+func checkDisabledExtensions(ctx context.Context, ex *extensions) (aclDisabled, observabilityDisabled, dnsDisabled bool, err error) {
 	var diags diag.Diagnostics
 	acl := acl{}
 	if ex.ACL.IsNull() {
@@ -1718,12 +1783,20 @@ func checkDisabledExtensions(ctx context.Context, ex extensions) (aclDisabled, a
 	}
 
 	observability := observability{}
-	if ex.Observability.IsNull() {
+	if ex.Argus.IsNull() && ex.Observability.IsNull() {
 		observability.Enabled = types.BoolValue(false)
+	} else if !ex.Argus.IsNull() {
+		argus := argus{}
+		diags = ex.Observability.As(ctx, &argus, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return false, false, false, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
+		}
+		observability.Enabled = argus.Enabled
+		observability.InstanceId = argus.ArgusInstanceId
 	} else {
 		diags = ex.Observability.As(ctx, &observability, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return false, false, false, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
+			return false, false, false, fmt.Errorf("converting extensions.observability object: %v", diags.Errors())
 		}
 	}
 
@@ -1764,12 +1837,12 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	// If we parse that object into the terraform model, it will produce an inconsistent result after apply
 	// error
 
-	aclDisabled, argusDisabled, dnsDisabled, err := checkDisabledExtensions(ctx, ex)
+	aclDisabled, observabilityDisabled, dnsDisabled, err := checkDisabledExtensions(ctx, &ex)
 	if err != nil {
 		return fmt.Errorf("checking if extensions are disabled: %w", err)
 	}
 	disabledExtensions := false
-	if aclDisabled && argusDisabled && dnsDisabled {
+	if aclDisabled && observabilityDisabled && dnsDisabled {
 		disabledExtensions = true
 	}
 
@@ -1806,29 +1879,29 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		aclExtension = ex.ACL
 	}
 
-	argusExtension := types.ObjectNull(observabilityTypes)
+	observabilityExtension := types.ObjectNull(observabilityTypes)
 	if cl.Extensions.Observability != nil {
 		enabled := types.BoolNull()
 		if cl.Extensions.Observability.Enabled != nil {
 			enabled = types.BoolValue(*cl.Extensions.Observability.Enabled)
 		}
 
-		argusInstanceId := types.StringNull()
+		observabilityInstanceId := types.StringNull()
 		if cl.Extensions.Observability.InstanceId != nil {
-			argusInstanceId = types.StringValue(*cl.Extensions.Observability.InstanceId)
+			observabilityInstanceId = types.StringValue(*cl.Extensions.Observability.InstanceId)
 		}
 
-		argusExtensionValues := map[string]attr.Value{
-			"enabled":           enabled,
-			"argus_instance_id": argusInstanceId,
+		observabilityExtensionValues := map[string]attr.Value{
+			"enabled":     enabled,
+			"instance_id": observabilityInstanceId,
 		}
 
-		argusExtension, diags = types.ObjectValue(observabilityTypes, argusExtensionValues)
+		observabilityExtension, diags = types.ObjectValue(observabilityTypes, observabilityExtensionValues)
 		if diags.HasError() {
-			return fmt.Errorf("creating argus extension: %w", core.DiagsToError(diags))
+			return fmt.Errorf("creating observability extension: %w", core.DiagsToError(diags))
 		}
-	} else if argusDisabled && !ex.Observability.IsNull() {
-		argusExtension = ex.Observability
+	} else if observabilityDisabled && !ex.Observability.IsNull() {
+		observabilityExtension = ex.Observability
 	}
 
 	dnsExtension := types.ObjectNull(dnsTypes)
@@ -1857,9 +1930,9 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	}
 
 	extensionsValues := map[string]attr.Value{
-		"acl":   aclExtension,
-		"argus": argusExtension,
-		"dns":   dnsExtension,
+		"acl":           aclExtension,
+		"observability": observabilityExtension,
+		"dns":           dnsExtension,
 	}
 
 	extensions, diags := types.ObjectValue(extensionsTypes, extensionsValues)

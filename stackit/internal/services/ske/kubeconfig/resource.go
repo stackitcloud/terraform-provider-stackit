@@ -67,12 +67,13 @@ func (r *kubeconfigResource) Metadata(_ context.Context, req resource.MetadataRe
 
 // Configure adds the provider configured client to the resource.
 func (r *kubeconfigResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := skeUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := skeUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -233,12 +234,14 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	projectId := model.ProjectId.ValueString()
 	clusterName := model.ClusterName.ValueString()
 	kubeconfigUUID := uuid.New().String()
+	region := model.Region.ValueString()
 
 	model.KubeconfigId = types.StringValue(kubeconfigUUID)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
 	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	err := r.createKubeconfig(ctx, &model)
 	if err != nil {
@@ -370,9 +373,11 @@ func (r *kubeconfigResource) Delete(ctx context.Context, req resource.DeleteRequ
 	projectId := model.ProjectId.ValueString()
 	clusterName := model.ClusterName.ValueString()
 	kubeconfigUUID := model.KubeconfigId.ValueString()
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
 	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// kubeconfig is deleted automatically from the state
 	tflog.Info(ctx, "SKE kubeconfig deleted")

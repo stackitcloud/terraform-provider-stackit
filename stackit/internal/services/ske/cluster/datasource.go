@@ -262,8 +262,9 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"argus": schema.SingleNestedAttribute{
-						Description: "A single argus block as defined below",
-						Computed:    true,
+						Description:        "A single argus block as defined below. This field is deprecated and will be removed 06 January 2026.",
+						DeprecationMessage: "Use observability instead.",
+						Computed:           true,
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Description: "Flag to enable/disable argus extensions.",
@@ -271,6 +272,20 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							},
 							"argus_instance_id": schema.StringAttribute{
 								Description: "Instance ID of argus",
+								Computed:    true,
+							},
+						},
+					},
+					"observability": schema.SingleNestedAttribute{
+						Description: "A single observability block as defined below.",
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Description: "Flag to enable/disable Observability extensions.",
+								Computed:    true,
+							},
+							"instance_id": schema.StringAttribute{
+								Description: "Observability instance ID to choose which Observability instance is used. Required when enabled is set to `true`.",
 								Computed:    true,
 							},
 						},
