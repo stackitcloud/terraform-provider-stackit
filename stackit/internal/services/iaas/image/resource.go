@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -603,13 +605,7 @@ func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model) error {
 		return fmt.Errorf("image id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		imageId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), imageId)
 
 	// Map config
 	var configModel = &configModel{}
@@ -670,18 +666,9 @@ func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model) error {
 	}
 
 	// Map labels
-	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
-	if diags.HasError() {
-		return fmt.Errorf("convert labels to StringValue map: %w", core.DiagsToError(diags))
-	}
-	if imageResp.Labels != nil && len(*imageResp.Labels) != 0 {
-		var diags diag.Diagnostics
-		labels, diags = types.MapValueFrom(ctx, types.StringType, *imageResp.Labels)
-		if diags.HasError() {
-			return fmt.Errorf("convert labels to StringValue map: %w", core.DiagsToError(diags))
-		}
-	} else if model.Labels.IsNull() {
-		labels = types.MapNull(types.StringType)
+	labels, err := iaasUtils.MapLabels(ctx, imageResp.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
 
 	model.ImageId = types.StringValue(imageId)

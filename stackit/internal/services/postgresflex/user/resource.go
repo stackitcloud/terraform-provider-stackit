@@ -283,10 +283,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = r.providerData.GetRegion()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
@@ -458,14 +455,8 @@ func mapFieldsCreate(userResp *postgresflex.CreateUserResponse, model *Model, re
 		return fmt.Errorf("user id not present")
 	}
 	userId := *user.Id
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.InstanceId.ValueString(),
-		userId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId,
 	)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)
@@ -512,14 +503,8 @@ func mapFields(userResp *postgresflex.GetUserResponse, model *Model, region stri
 	} else {
 		return fmt.Errorf("user id not present")
 	}
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.InstanceId.ValueString(),
-		userId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId,
 	)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)

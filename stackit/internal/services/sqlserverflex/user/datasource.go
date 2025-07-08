@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
@@ -150,12 +149,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
@@ -210,14 +204,8 @@ func mapDataSourceFields(userResp *sqlserverflex.GetUserResponse, model *DataSou
 	} else {
 		return fmt.Errorf("user id not present")
 	}
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.InstanceId.ValueString(),
-		userId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId,
 	)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)

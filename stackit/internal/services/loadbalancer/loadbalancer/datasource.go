@@ -72,7 +72,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		"protocol":                              "Protocol is the highest network protocol we understand to load balance.",
 		"target_pool":                           "Reference target pool by target pool name.",
 		"name":                                  "Load balancer name.",
-		"plan_id":                               "The service plan ID. Defaults to p10. See the API docs for a list of available plans at: https://docs.api.stackit.cloud/documentation/load-balancer/version/v1#tag/APIService/operation/APIService_ListPlans",
+		"plan_id":                               "The service plan ID. See the API docs for a list of available plans at: https://docs.api.stackit.cloud/documentation/load-balancer/version/v1#tag/APIService/operation/APIService_ListPlans",
 		"networks":                              "List of networks that listeners and targets reside in.",
 		"network_id":                            "Openstack network ID.",
 		"role":                                  "The role defines how the load balancer is using the network.",
@@ -351,12 +351,7 @@ func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)

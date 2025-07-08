@@ -36,10 +36,10 @@ resource "stackit_dns_zone" "zone" {
   expire_time     = var.expire_time
   is_reverse_zone = var.is_reverse_zone
   # negative_cache  = var.negative_cache
-  primaries       = var.primaries
-  refresh_time    = var.refresh_time
-  retry_time      = var.retry_time
-  type            = var.type
+  primaries    = var.primaries
+  refresh_time = var.refresh_time
+  retry_time   = var.retry_time
+  type         = var.type
 }
 
 
@@ -60,6 +60,11 @@ resource "stackit_dns_record_set" "record_set" {
 data "stackit_dns_zone" "zone" {
   project_id = var.project_id
   zone_id    = stackit_dns_zone.zone.zone_id
+}
+
+data "stackit_dns_zone" "zone_name" {
+  project_id = var.project_id
+  dns_name   = stackit_dns_zone.zone.dns_name
 }
 
 data "stackit_dns_record_set" "record_set" {

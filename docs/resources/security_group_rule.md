@@ -74,5 +74,5 @@ Required:
 
 Optional:
 
-- `name` (String) The protocol name which the rule should match. Either `name` or `number` must be provided.
+- `name` (String) The protocol name which the rule should match. Either `name` or `number` must be provided. Possible values are: `ah`, `dccp`, `egp`, `esp`, `gre`, `icmp`, `igmp`, `ipip`, `ipv6-encap`, `ipv6-frag`, `ipv6-icmp`, `ipv6-nonxt`, `ipv6-opts`, `ipv6-route`, `ospf`, `pgm`, `rsvp`, `sctp`, `tcp`, `udp`, `udplite`, `vrrp`.
 - `number` (Number) The protocol number which the rule should match. Either `name` or `number` must be provided.

@@ -23,12 +23,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	internalUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -477,24 +477,18 @@ func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, networkAr
 		return fmt.Errorf("network area id not present")
 	}
 
-	idParts := []string{
-		model.OrganizationId.ValueString(),
-		networkAreaId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.OrganizationId.ValueString(), networkAreaId)
 
 	if networkAreaResp.Ipv4 == nil || networkAreaResp.Ipv4.DefaultNameservers == nil {
 		model.DefaultNameservers = types.ListNull(types.StringType)
 	} else {
 		respDefaultNameservers := *networkAreaResp.Ipv4.DefaultNameservers
-		modelDefaultNameservers, err := internalUtils.ListValuetoStringSlice(model.DefaultNameservers)
+		modelDefaultNameservers, err := utils.ListValuetoStringSlice(model.DefaultNameservers)
 		if err != nil {
 			return fmt.Errorf("get current network area default nameservers from model: %w", err)
 		}
 
-		reconciledDefaultNameservers := internalUtils.ReconcileStringSlices(modelDefaultNameservers, respDefaultNameservers)
+		reconciledDefaultNameservers := utils.ReconcileStringSlices(modelDefaultNameservers, respDefaultNameservers)
 
 		defaultNameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledDefaultNameservers)
 		if diags.HasError() {
@@ -509,18 +503,9 @@ func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, networkAr
 		return fmt.Errorf("mapping network ranges: %w", err)
 	}
 
-	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
-	if diags.HasError() {
-		return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-	}
-	if networkAreaResp.Labels != nil && len(*networkAreaResp.Labels) != 0 {
-		var diags diag.Diagnostics
-		labels, diags = types.MapValueFrom(ctx, types.StringType, *networkAreaResp.Labels)
-		if diags.HasError() {
-			return fmt.Errorf("converting labels to StringValue map: %w", core.DiagsToError(diags))
-		}
-	} else if model.Labels.IsNull() {
-		labels = types.MapNull(types.StringType)
+	labels, err := iaasUtils.MapLabels(ctx, networkAreaResp.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
 
 	model.NetworkAreaId = types.StringValue(networkAreaId)
@@ -567,7 +552,7 @@ func mapNetworkRanges(ctx context.Context, networkAreaRangesList *[]iaas.Network
 		apiNetworkRangePrefixes = append(apiNetworkRangePrefixes, *n.Prefix)
 	}
 
-	reconciledRangePrefixes := internalUtils.ReconcileStringSlices(modelNetworkRangePrefixes, apiNetworkRangePrefixes)
+	reconciledRangePrefixes := utils.ReconcileStringSlices(modelNetworkRangePrefixes, apiNetworkRangePrefixes)
 
 	networkRangesList := []attr.Value{}
 	for i, prefix := range reconciledRangePrefixes {
@@ -748,7 +733,7 @@ func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId stri
 			payload := iaas.CreateNetworkAreaRangePayload{
 				Ipv4: &[]iaas.NetworkRange{
 					{
-						Prefix: utils.Ptr(prefix),
+						Prefix: sdkUtils.Ptr(prefix),
 					},
 				},
 			}

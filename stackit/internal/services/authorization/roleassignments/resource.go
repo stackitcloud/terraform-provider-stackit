@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	authorizationUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/utils"
 
@@ -82,7 +84,7 @@ func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.Con
 		return
 	}
 
-	features.CheckExperimentEnabled(ctx, &providerData, experiment, fmt.Sprintf("stackit_authorization_%s_role_assignment", r.apiName), &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &providerData, experiment, fmt.Sprintf("stackit_authorization_%s_role_assignment", r.apiName), core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -98,7 +100,7 @@ func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.Con
 // Schema defines the schema for the resource.
 func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        features.AddExperimentDescription(fmt.Sprintf("%s Role Assignment resource schema.", r.apiName), experiment),
+		"main":        features.AddExperimentDescription(fmt.Sprintf("%s Role Assignment resource schema.", r.apiName), experiment, core.Resource),
 		"id":          "Terraform's internal resource identifier. It is structured as \"[resource_id],[role],[subject]\".",
 		"resource_id": fmt.Sprintf("%s Resource to assign the role to.", r.apiName),
 		"role":        "Role to be assigned",
@@ -281,15 +283,7 @@ func mapListMembersResponse(resp *authorization.ListMembersResponse, model *Mode
 		return fmt.Errorf("model input is nil")
 	}
 
-	idParts := []string{
-		model.ResourceId.ValueString(),
-		model.Role.ValueString(),
-		model.Subject.ValueString(),
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
-
+	model.Id = utils.BuildInternalTerraformId(model.ResourceId.ValueString(), model.Role.ValueString(), model.Subject.ValueString())
 	model.ResourceId = types.StringPointerValue(resp.ResourceId)
 
 	for _, m := range *resp.Members {

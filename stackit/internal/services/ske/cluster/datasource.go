@@ -98,6 +98,11 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed:    true,
 				ElementType: types.StringType,
 			},
+			"pod_address_ranges": schema.ListAttribute{
+				Description: "The network ranges (in CIDR notation) used by pods of the cluster.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
 			"node_pools": schema.ListNestedAttribute{
 				Description: "One or more `node_pool` block as defined below.",
 				Computed:    true,
@@ -322,12 +327,7 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	projectId := state.ProjectId.ValueString()
 	name := state.Name.ValueString()
-	var region string
-	if utils.IsUndefined(state.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = state.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(state.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)

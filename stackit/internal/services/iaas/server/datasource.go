@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -13,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -240,27 +238,13 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 		return fmt.Errorf("server id not present")
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		serverId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), serverId)
 
-	labels, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
-	if diags.HasError() {
-		return fmt.Errorf("convert labels to StringValue map: %w", core.DiagsToError(diags))
+	labels, err := iaasUtils.MapLabels(ctx, serverResp.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
-	if serverResp.Labels != nil && len(*serverResp.Labels) != 0 {
-		var diags diag.Diagnostics
-		labels, diags = types.MapValueFrom(ctx, types.StringType, *serverResp.Labels)
-		if diags.HasError() {
-			return fmt.Errorf("convert labels to StringValue map: %w", core.DiagsToError(diags))
-		}
-	} else if model.Labels.IsNull() {
-		labels = types.MapNull(types.StringType)
-	}
+
 	var createdAt basetypes.StringValue
 	if serverResp.CreatedAt != nil {
 		createdAtValue := *serverResp.CreatedAt

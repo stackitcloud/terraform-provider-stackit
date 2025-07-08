@@ -63,6 +63,7 @@ func TestMapFields(t *testing.T) {
 				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
 				Extensions:                types.ObjectNull(extensionsTypes),
 				EgressAddressRanges:       types.ListNull(types.StringType),
+				PodAddressRanges:          types.ListNull(types.StringType),
 				Region:                    types.StringValue(testRegion),
 			},
 			true,
@@ -151,6 +152,7 @@ func TestMapFields(t *testing.T) {
 					Error:               nil,
 					Hibernated:          nil,
 					EgressAddressRanges: &[]string{"0.0.0.0/32", "1.1.1.1/32"},
+					PodAddressRanges:    &[]string{"0.0.0.0/32", "1.1.1.1/32"},
 				},
 			},
 			testRegion,
@@ -162,6 +164,13 @@ func TestMapFields(t *testing.T) {
 				KubernetesVersionUsed:     types.StringValue("1.2.3"),
 				AllowPrivilegedContainers: types.BoolValue(true),
 				EgressAddressRanges: types.ListValueMust(
+					types.StringType,
+					[]attr.Value{
+						types.StringValue("0.0.0.0/32"),
+						types.StringValue("1.1.1.1/32"),
+					},
+				),
+				PodAddressRanges: types.ListValueMust(
 					types.StringType,
 					[]attr.Value{
 						types.StringValue("0.0.0.0/32"),
@@ -283,6 +292,7 @@ func TestMapFields(t *testing.T) {
 				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
 				Extensions:                types.ObjectNull(extensionsTypes),
 				EgressAddressRanges:       types.ListNull(types.StringType),
+				PodAddressRanges:          types.ListNull(types.StringType),
 				Region:                    types.StringValue(testRegion),
 			},
 			true,
@@ -319,6 +329,7 @@ func TestMapFields(t *testing.T) {
 				Maintenance:               types.ObjectNull(maintenanceTypes),
 				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
 				EgressAddressRanges:       types.ListNull(types.StringType),
+				PodAddressRanges:          types.ListNull(types.StringType),
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
 					"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
 						"enabled":       types.BoolValue(true),
@@ -369,6 +380,7 @@ func TestMapFields(t *testing.T) {
 				Maintenance:               types.ObjectNull(maintenanceTypes),
 				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
 				EgressAddressRanges:       types.ListNull(types.StringType),
+				PodAddressRanges:          types.ListNull(types.StringType),
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
 					"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
 						"enabled":       types.BoolValue(false),
@@ -430,6 +442,7 @@ func TestMapFields(t *testing.T) {
 				Maintenance:               types.ObjectNull(maintenanceTypes),
 				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
 				EgressAddressRanges:       types.ListNull(types.StringType),
+				PodAddressRanges:          types.ListNull(types.StringType),
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
 					"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(true),
@@ -470,6 +483,7 @@ func TestMapFields(t *testing.T) {
 				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
 				Extensions:                types.ObjectNull(extensionsTypes),
 				EgressAddressRanges:       types.ListNull(types.StringType),
+				PodAddressRanges:          types.ListNull(types.StringType),
 				Region:                    types.StringValue(testRegion),
 			},
 			true,
@@ -598,6 +612,7 @@ func TestMapFields(t *testing.T) {
 				KubernetesVersionUsed:     types.StringValue("1.2.3"),
 				AllowPrivilegedContainers: types.BoolValue(true),
 				EgressAddressRanges:       types.ListNull(types.StringType),
+				PodAddressRanges:          types.ListNull(types.StringType),
 				NodePools: types.ListValueMust(
 					types.ObjectType{AttrTypes: nodePoolTypes},
 					[]attr.Value{

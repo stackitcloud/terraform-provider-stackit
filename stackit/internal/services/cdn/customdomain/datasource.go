@@ -41,7 +41,7 @@ func (d *customDomainDataSource) Configure(ctx context.Context, req datasource.C
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_cdn_custom_domain", "datasource")
+	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_cdn_custom_domain", core.Datasource)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -60,7 +60,7 @@ func (r *customDomainDataSource) Metadata(_ context.Context, req datasource.Meta
 
 func (r *customDomainDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema."),
+		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema.", core.Datasource),
 		Description:         "CDN distribution data source schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

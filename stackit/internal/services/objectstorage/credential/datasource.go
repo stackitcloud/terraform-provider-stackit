@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -124,12 +123,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	credentialId := model.CredentialId.ValueString()
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
@@ -206,14 +200,8 @@ func mapDataSourceFields(credentialResp *objectstorage.AccessKey, model *DataSou
 		model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
 	}
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.CredentialsGroupId.ValueString(),
-		credentialId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), region, model.CredentialsGroupId.ValueString(), credentialId,
 	)
 	model.CredentialId = types.StringValue(credentialId)
 	model.Name = types.StringPointerValue(credentialResp.DisplayName)

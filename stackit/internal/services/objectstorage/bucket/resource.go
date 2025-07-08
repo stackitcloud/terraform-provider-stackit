@@ -2,6 +2,7 @@ package objectstorage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -229,10 +230,7 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 	projectId := model.ProjectId.ValueString()
 	bucketName := model.Name.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = r.providerData.GetRegion()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", bucketName)
@@ -290,6 +288,13 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	// Delete existing bucket
 	_, err := r.client.DeleteBucket(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) {
+			if oapiErr.StatusCode == http.StatusUnprocessableEntity {
+				core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", "Bucket isn't empty and cannot be deleted")
+				return
+			}
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", fmt.Sprintf("Calling API: %v", err))
 	}
 	_, err = wait.DeleteBucketWaitHandler(ctx, r.client, projectId, region, bucketName).WaitWithContext(ctx)
@@ -330,14 +335,7 @@ func mapFields(bucketResp *objectstorage.GetBucketResponse, model *Model, region
 	}
 	bucket := bucketResp.Bucket
 
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.Name.ValueString(),
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.Name.ValueString())
 	model.URLPathStyle = types.StringPointerValue(bucket.UrlPathStyle)
 	model.URLVirtualHostedStyle = types.StringPointerValue(bucket.UrlVirtualHostedStyle)
 	model.Region = types.StringValue(region)

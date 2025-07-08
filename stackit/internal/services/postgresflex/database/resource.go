@@ -256,10 +256,7 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	databaseId := model.DatabaseId.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = r.providerData.GetRegion()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "database_id", databaseId)
@@ -367,14 +364,8 @@ func mapFields(databaseResp *postgresflex.InstanceDatabase, model *Model, region
 	} else {
 		return fmt.Errorf("database id not present")
 	}
-	idParts := []string{
-		model.ProjectId.ValueString(),
-		region,
-		model.InstanceId.ValueString(),
-		databaseId,
-	}
-	model.Id = types.StringValue(
-		strings.Join(idParts, core.Separator),
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), databaseId,
 	)
 	model.DatabaseId = types.StringValue(databaseId)
 	model.Name = types.StringPointerValue(databaseResp.Name)

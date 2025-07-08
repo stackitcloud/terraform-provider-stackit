@@ -91,7 +91,10 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 // Schema defines the schema for the resource.
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                "Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.",
+		"main": fmt.Sprintf("%s\n\n%s",
+			"Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.",
+			"-> In case you're getting started with an empty STACKIT organization and want to use this resource to create projects in it, check out [this guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/stackit_org_service_account) for how to create a service account which you can use for authentication in the STACKIT Terraform provider.",
+		),
 		"id":                  "Terraform's internal resource ID. It is structured as \"`container_id`\".",
 		"project_id":          "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
 		"container_id":        "Project container ID. Globally unique, user-friendly identifier.",

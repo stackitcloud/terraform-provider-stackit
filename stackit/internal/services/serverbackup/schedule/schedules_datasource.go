@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	serverbackupUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/utils"
@@ -77,7 +76,7 @@ func (r *schedulesDataSource) Configure(ctx context.Context, req datasource.Conf
 func (r *schedulesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         "Server backup schedules datasource schema. Must have a `region` specified in the provider configuration.",
-		MarkdownDescription: features.AddBetaDescription("Server backup schedules datasource schema. Must have a `region` specified in the provider configuration."),
+		MarkdownDescription: features.AddBetaDescription("Server backup schedules datasource schema. Must have a `region` specified in the provider configuration.", core.Datasource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source identifier. It is structured as \"`project_id`,`server_id`\".",
@@ -174,12 +173,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	var region string
-	if utils.IsUndefined(model.Region) {
-		region = r.providerData.GetRegion()
-	} else {
-		region = model.Region.ValueString()
-	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -228,10 +222,7 @@ func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverbackup.G
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 
-	idParts := []string{projectId, region, serverId}
-	model.ID = types.StringValue(
-		strings.Join(idParts, core.Separator),
-	)
+	model.ID = utils.BuildInternalTerraformId(projectId, region, serverId)
 	model.Region = types.StringValue(region)
 
 	for _, schedule := range *schedules.Items {
