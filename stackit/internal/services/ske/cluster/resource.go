@@ -70,21 +70,20 @@ type skeClient interface {
 }
 
 type Model struct {
-	Id                        types.String `tfsdk:"id"` // needed by TF
-	ProjectId                 types.String `tfsdk:"project_id"`
-	Name                      types.String `tfsdk:"name"`
-	KubernetesVersionMin      types.String `tfsdk:"kubernetes_version_min"`
-	KubernetesVersion         types.String `tfsdk:"kubernetes_version"`
-	KubernetesVersionUsed     types.String `tfsdk:"kubernetes_version_used"`
-	AllowPrivilegedContainers types.Bool   `tfsdk:"allow_privileged_containers"`
-	NodePools                 types.List   `tfsdk:"node_pools"`
-	Maintenance               types.Object `tfsdk:"maintenance"`
-	Network                   types.Object `tfsdk:"network"`
-	Hibernations              types.List   `tfsdk:"hibernations"`
-	Extensions                types.Object `tfsdk:"extensions"`
-	EgressAddressRanges       types.List   `tfsdk:"egress_address_ranges"`
-	PodAddressRanges          types.List   `tfsdk:"pod_address_ranges"`
-	Region                    types.String `tfsdk:"region"`
+	Id                    types.String `tfsdk:"id"` // needed by TF
+	ProjectId             types.String `tfsdk:"project_id"`
+	Name                  types.String `tfsdk:"name"`
+	KubernetesVersionMin  types.String `tfsdk:"kubernetes_version_min"`
+	KubernetesVersion     types.String `tfsdk:"kubernetes_version"`
+	KubernetesVersionUsed types.String `tfsdk:"kubernetes_version_used"`
+	NodePools             types.List   `tfsdk:"node_pools"`
+	Maintenance           types.Object `tfsdk:"maintenance"`
+	Network               types.Object `tfsdk:"network"`
+	Hibernations          types.List   `tfsdk:"hibernations"`
+	Extensions            types.Object `tfsdk:"extensions"`
+	EgressAddressRanges   types.List   `tfsdk:"egress_address_ranges"`
+	PodAddressRanges      types.List   `tfsdk:"pod_address_ranges"`
+	Region                types.String `tfsdk:"region"`
 }
 
 // Struct corresponding to Model.NodePools[i]
@@ -389,10 +388,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"kubernetes_version_used": schema.StringAttribute{
 				Description: "Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. " + SKEUpdateDoc,
 				Computed:    true,
-			},
-			"allow_privileged_containers": schema.BoolAttribute{
-				Description: "Flag to specify if privileged mode for containers is enabled or not.\nThis should be used with care since it also disables a couple of other features like the use of some volume type (e.g. PVCs).\nDeprecated as of Kubernetes 1.25 and later",
-				Optional:    true,
 			},
 			"egress_address_ranges": schema.ListAttribute{
 				Description: "The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.",
@@ -733,34 +728,6 @@ func (r *clusterResource) ConfigValidators(_ context.Context) []resource.ConfigV
 	}
 }
 
-// needs to be executed inside the Create and Update methods
-// since ValidateConfig runs before variables are rendered to their value,
-// which causes errors like this: https://github.com/stackitcloud/terraform-provider-stackit/issues/201
-func checkAllowPrivilegedContainers(allowPrivilegeContainers types.Bool, kubernetesVersion types.String) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	// if kubernetesVersion is null, the latest one will be used and allowPriviledgeContainers will not be supported
-	if kubernetesVersion.IsNull() {
-		if !allowPrivilegeContainers.IsNull() {
-			diags.AddError("'Allow privilege containers' deprecated", "This field is deprecated as of Kubernetes 1.25 and later. Please remove this field")
-		}
-		return diags
-	}
-
-	comparison := semver.Compare(fmt.Sprintf("v%s", kubernetesVersion.ValueString()), "v1.25")
-	if comparison < 0 {
-		if allowPrivilegeContainers.IsNull() {
-			diags.AddError("'Allow privilege containers' missing", "This field is required for Kubernetes prior to 1.25")
-		}
-	} else {
-		if !allowPrivilegeContainers.IsNull() {
-			diags.AddError("'Allow privilege containers' deprecated", "This field is deprecated as of Kubernetes 1.25 and later. Please remove this field")
-		}
-	}
-
-	return diags
-}
-
 // Create creates the resource and sets the initial Terraform state.
 func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
@@ -774,11 +741,6 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	// needed for backwards compatibility following kubernetes_version field deprecation
 	if kubernetesVersion.IsNull() {
 		kubernetesVersion = model.KubernetesVersion
-	}
-	diags = checkAllowPrivilegedContainers(model.AllowPrivilegedContainers, kubernetesVersion)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
 	}
 
 	projectId := model.ProjectId.ValueString()
@@ -2177,12 +2139,6 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	// needed for backwards compatibility following kubernetes_version field deprecation
 	if kubernetesVersion.IsNull() {
 		kubernetesVersion = model.KubernetesVersion
-	}
-
-	diags = checkAllowPrivilegedContainers(model.AllowPrivilegedContainers, kubernetesVersion)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
 	}
 
 	projectId := model.ProjectId.ValueString()

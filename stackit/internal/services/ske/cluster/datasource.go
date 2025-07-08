@@ -88,11 +88,6 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Description: "Full Kubernetes version used. For example, if `1.22` was selected, this value may result to `1.22.15`",
 				Computed:    true,
 			},
-			"allow_privileged_containers": schema.BoolAttribute{
-				Description:        "DEPRECATED as of Kubernetes 1.25+\n Flag to specify if privileged mode for containers is enabled or not.\nThis should be used with care since it also disables a couple of other features like the use of some volume type (e.g. PVCs).",
-				DeprecationMessage: "Please remove this flag from your configuration when using Kubernetes version 1.25+.",
-				Computed:           true,
-			},
 			"egress_address_ranges": schema.ListAttribute{
 				Description: "The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.",
 				Computed:    true,
