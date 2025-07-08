@@ -30,6 +30,7 @@ var resourceMaxConfig string
 
 var testConfigVarsMin = config.Variables{
 	"project_id":          config.StringVariable(testutil.ProjectId),
+	"plan_id":             config.StringVariable("p10"),
 	"network_name":        config.StringVariable(fmt.Sprintf("tf-acc-n%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
 	"server_name":         config.StringVariable(fmt.Sprintf("tf-acc-s%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
 	"loadbalancer_name":   config.StringVariable(fmt.Sprintf("tf-acc-l%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
@@ -147,6 +148,7 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					// Load balancer instance
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "name", testutil.ConvertConfigVariable(testConfigVarsMin["loadbalancer_name"])),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "plan_id", testutil.ConvertConfigVariable(testConfigVarsMin["plan_id"])),
 					resource.TestCheckResourceAttrPair(
 						"data.stackit_loadbalancer.loadbalancer", "project_id",
 						"stackit_loadbalancer.loadbalancer", "project_id",
@@ -280,6 +282,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					// Load balancer instance
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "name", testutil.ConvertConfigVariable(testConfigVarsMax["loadbalancer_name"])),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "plan_id", testutil.ConvertConfigVariable(testConfigVarsMax["plan_id"])),
 					resource.TestCheckResourceAttrPair(
 						"data.stackit_loadbalancer.loadbalancer", "project_id",
 						"stackit_loadbalancer.loadbalancer", "project_id",
