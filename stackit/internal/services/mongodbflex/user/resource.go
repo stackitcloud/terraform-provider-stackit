@@ -46,6 +46,7 @@ type Model struct {
 	Host       types.String `tfsdk:"host"`
 	Port       types.Int64  `tfsdk:"port"`
 	Uri        types.String `tfsdk:"uri"`
+	Region     types.String `tfsdk:"region"`
 }
 
 // NewUserResource is a helper function to simplify the provider implementation.
@@ -55,7 +56,8 @@ func NewUserResource() resource.Resource {
 
 // userResource is the resource implementation.
 type userResource struct {
-	client *mongodbflex.APIClient
+	client       *mongodbflex.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -65,12 +67,13 @@ func (r *userResource) Metadata(_ context.Context, req resource.MetadataRequest,
 
 // Configure adds the provider configured client to the resource.
 func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := mongodbflexUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := mongodbflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -87,6 +90,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 		"instance_id": "ID of the MongoDB Flex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
 		"roles":       "Database access levels for the user. Some of the possible values are: [`read`, `readWrite`, `readWriteAnyDatabase`]",
+		"region":      "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -166,6 +170,15 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Computed:  true,
 				Sensitive: true,
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -179,8 +192,10 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	var roles []string
@@ -199,7 +214,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	// Create new user
-	userResp, err := r.client.CreateUser(ctx, projectId, instanceId).CreateUserPayload(*payload).Execute()
+	userResp, err := r.client.CreateUser(ctx, projectId, instanceId, region).CreateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -212,7 +227,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
 	// Map response body to schema
-	err = mapFieldsCreate(userResp, &model)
+	err = mapFieldsCreate(userResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -235,13 +250,15 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
-	recordSetResp, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
+	recordSetResp, err := r.client.GetUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -253,7 +270,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	// Map response body to schema
-	err = mapFields(recordSetResp, &model)
+	err = mapFields(recordSetResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -278,9 +295,11 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
@@ -309,20 +328,20 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	// Update existing instance
-	err = r.client.UpdateUser(ctx, projectId, instanceId, userId).UpdateUserPayload(*payload).Execute()
+	err = r.client.UpdateUser(ctx, projectId, instanceId, userId, region).UpdateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", err.Error())
 		return
 	}
 
-	userResp, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
+	userResp, err := r.client.GetUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(userResp, &stateModel)
+	err = mapFields(userResp, &stateModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -348,14 +367,16 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
 	// Delete user
-	err := r.client.DeleteUser(ctx, projectId, instanceId, userId).Execute()
+	err := r.client.DeleteUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -367,17 +388,18 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 // The expected format of the resource import identifier is: project_id,zone_id,record_set_id
 func (r *userResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing user",
-			fmt.Sprintf("Expected import identifier with format [project_id],[instance_id],[user_id], got %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id],[user_id], got %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), idParts[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), idParts[3])...)
 	core.LogAndAddWarning(ctx, &resp.Diagnostics,
 		"MongoDB Flex user imported with empty password and empty uri",
 		"The user password and uri are not imported as they are only available upon creation of a new user. The password and uri fields will be empty.",
@@ -385,7 +407,7 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 	tflog.Info(ctx, "MongoDB Flex user state imported")
 }
 
-func mapFieldsCreate(userResp *mongodbflex.CreateUserResponse, model *Model) error {
+func mapFieldsCreate(userResp *mongodbflex.CreateUserResponse, model *Model, region string) error {
 	if userResp == nil || userResp.Item == nil {
 		return fmt.Errorf("response is nil")
 	}
@@ -398,7 +420,8 @@ func mapFieldsCreate(userResp *mongodbflex.CreateUserResponse, model *Model) err
 		return fmt.Errorf("user id not present")
 	}
 	userId := *user.Id
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), userId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId)
+	model.Region = types.StringValue(region)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)
 	model.Database = types.StringPointerValue(user.Database)
@@ -427,7 +450,7 @@ func mapFieldsCreate(userResp *mongodbflex.CreateUserResponse, model *Model) err
 	return nil
 }
 
-func mapFields(userResp *mongodbflex.GetUserResponse, model *Model) error {
+func mapFields(userResp *mongodbflex.GetUserResponse, model *Model, region string) error {
 	if userResp == nil || userResp.Item == nil {
 		return fmt.Errorf("response is nil")
 	}
@@ -444,7 +467,8 @@ func mapFields(userResp *mongodbflex.GetUserResponse, model *Model) error {
 	} else {
 		return fmt.Errorf("user id not present")
 	}
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), userId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId)
+	model.Region = types.StringValue(region)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)
 	model.Database = types.StringPointerValue(user.Database)

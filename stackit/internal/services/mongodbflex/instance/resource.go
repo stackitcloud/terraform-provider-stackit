@@ -53,6 +53,7 @@ type Model struct {
 	Storage        types.Object `tfsdk:"storage"`
 	Version        types.String `tfsdk:"version"`
 	Options        types.Object `tfsdk:"options"`
+	Region         types.String `tfsdk:"region"`
 }
 
 // Struct corresponding to Model.Flavor
@@ -110,7 +111,8 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client *mongodbflex.APIClient
+	client       *mongodbflex.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -120,12 +122,13 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 // Configure adds the provider configured client to the resource.
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := mongodbflexUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := mongodbflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -139,7 +142,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 
 	descriptions := map[string]string{
 		"main":                              "MongoDB Flex instance resource schema. Must have a `region` specified in the provider configuration.",
-		"id":                                "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
+		"id":                                "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"instance_id":                       "ID of the MongoDB Flex instance.",
 		"project_id":                        "STACKIT project ID to which the instance is associated.",
 		"name":                              "Instance name.",
@@ -152,6 +155,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"weekly_snapshot_retention_weeks":   "The number of weeks that weekly backups will be retained.",
 		"monthly_snapshot_retention_months": "The number of months that monthly backups will be retained.",
 		"point_in_time_window_hours":        "The number of hours back in time the point-in-time recovery feature will be able to recover.",
+		"region":                            "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -298,6 +302,15 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 				},
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -312,7 +325,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	var acl []string
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
@@ -329,7 +344,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		err := loadFlavorId(ctx, r.client, &model, flavor)
+		err := loadFlavorId(ctx, r.client, &model, flavor, region)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
@@ -360,7 +375,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
+	createResp, err := r.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -385,14 +400,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, flavor, storage, options)
+	err = mapFields(ctx, waitResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -409,7 +424,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	backupScheduleOptions, err := r.client.UpdateBackupSchedule(ctx, projectId, instanceId).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
+	backupScheduleOptions, err := r.client.UpdateBackupSchedule(ctx, projectId, instanceId, region).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Updating options: %v", err))
 		return
@@ -439,8 +454,10 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	var flavor = &flavorModel{}
@@ -469,7 +486,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		}
 	}
 
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -481,7 +498,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, instanceResp, &model, flavor, storage, options)
+	err = mapFields(ctx, instanceResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -505,8 +522,10 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	var acl []string
@@ -524,7 +543,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		err := loadFlavorId(ctx, r.client, &model, flavor)
+		err := loadFlavorId(ctx, r.client, &model, flavor, region)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
@@ -555,19 +574,19 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	_, err = r.client.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
+	_, err = r.client.PartialUpdateInstance(ctx, projectId, instanceId, region).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
 	}
-	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, flavor, storage, options)
+	err = mapFields(ctx, waitResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -578,7 +597,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	backupScheduleOptions, err := r.client.UpdateBackupSchedule(ctx, projectId, instanceId).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
+	backupScheduleOptions, err := r.client.UpdateBackupSchedule(ctx, projectId, instanceId, region).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Updating options: %v", err))
 		return
@@ -608,17 +627,19 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Delete existing instance
-	err := r.client.DeleteInstance(ctx, projectId, instanceId).Execute()
+	err := r.client.DeleteInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -636,20 +657,21 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing instance",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[instance_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[instance_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
 	tflog.Info(ctx, "MongoDB Flex instance state imported")
 }
 
-func mapFields(ctx context.Context, resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flavorModel, storage *storageModel, options *optionsModel) error {
+func mapFields(ctx context.Context, resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flavorModel, storage *storageModel, options *optionsModel, region string) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -785,7 +807,8 @@ func mapFields(ctx context.Context, resp *mongodbflex.GetInstanceResponse, model
 		model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), instanceId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId)
+	model.Region = types.StringValue(region)
 	model.InstanceId = types.StringValue(instanceId)
 	model.Name = types.StringPointerValue(instance.Name)
 	model.ACL = aclList
@@ -849,7 +872,7 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}
 
 	return &mongodbflex.CreateInstancePayload{
-		Acl: &mongodbflex.ACL{
+		Acl: &mongodbflex.CreateInstancePayloadAcl{
 			Items: &acl,
 		},
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
@@ -956,10 +979,10 @@ func toUpdateBackupScheduleOptionsPayload(ctx context.Context, model *Model, con
 }
 
 type mongoDBFlexClient interface {
-	ListFlavorsExecute(ctx context.Context, projectId string) (*mongodbflex.ListFlavorsResponse, error)
+	ListFlavorsExecute(ctx context.Context, projectId, region string) (*mongodbflex.ListFlavorsResponse, error)
 }
 
-func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, flavor *flavorModel) error {
+func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, flavor *flavorModel, region string) error {
 	if model == nil {
 		return fmt.Errorf("nil model")
 	}
@@ -976,7 +999,7 @@ func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, f
 	}
 
 	projectId := model.ProjectId.ValueString()
-	res, err := client.ListFlavorsExecute(ctx, projectId)
+	res, err := client.ListFlavorsExecute(ctx, projectId, region)
 	if err != nil {
 		return fmt.Errorf("listing mongodbflex flavors: %w", err)
 	}

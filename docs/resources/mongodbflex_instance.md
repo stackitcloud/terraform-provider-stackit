@@ -51,9 +51,13 @@ resource "stackit_mongodbflex_instance" "example" {
 - `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
 - `version` (String)
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`".
 - `instance_id` (String) ID of the MongoDB Flex instance.
 
 <a id="nestedatt--flavor"></a>

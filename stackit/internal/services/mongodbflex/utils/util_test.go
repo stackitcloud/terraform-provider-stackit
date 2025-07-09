@@ -45,7 +45,6 @@ func TestConfigureClient(t *testing.T) {
 			},
 			expected: func() *mongodbflex.APIClient {
 				apiClient, err := mongodbflex.NewAPIClient(
-					config.WithRegion("eu01"),
 					utils.UserAgentConfigOption(testVersion),
 				)
 				if err != nil {

@@ -29,8 +29,8 @@ var instanceResource = map[string]string{
 	"replicas":                        "3",
 	"storage_class":                   "premium-perf2-mongodb",
 	"storage_size":                    "10",
-	"version":                         "6.0",
-	"version_updated":                 "7.0",
+	"version":                         "7.0",
+	"version_updated":                 "8.0",
 	"options_type":                    "Replica",
 	"flavor_id":                       "2.4",
 	"backup_schedule":                 "00 6 * * *",
@@ -217,12 +217,16 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_mongodbflex_instance.instance")
 					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
 
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, instanceId), nil
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
@@ -244,6 +248,10 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_mongodbflex_user.user")
 					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
@@ -253,7 +261,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 						return "", fmt.Errorf("couldn't find attribute user_id")
 					}
 
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, userId), nil
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, region, instanceId, userId), nil
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
@@ -293,9 +301,7 @@ func testAccCheckMongoDBFlexDestroy(s *terraform.State) error {
 	var client *mongodbflex.APIClient
 	var err error
 	if testutil.MongoDBFlexCustomEndpoint == "" {
-		client, err = mongodbflex.NewAPIClient(
-			config.WithRegion("eu01"),
-		)
+		client, err = mongodbflex.NewAPIClient()
 	} else {
 		client, err = mongodbflex.NewAPIClient(
 			config.WithEndpoint(testutil.MongoDBFlexCustomEndpoint),
@@ -310,12 +316,12 @@ func testAccCheckMongoDBFlexDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_mongodbflex_instance" {
 			continue
 		}
-		// instance terraform ID: = "[project_id],[instance_id]"
-		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		// instance terraform ID: = "[project_id],[region],[instance_id]"
+		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Tag("").Execute()
+	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId, testutil.Region).Tag("").Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
@@ -326,11 +332,11 @@ func testAccCheckMongoDBFlexDestroy(s *terraform.State) error {
 			continue
 		}
 		if utils.Contains(instancesToDestroy, *items[i].Id) {
-			err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *items[i].Id)
+			err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *items[i].Id, testutil.Region)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *items[i].Id, err)
 			}
-			_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *items[i].Id).WaitWithContext(ctx)
+			_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *items[i].Id, testutil.Region).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
 			}
