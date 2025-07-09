@@ -12,7 +12,6 @@ import (
 	serviceenablementUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/utils"
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -74,7 +73,6 @@ type Model struct {
 	ProjectId             types.String `tfsdk:"project_id"`
 	Name                  types.String `tfsdk:"name"`
 	KubernetesVersionMin  types.String `tfsdk:"kubernetes_version_min"`
-	KubernetesVersion     types.String `tfsdk:"kubernetes_version"`
 	KubernetesVersionUsed types.String `tfsdk:"kubernetes_version_used"`
 	NodePools             types.List   `tfsdk:"node_pools"`
 	Maintenance           types.Object `tfsdk:"maintenance"`
@@ -364,25 +362,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:    true,
 				Validators: []validator.String{
 					validate.VersionNumber(),
-				},
-			},
-			"kubernetes_version": schema.StringAttribute{
-				Description:        "Kubernetes version. Must only contain major and minor version (e.g. 1.22). This field is deprecated, use `kubernetes_version_min instead`",
-				Optional:           true,
-				DeprecationMessage: "Use `kubernetes_version_min instead`. Setting a specific kubernetes version would cause errors during minor version upgrades due to forced updates. In those cases, this field might not represent the actual kubernetes version used in the cluster.",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplaceIf(stringplanmodifier.RequiresReplaceIfFunc(func(_ context.Context, sr planmodifier.StringRequest, rrifr *stringplanmodifier.RequiresReplaceIfFuncResponse) {
-						if sr.StateValue.IsNull() || sr.PlanValue.IsNull() {
-							return
-						}
-						planVersion := fmt.Sprintf("v%s", sr.PlanValue.ValueString())
-						stateVersion := fmt.Sprintf("v%s", sr.StateValue.ValueString())
-
-						rrifr.RequiresReplace = semver.Compare(planVersion, stateVersion) < 0
-					}), "Kubernetes version", "If the Kubernetes version is a downgrade, the cluster will be replaced"),
-				},
-				Validators: []validator.String{
-					validate.MinorVersionNumber(),
 				},
 			},
 			"kubernetes_version_used": schema.StringAttribute{
@@ -723,17 +702,6 @@ func validateConfig(ctx context.Context, respDiags *diag.Diagnostics, model *Mod
 	}
 }
 
-// ConfigValidators validate the resource configuration
-func (r *clusterResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
-	return []resource.ConfigValidator{
-		// will raise an error if both fields are set simultaneously
-		resourcevalidator.Conflicting(
-			path.MatchRoot("kubernetes_version"),
-			path.MatchRoot("kubernetes_version_min"),
-		),
-	}
-}
-
 // Create creates the resource and sets the initial Terraform state.
 func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
@@ -741,12 +709,6 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	kubernetesVersion := model.KubernetesVersionMin
-	// needed for backwards compatibility following kubernetes_version field deprecation
-	if kubernetesVersion.IsNull() {
-		kubernetesVersion = model.KubernetesVersion
 	}
 
 	projectId := model.ProjectId.ValueString()
@@ -1914,14 +1876,6 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 
 func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion, currentKubernetesVersion *string, diags *diag.Diagnostics) (kubernetesPayload *ske.Kubernetes, hasDeprecatedVersion bool, err error) {
 	providedVersionMin := m.KubernetesVersionMin.ValueStringPointer()
-
-	if !m.KubernetesVersion.IsNull() {
-		// kubernetes_version field deprecation
-		// this if clause should be removed once kubernetes_version field is completely removed
-		// kubernetes_version field value is used as minimum kubernetes version
-		providedVersionMin = conversion.StringValueToPointer(m.KubernetesVersion)
-	}
-
 	versionUsed, hasDeprecatedVersion, err := latestMatchingKubernetesVersion(availableVersions, providedVersionMin, currentKubernetesVersion, diags)
 	if err != nil {
 		return nil, false, fmt.Errorf("getting latest matching kubernetes version: %w", err)
@@ -2140,12 +2094,6 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	kubernetesVersion := model.KubernetesVersionMin
-	// needed for backwards compatibility following kubernetes_version field deprecation
-	if kubernetesVersion.IsNull() {
-		kubernetesVersion = model.KubernetesVersion
 	}
 
 	projectId := model.ProjectId.ValueString()

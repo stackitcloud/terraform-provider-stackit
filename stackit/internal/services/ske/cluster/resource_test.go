@@ -56,7 +56,6 @@ func TestMapFields(t *testing.T) {
 				Id:                  types.StringValue("pid,region,name"),
 				ProjectId:           types.StringValue("pid"),
 				Name:                types.StringValue("name"),
-				KubernetesVersion:   types.StringNull(),
 				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 				Maintenance:         types.ObjectNull(maintenanceTypes),
 				Network:             types.ObjectNull(networkTypes),
@@ -159,7 +158,6 @@ func TestMapFields(t *testing.T) {
 				Id:                    types.StringValue("pid,region,name"),
 				ProjectId:             types.StringValue("pid"),
 				Name:                  types.StringValue("name"),
-				KubernetesVersion:     types.StringNull(),
 				KubernetesVersionUsed: types.StringValue("1.2.3"),
 				EgressAddressRanges: types.ListValueMust(
 					types.StringType,
@@ -283,7 +281,6 @@ func TestMapFields(t *testing.T) {
 				Id:                  types.StringValue("pid,region,name"),
 				ProjectId:           types.StringValue("pid"),
 				Name:                types.StringValue("name"),
-				KubernetesVersion:   types.StringNull(),
 				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 				Maintenance:         types.ObjectNull(maintenanceTypes),
 				Network:             types.ObjectNull(networkTypes),
@@ -321,7 +318,6 @@ func TestMapFields(t *testing.T) {
 				Id:                  types.StringValue("pid,region,name"),
 				ProjectId:           types.StringValue("pid"),
 				Name:                types.StringValue("name"),
-				KubernetesVersion:   types.StringNull(),
 				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 				Maintenance:         types.ObjectNull(maintenanceTypes),
 				Hibernations:        types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
@@ -373,7 +369,6 @@ func TestMapFields(t *testing.T) {
 				Id:                  types.StringValue("pid,region,name"),
 				ProjectId:           types.StringValue("pid"),
 				Name:                types.StringValue("name"),
-				KubernetesVersion:   types.StringNull(),
 				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 				Maintenance:         types.ObjectNull(maintenanceTypes),
 				Hibernations:        types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
@@ -436,7 +431,6 @@ func TestMapFields(t *testing.T) {
 				Id:                  types.StringValue("pid,region,name"),
 				ProjectId:           types.StringValue("pid"),
 				Name:                types.StringValue("name"),
-				KubernetesVersion:   types.StringNull(),
 				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 				Maintenance:         types.ObjectNull(maintenanceTypes),
 				Hibernations:        types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
@@ -476,7 +470,6 @@ func TestMapFields(t *testing.T) {
 				Id:                  types.StringValue("pid,region,name"),
 				ProjectId:           types.StringValue("pid"),
 				Name:                types.StringValue("name"),
-				KubernetesVersion:   types.StringNull(),
 				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 				Maintenance:         types.ObjectNull(maintenanceTypes),
 				Hibernations:        types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
@@ -606,7 +599,6 @@ func TestMapFields(t *testing.T) {
 				Id:                    types.StringValue("pid,region,name"),
 				ProjectId:             types.StringValue("pid"),
 				Name:                  types.StringValue("name"),
-				KubernetesVersion:     types.StringNull(),
 				KubernetesVersionUsed: types.StringValue("1.2.3"),
 				EgressAddressRanges:   types.ListNull(types.StringType),
 				PodAddressRanges:      types.ListNull(types.StringType),
@@ -2500,74 +2492,6 @@ func TestSortK8sVersion(t *testing.T) {
 	}
 }
 
-// TODO: hier sind wir
-/*
-if !extensions.Argus.IsUnknown() && !extensions.Observability.IsUnknown() && !extensions.Argus.IsNull() && !extensions.Observability.IsNull() {
-		core.LogAndAddError(ctx, &diags, "Error configuring cluster", "You cannot provide both the `argus` and `observability` extension fields simultaneously. Please remove the deprecated `argus` field, and use `observability`.")
-	}
-
-*/
-
-/*
-Welche Kombinationen?
-
-0 0
-0 1
-1 0
-1 1
-
-oder?
-
-wobei Null != Unkown...
-also dann eigentlich 2 mit je 3 Zuständen?
-
-0 1 U
-
-das hier oder?
-
-0 0 DONE
-0 1
-0 U
-1 0
-1 U
-1 1 DONE
-U 0
-U 1
-U U DONE
-
-Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
-					"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
-						"enabled": types.BoolValue(true),
-						"allowed_cidrs": types.ListValueMust(types.StringType, []attr.Value{
-							types.StringValue("cidr1"),
-						}),
-					}),
-					"argus": types.ObjectUnknown(argusTypes),
-					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
-						"enabled":     types.BoolValue(true),
-						"instance_id": types.StringValue("aid"),
-					}),
-					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
-						"enabled": types.BoolValue(true),
-						"zones": types.ListValueMust(types.StringType, []attr.Value{
-							types.StringValue("zone1"),
-						}),
-					}),
-				}),
-
-*/
-
-/*
-
-Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
-					"argus": types.ObjectNull(argusTypes),
-					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
-						"enabled":     types.BoolValue(true),
-						"instance_id": types.StringValue("aid"),
-					}),
-				}),
-*/
-
 func TestValidateConfig(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -2587,7 +2511,7 @@ func TestValidateConfig(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "argus and observability unkown",
+			name: "argus and observability unknown",
 			model: &Model{
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
 					"acl":           types.ObjectNull(aclTypes),
@@ -2614,7 +2538,7 @@ func TestValidateConfig(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "argus null and observability unkown",
+			name: "argus null and observability unknown",
 			model: &Model{
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
 					"acl":           types.ObjectNull(aclTypes),
@@ -2674,7 +2598,7 @@ func TestValidateConfig(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "argus unkown observability null",
+			name: "argus unknown observability null",
 			model: &Model{
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
 					"acl":           types.ObjectNull(aclTypes),
@@ -2686,7 +2610,7 @@ func TestValidateConfig(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "argus unkown observability set",
+			name: "argus unknown observability set",
 			model: &Model{
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
 					"acl":   types.ObjectNull(aclTypes),
