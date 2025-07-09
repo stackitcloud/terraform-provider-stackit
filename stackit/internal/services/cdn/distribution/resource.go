@@ -92,7 +92,7 @@ var configTypes = map[string]attr.Type{
 	"backend": types.ObjectType{AttrTypes: backendTypes},
 	"regions": types.ListType{ElemType: types.StringType},
 	"optimizer": types.ObjectType{
-		AttrTypes: map[string]attr.Type{"enabled": types.BoolType},
+		AttrTypes: optimizerTypes,
 	},
 }
 
