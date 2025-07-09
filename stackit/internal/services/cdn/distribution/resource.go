@@ -364,7 +364,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	var optimizer *cdn.OptimizerPatch
-	if !model.Config.IsUnknown() && !model.Config.IsNull() && configModel.Optimizer != nil {
+	if !utils.IsUndefined(model.Config) && configModel.Optimizer != nil {
 		optimizer = &cdn.OptimizerPatch{}
 		optimizer.SetEnabled(configModel.Optimizer.Enabled.ValueBool())
 	}
@@ -646,7 +646,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 	}
 
 	var optimizer *cdn.Optimizer
-	if configModel.Optimizer != nil && !configModel.Optimizer.Enabled.IsNull() && !configModel.Optimizer.Enabled.IsUnknown() {
+	if configModel.Optimizer != nil && !utils.IsUndefined(configModel.Optimizer.Enabled) {
 		optimizer = cdn.NewOptimizer(configModel.Optimizer.Enabled.ValueBool())
 	}
 
