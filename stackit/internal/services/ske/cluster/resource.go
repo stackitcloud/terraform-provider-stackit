@@ -192,7 +192,7 @@ type extensions struct {
 
 // Types corresponding to extensions
 var extensionsTypes = map[string]attr.Type{
-	//	"argus":         basetypes.ObjectType{AttrTypes: argusTypes},
+	"argus":         basetypes.ObjectType{AttrTypes: argusTypes},
 	"observability": basetypes.ObjectType{AttrTypes: observabilityTypes},
 	"acl":           basetypes.ObjectType{AttrTypes: aclTypes},
 	"dns":           basetypes.ObjectType{AttrTypes: dnsTypes},
@@ -693,6 +693,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 	}
 }
 
+// The argus extension is deprecated but can still be used until it is removed on 06 January 2026.
 func (r *clusterResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var resourceModel Model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &resourceModel)...)
@@ -700,20 +701,25 @@ func (r *clusterResource) ValidateConfig(ctx context.Context, req resource.Valid
 		return
 	}
 
+	// function is used in order to be able to write easier unit tests
+	validateConfig(ctx, &resp.Diagnostics, &resourceModel)
+}
+
+func validateConfig(ctx context.Context, respDiags *diag.Diagnostics, model *Model) {
 	// If no extensions are configured, return without error.
-	if resourceModel.Extensions.IsNull() || resourceModel.Extensions.IsUnknown() {
+	if model.Extensions.IsNull() || model.Extensions.IsUnknown() {
 		return
 	}
 
 	extensions := &extensions{}
-	diags := resourceModel.Extensions.As(ctx, extensions, basetypes.ObjectAsOptions{})
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+	diags := model.Extensions.As(ctx, extensions, basetypes.ObjectAsOptions{})
+	respDiags.Append(diags...)
+	if respDiags.HasError() {
 		return
 	}
 
 	if !extensions.Argus.IsUnknown() && !extensions.Observability.IsUnknown() && !extensions.Argus.IsNull() && !extensions.Observability.IsNull() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring cluster", "You cannot provide both the `argus` and `observability` extension fields simultaneously. Please remove the deprecated `argus` field, and use `observability`.")
+		core.LogAndAddError(ctx, respDiags, "Error configuring cluster", "You cannot provide both the `argus` and `observability` extension fields simultaneously. Please remove the deprecated `argus` field, and use `observability`.")
 	}
 }
 
@@ -1749,7 +1755,7 @@ func checkDisabledExtensions(ctx context.Context, ex *extensions) (aclDisabled, 
 		observability.Enabled = types.BoolValue(false)
 	} else if !ex.Argus.IsNull() {
 		argus := argus{}
-		diags = ex.Observability.As(ctx, &argus, basetypes.ObjectAsOptions{})
+		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return false, false, false, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
 		}
@@ -1893,6 +1899,7 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 
 	extensionsValues := map[string]attr.Value{
 		"acl":           aclExtension,
+		"argus":         types.ObjectNull(argusTypes), // Deprecated: Won't be received from backend.
 		"observability": observabilityExtension,
 		"dns":           dnsExtension,
 	}

@@ -254,6 +254,7 @@ func TestMapFields(t *testing.T) {
 							types.StringValue("cidr1"),
 						}),
 					}),
+					"argus": types.ObjectNull(argusTypes),
 					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 						"enabled":     types.BoolValue(true),
 						"instance_id": types.StringValue("aid"),
@@ -331,6 +332,7 @@ func TestMapFields(t *testing.T) {
 						"enabled":       types.BoolValue(true),
 						"allowed_cidrs": types.ListNull(types.StringType),
 					}),
+					"argus": types.ObjectNull(argusTypes),
 					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 						"enabled":     types.BoolValue(true),
 						"instance_id": types.StringNull(),
@@ -351,6 +353,7 @@ func TestMapFields(t *testing.T) {
 					"enabled":       types.BoolValue(false),
 					"allowed_cidrs": types.ListNull(types.StringType),
 				}),
+				"argus": types.ObjectNull(argusTypes),
 				"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 					"enabled":     types.BoolValue(false),
 					"instance_id": types.StringNull(),
@@ -381,6 +384,7 @@ func TestMapFields(t *testing.T) {
 						"enabled":       types.BoolValue(false),
 						"allowed_cidrs": types.ListNull(types.StringType),
 					}),
+					"argus": types.ObjectNull(argusTypes),
 					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 						"enabled":     types.BoolValue(false),
 						"instance_id": types.StringNull(),
@@ -403,6 +407,7 @@ func TestMapFields(t *testing.T) {
 						types.StringValue("cidr1"),
 					}),
 				}),
+				"argus": types.ObjectNull(argusTypes),
 				"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 					"enabled":     types.BoolValue(false),
 					"instance_id": types.StringValue("id"),
@@ -444,6 +449,7 @@ func TestMapFields(t *testing.T) {
 							types.StringValue("cidr1"),
 						}),
 					}),
+					"argus": types.ObjectNull(argusTypes),
 					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 						"enabled":     types.BoolValue(false),
 						"instance_id": types.StringValue("id"),
@@ -671,6 +677,7 @@ func TestMapFields(t *testing.T) {
 							types.StringValue("cidr1"),
 						}),
 					}),
+					"argus": types.ObjectNull(argusTypes),
 					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 						"enabled":     types.BoolValue(true),
 						"instance_id": types.StringValue("aid"),
@@ -2488,6 +2495,220 @@ func TestSortK8sVersion(t *testing.T) {
 
 			if expected != actual {
 				t.Errorf("wrong sort order. wanted %s but got %s", expected, actual)
+			}
+		})
+	}
+}
+
+// TODO: hier sind wir
+/*
+if !extensions.Argus.IsUnknown() && !extensions.Observability.IsUnknown() && !extensions.Argus.IsNull() && !extensions.Observability.IsNull() {
+		core.LogAndAddError(ctx, &diags, "Error configuring cluster", "You cannot provide both the `argus` and `observability` extension fields simultaneously. Please remove the deprecated `argus` field, and use `observability`.")
+	}
+
+*/
+
+/*
+Welche Kombinationen?
+
+0 0
+0 1
+1 0
+1 1
+
+oder?
+
+wobei Null != Unkown...
+also dann eigentlich 2 mit je 3 Zuständen?
+
+0 1 U
+
+das hier oder?
+
+0 0 DONE
+0 1
+0 U
+1 0
+1 U
+1 1 DONE
+U 0
+U 1
+U U DONE
+
+Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
+						"allowed_cidrs": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("cidr1"),
+						}),
+					}),
+					"argus": types.ObjectUnknown(argusTypes),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(true),
+						"instance_id": types.StringValue("aid"),
+					}),
+					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
+						"zones": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("zone1"),
+						}),
+					}),
+				}),
+
+*/
+
+/*
+
+Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"argus": types.ObjectNull(argusTypes),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(true),
+						"instance_id": types.StringValue("aid"),
+					}),
+				}),
+*/
+
+func TestValidateConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		model   *Model
+		wantErr bool
+	}{
+		{
+			name: "argus and observability null",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":           types.ObjectNull(aclTypes),
+					"dns":           types.ObjectNull(dnsTypes),
+					"argus":         types.ObjectNull(argusTypes),
+					"observability": types.ObjectNull(observabilityTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "argus and observability unkown",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":           types.ObjectNull(aclTypes),
+					"dns":           types.ObjectNull(dnsTypes),
+					"argus":         types.ObjectUnknown(argusTypes),
+					"observability": types.ObjectUnknown(observabilityTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "argus null and observability set",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":   types.ObjectNull(aclTypes),
+					"dns":   types.ObjectNull(dnsTypes),
+					"argus": types.ObjectNull(argusTypes),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(true),
+						"instance_id": types.StringValue("aid"),
+					}),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "argus null and observability unkown",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":           types.ObjectNull(aclTypes),
+					"dns":           types.ObjectNull(dnsTypes),
+					"argus":         types.ObjectNull(argusTypes),
+					"observability": types.ObjectUnknown(observabilityTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "argus set and observability null",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl": types.ObjectNull(aclTypes),
+					"dns": types.ObjectNull(dnsTypes),
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+						"enabled":           types.BoolValue(true),
+						"argus_instance_id": types.StringValue("aid"),
+					}),
+					"observability": types.ObjectNull(observabilityTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "argus set and observability unknown",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl": types.ObjectNull(aclTypes),
+					"dns": types.ObjectNull(dnsTypes),
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+						"enabled":           types.BoolValue(true),
+						"argus_instance_id": types.StringValue("aid"),
+					}),
+					"observability": types.ObjectUnknown(observabilityTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "argus and observability both set",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl": types.ObjectNull(aclTypes),
+					"dns": types.ObjectNull(dnsTypes),
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+						"enabled":           types.BoolValue(true),
+						"argus_instance_id": types.StringValue("aid"),
+					}),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(true),
+						"instance_id": types.StringValue("aid"),
+					}),
+				}),
+			},
+			wantErr: true,
+		},
+		{
+			name: "argus unkown observability null",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":           types.ObjectNull(aclTypes),
+					"dns":           types.ObjectNull(dnsTypes),
+					"argus":         types.ObjectUnknown(argusTypes),
+					"observability": types.ObjectNull(observabilityTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "argus unkown observability set",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":   types.ObjectNull(aclTypes),
+					"dns":   types.ObjectNull(dnsTypes),
+					"argus": types.ObjectUnknown(argusTypes),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(true),
+						"instance_id": types.StringValue("aid"),
+					}),
+				}),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			diags := diag.Diagnostics{}
+
+			validateConfig(ctx, &diags, tt.model)
+			if diags.HasError() != tt.wantErr {
+				t.Errorf("validateConfig() = %v, want %v", diags.HasError(), tt.wantErr)
 			}
 		})
 	}
