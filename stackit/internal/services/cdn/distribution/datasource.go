@@ -148,6 +148,11 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						Computed:    true,
 						Description: schemaDescriptions["config_regions"],
 						ElementType: types.StringType,
+					},
+					"blocked_countries": schema.ListAttribute{
+						Computed:    true,
+						Description: schemaDescriptions["config_blocked_countries"],
+						ElementType: types.StringType,
 					}},
 			},
 		},

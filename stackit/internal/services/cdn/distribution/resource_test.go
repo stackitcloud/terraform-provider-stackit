@@ -24,9 +24,12 @@ func TestToCreatePayload(t *testing.T) {
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
+	blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
+	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
-		"backend": backend,
-		"regions": regionsFixture,
+		"backend":           backend,
+		"regions":           regionsFixture,
+		"blocked_countries": blockedCountriesFixture,
 	})
 	modelFixture := func(mods ...func(*Model)) *Model {
 		model := &Model{
@@ -51,8 +54,9 @@ func TestToCreatePayload(t *testing.T) {
 					"testHeader0": "testHeaderValue0",
 					"testHeader1": "testHeaderValue1",
 				},
-				OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
-				Regions:   &[]cdn.Region{"EU", "US"},
+				OriginUrl:        cdn.PtrString("https://www.mycoolapp.com"),
+				Regions:          &[]cdn.Region{"EU", "US"},
+				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
 			},
 			IsValid: true,
 		},
@@ -104,9 +108,12 @@ func TestConvertConfig(t *testing.T) {
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
+	blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
+	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
-		"backend": backend,
-		"regions": regionsFixture,
+		"backend":           backend,
+		"regions":           regionsFixture,
+		"blocked_countries": blockedCountriesFixture,
 	})
 	modelFixture := func(mods ...func(*Model)) *Model {
 		model := &Model{
@@ -137,7 +144,8 @@ func TestConvertConfig(t *testing.T) {
 						Type:      cdn.PtrString("http"),
 					},
 				},
-				Regions: &[]cdn.Region{"EU", "US"},
+				Regions:          &[]cdn.Region{"EU", "US"},
+				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
 			},
 			IsValid: true,
 		},
@@ -188,9 +196,12 @@ func TestMapFields(t *testing.T) {
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
+	blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
+	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
-		"backend": backend,
-		"regions": regionsFixture,
+		"backend":           backend,
+		"regions":           regionsFixture,
+		"blocked_countries": blockedCountriesFixture,
 	})
 	emtpyErrorsList := types.ListValueMust(types.StringType, []attr.Value{})
 	managedDomain := types.ObjectValueMust(domainTypes, map[string]attr.Value{
@@ -219,17 +230,19 @@ func TestMapFields(t *testing.T) {
 	}
 	distributionFixture := func(mods ...func(*cdn.Distribution)) *cdn.Distribution {
 		distribution := &cdn.Distribution{
-			Config: &cdn.Config{Backend: &cdn.ConfigBackend{
-				HttpBackend: &cdn.HttpBackend{
-					OriginRequestHeaders: &map[string]string{
-						"testHeader0": "testHeaderValue0",
-						"testHeader1": "testHeaderValue1",
+			Config: &cdn.Config{
+				Backend: &cdn.ConfigBackend{
+					HttpBackend: &cdn.HttpBackend{
+						OriginRequestHeaders: &map[string]string{
+							"testHeader0": "testHeaderValue0",
+							"testHeader1": "testHeaderValue1",
+						},
+						OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
+						Type:      cdn.PtrString("http"),
 					},
-					OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
-					Type:      cdn.PtrString("http"),
 				},
-			},
-				Regions: &[]cdn.Region{"EU", "US"},
+				Regions:          &[]cdn.Region{"EU", "US"},
+				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
 			},
 			CreatedAt: &createdAt,
 			Domains: &[]cdn.Domain{

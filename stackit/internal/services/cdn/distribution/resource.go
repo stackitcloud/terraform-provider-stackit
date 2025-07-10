@@ -54,6 +54,7 @@ var schemaDescriptions = map[string]string{
 	"config_backend_type":                   "The configured backend type. ",
 	"config_backend_origin_url":             "The configured backend type for the distribution",
 	"config_backend_origin_request_headers": "The configured origin request headers for the backend",
+	"config_blocked_countries":              "The configured countries where distribution of content is blocked",
 	"domain_name":                           "The name of the domain",
 	"domain_status":                         "The status of the domain",
 	"domain_type":                           "The type of the domain. Each distribution has one domain of type \"managed\", and domains of type \"custom\" may be additionally created by the user",
@@ -73,8 +74,9 @@ type Model struct {
 }
 
 type distributionConfig struct {
-	Backend backend   `tfsdk:"backend"` // The backend associated with the distribution
-	Regions *[]string `tfsdk:"regions"` // The regions in which data will be cached
+	Backend          backend   `tfsdk:"backend"`           // The backend associated with the distribution
+	Regions          *[]string `tfsdk:"regions"`           // The regions in which data will be cached
+	BlockedCountries *[]string `tfsdk:"blocked_countries"` // The countries for which content will be blocked
 }
 
 type backend struct {
@@ -84,8 +86,9 @@ type backend struct {
 }
 
 var configTypes = map[string]attr.Type{
-	"backend": types.ObjectType{AttrTypes: backendTypes},
-	"regions": types.ListType{ElemType: types.StringType},
+	"backend":           types.ObjectType{AttrTypes: backendTypes},
+	"regions":           types.ListType{ElemType: types.StringType},
+	"blocked_countries": types.ListType{ElemType: types.StringType},
 }
 
 var backendTypes = map[string]attr.Type{
@@ -230,6 +233,11 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						Required:    true,
 						Description: schemaDescriptions["config_regions"],
 						ElementType: types.StringType,
+					},
+					"blocked_countries": schema.ListAttribute{
+						Computed:    true,
+						Description: schemaDescriptions["config_blocked_countries"],
+						ElementType: types.StringType,
 					}},
 			},
 		},
@@ -349,6 +357,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 		regions = append(regions, *regionEnum)
 	}
+
 	_, err := r.client.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdn.PatchDistributionPayload{
 		Config: &cdn.ConfigPatch{
 			Backend: &cdn.ConfigPatchBackend{
@@ -454,6 +463,7 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 	model.CreatedAt = types.StringValue(distribution.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(distribution.UpdatedAt.String())
 
+	// distributionErrors
 	distributionErrors := []attr.Value{}
 	if distribution.Errors != nil {
 		for _, e := range *distribution.Errors {
@@ -466,6 +476,7 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 	}
 	model.Errors = modelErrors
 
+	// regions
 	regions := []attr.Value{}
 	for _, r := range *distribution.Config.Regions {
 		regions = append(regions, types.StringValue(string(r)))
@@ -474,6 +485,18 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
+	// blockedCountries
+	var blockedCountries []attr.Value
+	for _, c := range *distribution.Config.BlockedCountries {
+		blockedCountries = append(blockedCountries, types.StringValue(string(c)))
+	}
+	modelBlockedCountries, diags := types.ListValue(types.StringType, blockedCountries)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	// originRequestHeaders
 	originRequestHeaders := types.MapNull(types.StringType)
 	if origHeaders := distribution.Config.Backend.HttpBackend.OriginRequestHeaders; origHeaders != nil && len(*origHeaders) > 0 {
 		headers := map[string]attr.Value{}
@@ -496,8 +519,9 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 		return core.DiagsToError(diags)
 	}
 	cfg, diags := types.ObjectValue(configTypes, map[string]attr.Value{
-		"backend": backend,
-		"regions": modelRegions,
+		"backend":           backend,
+		"regions":           modelRegions,
+		"blocked_countries": modelBlockedCountries,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -557,6 +581,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 		IntentId:             cdn.PtrString(uuid.NewString()),
 		OriginUrl:            cfg.Backend.HttpBackend.OriginUrl,
 		Regions:              cfg.Regions,
+		BlockedCountries:     cfg.BlockedCountries,
 		OriginRequestHeaders: cfg.Backend.HttpBackend.OriginRequestHeaders,
 	}
 
@@ -578,6 +603,8 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
+
+	// regions
 	regions := []cdn.Region{}
 	for _, r := range *configModel.Regions {
 		regionEnum, err := cdn.NewRegionFromValue(r)
@@ -587,6 +614,17 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 		regions = append(regions, *regionEnum)
 	}
 
+	// blockedCountries
+	var blockedCountries []string
+	for _, blockedCountry := range *configModel.BlockedCountries {
+		validatedBlockedCountry, err := validateCountryCode(blockedCountry)
+		if err != nil {
+			return nil, err
+		}
+		blockedCountries = append(blockedCountries, string(validatedBlockedCountry))
+	}
+
+	// originRequestHeaders
 	originRequestHeaders := map[string]string{}
 	if configModel.Backend.OriginRequestHeaders != nil {
 		for k, v := range *configModel.Backend.OriginRequestHeaders {
@@ -601,6 +639,29 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 				Type:                 &configModel.Backend.Type,
 			},
 		},
-		Regions: &regions,
+		Regions:          &regions,
+		BlockedCountries: &blockedCountries,
 	}, nil
+}
+
+// validateCountryCode checks for a valid country user input. This is just a quick check
+// since the API already does a more thorough check.
+func validateCountryCode(country string) (string, error) {
+	if len(country) != 2 {
+		return "", errors.New("country code must be exactly 2 characters long")
+	}
+
+	upperCountry := strings.ToUpper(country)
+
+	// Check if both characters are alphabetical letters within the ASCII range A-Z.
+	// Yes, we could use the unicode package, but we are only targeting ASCII letters specifically, so
+	// let's omit this dependency.
+	char1 := upperCountry[0]
+	char2 := upperCountry[1]
+
+	if !((char1 >= 'A' && char1 <= 'Z') && (char2 >= 'A' && char2 <= 'Z')) {
+		return "", fmt.Errorf("country code '%s' must consist of two alphabetical letters (A-Z or a-z)", country)
+	}
+
+	return upperCountry, nil
 }

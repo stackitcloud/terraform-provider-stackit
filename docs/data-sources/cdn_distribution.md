@@ -46,6 +46,7 @@ data "stackit_cdn_distribution" "example" {
 Read-Only:
 
 - `backend` (Attributes) The configured backend for the distribution (see [below for nested schema](#nestedatt--config--backend))
+- `blocked_countries` (List of String) The configured countries where distribution of content is blocked
 - `regions` (List of String) The configured regions where content will be hosted
 
 <a id="nestedatt--config--backend"></a>
