@@ -478,7 +478,7 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 		clustersToDestroy = append(clustersToDestroy, clusterName)
 	}
 
-	clustersResp, err := client.ListClusters(ctx, testutil.Region, testutil.ProjectId).Execute()
+	clustersResp, err := client.ListClusters(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting clustersResp: %w", err)
 	}

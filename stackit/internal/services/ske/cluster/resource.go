@@ -686,7 +686,7 @@ func (r *clusterResource) ValidateConfig(ctx context.Context, req resource.Valid
 
 func validateConfig(ctx context.Context, respDiags *diag.Diagnostics, model *Model) {
 	// If no extensions are configured, return without error.
-	if model.Extensions.IsNull() || model.Extensions.IsUnknown() {
+	if utils.IsUndefined(model.Extensions) {
 		return
 	}
 
@@ -697,7 +697,7 @@ func validateConfig(ctx context.Context, respDiags *diag.Diagnostics, model *Mod
 		return
 	}
 
-	if !extensions.Argus.IsUnknown() && !extensions.Observability.IsUnknown() && !extensions.Argus.IsNull() && !extensions.Observability.IsNull() {
+	if !utils.IsUndefined(extensions.Argus) && !utils.IsUndefined(extensions.Observability) {
 		core.LogAndAddError(ctx, respDiags, "Error configuring cluster", "You cannot provide both the `argus` and `observability` extension fields simultaneously. Please remove the deprecated `argus` field, and use `observability`.")
 	}
 }
@@ -1226,19 +1226,7 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 	}
 
 	var skeObservability *ske.Observability
-	if !(ex.Argus.IsNull() || ex.Argus.IsUnknown()) {
-		argus := argus{}
-		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return nil, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
-		}
-		argusEnabled := conversion.BoolValueToPointer(argus.Enabled)
-		argusInstanceId := conversion.StringValueToPointer(argus.ArgusInstanceId)
-		skeObservability = &ske.Observability{
-			Enabled:    argusEnabled,
-			InstanceId: argusInstanceId,
-		}
-	} else if !(ex.Observability.IsNull() || ex.Observability.IsUnknown()) {
+	if !utils.IsUndefined(ex.Observability) {
 		observability := observability{}
 		diags = ex.Observability.As(ctx, &observability, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -1249,6 +1237,18 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 		skeObservability = &ske.Observability{
 			Enabled:    observabilityEnabled,
 			InstanceId: observabilityInstanceId,
+		}
+	} else if !utils.IsUndefined(ex.Argus) { // Fallback to deprecated argus
+		argus := argus{}
+		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
+		}
+		argusEnabled := conversion.BoolValueToPointer(argus.Enabled)
+		argusInstanceId := conversion.StringValueToPointer(argus.ArgusInstanceId)
+		skeObservability = &ske.Observability{
+			Enabled:    argusEnabled,
+			InstanceId: argusInstanceId,
 		}
 	}
 
@@ -1809,6 +1809,8 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		aclExtension = ex.ACL
 	}
 
+	// Deprecated: argus won't be received from backend. Use observabilty instead.
+	argusExtension := types.ObjectNull(argusTypes)
 	observabilityExtension := types.ObjectNull(observabilityTypes)
 	if cl.Extensions.Observability != nil {
 		enabled := types.BoolNull()
@@ -1826,12 +1828,36 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 			"instance_id": observabilityInstanceId,
 		}
 
+		argusExtensionValues := map[string]attr.Value{
+			"enabled":           enabled,
+			"argus_instance_id": observabilityInstanceId,
+		}
+
 		observabilityExtension, diags = types.ObjectValue(observabilityTypes, observabilityExtensionValues)
 		if diags.HasError() {
 			return fmt.Errorf("creating observability extension: %w", core.DiagsToError(diags))
 		}
+		argusExtension, diags = types.ObjectValue(argusTypes, argusExtensionValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating argus extension: %w", core.DiagsToError(diags))
+		}
 	} else if observabilityDisabled && !ex.Observability.IsNull() {
 		observabilityExtension = ex.Observability
+
+		// set deprecated argus extension
+		observability := observability{}
+		diags = ex.Observability.As(ctx, &observability, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return fmt.Errorf("converting extensions.observability object: %v", diags.Errors())
+		}
+		argusExtensionValues := map[string]attr.Value{
+			"enabled":           observability.Enabled,
+			"argus_instance_id": observability.InstanceId,
+		}
+		argusExtension, diags = types.ObjectValue(argusTypes, argusExtensionValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating argus extension: %w", core.DiagsToError(diags))
+		}
 	}
 
 	dnsExtension := types.ObjectNull(dnsTypes)
@@ -1859,11 +1885,23 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		dnsExtension = ex.DNS
 	}
 
-	extensionsValues := map[string]attr.Value{
-		"acl":           aclExtension,
-		"argus":         types.ObjectNull(argusTypes), // Deprecated: Won't be received from backend.
-		"observability": observabilityExtension,
-		"dns":           dnsExtension,
+	// Deprecation: Argus was renamed to observability. Depending on which attribute was used in the terraform config the
+	// according one has to be set here.
+	var extensionsValues map[string]attr.Value
+	if utils.IsUndefined(ex.Argus) {
+		extensionsValues = map[string]attr.Value{
+			"acl":           aclExtension,
+			"argus":         types.ObjectNull(argusTypes),
+			"observability": observabilityExtension,
+			"dns":           dnsExtension,
+		}
+	} else {
+		extensionsValues = map[string]attr.Value{
+			"acl":           aclExtension,
+			"argus":         argusExtension,
+			"observability": types.ObjectNull(observabilityTypes),
+			"dns":           dnsExtension,
+		}
 	}
 
 	extensions, diags := types.ObjectValue(extensionsTypes, extensionsValues)
