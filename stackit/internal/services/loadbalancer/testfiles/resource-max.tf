@@ -4,6 +4,7 @@ variable "network_name" {}
 variable "server_name" {}
 
 variable "loadbalancer_name" {}
+variable "plan_id" {}
 variable "target_pool_name" {}
 variable "target_port" {}
 variable "target_display_name" {}
@@ -73,6 +74,7 @@ resource "stackit_server" "server" {
 resource "stackit_loadbalancer" "loadbalancer" {
   project_id = var.project_id
   name       = var.loadbalancer_name
+  plan_id    = var.plan_id
   target_pools = [
     {
       name        = var.target_pool_name
