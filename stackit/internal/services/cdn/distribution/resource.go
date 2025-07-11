@@ -75,9 +75,9 @@ type Model struct {
 }
 
 type distributionConfig struct {
-	Backend   backend          `tfsdk:"backend"`   // The backend associated with the distribution
-	Regions   *[]string        `tfsdk:"regions"`   // The regions in which data will be cached
-	Optimizer *optimizerConfig `tfsdk:"optimizer"` // The optimizer configuration
+	Backend   backend      `tfsdk:"backend"`   // The backend associated with the distribution
+	Regions   *[]string    `tfsdk:"regions"`   // The regions in which data will be cached
+	Optimizer types.Object `tfsdk:"optimizer"` // The optimizer configuration
 }
 type optimizerConfig struct {
 	Enabled types.Bool `tfsdk:"enabled"`
@@ -363,12 +363,6 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	var optimizer *cdn.OptimizerPatch
-	if !utils.IsUndefined(model.Config) && configModel.Optimizer != nil {
-		optimizer = &cdn.OptimizerPatch{}
-		optimizer.SetEnabled(configModel.Optimizer.Enabled.ValueBool())
-	}
-
 	regions := []cdn.Region{}
 	for _, r := range *configModel.Regions {
 		regionEnum, err := cdn.NewRegionFromValue(r)
@@ -378,18 +372,36 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 		regions = append(regions, *regionEnum)
 	}
-	_, err := r.client.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdn.PatchDistributionPayload{
-		Config: &cdn.ConfigPatch{
-			Backend: &cdn.ConfigPatchBackend{
-				HttpBackendPatch: &cdn.HttpBackendPatch{
-					OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
-					OriginUrl:            &configModel.Backend.OriginURL,
-					Type:                 &configModel.Backend.Type,
-				},
+
+	configPatch := &cdn.ConfigPatch{
+		Backend: &cdn.ConfigPatchBackend{
+			HttpBackendPatch: &cdn.HttpBackendPatch{
+				OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
+				OriginUrl:            &configModel.Backend.OriginURL,
+				Type:                 &configModel.Backend.Type,
 			},
-			Regions:   &regions,
-			Optimizer: optimizer,
 		},
+		Regions: &regions,
+	}
+
+	if !configModel.Optimizer.IsNull() && !configModel.Optimizer.IsUnknown() {
+		var optimizerModel optimizerConfig
+
+		diags = configModel.Optimizer.As(ctx, &optimizerModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping optimizer config")
+			return
+		}
+
+		optimizer := cdn.NewOptimizerPatch()
+		if !optimizerModel.Enabled.IsNull() && !optimizerModel.Enabled.IsUnknown() {
+			optimizer.SetEnabled(optimizerModel.Enabled.ValueBool())
+		}
+		configPatch.Optimizer = optimizer
+	}
+
+	_, err := r.client.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdn.PatchDistributionPayload{
+		Config:   configPatch,
 		IntentId: cdn.PtrString(uuid.NewString()),
 	}).Execute()
 	if err != nil {
@@ -645,12 +657,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 		}
 	}
 
-	var optimizer *cdn.Optimizer
-	if configModel.Optimizer != nil && !utils.IsUndefined(configModel.Optimizer.Enabled) {
-		optimizer = cdn.NewOptimizer(configModel.Optimizer.Enabled.ValueBool())
-	}
-
-	return &cdn.Config{
+	cdnConfig := &cdn.Config{
 		Backend: &cdn.ConfigBackend{
 			HttpBackend: &cdn.HttpBackend{
 				OriginRequestHeaders: &originRequestHeaders,
@@ -658,7 +665,20 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 				Type:                 &configModel.Backend.Type,
 			},
 		},
-		Regions:   &regions,
-		Optimizer: optimizer,
-	}, nil
+		Regions: &regions,
+	}
+
+	if !configModel.Optimizer.IsNull() && !configModel.Optimizer.IsUnknown() {
+		var optimizerModel optimizerConfig
+		diags := configModel.Optimizer.As(ctx, &optimizerModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		if !optimizerModel.Enabled.IsUnknown() && !optimizerModel.Enabled.IsNull() {
+			cdnConfig.Optimizer = cdn.NewOptimizer(optimizerModel.Enabled.ValueBool())
+		}
+	}
+
+	return cdnConfig, nil
 }
