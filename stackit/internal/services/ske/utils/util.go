@@ -18,8 +18,6 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	}
 	if providerData.SKECustomEndpoint != "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(providerData.SKECustomEndpoint))
-	} else {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion(providerData.GetRegion()))
 	}
 	apiClient, err := ske.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {

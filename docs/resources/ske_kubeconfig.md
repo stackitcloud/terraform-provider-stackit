@@ -32,6 +32,7 @@ resource "stackit_ske_kubeconfig" "example" {
 
 - `expiration` (Number) Expiration time of the kubeconfig, in seconds. Defaults to `3600`
 - `refresh` (Boolean) If set to true, the provider will check if the kubeconfig has expired and will generated a new valid one in-place
+- `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
 

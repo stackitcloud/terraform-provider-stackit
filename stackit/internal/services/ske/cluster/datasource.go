@@ -79,19 +79,9 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Description: `The minimum Kubernetes version, this field is always nil. ` + SKEUpdateDoc + " To get the current kubernetes version being used for your cluster, use the `kubernetes_version_used` field.",
 				Computed:    true,
 			},
-			"kubernetes_version": schema.StringAttribute{
-				Description:        "Kubernetes version. This field is deprecated, use `kubernetes_version_used` instead",
-				Computed:           true,
-				DeprecationMessage: "This field is always nil, use `kubernetes_version_used` to get the cluster kubernetes version. This field would cause errors when the cluster got a kubernetes version minor upgrade, either triggered by automatic or forceful updates.",
-			},
 			"kubernetes_version_used": schema.StringAttribute{
 				Description: "Full Kubernetes version used. For example, if `1.22` was selected, this value may result to `1.22.15`",
 				Computed:    true,
-			},
-			"allow_privileged_containers": schema.BoolAttribute{
-				Description:        "DEPRECATED as of Kubernetes 1.25+\n Flag to specify if privileged mode for containers is enabled or not.\nThis should be used with care since it also disables a couple of other features like the use of some volume type (e.g. PVCs).",
-				DeprecationMessage: "Please remove this flag from your configuration when using Kubernetes version 1.25+.",
-				Computed:           true,
 			},
 			"egress_address_ranges": schema.ListAttribute{
 				Description: "The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.",
@@ -262,8 +252,9 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"argus": schema.SingleNestedAttribute{
-						Description: "A single argus block as defined below",
-						Computed:    true,
+						Description:        "A single argus block as defined below. This field is deprecated and will be removed 06 January 2026.",
+						DeprecationMessage: "Use observability instead.",
+						Computed:           true,
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Description: "Flag to enable/disable argus extensions.",
@@ -271,6 +262,20 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							},
 							"argus_instance_id": schema.StringAttribute{
 								Description: "Instance ID of argus",
+								Computed:    true,
+							},
+						},
+					},
+					"observability": schema.SingleNestedAttribute{
+						Description: "A single observability block as defined below.",
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Description: "Flag to enable/disable Observability extensions.",
+								Computed:    true,
+							},
+							"instance_id": schema.StringAttribute{
+								Description: "Observability instance ID to choose which Observability instance is used. Required when enabled is set to `true`.",
 								Computed:    true,
 							},
 						},
@@ -331,7 +336,7 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
-	clusterResp, err := r.client.GetCluster(ctx, projectId, name).Execute()
+	clusterResp, err := r.client.GetCluster(ctx, projectId, region, name).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
