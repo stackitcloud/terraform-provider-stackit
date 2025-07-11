@@ -27,6 +27,11 @@ data "stackit_network" "example" {
 - `network_id` (String) The network ID.
 - `project_id` (String) STACKIT project ID to which the network is associated.
 
+### Optional
+
+- `region` (String) Can only be used when experimental "network" is set. This is likely going to undergo significant changes or be removed in the future.
+The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`network_id`".
@@ -46,3 +51,5 @@ data "stackit_network" "example" {
 - `prefixes` (List of String, Deprecated) The prefixes of the network. This field is deprecated and will be removed soon, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.
 - `public_ip` (String) The public IP of the network.
 - `routed` (Boolean) Shows if the network is routed and therefore accessible from other networks.
+- `routing_table_id` (String) Can only be used when experimental "network" is set. This is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+The ID of the routing table associated with the network.

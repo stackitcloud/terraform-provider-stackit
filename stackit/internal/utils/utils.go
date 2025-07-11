@@ -146,7 +146,7 @@ func LogError(ctx context.Context, inputDiags *diag.Diagnostics, err error, summ
 }
 
 // FormatPossibleValues formats a slice into a comma-separated-list for usage in the provider docs
-func FormatPossibleValues(values []string) string {
+func FormatPossibleValues(values ...string) string {
 	var formattedValues []string
 	for _, value := range values {
 		formattedValues = append(formattedValues, fmt.Sprintf("`%v`", value))

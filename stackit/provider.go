@@ -3,6 +3,7 @@ package stackit
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -40,7 +41,11 @@ import (
 	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
 	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
 	iaasVolumeAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volumeattach"
-	kms "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/key-ring"
+	iaasalphaRoutingTableRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/route"
+	iaasalphaRoutingTableRoutes "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/routes"
+	iaasalphaRoutingTable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/table"
+	iaasalphaRoutingTables "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/tables"
+  kms "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/key-ring"
 	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
 	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
@@ -185,7 +190,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"service_enablement_custom_endpoint": "Custom endpoint for the Service Enablement API",
 		"token_custom_endpoint":              "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
 		"enable_beta_resources":              "Enable beta resources. Default is false.",
-		"experiments":                        fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", features.AvailableExperiments),
+		"experiments":                        fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", strings.Join(features.AvailableExperiments, ", ")),
 	}
 
 	resp.Schema = schema.Schema{
@@ -469,6 +474,10 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasKeyPair.NewKeyPairDataSource,
 		iaasServer.NewServerDataSource,
 		iaasSecurityGroup.NewSecurityGroupDataSource,
+		iaasalphaRoutingTable.NewRoutingTableDataSource,
+		iaasalphaRoutingTableRoute.NewRoutingTableRouteDataSource,
+		iaasalphaRoutingTables.NewRoutingTablesDataSource,
+		iaasalphaRoutingTableRoutes.NewRoutingTableRoutesDataSource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
 		kms.NewKeyRingDataSource,
 		loadBalancer.NewLoadBalancerDataSource,
@@ -532,7 +541,9 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasServer.NewServerResource,
 		iaasSecurityGroup.NewSecurityGroupResource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
-		kms.NewKeyRingResource,
+		iaasalphaRoutingTable.NewRoutingTableResource,
+		iaasalphaRoutingTableRoute.NewRoutingTableRouteResource,
+    kms.NewKeyRingResource,
 		loadBalancer.NewLoadBalancerResource,
 		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
 		logMeInstance.NewInstanceResource,

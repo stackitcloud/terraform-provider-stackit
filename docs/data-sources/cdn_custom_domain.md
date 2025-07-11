@@ -4,14 +4,14 @@ page_title: "stackit_cdn_custom_domain Data Source - stackit"
 subcategory: ""
 description: |-
   CDN distribution data source schema.
-  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
+  ~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_cdn_custom_domain (Data Source)
 
 CDN distribution data source schema.
 
-~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
+~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 

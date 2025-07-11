@@ -132,6 +132,23 @@ func IaaSProviderConfig() string {
 	)
 }
 
+func IaaSProviderConfigWithExperiments() string {
+	if IaaSCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			default_region = "eu01"
+  			experiments = [ "routing-tables", "network" ]
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			iaas_custom_endpoint = "%s"
+			experiments = [ "routing-tables", "network" ]
+		}`,
+		IaaSCustomEndpoint,
+	)
+}
+
 func LoadBalancerProviderConfig() string {
 	if LoadBalancerCustomEndpoint == "" {
 		return `

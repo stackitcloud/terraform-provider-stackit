@@ -183,7 +183,7 @@ To enable experiments set the experiments field in the provider definition:
 ```hcl
 provider "stackit" {
   default_region        = "eu01"
-  experiments           = ["iam"]
+  experiments           = ["iam", "routing-tables", "network"]
 }
 ```
 
@@ -192,6 +192,16 @@ provider "stackit" {
 #### `iam`
 
 Enables IAM management features in the Terraform provider. The underlying IAM API is expected to undergo a redesign in the future, which leads to it being considered experimental.
+
+#### `routing-tables`
+
+This feature enables experimental routing table capabilities in the Terraform Provider, available only to designated SNAs at this time.
+
+#### `network`
+
+The `stackit_network` provides the fields `region` and `routing_table_id` when the experiment flag `network` is set. 
+The underlying API is not stable yet and could change in the future.  
+If you don't need these fields, don't set the experiment flag `network`, to use the stable api.
 
 ## Acceptance Tests
 

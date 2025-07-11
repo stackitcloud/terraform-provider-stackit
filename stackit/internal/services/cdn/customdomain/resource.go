@@ -88,7 +88,7 @@ func (r *customDomainResource) Metadata(_ context.Context, req resource.Metadata
 
 func (r *customDomainResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema."),
+		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema.", core.Resource),
 		Description:         "CDN distribution data source schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/git"
@@ -63,7 +64,7 @@ func (g *gitDataSource) Metadata(_ context.Context, req datasource.MetadataReque
 // Schema defines the schema for the git data source.
 func (g *gitDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Git Instance datasource schema."),
+		MarkdownDescription: features.AddBetaDescription("Git Instance datasource schema.", core.Datasource),
 		Description:         "Git Instance datasource schema.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -85,6 +86,27 @@ func (g *gitDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"acl": schema.ListAttribute{
+				Description: descriptions["acl"],
+				Computed:    true,
+				ElementType: types.StringType,
+			},
+			"consumed_disk": schema.StringAttribute{
+				Description: descriptions["consumed_disk"],
+				Computed:    true,
+			},
+			"consumed_object_storage": schema.StringAttribute{
+				Description: descriptions["consumed_object_storage"],
+				Computed:    true,
+			},
+			"created": schema.StringAttribute{
+				Description: descriptions["created"],
+				Computed:    true,
+			},
+			"flavor": schema.StringAttribute{
+				Description: descriptions["flavor"],
+				Computed:    true,
 			},
 			"name": schema.StringAttribute{
 				Description: descriptions["name"],
@@ -127,7 +149,7 @@ func (g *gitDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		return
 	}
 
-	err = mapFields(gitInstanceResp, &model)
+	err = mapFields(ctx, gitInstanceResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading git instance", fmt.Sprintf("Processing API response: %v", err))
 		return
