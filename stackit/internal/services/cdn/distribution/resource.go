@@ -388,7 +388,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		Regions: &regions,
 	}
 
-	if !configModel.Optimizer.IsNull() && !configModel.Optimizer.IsUnknown() {
+	if !utils.IsUndefined(configModel.Optimizer) {
 		var optimizerModel optimizerConfig
 
 		diags = configModel.Optimizer.As(ctx, &optimizerModel, basetypes.ObjectAsOptions{})
