@@ -224,8 +224,12 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						Computed:    true,
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
-								Required: true,
+								Optional: true,
+								Computed: true,
 							},
+						},
+						Validators: []validator.Object{
+							objectvalidator.AlsoRequires(path.MatchRelative().AtName("enabled")),
 						},
 					},
 					"backend": schema.SingleNestedAttribute{
