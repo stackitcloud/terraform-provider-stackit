@@ -679,7 +679,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 			return nil, core.DiagsToError(diags)
 		}
 
-		if !optimizerModel.Enabled.IsUnknown() && !optimizerModel.Enabled.IsNull() {
+		if !utils.IsUndefined(optimizerModel.Enabled) {
 			cdnConfig.Optimizer = cdn.NewOptimizer(optimizerModel.Enabled.ValueBool())
 		}
 	}
