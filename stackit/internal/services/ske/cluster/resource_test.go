@@ -23,7 +23,9 @@ type skeClientMocked struct {
 	getClusterResp *ske.Cluster
 }
 
-func (c *skeClientMocked) GetClusterExecute(_ context.Context, _, _ string) (*ske.Cluster, error) {
+const testRegion = "region"
+
+func (c *skeClientMocked) GetClusterExecute(_ context.Context, _, _, _ string) (*ske.Cluster, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("get cluster failed")
 	}
@@ -33,7 +35,6 @@ func (c *skeClientMocked) GetClusterExecute(_ context.Context, _, _ string) (*sk
 
 func TestMapFields(t *testing.T) {
 	cs := ske.ClusterStatusState("OK")
-	const testRegion = "region"
 	tests := []struct {
 		description     string
 		stateExtensions types.Object
@@ -52,19 +53,17 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,region,name"),
-				ProjectId:                 types.StringValue("pid"),
-				Name:                      types.StringValue("name"),
-				KubernetesVersion:         types.StringNull(),
-				AllowPrivilegedContainers: types.BoolNull(),
-				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
-				Maintenance:               types.ObjectNull(maintenanceTypes),
-				Network:                   types.ObjectNull(networkTypes),
-				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
-				Extensions:                types.ObjectNull(extensionsTypes),
-				EgressAddressRanges:       types.ListNull(types.StringType),
-				PodAddressRanges:          types.ListNull(types.StringType),
-				Region:                    types.StringValue(testRegion),
+				Id:                  types.StringValue("pid,region,name"),
+				ProjectId:           types.StringValue("pid"),
+				Name:                types.StringValue("name"),
+				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:         types.ObjectNull(maintenanceTypes),
+				Network:             types.ObjectNull(networkTypes),
+				Hibernations:        types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions:          types.ObjectNull(extensionsTypes),
+				EgressAddressRanges: types.ListNull(types.StringType),
+				PodAddressRanges:    types.ListNull(types.StringType),
+				Region:              types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -78,9 +77,9 @@ func TestMapFields(t *testing.T) {
 						AllowedCidrs: &[]string{"cidr1"},
 						Enabled:      utils.Ptr(true),
 					},
-					Argus: &ske.Argus{
-						ArgusInstanceId: utils.Ptr("aid"),
-						Enabled:         utils.Ptr(true),
+					Observability: &ske.Observability{
+						InstanceId: utils.Ptr("aid"),
+						Enabled:    utils.Ptr(true),
 					},
 					Dns: &ske.DNS{
 						Zones:   &[]string{"foo.onstackit.cloud"},
@@ -97,8 +96,7 @@ func TestMapFields(t *testing.T) {
 					},
 				},
 				Kubernetes: &ske.Kubernetes{
-					AllowPrivilegedContainers: utils.Ptr(true),
-					Version:                   utils.Ptr("1.2.3"),
+					Version: utils.Ptr("1.2.3"),
 				},
 				Maintenance: &ske.Maintenance{
 					AutoUpdate: &ske.MaintenanceAutoUpdate{
@@ -157,12 +155,10 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,region,name"),
-				ProjectId:                 types.StringValue("pid"),
-				Name:                      types.StringValue("name"),
-				KubernetesVersion:         types.StringNull(),
-				KubernetesVersionUsed:     types.StringValue("1.2.3"),
-				AllowPrivilegedContainers: types.BoolValue(true),
+				Id:                    types.StringValue("pid,region,name"),
+				ProjectId:             types.StringValue("pid"),
+				Name:                  types.StringValue("name"),
+				KubernetesVersionUsed: types.StringValue("1.2.3"),
 				EgressAddressRanges: types.ListValueMust(
 					types.StringType,
 					[]attr.Value{
@@ -256,9 +252,10 @@ func TestMapFields(t *testing.T) {
 							types.StringValue("cidr1"),
 						}),
 					}),
-					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
-						"enabled":           types.BoolValue(true),
-						"argus_instance_id": types.StringValue("aid"),
+					"argus": types.ObjectNull(argusTypes),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(true),
+						"instance_id": types.StringValue("aid"),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(true),
@@ -281,19 +278,17 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,region,name"),
-				ProjectId:                 types.StringValue("pid"),
-				Name:                      types.StringValue("name"),
-				KubernetesVersion:         types.StringNull(),
-				AllowPrivilegedContainers: types.BoolNull(),
-				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
-				Maintenance:               types.ObjectNull(maintenanceTypes),
-				Network:                   types.ObjectNull(networkTypes),
-				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
-				Extensions:                types.ObjectNull(extensionsTypes),
-				EgressAddressRanges:       types.ListNull(types.StringType),
-				PodAddressRanges:          types.ListNull(types.StringType),
-				Region:                    types.StringValue(testRegion),
+				Id:                  types.StringValue("pid,region,name"),
+				ProjectId:           types.StringValue("pid"),
+				Name:                types.StringValue("name"),
+				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:         types.ObjectNull(maintenanceTypes),
+				Network:             types.ObjectNull(networkTypes),
+				Hibernations:        types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions:          types.ObjectNull(extensionsTypes),
+				EgressAddressRanges: types.ListNull(types.StringType),
+				PodAddressRanges:    types.ListNull(types.StringType),
+				Region:              types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -307,9 +302,9 @@ func TestMapFields(t *testing.T) {
 						AllowedCidrs: nil,
 						Enabled:      utils.Ptr(true),
 					},
-					Argus: &ske.Argus{
-						ArgusInstanceId: nil,
-						Enabled:         utils.Ptr(true),
+					Observability: &ske.Observability{
+						InstanceId: nil,
+						Enabled:    utils.Ptr(true),
 					},
 					Dns: &ske.DNS{
 						Zones:   nil,
@@ -320,24 +315,23 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,region,name"),
-				ProjectId:                 types.StringValue("pid"),
-				Name:                      types.StringValue("name"),
-				KubernetesVersion:         types.StringNull(),
-				AllowPrivilegedContainers: types.BoolNull(),
-				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
-				Maintenance:               types.ObjectNull(maintenanceTypes),
-				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
-				EgressAddressRanges:       types.ListNull(types.StringType),
-				PodAddressRanges:          types.ListNull(types.StringType),
+				Id:                  types.StringValue("pid,region,name"),
+				ProjectId:           types.StringValue("pid"),
+				Name:                types.StringValue("name"),
+				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:         types.ObjectNull(maintenanceTypes),
+				Hibernations:        types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				EgressAddressRanges: types.ListNull(types.StringType),
+				PodAddressRanges:    types.ListNull(types.StringType),
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
 					"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
 						"enabled":       types.BoolValue(true),
 						"allowed_cidrs": types.ListNull(types.StringType),
 					}),
-					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
-						"enabled":           types.BoolValue(true),
-						"argus_instance_id": types.StringNull(),
+					"argus": types.ObjectNull(argusTypes),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(true),
+						"instance_id": types.StringNull(),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(true),
@@ -355,9 +349,10 @@ func TestMapFields(t *testing.T) {
 					"enabled":       types.BoolValue(false),
 					"allowed_cidrs": types.ListNull(types.StringType),
 				}),
-				"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
-					"enabled":           types.BoolValue(false),
-					"argus_instance_id": types.StringNull(),
+				"argus": types.ObjectNull(argusTypes),
+				"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+					"enabled":     types.BoolValue(false),
+					"instance_id": types.StringNull(),
 				}),
 				"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
 					"enabled": types.BoolValue(false),
@@ -371,24 +366,23 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,region,name"),
-				ProjectId:                 types.StringValue("pid"),
-				Name:                      types.StringValue("name"),
-				KubernetesVersion:         types.StringNull(),
-				AllowPrivilegedContainers: types.BoolNull(),
-				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
-				Maintenance:               types.ObjectNull(maintenanceTypes),
-				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
-				EgressAddressRanges:       types.ListNull(types.StringType),
-				PodAddressRanges:          types.ListNull(types.StringType),
+				Id:                  types.StringValue("pid,region,name"),
+				ProjectId:           types.StringValue("pid"),
+				Name:                types.StringValue("name"),
+				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:         types.ObjectNull(maintenanceTypes),
+				Hibernations:        types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				EgressAddressRanges: types.ListNull(types.StringType),
+				PodAddressRanges:    types.ListNull(types.StringType),
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
 					"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
 						"enabled":       types.BoolValue(false),
 						"allowed_cidrs": types.ListNull(types.StringType),
 					}),
-					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
-						"enabled":           types.BoolValue(false),
-						"argus_instance_id": types.StringNull(),
+					"argus": types.ObjectNull(argusTypes),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(false),
+						"instance_id": types.StringNull(),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(false),
@@ -400,7 +394,7 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
-			"extensions_only_argus_disabled",
+			"extensions_only_observability_disabled",
 			types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
 				"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
 					"enabled": types.BoolValue(true),
@@ -408,9 +402,10 @@ func TestMapFields(t *testing.T) {
 						types.StringValue("cidr1"),
 					}),
 				}),
-				"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
-					"enabled":           types.BoolValue(false),
-					"argus_instance_id": types.StringValue("id"),
+				"argus": types.ObjectNull(argusTypes),
+				"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+					"enabled":     types.BoolValue(false),
+					"instance_id": types.StringValue("id"),
 				}),
 				"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
 					"enabled": types.BoolValue(true),
@@ -433,16 +428,14 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,region,name"),
-				ProjectId:                 types.StringValue("pid"),
-				Name:                      types.StringValue("name"),
-				KubernetesVersion:         types.StringNull(),
-				AllowPrivilegedContainers: types.BoolNull(),
-				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
-				Maintenance:               types.ObjectNull(maintenanceTypes),
-				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
-				EgressAddressRanges:       types.ListNull(types.StringType),
-				PodAddressRanges:          types.ListNull(types.StringType),
+				Id:                  types.StringValue("pid,region,name"),
+				ProjectId:           types.StringValue("pid"),
+				Name:                types.StringValue("name"),
+				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:         types.ObjectNull(maintenanceTypes),
+				Hibernations:        types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				EgressAddressRanges: types.ListNull(types.StringType),
+				PodAddressRanges:    types.ListNull(types.StringType),
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
 					"acl": types.ObjectValueMust(aclTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(true),
@@ -450,9 +443,10 @@ func TestMapFields(t *testing.T) {
 							types.StringValue("cidr1"),
 						}),
 					}),
-					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
-						"enabled":           types.BoolValue(false),
-						"argus_instance_id": types.StringValue("id"),
+					"argus": types.ObjectNull(argusTypes),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(false),
+						"instance_id": types.StringValue("id"),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(true),
@@ -473,18 +467,16 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,region,name"),
-				ProjectId:                 types.StringValue("pid"),
-				Name:                      types.StringValue("name"),
-				KubernetesVersion:         types.StringNull(),
-				AllowPrivilegedContainers: types.BoolNull(),
-				NodePools:                 types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
-				Maintenance:               types.ObjectNull(maintenanceTypes),
-				Hibernations:              types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
-				Extensions:                types.ObjectNull(extensionsTypes),
-				EgressAddressRanges:       types.ListNull(types.StringType),
-				PodAddressRanges:          types.ListNull(types.StringType),
-				Region:                    types.StringValue(testRegion),
+				Id:                  types.StringValue("pid,region,name"),
+				ProjectId:           types.StringValue("pid"),
+				Name:                types.StringValue("name"),
+				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:         types.ObjectNull(maintenanceTypes),
+				Hibernations:        types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions:          types.ObjectNull(extensionsTypes),
+				EgressAddressRanges: types.ListNull(types.StringType),
+				PodAddressRanges:    types.ListNull(types.StringType),
+				Region:              types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -535,9 +527,9 @@ func TestMapFields(t *testing.T) {
 						AllowedCidrs: &[]string{"cidr1"},
 						Enabled:      utils.Ptr(true),
 					},
-					Argus: &ske.Argus{
-						ArgusInstanceId: utils.Ptr("aid"),
-						Enabled:         utils.Ptr(true),
+					Observability: &ske.Observability{
+						InstanceId: utils.Ptr("aid"),
+						Enabled:    utils.Ptr(true),
 					},
 					Dns: &ske.DNS{
 						Zones:   &[]string{"zone1"},
@@ -554,8 +546,7 @@ func TestMapFields(t *testing.T) {
 					},
 				},
 				Kubernetes: &ske.Kubernetes{
-					AllowPrivilegedContainers: utils.Ptr(true),
-					Version:                   utils.Ptr("1.2.3"),
+					Version: utils.Ptr("1.2.3"),
 				},
 				Maintenance: &ske.Maintenance{
 					AutoUpdate: &ske.MaintenanceAutoUpdate{
@@ -605,14 +596,12 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:                        types.StringValue("pid,region,name"),
-				ProjectId:                 types.StringValue("pid"),
-				Name:                      types.StringValue("name"),
-				KubernetesVersion:         types.StringNull(),
-				KubernetesVersionUsed:     types.StringValue("1.2.3"),
-				AllowPrivilegedContainers: types.BoolValue(true),
-				EgressAddressRanges:       types.ListNull(types.StringType),
-				PodAddressRanges:          types.ListNull(types.StringType),
+				Id:                    types.StringValue("pid,region,name"),
+				ProjectId:             types.StringValue("pid"),
+				Name:                  types.StringValue("name"),
+				KubernetesVersionUsed: types.StringValue("1.2.3"),
+				EgressAddressRanges:   types.ListNull(types.StringType),
+				PodAddressRanges:      types.ListNull(types.StringType),
 				NodePools: types.ListValueMust(
 					types.ObjectType{AttrTypes: nodePoolTypes},
 					[]attr.Value{
@@ -680,9 +669,10 @@ func TestMapFields(t *testing.T) {
 							types.StringValue("cidr1"),
 						}),
 					}),
-					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
-						"enabled":           types.BoolValue(true),
-						"argus_instance_id": types.StringValue("aid"),
+					"argus": types.ObjectNull(argusTypes),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(true),
+						"instance_id": types.StringValue("aid"),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(true),
@@ -1894,92 +1884,6 @@ func TestGetMaintenanceTimes(t *testing.T) {
 	}
 }
 
-func TestCheckAllowPrivilegedContainers(t *testing.T) {
-	tests := []struct {
-		description              string
-		kubernetesVersion        *string
-		allowPrivilegeContainers *bool
-		isValid                  bool
-	}{
-		{
-			description:              "null_version_1_flag_deprecated",
-			kubernetesVersion:        nil,
-			allowPrivilegeContainers: nil,
-			isValid:                  true,
-		},
-		{
-			description:              "null_version_2_flag_deprecated",
-			kubernetesVersion:        nil,
-			allowPrivilegeContainers: utils.Ptr(false),
-			isValid:                  false,
-		},
-		{
-			description:              "flag_required_1",
-			kubernetesVersion:        utils.Ptr("0.999.999"),
-			allowPrivilegeContainers: nil,
-			isValid:                  false,
-		},
-		{
-			description:              "flag_required_2",
-			kubernetesVersion:        utils.Ptr("0.999.999"),
-			allowPrivilegeContainers: utils.Ptr(false),
-			isValid:                  true,
-		},
-		{
-			description:              "flag_required_3",
-			kubernetesVersion:        utils.Ptr("1.24.999"),
-			allowPrivilegeContainers: nil,
-			isValid:                  false,
-		},
-		{
-			description:              "flag_required_4",
-			kubernetesVersion:        utils.Ptr("1.24.999"),
-			allowPrivilegeContainers: utils.Ptr(false),
-			isValid:                  true,
-		},
-		{
-			description:              "flag_deprecated_1",
-			kubernetesVersion:        utils.Ptr("1.25"),
-			allowPrivilegeContainers: nil,
-			isValid:                  true,
-		},
-		{
-			description:              "flag_deprecated_2",
-			kubernetesVersion:        utils.Ptr("1.25"),
-			allowPrivilegeContainers: utils.Ptr(false),
-			isValid:                  false,
-		},
-		{
-			description:              "flag_deprecated_3",
-			kubernetesVersion:        utils.Ptr("2.0.0"),
-			allowPrivilegeContainers: nil,
-			isValid:                  true,
-		},
-		{
-			description:              "flag_deprecated_4",
-			kubernetesVersion:        utils.Ptr("2.0.0"),
-			allowPrivilegeContainers: utils.Ptr(false),
-			isValid:                  false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.description, func(t *testing.T) {
-			diags := checkAllowPrivilegedContainers(
-				types.BoolPointerValue(tt.allowPrivilegeContainers),
-				types.StringPointerValue(tt.kubernetesVersion),
-			)
-
-			if tt.isValid && diags.HasError() {
-				t.Errorf("checkAllowPrivilegedContainers failed on valid input: %v", core.DiagsToError(diags))
-			}
-			if !tt.isValid && !diags.HasError() {
-				t.Errorf("checkAllowPrivilegedContainers didn't fail on valid input")
-			}
-		})
-	}
-}
-
 func TestGetCurrentVersion(t *testing.T) {
 	tests := []struct {
 		description               string
@@ -2583,6 +2487,152 @@ func TestSortK8sVersion(t *testing.T) {
 
 			if expected != actual {
 				t.Errorf("wrong sort order. wanted %s but got %s", expected, actual)
+			}
+		})
+	}
+}
+
+func TestValidateConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		model   *Model
+		wantErr bool
+	}{
+		{
+			name: "argus and observability null",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":           types.ObjectNull(aclTypes),
+					"dns":           types.ObjectNull(dnsTypes),
+					"argus":         types.ObjectNull(argusTypes),
+					"observability": types.ObjectNull(observabilityTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "argus and observability unknown",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":           types.ObjectNull(aclTypes),
+					"dns":           types.ObjectNull(dnsTypes),
+					"argus":         types.ObjectUnknown(argusTypes),
+					"observability": types.ObjectUnknown(observabilityTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "argus null and observability set",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":   types.ObjectNull(aclTypes),
+					"dns":   types.ObjectNull(dnsTypes),
+					"argus": types.ObjectNull(argusTypes),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(true),
+						"instance_id": types.StringValue("aid"),
+					}),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "argus null and observability unknown",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":           types.ObjectNull(aclTypes),
+					"dns":           types.ObjectNull(dnsTypes),
+					"argus":         types.ObjectNull(argusTypes),
+					"observability": types.ObjectUnknown(observabilityTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "argus set and observability null",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl": types.ObjectNull(aclTypes),
+					"dns": types.ObjectNull(dnsTypes),
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+						"enabled":           types.BoolValue(true),
+						"argus_instance_id": types.StringValue("aid"),
+					}),
+					"observability": types.ObjectNull(observabilityTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "argus set and observability unknown",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl": types.ObjectNull(aclTypes),
+					"dns": types.ObjectNull(dnsTypes),
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+						"enabled":           types.BoolValue(true),
+						"argus_instance_id": types.StringValue("aid"),
+					}),
+					"observability": types.ObjectUnknown(observabilityTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "argus and observability both set",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl": types.ObjectNull(aclTypes),
+					"dns": types.ObjectNull(dnsTypes),
+					"argus": types.ObjectValueMust(argusTypes, map[string]attr.Value{
+						"enabled":           types.BoolValue(true),
+						"argus_instance_id": types.StringValue("aid"),
+					}),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(true),
+						"instance_id": types.StringValue("aid"),
+					}),
+				}),
+			},
+			wantErr: true,
+		},
+		{
+			name: "argus unknown observability null",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":           types.ObjectNull(aclTypes),
+					"dns":           types.ObjectNull(dnsTypes),
+					"argus":         types.ObjectUnknown(argusTypes),
+					"observability": types.ObjectNull(observabilityTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "argus unknown observability set",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":   types.ObjectNull(aclTypes),
+					"dns":   types.ObjectNull(dnsTypes),
+					"argus": types.ObjectUnknown(argusTypes),
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(true),
+						"instance_id": types.StringValue("aid"),
+					}),
+				}),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			diags := diag.Diagnostics{}
+
+			validateConfig(ctx, &diags, tt.model)
+			if diags.HasError() != tt.wantErr {
+				t.Errorf("validateConfig() = %v, want %v", diags.HasError(), tt.wantErr)
 			}
 		})
 	}

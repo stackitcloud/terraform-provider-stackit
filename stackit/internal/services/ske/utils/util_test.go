@@ -46,7 +46,6 @@ func TestConfigureClient(t *testing.T) {
 			expected: func() *ske.APIClient {
 				apiClient, err := ske.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
-					config.WithRegion("eu01"),
 				)
 				if err != nil {
 					t.Errorf("error configuring client: %v", err)

@@ -33,14 +33,10 @@ data "stackit_ske_cluster" "example" {
 
 ### Read-Only
 
-- `allow_privileged_containers` (Boolean, Deprecated) DEPRECATED as of Kubernetes 1.25+
- Flag to specify if privileged mode for containers is enabled or not.
-This should be used with care since it also disables a couple of other features like the use of some volume type (e.g. PVCs).
 - `egress_address_ranges` (List of String) The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.
 - `extensions` (Attributes) A single extensions block as defined below (see [below for nested schema](#nestedatt--extensions))
 - `hibernations` (Attributes List) One or more hibernation block as defined below. (see [below for nested schema](#nestedatt--hibernations))
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`name`".
-- `kubernetes_version` (String, Deprecated) Kubernetes version. This field is deprecated, use `kubernetes_version_used` instead
 - `kubernetes_version_min` (String) The minimum Kubernetes version, this field is always nil. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html). To get the current kubernetes version being used for your cluster, use the `kubernetes_version_used` field.
 - `kubernetes_version_used` (String) Full Kubernetes version used. For example, if `1.22` was selected, this value may result to `1.22.15`
 - `maintenance` (Attributes) A single maintenance block as defined below (see [below for nested schema](#nestedatt--maintenance))
@@ -54,8 +50,9 @@ This should be used with care since it also disables a couple of other features 
 Read-Only:
 
 - `acl` (Attributes) Cluster access control configuration (see [below for nested schema](#nestedatt--extensions--acl))
-- `argus` (Attributes) A single argus block as defined below (see [below for nested schema](#nestedatt--extensions--argus))
+- `argus` (Attributes, Deprecated) A single argus block as defined below. This field is deprecated and will be removed 06 January 2026. (see [below for nested schema](#nestedatt--extensions--argus))
 - `dns` (Attributes) DNS extension configuration (see [below for nested schema](#nestedatt--extensions--dns))
+- `observability` (Attributes) A single observability block as defined below. (see [below for nested schema](#nestedatt--extensions--observability))
 
 <a id="nestedatt--extensions--acl"></a>
 ### Nested Schema for `extensions.acl`
@@ -82,6 +79,15 @@ Read-Only:
 
 - `enabled` (Boolean) Flag to enable/disable DNS extensions
 - `zones` (List of String) Specify a list of domain filters for externalDNS (e.g., `foo.runs.onstackit.cloud`)
+
+
+<a id="nestedatt--extensions--observability"></a>
+### Nested Schema for `extensions.observability`
+
+Read-Only:
+
+- `enabled` (Boolean) Flag to enable/disable Observability extensions.
+- `instance_id` (String) Observability instance ID to choose which Observability instance is used. Required when enabled is set to `true`.
 
 
 
