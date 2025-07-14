@@ -398,7 +398,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 
 		optimizer := cdn.NewOptimizerPatch()
-		if !optimizerModel.Enabled.IsNull() && !optimizerModel.Enabled.IsUnknown() {
+		if !utils.IsUndefined(optimizerModel.Enabled) {
 			optimizer.SetEnabled(optimizerModel.Enabled.ValueBool())
 		}
 		configPatch.Optimizer = optimizer
