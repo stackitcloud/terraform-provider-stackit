@@ -353,3 +353,108 @@ func TestMapFields(t *testing.T) {
 		})
 	}
 }
+
+// TestValidateCountryCode tests the validateCountryCode function with a variety of inputs.
+func TestValidateCountryCode(t *testing.T) {
+	testCases := []struct {
+		name          string
+		inputCountry  string
+		wantOutput    string
+		expectError   bool
+		expectedError string
+	}{
+		// Happy Path
+		{
+			name:         "Valid lowercase",
+			inputCountry: "us",
+			wantOutput:   "US",
+			expectError:  false,
+		},
+		{
+			name:         "Valid uppercase",
+			inputCountry: "DE",
+			wantOutput:   "DE",
+			expectError:  false,
+		},
+		{
+			name:         "Valid mixed case",
+			inputCountry: "cA",
+			wantOutput:   "CA",
+			expectError:  false,
+		},
+		{
+			name:         "Valid country code FR",
+			inputCountry: "fr",
+			wantOutput:   "FR",
+			expectError:  false,
+		},
+
+		// Error Scenarios
+		{
+			name:          "Invalid length - too short",
+			inputCountry:  "a",
+			wantOutput:    "",
+			expectError:   true,
+			expectedError: "country code must be exactly 2 characters long",
+		},
+		{
+			name:          "Invalid length - too long",
+			inputCountry:  "USA",
+			wantOutput:    "",
+			expectError:   true,
+			expectedError: "country code must be exactly 2 characters long",
+		},
+		{
+			name:          "Invalid characters - contains number",
+			inputCountry:  "U1",
+			wantOutput:    "",
+			expectError:   true,
+			expectedError: "country code 'U1' must consist of two alphabetical letters (A-Z or a-z)",
+		},
+		{
+			name:          "Invalid characters - contains symbol",
+			inputCountry:  "D!",
+			wantOutput:    "",
+			expectError:   true,
+			expectedError: "country code 'D!' must consist of two alphabetical letters (A-Z or a-z)",
+		},
+		{
+			name:          "Invalid characters - both are numbers",
+			inputCountry:  "42",
+			wantOutput:    "",
+			expectError:   true,
+			expectedError: "country code '42' must consist of two alphabetical letters (A-Z or a-z)",
+		},
+		{
+			name:          "Empty string",
+			inputCountry:  "",
+			wantOutput:    "",
+			expectError:   true,
+			expectedError: "country code must be exactly 2 characters long",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotOutput, err := validateCountryCode(tc.inputCountry)
+
+			if tc.expectError {
+				if err == nil {
+					t.Errorf("expected an error for input '%s', but got none", tc.inputCountry)
+				} else if err.Error() != tc.expectedError {
+					t.Errorf("for input '%s', expected error '%s', but got '%s'", tc.inputCountry, tc.expectedError, err.Error())
+				}
+				if gotOutput != "" {
+					t.Errorf("expected empty string on error, but got '%s'", gotOutput)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("did not expect an error for input '%s', but got: %v", tc.inputCountry, err)
+				}
+				if gotOutput != tc.wantOutput {
+					t.Errorf("for input '%s', expected output '%s', but got '%s'", tc.inputCountry, tc.wantOutput, gotOutput)
+				}
+			}
+		})
+	}
+}

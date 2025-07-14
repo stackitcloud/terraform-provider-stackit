@@ -150,7 +150,7 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						ElementType: types.StringType,
 					},
 					"blocked_countries": schema.ListAttribute{
-						Computed:    true,
+						Optional:    true,
 						Description: schemaDescriptions["config_blocked_countries"],
 						ElementType: types.StringType,
 					}},

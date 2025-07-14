@@ -235,7 +235,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						ElementType: types.StringType,
 					},
 					"blocked_countries": schema.ListAttribute{
-						Computed:    true,
+						Optional:    true,
 						Description: schemaDescriptions["config_blocked_countries"],
 						ElementType: types.StringType,
 					}},
@@ -358,6 +358,19 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		regions = append(regions, *regionEnum)
 	}
 
+	// blockedCountries
+	var blockedCountries []string
+	if configModel.BlockedCountries != nil {
+		for _, blockedCountry := range *configModel.BlockedCountries {
+			validatedBlockedCountry, err := validateCountryCode(blockedCountry)
+			if err != nil {
+				core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Blocked countries: %v", err))
+				return
+			}
+			blockedCountries = append(blockedCountries, validatedBlockedCountry)
+		}
+	}
+
 	_, err := r.client.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdn.PatchDistributionPayload{
 		Config: &cdn.ConfigPatch{
 			Backend: &cdn.ConfigPatchBackend{
@@ -367,7 +380,8 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 					Type:                 &configModel.Backend.Type,
 				},
 			},
-			Regions: &regions,
+			Regions:          &regions,
+			BlockedCountries: &blockedCountries,
 		},
 		IntentId: cdn.PtrString(uuid.NewString()),
 	}).Execute()
@@ -488,9 +502,12 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 
 	// blockedCountries
 	var blockedCountries []attr.Value
-	for _, c := range *distribution.Config.BlockedCountries {
-		blockedCountries = append(blockedCountries, types.StringValue(string(c)))
+	if distribution.Config != nil && distribution.Config.BlockedCountries != nil {
+		for _, c := range *distribution.Config.BlockedCountries {
+			blockedCountries = append(blockedCountries, types.StringValue(string(c)))
+		}
 	}
+
 	modelBlockedCountries, diags := types.ListValue(types.StringType, blockedCountries)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -616,12 +633,14 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 
 	// blockedCountries
 	var blockedCountries []string
-	for _, blockedCountry := range *configModel.BlockedCountries {
-		validatedBlockedCountry, err := validateCountryCode(blockedCountry)
-		if err != nil {
-			return nil, err
+	if configModel.BlockedCountries != nil {
+		for _, blockedCountry := range *configModel.BlockedCountries {
+			validatedBlockedCountry, err := validateCountryCode(blockedCountry)
+			if err != nil {
+				return nil, err
+			}
+			blockedCountries = append(blockedCountries, validatedBlockedCountry)
 		}
-		blockedCountries = append(blockedCountries, string(validatedBlockedCountry))
 	}
 
 	// originRequestHeaders
