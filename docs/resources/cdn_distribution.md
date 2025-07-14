@@ -77,7 +77,7 @@ Optional:
 <a id="nestedatt--config--optimizer"></a>
 ### Nested Schema for `config.optimizer`
 
-Required:
+Optional:
 
 - `enabled` (Boolean)
 
