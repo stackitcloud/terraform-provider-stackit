@@ -55,7 +55,7 @@ Required:
 - `backend` (Attributes) The configured backend for the distribution (see [below for nested schema](#nestedatt--config--backend))
 - `regions` (List of String) The configured regions where content will be hosted
 
-Read-Only:
+Optional:
 
 - `blocked_countries` (List of String) The configured countries where distribution of content is blocked
 
