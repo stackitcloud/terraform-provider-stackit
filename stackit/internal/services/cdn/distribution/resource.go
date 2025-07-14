@@ -359,16 +359,23 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// blockedCountries
-	var blockedCountries []string
+	// Use a pointer to a slice to distinguish between an empty list (unblock all) and nil (no change).
+	var blockedCountries *[]string
 	if configModel.BlockedCountries != nil {
+		// Use a temporary slice
+		tempBlockedCountries := []string{}
+
 		for _, blockedCountry := range *configModel.BlockedCountries {
 			validatedBlockedCountry, err := validateCountryCode(blockedCountry)
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Blocked countries: %v", err))
 				return
 			}
-			blockedCountries = append(blockedCountries, validatedBlockedCountry)
+			tempBlockedCountries = append(tempBlockedCountries, validatedBlockedCountry)
 		}
+
+		// Point to the populated slice
+		blockedCountries = &tempBlockedCountries
 	}
 
 	_, err := r.client.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdn.PatchDistributionPayload{
@@ -381,13 +388,15 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 				},
 			},
 			Regions:          &regions,
-			BlockedCountries: &blockedCountries,
+			BlockedCountries: blockedCountries,
 		},
 		IntentId: cdn.PtrString(uuid.NewString()),
 	}).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Patch distribution: %v", err))
+		return
 	}
+
 	waitResp, err := wait.UpdateDistributionWaitHandler(ctx, r.client, projectId, distributionId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Waiting for update: %v", err))
@@ -399,6 +408,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
