@@ -25,6 +25,10 @@ resource "stackit_cdn_distribution" "example_distribution" {
     }
     regions           = ["EU", "US", "ASIA", "AF", "SA"]
     blocked_countries = ["DE", "AT", "CH"]
+    
+    optimizer = {
+      enabled = true
+    }
   }
 }
 ```
@@ -58,6 +62,7 @@ Required:
 Optional:
 
 - `blocked_countries` (List of String) The configured countries where distribution of content is blocked
+- `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
 
 <a id="nestedatt--config--backend"></a>
 ### Nested Schema for `config.backend`
@@ -70,6 +75,14 @@ Required:
 Optional:
 
 - `origin_request_headers` (Map of String) The configured origin request headers for the backend
+
+
+<a id="nestedatt--config--optimizer"></a>
+### Nested Schema for `config.optimizer`
+
+Optional:
+
+- `enabled` (Boolean)
 
 
 

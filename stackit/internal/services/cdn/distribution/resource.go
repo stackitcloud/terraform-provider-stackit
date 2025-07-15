@@ -12,8 +12,10 @@ import (
 	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -52,6 +54,7 @@ var schemaDescriptions = map[string]string{
 	"config_backend":                        "The configured backend for the distribution",
 	"config_regions":                        "The configured regions where content will be hosted",
 	"config_backend_type":                   "The configured backend type. ",
+	"config_optimizer":                      "Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience.",
 	"config_backend_origin_url":             "The configured backend type for the distribution",
 	"config_backend_origin_request_headers": "The configured origin request headers for the backend",
 	"config_blocked_countries":              "The configured countries where distribution of content is blocked",
@@ -74,9 +77,14 @@ type Model struct {
 }
 
 type distributionConfig struct {
-	Backend          backend   `tfsdk:"backend"`           // The backend associated with the distribution
-	Regions          *[]string `tfsdk:"regions"`           // The regions in which data will be cached
-	BlockedCountries *[]string `tfsdk:"blocked_countries"` // The countries for which content will be blocked
+	Backend          backend       `tfsdk:"backend"`           // The backend associated with the distribution
+	Regions          *[]string    `tfsdk:"regions"`           // The regions in which data will be cached
+	BlockedCountries *[]string    `tfsdk:"blocked_countries"` // The countries for which content will be blocked
+	Optimizer        types.Object `tfsdk:"optimizer"`      // The optimizer configuration
+}
+
+type optimizerConfig struct {
+	Enabled types.Bool `tfsdk:"enabled"`
 }
 
 type backend struct {
@@ -86,9 +94,17 @@ type backend struct {
 }
 
 var configTypes = map[string]attr.Type{
-	"backend":           types.ObjectType{AttrTypes: backendTypes},
-	"regions":           types.ListType{ElemType: types.StringType},
-	"blocked_countries": types.ListType{ElemType: types.StringType},
+	"backend": types.ObjectType{AttrTypes: backendTypes},
+	"regions": types.ListType{ElemType: types.StringType},
+	"optimizer": types.ObjectType{
+		AttrTypes: optimizerTypes,
+	},
+  "blocked_countries": types.ListType{ElemType: types.StringType},
+
+}
+
+var optimizerTypes = map[string]attr.Type{
+	"enabled": types.BoolType,
 }
 
 var backendTypes = map[string]attr.Type{
@@ -209,6 +225,20 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 				Required:    true,
 				Description: schemaDescriptions["config"],
 				Attributes: map[string]schema.Attribute{
+					"optimizer": schema.SingleNestedAttribute{
+						Description: schemaDescriptions["config_optimizer"],
+						Optional:    true,
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Optional: true,
+								Computed: true,
+							},
+						},
+						Validators: []validator.Object{
+							objectvalidator.AlsoRequires(path.MatchRelative().AtName("enabled")),
+						},
+					},
 					"backend": schema.SingleNestedAttribute{
 						Required:    true,
 						Description: schemaDescriptions["config_backend"],
@@ -239,6 +269,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						Description: schemaDescriptions["config_blocked_countries"],
 						ElementType: types.StringType,
 					}},
+				},
 			},
 		},
 	}
@@ -378,18 +409,36 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		blockedCountries = &tempBlockedCountries
 	}
 
-	_, err := r.client.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdn.PatchDistributionPayload{
-		Config: &cdn.ConfigPatch{
-			Backend: &cdn.ConfigPatchBackend{
-				HttpBackendPatch: &cdn.HttpBackendPatch{
-					OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
-					OriginUrl:            &configModel.Backend.OriginURL,
-					Type:                 &configModel.Backend.Type,
-				},
+	configPatch := &cdn.ConfigPatch{
+		Backend: &cdn.ConfigPatchBackend{
+			HttpBackendPatch: &cdn.HttpBackendPatch{
+				OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
+				OriginUrl:            &configModel.Backend.OriginURL,
+				Type:                 &configModel.Backend.Type,
 			},
-			Regions:          &regions,
-			BlockedCountries: blockedCountries,
 		},
+		Regions: &regions,
+    BlockedCountries: blockedCountries,
+	}
+
+	if !utils.IsUndefined(configModel.Optimizer) {
+		var optimizerModel optimizerConfig
+
+		diags = configModel.Optimizer.As(ctx, &optimizerModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping optimizer config")
+			return
+		}
+
+		optimizer := cdn.NewOptimizerPatch()
+		if !utils.IsUndefined(optimizerModel.Enabled) {
+			optimizer.SetEnabled(optimizerModel.Enabled.ValueBool())
+		}
+		configPatch.Optimizer = optimizer
+	}
+
+	_, err := r.client.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdn.PatchDistributionPayload{
+		Config:   configPatch,
 		IntentId: cdn.PtrString(uuid.NewString()),
 	}).Execute()
 	if err != nil {
@@ -545,10 +594,25 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
+	optimizerVal := types.ObjectNull(optimizerTypes)
+	if o := distribution.Config.Optimizer; o != nil {
+		optimizerEnabled, ok := o.GetEnabledOk()
+		if ok {
+			var diags diag.Diagnostics
+			optimizerVal, diags = types.ObjectValue(optimizerTypes, map[string]attr.Value{
+				"enabled": types.BoolValue(optimizerEnabled),
+			})
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
+		}
+	}
 	cfg, diags := types.ObjectValue(configTypes, map[string]attr.Value{
 		"backend":           backend,
 		"regions":           modelRegions,
 		"blocked_countries": modelBlockedCountries,
+    "optimizer":         optimizerVal,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -604,12 +668,18 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 	if err != nil {
 		return nil, err
 	}
+	var optimizer *cdn.Optimizer
+	if cfg.Optimizer != nil {
+		optimizer = cdn.NewOptimizer(cfg.Optimizer.GetEnabled())
+	}
+
 	payload := &cdn.CreateDistributionPayload{
 		IntentId:             cdn.PtrString(uuid.NewString()),
 		OriginUrl:            cfg.Backend.HttpBackend.OriginUrl,
 		Regions:              cfg.Regions,
 		BlockedCountries:     cfg.BlockedCountries,
 		OriginRequestHeaders: cfg.Backend.HttpBackend.OriginRequestHeaders,
+		Optimizer:            optimizer,
 	}
 
 	return payload, nil
@@ -660,7 +730,8 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 			originRequestHeaders[k] = v
 		}
 	}
-	return &cdn.Config{
+
+	cdnConfig := &cdn.Config{
 		Backend: &cdn.ConfigBackend{
 			HttpBackend: &cdn.HttpBackend{
 				OriginRequestHeaders: &originRequestHeaders,
@@ -668,9 +739,23 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 				Type:                 &configModel.Backend.Type,
 			},
 		},
-		Regions:          &regions,
-		BlockedCountries: &blockedCountries,
-	}, nil
+		Regions: &regions,
+  	BlockedCountries: &blockedCountries,
+	}
+
+	if !utils.IsUndefined(configModel.Optimizer) {
+		var optimizerModel optimizerConfig
+		diags := configModel.Optimizer.As(ctx, &optimizerModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		if !utils.IsUndefined(optimizerModel.Enabled) {
+			cdnConfig.Optimizer = cdn.NewOptimizer(optimizerModel.Enabled.ValueBool())
+		}
+	}
+
+	return cdnConfig, nil
 }
 
 // validateCountryCode checks for a valid country user input. This is just a quick check

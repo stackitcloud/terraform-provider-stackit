@@ -16,7 +16,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.26.0
-	github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.19-alpha
+	github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.21-alpha
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.25.0
@@ -34,10 +34,10 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.1
-	github.com/stackitcloud/stackit-sdk-go/services/ske v0.27.0
+	github.com/stackitcloud/stackit-sdk-go/services/ske v1.0.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.3.0
 	github.com/teambition/rrule-go v1.8.2
-	golang.org/x/mod v0.25.0
+	golang.org/x/mod v0.26.0
 )
 
 require github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
@@ -84,12 +84,12 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/zclconf/go-cty v1.16.3 // indirect
-	golang.org/x/crypto v0.39.0 // indirect
-	golang.org/x/net v0.41.0 // indirect
-	golang.org/x/sync v0.15.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/text v0.26.0 // indirect
-	golang.org/x/tools v0.34.0 // indirect
+	golang.org/x/crypto v0.40.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
+	golang.org/x/tools v0.35.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250603155806-513f23925822 // indirect
 	google.golang.org/grpc v1.73.0 // indirect

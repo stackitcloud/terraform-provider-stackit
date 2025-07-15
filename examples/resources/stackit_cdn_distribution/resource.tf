@@ -7,5 +7,9 @@ resource "stackit_cdn_distribution" "example_distribution" {
     }
     regions           = ["EU", "US", "ASIA", "AF", "SA"]
     blocked_countries = ["DE", "AT", "CH"]
+    
+    optimizer = {
+      enabled = true
+    }
   }
 }

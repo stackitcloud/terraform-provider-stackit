@@ -122,13 +122,28 @@ func IaaSProviderConfig() string {
 		return `
 		provider "stackit" {
 			default_region = "eu01"
-			experiments = ["routing-tables"]
 		}`
 	}
 	return fmt.Sprintf(`
 		provider "stackit" {
 			iaas_custom_endpoint = "%s"
-			experiments = ["routing-tables"]
+		}`,
+		IaaSCustomEndpoint,
+	)
+}
+
+func IaaSProviderConfigWithExperiments() string {
+	if IaaSCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			default_region = "eu01"
+  			experiments = [ "routing-tables", "network" ]
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			iaas_custom_endpoint = "%s"
+			experiments = [ "routing-tables", "network" ]
 		}`,
 		IaaSCustomEndpoint,
 	)

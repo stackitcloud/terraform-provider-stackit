@@ -1,4 +1,4 @@
-package network
+package v1network
 
 import (
 	"context"
@@ -9,19 +9,20 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network/utils/model"
 )
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
-		state       Model
+		state       model.Model
 		input       *iaas.Network
-		expected    Model
+		expected    model.Model
 		isValid     bool
 	}{
 		{
 			"id_ok",
-			Model{
+			model.Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 			},
@@ -29,7 +30,7 @@ func TestMapFields(t *testing.T) {
 				NetworkId: utils.Ptr("nid"),
 				Gateway:   iaas.NewNullableString(nil),
 			},
-			Model{
+			model.Model{
 				Id:               types.StringValue("pid,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
@@ -54,7 +55,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"values_ok",
-			Model{
+			model.Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 			},
@@ -85,7 +86,7 @@ func TestMapFields(t *testing.T) {
 				Gateway:   iaas.NewNullableString(utils.Ptr("gateway")),
 				Gatewayv6: iaas.NewNullableString(utils.Ptr("gateway")),
 			},
-			Model{
+			model.Model{
 				Id:        types.StringValue("pid,nid"),
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
@@ -130,7 +131,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"ipv4_nameservers_changed_outside_tf",
-			Model{
+			model.Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Nameservers: types.ListValueMust(types.StringType, []attr.Value{
@@ -149,7 +150,7 @@ func TestMapFields(t *testing.T) {
 					"ns3",
 				},
 			},
-			Model{
+			model.Model{
 				Id:              types.StringValue("pid,nid"),
 				ProjectId:       types.StringValue("pid"),
 				NetworkId:       types.StringValue("nid"),
@@ -172,7 +173,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"ipv6_nameservers_changed_outside_tf",
-			Model{
+			model.Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{
@@ -187,7 +188,7 @@ func TestMapFields(t *testing.T) {
 					"ns3",
 				},
 			},
-			Model{
+			model.Model{
 				Id:              types.StringValue("pid,nid"),
 				ProjectId:       types.StringValue("pid"),
 				NetworkId:       types.StringValue("nid"),
@@ -207,7 +208,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"ipv4_prefixes_changed_outside_tf",
-			Model{
+			model.Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Prefixes: types.ListValueMust(types.StringType, []attr.Value{
@@ -222,7 +223,7 @@ func TestMapFields(t *testing.T) {
 					"192.168.55.0/24",
 				},
 			},
-			Model{
+			model.Model{
 				Id:               types.StringValue("pid,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
@@ -248,7 +249,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"ipv6_prefixes_changed_outside_tf",
-			Model{
+			model.Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				IPv6Prefixes: types.ListValueMust(types.StringType, []attr.Value{
@@ -263,7 +264,7 @@ func TestMapFields(t *testing.T) {
 					"fd12:3456:789a:2::/64",
 				},
 			},
-			Model{
+			model.Model{
 				Id:               types.StringValue("pid,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
@@ -286,14 +287,14 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"ipv4_ipv6_gateway_nil",
-			Model{
+			model.Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 			},
 			&iaas.Network{
 				NetworkId: utils.Ptr("nid"),
 			},
-			Model{
+			model.Model{
 				Id:               types.StringValue("pid,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
@@ -316,18 +317,18 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"response_nil_fail",
-			Model{},
+			model.Model{},
 			nil,
-			Model{},
+			model.Model{},
 			false,
 		},
 		{
 			"no_resource_id",
-			Model{
+			model.Model{
 				ProjectId: types.StringValue("pid"),
 			},
 			&iaas.Network{},
-			Model{},
+			model.Model{},
 			false,
 		},
 	}
@@ -353,13 +354,13 @@ func TestMapFields(t *testing.T) {
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *Model
+		input       *model.Model
 		expected    *iaas.CreateNetworkPayload
 		isValid     bool
 	}{
 		{
 			"default_ok",
-			&Model{
+			&model.Model{
 				Name: types.StringValue("name"),
 				IPv4Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -395,7 +396,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			"ipv4_nameservers_okay",
-			&Model{
+			&model.Model{
 				Name: types.StringValue("name"),
 				Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -431,7 +432,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			"ipv6_default_ok",
-			&Model{
+			&model.Model{
 				Name: types.StringValue("name"),
 				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -488,14 +489,14 @@ func TestToCreatePayload(t *testing.T) {
 func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *Model
-		state       Model
+		input       *model.Model
+		state       model.Model
 		expected    *iaas.PartialUpdateNetworkPayload
 		isValid     bool
 	}{
 		{
 			"default_ok",
-			&Model{
+			&model.Model{
 				Name: types.StringValue("name"),
 				IPv4Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -507,7 +508,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Routed:      types.BoolValue(true),
 				IPv4Gateway: types.StringValue("gateway"),
 			},
-			Model{
+			model.Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Labels:    types.MapNull(types.StringType),
@@ -531,7 +532,7 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"ipv4_nameservers_okay",
-			&Model{
+			&model.Model{
 				Name: types.StringValue("name"),
 				Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -543,7 +544,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Routed:      types.BoolValue(true),
 				IPv4Gateway: types.StringValue("gateway"),
 			},
-			Model{
+			model.Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Labels:    types.MapNull(types.StringType),
@@ -567,7 +568,7 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"ipv4_gateway_nil",
-			&Model{
+			&model.Model{
 				Name: types.StringValue("name"),
 				IPv4Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -578,7 +579,7 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				Routed: types.BoolValue(true),
 			},
-			Model{
+			model.Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Labels:    types.MapNull(types.StringType),
@@ -601,7 +602,7 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"ipv6_default_ok",
-			&Model{
+			&model.Model{
 				Name: types.StringValue("name"),
 				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -613,7 +614,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Routed:      types.BoolValue(true),
 				IPv6Gateway: types.StringValue("gateway"),
 			},
-			Model{
+			model.Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Labels:    types.MapNull(types.StringType),
@@ -637,7 +638,7 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"ipv6_gateway_nil",
-			&Model{
+			&model.Model{
 				Name: types.StringValue("name"),
 				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -648,7 +649,7 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				Routed: types.BoolValue(true),
 			},
-			Model{
+			model.Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Labels:    types.MapNull(types.StringType),
