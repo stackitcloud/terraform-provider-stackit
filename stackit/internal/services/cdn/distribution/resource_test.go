@@ -24,7 +24,7 @@ func TestToCreatePayload(t *testing.T) {
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
-  blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
+	blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
 	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{
 		"enabled": types.BoolValue(true),
@@ -67,9 +67,10 @@ func TestToCreatePayload(t *testing.T) {
 		"happy_path_with_optimizer": {
 			Input: modelFixture(func(m *Model) {
 				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
-					"backend":   backend,
-					"regions":   regionsFixture,
-					"optimizer": optimizer,
+					"backend":           backend,
+					"regions":           regionsFixture,
+					"optimizer":         optimizer,
+					"blocked_countries": blockedCountriesFixture,
 				})
 			}),
 			Expected: &cdn.CreateDistributionPayload{
@@ -77,9 +78,10 @@ func TestToCreatePayload(t *testing.T) {
 					"testHeader0": "testHeaderValue0",
 					"testHeader1": "testHeaderValue1",
 				},
-				OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
-				Regions:   &[]cdn.Region{"EU", "US"},
-				Optimizer: cdn.NewOptimizer(true),
+				OriginUrl:        cdn.PtrString("https://www.mycoolapp.com"),
+				Regions:          &[]cdn.Region{"EU", "US"},
+				Optimizer:        cdn.NewOptimizer(true),
+				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
 			},
 			IsValid: true,
 		},
@@ -131,14 +133,14 @@ func TestConvertConfig(t *testing.T) {
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
-  blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
+	blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
 	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{"enabled": types.BoolValue(true)})
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
 		"backend":           backend,
 		"regions":           regionsFixture,
 		"optimizer":         types.ObjectNull(optimizerTypes),
-    "blocked_countries": blockedCountriesFixture,
+		"blocked_countries": blockedCountriesFixture,
 	})
 	modelFixture := func(mods ...func(*Model)) *Model {
 		model := &Model{
@@ -177,9 +179,10 @@ func TestConvertConfig(t *testing.T) {
 		"happy_path_with_optimizer": {
 			Input: modelFixture(func(m *Model) {
 				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
-					"backend":   backend,
-					"regions":   regionsFixture,
-					"optimizer": optimizer,
+					"backend":           backend,
+					"regions":           regionsFixture,
+					"optimizer":         optimizer,
+					"blocked_countries": blockedCountriesFixture,
 				})
 			}),
 			Expected: &cdn.Config{
@@ -193,8 +196,9 @@ func TestConvertConfig(t *testing.T) {
 						Type:      cdn.PtrString("http"),
 					},
 				},
-				Regions:   &[]cdn.Region{"EU", "US"},
-				Optimizer: cdn.NewOptimizer(true),
+				Regions:          &[]cdn.Region{"EU", "US"},
+				Optimizer:        cdn.NewOptimizer(true),
+				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
 			},
 			IsValid: true,
 		},
@@ -245,8 +249,8 @@ func TestMapFields(t *testing.T) {
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
-  blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
-	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)  
+	blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
+	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{
 		"enabled": types.BoolValue(true),
 	})
@@ -295,9 +299,9 @@ func TestMapFields(t *testing.T) {
 						Type:      cdn.PtrString("http"),
 					},
 				},
-				Regions:   &[]cdn.Region{"EU", "US"},
-        BlockedCountries: &[]string{"XX", "YY", "ZZ"},
-				Optimizer: nil,
+				Regions:          &[]cdn.Region{"EU", "US"},
+				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+				Optimizer:        nil,
 			},
 			CreatedAt: &createdAt,
 			Domains: &[]cdn.Domain{
@@ -330,9 +334,10 @@ func TestMapFields(t *testing.T) {
 		"happy_path_with_optimizer": {
 			Expected: expectedModel(func(m *Model) {
 				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
-					"backend":   backend,
-					"regions":   regionsFixture,
-					"optimizer": optimizer,
+					"backend":           backend,
+					"regions":           regionsFixture,
+					"optimizer":         optimizer,
+					"blocked_countries": blockedCountriesFixture,
 				})
 			}),
 			Input: distributionFixture(func(d *cdn.Distribution) {

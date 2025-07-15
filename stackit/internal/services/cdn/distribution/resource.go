@@ -77,10 +77,10 @@ type Model struct {
 }
 
 type distributionConfig struct {
-	Backend          backend       `tfsdk:"backend"`           // The backend associated with the distribution
+	Backend          backend      `tfsdk:"backend"`           // The backend associated with the distribution
 	Regions          *[]string    `tfsdk:"regions"`           // The regions in which data will be cached
 	BlockedCountries *[]string    `tfsdk:"blocked_countries"` // The countries for which content will be blocked
-	Optimizer        types.Object `tfsdk:"optimizer"`      // The optimizer configuration
+	Optimizer        types.Object `tfsdk:"optimizer"`         // The optimizer configuration
 }
 
 type optimizerConfig struct {
@@ -94,13 +94,12 @@ type backend struct {
 }
 
 var configTypes = map[string]attr.Type{
-	"backend": types.ObjectType{AttrTypes: backendTypes},
-	"regions": types.ListType{ElemType: types.StringType},
+	"backend":           types.ObjectType{AttrTypes: backendTypes},
+	"regions":           types.ListType{ElemType: types.StringType},
+	"blocked_countries": types.ListType{ElemType: types.StringType},
 	"optimizer": types.ObjectType{
 		AttrTypes: optimizerTypes,
 	},
-  "blocked_countries": types.ListType{ElemType: types.StringType},
-
 }
 
 var optimizerTypes = map[string]attr.Type{
@@ -268,7 +267,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						Optional:    true,
 						Description: schemaDescriptions["config_blocked_countries"],
 						ElementType: types.StringType,
-					}},
+					},
 				},
 			},
 		},
@@ -417,8 +416,8 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 				Type:                 &configModel.Backend.Type,
 			},
 		},
-		Regions: &regions,
-    BlockedCountries: blockedCountries,
+		Regions:          &regions,
+		BlockedCountries: blockedCountries,
 	}
 
 	if !utils.IsUndefined(configModel.Optimizer) {
@@ -612,7 +611,7 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 		"backend":           backend,
 		"regions":           modelRegions,
 		"blocked_countries": modelBlockedCountries,
-    "optimizer":         optimizerVal,
+		"optimizer":         optimizerVal,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -739,8 +738,8 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 				Type:                 &configModel.Backend.Type,
 			},
 		},
-		Regions: &regions,
-  	BlockedCountries: &blockedCountries,
+		Regions:          &regions,
+		BlockedCountries: &blockedCountries,
 	}
 
 	if !utils.IsUndefined(configModel.Optimizer) {
