@@ -43,6 +43,10 @@ data "stackit_cdn_distribution" "example" {
 <a id="nestedatt--config"></a>
 ### Nested Schema for `config`
 
+Optional:
+
+- `blocked_countries` (List of String) The configured countries where distribution of content is blocked
+
 Read-Only:
 
 - `backend` (Attributes) The configured backend for the distribution (see [below for nested schema](#nestedatt--config--backend))
