@@ -62,6 +62,8 @@ func (r *loadBalancerDataSource) Configure(ctx context.Context, req datasource.C
 
 // Schema defines the schema for the data source.
 func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	servicePlanOptions := []string{"p10", "p50", "p250", "p750"}
+
 	descriptions := map[string]string{
 		"main":                                  "Load Balancer data source schema. Must have a `region` specified in the provider configuration.",
 		"id":                                    "Terraform's internal resource ID. It is structured as \"`project_id`\",\"region\",\"`name`\".",
@@ -72,7 +74,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		"protocol":                              "Protocol is the highest network protocol we understand to load balance.",
 		"target_pool":                           "Reference target pool by target pool name.",
 		"name":                                  "Load balancer name.",
-		"plan_id":                               "The service plan ID. See the API docs for a list of available plans at: https://docs.api.stackit.cloud/documentation/load-balancer/version/v1#tag/APIService/operation/APIService_ListPlans",
+		"plan_id":                               "The service plan ID. If not defined, the default service plan is `p10`. " + utils.FormatPossibleValues(servicePlanOptions...),
 		"networks":                              "List of networks that listeners and targets reside in.",
 		"network_id":                            "Openstack network ID.",
 		"role":                                  "The role defines how the load balancer is using the network.",
