@@ -24,6 +24,9 @@ resource "stackit_cdn_distribution" "example_distribution" {
       origin_url = "mybackend.onstackit.cloud"
     }
     regions = ["EU", "US", "ASIA", "AF", "SA"]
+    optimizer = {
+      enabled = true
+    }
   }
 }
 ```
@@ -54,6 +57,10 @@ Required:
 - `backend` (Attributes) The configured backend for the distribution (see [below for nested schema](#nestedatt--config--backend))
 - `regions` (List of String) The configured regions where content will be hosted
 
+Optional:
+
+- `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
+
 <a id="nestedatt--config--backend"></a>
 ### Nested Schema for `config.backend`
 
@@ -65,6 +72,14 @@ Required:
 Optional:
 
 - `origin_request_headers` (Map of String) The configured origin request headers for the backend
+
+
+<a id="nestedatt--config--optimizer"></a>
+### Nested Schema for `config.optimizer`
+
+Optional:
+
+- `enabled` (Boolean)
 
 
 

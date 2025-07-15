@@ -6,5 +6,8 @@ resource "stackit_cdn_distribution" "example_distribution" {
       origin_url = "mybackend.onstackit.cloud"
     }
     regions = ["EU", "US", "ASIA", "AF", "SA"]
+    optimizer = {
+      enabled = true
+    }
   }
 }
