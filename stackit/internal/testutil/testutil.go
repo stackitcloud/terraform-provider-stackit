@@ -95,11 +95,15 @@ func ObservabilityProviderConfig() string {
 }
 func CdnProviderConfig() string {
 	if CdnCustomEndpoint == "" {
-		return `provider "stackit" {}`
+		return `
+		provider "stackit" {
+			enable_beta_resources = true
+		}`
 	}
 	return fmt.Sprintf(`
 		provider "stackit" {
 			cdn_custom_endpoint = "%s"
+			enable_beta_resources = true
 		}`,
 		CdnCustomEndpoint,
 	)
@@ -154,7 +158,6 @@ func LoadBalancerProviderConfig() string {
 		return `
 		provider "stackit" {
 			default_region = "eu01"
-			enable_beta_resources = true
 		}`
 	}
 	return fmt.Sprintf(`
@@ -383,6 +386,7 @@ func ServerUpdateProviderConfig() string {
 	return fmt.Sprintf(`
 		provider "stackit" {
 			server_update_custom_endpoint = "%s"
+			enable_beta_resources = true
 		}`,
 		ServerUpdateCustomEndpoint,
 	)
