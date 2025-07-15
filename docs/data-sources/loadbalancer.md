@@ -38,6 +38,7 @@ data "stackit_loadbalancer" "example" {
 - `listeners` (Attributes List) List of all listeners which will accept traffic. Limited to 20. (see [below for nested schema](#nestedatt--listeners))
 - `networks` (Attributes List) List of networks that listeners and targets reside in. (see [below for nested schema](#nestedatt--networks))
 - `options` (Attributes) Defines any optional functionality you want to have enabled on your load balancer. (see [below for nested schema](#nestedatt--options))
+- `plan_id` (String) The service plan ID. If not defined, the default service plan is `p10`. Possible values are: `p10`, `p50`, `p250`, `p750`.
 - `private_address` (String) Transient private Load Balancer IP address. It can change any time.
 - `target_pools` (Attributes List) List of all target pools which will be used in the Load Balancer. Limited to 20. (see [below for nested schema](#nestedatt--target_pools))
 
