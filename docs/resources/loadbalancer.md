@@ -126,7 +126,7 @@ resource "stackit_loadbalancer" "example" {
 
 - `external_address` (String) External Load Balancer IP address where this Load Balancer is exposed.
 - `options` (Attributes) Defines any optional functionality you want to have enabled on your load balancer. (see [below for nested schema](#nestedatt--options))
-- `plan_id` (String) The service plan ID. Defaults to p10. See the API docs for a list of available plans at: https://docs.api.stackit.cloud/documentation/load-balancer/version/v1#tag/APIService/operation/APIService_ListPlans
+- `plan_id` (String) The service plan ID. If not defined, the default service plan is `p10`. Possible values are: `p10`, `p50`, `p250`, `p750`.
 - `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only

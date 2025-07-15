@@ -296,6 +296,7 @@ func (r *loadBalancerResource) Configure(ctx context.Context, req resource.Confi
 func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	protocolOptions := []string{"PROTOCOL_UNSPECIFIED", "PROTOCOL_TCP", "PROTOCOL_UDP", "PROTOCOL_TCP_PROXY", "PROTOCOL_TLS_PASSTHROUGH"}
 	roleOptions := []string{"ROLE_UNSPECIFIED", "ROLE_LISTENERS_AND_TARGETS", "ROLE_LISTENERS", "ROLE_TARGETS"}
+	servicePlanOptions := []string{"p10", "p50", "p250", "p750"}
 
 	descriptions := map[string]string{
 		"main":                                  "Load Balancer resource schema.",
@@ -307,7 +308,7 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 		"protocol":                              "Protocol is the highest network protocol we understand to load balance. " + utils.SupportedValuesDocumentation(protocolOptions),
 		"target_pool":                           "Reference target pool by target pool name.",
 		"name":                                  "Load balancer name.",
-		"plan_id":                               "The service plan ID. Defaults to p10. See the API docs for a list of available plans at: https://docs.api.stackit.cloud/documentation/load-balancer/version/v1#tag/APIService/operation/APIService_ListPlans",
+		"plan_id":                               "The service plan ID. If not defined, the default service plan is `p10`. " + utils.FormatPossibleValues(servicePlanOptions...),
 		"networks":                              "List of networks that listeners and targets reside in.",
 		"network_id":                            "Openstack network ID.",
 		"role":                                  "The role defines how the load balancer is using the network. " + utils.SupportedValuesDocumentation(roleOptions),
