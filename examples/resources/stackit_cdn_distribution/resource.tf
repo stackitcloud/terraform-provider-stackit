@@ -5,6 +5,11 @@ resource "stackit_cdn_distribution" "example_distribution" {
       type       = "http"
       origin_url = "mybackend.onstackit.cloud"
     }
-    regions = ["EU", "US", "ASIA", "AF", "SA"]
+    regions           = ["EU", "US", "ASIA", "AF", "SA"]
+    blocked_countries = ["DE", "AT", "CH"]
+
+    optimizer = {
+      enabled = true
+    }
   }
 }

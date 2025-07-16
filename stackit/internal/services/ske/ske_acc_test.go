@@ -74,7 +74,7 @@ var testConfigVarsMax = config.Variables{
 	"nodepool_volume_type":                             config.StringVariable("storage_premium_perf0"),
 	"ext_acl_enabled":                                  config.StringVariable("true"),
 	"ext_acl_allowed_cidr1":                            config.StringVariable("10.0.100.0/24"),
-	"ext_argus_enabled":                                config.StringVariable("false"),
+	"ext_observability_enabled":                        config.StringVariable("false"),
 	"ext_dns_enabled":                                  config.StringVariable("true"),
 	"nodepool_hibernations1_start":                     config.StringVariable("0 18 * * *"),
 	"nodepool_hibernations1_end":                       config.StringVariable("59 23 * * *"),
@@ -199,7 +199,7 @@ func TestAccSKEMin(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				// The fields are not provided in the SKE API when disabled, although set actively.
-				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "node_pools.0.os_version_min", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled"},
+				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "node_pools.0.os_version_min", "extensions.observability.%", "extensions.observability.instance_id", "extensions.observability.enabled"},
 			},
 			// 4) Update kubernetes version, OS version and maintenance end, downgrade of kubernetes version
 			{
@@ -269,7 +269,7 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_acl_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", testutil.ConvertConfigVariable(testConfigVarsMax["ext_acl_allowed_cidr1"])),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.argus.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_argus_enabled"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.observability.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_observability_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_dns_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.0", testutil.ConvertConfigVariable(testConfigVarsMax["dns_name"])),
@@ -341,7 +341,7 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.acl.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_acl_enabled"])),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", testutil.ConvertConfigVariable(testConfigVarsMax["ext_acl_allowed_cidr1"])),
-					// no check for argus, as it was disabled in the setup
+					// no check for observability, as it was disabled in the setup
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.dns.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_dns_enabled"])),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.dns.zones.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.dns.zones.0", testutil.ConvertConfigVariable(testConfigVarsMax["dns_name"])),
@@ -388,7 +388,7 @@ func TestAccSKEMax(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				// The fields are not provided in the SKE API when disabled, although set actively.
-				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "node_pools.0.os_version_min", "extensions.argus.%", "extensions.argus.argus_instance_id", "extensions.argus.enabled"},
+				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "node_pools.0.os_version_min", "extensions.observability.%", "extensions.observability.instance_id", "extensions.observability.enabled"},
 			},
 			// 4) Update kubernetes version, OS version and maintenance end, downgrade of kubernetes version
 			{
@@ -424,7 +424,7 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_acl_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_acl_allowed_cidr1"])),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.argus.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_argus_enabled"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.observability.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_observability_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_dns_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["dns_name"])),
@@ -458,9 +458,7 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 	var client *ske.APIClient
 	var err error
 	if testutil.SKECustomEndpoint == "" {
-		client, err = ske.NewAPIClient(
-			coreConfig.WithRegion(testutil.Region),
-		)
+		client, err = ske.NewAPIClient()
 	} else {
 		client, err = ske.NewAPIClient(
 			coreConfig.WithEndpoint(testutil.SKECustomEndpoint),
@@ -480,7 +478,7 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 		clustersToDestroy = append(clustersToDestroy, clusterName)
 	}
 
-	clustersResp, err := client.ListClusters(ctx, testutil.ProjectId).Execute()
+	clustersResp, err := client.ListClusters(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting clustersResp: %w", err)
 	}
@@ -491,11 +489,11 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 			continue
 		}
 		if utils.Contains(clustersToDestroy, *items[i].Name) {
-			_, err := client.DeleteClusterExecute(ctx, testutil.ProjectId, *items[i].Name)
+			_, err := client.DeleteClusterExecute(ctx, testutil.ProjectId, testutil.Region, *items[i].Name)
 			if err != nil {
 				return fmt.Errorf("destroying cluster %s during CheckDestroy: %w", *items[i].Name, err)
 			}
-			_, err = wait.DeleteClusterWaitHandler(ctx, client, testutil.ProjectId, *items[i].Name).WaitWithContext(ctx)
+			_, err = wait.DeleteClusterWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, *items[i].Name).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying cluster %s during CheckDestroy: waiting for deletion %w", *items[i].Name, err)
 			}
@@ -525,7 +523,7 @@ func NewSkeProviderOptions(nodePoolOs string) *SkeProviderOptions {
 	var err error
 
 	if testutil.SKECustomEndpoint == "" {
-		client, err = ske.NewAPIClient(coreConfig.WithRegion("eu01"))
+		client, err = ske.NewAPIClient()
 	} else {
 		client, err = ske.NewAPIClient(coreConfig.WithEndpoint(testutil.SKECustomEndpoint))
 	}
@@ -534,7 +532,7 @@ func NewSkeProviderOptions(nodePoolOs string) *SkeProviderOptions {
 		panic("failed to create SKE client: " + err.Error())
 	}
 
-	options, err := client.ListProviderOptions(ctx).Execute()
+	options, err := client.ListProviderOptions(ctx, testutil.Region).Execute()
 	if err != nil {
 		panic("failed to fetch SKE provider options: " + err.Error())
 	}

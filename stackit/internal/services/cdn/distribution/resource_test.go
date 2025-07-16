@@ -24,9 +24,16 @@ func TestToCreatePayload(t *testing.T) {
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
+	blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
+	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
+	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{
+		"enabled": types.BoolValue(true),
+	})
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
-		"backend": backend,
-		"regions": regionsFixture,
+		"backend":           backend,
+		"regions":           regionsFixture,
+		"blocked_countries": blockedCountriesFixture,
+		"optimizer":         types.ObjectNull(optimizerTypes),
 	})
 	modelFixture := func(mods ...func(*Model)) *Model {
 		model := &Model{
@@ -51,8 +58,30 @@ func TestToCreatePayload(t *testing.T) {
 					"testHeader0": "testHeaderValue0",
 					"testHeader1": "testHeaderValue1",
 				},
-				OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
-				Regions:   &[]cdn.Region{"EU", "US"},
+				OriginUrl:        cdn.PtrString("https://www.mycoolapp.com"),
+				Regions:          &[]cdn.Region{"EU", "US"},
+				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_optimizer": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+					"backend":           backend,
+					"regions":           regionsFixture,
+					"optimizer":         optimizer,
+					"blocked_countries": blockedCountriesFixture,
+				})
+			}),
+			Expected: &cdn.CreateDistributionPayload{
+				OriginRequestHeaders: &map[string]string{
+					"testHeader0": "testHeaderValue0",
+					"testHeader1": "testHeaderValue1",
+				},
+				OriginUrl:        cdn.PtrString("https://www.mycoolapp.com"),
+				Regions:          &[]cdn.Region{"EU", "US"},
+				Optimizer:        cdn.NewOptimizer(true),
+				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
 			},
 			IsValid: true,
 		},
@@ -104,9 +133,14 @@ func TestConvertConfig(t *testing.T) {
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
+	blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
+	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
+	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{"enabled": types.BoolValue(true)})
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
-		"backend": backend,
-		"regions": regionsFixture,
+		"backend":           backend,
+		"regions":           regionsFixture,
+		"optimizer":         types.ObjectNull(optimizerTypes),
+		"blocked_countries": blockedCountriesFixture,
 	})
 	modelFixture := func(mods ...func(*Model)) *Model {
 		model := &Model{
@@ -137,7 +171,34 @@ func TestConvertConfig(t *testing.T) {
 						Type:      cdn.PtrString("http"),
 					},
 				},
-				Regions: &[]cdn.Region{"EU", "US"},
+				Regions:          &[]cdn.Region{"EU", "US"},
+				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_optimizer": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+					"backend":           backend,
+					"regions":           regionsFixture,
+					"optimizer":         optimizer,
+					"blocked_countries": blockedCountriesFixture,
+				})
+			}),
+			Expected: &cdn.Config{
+				Backend: &cdn.ConfigBackend{
+					HttpBackend: &cdn.HttpBackend{
+						OriginRequestHeaders: &map[string]string{
+							"testHeader0": "testHeaderValue0",
+							"testHeader1": "testHeaderValue1",
+						},
+						OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
+						Type:      cdn.PtrString("http"),
+					},
+				},
+				Regions:          &[]cdn.Region{"EU", "US"},
+				Optimizer:        cdn.NewOptimizer(true),
+				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
 			},
 			IsValid: true,
 		},
@@ -188,10 +249,18 @@ func TestMapFields(t *testing.T) {
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
-	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
-		"backend": backend,
-		"regions": regionsFixture,
+	blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
+	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
+	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{
+		"enabled": types.BoolValue(true),
 	})
+	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
+		"backend":           backend,
+		"regions":           regionsFixture,
+		"blocked_countries": blockedCountriesFixture,
+		"optimizer":         types.ObjectNull(optimizerTypes),
+	})
+
 	emtpyErrorsList := types.ListValueMust(types.StringType, []attr.Value{})
 	managedDomain := types.ObjectValueMust(domainTypes, map[string]attr.Value{
 		"name":   types.StringValue("test.stackit-cdn.com"),
@@ -219,17 +288,20 @@ func TestMapFields(t *testing.T) {
 	}
 	distributionFixture := func(mods ...func(*cdn.Distribution)) *cdn.Distribution {
 		distribution := &cdn.Distribution{
-			Config: &cdn.Config{Backend: &cdn.ConfigBackend{
-				HttpBackend: &cdn.HttpBackend{
-					OriginRequestHeaders: &map[string]string{
-						"testHeader0": "testHeaderValue0",
-						"testHeader1": "testHeaderValue1",
+			Config: &cdn.Config{
+				Backend: &cdn.ConfigBackend{
+					HttpBackend: &cdn.HttpBackend{
+						OriginRequestHeaders: &map[string]string{
+							"testHeader0": "testHeaderValue0",
+							"testHeader1": "testHeaderValue1",
+						},
+						OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
+						Type:      cdn.PtrString("http"),
 					},
-					OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
-					Type:      cdn.PtrString("http"),
 				},
-			},
-				Regions: &[]cdn.Region{"EU", "US"},
+				Regions:          &[]cdn.Region{"EU", "US"},
+				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+				Optimizer:        nil,
 			},
 			CreatedAt: &createdAt,
 			Domains: &[]cdn.Domain{
@@ -258,6 +330,22 @@ func TestMapFields(t *testing.T) {
 			Expected: expectedModel(),
 			Input:    distributionFixture(),
 			IsValid:  true,
+		},
+		"happy_path_with_optimizer": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+					"backend":           backend,
+					"regions":           regionsFixture,
+					"optimizer":         optimizer,
+					"blocked_countries": blockedCountriesFixture,
+				})
+			}),
+			Input: distributionFixture(func(d *cdn.Distribution) {
+				d.Config.Optimizer = &cdn.Optimizer{
+					Enabled: cdn.PtrBool(true),
+				}
+			}),
+			IsValid: true,
 		},
 		"happy_path_status_error": {
 			Expected: expectedModel(func(m *Model) {
@@ -335,6 +423,111 @@ func TestMapFields(t *testing.T) {
 				diff := cmp.Diff(model, tc.Expected)
 				if diff != "" {
 					t.Fatalf("Create Payload not as expected: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+// TestValidateCountryCode tests the validateCountryCode function with a variety of inputs.
+func TestValidateCountryCode(t *testing.T) {
+	testCases := []struct {
+		name          string
+		inputCountry  string
+		wantOutput    string
+		expectError   bool
+		expectedError string
+	}{
+		// Happy Path
+		{
+			name:         "Valid lowercase",
+			inputCountry: "us",
+			wantOutput:   "US",
+			expectError:  false,
+		},
+		{
+			name:         "Valid uppercase",
+			inputCountry: "DE",
+			wantOutput:   "DE",
+			expectError:  false,
+		},
+		{
+			name:         "Valid mixed case",
+			inputCountry: "cA",
+			wantOutput:   "CA",
+			expectError:  false,
+		},
+		{
+			name:         "Valid country code FR",
+			inputCountry: "fr",
+			wantOutput:   "FR",
+			expectError:  false,
+		},
+
+		// Error Scenarios
+		{
+			name:          "Invalid length - too short",
+			inputCountry:  "a",
+			wantOutput:    "",
+			expectError:   true,
+			expectedError: "country code must be exactly 2 characters long",
+		},
+		{
+			name:          "Invalid length - too long",
+			inputCountry:  "USA",
+			wantOutput:    "",
+			expectError:   true,
+			expectedError: "country code must be exactly 2 characters long",
+		},
+		{
+			name:          "Invalid characters - contains number",
+			inputCountry:  "U1",
+			wantOutput:    "",
+			expectError:   true,
+			expectedError: "country code 'U1' must consist of two alphabetical letters (A-Z or a-z)",
+		},
+		{
+			name:          "Invalid characters - contains symbol",
+			inputCountry:  "D!",
+			wantOutput:    "",
+			expectError:   true,
+			expectedError: "country code 'D!' must consist of two alphabetical letters (A-Z or a-z)",
+		},
+		{
+			name:          "Invalid characters - both are numbers",
+			inputCountry:  "42",
+			wantOutput:    "",
+			expectError:   true,
+			expectedError: "country code '42' must consist of two alphabetical letters (A-Z or a-z)",
+		},
+		{
+			name:          "Empty string",
+			inputCountry:  "",
+			wantOutput:    "",
+			expectError:   true,
+			expectedError: "country code must be exactly 2 characters long",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotOutput, err := validateCountryCode(tc.inputCountry)
+
+			if tc.expectError {
+				if err == nil {
+					t.Errorf("expected an error for input '%s', but got none", tc.inputCountry)
+				} else if err.Error() != tc.expectedError {
+					t.Errorf("for input '%s', expected error '%s', but got '%s'", tc.inputCountry, tc.expectedError, err.Error())
+				}
+				if gotOutput != "" {
+					t.Errorf("expected empty string on error, but got '%s'", gotOutput)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("did not expect an error for input '%s', but got: %v", tc.inputCountry, err)
+				}
+				if gotOutput != tc.wantOutput {
+					t.Errorf("for input '%s', expected output '%s', but got '%s'", tc.inputCountry, tc.wantOutput, gotOutput)
 				}
 			}
 		})
