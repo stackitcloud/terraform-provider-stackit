@@ -118,12 +118,26 @@ var globalConfigurationTypes = map[string]attr.Type{
 }
 
 // Struct corresponding to Model.AlertConfig.route
-type routeModel struct {
+type mainRouteModel struct {
 	GroupBy        types.List   `tfsdk:"group_by"`
 	GroupInterval  types.String `tfsdk:"group_interval"`
 	GroupWait      types.String `tfsdk:"group_wait"`
-	Match          types.Map    `tfsdk:"match"`
+	Receiver       types.String `tfsdk:"receiver"`
+	RepeatInterval types.String `tfsdk:"repeat_interval"`
+	Routes         types.List   `tfsdk:"routes"`
+}
+
+// Struct corresponding to Model.AlertConfig.route
+// This is used to map the routes between the mainRouteModel and the last level of recursion of the routes field
+type routeModelMiddle struct {
+	GroupBy       types.List   `tfsdk:"group_by"`
+	GroupInterval types.String `tfsdk:"group_interval"`
+	GroupWait     types.String `tfsdk:"group_wait"`
+	// Deprecated: Match is deprecated and will be removed after 16th January 2026. Use Matchers instead
+	Match types.Map `tfsdk:"match"`
+	// Deprecated: MatchRegex is deprecated and will be removed after 16th January 2026. Use Matchers instead
 	MatchRegex     types.Map    `tfsdk:"match_regex"`
+	Matchers       types.List   `tfsdk:"matchers"`
 	Receiver       types.String `tfsdk:"receiver"`
 	RepeatInterval types.String `tfsdk:"repeat_interval"`
 	Routes         types.List   `tfsdk:"routes"`
@@ -132,11 +146,14 @@ type routeModel struct {
 // Struct corresponding to Model.AlertConfig.route but without the recursive routes field
 // This is used to map the last level of recursion of the routes field
 type routeModelNoRoutes struct {
-	GroupBy        types.List   `tfsdk:"group_by"`
-	GroupInterval  types.String `tfsdk:"group_interval"`
-	GroupWait      types.String `tfsdk:"group_wait"`
-	Match          types.Map    `tfsdk:"match"`
+	GroupBy       types.List   `tfsdk:"group_by"`
+	GroupInterval types.String `tfsdk:"group_interval"`
+	GroupWait     types.String `tfsdk:"group_wait"`
+	// Deprecated: Match is deprecated and will be removed after 16th January 2026. Use Matchers instead
+	Match types.Map `tfsdk:"match"`
+	// Deprecated: MatchRegex is deprecated and will be removed after 16th January 2026. Use Matchers instead
 	MatchRegex     types.Map    `tfsdk:"match_regex"`
+	Matchers       types.List   `tfsdk:"matchers"`
 	Receiver       types.String `tfsdk:"receiver"`
 	RepeatInterval types.String `tfsdk:"repeat_interval"`
 }
@@ -145,8 +162,6 @@ var routeTypes = map[string]attr.Type{
 	"group_by":        types.ListType{ElemType: types.StringType},
 	"group_interval":  types.StringType,
 	"group_wait":      types.StringType,
-	"match":           types.MapType{ElemType: types.StringType},
-	"match_regex":     types.MapType{ElemType: types.StringType},
 	"receiver":        types.StringType,
 	"repeat_interval": types.StringType,
 	"routes":          types.ListType{ElemType: getRouteListType()},
@@ -218,8 +233,9 @@ var routeDescriptions = map[string]string{
 	"group_by":        "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
 	"group_interval":  "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
 	"group_wait":      "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.)",
-	"match":           "A set of equality matchers an alert has to fulfill to match the node.",
-	"match_regex":     "A set of regex-matchers an alert has to fulfill to match the node.",
+	"match":           "A set of equality matchers an alert has to fulfill to match the node. This field is deprecated and will be removed after 16th January 2026, use `matchers` in the `routes` instead",
+	"match_regex":     "A set of regex-matchers an alert has to fulfill to match the node. This field is deprecated and will be removed after 16th January 2026, use `matchers` in the `routes` instead",
+	"matchers":        "A list of matchers that an alert has to fulfill to match the node. A matcher is a string with a syntax inspired by PromQL and OpenMetrics.",
 	"receiver":        "The name of the receiver to route the alerts to.",
 	"repeat_interval": "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
 	"routes":          "List of child routes.",
@@ -241,6 +257,7 @@ func getRouteListTypeAux(level, limit int) types.ObjectType {
 		"group_wait":      types.StringType,
 		"match":           types.MapType{ElemType: types.StringType},
 		"match_regex":     types.MapType{ElemType: types.StringType},
+		"matchers":        types.ListType{ElemType: types.StringType},
 		"receiver":        types.StringType,
 		"repeat_interval": types.StringType,
 	}
@@ -290,13 +307,21 @@ func getRouteNestedObjectAux(isDatasource bool, level, limit int) schema.ListNes
 			},
 		},
 		"match": schema.MapAttribute{
-			Description: routeDescriptions["match"],
-			Optional:    !isDatasource,
-			Computed:    isDatasource,
-			ElementType: types.StringType,
+			Description:        routeDescriptions["match"],
+			DeprecationMessage: "Use `matchers` in the `routes` instead.",
+			Optional:           !isDatasource,
+			Computed:           isDatasource,
+			ElementType:        types.StringType,
 		},
 		"match_regex": schema.MapAttribute{
-			Description: routeDescriptions["match_regex"],
+			Description:        routeDescriptions["match_regex"],
+			DeprecationMessage: "Use `matchers` in the `routes` instead.",
+			Optional:           !isDatasource,
+			Computed:           isDatasource,
+			ElementType:        types.StringType,
+		},
+		"matchers": schema.ListAttribute{
+			Description: routeDescriptions["matchers"],
 			Optional:    !isDatasource,
 			Computed:    isDatasource,
 			ElementType: types.StringType,
@@ -700,16 +725,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},
-							},
-							"match": schema.MapAttribute{
-								Description: routeDescriptions["match"],
-								Optional:    true,
-								ElementType: types.StringType,
-							},
-							"match_regex": schema.MapAttribute{
-								Description: routeDescriptions["match_regex"],
-								Optional:    true,
-								ElementType: types.StringType,
 							},
 							"receiver": schema.StringAttribute{
 								Description: routeDescriptions["receiver"],
@@ -1521,8 +1536,6 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		"group_wait":      types.StringValue("30s"),
 		"group_interval":  types.StringValue("5m"),
 		"repeat_interval": types.StringValue("4h"),
-		"match":           types.MapNull(types.StringType),
-		"match_regex":     types.MapNull(types.StringType),
 		"routes":          types.ListNull(getRouteListType()),
 	})
 	if diags.HasError() {
@@ -1735,16 +1748,6 @@ func mapRouteToAttributes(ctx context.Context, route *observability.Route) (attr
 		return types.ObjectNull(routeTypes), fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
 	}
 
-	matchModel, diags := types.MapValueFrom(ctx, types.StringType, route.Match)
-	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping match: %w", core.DiagsToError(diags))
-	}
-
-	matchRegexModel, diags := types.MapValueFrom(ctx, types.StringType, route.MatchRe)
-	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping match regex: %w", core.DiagsToError(diags))
-	}
-
 	childRoutes, err := mapChildRoutesToAttributes(ctx, route.Routes)
 	if err != nil {
 		return types.ObjectNull(routeTypes), fmt.Errorf("mapping child routes: %w", err)
@@ -1754,8 +1757,6 @@ func mapRouteToAttributes(ctx context.Context, route *observability.Route) (attr
 		"group_by":        groupByModel,
 		"group_interval":  types.StringPointerValue(route.GroupInterval),
 		"group_wait":      types.StringPointerValue(route.GroupWait),
-		"match":           matchModel,
-		"match_regex":     matchRegexModel,
 		"receiver":        types.StringPointerValue(route.Receiver),
 		"repeat_interval": types.StringPointerValue(route.RepeatInterval),
 		"routes":          childRoutes,
@@ -1796,12 +1797,18 @@ func mapChildRoutesToAttributes(ctx context.Context, routes *[]observability.Rou
 			return nullList, fmt.Errorf("mapping match regex: %w", core.DiagsToError(diags))
 		}
 
+		matchersModel, diags := types.ListValueFrom(ctx, types.StringType, route.Matchers)
+		if diags.HasError() {
+			return nullList, fmt.Errorf("mapping matchers: %w", core.DiagsToError(diags))
+		}
+
 		routeMap := map[string]attr.Value{
 			"group_by":        groupByModel,
 			"group_interval":  types.StringPointerValue(route.GroupInterval),
 			"group_wait":      types.StringPointerValue(route.GroupWait),
 			"match":           matchModel,
 			"match_regex":     matchRegexModel,
+			"matchers":        matchersModel,
 			"receiver":        types.StringPointerValue(route.Receiver),
 			"repeat_interval": types.StringPointerValue(route.RepeatInterval),
 		}
@@ -1921,7 +1928,7 @@ func toUpdateAlertConfigPayload(ctx context.Context, model *alertConfigModel) (*
 		return nil, fmt.Errorf("mapping receivers: %w", err)
 	}
 
-	routeTF := routeModel{}
+	routeTF := mainRouteModel{}
 	diags := model.Route.As(ctx, &routeTF, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
@@ -2023,15 +2030,13 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]observa
 	return &receivers, nil
 }
 
-func toRoutePayload(ctx context.Context, routeTF *routeModel) (*observability.UpdateAlertConfigsPayloadRoute, error) {
+func toRoutePayload(ctx context.Context, routeTF *mainRouteModel) (*observability.UpdateAlertConfigsPayloadRoute, error) {
 	if routeTF == nil {
 		return nil, fmt.Errorf("nil route model")
 	}
 
 	var groupByPayload *[]string
-	var matchPayload *map[string]interface{}
-	var matchRegexPayload *map[string]interface{}
-	var childRoutesPayload *[]observability.UpdateAlertConfigsPayloadRouteRoutesInner
+	var childRoutesPayload *[]observability.CreateAlertConfigRoutePayloadRoutesInner
 
 	if !routeTF.GroupBy.IsNull() && !routeTF.GroupBy.IsUnknown() {
 		groupByPayload = &[]string{}
@@ -2041,24 +2046,8 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*observability.Up
 		}
 	}
 
-	if !routeTF.Match.IsNull() && !routeTF.Match.IsUnknown() {
-		matchMap, err := conversion.ToStringInterfaceMap(ctx, routeTF.Match)
-		if err != nil {
-			return nil, fmt.Errorf("mapping match: %w", err)
-		}
-		matchPayload = &matchMap
-	}
-
-	if !routeTF.MatchRegex.IsNull() && !routeTF.MatchRegex.IsUnknown() {
-		matchRegexMap, err := conversion.ToStringInterfaceMap(ctx, routeTF.MatchRegex)
-		if err != nil {
-			return nil, fmt.Errorf("mapping match regex: %w", err)
-		}
-		matchRegexPayload = &matchRegexMap
-	}
-
 	if !routeTF.Routes.IsNull() && !routeTF.Routes.IsUnknown() {
-		childRoutes := []routeModel{}
+		childRoutes := []routeModelMiddle{}
 		diags := routeTF.Routes.ElementsAs(ctx, &childRoutes, false)
 		if diags.HasError() {
 			// If there is an error, we will try to map the child routes as if they are the last child routes
@@ -2070,12 +2059,107 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*observability.Up
 				return nil, fmt.Errorf("mapping child routes: %w", core.DiagsToError(diags))
 			}
 			for i := range lastChildRoutes {
-				childRoute := routeModel{
+				childRoute := routeModelMiddle{
 					GroupBy:        lastChildRoutes[i].GroupBy,
 					GroupInterval:  lastChildRoutes[i].GroupInterval,
 					GroupWait:      lastChildRoutes[i].GroupWait,
 					Match:          lastChildRoutes[i].Match,
 					MatchRegex:     lastChildRoutes[i].MatchRegex,
+					Matchers:       lastChildRoutes[i].Matchers,
+					Receiver:       lastChildRoutes[i].Receiver,
+					RepeatInterval: lastChildRoutes[i].RepeatInterval,
+					Routes:         types.ListNull(getRouteListType()),
+				}
+				childRoutes = append(childRoutes, childRoute)
+			}
+		}
+
+		childRoutesList := []observability.CreateAlertConfigRoutePayloadRoutesInner{}
+		for i := range childRoutes {
+			childRoute := childRoutes[i]
+			childRoutePayload, err := toMiddleRoutesToPayload(ctx, &childRoute)
+			if err != nil {
+				return nil, fmt.Errorf("mapping child route: %w", err)
+			}
+			childRoutesList = append(childRoutesList, *toChildRoutePayload(childRoutePayload))
+		}
+
+		childRoutesPayload = &childRoutesList
+	}
+
+	return &observability.UpdateAlertConfigsPayloadRoute{
+		GroupBy:        groupByPayload,
+		GroupInterval:  conversion.StringValueToPointer(routeTF.GroupInterval),
+		GroupWait:      conversion.StringValueToPointer(routeTF.GroupWait),
+		Receiver:       conversion.StringValueToPointer(routeTF.Receiver),
+		RepeatInterval: conversion.StringValueToPointer(routeTF.RepeatInterval),
+		Routes:         childRoutesPayload,
+	}, nil
+}
+
+func toMiddleRoutesToPayload(ctx context.Context, routeTF *routeModelMiddle) (*observability.UpdateAlertConfigsPayloadRoute, error) {
+	if routeTF == nil {
+		return nil, fmt.Errorf("nil route model")
+	}
+
+	var groupByPayload *[]string
+	var matchPayload *map[string]interface{}
+	var matchRegexPayload *map[string]interface{}
+	var childRoutesPayload *[]observability.UpdateAlertConfigsPayloadRouteRoutesInner
+	var matchersPayload *[]string
+
+	if !utils.IsUndefined(routeTF.GroupBy) {
+		groupByPayload = &[]string{}
+		diags := routeTF.GroupBy.ElementsAs(ctx, groupByPayload, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
+		}
+	}
+
+	if !utils.IsUndefined(routeTF.Match) {
+		matchMap, err := conversion.ToStringInterfaceMap(ctx, routeTF.Match)
+		if err != nil {
+			return nil, fmt.Errorf("mapping match: %w", err)
+		}
+		matchPayload = &matchMap
+	}
+
+	if !utils.IsUndefined(routeTF.MatchRegex) {
+		matchRegexMap, err := conversion.ToStringInterfaceMap(ctx, routeTF.MatchRegex)
+		if err != nil {
+			return nil, fmt.Errorf("mapping match regex: %w", err)
+		}
+		matchRegexPayload = &matchRegexMap
+	}
+
+	if !utils.IsUndefined(routeTF.Matchers) {
+		matchersList, err := conversion.StringListToPointer(routeTF.Matchers)
+		if err != nil {
+			return nil, fmt.Errorf("mapping match regex: %w", err)
+		}
+		matchersPayload = matchersList
+	}
+
+	if !routeTF.Routes.IsNull() && !routeTF.Routes.IsUnknown() {
+		childRoutes := []routeModelMiddle{}
+		diags := routeTF.Routes.ElementsAs(ctx, &childRoutes, false)
+		if diags.HasError() {
+			// If there is an error, we will try to map the child routes as if they are the last child routes
+			// This is done because the last child routes in the recursion have a different structure (don't have the `routes` fields)
+			// and need to be unpacked to a different struct (routeModelNoRoutes)
+			lastChildRoutes := []routeModelNoRoutes{}
+			diags = routeTF.Routes.ElementsAs(ctx, &lastChildRoutes, true)
+			if diags.HasError() {
+				return nil, fmt.Errorf("mapping child routes: %w", core.DiagsToError(diags))
+			}
+			for i := range lastChildRoutes {
+				childRoute := routeModelMiddle{
+					GroupBy:        lastChildRoutes[i].GroupBy,
+					GroupInterval:  lastChildRoutes[i].GroupInterval,
+					GroupWait:      lastChildRoutes[i].GroupWait,
+					Match:          lastChildRoutes[i].Match,
+					MatchRegex:     lastChildRoutes[i].MatchRegex,
+					Matchers:       lastChildRoutes[i].Matchers,
 					Receiver:       lastChildRoutes[i].Receiver,
 					RepeatInterval: lastChildRoutes[i].RepeatInterval,
 					Routes:         types.ListNull(getRouteListType()),
@@ -2087,7 +2171,7 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*observability.Up
 		childRoutesList := []observability.UpdateAlertConfigsPayloadRouteRoutesInner{}
 		for i := range childRoutes {
 			childRoute := childRoutes[i]
-			childRoutePayload, err := toRoutePayload(ctx, &childRoute)
+			childRoutePayload, err := toMiddleRoutesToPayload(ctx, &childRoute)
 			if err != nil {
 				return nil, fmt.Errorf("mapping child route: %w", err)
 			}
@@ -2103,6 +2187,7 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*observability.Up
 		GroupWait:      conversion.StringValueToPointer(routeTF.GroupWait),
 		Match:          matchPayload,
 		MatchRe:        matchRegexPayload,
+		Matchers:       matchersPayload,
 		Receiver:       conversion.StringValueToPointer(routeTF.Receiver),
 		RepeatInterval: conversion.StringValueToPointer(routeTF.RepeatInterval),
 		Routes:         childRoutesPayload,
@@ -2119,6 +2204,7 @@ func toChildRoutePayload(in *observability.UpdateAlertConfigsPayloadRoute) *obse
 		GroupWait:      in.GroupWait,
 		Match:          in.Match,
 		MatchRe:        in.MatchRe,
+		Matchers:       in.Matchers,
 		Receiver:       in.Receiver,
 		RepeatInterval: in.RepeatInterval,
 		// Routes not currently supported
