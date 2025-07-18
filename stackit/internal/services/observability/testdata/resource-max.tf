@@ -21,15 +21,23 @@ variable "auth_identity" {}
 variable "auth_password" {}
 variable "auth_username" {}
 variable "email_from" {}
+variable "email_send_resolved" {}
 variable "smart_host" {}
 variable "email_to" {}
 variable "opsgenie_api_key" {}
 variable "opsgenie_api_tags" {}
 variable "opsgenie_api_url" {}
+<<<<<<< HEAD
 variable "opsgenie_priority" {}
 variable "webhook_configs_url" {}
 variable "ms_teams" {}
 variable "google_chat" {}
+=======
+variable "opsgenie_send_resolved" {}
+variable "webhook_configs_url" {}
+variable "ms_teams" {}
+variable "webhook_configs_send_resolved" {}
+>>>>>>> 6acb3c1c (feat(observability): add send_resolved field)
 variable "group_by" {}
 variable "group_interval" {}
 variable "group_wait" {}
@@ -112,21 +120,33 @@ resource "stackit_observability_instance" "instance" {
             from          = var.email_from
             smart_host    = var.smart_host
             to            = var.email_to
+            send_resolved = var.email_send_resolved
           }
         ]
         opsgenie_configs = [
           {
+<<<<<<< HEAD
             api_key  = var.opsgenie_api_key
             tags     = var.opsgenie_api_tags
             api_url  = var.opsgenie_api_url
             priority = var.opsgenie_priority
+=======
+            api_key = var.opsgenie_api_key
+            tags    = var.opsgenie_api_tags
+            api_url = var.opsgenie_api_url
+            send_resolved = var.opsgenie_send_resolved
+>>>>>>> 6acb3c1c (feat(observability): add send_resolved field)
           }
         ]
         webhooks_configs = [
           {
             url      = var.webhook_configs_url
             ms_teams = var.ms_teams
+<<<<<<< HEAD
             google_chat = var.google_chat
+=======
+            send_resolved = var.webhook_configs_send_resolved
+>>>>>>> 6acb3c1c (feat(observability): add send_resolved field)
           }
         ]
       },
