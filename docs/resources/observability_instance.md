@@ -98,6 +98,7 @@ Optional:
 - `auth_password` (String) SMTP authentication password.
 - `auth_username` (String) SMTP authentication username.
 - `from` (String) The sender email address. Must be a valid email address
+- `send_resolved` (Boolean) Whether to notify about resolved alerts.
 - `smart_host` (String) The SMTP host through which emails are sent.
 - `to` (String) The email address to send notifications to. Must be a valid email address
 
@@ -109,6 +110,7 @@ Optional:
 
 - `api_key` (String) The API key for OpsGenie.
 - `api_url` (String) The host to send OpsGenie API requests to. Must be a valid URL
+- `send_resolved` (Boolean) Whether to notify about resolved alerts.
 - `tags` (String) Comma separated list of tags attached to the notifications.
 
 
@@ -118,6 +120,7 @@ Optional:
 Optional:
 
 - `ms_teams` (Boolean) Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.
+- `send_resolved` (Boolean) Whether to notify about resolved alerts.
 - `url` (String) The endpoint to send HTTP POST requests to. Must be a valid URL
 
 
