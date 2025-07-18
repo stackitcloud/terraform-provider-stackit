@@ -142,10 +142,8 @@ func (m *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	listMachineTypeReq := m.client.ListMachineTypes(ctx, projectId)
 
-	if !model.Filter.IsNull() && !model.Filter.IsUnknown() {
-		if filter := strings.TrimSpace(model.Filter.ValueString()); filter != "" {
-			listMachineTypeReq = listMachineTypeReq.Filter(filter)
-		}
+	if !model.Filter.IsNull() && !model.Filter.IsUnknown() && strings.TrimSpace(model.Filter.ValueString()) != "" {
+		listMachineTypeReq = listMachineTypeReq.Filter(strings.TrimSpace(model.Filter.ValueString()))
 	}
 
 	apiResp, err := listMachineTypeReq.Execute()
@@ -160,16 +158,15 @@ func (m *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	items := apiResp.Items
-	if items == nil || len(*items) == 0 {
+	if apiResp.Items == nil || len(*apiResp.Items) == 0 {
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "No machine types found", "No matching machine types.")
 		return
 	}
 
 	// Convert items to []*iaas.MachineType
-	machineTypes := make([]*iaas.MachineType, len(*items))
-	for i := range *items {
-		machineTypes[i] = &(*items)[i]
+	machineTypes := make([]*iaas.MachineType, len(*apiResp.Items))
+	for i := range *apiResp.Items {
+		machineTypes[i] = &(*apiResp.Items)[i]
 	}
 
 	sorted, err := sortMachineTypeByName(machineTypes, sortAscending)
@@ -179,11 +176,6 @@ func (m *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 
 	first := sorted[0]
-	if err := mapDataSourceFields(ctx, first, &model); err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping error", fmt.Sprintf("Failed to translate API response: %v", err))
-		return
-	}
-
 	if err := mapDataSourceFields(ctx, first, &model); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping error", fmt.Sprintf("Failed to translate API response: %v", err))
 		return
@@ -201,9 +193,8 @@ func mapDataSourceFields(ctx context.Context, machineType *iaas.MachineType, mod
 	if machineType.Name == nil || *machineType.Name == "" {
 		return fmt.Errorf("machine type name is missing")
 	}
-	name := *machineType.Name
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), name)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), *machineType.Name)
 	model.Name = types.StringPointerValue(machineType.Name)
 	model.Description = types.StringPointerValue(machineType.Description)
 	model.Disk = types.Int64PointerValue(machineType.Disk)
