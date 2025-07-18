@@ -88,6 +88,9 @@ var (
 
 	//go:embed testdata/resource-server-max-server-attachments.tf
 	resourceServerMaxAttachmentConfig string
+
+	//go:embed testdata/datasource-machinetype.tf
+	dataSourceMachineTypeConfig string
 )
 
 const (
@@ -486,6 +489,10 @@ var testConfigKeyPairMaxUpdated = func() config.Variables {
 	updatedConfig["label"] = config.StringVariable("updated")
 	return updatedConfig
 }()
+
+var testConfigMachineTypeVars = config.Variables{
+	"project_id": config.StringVariable(testutil.ProjectId),
+}
 
 // if no local file is provided the test should create a default file and work with this instead of failing
 var localFileForIaasImage os.File
@@ -4018,6 +4025,47 @@ func TestAccImageMax(t *testing.T) {
 				),
 			},
 			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccMachineTyp(t *testing.T) {
+	t.Logf("TestAccMachineTyp projectid: %s", testutil.ConvertConfigVariable(testConfigMachineTypeVars["project_id"]))
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				ConfigVariables: testConfigMachineTypeVars,
+				Config:          fmt.Sprintf("%s\n%s", dataSourceMachineTypeConfig, testutil.IaaSProviderConfig()),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_machine_type.two_vcpus_filter", "project_id", testutil.ConvertConfigVariable(testConfigMachineTypeVars["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_machine_type.two_vcpus_filter", "id"),
+					resource.TestCheckResourceAttrSet("data.stackit_machine_type.two_vcpus_filter", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_machine_type.two_vcpus_filter", "vcpus"),
+					resource.TestCheckResourceAttr("data.stackit_machine_type.two_vcpus_filter", "vcpus", "2"),
+					resource.TestCheckResourceAttrSet("data.stackit_machine_type.two_vcpus_filter", "ram"),
+					resource.TestCheckResourceAttrSet("data.stackit_machine_type.two_vcpus_filter", "disk"),
+					resource.TestCheckResourceAttrSet("data.stackit_machine_type.two_vcpus_filter", "description"),
+					resource.TestCheckResourceAttrSet("data.stackit_machine_type.two_vcpus_filter", "extra_specs.cpu"),
+
+					resource.TestCheckResourceAttr("data.stackit_machine_type.filter_sorted_ascending_false", "project_id", testutil.ConvertConfigVariable(testConfigMachineTypeVars["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_machine_type.filter_sorted_ascending_false", "id"),
+					resource.TestCheckResourceAttrSet("data.stackit_machine_type.filter_sorted_ascending_false", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_machine_type.filter_sorted_ascending_false", "vcpus"),
+					resource.TestCheckResourceAttrSet("data.stackit_machine_type.filter_sorted_ascending_false", "ram"),
+					resource.TestCheckResourceAttrSet("data.stackit_machine_type.filter_sorted_ascending_false", "disk"),
+					resource.TestCheckResourceAttrSet("data.stackit_machine_type.filter_sorted_ascending_false", "description"),
+					resource.TestCheckResourceAttrSet("data.stackit_machine_type.filter_sorted_ascending_false", "extra_specs.cpu"),
+
+					resource.TestCheckResourceAttr("data.stackit_machine_type.no_match", "project_id", testutil.ConvertConfigVariable(testConfigMachineTypeVars["project_id"])),
+					resource.TestCheckNoResourceAttr("data.stackit_machine_type.no_match", "description"),
+					resource.TestCheckNoResourceAttr("data.stackit_machine_type.no_match", "disk"),
+					resource.TestCheckNoResourceAttr("data.stackit_machine_type.no_match", "extra_specs"),
+					resource.TestCheckNoResourceAttr("data.stackit_machine_type.no_match", "id"),
+					resource.TestCheckNoResourceAttr("data.stackit_machine_type.no_match", "name"),
+					resource.TestCheckNoResourceAttr("data.stackit_machine_type.no_match", "ram"),
+				),
+			},
 		},
 	})
 }
