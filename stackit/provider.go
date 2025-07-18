@@ -27,6 +27,7 @@ import (
 	iaasAffinityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/affinitygroup"
 	iaasImage "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/image"
 	iaasKeyPair "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/keypair"
+	machineType "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/machinetype"
 	iaasNetwork "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network"
 	iaasNetworkArea "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarea"
 	iaasNetworkAreaRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearoute"
@@ -471,6 +472,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		logMeInstance.NewInstanceDataSource,
 		logMeCredential.NewCredentialDataSource,
 		logAlertGroup.NewLogAlertGroupDataSource,
+		machineType.NewMachineTypeDataSource,
 		mariaDBInstance.NewInstanceDataSource,
 		mariaDBCredential.NewCredentialDataSource,
 		mongoDBFlexInstance.NewInstanceDataSource,
