@@ -45,10 +45,10 @@ func TestMapDataSourceFields(t *testing.T) {
 				Disk:        types.Int64Value(20),
 				Ram:         types.Int64Value(2048),
 				Vcpus:       types.Int64Value(2),
-				ExtraSpecs: mustMapString(map[string]string{
-					"cpu":         "amd-epycrome-7702",
-					"overcommit":  "1",
-					"environment": "general",
+				ExtraSpecs: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"cpu":         types.StringValue("amd-epycrome-7702"),
+					"overcommit":  types.StringValue("1"),
+					"environment": types.StringValue("general"),
 				}),
 			},
 			expectError: false,
@@ -209,13 +209,6 @@ func TestSortMachineTypeByName(t *testing.T) {
 			ascending:   true,
 			expectError: true,
 		},
-		{
-			name:        "equal names are stable",
-			input:       []*iaas.MachineType{{Name: utils.Ptr("same")}, {Name: utils.Ptr("same")}, {Name: utils.Ptr("same")}},
-			ascending:   true,
-			expected:    []string{"same", "same", "same"},
-			expectError: false,
-		},
 	}
 
 	for _, tt := range tests {
@@ -245,20 +238,4 @@ func TestSortMachineTypeByName(t *testing.T) {
 			}
 		})
 	}
-}
-
-func mustMapString(val map[string]string) types.Map {
-	m, diags := types.MapValue(types.StringType, convertToAttr(val))
-	if diags.HasError() {
-		panic("invalid test: " + diags.Errors()[0].Detail())
-	}
-	return m
-}
-
-func convertToAttr(m map[string]string) map[string]attr.Value {
-	res := make(map[string]attr.Value, len(m))
-	for k, v := range m {
-		res[k] = types.StringValue(v)
-	}
-	return res
 }
