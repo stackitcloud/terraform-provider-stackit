@@ -21,15 +21,18 @@ variable "auth_identity" {}
 variable "auth_password" {}
 variable "auth_username" {}
 variable "email_from" {}
+variable "email_send_resolved" {}
 variable "smart_host" {}
 variable "email_to" {}
 variable "opsgenie_api_key" {}
 variable "opsgenie_api_tags" {}
 variable "opsgenie_api_url" {}
 variable "opsgenie_priority" {}
+variable "opsgenie_send_resolved" {}
 variable "webhook_configs_url" {}
 variable "ms_teams" {}
 variable "google_chat" {}
+variable "webhook_configs_send_resolved" {}
 variable "group_by" {}
 variable "group_interval" {}
 variable "group_wait" {}
@@ -113,6 +116,7 @@ resource "stackit_observability_instance" "instance" {
             from          = var.email_from
             smart_host    = var.smart_host
             to            = var.email_to
+            send_resolved = var.email_send_resolved
           }
         ]
         opsgenie_configs = [
@@ -121,6 +125,7 @@ resource "stackit_observability_instance" "instance" {
             tags     = var.opsgenie_api_tags
             api_url  = var.opsgenie_api_url
             priority = var.opsgenie_priority
+            send_resolved = var.opsgenie_send_resolved
           }
         ]
         webhooks_configs = [
@@ -128,6 +133,7 @@ resource "stackit_observability_instance" "instance" {
             url      = var.webhook_configs_url
             ms_teams = var.ms_teams
             google_chat = var.google_chat
+            send_resolved = var.webhook_configs_send_resolved
           }
         ]
       },
