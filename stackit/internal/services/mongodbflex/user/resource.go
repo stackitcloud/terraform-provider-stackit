@@ -32,6 +32,7 @@ var (
 	_ resource.Resource                = &userResource{}
 	_ resource.ResourceWithConfigure   = &userResource{}
 	_ resource.ResourceWithImportState = &userResource{}
+	_ resource.ResourceWithModifyPlan  = &userResource{}
 )
 
 type Model struct {
@@ -79,6 +80,36 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	}
 	r.client = apiClient
 	tflog.Info(ctx, "MongoDB Flex user client configured")
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Schema defines the schema for the resource.
