@@ -1,6 +1,7 @@
 package mongodbflex
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -14,6 +15,7 @@ func TestMapDataSourceFields(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *mongodbflex.GetUserResponse
+		region      string
 		expected    DataSourceModel
 		isValid     bool
 	}{
@@ -22,11 +24,12 @@ func TestMapDataSourceFields(t *testing.T) {
 			&mongodbflex.GetUserResponse{
 				Item: &mongodbflex.InstanceResponseUser{},
 			},
+			testRegion,
 			DataSourceModel{
-				Id:         types.StringValue("pid,iid,uid"),
-				UserId:     types.StringValue("uid"),
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
+				Id:         types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, testRegion, instanceId, userId)),
+				UserId:     types.StringValue(userId),
+				InstanceId: types.StringValue(instanceId),
+				ProjectId:  types.StringValue(projectId),
 				Username:   types.StringNull(),
 				Database:   types.StringNull(),
 				Roles:      types.SetNull(types.StringType),
@@ -50,11 +53,12 @@ func TestMapDataSourceFields(t *testing.T) {
 					Port:     utils.Ptr(int64(1234)),
 				},
 			},
+			testRegion,
 			DataSourceModel{
-				Id:         types.StringValue("pid,iid,uid"),
-				UserId:     types.StringValue("uid"),
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
+				Id:         types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, testRegion, instanceId, userId)),
+				UserId:     types.StringValue(userId),
+				InstanceId: types.StringValue(instanceId),
+				ProjectId:  types.StringValue(projectId),
 				Username:   types.StringValue("username"),
 				Database:   types.StringValue("database"),
 				Roles: types.SetValueMust(types.StringType, []attr.Value{
@@ -71,7 +75,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			"null_fields_and_int_conversions",
 			&mongodbflex.GetUserResponse{
 				Item: &mongodbflex.InstanceResponseUser{
-					Id:       utils.Ptr("uid"),
+					Id:       utils.Ptr(userId),
 					Roles:    &[]string{},
 					Username: nil,
 					Database: nil,
@@ -79,11 +83,12 @@ func TestMapDataSourceFields(t *testing.T) {
 					Port:     utils.Ptr(int64(2123456789)),
 				},
 			},
+			testRegion,
 			DataSourceModel{
-				Id:         types.StringValue("pid,iid,uid"),
-				UserId:     types.StringValue("uid"),
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
+				Id:         types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, testRegion, instanceId, userId)),
+				UserId:     types.StringValue(userId),
+				InstanceId: types.StringValue(instanceId),
+				ProjectId:  types.StringValue(projectId),
 				Username:   types.StringNull(),
 				Database:   types.StringNull(),
 				Roles:      types.SetValueMust(types.StringType, []attr.Value{}),
@@ -95,12 +100,14 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			"nil_response",
 			nil,
+			testRegion,
 			DataSourceModel{},
 			false,
 		},
 		{
 			"nil_response_2",
 			&mongodbflex.GetUserResponse{},
+			testRegion,
 			DataSourceModel{},
 			false,
 		},
@@ -109,6 +116,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			&mongodbflex.GetUserResponse{
 				Item: &mongodbflex.InstanceResponseUser{},
 			},
+			testRegion,
 			DataSourceModel{},
 			false,
 		},
@@ -120,7 +128,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				InstanceId: tt.expected.InstanceId,
 				UserId:     tt.expected.UserId,
 			}
-			err := mapDataSourceFields(tt.input, state)
+			err := mapDataSourceFields(tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

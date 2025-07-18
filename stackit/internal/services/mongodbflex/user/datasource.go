@@ -36,6 +36,7 @@ type DataSourceModel struct {
 	Roles      types.Set    `tfsdk:"roles"`
 	Host       types.String `tfsdk:"host"`
 	Port       types.Int64  `tfsdk:"port"`
+	Region     types.String `tfsdk:"region"`
 }
 
 // NewUserDataSource is a helper function to simplify the provider implementation.
@@ -45,37 +46,40 @@ func NewUserDataSource() datasource.DataSource {
 
 // userDataSource is the data source implementation.
 type userDataSource struct {
-	client *mongodbflex.APIClient
+	client       *mongodbflex.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
-func (r *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_mongodbflex_user"
 }
 
 // Configure adds the provider configured client to the data source.
-func (r *userDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+func (d *userDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := mongodbflexUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := mongodbflexUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+	d.client = apiClient
 	tflog.Info(ctx, "MongoDB Flex user client configured")
 }
 
 // Schema defines the schema for the data source.
-func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "MongoDB Flex user data source schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
+		"id":          "Terraform's internal data source. ID. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the MongoDB Flex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
+		"region":      "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -124,12 +128,18 @@ func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			"port": schema.Int64Attribute{
 				Computed: true,
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+			},
 		},
 	}
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -137,13 +147,15 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
-	recordSetResp, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
+	recordSetResp, err := d.client.GetUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -160,7 +172,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	}
 
 	// Map response body to schema and populate Computed attribute values
-	err = mapDataSourceFields(recordSetResp, &model)
+	err = mapDataSourceFields(recordSetResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -175,7 +187,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	tflog.Info(ctx, "MongoDB Flex user read")
 }
 
-func mapDataSourceFields(userResp *mongodbflex.GetUserResponse, model *DataSourceModel) error {
+func mapDataSourceFields(userResp *mongodbflex.GetUserResponse, model *DataSourceModel, region string) error {
 	if userResp == nil || userResp.Item == nil {
 		return fmt.Errorf("response is nil")
 	}
@@ -192,7 +204,7 @@ func mapDataSourceFields(userResp *mongodbflex.GetUserResponse, model *DataSourc
 	} else {
 		return fmt.Errorf("user id not present")
 	}
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), userId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)
 	model.Database = types.StringPointerValue(user.Database)

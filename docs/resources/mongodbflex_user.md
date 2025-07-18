@@ -34,6 +34,7 @@ resource "stackit_mongodbflex_user" "example" {
 
 ### Optional
 
+- `region` (String) The resource region. If not defined, the provider region is used.
 - `username` (String)
 
 ### Read-Only
