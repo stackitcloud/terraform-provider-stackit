@@ -61,6 +61,7 @@ type Model struct {
 	PrivateAddress                 types.String `tfsdk:"private_address"`
 	TargetPools                    types.List   `tfsdk:"target_pools"`
 	Region                         types.String `tfsdk:"region"`
+	SecurityGroupId                types.String `tfsdk:"security_group_id"`
 }
 
 // Struct corresponding to Model.Listeners[i]
@@ -682,6 +683,13 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"security_group_id": schema.StringAttribute{
+				Description: "The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT NETWORK AREAS (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 		},
 	}
 }
@@ -1237,6 +1245,11 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, reg
 	m.PrivateAddress = types.StringPointerValue(lb.PrivateAddress)
 	m.DisableSecurityGroupAssignment = types.BoolPointerValue(lb.DisableTargetSecurityGroupAssignment)
 
+	if lb.TargetSecurityGroup != nil {
+		m.SecurityGroupId = types.StringPointerValue(lb.TargetSecurityGroup.Id)
+	} else {
+		m.SecurityGroupId = types.StringNull()
+	}
 	err := mapListeners(lb, m)
 	if err != nil {
 		return fmt.Errorf("mapping listeners: %w", err)
