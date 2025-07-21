@@ -344,6 +344,10 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Optional:    true,
 				Description: descriptions["region"],
 			},
+			"security_group_id": schema.StringAttribute{
+				Description: "The ID of the security group automatically assigned to the load balancer's targets.",
+				Computed:    true,
+			},
 		},
 	}
 }

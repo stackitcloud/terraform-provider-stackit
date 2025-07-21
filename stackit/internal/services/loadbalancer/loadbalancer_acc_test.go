@@ -124,6 +124,7 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.logs.push_url"),
 					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
 					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.metrics.push_url"),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "security_group_id"),
 
 					// Loadbalancer observability credentials resource
 					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.obs_credential", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -175,6 +176,7 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.logs.push_url"),
 					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
 					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.metrics.push_url"),
+					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "security_group_id"),
 				)},
 			// Import
 			{
@@ -238,6 +240,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "networks.0.role", testutil.ConvertConfigVariable(testConfigVarsMax["network_role"])),
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "external_address"),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "disable_security_group_assignment", "true"),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "security_group_id"),
 
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.healthy_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["healthy_threshold"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval", testutil.ConvertConfigVariable(testConfigVarsMax["health_interval"])),
@@ -309,6 +312,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "networks.0.role", testutil.ConvertConfigVariable(testConfigVarsMax["network_role"])),
 					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "external_address"),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "disable_security_group_assignment", "true"),
+					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "security_group_id"),
 
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.healthy_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["healthy_threshold"])),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval", testutil.ConvertConfigVariable(testConfigVarsMax["health_interval"])),
