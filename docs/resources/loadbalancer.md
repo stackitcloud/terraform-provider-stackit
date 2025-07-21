@@ -134,6 +134,7 @@ resource "stackit_loadbalancer" "example" {
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`","region","`name`".
 - `private_address` (String) Transient private Load Balancer IP address. It can change any time.
+- `security_group_id` (String) The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT NETWORK AREAS (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.
 
 <a id="nestedatt--listeners"></a>
 ### Nested Schema for `listeners`
