@@ -33,34 +33,36 @@ func NewInstanceDataSource() datasource.DataSource {
 
 // instanceDataSource is the data source implementation.
 type instanceDataSource struct {
-	client *mongodbflex.APIClient
+	client       *mongodbflex.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
-func (r *instanceDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *instanceDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_mongodbflex_instance"
 }
 
 // Configure adds the provider configured client to the data source.
-func (r *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+func (d *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := mongodbflexUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := mongodbflexUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+	d.client = apiClient
 	tflog.Info(ctx, "MongoDB Flex instance client configured")
 }
 
 // Schema defines the schema for the data source.
-func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                              "MongoDB Flex instance data source schema. Must have a `region` specified in the provider configuration.",
-		"id":                                "Terraform's internal data source ID. It is structured as \"`project_id`,`instance_id`\".",
+		"id":                                "Terraform's internal data source ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"instance_id":                       "ID of the MongoDB Flex instance.",
 		"project_id":                        "STACKIT project ID to which the instance is associated.",
 		"name":                              "Instance name.",
@@ -73,6 +75,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"weekly_snapshot_retention_weeks":   "The number of weeks that weekly backups will be retained.",
 		"monthly_snapshot_retention_months": "The number of months that monthly backups will be retained.",
 		"point_in_time_window_hours":        "The number of hours back in time the point-in-time recovery feature will be able to recover.",
+		"region":                            "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -175,12 +178,18 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					},
 				},
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+			},
 		},
 	}
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -189,10 +198,12 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	projectId := model.ProjectId.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := d.client.GetInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -233,7 +244,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 	}
 
-	err = mapFields(ctx, instanceResp, &model, flavor, storage, options)
+	err = mapFields(ctx, instanceResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
