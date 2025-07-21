@@ -4029,7 +4029,7 @@ func TestAccImageMax(t *testing.T) {
 	})
 }
 
-func TestAccMachineTyp(t *testing.T) {
+func TestAccMachineType(t *testing.T) {
 	t.Logf("TestAccMachineTyp projectid: %s", testutil.ConvertConfigVariable(testConfigMachineTypeVars["project_id"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
