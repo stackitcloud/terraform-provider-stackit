@@ -3,6 +3,7 @@ package loadbalancer
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"net/http"
 	"strings"
 	"time"
@@ -48,17 +49,18 @@ var (
 )
 
 type Model struct {
-	Id              types.String `tfsdk:"id"` // needed by TF
-	ProjectId       types.String `tfsdk:"project_id"`
-	ExternalAddress types.String `tfsdk:"external_address"`
-	Listeners       types.List   `tfsdk:"listeners"`
-	Name            types.String `tfsdk:"name"`
-	PlanId          types.String `tfsdk:"plan_id"`
-	Networks        types.List   `tfsdk:"networks"`
-	Options         types.Object `tfsdk:"options"`
-	PrivateAddress  types.String `tfsdk:"private_address"`
-	TargetPools     types.List   `tfsdk:"target_pools"`
-	Region          types.String `tfsdk:"region"`
+	Id                             types.String `tfsdk:"id"` // needed by TF
+	ProjectId                      types.String `tfsdk:"project_id"`
+	ExternalAddress                types.String `tfsdk:"external_address"`
+	DisableSecurityGroupAssignment types.Bool   `tfsdk:"disable_security_group_assignment"`
+	Listeners                      types.List   `tfsdk:"listeners"`
+	Name                           types.String `tfsdk:"name"`
+	PlanId                         types.String `tfsdk:"plan_id"`
+	Networks                       types.List   `tfsdk:"networks"`
+	Options                        types.Object `tfsdk:"options"`
+	PrivateAddress                 types.String `tfsdk:"private_address"`
+	TargetPools                    types.List   `tfsdk:"target_pools"`
+	Region                         types.String `tfsdk:"region"`
 }
 
 // Struct corresponding to Model.Listeners[i]
@@ -303,6 +305,7 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 		"id":                                    "Terraform's internal resource ID. It is structured as \"`project_id`\",\"region\",\"`name`\".",
 		"project_id":                            "STACKIT project ID to which the Load Balancer is associated.",
 		"external_address":                      "External Load Balancer IP address where this Load Balancer is exposed.",
+		"disable_security_group_assignment":     "If set to true, this will disable the automatic assignment of a security group to the load balancer's targets. This option is primarily used to allow targets that are not within the load balancer's own network or SNA. When this is enabled, you are fully responsible for ensuring network connectivity to the targets, including managing all routing and security group rules manually. This setting cannot be changed after the load balancer is created.",
 		"listeners":                             "List of all listeners which will accept traffic. Limited to 20.",
 		"port":                                  "Port number where we listen for traffic.",
 		"protocol":                              "Protocol is the highest network protocol we understand to load balance. " + utils.SupportedValuesDocumentation(protocolOptions),
@@ -371,6 +374,16 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 				Optional:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"disable_security_group_assignment": schema.BoolAttribute{
+				Description: descriptions["disable_security_group_assignment"],
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"plan_id": schema.StringAttribute{
@@ -907,13 +920,14 @@ func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoa
 	}
 
 	return &loadbalancer.CreateLoadBalancerPayload{
-		ExternalAddress: conversion.StringValueToPointer(model.ExternalAddress),
-		Listeners:       listenersPayload,
-		Name:            conversion.StringValueToPointer(model.Name),
-		PlanId:          conversion.StringValueToPointer(model.PlanId),
-		Networks:        networksPayload,
-		Options:         optionsPayload,
-		TargetPools:     targetPoolsPayload,
+		ExternalAddress:                      conversion.StringValueToPointer(model.ExternalAddress),
+		DisableTargetSecurityGroupAssignment: conversion.BoolValueToPointer(model.DisableSecurityGroupAssignment),
+		Listeners:                            listenersPayload,
+		Name:                                 conversion.StringValueToPointer(model.Name),
+		PlanId:                               conversion.StringValueToPointer(model.PlanId),
+		Networks:                             networksPayload,
+		Options:                              optionsPayload,
+		TargetPools:                          targetPoolsPayload,
 	}, nil
 }
 
@@ -1221,6 +1235,7 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, reg
 	m.PlanId = types.StringPointerValue(lb.PlanId)
 	m.ExternalAddress = types.StringPointerValue(lb.ExternalAddress)
 	m.PrivateAddress = types.StringPointerValue(lb.PrivateAddress)
+	m.DisableSecurityGroupAssignment = types.BoolPointerValue(lb.DisableTargetSecurityGroupAssignment)
 
 	err := mapListeners(lb, m)
 	if err != nil {
