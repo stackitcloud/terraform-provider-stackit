@@ -43,9 +43,14 @@ data "stackit_cdn_distribution" "example" {
 <a id="nestedatt--config"></a>
 ### Nested Schema for `config`
 
+Optional:
+
+- `blocked_countries` (List of String) The configured countries where distribution of content is blocked
+
 Read-Only:
 
 - `backend` (Attributes) The configured backend for the distribution (see [below for nested schema](#nestedatt--config--backend))
+- `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
 - `regions` (List of String) The configured regions where content will be hosted
 
 <a id="nestedatt--config--backend"></a>
@@ -56,6 +61,14 @@ Read-Only:
 - `origin_request_headers` (Map of String) The configured origin request headers for the backend
 - `origin_url` (String) The configured backend type for the distribution
 - `type` (String) The configured backend type. Supported values are: `http`.
+
+
+<a id="nestedatt--config--optimizer"></a>
+### Nested Schema for `config.optimizer`
+
+Read-Only:
+
+- `enabled` (Boolean)
 
 
 
