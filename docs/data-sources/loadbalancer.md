@@ -33,6 +33,7 @@ data "stackit_loadbalancer" "example" {
 
 ### Read-Only
 
+- `disable_security_group_assignment` (Boolean) Disables the target security group assignment.
 - `external_address` (String) External Load Balancer IP address where this Load Balancer is exposed.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`","region","`name`".
 - `listeners` (Attributes List) List of all listeners which will accept traffic. Limited to 20. (see [below for nested schema](#nestedatt--listeners))
