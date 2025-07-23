@@ -182,7 +182,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `service_account_email` (String, Deprecated) Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.
 - `service_account_key` (String) Service account key used for authentication. If set, the key flow will be used to authenticate all operations.
 - `service_account_key_path` (String) Path for the service account key used for authentication. If set, the key flow will be used to authenticate all operations.
-- `service_account_token` (String) Token used for authentication. If set, the token flow will be used to authenticate all operations.
+- `service_account_token` (String, Deprecated) Token used for authentication. If set, the token flow will be used to authenticate all operations.
 - `service_enablement_custom_endpoint` (String) Custom endpoint for the Service Enablement API
 - `ske_custom_endpoint` (String) Custom endpoint for the Kubernetes Engine (SKE) service
 - `sqlserverflex_custom_endpoint` (String) Custom endpoint for the SQL Server Flex service
