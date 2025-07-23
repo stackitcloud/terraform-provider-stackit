@@ -12,6 +12,7 @@ import (
 )
 
 func TestMapFields(t *testing.T) {
+	const testRegion = "eu01"
 	tests := []struct {
 		description string
 		input       *ske.Kubeconfig
@@ -32,6 +33,7 @@ func TestMapFields(t *testing.T) {
 				Refresh:      types.BoolNull(),
 				ExpiresAt:    types.StringValue("2024-02-07T16:42:12Z"),
 				CreationTime: types.StringValue("2024-02-05T14:40:12Z"),
+				Region:       types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -63,7 +65,7 @@ func TestMapFields(t *testing.T) {
 				ClusterName: tt.expected.ClusterName,
 			}
 			creationTime, _ := time.Parse(time.RFC3339, tt.expected.CreationTime.ValueString())
-			err := mapFields(tt.input, state, creationTime)
+			err := mapFields(tt.input, state, creationTime, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
