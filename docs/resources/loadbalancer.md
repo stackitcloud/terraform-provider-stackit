@@ -116,15 +116,15 @@ resource "stackit_loadbalancer" "example" {
 
 # 1. Create a network for the Load Balancer
 resource "stackit_network" "lb_network" {
-  project_id = var.project_id
-  name       = "lb-network"
+  project_id  = var.project_id
+  name        = "lb-network"
   ipv4_prefix = "192.168.1.0/24"
 }
 
 # 2. Create a separate network for the Target Server
 resource "stackit_network" "target_network" {
-  project_id = var.project_id
-  name       = "target-network"
+  project_id  = var.project_id
+  name        = "target-network"
   ipv4_prefix = "192.168.2.0/24"
 }
 
