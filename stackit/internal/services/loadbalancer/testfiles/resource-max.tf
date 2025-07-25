@@ -73,9 +73,9 @@ resource "stackit_server" "server" {
 }
 
 resource "stackit_loadbalancer" "loadbalancer" {
-  project_id = var.project_id
-  name       = var.loadbalancer_name
-  plan_id    = var.plan_id
+  project_id                        = var.project_id
+  name                              = var.loadbalancer_name
+  plan_id                           = var.plan_id
   disable_security_group_assignment = var.disable_security_group_assignment
   target_pools = [
     {
@@ -122,14 +122,14 @@ resource "stackit_loadbalancer" "loadbalancer" {
     private_network_only = var.private_network_only
     acl                  = [var.acl]
     observability = {
-    	logs = {
-    		credentials_ref = stackit_loadbalancer_observability_credential.logs.credentials_ref
-    		push_url = var.observability_logs_push_url
-    	}
-    	metrics = {
-    		credentials_ref = stackit_loadbalancer_observability_credential.metrics.credentials_ref
-    		push_url = var.observability_metrics_push_url
-    	}
+      logs = {
+        credentials_ref = stackit_loadbalancer_observability_credential.logs.credentials_ref
+        push_url        = var.observability_logs_push_url
+      }
+      metrics = {
+        credentials_ref = stackit_loadbalancer_observability_credential.metrics.credentials_ref
+        push_url        = var.observability_metrics_push_url
+      }
     }
   }
   external_address = stackit_public_ip.public_ip.ip
