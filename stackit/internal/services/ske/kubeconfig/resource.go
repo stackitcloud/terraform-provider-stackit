@@ -276,6 +276,8 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	clusterName := model.ClusterName.ValueString()
 	kubeconfigUUID := model.KubeconfigId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+	// Prevent error state when updating to v2 api version and the kubeconfig is expired
+	model.Region = types.StringValue(region)
 	// Prevent recreation of kubeconfig when updating to v2 api version
 	diags = resp.State.SetAttribute(ctx, path.Root("region"), region)
 	resp.Diagnostics.Append(diags...)
