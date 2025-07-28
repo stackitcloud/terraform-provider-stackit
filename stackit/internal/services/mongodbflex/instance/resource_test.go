@@ -41,7 +41,7 @@ func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		input       *mongodbflex.GetInstanceResponse
+		input       *mongodbflex.InstanceResponse
 		flavor      *flavorModel
 		storage     *storageModel
 		options     *optionsModel
@@ -55,7 +55,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue(instanceId),
 				ProjectId:  types.StringValue(projectId),
 			},
-			&mongodbflex.GetInstanceResponse{
+			&mongodbflex.InstanceResponse{
 				Item: &mongodbflex.Instance{},
 			},
 			&flavorModel{},
@@ -99,7 +99,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue(instanceId),
 				ProjectId:  types.StringValue(projectId),
 			},
-			&mongodbflex.GetInstanceResponse{
+			&mongodbflex.InstanceResponse{
 				Item: &mongodbflex.Instance{
 					Acl: &mongodbflex.ACL{
 						Items: &[]string{
@@ -179,7 +179,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue(instanceId),
 				ProjectId:  types.StringValue(projectId),
 			},
-			&mongodbflex.GetInstanceResponse{
+			&mongodbflex.InstanceResponse{
 				Item: &mongodbflex.Instance{
 					Acl: &mongodbflex.ACL{
 						Items: &[]string{
@@ -264,7 +264,7 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("ip1"),
 				}),
 			},
-			&mongodbflex.GetInstanceResponse{
+			&mongodbflex.InstanceResponse{
 				Item: &mongodbflex.Instance{
 					Acl: &mongodbflex.ACL{
 						Items: &[]string{
@@ -358,7 +358,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue(instanceId),
 				ProjectId:  types.StringValue(projectId),
 			},
-			&mongodbflex.GetInstanceResponse{},
+			&mongodbflex.InstanceResponse{},
 			&flavorModel{},
 			&storageModel{},
 			&optionsModel{},

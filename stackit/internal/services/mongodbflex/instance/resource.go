@@ -702,7 +702,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "MongoDB Flex instance state imported")
 }
 
-func mapFields(ctx context.Context, resp *mongodbflex.GetInstanceResponse, model *Model, flavor *flavorModel, storage *storageModel, options *optionsModel, region string) error {
+func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *Model, flavor *flavorModel, storage *storageModel, options *optionsModel, region string) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
