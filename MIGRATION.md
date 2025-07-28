@@ -44,10 +44,10 @@ resource "stackit_ske_project" "project-example" {
 
 # __generated__ by Terraform from "project_id,example-cluster"
 resource "stackit_ske_cluster" "cluster-example" {
-  allow_privileged_containers = null
-  extensions                  = null
-  hibernations                = null
-  kubernetes_version          = "1.25"
+  allow_privileged_containers     = null
+  extensions                      = null
+  hibernations                    = null
+  kubernetes_version_min          = "1.25"
   maintenance = {
     enable_kubernetes_version_updates    = true
     enable_machine_image_version_updates = true

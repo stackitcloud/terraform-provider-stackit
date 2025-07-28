@@ -17,9 +17,9 @@ SKE Cluster Resource schema. Must have a `region` specified in the provider conf
 
 ```terraform
 resource "stackit_ske_cluster" "example" {
-  project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name               = "example"
-  kubernetes_version = "x.x"
+  project_id             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name                   = "example"
+  kubernetes_version_min = "x.x"
   node_pools = [
     {
       name               = "np-example"
