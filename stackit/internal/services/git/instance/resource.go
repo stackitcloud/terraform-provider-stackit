@@ -406,7 +406,7 @@ func toCreatePayload(ctx context.Context, model *Model) (git.CreateInstancePaylo
 	}
 
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
-		payload.Flavor = model.Flavor.ValueStringPointer()
+		payload.Flavor = git.CreateInstancePayloadGetFlavorAttributeType(model.Flavor.ValueStringPointer())
 	}
 
 	return payload, diags

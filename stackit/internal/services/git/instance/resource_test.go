@@ -178,7 +178,7 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			expected: git.CreateInstancePayload{
 				Name:   utils.Ptr("my-instance"),
-				Flavor: utils.Ptr("git-100"),
+				Flavor: git.CREATEINSTANCEPAYLOADFLAVOR__100.Ptr(),
 				Acl:    &[]string{"10.0.0.1", "10.0.0.2"},
 			},
 			expectError: false,
@@ -187,12 +187,12 @@ func TestToCreatePayload(t *testing.T) {
 			description: "empty ACL still valid",
 			input: &Model{
 				Name:   types.StringValue("my-instance"),
-				Flavor: types.StringValue("git-101"),
+				Flavor: types.StringValue("git-100"),
 				ACL:    types.ListValueMust(types.StringType, []attr.Value{}),
 			},
 			expected: git.CreateInstancePayload{
 				Name:   utils.Ptr("my-instance"),
-				Flavor: utils.Ptr("git-101"),
+				Flavor: git.CREATEINSTANCEPAYLOADFLAVOR__100.Ptr(),
 				Acl:    &[]string{},
 			},
 			expectError: false,
