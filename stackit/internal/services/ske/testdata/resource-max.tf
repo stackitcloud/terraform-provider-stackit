@@ -19,7 +19,7 @@ variable "nodepool_volume_size" {}
 variable "nodepool_volume_type" {}
 variable "ext_acl_enabled" {}
 variable "ext_acl_allowed_cidr1" {}
-variable "ext_argus_enabled" {}
+variable "ext_observability_enabled" {}
 variable "ext_dns_enabled" {}
 variable "nodepool_hibernations1_start" {}
 variable "nodepool_hibernations1_end" {}
@@ -70,8 +70,8 @@ resource "stackit_ske_cluster" "cluster" {
       enabled       = var.ext_acl_enabled
       allowed_cidrs = [var.ext_acl_allowed_cidr1]
     }
-    argus = {
-      enabled = var.ext_argus_enabled
+    observability = {
+      enabled = var.ext_observability_enabled
     }
     dns = {
       enabled = var.ext_dns_enabled
