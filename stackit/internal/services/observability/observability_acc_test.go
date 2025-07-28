@@ -84,6 +84,7 @@ var testConfigVarsMax = config.Variables{
 	"opsgenie_api_key":                       config.StringVariable("example-api-key"),
 	"opsgenie_api_tags":                      config.StringVariable("observability-alert"),
 	"opsgenie_api_url":                       config.StringVariable("https://api.eu.opsgenie.com"),
+	"opsgenie_priority":                      config.StringVariable("P3"),
 	"webhook_configs_url":                    config.StringVariable("https://example.com"),
 	"ms_teams":                               config.StringVariable("true"),
 	"group_by":                               config.StringVariable("alertname"),
@@ -505,6 +506,7 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.api_key", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_key"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.tags", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_tags"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.api_url", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_url"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.priority", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_priority"])),
 
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.url", testutil.ConvertConfigVariable(testConfigVarsMax["webhook_configs_url"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.ms_teams", testutil.ConvertConfigVariable(testConfigVarsMax["ms_teams"])),
@@ -666,6 +668,7 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.api_key", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_key"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.tags", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_tags"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.api_url", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_url"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.priority", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_priority"])),
 
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.url", testutil.ConvertConfigVariable(testConfigVarsMax["webhook_configs_url"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.ms_teams", testutil.ConvertConfigVariable(testConfigVarsMax["ms_teams"])),
@@ -888,6 +891,7 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.api_key", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_key"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.tags", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_tags"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.api_url", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_url"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.priority", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_priority"])),
 
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.url", testutil.ConvertConfigVariable(testConfigVarsMax["webhook_configs_url"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.ms_teams", testutil.ConvertConfigVariable(testConfigVarsMax["ms_teams"])),
