@@ -6,7 +6,7 @@ resource "stackit_network_area" "example" {
       prefix = "192.168.0.0/24"
     }
   ]
-  transfer_network = "192.168.0.0/24"
+  transfer_network = "192.168.1.0/24"
   labels = {
     "key" = "value"
   }
