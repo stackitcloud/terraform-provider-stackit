@@ -45,7 +45,7 @@ import (
 	iaasalphaRoutingTableRoutes "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/routes"
 	iaasalphaRoutingTable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/table"
 	iaasalphaRoutingTables "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/tables"
-  kms "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/key-ring"
+	kms "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/key-ring"
 	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
 	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
@@ -543,7 +543,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
 		iaasalphaRoutingTable.NewRoutingTableResource,
 		iaasalphaRoutingTableRoute.NewRoutingTableRouteResource,
-    kms.NewKeyRingResource,
+		kms.NewKeyRingResource,
 		loadBalancer.NewLoadBalancerResource,
 		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
 		logMeInstance.NewInstanceResource,
