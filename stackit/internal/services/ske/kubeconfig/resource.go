@@ -10,6 +10,7 @@ import (
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -274,7 +275,15 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	projectId := model.ProjectId.ValueString()
 	clusterName := model.ClusterName.ValueString()
 	kubeconfigUUID := model.KubeconfigId.ValueString()
-	region := model.Region.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
+	// Prevent error state when updating to v2 api version and the kubeconfig is expired
+	model.Region = types.StringValue(region)
+	// Prevent recreation of kubeconfig when updating to v2 api version
+	diags = resp.State.SetAttribute(ctx, path.Root("region"), region)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
 	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
@@ -321,7 +330,6 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("The existing kubeconfig is invalid, creating a new one: %v", err))
 			return
 		}
-
 		// Set state to fully populated data
 		diags = resp.State.Set(ctx, model)
 		resp.Diagnostics.Append(diags...)
@@ -346,7 +354,7 @@ func (r *kubeconfigResource) createKubeconfig(ctx context.Context, model *Model)
 	}
 
 	// Map response body to schema
-	err = mapFields(kubeconfigResp, model, time.Now())
+	err = mapFields(kubeconfigResp, model, time.Now(), model.Region.ValueString())
 	if err != nil {
 		return fmt.Errorf("processing API payload: %w", err)
 	}
@@ -383,7 +391,7 @@ func (r *kubeconfigResource) Delete(ctx context.Context, req resource.DeleteRequ
 	tflog.Info(ctx, "SKE kubeconfig deleted")
 }
 
-func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model, creationTime time.Time) error {
+func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model, creationTime time.Time, region string) error {
 	if kubeconfigResp == nil {
 		return fmt.Errorf("response is nil")
 	}
@@ -403,6 +411,7 @@ func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model, creationTime time.T
 	model.ExpiresAt = types.StringValue(kubeconfigResp.ExpirationTimestamp.Format(time.RFC3339))
 	// set creation time
 	model.CreationTime = types.StringValue(creationTime.Format(time.RFC3339))
+	model.Region = types.StringValue(region)
 	return nil
 }
 

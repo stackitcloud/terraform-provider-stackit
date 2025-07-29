@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -13,12 +15,21 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
 )
 
+const (
+	testRegion = "eu02"
+)
+
+var (
+	projectId  = uuid.NewString()
+	instanceId = uuid.NewString()
+)
+
 type mongoDBFlexClientMocked struct {
 	returnError     bool
 	listFlavorsResp *mongodbflex.ListFlavorsResponse
 }
 
-func (c *mongoDBFlexClientMocked) ListFlavorsExecute(_ context.Context, _ string) (*mongodbflex.ListFlavorsResponse, error) {
+func (c *mongoDBFlexClientMocked) ListFlavorsExecute(_ context.Context, _, _ string) (*mongodbflex.ListFlavorsResponse, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("get flavors failed")
 	}
@@ -30,29 +41,31 @@ func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		input       *mongodbflex.GetInstanceResponse
+		input       *mongodbflex.InstanceResponse
 		flavor      *flavorModel
 		storage     *storageModel
 		options     *optionsModel
+		region      string
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_values",
 			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
+				InstanceId: types.StringValue(instanceId),
+				ProjectId:  types.StringValue(projectId),
 			},
-			&mongodbflex.GetInstanceResponse{
+			&mongodbflex.InstanceResponse{
 				Item: &mongodbflex.Instance{},
 			},
 			&flavorModel{},
 			&storageModel{},
 			&optionsModel{},
+			testRegion,
 			Model{
-				Id:             types.StringValue("pid,iid"),
-				InstanceId:     types.StringValue("iid"),
-				ProjectId:      types.StringValue("pid"),
+				Id:             types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, testRegion, instanceId)),
+				InstanceId:     types.StringValue(instanceId),
+				ProjectId:      types.StringValue(projectId),
 				Name:           types.StringNull(),
 				ACL:            types.ListNull(types.StringType),
 				BackupSchedule: types.StringNull(),
@@ -76,16 +89,17 @@ func TestMapFields(t *testing.T) {
 					"point_in_time_window_hours":        types.Int64Null(),
 				}),
 				Version: types.StringNull(),
+				Region:  types.StringValue(testRegion),
 			},
 			true,
 		},
 		{
 			"simple_values",
 			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
+				InstanceId: types.StringValue(instanceId),
+				ProjectId:  types.StringValue(projectId),
 			},
-			&mongodbflex.GetInstanceResponse{
+			&mongodbflex.InstanceResponse{
 				Item: &mongodbflex.Instance{
 					Acl: &mongodbflex.ACL{
 						Items: &[]string{
@@ -101,7 +115,7 @@ func TestMapFields(t *testing.T) {
 						Id:          utils.Ptr("flavor_id"),
 						Memory:      utils.Ptr(int64(34)),
 					},
-					Id:       utils.Ptr("iid"),
+					Id:       utils.Ptr(instanceId),
 					Name:     utils.Ptr("name"),
 					Replicas: utils.Ptr(int64(56)),
 					Status:   mongodbflex.INSTANCESTATUS_READY.Ptr(),
@@ -123,10 +137,11 @@ func TestMapFields(t *testing.T) {
 			&flavorModel{},
 			&storageModel{},
 			&optionsModel{},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid"),
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
+				Id:         types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, testRegion, instanceId)),
+				InstanceId: types.StringValue(instanceId),
+				ProjectId:  types.StringValue(projectId),
 				Name:       types.StringValue("name"),
 				ACL: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ip1"),
@@ -153,6 +168,7 @@ func TestMapFields(t *testing.T) {
 					"monthly_snapshot_retention_months": types.Int64Value(8),
 					"point_in_time_window_hours":        types.Int64Value(9),
 				}),
+				Region:  types.StringValue(testRegion),
 				Version: types.StringValue("version"),
 			},
 			true,
@@ -160,10 +176,10 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values_no_flavor_and_storage",
 			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
+				InstanceId: types.StringValue(instanceId),
+				ProjectId:  types.StringValue(projectId),
 			},
-			&mongodbflex.GetInstanceResponse{
+			&mongodbflex.InstanceResponse{
 				Item: &mongodbflex.Instance{
 					Acl: &mongodbflex.ACL{
 						Items: &[]string{
@@ -174,7 +190,7 @@ func TestMapFields(t *testing.T) {
 					},
 					BackupSchedule: utils.Ptr("schedule"),
 					Flavor:         nil,
-					Id:             utils.Ptr("iid"),
+					Id:             utils.Ptr(instanceId),
 					Name:           utils.Ptr("name"),
 					Replicas:       utils.Ptr(int64(56)),
 					Status:         mongodbflex.INSTANCESTATUS_READY.Ptr(),
@@ -201,10 +217,11 @@ func TestMapFields(t *testing.T) {
 			&optionsModel{
 				Type: types.StringValue("type"),
 			},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid"),
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
+				Id:         types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, testRegion, instanceId)),
+				InstanceId: types.StringValue(instanceId),
+				ProjectId:  types.StringValue(projectId),
 				Name:       types.StringValue("name"),
 				ACL: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ip1"),
@@ -231,6 +248,7 @@ func TestMapFields(t *testing.T) {
 					"monthly_snapshot_retention_months": types.Int64Value(8),
 					"point_in_time_window_hours":        types.Int64Value(9),
 				}),
+				Region:  types.StringValue(testRegion),
 				Version: types.StringValue("version"),
 			},
 			true,
@@ -238,15 +256,15 @@ func TestMapFields(t *testing.T) {
 		{
 			"acls_unordered",
 			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
+				InstanceId: types.StringValue(instanceId),
+				ProjectId:  types.StringValue(projectId),
 				ACL: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ip2"),
 					types.StringValue(""),
 					types.StringValue("ip1"),
 				}),
 			},
-			&mongodbflex.GetInstanceResponse{
+			&mongodbflex.InstanceResponse{
 				Item: &mongodbflex.Instance{
 					Acl: &mongodbflex.ACL{
 						Items: &[]string{
@@ -257,7 +275,7 @@ func TestMapFields(t *testing.T) {
 					},
 					BackupSchedule: utils.Ptr("schedule"),
 					Flavor:         nil,
-					Id:             utils.Ptr("iid"),
+					Id:             utils.Ptr(instanceId),
 					Name:           utils.Ptr("name"),
 					Replicas:       utils.Ptr(int64(56)),
 					Status:         mongodbflex.INSTANCESTATUS_READY.Ptr(),
@@ -284,10 +302,11 @@ func TestMapFields(t *testing.T) {
 			&optionsModel{
 				Type: types.StringValue("type"),
 			},
+			testRegion,
 			Model{
-				Id:         types.StringValue("pid,iid"),
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
+				Id:         types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, testRegion, instanceId)),
+				InstanceId: types.StringValue(instanceId),
+				ProjectId:  types.StringValue(projectId),
 				Name:       types.StringValue("name"),
 				ACL: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ip2"),
@@ -314,6 +333,7 @@ func TestMapFields(t *testing.T) {
 					"monthly_snapshot_retention_months": types.Int64Value(8),
 					"point_in_time_window_hours":        types.Int64Value(9),
 				}),
+				Region:  types.StringValue(testRegion),
 				Version: types.StringValue("version"),
 			},
 			true,
@@ -321,33 +341,35 @@ func TestMapFields(t *testing.T) {
 		{
 			"nil_response",
 			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
+				InstanceId: types.StringValue(instanceId),
+				ProjectId:  types.StringValue(projectId),
 			},
 			nil,
 			&flavorModel{},
 			&storageModel{},
 			&optionsModel{},
+			testRegion,
 			Model{},
 			false,
 		},
 		{
 			"no_resource_id",
 			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
+				InstanceId: types.StringValue(instanceId),
+				ProjectId:  types.StringValue(projectId),
 			},
-			&mongodbflex.GetInstanceResponse{},
+			&mongodbflex.InstanceResponse{},
 			&flavorModel{},
 			&storageModel{},
 			&optionsModel{},
+			testRegion,
 			Model{},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.storage, tt.options)
+			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.storage, tt.options, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -454,7 +476,7 @@ func TestToCreatePayload(t *testing.T) {
 			&storageModel{},
 			&optionsModel{},
 			&mongodbflex.CreateInstancePayload{
-				Acl: &mongodbflex.ACL{
+				Acl: &mongodbflex.CreateInstancePayloadAcl{
 					Items: &[]string{},
 				},
 				Storage: &mongodbflex.Storage{},
@@ -485,7 +507,7 @@ func TestToCreatePayload(t *testing.T) {
 				Type: types.StringValue("type"),
 			},
 			&mongodbflex.CreateInstancePayload{
-				Acl: &mongodbflex.ACL{
+				Acl: &mongodbflex.CreateInstancePayloadAcl{
 					Items: &[]string{
 						"ip_1",
 						"ip_2",
@@ -526,7 +548,7 @@ func TestToCreatePayload(t *testing.T) {
 				Type: types.StringNull(),
 			},
 			&mongodbflex.CreateInstancePayload{
-				Acl: &mongodbflex.ACL{
+				Acl: &mongodbflex.CreateInstancePayloadAcl{
 					Items: &[]string{
 						"",
 					},
@@ -933,7 +955,7 @@ func TestLoadFlavorId(t *testing.T) {
 				RAM: types.Int64Value(8),
 			},
 			&mongodbflex.ListFlavorsResponse{
-				Flavors: &[]mongodbflex.HandlersInfraFlavor{
+				Flavors: &[]mongodbflex.InstanceFlavor{
 					{
 						Id:          utils.Ptr("fid-1"),
 						Cpu:         utils.Ptr(int64(2)),
@@ -958,7 +980,7 @@ func TestLoadFlavorId(t *testing.T) {
 				RAM: types.Int64Value(8),
 			},
 			&mongodbflex.ListFlavorsResponse{
-				Flavors: &[]mongodbflex.HandlersInfraFlavor{
+				Flavors: &[]mongodbflex.InstanceFlavor{
 					{
 						Id:          utils.Ptr("fid-1"),
 						Cpu:         utils.Ptr(int64(2)),
@@ -989,7 +1011,7 @@ func TestLoadFlavorId(t *testing.T) {
 				RAM: types.Int64Value(8),
 			},
 			&mongodbflex.ListFlavorsResponse{
-				Flavors: &[]mongodbflex.HandlersInfraFlavor{
+				Flavors: &[]mongodbflex.InstanceFlavor{
 					{
 						Id:          utils.Ptr("fid-1"),
 						Cpu:         utils.Ptr(int64(1)),
@@ -1047,13 +1069,13 @@ func TestLoadFlavorId(t *testing.T) {
 				listFlavorsResp: tt.mockedResp,
 			}
 			model := &Model{
-				ProjectId: types.StringValue("pid"),
+				ProjectId: types.StringValue(projectId),
 			}
 			flavorModel := &flavorModel{
 				CPU: tt.inputFlavor.CPU,
 				RAM: tt.inputFlavor.RAM,
 			}
-			err := loadFlavorId(context.Background(), client, model, flavorModel)
+			err := loadFlavorId(context.Background(), client, model, flavorModel, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

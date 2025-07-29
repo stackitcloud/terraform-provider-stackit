@@ -98,6 +98,7 @@ func (r *serviceAccountTokenResource) Schema(_ context.Context, _ resource.Schem
 	resp.Schema = schema.Schema{
 		MarkdownDescription: fmt.Sprintf("%s%s", descriptions["main"], markdownDescription),
 		Description:         descriptions["main"],
+		DeprecationMessage:  "This resource is scheduled for deprecation and will be removed on December 17, 2025. To ensure a smooth transition, please refer to our migration guide at https://docs.stackit.cloud/stackit/en/deprecation-plan-for-service-account-access-tokens-and-migration-guide-373293307.html for detailed instructions and recommendations.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],

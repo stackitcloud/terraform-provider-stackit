@@ -27,12 +27,16 @@ data "stackit_mongodbflex_instance" "example" {
 - `instance_id` (String) ID of the MongoDB Flex instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `acl` (List of String) The Access Control List (ACL) for the MongoDB Flex instance.
 - `backup_schedule` (String) The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").
 - `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
-- `id` (String) Terraform's internal data source ID. It is structured as "`project_id`,`instance_id`".
+- `id` (String) Terraform's internal data source ID. It is structured as "`project_id`,`region`,`instance_id`".
 - `name` (String) Instance name.
 - `options` (Attributes) Custom parameters for the MongoDB Flex instance. (see [below for nested schema](#nestedatt--options))
 - `replicas` (Number)

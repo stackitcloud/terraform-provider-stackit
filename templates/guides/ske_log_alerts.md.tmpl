@@ -39,9 +39,9 @@ This guide walks you through setting up log-based alerting in STACKIT Observabil
 
    ```hcl
    resource "stackit_ske_cluster" "example" {
-     project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-     name               = "example"
-     kubernetes_version = "1.31"
+     project_id             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+     name                   = "example"
+     kubernetes_version_min = "1.31"
      node_pools = [
        {
          name               = "standard"
