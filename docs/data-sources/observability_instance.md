@@ -110,6 +110,7 @@ Read-Only:
 
 - `api_key` (String) The API key for OpsGenie.
 - `api_url` (String) The host to send OpsGenie API requests to. Must be a valid URL
+- `priority` (String) Priority of the alert. Possible values are: `P1`, `P2`, `P3`, `P4`, `P5`.
 - `tags` (String) Comma separated list of tags attached to the notifications.
 
 

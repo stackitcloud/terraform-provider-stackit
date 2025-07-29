@@ -247,6 +247,10 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 												Description: "Comma separated list of tags attached to the notifications.",
 												Computed:    true,
 											},
+											"priority": schema.StringAttribute{
+												Description: "Priority of the alert. " + utils.FormatPossibleValues([]string{"P1", "P2", "P3", "P4", "P5"}...),
+												Computed:    true,
+											},
 										},
 									},
 								},
