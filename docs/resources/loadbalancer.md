@@ -167,6 +167,7 @@ resource "stackit_security_group" "target_sg" {
 # 5. Create a rule to allow traffic FROM the load balancer
 #    This is the core of the manual setup.
 resource "stackit_security_group_rule" "allow_lb_ingress" {
+  project_id        = var.project_id
   security_group_id = stackit_security_group.target_sg.id
   direction         = "ingress"
   protocol          = "tcp"
@@ -197,9 +198,6 @@ resource "stackit_server" "target_server" {
     network_id      = stackit_network.target_network.id
     security_groups = [stackit_security_group.target_sg.id]
   }]
-
-  # Ensure the rule is created before the server
-  depends_on = [stackit_security_group_rule.allow_lb_ingress]
 }
 
 # Only use the import statement, if you want to import an existing loadbalancer
