@@ -243,6 +243,14 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 												Description: "The host to send OpsGenie API requests to. Must be a valid URL",
 												Computed:    true,
 											},
+											"priority": schema.StringAttribute{
+												Description: "Priority level of alert. Possible values are P1, P2, P3, P4, and P5.",
+												Computed:    true,
+											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
+												Computed:    true,
+											},
 											"tags": schema.StringAttribute{
 												Description: "Comma separated list of tags attached to the notifications.",
 												Computed:    true,

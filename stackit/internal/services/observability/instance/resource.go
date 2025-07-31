@@ -187,15 +187,19 @@ var emailConfigsTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.AlertConfig.receivers.opsGenieConfigs
 type opsgenieConfigsModel struct {
-	ApiKey types.String `tfsdk:"api_key"`
-	ApiUrl types.String `tfsdk:"api_url"`
-	Tags   types.String `tfsdk:"tags"`
+	ApiKey       types.String `tfsdk:"api_key"`
+	ApiUrl       types.String `tfsdk:"api_url"`
+	Priority     types.String `tfsdk:"priority"`
+	SendResolved types.Bool   `tfsdk:"send_resolved"`
+	Tags         types.String `tfsdk:"tags"`
 }
 
 var opsgenieConfigsTypes = map[string]attr.Type{
-	"api_key": types.StringType,
-	"api_url": types.StringType,
-	"tags":    types.StringType,
+	"api_key":       types.StringType,
+	"api_url":       types.StringType,
+	"priority":      types.StringType,
+	"send_resolved": types.BoolType,
+	"tags":          types.StringType,
 }
 
 // Struct corresponding to Model.AlertConfig.receivers.webHooksConfigs
@@ -1665,9 +1669,11 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		if receiver.OpsgenieConfigs != nil {
 			for _, opsgenieConfig := range *receiver.OpsgenieConfigs {
 				opsGenieConfigMap := map[string]attr.Value{
-					"api_key": types.StringPointerValue(opsgenieConfig.ApiKey),
-					"api_url": types.StringPointerValue(opsgenieConfig.ApiUrl),
-					"tags":    types.StringPointerValue(opsgenieConfig.Tags),
+					"api_key":       types.StringPointerValue(opsgenieConfig.ApiKey),
+					"api_url":       types.StringPointerValue(opsgenieConfig.ApiUrl),
+					"priority":      types.StringPointerValue(opsgenieConfig.Priority),
+					"send_resolved": types.BoolPointerValue(opsgenieConfig.SendResolved),
+					"tags":          types.StringPointerValue(opsgenieConfig.Tags),
 				}
 				opsGenieConfigModel, diags := types.ObjectValue(opsgenieConfigsTypes, opsGenieConfigMap)
 				if diags.HasError() {
@@ -2014,9 +2020,11 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]observa
 			for i := range opsgenieConfigs {
 				opsgenieConfig := opsgenieConfigs[i]
 				payloadOpsGenieConfigs = append(payloadOpsGenieConfigs, observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{
-					ApiKey: conversion.StringValueToPointer(opsgenieConfig.ApiKey),
-					ApiUrl: conversion.StringValueToPointer(opsgenieConfig.ApiUrl),
-					Tags:   conversion.StringValueToPointer(opsgenieConfig.Tags),
+					ApiKey:       conversion.StringValueToPointer(opsgenieConfig.ApiKey),
+					ApiUrl:       conversion.StringValueToPointer(opsgenieConfig.ApiUrl),
+					Priority:     conversion.StringValueToPointer(opsgenieConfig.Priority),
+					SendResolved: conversion.BoolValueToPointer(opsgenieConfig.SendResolved),
+					Tags:         conversion.StringValueToPointer(opsgenieConfig.Tags),
 				})
 			}
 			receiverPayload.OpsgenieConfigs = &payloadOpsGenieConfigs
