@@ -33,9 +33,11 @@ func fixtureEmailConfigsModel() basetypes.ListValue {
 func fixtureOpsGenieConfigsModel() basetypes.ListValue {
 	return types.ListValueMust(types.ObjectType{AttrTypes: opsgenieConfigsTypes}, []attr.Value{
 		types.ObjectValueMust(opsgenieConfigsTypes, map[string]attr.Value{
-			"api_key": types.StringValue("key"),
-			"tags":    types.StringValue("tag"),
-			"api_url": types.StringValue("ops.example.com"),
+			"api_key":       types.StringValue("key"),
+			"tags":          types.StringValue("tag"),
+			"api_url":       types.StringValue("ops.example.com"),
+			"priority":      types.StringNull(),
+			"send_resolved": types.BoolNull(),
 		}),
 	})
 }
