@@ -148,6 +148,7 @@ resource "stackit_security_group" "target_sg" {
 # 5. Create a rule to allow traffic FROM the load balancer
 #    This is the core of the manual setup.
 resource "stackit_security_group_rule" "allow_lb_ingress" {
+  project_id        = var.project_id
   security_group_id = stackit_security_group.target_sg.id
   direction         = "ingress"
   protocol          = "tcp"
