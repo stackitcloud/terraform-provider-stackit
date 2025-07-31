@@ -37,7 +37,7 @@ Check one of the examples in the [examples](examples/) folder.
 To authenticate, you will need a [service account](https://docs.stackit.cloud/stackit/en/service-accounts-134415819.html). Create it in the [STACKIT Portal](https://portal.stackit.cloud/) and assign the necessary permissions to it, e.g. `project.owner`. There are multiple ways to authenticate:
 
 - Key flow (recommended)
-- Token flow (will be removed is scheduled for deprecation and will be removed on December 17, 2025.)
+- Token flow (is scheduled for deprecation and will be removed on December 17, 2025.)
 
 When setting up authentication, the provider will always try to use the key flow first and search for credentials in several locations, following a specific order:
 
