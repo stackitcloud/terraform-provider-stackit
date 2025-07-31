@@ -169,6 +169,7 @@ func (r *serviceAccountTokenResource) Schema(_ context.Context, _ resource.Schem
 
 // Create creates the resource and sets the initial Terraform state for service accounts.
 func (r *serviceAccountTokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+	core.LogAndAddWarning(ctx, &resp.Diagnostics, "stackit_service_account_access_token resource deprecated", "use stackit_service_account_key resource instead")
 	// Retrieve the planned values for the resource.
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -216,6 +217,7 @@ func (r *serviceAccountTokenResource) Create(ctx context.Context, req resource.C
 
 // Read refreshes the Terraform state with the latest service account data.
 func (r *serviceAccountTokenResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+	core.LogAndAddWarning(ctx, &resp.Diagnostics, "stackit_service_account_access_token resource deprecated", "use stackit_service_account_key resource instead")
 	// Retrieve the current state of the resource.
 	var model Model
 	diags := req.State.Get(ctx, &model)
@@ -284,6 +286,7 @@ func (r *serviceAccountTokenResource) Update(ctx context.Context, _ resource.Upd
 
 // Delete deletes the service account and removes it from the Terraform state on success.
 func (r *serviceAccountTokenResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+	core.LogAndAddWarning(ctx, &resp.Diagnostics, "stackit_service_account_access_token resource deprecated", "use stackit_service_account_key resource instead")
 	// Retrieve current state of the resource.
 	var model Model
 	diags := req.State.Get(ctx, &model)
