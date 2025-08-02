@@ -15,7 +15,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.1
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.7.1
-	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.27.1
+	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.28.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.21-alpha
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.5.1
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.1
@@ -48,7 +48,7 @@ require (
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.3 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0 // indirect
