@@ -6,3 +6,9 @@ resource "stackit_image" "example_image" {
   min_disk_size   = 10
   min_ram         = 5
 }
+
+# Only use the import statement, if you want to import an existing image
+import {
+  to = stackit_image.import-example
+  id = "${var.project_id},${var.image_id}"
+}
