@@ -85,6 +85,7 @@ func (r *serviceAccountTokenResource) Schema(_ context.Context, _ resource.Schem
 	descriptions := map[string]string{
 		"id":                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`service_account_email`,`access_token_id`\".",
 		"main":                  "Service account access token schema.",
+		"deprecation_message":   "This resource is scheduled for deprecation and will be removed on December 17, 2025. To ensure a smooth transition, please refer to our migration guide at https://docs.stackit.cloud/stackit/en/deprecation-plan-for-service-account-access-tokens-and-migration-guide-373293307.html for detailed instructions and recommendations.",
 		"project_id":            "STACKIT project ID associated with the service account token.",
 		"service_account_email": "Email address linked to the service account.",
 		"ttl_days":              "Specifies the token's validity duration in days. If unspecified, defaults to 90 days.",
@@ -96,9 +97,9 @@ func (r *serviceAccountTokenResource) Schema(_ context.Context, _ resource.Schem
 		"valid_until":           "Estimated expiration timestamp of the access token. For precise validity, check the JWT details.",
 	}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: fmt.Sprintf("%s%s", descriptions["main"], markdownDescription),
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s\n%s", descriptions["main"], descriptions["deprecation_message"], markdownDescription),
 		Description:         descriptions["main"],
-		DeprecationMessage:  "This resource is scheduled for deprecation and will be removed on December 17, 2025. To ensure a smooth transition, please refer to our migration guide at https://docs.stackit.cloud/stackit/en/deprecation-plan-for-service-account-access-tokens-and-migration-guide-373293307.html for detailed instructions and recommendations.",
+		DeprecationMessage:  descriptions["deprecation_message"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -169,6 +170,7 @@ func (r *serviceAccountTokenResource) Schema(_ context.Context, _ resource.Schem
 
 // Create creates the resource and sets the initial Terraform state for service accounts.
 func (r *serviceAccountTokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+	core.LogAndAddWarning(ctx, &resp.Diagnostics, "stackit_service_account_access_token resource deprecated", "use stackit_service_account_key resource instead")
 	// Retrieve the planned values for the resource.
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -216,6 +218,7 @@ func (r *serviceAccountTokenResource) Create(ctx context.Context, req resource.C
 
 // Read refreshes the Terraform state with the latest service account data.
 func (r *serviceAccountTokenResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+	core.LogAndAddWarning(ctx, &resp.Diagnostics, "stackit_service_account_access_token resource deprecated", "use stackit_service_account_key resource instead")
 	// Retrieve the current state of the resource.
 	var model Model
 	diags := req.State.Get(ctx, &model)
@@ -284,6 +287,7 @@ func (r *serviceAccountTokenResource) Update(ctx context.Context, _ resource.Upd
 
 // Delete deletes the service account and removes it from the Terraform state on success.
 func (r *serviceAccountTokenResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+	core.LogAndAddWarning(ctx, &resp.Diagnostics, "stackit_service_account_access_token resource deprecated", "use stackit_service_account_key resource instead")
 	// Retrieve current state of the resource.
 	var model Model
 	diags := req.State.Get(ctx, &model)
