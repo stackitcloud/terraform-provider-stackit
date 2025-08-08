@@ -128,7 +128,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed:    true,
 			},
 			"disable_security_group_assignment": schema.BoolAttribute{
-				Description: "Disables the target security group assignment.",
+				Description: descriptions["disable_security_group_assignment"],
 				Computed:    true,
 			},
 			"plan_id": schema.StringAttribute{
