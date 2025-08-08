@@ -33,7 +33,7 @@ data "stackit_loadbalancer" "example" {
 
 ### Read-Only
 
-- `disable_security_group_assignment` (Boolean) Disables the target security group assignment.
+- `disable_security_group_assignment` (Boolean) If set to true, this will disable the automatic assignment of a security group to the load balancer's targets. This option is primarily used to allow targets that are not within the load balancer's own network or SNA. When this is enabled, you are fully responsible for ensuring network connectivity to the targets, including managing all routing and security group rules manually. This setting cannot be changed after the load balancer is created.
 - `external_address` (String) External Load Balancer IP address where this Load Balancer is exposed.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`","region","`name`".
 - `listeners` (Attributes List) List of all listeners which will accept traffic. Limited to 20. (see [below for nested schema](#nestedatt--listeners))
