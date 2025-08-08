@@ -721,15 +721,50 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	loadBalancerName := *createResp.Name
 
-	waitResp, err := wait.CreateLoadBalancerWaitHandler(ctx, r.client, projectId, region, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Load balancer creation waiting: %v", err))
-		return
+	// This variable will hold the final load balancer object
+	var lb *loadbalancer.LoadBalancer
+
+	if model.DisableSecurityGroupAssignment.ValueBool() {
+		// MANUAL MODE: Manually poll the resource until the security_group_id is available.
+		timeout := 5 * time.Minute
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-time.After(timeout):
+				core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("timed out waiting for security_group_id to be populated for load balancer %q", loadBalancerName))
+				return
+			case <-ticker.C:
+				getResp, err := r.client.GetLoadBalancer(ctx, projectId, region, loadBalancerName).Execute()
+				if err != nil {
+					core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("polling for security_group_id: %v", err))
+					return
+				}
+
+				// Check if the security group has been created and attached yet.
+				if getResp.TargetSecurityGroup != nil && getResp.TargetSecurityGroup.Id != nil && *getResp.TargetSecurityGroup.Id != "" {
+					lb = getResp // Success! The ID is available.
+					goto POLLING_DONE
+				}
+				// The ID is not ready yet, the loop will continue on the next tick.
+			}
+		}
+	POLLING_DONE:
+	} else {
+		// AUTOMATIC MODE: Wait for the load balancer to become active.
+		waitResp, err := wait.CreateLoadBalancerWaitHandler(ctx, r.client, projectId, region, loadBalancerName).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Load balancer creation waiting: %v", err))
+			return
+		}
+		lb = waitResp
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, region)
+	err = mapFields(ctx, lb, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
