@@ -3,6 +3,9 @@ package kms
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -19,8 +22,6 @@ import (
 	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-	"net/http"
-	"strings"
 )
 
 var (
@@ -52,7 +53,7 @@ type keyResource struct {
 	providerData core.ProviderData
 }
 
-func (k *keyResource) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
+func (k *keyResource) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_kms_key"
 }
 
@@ -69,7 +70,7 @@ func (k *keyResource) Configure(ctx context.Context, request resource.ConfigureR
 	k.client = apiClient
 }
 
-func (k *keyResource) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
+func (k *keyResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":         "KMS Key resource schema. Must have a `region` specified in the provider configuration.",
 		"backend":      "The backend that is used for KMS. Right now, only software is accepted.",
@@ -195,7 +196,7 @@ func (k *keyResource) Schema(ctx context.Context, request resource.SchemaRequest
 	}
 }
 
-func (k *keyResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) {
+func (k *keyResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := request.Plan.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
@@ -227,6 +228,10 @@ func (k *keyResource) Create(ctx context.Context, request resource.CreateRequest
 	ctx = tflog.SetField(ctx, "key_id", keyId)
 
 	err = mapFields(createResponse, &model, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating key", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
 
 	diags = response.State.Set(ctx, model)
 	response.Diagnostics.Append(diags...)
@@ -236,7 +241,7 @@ func (k *keyResource) Create(ctx context.Context, request resource.CreateRequest
 	tflog.Info(ctx, "Key created")
 }
 
-func (k *keyResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) {
+func (k *keyResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
@@ -278,12 +283,12 @@ func (k *keyResource) Read(ctx context.Context, request resource.ReadRequest, re
 	tflog.Info(ctx, "Key read")
 }
 
-func (k *keyResource) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+func (k *keyResource) Update(ctx context.Context, _ resource.UpdateRequest, response *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// keys cannot be updated, so we log an error.
 	core.LogAndAddError(ctx, &response.Diagnostics, "Error updating key", "Keys can't be updated")
 }
 
-func (k *keyResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
+func (k *keyResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)

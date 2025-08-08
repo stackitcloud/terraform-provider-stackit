@@ -3,6 +3,9 @@ package kms
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -19,8 +22,6 @@ import (
 	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-	"net/http"
-	"strings"
 )
 
 var (
@@ -51,7 +52,7 @@ type wrappingKeyResource struct {
 	providerData core.ProviderData
 }
 
-func (w *wrappingKeyResource) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
+func (w *wrappingKeyResource) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_kms_wrapping_key"
 }
 
@@ -68,7 +69,7 @@ func (w *wrappingKeyResource) Configure(ctx context.Context, request resource.Co
 	w.client = apiClient
 }
 
-func (w *wrappingKeyResource) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
+func (w *wrappingKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":            "KMS Key resource schema. Must have a `region` specified in the provider configuration.",
 		"algorithm":       "The encryption algorithm that the key will use to encrypt data",
@@ -188,7 +189,7 @@ func (w *wrappingKeyResource) Schema(ctx context.Context, request resource.Schem
 	}
 }
 
-func (w *wrappingKeyResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) {
+func (w *wrappingKeyResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 
 	diags := request.Plan.Get(ctx, &model)
@@ -222,6 +223,10 @@ func (w *wrappingKeyResource) Create(ctx context.Context, request resource.Creat
 	ctx = tflog.SetField(ctx, "wrapping_key_id", wrappingKeyId)
 
 	err = mapFields(createResponse, &model, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating wrapping key", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
 
 	diags = response.State.Set(ctx, model)
 	response.Diagnostics.Append(diags...)
@@ -231,7 +236,7 @@ func (w *wrappingKeyResource) Create(ctx context.Context, request resource.Creat
 	tflog.Info(ctx, "Key created")
 }
 
-func (w *wrappingKeyResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) {
+func (w *wrappingKeyResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
@@ -273,12 +278,12 @@ func (w *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 	tflog.Info(ctx, "Wrapping key read")
 }
 
-func (w *wrappingKeyResource) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+func (w *wrappingKeyResource) Update(ctx context.Context, _ resource.UpdateRequest, response *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// wrapping keys cannot be updated, so we log an error.
 	core.LogAndAddError(ctx, &response.Diagnostics, "Error updating wrapping key", "Keys can't be updated")
 }
 
-func (w *wrappingKeyResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
+func (w *wrappingKeyResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)

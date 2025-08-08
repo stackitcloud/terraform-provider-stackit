@@ -3,6 +3,8 @@ package kms
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -14,7 +16,6 @@ import (
 	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-	"net/http"
 )
 
 var (
@@ -30,7 +31,7 @@ type wrappingKeyDataSource struct {
 	providerData core.ProviderData
 }
 
-func (w *wrappingKeyDataSource) Metadata(ctx context.Context, request datasource.MetadataRequest, response *datasource.MetadataResponse) {
+func (w *wrappingKeyDataSource) Metadata(_ context.Context, request datasource.MetadataRequest, response *datasource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_kms_wrapping_key"
 }
 
@@ -50,7 +51,7 @@ func (w *wrappingKeyDataSource) Configure(ctx context.Context, request datasourc
 	tflog.Info(ctx, "Wrapping key configured")
 }
 
-func (w *wrappingKeyDataSource) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
+func (w *wrappingKeyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":         "KMS Key resource schema. Must have a `region` specified in the provider configuration.",
 		"backend":      "The backend that is used for KMS. Right now, only software is accepted.",
@@ -141,7 +142,7 @@ func (w *wrappingKeyDataSource) Schema(ctx context.Context, request datasource.S
 	}
 }
 
-func (w *wrappingKeyDataSource) Read(ctx context.Context, request datasource.ReadRequest, response *datasource.ReadResponse) {
+func (w *wrappingKeyDataSource) Read(ctx context.Context, request datasource.ReadRequest, response *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := request.Config.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)

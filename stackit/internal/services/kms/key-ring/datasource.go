@@ -3,6 +3,8 @@ package kms
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -14,7 +16,6 @@ import (
 	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-	"net/http"
 )
 
 var (
@@ -30,7 +31,7 @@ type keyRingDataSource struct {
 	providerData core.ProviderData
 }
 
-func (k *keyRingDataSource) Metadata(ctx context.Context, request datasource.MetadataRequest, response *datasource.MetadataResponse) {
+func (k *keyRingDataSource) Metadata(_ context.Context, request datasource.MetadataRequest, response *datasource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_kms_key_ring"
 }
 
@@ -50,7 +51,7 @@ func (k *keyRingDataSource) Configure(ctx context.Context, request datasource.Co
 	tflog.Info(ctx, "Key ring configured")
 }
 
-func (k *keyRingDataSource) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
+func (k *keyRingDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":         "KMS Key Ring resource schema.",
 		"description":  "A user chosen description to distinguish multiple key rings.",
@@ -108,7 +109,7 @@ func (k *keyRingDataSource) Schema(ctx context.Context, request datasource.Schem
 	}
 }
 
-func (k *keyRingDataSource) Read(ctx context.Context, request datasource.ReadRequest, response *datasource.ReadResponse) {
+func (k *keyRingDataSource) Read(ctx context.Context, request datasource.ReadRequest, response *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 
 	diags := request.Config.Get(ctx, &model)
