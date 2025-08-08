@@ -696,7 +696,6 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -708,14 +707,12 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
-	// Create a new load balancer
 	createResp, err := r.client.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).XRequestID(uuid.NewString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Calling API: %v", err))
@@ -723,7 +720,6 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	}
 	loadBalancerName := *createResp.Name
 
-	// This variable will hold the final load balancer object
 	var lb *loadbalancer.LoadBalancer
 
 	if model.DisableSecurityGroupAssignment.ValueBool() {
@@ -744,9 +740,8 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 					return
 				}
 
-				// Check if the security group has been created and attached yet.
 				if getResp.TargetSecurityGroup != nil && getResp.TargetSecurityGroup.Id != nil && *getResp.TargetSecurityGroup.Id != "" {
-					lb = getResp // Success! The ID is available.
+					lb = getResp
 					goto POLLING_DONE
 				}
 				// The ID is not ready yet, the loop will continue on the next tick.
@@ -763,14 +758,12 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 		lb = waitResp
 	}
 
-	// Map response body to schema
 	err = mapFields(ctx, lb, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
-	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
