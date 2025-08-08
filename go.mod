@@ -17,13 +17,14 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.7.1
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.28.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.21-alpha
+	github.com/stackitcloud/stackit-sdk-go/services/kms v0.5.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.5.1
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.1
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.25.1
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.5.1
-	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.5.1
+	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.5.2
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.3.1
-	github.com/stackitcloud/stackit-sdk-go/services/observability v0.9.1
+	github.com/stackitcloud/stackit-sdk-go/services/observability v0.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.24.1
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.2.1
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.25.1
@@ -37,7 +38,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.3.1
 	github.com/teambition/rrule-go v1.8.2
-	golang.org/x/mod v0.26.0
+	golang.org/x/mod v0.27.0
 )
 
 require github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
@@ -65,7 +66,7 @@ require (
 	github.com/hashicorp/terraform-exec v0.23.0 // indirect
 	github.com/hashicorp/terraform-json v0.25.0 // indirect
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.37.0 // indirect
-	github.com/hashicorp/terraform-registry-address v0.2.5 // indirect
+	github.com/hashicorp/terraform-registry-address v0.3.0 // indirect
 	github.com/hashicorp/terraform-svchost v0.1.1 // indirect
 	github.com/hashicorp/yamux v0.1.2 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
@@ -76,7 +77,7 @@ require (
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/oklog/run v1.1.0 // indirect
+	github.com/oklog/run v1.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/stackitcloud/stackit-sdk-go/services/authorization v0.8.1
 	github.com/stretchr/testify v1.8.4 // indirect
@@ -84,16 +85,16 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/zclconf/go-cty v1.16.3 // indirect
-	golang.org/x/crypto v0.40.0 // indirect
-	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/crypto v0.41.0 // indirect
+	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/tools v0.35.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250603155806-513f23925822 // indirect
-	google.golang.org/grpc v1.73.0 // indirect
-	google.golang.org/protobuf v1.36.6 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250804133106-a7a43d27e69b // indirect
+	google.golang.org/grpc v1.74.2 // indirect
+	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
 
