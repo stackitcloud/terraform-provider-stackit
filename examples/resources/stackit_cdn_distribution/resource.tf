@@ -3,7 +3,7 @@ resource "stackit_cdn_distribution" "example_distribution" {
   config = {
     backend = {
       type       = "http"
-      origin_url = "mybackend.onstackit.cloud"
+      origin_url = "https://mybackend.onstackit.cloud"
     }
     regions           = ["EU", "US", "ASIA", "AF", "SA"]
     blocked_countries = ["DE", "AT", "CH"]
@@ -12,4 +12,10 @@ resource "stackit_cdn_distribution" "example_distribution" {
       enabled = true
     }
   }
+}
+
+# Only use the import statement, if you want to import an existing cdn distribution
+import {
+  to = stackit_cdn_distribution.import-example
+  id = "${var.project_id},${var.distribution_id}"
 }
