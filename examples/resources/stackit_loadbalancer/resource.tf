@@ -144,7 +144,7 @@ resource "stackit_loadbalancer" "example" {
 
 # Create a new security group to be assigned to the target server.
 resource "stackit_security_group" "target_sg" {
-  project_id  = var.project_id
+  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name        = "target-sg-for-lb-access"
   description = "Allows ingress traffic from the example load balancer."
 }
@@ -152,6 +152,7 @@ resource "stackit_security_group" "target_sg" {
 # Create a rule to allow traffic FROM the load balancer.
 # This rule uses the computed `security_group_id` of the load balancer.
 resource "stackit_security_group_rule" "allow_lb_ingress" {
+  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   security_group_id = stackit_security_group.target_sg.id
   direction         = "ingress"
   protocol          = "tcp"
@@ -166,7 +167,7 @@ resource "stackit_security_group_rule" "allow_lb_ingress" {
 }
 
 resource "stackit_server" "example" {
-  project_id        = var.project_id
+  project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name              = "example-remote-target"
   machine_type      = "c1.1"
   availability_zone = data.stackit_availability_zones.example.names[0]
