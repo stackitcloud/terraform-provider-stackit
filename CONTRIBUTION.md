@@ -121,7 +121,7 @@ To test your changes locally, you have to compile the provider (requires Go 1.24
 
 1. Go to the copied example and initialize Terraform by running `terraform init -reconfigure -upgrade`. This will throw an error ("Failed to query available provider packages") which can be ignored since we are using the local provider build.
    > Note: Terraform will store its resources' states locally. To allow multiple people to use the same resources, check [Setup for multi-person usage](#setup-centralized-terraform-state)
-1. Setup authentication by setting the env var `STACKIT_SERVICE_ACCOUNT_TOKEN` as a valid token (see [Authentication](#authentication) for more details on how to autenticate).
+1. Setup authentication (see [Authentication](#authentication) for more details on how to authenticate).
 1. Run `terraform plan` or `terraform apply` commands.
 1. To debug the terraform provider, execute the following steps:
 	* install the compiled terraform provider to binary path defined in the .terraformrc file

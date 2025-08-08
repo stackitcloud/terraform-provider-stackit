@@ -209,6 +209,9 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"service_account_token": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["service_account_token"],
+				DeprecationMessage: "Authentication via Service Account Token is deprecated and will be removed on December 17, 2025. " +
+					"Please use `service_account_key` or `service_account_key_path` instead. " +
+					"For a smooth transition, refer to our migration guide: https://docs.stackit.cloud/stackit/en/deprecation-plan-for-service-account-access-tokens-and-migration-guide-373293307.html",
 			},
 			"service_account_key_path": schema.StringAttribute{
 				Optional:    true,

@@ -4,7 +4,7 @@ provider "stackit" {
 
 # Authentication
 
-# Token flow
+# Token flow (scheduled for deprecation and will be removed on December 17, 2025)
 provider "stackit" {
   default_region        = "eu01"
   service_account_token = var.service_account_token
