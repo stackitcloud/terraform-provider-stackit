@@ -18,23 +18,23 @@ import (
 )
 
 var (
-	_ datasource.DataSource = &keyRingDataSource{}
+	_ datasource.DataSource = &keyDataSource{}
 )
 
-func NewKeyRingDataSource() datasource.DataSource {
-	return &keyRingDataSource{}
+func NewKeyDataSource() datasource.DataSource {
+	return &keyDataSource{}
 }
 
-type keyRingDataSource struct {
+type keyDataSource struct {
 	client       *kms.APIClient
 	providerData core.ProviderData
 }
 
-func (k *keyRingDataSource) Metadata(ctx context.Context, request datasource.MetadataRequest, response *datasource.MetadataResponse) {
-	response.TypeName = request.ProviderTypeName + "_kms_key_ring"
+func (k *keyDataSource) Metadata(ctx context.Context, request datasource.MetadataRequest, response *datasource.MetadataResponse) {
+	response.TypeName = request.ProviderTypeName + "_kms_key"
 }
 
-func (k *keyRingDataSource) Configure(ctx context.Context, request datasource.ConfigureRequest, response *datasource.ConfigureResponse) {
+func (k *keyDataSource) Configure(ctx context.Context, request datasource.ConfigureRequest, response *datasource.ConfigureResponse) {
 	var ok bool
 	k.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
@@ -47,16 +47,20 @@ func (k *keyRingDataSource) Configure(ctx context.Context, request datasource.Co
 	}
 
 	k.client = apiClient
-	tflog.Info(ctx, "Key ring configured")
+	tflog.Info(ctx, "Key configured")
 }
 
-func (k *keyRingDataSource) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
+func (k *keyDataSource) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":         "KMS Key Ring resource schema.",
-		"description":  "A user chosen description to distinguish multiple key rings.",
-		"display_name": "The display name to distinguish multiple key rings.",
-		"key_ring_id":  "An auto generated unique id which identifies the key ring.",
+		"main":         "KMS Key resource schema. Must have a `region` specified in the provider configuration.",
+		"backend":      "The backend that is used for KMS. Right now, only software is accepted.",
+		"algorithm":    "The encryption algorithm that the key will use to encrypt data",
+		"description":  "A user chosen description to distinguish multiple keys",
+		"display_name": "The display name to distinguish multiple keys",
 		"id":           "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
+		"import_only":  "Specifies if the the key should be import_only",
+		"key_ring_id":  "The ID of the associated key ring",
+		"purpose":      "The purpose for which the key will be used",
 		"project_id":   "STACKIT project ID to which the key ring is associated.",
 		"region_id":    "The STACKIT region name the key ring is located in.",
 	}
@@ -64,6 +68,20 @@ func (k *keyRingDataSource) Schema(ctx context.Context, request datasource.Schem
 	response.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
+			"algorithm": schema.StringAttribute{
+				Description: descriptions["algorithm"],
+				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+			},
+			"backend": schema.StringAttribute{
+				Description: descriptions["backend"],
+				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+			},
 			"description": schema.StringAttribute{
 				Description: descriptions["description"],
 				Optional:    true,
@@ -72,14 +90,23 @@ func (k *keyRingDataSource) Schema(ctx context.Context, request datasource.Schem
 				},
 			},
 			"display_name": schema.StringAttribute{
-				Description: descriptions["description"],
+				Description: descriptions["display_name"],
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
-			"key_ring_id": schema.StringAttribute{
-				Description: descriptions["key_ring_id"],
+			"id": schema.StringAttribute{
+				Description: descriptions["id"],
+				Computed:    true,
+			},
+			"import_only": schema.BoolAttribute{
+				Description: descriptions["id"],
+				Computed:    false,
+				Required:    true,
+			},
+			"key_id": schema.StringAttribute{
+				Description: descriptions["key_id"],
 				Computed:    false,
 				Required:    true,
 				Validators: []validator.String{
@@ -87,9 +114,20 @@ func (k *keyRingDataSource) Schema(ctx context.Context, request datasource.Schem
 					validate.NoSeparator(),
 				},
 			},
-			"id": schema.StringAttribute{
-				Description: descriptions["id"],
-				Computed:    true,
+			"key_ring_id": schema.StringAttribute{
+				Description: descriptions["key_ring_id"],
+				Required:    true,
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
+			},
+			"purpose": schema.StringAttribute{
+				Description: descriptions["purpose"],
+				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Description: descriptions["project_id"],
@@ -108,30 +146,32 @@ func (k *keyRingDataSource) Schema(ctx context.Context, request datasource.Schem
 	}
 }
 
-func (k *keyRingDataSource) Read(ctx context.Context, request datasource.ReadRequest, response *datasource.ReadResponse) {
+func (k *keyDataSource) Read(ctx context.Context, request datasource.ReadRequest, response *datasource.ReadResponse) {
 	var model Model
-
 	diags := request.Config.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := k.providerData.GetRegionWithOverride(model.Region)
+	keyId := model.KeyId.ValueString()
 
 	ctx = tflog.SetField(ctx, "key_ring_id", keyRingId)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "key_id", keyId)
 
-	keyRingResponse, err := k.client.GetKeyRing(ctx, projectId, region, keyRingId).Execute()
+	keyResponse, err := k.client.GetKey(ctx, projectId, region, keyRingId, keyId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
 			&response.Diagnostics,
 			err,
-			"Reading key ring",
-			fmt.Sprintf("Key ring with ID %q does not exist in project %q.", keyRingId, projectId),
+			"Reading key",
+			fmt.Sprintf("Key with ID %q does not exist in project %q.", keyId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
@@ -140,16 +180,15 @@ func (k *keyRingDataSource) Read(ctx context.Context, request datasource.ReadReq
 		return
 	}
 
-	err = mapFields(keyRingResponse, &model, region)
+	err = mapFields(keyResponse, &model, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading key ring", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading key", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-
-	diags = response.State.Set(ctx, &model)
+	diags = response.State.Set(ctx, model)
 	response.Diagnostics.Append(diags...)
 	if response.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Key ring read")
+	tflog.Info(ctx, "Key read")
 }

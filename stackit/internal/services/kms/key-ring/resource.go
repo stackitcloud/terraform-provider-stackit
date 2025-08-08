@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/kms"
+	"github.com/stackitcloud/stackit-sdk-go/services/kms/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
@@ -21,6 +22,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 	"net/http"
 	"strings"
+	"time"
 )
 
 var (
@@ -168,7 +170,13 @@ func (k *keyRingResource) Create(ctx context.Context, request resource.CreateReq
 	keyRingId := *createResponse.Id
 	ctx = tflog.SetField(ctx, "key_ring_id", keyRingId)
 
-	err = mapFields(createResponse, &model, region)
+	waitResp, err := wait.CreateKeyRingWaitHandler(ctx, k.client, projectId, region, keyRingId).SetSleepBeforeWait(5 * time.Second).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating key ring", fmt.Sprintf("Key Ring creation waiting: %v", err))
+		return
+	}
+
+	err = mapFields(waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating key ring", fmt.Sprintf("Processing API payload: %v", err))
 		return
