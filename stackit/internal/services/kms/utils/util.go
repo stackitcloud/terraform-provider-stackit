@@ -22,6 +22,7 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	apiClient, err := kms.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+		return nil
 	}
 
 	return apiClient
