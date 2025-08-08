@@ -1,12 +1,17 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
@@ -374,6 +379,124 @@ func TestBuildInternalTerraformId(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := BuildInternalTerraformId(tt.args.idParts...); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("BuildInternalTerraformId() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCheckListRemoval(t *testing.T) {
+	type model struct {
+		AllowedAddresses types.List `tfsdk:"allowed_addresses"`
+	}
+	tests := []struct {
+		description          string
+		configModelList      types.List
+		planModelList        types.List
+		path                 path.Path
+		listType             attr.Type
+		createEmptyList      bool
+		expectedAdjustedResp bool
+	}{
+		{
+			"config and plan are the same - no change",
+			types.ListValueMust(types.StringType, []attr.Value{
+				types.StringValue("value1"),
+			}),
+			types.ListValueMust(types.StringType, []attr.Value{
+				types.StringValue("value1"),
+			}),
+			path.Root("allowed_addresses"),
+			types.StringType,
+			false,
+			false,
+		},
+		{
+			"list was removed from config",
+			types.ListNull(types.StringType),
+			types.ListValueMust(types.StringType, []attr.Value{
+				types.StringValue("value1"),
+			}),
+			path.Root("allowed_addresses"),
+			types.StringType,
+			false,
+			true,
+		},
+		{
+			"list was added to config",
+			types.ListValueMust(types.StringType, []attr.Value{
+				types.StringValue("value1"),
+			}),
+			types.ListNull(types.StringType),
+			path.Root("allowed_addresses"),
+			types.StringType,
+			false,
+			false,
+		},
+		{
+			"no list provided at all",
+			types.ListNull(types.StringType),
+			types.ListNull(types.StringType),
+			path.Root("allowed_addresses"),
+			types.StringType,
+			false,
+			false,
+		},
+		{
+			"create empty list test - list was removed from config",
+			types.ListNull(types.StringType),
+			types.ListValueMust(types.StringType, []attr.Value{
+				types.StringValue("value1"),
+			}),
+			path.Root("allowed_addresses"),
+			types.StringType,
+			true,
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			// create resp
+			plan := tfsdk.Plan{
+				Schema: schema.Schema{
+					Attributes: map[string]schema.Attribute{
+						"allowed_addresses": schema.ListAttribute{
+							ElementType: basetypes.StringType{},
+						},
+					},
+				},
+			}
+
+			// set input planModelList to plan
+			if diags := plan.Set(context.Background(), model{tt.planModelList}); diags.HasError() {
+				t.Fatalf("cannot create test model: %v", diags)
+			}
+			resp := resource.ModifyPlanResponse{
+				Plan: plan,
+			}
+
+			CheckListRemoval(context.Background(), tt.configModelList, tt.planModelList, tt.path, tt.listType, tt.createEmptyList, &resp)
+			// check targetList
+			var respList types.List
+			resp.Plan.GetAttribute(context.Background(), tt.path, &respList)
+
+			if tt.createEmptyList {
+				emptyList, _ := types.ListValueFrom(context.Background(), tt.listType, []string{})
+				diffEmptyList := cmp.Diff(emptyList, respList)
+				if diffEmptyList != "" {
+					t.Fatalf("an empty list should have been created but was not: %s", diffEmptyList)
+				}
+			}
+
+			// compare planModelList and resp list
+			diff := cmp.Diff(tt.planModelList, respList)
+			if tt.expectedAdjustedResp {
+				if diff == "" {
+					t.Fatalf("plan should be adjusted but was not")
+				}
+			} else {
+				if diff != "" {
+					t.Fatalf("plan should not be adjusted but diff is: %s", diff)
+				}
 			}
 		})
 	}
