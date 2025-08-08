@@ -346,7 +346,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Description: descriptions["region"],
 			},
 			"security_group_id": schema.StringAttribute{
-				Description: "The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT NETWORK AREAS (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.",
+				Description: descriptions["security_group_id"],
 				Computed:    true,
 			},
 		},
