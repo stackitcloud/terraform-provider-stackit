@@ -110,30 +110,34 @@ resource "stackit_loadbalancer" "example" {
   }
 }
 
-# This example shows an advanced setup where the load balancer is in one
+# This example demonstrates an advanced setup where the Load Balancer is in one
 # network and the target server is in another. This requires manual
-# security group configuration.
+# security group configuration using the `disable_security_group_assignment`
+# and `security_group_id` attributes.
 
-# 1. Create a network for the Load Balancer
+# We create two separate networks: one for the load balancer and one for the target.
 resource "stackit_network" "lb_network" {
-  project_id  = var.project_id
-  name        = "lb-network"
+  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name        = "lb-network-example"
   ipv4_prefix = "192.168.1.0/24"
 }
 
-# 2. Create a separate network for the Target Server
 resource "stackit_network" "target_network" {
-  project_id  = var.project_id
-  name        = "target-network"
+  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name        = "target-network-example"
   ipv4_prefix = "192.168.2.0/24"
 }
 
-# 3. Create the Load Balancer and disable automatic security groups
-resource "stackit_loadbalancer" "example_advanced" {
-  project_id = var.project_id
-  name       = "advanced-lb"
+resource "stackit_public_ip" "example" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
 
-  # This is the key setting for manual mode
+resource "stackit_loadbalancer" "example" {
+  project_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name             = "example-advanced-lb"
+  external_address = stackit_public_ip.example.ip
+
+  # Key setting for manual mode: disables automatic security group handling.
   disable_security_group_assignment = true
 
   networks = [{
@@ -141,39 +145,38 @@ resource "stackit_loadbalancer" "example_advanced" {
     role       = "ROLE_LISTENERS_AND_TARGETS"
   }]
 
-  target_pools = [{
-    name        = "cross-network-pool"
-    target_port = 80
-    targets = [{
-      display_name = "remote-target-server"
-      ip           = stackit_server.target_server.network_interfaces[0].ipv4
-    }]
-  }]
-
   listeners = [{
     port        = 80
     protocol    = "PROTOCOL_TCP"
     target_pool = "cross-network-pool"
   }]
+
+  target_pools = [{
+    name        = "cross-network-pool"
+    target_port = 80
+    targets = [{
+      display_name = stackit_server.example.name
+      ip           = stackit_network_interface.nic.ipv4
+    }]
+  }]
 }
 
-# 4. Create a new security group for the target server
+# Create a new security group to be assigned to the target server.
 resource "stackit_security_group" "target_sg" {
   project_id  = var.project_id
   name        = "target-sg-for-lb-access"
-  description = "Allows ingress traffic from the advanced load balancer."
+  description = "Allows ingress traffic from the example load balancer."
 }
 
-# 5. Create a rule to allow traffic FROM the load balancer
-#    This is the core of the manual setup.
+# Create a rule to allow traffic FROM the load balancer.
+# This rule uses the computed `security_group_id` of the load balancer.
 resource "stackit_security_group_rule" "allow_lb_ingress" {
-  project_id        = var.project_id
   security_group_id = stackit_security_group.target_sg.id
   direction         = "ingress"
   protocol          = "tcp"
 
-  # Use the computed security_group_id from the load balancer
-  remote_security_group_id = stackit_loadbalancer.example_advanced.security_group_id
+  # This is the crucial link: it allows traffic from the LB's security group.
+  remote_security_group_id = stackit_loadbalancer.example.security_group_id
 
   port_range = {
     min = 80
@@ -181,22 +184,24 @@ resource "stackit_security_group_rule" "allow_lb_ingress" {
   }
 }
 
-# 6. Create the target server and assign the new security group to it
-resource "stackit_server" "target_server" {
+resource "stackit_server" "example" {
   project_id        = var.project_id
-  name              = "remote-target-server"
+  name              = "example-remote-target"
   machine_type      = "c1.1"
-  availability_zone = "eu01-1"
+  availability_zone = data.stackit_availability_zones.example.names[0]
 
   boot_volume = {
     source_type = "image"
-    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" // e.g., an Ubuntu image ID
+    source_id   = data.stackit_image.example_ubuntu.id
     size        = 10
   }
 
   network_interfaces = [{
-    network_id      = stackit_network.target_network.id
-    security_groups = [stackit_security_group.target_sg.id]
+    network_id = stackit_network.target_network.id
+    # Assign the manually configured security group to the server's NIC.
+    security_groups = [
+      stackit_security_group.target_sg.id
+    ]
   }]
 }
 ```
