@@ -98,15 +98,17 @@ resource "stackit_loadbalancer" "example" {
 
 # We create two separate networks: one for the load balancer and one for the target.
 resource "stackit_network" "lb_network" {
-  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name        = "lb-network-example"
-  ipv4_prefix = "192.168.1.0/24"
+  project_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name             = "lb-network-example"
+  ipv4_prefix      = "192.168.1.0/24"
+  ipv4_nameservers = ["8.8.8.8"]
 }
 
 resource "stackit_network" "target_network" {
-  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name        = "target-network-example"
-  ipv4_prefix = "192.168.2.0/24"
+  project_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name             = "target-network-example"
+  ipv4_prefix      = "192.168.2.0/24"
+  ipv4_nameservers = ["8.8.8.8"]
 }
 
 resource "stackit_public_ip" "example" {
@@ -152,7 +154,7 @@ resource "stackit_security_group" "target_sg" {
 # Create a rule to allow traffic FROM the load balancer.
 # This rule uses the computed `security_group_id` of the load balancer.
 resource "stackit_security_group_rule" "allow_lb_ingress" {
-  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   security_group_id = stackit_security_group.target_sg.id
   direction         = "ingress"
   protocol          = "tcp"
