@@ -46,7 +46,8 @@ import {
 
 ### Optional
 
-- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}. To add a project to a STACKIT Network Area, setting the label `networkArea=<networkAreaID>` is required.
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}.  
+To create a project within a STACKIT Network Area, setting the label `networkArea=<networkAreaID>` is required. This can not be changed after project creation.
 
 ### Read-Only
 
