@@ -7,7 +7,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -156,4 +159,17 @@ func FormatPossibleValues(values ...string) string {
 
 func BuildInternalTerraformId(idParts ...string) types.String {
 	return types.StringValue(strings.Join(idParts, core.Separator))
+}
+
+// If a List was completely removed from the terraform config this is not recognized by terraform.
+// This helper function checks if that is the case and adjusts the plan accordingly.
+func CheckListRemoval(ctx context.Context, configModelList, planModelList types.List, destination path.Path, listType attr.Type, createEmptyList bool, resp *resource.ModifyPlanResponse) {
+	if configModelList.IsNull() && !planModelList.IsNull() {
+		if createEmptyList {
+			emptyList, _ := types.ListValueFrom(ctx, listType, []string{})
+			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, destination, emptyList)...)
+		} else {
+			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, destination, types.ListNull(listType))...)
+		}
+	}
 }
