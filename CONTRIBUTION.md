@@ -22,7 +22,6 @@ Your contribution is welcome! Thank you for your interest in contributing to the
 
 These commands can be executed from the project root:
 
-- `make project-tools`: get the required dependencies
 - `make lint`: lint the code and examples
 - `make generate-docs`: generate terraform documentation
 - `make test`: run unit tests
