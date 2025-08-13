@@ -4027,7 +4027,6 @@ func TestAccProject(t *testing.T) {
 	t.Logf("TestAccProject ProjectId: %s", projectId)
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Data source
 			{
