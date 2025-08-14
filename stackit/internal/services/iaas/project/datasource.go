@@ -166,12 +166,12 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	if model.ProjectId.ValueString() != "" {
 		projectId = model.ProjectId.ValueString()
 	} else if projectResp.ProjectId != nil {
-		projectId = model.ProjectId.ValueString()
+		projectId = *projectResp.ProjectId
 	} else {
 		return fmt.Errorf("project id is not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString())
+	model.Id = utils.BuildInternalTerraformId(projectId)
 	model.ProjectId = types.StringValue(projectId)
 
 	var areaId basetypes.StringValue

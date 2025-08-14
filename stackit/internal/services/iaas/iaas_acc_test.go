@@ -4024,7 +4024,6 @@ func TestAccImageMax(t *testing.T) {
 
 func TestAccProject(t *testing.T) {
 	projectId := testutil.ProjectId
-	t.Logf("TestAccProject ProjectId: %s", projectId)
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
