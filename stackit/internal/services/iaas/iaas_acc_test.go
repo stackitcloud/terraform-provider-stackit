@@ -4022,6 +4022,38 @@ func TestAccImageMax(t *testing.T) {
 	})
 }
 
+func TestAccProject(t *testing.T) {
+	projectId := testutil.ProjectId
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Data source
+			{
+				ConfigVariables: testConfigKeyPairMin,
+				Config: fmt.Sprintf(`
+					%s
+
+					data "stackit_iaas_project" "project" {
+						project_id = %q
+					}
+					`,
+					testutil.IaaSProviderConfig(), testutil.ProjectId,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
+					resource.TestCheckResourceAttr("data.stackit_iaas_project.project", "project_id", projectId),
+					resource.TestCheckResourceAttr("data.stackit_iaas_project.project", "id", projectId),
+					resource.TestCheckResourceAttrSet("data.stackit_iaas_project.project", "area_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_iaas_project.project", "internet_access"),
+					resource.TestCheckResourceAttrSet("data.stackit_iaas_project.project", "state"),
+					resource.TestCheckResourceAttrSet("data.stackit_iaas_project.project", "created_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_iaas_project.project", "updated_at"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckDestroy(s *terraform.State) error {
 	checkFunctions := []func(s *terraform.State) error{
 		testAccCheckNetworkV1Destroy,

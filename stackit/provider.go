@@ -32,6 +32,7 @@ import (
 	iaasNetworkAreaRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearoute"
 	iaasNetworkInterface "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterface"
 	iaasNetworkInterfaceAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterfaceattach"
+	iaasProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/project"
 	iaasPublicIp "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicip"
 	iaasPublicIpAssociate "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicipassociate"
 	iaasPublicIpRanges "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicipranges"
@@ -460,6 +461,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasNetworkAreaRoute.NewNetworkAreaRouteDataSource,
 		iaasNetworkInterface.NewNetworkInterfaceDataSource,
 		iaasVolume.NewVolumeDataSource,
+		iaasProject.NewProjectDataSource,
 		iaasPublicIp.NewPublicIpDataSource,
 		iaasPublicIpRanges.NewPublicIpRangesDataSource,
 		iaasKeyPair.NewKeyPairDataSource,
