@@ -143,7 +143,7 @@ resource "stackit_loadbalancer" "example" {
   disable_security_group_assignment = true
 
   networks = [{
-    network_id = stackit_network.lb_network.id
+    network_id = stackit_network.lb_network.network_id
     role       = "ROLE_LISTENERS_AND_TARGETS"
   }]
 
@@ -176,7 +176,9 @@ resource "stackit_security_group_rule" "allow_lb_ingress" {
   project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   security_group_id = stackit_security_group.target_sg.id
   direction         = "ingress"
-  protocol          = "tcp"
+  protocol = {
+    name = "tcp"
+  }
 
   # This is the crucial link: it allows traffic from the LB's security group.
   remote_security_group_id = stackit_loadbalancer.example.security_group_id
@@ -191,21 +193,23 @@ resource "stackit_server" "example" {
   project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name              = "example-remote-target"
   machine_type      = "c1.1"
-  availability_zone = data.stackit_availability_zones.example.names[0]
+  availability_zone = "eu01-1"
 
   boot_volume = {
     source_type = "image"
-    source_id   = data.stackit_image.example_ubuntu.id
+    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     size        = 10
   }
 
-  network_interfaces = [{
-    network_id = stackit_network.target_network.id
-    # Assign the manually configured security group to the server's NIC.
-    security_groups = [
-      stackit_security_group.target_sg.id
-    ]
-  }]
+  network_interfaces = [
+    stackit_network_interface.nic.network_interface_id
+  ]
+}
+
+resource "stackit_network_interface" "nic" {
+  project_id         = var.project_id
+  network_id         = stackit_network.target_network.network_id
+  security_group_ids = [stackit_security_group.target_sg.security_group_id]
 }
 ```
 
