@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script is used to manage the project, only used for installing the required tools for now
 # Usage: ./project.sh [action]

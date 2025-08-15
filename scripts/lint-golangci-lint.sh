@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This script lints the SDK modules and the internal examples
 # Pre-requisites: golangci-lint
 set -eo pipefail
