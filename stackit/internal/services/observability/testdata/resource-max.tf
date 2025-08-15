@@ -26,6 +26,7 @@ variable "email_to" {}
 variable "opsgenie_api_key" {}
 variable "opsgenie_api_tags" {}
 variable "opsgenie_api_url" {}
+variable "opsgenie_priority" {}
 variable "webhook_configs_url" {}
 variable "ms_teams" {}
 variable "group_by" {}
@@ -114,9 +115,10 @@ resource "stackit_observability_instance" "instance" {
         ]
         opsgenie_configs = [
           {
-            api_key = var.opsgenie_api_key
-            tags    = var.opsgenie_api_tags
-            api_url = var.opsgenie_api_url
+            api_key  = var.opsgenie_api_key
+            tags     = var.opsgenie_api_tags
+            api_url  = var.opsgenie_api_url
+            priority = var.opsgenie_priority
           }
         ]
         webhooks_configs = [
