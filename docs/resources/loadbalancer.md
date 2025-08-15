@@ -174,7 +174,7 @@ resource "stackit_security_group" "target_sg" {
 # This rule uses the computed `security_group_id` of the load balancer.
 resource "stackit_security_group_rule" "allow_lb_ingress" {
   project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  security_group_id = stackit_security_group.target_sg.id
+  security_group_id = stackit_security_group.target_sg.security_group_id
   direction         = "ingress"
   protocol = {
     name = "tcp"
