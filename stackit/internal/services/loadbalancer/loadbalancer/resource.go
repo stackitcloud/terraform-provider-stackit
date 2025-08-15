@@ -724,8 +724,6 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	}
 	loadBalancerName := *createResp.Name
 
-	// Wait for the load balancer to become active.
-	// This single handler is now used for both automatic and manual modes.
 	waitResp, err := wait.CreateLoadBalancerWaitHandler(ctx, r.client, projectId, region, loadBalancerName).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Load balancer creation waiting: %v", err))
