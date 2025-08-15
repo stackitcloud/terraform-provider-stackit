@@ -696,6 +696,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -707,12 +708,14 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
+	// Create a new load balancer
 	createResp, err := r.client.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).XRequestID(uuid.NewString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Calling API: %v", err))
@@ -720,50 +723,22 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	}
 	loadBalancerName := *createResp.Name
 
-	var lb *loadbalancer.LoadBalancer
-
-	if model.DisableSecurityGroupAssignment.ValueBool() {
-		// MANUAL MODE: Manually poll the resource until the security_group_id is available.
-		timeout := 5 * time.Minute
-		ticker := time.NewTicker(5 * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-time.After(timeout):
-				core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("timed out waiting for security_group_id to be populated for load balancer %q", loadBalancerName))
-				return
-			case <-ticker.C:
-				getResp, err := r.client.GetLoadBalancer(ctx, projectId, region, loadBalancerName).Execute()
-				if err != nil {
-					core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("polling for security_group_id: %v", err))
-					return
-				}
-
-				if getResp.TargetSecurityGroup != nil && getResp.TargetSecurityGroup.Id != nil && *getResp.TargetSecurityGroup.Id != "" {
-					lb = getResp
-					goto POLLING_DONE
-				}
-				// The ID is not ready yet, the loop will continue on the next tick.
-			}
-		}
-	POLLING_DONE:
-	} else {
-		// AUTOMATIC MODE: Wait for the load balancer to become active.
-		waitResp, err := wait.CreateLoadBalancerWaitHandler(ctx, r.client, projectId, region, loadBalancerName).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Load balancer creation waiting: %v", err))
-			return
-		}
-		lb = waitResp
+	// Wait for the load balancer to become active.
+	// This single handler is now used for both automatic and manual modes.
+	waitResp, err := wait.CreateLoadBalancerWaitHandler(ctx, r.client, projectId, region, loadBalancerName).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Load balancer creation waiting: %v", err))
+		return
 	}
 
-	err = mapFields(ctx, lb, &model, region)
+	// Map response body to schema
+	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
+	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
