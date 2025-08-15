@@ -24,6 +24,7 @@ func fixtureEmailConfigsModel() basetypes.ListValue {
 			"auth_password": types.StringValue("password"),
 			"auth_username": types.StringValue("username"),
 			"from":          types.StringValue("notification@example.com"),
+			"send_resolved": types.BoolValue(true),
 			"smart_host":    types.StringValue("smtp.example.com"),
 			"to":            types.StringValue("me@example.com"),
 		}),
@@ -33,9 +34,10 @@ func fixtureEmailConfigsModel() basetypes.ListValue {
 func fixtureOpsGenieConfigsModel() basetypes.ListValue {
 	return types.ListValueMust(types.ObjectType{AttrTypes: opsgenieConfigsTypes}, []attr.Value{
 		types.ObjectValueMust(opsgenieConfigsTypes, map[string]attr.Value{
-			"api_key": types.StringValue("key"),
-			"tags":    types.StringValue("tag"),
-			"api_url": types.StringValue("ops.example.com"),
+			"api_key":       types.StringValue("key"),
+			"tags":          types.StringValue("tag"),
+			"api_url":       types.StringValue("ops.example.com"),
+			"send_resolved": types.BoolValue(true),
 		}),
 	})
 }
@@ -43,8 +45,9 @@ func fixtureOpsGenieConfigsModel() basetypes.ListValue {
 func fixtureWebHooksConfigsModel() basetypes.ListValue {
 	return types.ListValueMust(types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{
 		types.ObjectValueMust(webHooksConfigsTypes, map[string]attr.Value{
-			"url":      types.StringValue("http://example.com"),
-			"ms_teams": types.BoolValue(true),
+			"url":           types.StringValue("http://example.com"),
+			"ms_teams":      types.BoolValue(true),
+			"send_resolved": types.BoolValue(true),
 		}),
 	})
 }
@@ -133,6 +136,7 @@ func fixtureEmailConfigsPayload() observability.CreateAlertConfigReceiverPayload
 		AuthPassword: utils.Ptr("password"),
 		AuthUsername: utils.Ptr("username"),
 		From:         utils.Ptr("notification@example.com"),
+		SendResolved: utils.Ptr(true),
 		Smarthost:    utils.Ptr("smtp.example.com"),
 		To:           utils.Ptr("me@example.com"),
 	}
@@ -140,16 +144,18 @@ func fixtureEmailConfigsPayload() observability.CreateAlertConfigReceiverPayload
 
 func fixtureOpsGenieConfigsPayload() observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner {
 	return observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{
-		ApiKey: utils.Ptr("key"),
-		Tags:   utils.Ptr("tag"),
-		ApiUrl: utils.Ptr("ops.example.com"),
+		ApiKey:       utils.Ptr("key"),
+		Tags:         utils.Ptr("tag"),
+		ApiUrl:       utils.Ptr("ops.example.com"),
+		SendResolved: utils.Ptr(true),
 	}
 }
 
 func fixtureWebHooksConfigsPayload() observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner {
 	return observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
-		Url:     utils.Ptr("http://example.com"),
-		MsTeams: utils.Ptr(true),
+		Url:          utils.Ptr("http://example.com"),
+		MsTeams:      utils.Ptr(true),
+		SendResolved: utils.Ptr(true),
 	}
 }
 
@@ -213,6 +219,7 @@ func fixtureEmailConfigsResponse() observability.EmailConfig {
 		AuthPassword: utils.Ptr("password"),
 		AuthUsername: utils.Ptr("username"),
 		From:         utils.Ptr("notification@example.com"),
+		SendResolved: utils.Ptr(true),
 		Smarthost:    utils.Ptr("smtp.example.com"),
 		To:           utils.Ptr("me@example.com"),
 	}
@@ -220,16 +227,18 @@ func fixtureEmailConfigsResponse() observability.EmailConfig {
 
 func fixtureOpsGenieConfigsResponse() observability.OpsgenieConfig {
 	return observability.OpsgenieConfig{
-		ApiKey: utils.Ptr("key"),
-		Tags:   utils.Ptr("tag"),
-		ApiUrl: utils.Ptr("ops.example.com"),
+		ApiKey:       utils.Ptr("key"),
+		Tags:         utils.Ptr("tag"),
+		ApiUrl:       utils.Ptr("ops.example.com"),
+		SendResolved: utils.Ptr(true),
 	}
 }
 
 func fixtureWebHooksConfigsResponse() observability.WebHook {
 	return observability.WebHook{
-		Url:     utils.Ptr("http://example.com"),
-		MsTeams: utils.Ptr(true),
+		Url:          utils.Ptr("http://example.com"),
+		MsTeams:      utils.Ptr(true),
+		SendResolved: utils.Ptr(true),
 	}
 }
 
