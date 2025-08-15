@@ -343,6 +343,7 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 		"targets.display_name":                  "Target display name",
 		"ip":                                    "Target IP",
 		"region":                                "The resource region. If not defined, the provider region is used.",
+		"security_group_id":                     "The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT NETWORK AREAS (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.",
 	}
 
 	resp.Schema = schema.Schema{
