@@ -12,6 +12,7 @@ import (
 
 	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -20,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -202,13 +204,15 @@ var opsgenieConfigsTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.AlertConfig.receivers.webHooksConfigs
 type webHooksConfigsModel struct {
-	Url     types.String `tfsdk:"url"`
-	MsTeams types.Bool   `tfsdk:"ms_teams"`
+	Url        types.String `tfsdk:"url"`
+	MsTeams    types.Bool   `tfsdk:"ms_teams"`
+	GoogleChat types.Bool   `tfsdk:"google_chat"`
 }
 
 var webHooksConfigsTypes = map[string]attr.Type{
-	"url":      types.StringType,
-	"ms_teams": types.BoolType,
+	"url":         types.StringType,
+	"ms_teams":    types.BoolType,
+	"google_chat": types.BoolType,
 }
 
 var routeDescriptions = map[string]string{
@@ -591,6 +595,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 											"auth_password": schema.StringAttribute{
 												Description: "SMTP authentication password.",
 												Optional:    true,
+												Sensitive:   true,
 											},
 											"auth_username": schema.StringAttribute{
 												Description: "SMTP authentication username.",
@@ -649,10 +654,25 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 											"url": schema.StringAttribute{
 												Description: "The endpoint to send HTTP POST requests to. Must be a valid URL",
 												Optional:    true,
+												Sensitive:   true,
 											},
 											"ms_teams": schema.BoolAttribute{
 												Description: "Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.",
 												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(false),
+												Validators: []validator.Bool{
+													boolvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("google_chat")),
+												},
+											},
+											"google_chat": schema.BoolAttribute{
+												Description: "Google Chat webhooks require special handling, set this to true if the webhook is for Google Chat.",
+												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(false),
+												Validators: []validator.Bool{
+													boolvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("ms_teams")),
+												},
 											},
 										},
 									},
@@ -1687,9 +1707,19 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		webhooksConfigList := []attr.Value{}
 		if receiver.WebHookConfigs != nil {
 			for _, webhookConfig := range *receiver.WebHookConfigs {
+				msTeamsValue := types.BoolValue(false)
+				if webhookConfig.MsTeams != nil {
+					msTeamsValue = types.BoolValue(*webhookConfig.MsTeams)
+				}
+				googleChatValue := types.BoolValue(false)
+				if webhookConfig.GoogleChat != nil {
+					googleChatValue = types.BoolValue(*webhookConfig.GoogleChat)
+				}
+
 				webHookConfigsMap := map[string]attr.Value{
-					"url":      types.StringPointerValue(webhookConfig.Url),
-					"ms_teams": types.BoolPointerValue(webhookConfig.MsTeams),
+					"url":         types.StringPointerValue(webhookConfig.Url),
+					"ms_teams":    msTeamsValue,
+					"google_chat": googleChatValue,
 				}
 				webHookConfigsModel, diags := types.ObjectValue(webHooksConfigsTypes, webHookConfigsMap)
 				if diags.HasError() {
@@ -2040,8 +2070,9 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]observa
 			for i := range receiverWebHooksConfigs {
 				webHooksConfig := receiverWebHooksConfigs[i]
 				payloadWebHooksConfigs = append(payloadWebHooksConfigs, observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
-					Url:     conversion.StringValueToPointer(webHooksConfig.Url),
-					MsTeams: conversion.BoolValueToPointer(webHooksConfig.MsTeams),
+					Url:        conversion.StringValueToPointer(webHooksConfig.Url),
+					MsTeams:    conversion.BoolValueToPointer(webHooksConfig.MsTeams),
+					GoogleChat: conversion.BoolValueToPointer(webHooksConfig.GoogleChat),
 				})
 			}
 			receiverPayload.WebHookConfigs = &payloadWebHooksConfigs
