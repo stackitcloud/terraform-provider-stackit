@@ -124,8 +124,9 @@ Optional:
 
 Optional:
 
-- `ms_teams` (Boolean) Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.
-- `url` (String) The endpoint to send HTTP POST requests to. Must be a valid URL
+- `ms_teams` (Boolean) Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams. Default is `false`.
+- `google_chat` (Boolean) Google Chat webhooks require special handling, set this to true if the webhook is for Google Chat. Default is `false`.
+- `url` (String, Sensitive) The endpoint to send HTTP POST requests to. Must be a valid URL
 
 
 
