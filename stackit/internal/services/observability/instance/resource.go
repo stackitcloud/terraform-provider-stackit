@@ -1707,14 +1707,8 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		webhooksConfigList := []attr.Value{}
 		if receiver.WebHookConfigs != nil {
 			for _, webhookConfig := range *receiver.WebHookConfigs {
-				msTeamsValue := types.BoolValue(false)
-				if webhookConfig.MsTeams != nil {
-					msTeamsValue = types.BoolValue(*webhookConfig.MsTeams)
-				}
-				googleChatValue := types.BoolValue(false)
-				if webhookConfig.GoogleChat != nil {
-					googleChatValue = types.BoolValue(*webhookConfig.GoogleChat)
-				}
+				msTeamsValue := types.BoolPointerValue(webhookConfig.MsTeams)
+				googleChatValue := types.BoolPointerValue(webhookConfig.GoogleChat)
 
 				webHookConfigsMap := map[string]attr.Value{
 					"url":         types.StringPointerValue(webhookConfig.Url),
