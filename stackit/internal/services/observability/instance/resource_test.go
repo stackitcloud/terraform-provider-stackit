@@ -151,8 +151,9 @@ func fixtureOpsGenieConfigsPayload() observability.CreateAlertConfigReceiverPayl
 
 func fixtureWebHooksConfigsPayload() observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner {
 	return observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
-		Url:     utils.Ptr("http://example.com"),
-		MsTeams: utils.Ptr(true),
+		Url:        utils.Ptr("http://example.com"),
+		MsTeams:    utils.Ptr(true),
+		GoogleChat: utils.Ptr(true),
 	}
 }
 
@@ -232,8 +233,9 @@ func fixtureOpsGenieConfigsResponse() observability.OpsgenieConfig {
 
 func fixtureWebHooksConfigsResponse() observability.WebHook {
 	return observability.WebHook{
-		Url:     utils.Ptr("http://example.com"),
-		MsTeams: utils.Ptr(true),
+		Url:        utils.Ptr("http://example.com"),
+		MsTeams:    utils.Ptr(true),
+		GoogleChat: utils.Ptr(true),
 	}
 }
 
