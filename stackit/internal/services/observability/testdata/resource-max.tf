@@ -29,6 +29,7 @@ variable "opsgenie_api_url" {}
 variable "opsgenie_priority" {}
 variable "webhook_configs_url" {}
 variable "ms_teams" {}
+variable "google_chat" {}
 variable "group_by" {}
 variable "group_interval" {}
 variable "group_wait" {}
