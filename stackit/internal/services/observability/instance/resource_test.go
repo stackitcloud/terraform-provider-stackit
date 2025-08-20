@@ -44,8 +44,9 @@ func fixtureOpsGenieConfigsModel() basetypes.ListValue {
 func fixtureWebHooksConfigsModel() basetypes.ListValue {
 	return types.ListValueMust(types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{
 		types.ObjectValueMust(webHooksConfigsTypes, map[string]attr.Value{
-			"url":      types.StringValue("http://example.com"),
-			"ms_teams": types.BoolValue(true),
+			"url":         types.StringValue("http://example.com"),
+			"ms_teams":    types.BoolValue(true),
+			"google_chat": types.BoolValue(true),
 		}),
 	})
 }
