@@ -210,6 +210,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 											"auth_password": schema.StringAttribute{
 												Description: "SMTP authentication password.",
 												Computed:    true,
+												Sensitive:   true,
 											},
 											"auth_username": schema.StringAttribute{
 												Description: "SMTP authentication username.",
@@ -262,6 +263,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 											"url": schema.StringAttribute{
 												Description: "The endpoint to send HTTP POST requests to. Must be a valid URL",
 												Computed:    true,
+												Sensitive:   true,
 											},
 											"ms_teams": schema.BoolAttribute{
 												Description: "Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.",
