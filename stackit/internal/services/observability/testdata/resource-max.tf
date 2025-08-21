@@ -126,6 +126,7 @@ resource "stackit_observability_instance" "instance" {
           {
             url      = var.webhook_configs_url
             ms_teams = var.ms_teams
+            google_chat = var.google_chat
           }
         ]
       },
