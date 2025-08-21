@@ -400,18 +400,6 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	metricsRetentionResp, err := d.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get metrics retention: %v", err))
-		return
-	}
-
-	alertConfigResp, err := d.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get alert config: %v", err))
-		return
-	}
-
 	// Map response body to schema
 	err = mapFields(ctx, instanceResp, &model)
 	if err != nil {
@@ -423,6 +411,12 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	plan, err := loadPlanId(ctx, *d.client, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan: %v", err))
 		return
 	}
 
@@ -439,31 +433,48 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	// Map response body to schema
-	err = mapMetricsRetentionField(metricsRetentionResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
-		return
+	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
+		metricsRetentionResp, err := d.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get metrics retention: %v", err))
+			return
+		}
+		// Map response body to schema
+		err = mapMetricsRetentionField(metricsRetentionResp, &model)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
+			return
+		}
+		// Set state to fully populated data
+		diags := setMetricsRetentions(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
-	// Set state to fully populated data
-	diags = setMetricsRetentions(ctx, &resp.State, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	// There are plans where no alert matchers and receivers are present e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetAlertMatchers() != 0 && plan.GetAlertReceivers() != 0 {
+		alertConfigResp, err := d.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get alert config: %v", err))
+			return
+		}
+		// Map response body to schema
+		err = mapAlertConfigField(ctx, alertConfigResp, &model)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
+			return
+		}
+
+		// Set state to fully populated data
+		diags = setAlertConfig(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
-	err = mapAlertConfigField(ctx, alertConfigResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
-		return
-	}
-
-	// Set state to fully populated data
-	diags = setAlertConfig(ctx, &resp.State, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	tflog.Info(ctx, "Observability instance read")
 }
