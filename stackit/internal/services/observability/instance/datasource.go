@@ -267,6 +267,10 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 												Description: "Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.",
 												Computed:    true,
 											},
+											"google_chat": schema.BoolAttribute{
+												Description: "Google Chat webhooks require special handling, set this to true if the webhook is for Google Chat.",
+												Computed:    true,
+											},
 										},
 									},
 								},
