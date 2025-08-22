@@ -2246,7 +2246,7 @@ func (v webhookConfigMutuallyExclusive) MarkdownDescription(ctx context.Context)
 	return v.Description(ctx)
 }
 
-func (v webhookConfigMutuallyExclusive) ValidateObject(ctx context.Context, req validator.ObjectRequest, resp *validator.ObjectResponse) { //nolint:gocritic // req parameter signature required by validator.Object interface
+func (v webhookConfigMutuallyExclusive) ValidateObject(_ context.Context, req validator.ObjectRequest, resp *validator.ObjectResponse) { //nolint:gocritic // req parameter signature required by validator.Object interface
 	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
 		return
 	}
