@@ -131,7 +131,7 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig["alert_rule_expression"] = config.StringVariable(alert_rule_expression_updated)
 	tempConfig["logalertgroup_interval"] = config.StringVariable("1h")
 	tempConfig["logalertgroup_expression"] = config.StringVariable(logalertgroup_expression_updated)
-	tempConfig["webhook_configs_url"] = config.StringVariable("https://chat.googleapis.com/v1/spaces/AAAAA/messages?key=example-key&token=example-token")
+	tempConfig["webhook_configs_url"] = config.StringVariable("https://chat.googleapis.com/api")
 	tempConfig["ms_teams"] = config.StringVariable("false")
 	tempConfig["google_chat"] = config.StringVariable("true")
 	return tempConfig

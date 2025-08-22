@@ -12,7 +12,6 @@ import (
 
 	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -650,6 +649,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 										listvalidator.SizeAtLeast(1),
 									},
 									NestedObject: schema.NestedAttributeObject{
+										Validators: []validator.Object{
+											WebhookConfigMutuallyExclusive(),
+										},
 										Attributes: map[string]schema.Attribute{
 											"url": schema.StringAttribute{
 												Description: "The endpoint to send HTTP POST requests to. Must be a valid URL",
@@ -661,18 +663,12 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 												Optional:    true,
 												Computed:    true,
 												Default:     booldefault.StaticBool(false),
-												Validators: []validator.Bool{
-													boolvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("google_chat")),
-												},
 											},
 											"google_chat": schema.BoolAttribute{
 												Description: "Google Chat webhooks require special handling, set this to true if the webhook is for Google Chat.",
 												Optional:    true,
 												Computed:    true,
 												Default:     booldefault.StaticBool(false),
-												Validators: []validator.Bool{
-													boolvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("ms_teams")),
-												},
 											},
 										},
 									},
@@ -2238,4 +2234,52 @@ func setMetricsRetentions(ctx context.Context, state *tfsdk.State, model *Model)
 
 func setAlertConfig(ctx context.Context, state *tfsdk.State, model *Model) diag.Diagnostics {
 	return state.SetAttribute(ctx, path.Root("alert_config"), model.AlertConfig)
+}
+
+type webhookConfigMutuallyExclusive struct{}
+
+func (v webhookConfigMutuallyExclusive) Description(_ context.Context) string {
+	return "ms_teams and google_chat cannot both be true"
+}
+
+func (v webhookConfigMutuallyExclusive) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v webhookConfigMutuallyExclusive) ValidateObject(ctx context.Context, req validator.ObjectRequest, resp *validator.ObjectResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	attributes := req.ConfigValue.Attributes()
+
+	msTeamsAttr, msTeamsExists := attributes["ms_teams"]
+	googleChatAttr, googleChatExists := attributes["google_chat"]
+
+	if !msTeamsExists || !googleChatExists {
+		return
+	}
+
+	if msTeamsAttr.IsNull() || msTeamsAttr.IsUnknown() || googleChatAttr.IsNull() || googleChatAttr.IsUnknown() {
+		return
+	}
+
+	msTeamsValue, ok1 := msTeamsAttr.(types.Bool)
+	googleChatValue, ok2 := googleChatAttr.(types.Bool)
+
+	if !ok1 || !ok2 {
+		return
+	}
+
+	if msTeamsValue.ValueBool() && googleChatValue.ValueBool() {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid Webhook Configuration",
+			"Both ms_teams and google_chat cannot be set to true at the same time. Only one can be true.",
+		)
+	}
+}
+
+func WebhookConfigMutuallyExclusive() validator.Object {
+	return webhookConfigMutuallyExclusive{}
 }
