@@ -19,7 +19,7 @@ resource "stackit_server" "user-data-from-file" {
     source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   }
   name         = "example-server"
-  machine_type = "g1.1"
+  machine_type = "g2i.1"
   keypair_name = stackit_key_pair.keypair.name
   user_data    = file("${path.module}/cloud-init.yaml")
 }
@@ -36,7 +36,7 @@ resource "stackit_server" "boot-from-volume" {
     source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   }
   availability_zone = "eu01-1"
-  machine_type      = "g1.1"
+  machine_type      = "g2i.1"
   keypair_name      = "example-keypair"
 }
 ` + "\n```" + `
@@ -62,7 +62,7 @@ resource "stackit_server" "boot-from-volume" {
     source_id   = stackit_volume.example-volume.volume_id
   }
   availability_zone = "eu01-1"
-  machine_type      = "g1.1"
+  machine_type      = "g2i.1"
   keypair_name = stackit_key_pair.keypair.name
 }
 ` + "\n```" + `
@@ -103,7 +103,7 @@ resource "stackit_server" "server-with-network" {
     source_type = "image"
     source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   }
-  machine_type = "g1.1"
+  machine_type = "g2i.1"
   keypair_name = stackit_key_pair.keypair.name
   network_interfaces = [
     stackit_network_interface.nic.network_interface_id
@@ -135,7 +135,7 @@ resource "stackit_server" "server-with-volume" {
     source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   }
   availability_zone = "eu01-1"
-  machine_type      = "g1.1"
+  machine_type      = "g2i.1"
   keypair_name = stackit_key_pair.keypair.name
 }
 
@@ -156,7 +156,7 @@ resource "stackit_server" "user-data" {
     source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   }
   name         = "example-server"
-  machine_type = "g1.1"
+  machine_type = "g2i.1"
   keypair_name = stackit_key_pair.keypair.name
   user_data    = "#!/bin/bash\n/bin/su"
 }
@@ -169,7 +169,7 @@ resource "stackit_server" "user-data-from-file" {
     source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   }
   name         = "example-server"
-  machine_type = "g1.1"
+  machine_type = "g2i.1"
   keypair_name = stackit_key_pair.keypair.name
   user_data    = file("${path.module}/cloud-init.yaml")
 }
