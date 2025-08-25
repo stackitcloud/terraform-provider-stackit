@@ -219,6 +219,10 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 												Description: "The sender email address. Must be a valid email address",
 												Computed:    true,
 											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
+												Computed:    true,
+											},
 											"smart_host": schema.StringAttribute{
 												Description: "The SMTP host through which emails are sent.",
 												Computed:    true,
@@ -247,6 +251,10 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 												Description: "Comma separated list of tags attached to the notifications.",
 												Computed:    true,
 											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
+												Computed:    true,
+											},
 										},
 									},
 								},
@@ -261,6 +269,10 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 											},
 											"ms_teams": schema.BoolAttribute{
 												Description: "Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.",
+												Computed:    true,
+											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
 												Computed:    true,
 											},
 										},
