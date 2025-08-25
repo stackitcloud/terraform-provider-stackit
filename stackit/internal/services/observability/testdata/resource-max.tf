@@ -29,6 +29,7 @@ variable "opsgenie_api_url" {}
 variable "opsgenie_priority" {}
 variable "webhook_configs_url" {}
 variable "ms_teams" {}
+variable "google_chat" {}
 variable "group_by" {}
 variable "group_interval" {}
 variable "group_wait" {}
@@ -125,6 +126,7 @@ resource "stackit_observability_instance" "instance" {
           {
             url      = var.webhook_configs_url
             ms_teams = var.ms_teams
+            google_chat = var.google_chat
           }
         ]
       },

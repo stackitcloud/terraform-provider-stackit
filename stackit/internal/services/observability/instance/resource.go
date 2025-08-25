@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -202,13 +203,15 @@ var opsgenieConfigsTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.AlertConfig.receivers.webHooksConfigs
 type webHooksConfigsModel struct {
-	Url     types.String `tfsdk:"url"`
-	MsTeams types.Bool   `tfsdk:"ms_teams"`
+	Url        types.String `tfsdk:"url"`
+	MsTeams    types.Bool   `tfsdk:"ms_teams"`
+	GoogleChat types.Bool   `tfsdk:"google_chat"`
 }
 
 var webHooksConfigsTypes = map[string]attr.Type{
-	"url":      types.StringType,
-	"ms_teams": types.BoolType,
+	"url":         types.StringType,
+	"ms_teams":    types.BoolType,
+	"google_chat": types.BoolType,
 }
 
 var routeDescriptions = map[string]string{
@@ -591,6 +594,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 											"auth_password": schema.StringAttribute{
 												Description: "SMTP authentication password.",
 												Optional:    true,
+												Sensitive:   true,
 											},
 											"auth_username": schema.StringAttribute{
 												Description: "SMTP authentication username.",
@@ -645,14 +649,26 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 										listvalidator.SizeAtLeast(1),
 									},
 									NestedObject: schema.NestedAttributeObject{
+										Validators: []validator.Object{
+											WebhookConfigMutuallyExclusive(),
+										},
 										Attributes: map[string]schema.Attribute{
 											"url": schema.StringAttribute{
 												Description: "The endpoint to send HTTP POST requests to. Must be a valid URL",
 												Optional:    true,
+												Sensitive:   true,
 											},
 											"ms_teams": schema.BoolAttribute{
 												Description: "Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.",
 												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(false),
+											},
+											"google_chat": schema.BoolAttribute{
+												Description: "Google Chat webhooks require special handling, set this to true if the webhook is for Google Chat.",
+												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(false),
 											},
 										},
 									},
@@ -1687,9 +1703,13 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		webhooksConfigList := []attr.Value{}
 		if receiver.WebHookConfigs != nil {
 			for _, webhookConfig := range *receiver.WebHookConfigs {
+				msTeamsValue := types.BoolPointerValue(webhookConfig.MsTeams)
+				googleChatValue := types.BoolPointerValue(webhookConfig.GoogleChat)
+
 				webHookConfigsMap := map[string]attr.Value{
-					"url":      types.StringPointerValue(webhookConfig.Url),
-					"ms_teams": types.BoolPointerValue(webhookConfig.MsTeams),
+					"url":         types.StringPointerValue(webhookConfig.Url),
+					"ms_teams":    msTeamsValue,
+					"google_chat": googleChatValue,
 				}
 				webHookConfigsModel, diags := types.ObjectValue(webHooksConfigsTypes, webHookConfigsMap)
 				if diags.HasError() {
@@ -2040,8 +2060,9 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]observa
 			for i := range receiverWebHooksConfigs {
 				webHooksConfig := receiverWebHooksConfigs[i]
 				payloadWebHooksConfigs = append(payloadWebHooksConfigs, observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
-					Url:     conversion.StringValueToPointer(webHooksConfig.Url),
-					MsTeams: conversion.BoolValueToPointer(webHooksConfig.MsTeams),
+					Url:        conversion.StringValueToPointer(webHooksConfig.Url),
+					MsTeams:    conversion.BoolValueToPointer(webHooksConfig.MsTeams),
+					GoogleChat: conversion.BoolValueToPointer(webHooksConfig.GoogleChat),
 				})
 			}
 			receiverPayload.WebHookConfigs = &payloadWebHooksConfigs
@@ -2213,4 +2234,52 @@ func setMetricsRetentions(ctx context.Context, state *tfsdk.State, model *Model)
 
 func setAlertConfig(ctx context.Context, state *tfsdk.State, model *Model) diag.Diagnostics {
 	return state.SetAttribute(ctx, path.Root("alert_config"), model.AlertConfig)
+}
+
+type webhookConfigMutuallyExclusive struct{}
+
+func (v webhookConfigMutuallyExclusive) Description(_ context.Context) string {
+	return "ms_teams and google_chat cannot both be true"
+}
+
+func (v webhookConfigMutuallyExclusive) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v webhookConfigMutuallyExclusive) ValidateObject(_ context.Context, req validator.ObjectRequest, resp *validator.ObjectResponse) { //nolint:gocritic // req parameter signature required by validator.Object interface
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	attributes := req.ConfigValue.Attributes()
+
+	msTeamsAttr, msTeamsExists := attributes["ms_teams"]
+	googleChatAttr, googleChatExists := attributes["google_chat"]
+
+	if !msTeamsExists || !googleChatExists {
+		return
+	}
+
+	if msTeamsAttr.IsNull() || msTeamsAttr.IsUnknown() || googleChatAttr.IsNull() || googleChatAttr.IsUnknown() {
+		return
+	}
+
+	msTeamsValue, ok1 := msTeamsAttr.(types.Bool)
+	googleChatValue, ok2 := googleChatAttr.(types.Bool)
+
+	if !ok1 || !ok2 {
+		return
+	}
+
+	if msTeamsValue.ValueBool() && googleChatValue.ValueBool() {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid Webhook Configuration",
+			"Both ms_teams and google_chat cannot be set to true at the same time. Only one can be true.",
+		)
+	}
+}
+
+func WebhookConfigMutuallyExclusive() validator.Object {
+	return webhookConfigMutuallyExclusive{}
 }

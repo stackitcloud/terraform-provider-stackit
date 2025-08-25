@@ -44,8 +44,9 @@ func fixtureOpsGenieConfigsModel() basetypes.ListValue {
 func fixtureWebHooksConfigsModel() basetypes.ListValue {
 	return types.ListValueMust(types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{
 		types.ObjectValueMust(webHooksConfigsTypes, map[string]attr.Value{
-			"url":      types.StringValue("http://example.com"),
-			"ms_teams": types.BoolValue(true),
+			"url":         types.StringValue("http://example.com"),
+			"ms_teams":    types.BoolValue(true),
+			"google_chat": types.BoolValue(true),
 		}),
 	})
 }
@@ -150,8 +151,9 @@ func fixtureOpsGenieConfigsPayload() observability.CreateAlertConfigReceiverPayl
 
 func fixtureWebHooksConfigsPayload() observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner {
 	return observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
-		Url:     utils.Ptr("http://example.com"),
-		MsTeams: utils.Ptr(true),
+		Url:        utils.Ptr("http://example.com"),
+		MsTeams:    utils.Ptr(true),
+		GoogleChat: utils.Ptr(true),
 	}
 }
 
@@ -231,8 +233,9 @@ func fixtureOpsGenieConfigsResponse() observability.OpsgenieConfig {
 
 func fixtureWebHooksConfigsResponse() observability.WebHook {
 	return observability.WebHook{
-		Url:     utils.Ptr("http://example.com"),
-		MsTeams: utils.Ptr(true),
+		Url:        utils.Ptr("http://example.com"),
+		MsTeams:    utils.Ptr(true),
+		GoogleChat: utils.Ptr(true),
 	}
 }
 

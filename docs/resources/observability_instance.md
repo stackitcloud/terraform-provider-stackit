@@ -101,7 +101,7 @@ Optional:
 Optional:
 
 - `auth_identity` (String) SMTP authentication information. Must be a valid email address
-- `auth_password` (String) SMTP authentication password.
+- `auth_password` (String, Sensitive) SMTP authentication password.
 - `auth_username` (String) SMTP authentication username.
 - `from` (String) The sender email address. Must be a valid email address
 - `smart_host` (String) The SMTP host through which emails are sent.
@@ -124,8 +124,9 @@ Optional:
 
 Optional:
 
+- `google_chat` (Boolean) Google Chat webhooks require special handling, set this to true if the webhook is for Google Chat.
 - `ms_teams` (Boolean) Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.
-- `url` (String) The endpoint to send HTTP POST requests to. Must be a valid URL
+- `url` (String, Sensitive) The endpoint to send HTTP POST requests to. Must be a valid URL
 
 
 

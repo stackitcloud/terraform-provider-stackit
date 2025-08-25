@@ -87,6 +87,7 @@ var testConfigVarsMax = config.Variables{
 	"opsgenie_priority":                      config.StringVariable("P3"),
 	"webhook_configs_url":                    config.StringVariable("https://example.com"),
 	"ms_teams":                               config.StringVariable("true"),
+	"google_chat":                            config.StringVariable("false"),
 	"group_by":                               config.StringVariable("alertname"),
 	"group_interval":                         config.StringVariable("10m"),
 	"group_wait":                             config.StringVariable("1m"),
@@ -130,6 +131,9 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig["alert_rule_expression"] = config.StringVariable(alert_rule_expression_updated)
 	tempConfig["logalertgroup_interval"] = config.StringVariable("1h")
 	tempConfig["logalertgroup_expression"] = config.StringVariable(logalertgroup_expression_updated)
+	tempConfig["webhook_configs_url"] = config.StringVariable("https://chat.googleapis.com/api")
+	tempConfig["ms_teams"] = config.StringVariable("false")
+	tempConfig["google_chat"] = config.StringVariable("true")
 	return tempConfig
 }
 
@@ -510,6 +514,7 @@ func TestAccResourceMax(t *testing.T) {
 
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.url", testutil.ConvertConfigVariable(testConfigVarsMax["webhook_configs_url"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.ms_teams", testutil.ConvertConfigVariable(testConfigVarsMax["ms_teams"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.google_chat", testutil.ConvertConfigVariable(testConfigVarsMax["google_chat"])),
 
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.group_by.0", testutil.ConvertConfigVariable(testConfigVarsMax["group_by"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.group_interval", testutil.ConvertConfigVariable(testConfigVarsMax["group_interval"])),
@@ -672,6 +677,7 @@ func TestAccResourceMax(t *testing.T) {
 
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.url", testutil.ConvertConfigVariable(testConfigVarsMax["webhook_configs_url"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.ms_teams", testutil.ConvertConfigVariable(testConfigVarsMax["ms_teams"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.google_chat", testutil.ConvertConfigVariable(testConfigVarsMax["google_chat"])),
 
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.group_by.0", testutil.ConvertConfigVariable(testConfigVarsMax["group_by"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.group_interval", testutil.ConvertConfigVariable(testConfigVarsMax["group_interval"])),
@@ -893,8 +899,9 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.api_url", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_url"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.opsgenie_configs.0.priority", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_priority"])),
 
-					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.url", testutil.ConvertConfigVariable(testConfigVarsMax["webhook_configs_url"])),
-					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.ms_teams", testutil.ConvertConfigVariable(testConfigVarsMax["ms_teams"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.url", testutil.ConvertConfigVariable(configVarsMaxUpdated()["webhook_configs_url"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.ms_teams", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ms_teams"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.receivers.0.webhooks_configs.0.google_chat", testutil.ConvertConfigVariable(configVarsMaxUpdated()["google_chat"])),
 
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.group_by.0", testutil.ConvertConfigVariable(testConfigVarsMax["group_by"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.group_interval", testutil.ConvertConfigVariable(testConfigVarsMax["group_interval"])),
