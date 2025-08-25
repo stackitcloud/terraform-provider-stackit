@@ -69,9 +69,9 @@ var testConfigVarsMax = config.Variables{
 	"alert_annotation": config.StringVariable("annotation1"),
 	"alert_interval":   config.StringVariable("5h"),
 	// max instance
-	"metrics_retention_days":                 config.StringVariable("30"),
-	"metrics_retention_days_5m_downsampling": config.StringVariable("10"),
-	"metrics_retention_days_1h_downsampling": config.StringVariable("5"),
+	"metrics_retention_days":                 config.StringVariable("90"),
+	"metrics_retention_days_5m_downsampling": config.StringVariable("90"),
+	"metrics_retention_days_1h_downsampling": config.StringVariable("90"),
 	"instance_acl_1":                         config.StringVariable("1.2.3.4/32"),
 	"instance_acl_2":                         config.StringVariable("111.222.111.222/32"),
 	"receiver_name":                          config.StringVariable("OpsGenieReceiverInfo"),

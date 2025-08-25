@@ -18,9 +18,9 @@ resource "stackit_observability_instance" "example" {
   name                                   = "example-instance"
   plan_name                              = "Observability-Monitoring-Medium-EU01"
   acl                                    = ["1.1.1.1/32", "2.2.2.2/32"]
-  metrics_retention_days                 = 30
-  metrics_retention_days_5m_downsampling = 10
-  metrics_retention_days_1h_downsampling = 5
+  metrics_retention_days                 = 90
+  metrics_retention_days_5m_downsampling = 90
+  metrics_retention_days_1h_downsampling = 90
 }
 
 # Only use the import statement, if you want to import an existing observability instance
@@ -43,9 +43,9 @@ import {
 
 - `acl` (Set of String) The access control list for this instance. Each entry is an IP address range that is permitted to access, in CIDR notation.
 - `alert_config` (Attributes) Alert configuration for the instance. (see [below for nested schema](#nestedatt--alert_config))
-- `metrics_retention_days` (Number) Specifies for how many days the raw metrics are kept.
-- `metrics_retention_days_1h_downsampling` (Number) Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `0` (disabled).
-- `metrics_retention_days_5m_downsampling` (Number) Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `0` (disabled).
+- `metrics_retention_days` (Number) Specifies for how many days the raw metrics are kept. Default is set to `90`.
+- `metrics_retention_days_1h_downsampling` (Number) Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `90`.
+- `metrics_retention_days_5m_downsampling` (Number) Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `90`.
 - `parameters` (Map of String) Additional parameters.
 
 ### Read-Only

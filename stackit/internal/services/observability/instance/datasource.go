@@ -133,15 +133,15 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Sensitive:   true,
 			},
 			"metrics_retention_days": schema.Int64Attribute{
-				Description: "Specifies for how many days the raw metrics are kept.",
+				Description: "Specifies for how many days the raw metrics are kept. Default is set to `90`.",
 				Computed:    true,
 			},
 			"metrics_retention_days_5m_downsampling": schema.Int64Attribute{
-				Description: "Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `0` (disabled).",
+				Description: "Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `90`.",
 				Computed:    true,
 			},
 			"metrics_retention_days_1h_downsampling": schema.Int64Attribute{
-				Description: "Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `0` (disabled).",
+				Description: "Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `90`.",
 				Computed:    true,
 			},
 			"metrics_url": schema.StringAttribute{
