@@ -187,15 +187,17 @@ var emailConfigsTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.AlertConfig.receivers.opsGenieConfigs
 type opsgenieConfigsModel struct {
-	ApiKey types.String `tfsdk:"api_key"`
-	ApiUrl types.String `tfsdk:"api_url"`
-	Tags   types.String `tfsdk:"tags"`
+	ApiKey   types.String `tfsdk:"api_key"`
+	ApiUrl   types.String `tfsdk:"api_url"`
+	Tags     types.String `tfsdk:"tags"`
+	Priority types.String `tfsdk:"priority"`
 }
 
 var opsgenieConfigsTypes = map[string]attr.Type{
-	"api_key": types.StringType,
-	"api_url": types.StringType,
-	"tags":    types.StringType,
+	"api_key":  types.StringType,
+	"api_url":  types.StringType,
+	"tags":     types.StringType,
+	"priority": types.StringType,
 }
 
 // Struct corresponding to Model.AlertConfig.receivers.webHooksConfigs
@@ -627,6 +629,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 											},
 											"tags": schema.StringAttribute{
 												Description: "Comma separated list of tags attached to the notifications.",
+												Optional:    true,
+											},
+											"priority": schema.StringAttribute{
+												Description: "Priority of the alert. " + utils.FormatPossibleValues("P1", "P2", "P3", "P4", "P5"),
 												Optional:    true,
 											},
 										},
@@ -1665,9 +1671,10 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		if receiver.OpsgenieConfigs != nil {
 			for _, opsgenieConfig := range *receiver.OpsgenieConfigs {
 				opsGenieConfigMap := map[string]attr.Value{
-					"api_key": types.StringPointerValue(opsgenieConfig.ApiKey),
-					"api_url": types.StringPointerValue(opsgenieConfig.ApiUrl),
-					"tags":    types.StringPointerValue(opsgenieConfig.Tags),
+					"api_key":  types.StringPointerValue(opsgenieConfig.ApiKey),
+					"api_url":  types.StringPointerValue(opsgenieConfig.ApiUrl),
+					"tags":     types.StringPointerValue(opsgenieConfig.Tags),
+					"priority": types.StringPointerValue(opsgenieConfig.Priority),
 				}
 				opsGenieConfigModel, diags := types.ObjectValue(opsgenieConfigsTypes, opsGenieConfigMap)
 				if diags.HasError() {
@@ -2014,9 +2021,10 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]observa
 			for i := range opsgenieConfigs {
 				opsgenieConfig := opsgenieConfigs[i]
 				payloadOpsGenieConfigs = append(payloadOpsGenieConfigs, observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{
-					ApiKey: conversion.StringValueToPointer(opsgenieConfig.ApiKey),
-					ApiUrl: conversion.StringValueToPointer(opsgenieConfig.ApiUrl),
-					Tags:   conversion.StringValueToPointer(opsgenieConfig.Tags),
+					ApiKey:   conversion.StringValueToPointer(opsgenieConfig.ApiKey),
+					ApiUrl:   conversion.StringValueToPointer(opsgenieConfig.ApiUrl),
+					Tags:     conversion.StringValueToPointer(opsgenieConfig.Tags),
+					Priority: conversion.StringValueToPointer(opsgenieConfig.Priority),
 				})
 			}
 			receiverPayload.OpsgenieConfigs = &payloadOpsGenieConfigs

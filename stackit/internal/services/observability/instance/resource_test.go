@@ -33,9 +33,10 @@ func fixtureEmailConfigsModel() basetypes.ListValue {
 func fixtureOpsGenieConfigsModel() basetypes.ListValue {
 	return types.ListValueMust(types.ObjectType{AttrTypes: opsgenieConfigsTypes}, []attr.Value{
 		types.ObjectValueMust(opsgenieConfigsTypes, map[string]attr.Value{
-			"api_key": types.StringValue("key"),
-			"tags":    types.StringValue("tag"),
-			"api_url": types.StringValue("ops.example.com"),
+			"api_key":  types.StringValue("key"),
+			"tags":     types.StringValue("tag"),
+			"api_url":  types.StringValue("ops.example.com"),
+			"priority": types.StringValue("P3"),
 		}),
 	})
 }
@@ -140,9 +141,10 @@ func fixtureEmailConfigsPayload() observability.CreateAlertConfigReceiverPayload
 
 func fixtureOpsGenieConfigsPayload() observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner {
 	return observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{
-		ApiKey: utils.Ptr("key"),
-		Tags:   utils.Ptr("tag"),
-		ApiUrl: utils.Ptr("ops.example.com"),
+		ApiKey:   utils.Ptr("key"),
+		Tags:     utils.Ptr("tag"),
+		ApiUrl:   utils.Ptr("ops.example.com"),
+		Priority: utils.Ptr("P3"),
 	}
 }
 
@@ -220,9 +222,10 @@ func fixtureEmailConfigsResponse() observability.EmailConfig {
 
 func fixtureOpsGenieConfigsResponse() observability.OpsgenieConfig {
 	return observability.OpsgenieConfig{
-		ApiKey: utils.Ptr("key"),
-		Tags:   utils.Ptr("tag"),
-		ApiUrl: utils.Ptr("ops.example.com"),
+		ApiKey:   utils.Ptr("key"),
+		Tags:     utils.Ptr("tag"),
+		ApiUrl:   utils.Ptr("ops.example.com"),
+		Priority: utils.Ptr("P3"),
 	}
 }
 
