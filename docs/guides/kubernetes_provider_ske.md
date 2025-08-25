@@ -32,7 +32,7 @@ This guide outlines the process of utilizing the [HashiCorp Kubernetes provider]
       node_pools = [
         {
           name               = "example-node-pool"
-          machine_type       = "g1.3"
+          machine_type       = "g2i.4"
           minimum            = 1
           maximum            = 2
           availability_zones = ["eu01-1"]
