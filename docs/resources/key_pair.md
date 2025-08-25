@@ -20,7 +20,7 @@ description: |-
       source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     }
     availability_zone = "eu01-1"
-    machine_type      = "g1.1"
+    machine_type      = "g2i.1"
     keypair_name      = "example-key-pair"
   }
 ---
@@ -47,7 +47,7 @@ resource "stackit_server" "example-server" {
     source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   }
   availability_zone = "eu01-1"
-  machine_type      = "g1.1"
+  machine_type      = "g2i.1"
   keypair_name      = "example-key-pair"
 }
 

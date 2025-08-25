@@ -22,7 +22,7 @@ description: |-
     }
     affinity_group    = stackit_affinity_group.affinity-group.affinity_group_id
     availability_zone = "eu01-1"
-    machine_type      = "g1.1"
+    machine_type      = "g2i.1"
   }
   
   
@@ -61,7 +61,7 @@ resource "stackit_server" "example-server" {
   }
   affinity_group    = stackit_affinity_group.affinity-group.affinity_group_id
   availability_zone = "eu01-1"
-  machine_type      = "g1.1"
+  machine_type      = "g2i.1"
 }
 
 ```
