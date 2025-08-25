@@ -632,7 +632,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 												Optional:    true,
 											},
 											"priority": schema.StringAttribute{
-												Description: "Priority of the alert. " + utils.FormatPossibleValues([]string{"P1", "P2", "P3", "P4", "P5"}...),
+												Description: "Priority of the alert. " + utils.FormatPossibleValues("P1", "P2", "P3", "P4", "P5"),
 												Optional:    true,
 											},
 										},
