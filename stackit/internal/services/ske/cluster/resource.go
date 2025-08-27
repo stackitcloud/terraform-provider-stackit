@@ -372,6 +372,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.",
 				Computed:    true,
 				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"pod_address_ranges": schema.ListAttribute{
 				Description: "The network ranges (in CIDR notation) used by pods of the cluster.",
