@@ -296,16 +296,6 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 								Description: "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .",
 								Computed:    true,
 							},
-							"match": schema.MapAttribute{
-								Description: "A set of equality matchers an alert has to fulfill to match the node.",
-								Computed:    true,
-								ElementType: types.StringType,
-							},
-							"match_regex": schema.MapAttribute{
-								Description: "A set of regex-matchers an alert has to fulfill to match the node.",
-								Computed:    true,
-								ElementType: types.StringType,
-							},
 							"receiver": schema.StringAttribute{
 								Description: "The name of the receiver to route the alerts to.",
 								Computed:    true,
