@@ -16,6 +16,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -46,13 +47,18 @@ type machineTypeDataSource struct {
 	client *iaas.APIClient
 }
 
-func (m *machineTypeDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *machineTypeDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_machine_type"
 }
 
-func (m *machineTypeDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *machineTypeDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
+		return
+	}
+
+	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_machine_type", "datasource")
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -60,14 +66,14 @@ func (m *machineTypeDataSource) Configure(ctx context.Context, req datasource.Co
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	m.client = client
+	d.client = client
 
 	tflog.Info(ctx, "IAAS client configured")
 }
 
-func (m *machineTypeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *machineTypeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Machine type data source.",
+		MarkdownDescription: features.AddBetaDescription("Machine type data source.", core.Datasource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`image_id`\".",
@@ -126,7 +132,7 @@ See https://expr-lang.org/docs/language-definition for syntax.`,
 	}
 }
 
-func (m *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
@@ -140,7 +146,7 @@ func (m *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 	ctx = tflog.SetField(ctx, "filter_is_null", model.Filter.IsNull())
 	ctx = tflog.SetField(ctx, "filter_is_unknown", model.Filter.IsUnknown())
 
-	listMachineTypeReq := m.client.ListMachineTypes(ctx, projectId)
+	listMachineTypeReq := d.client.ListMachineTypes(ctx, projectId)
 
 	if !model.Filter.IsNull() && !model.Filter.IsUnknown() && strings.TrimSpace(model.Filter.ValueString()) != "" {
 		listMachineTypeReq = listMachineTypeReq.Filter(strings.TrimSpace(model.Filter.ValueString()))
@@ -175,13 +181,15 @@ func (m *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	first := sorted[0]
-	if err := mapDataSourceFields(ctx, first, &model); err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping error", fmt.Sprintf("Failed to translate API response: %v", err))
+	if err := mapDataSourceFields(ctx, sorted[0], &model); err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading machine type", fmt.Sprintf("Failed to translate API response: %v", err))
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "Successfully read machine type")
 }
 
@@ -219,7 +227,7 @@ func sortMachineTypeByName(input []*iaas.MachineType, ascending bool) ([]*iaas.M
 	}
 
 	// Filter out nil or missing name
-	filtered := make([]*iaas.MachineType, 0)
+	var filtered []*iaas.MachineType
 	for _, m := range input {
 		if m != nil && m.Name != nil {
 			filtered = append(filtered, m)

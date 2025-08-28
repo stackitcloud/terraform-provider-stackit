@@ -4061,14 +4061,14 @@ func TestAccProject(t *testing.T) {
 	})
 }
 
-func TestAccMachineTyp(t *testing.T) {
-	t.Logf("TestAccMachineTyp projectid: %s", testutil.ConvertConfigVariable(testConfigMachineTypeVars["project_id"]))
+func TestAccMachineType(t *testing.T) {
+	t.Logf("TestAccMachineType projectid: %s", testutil.ConvertConfigVariable(testConfigMachineTypeVars["project_id"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				ConfigVariables: testConfigMachineTypeVars,
-				Config:          fmt.Sprintf("%s\n%s", dataSourceMachineTypeConfig, testutil.IaaSProviderConfig()),
+				Config:          fmt.Sprintf("%s\n%s", dataSourceMachineTypeConfig, testutil.IaaSProviderConfigWithBetaResourcesEnabled()),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_machine_type.two_vcpus_filter", "project_id", testutil.ConvertConfigVariable(testConfigMachineTypeVars["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_machine_type.two_vcpus_filter", "id"),

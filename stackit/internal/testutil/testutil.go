@@ -136,6 +136,23 @@ func IaaSProviderConfig() string {
 	)
 }
 
+func IaaSProviderConfigWithBetaResourcesEnabled() string {
+	if IaaSCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			enable_beta_resources = true
+			default_region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			enable_beta_resources = true
+			iaas_custom_endpoint = "%s"
+		}`,
+		IaaSCustomEndpoint,
+	)
+}
+
 func IaaSProviderConfigWithExperiments() string {
 	if IaaSCustomEndpoint == "" {
 		return `
