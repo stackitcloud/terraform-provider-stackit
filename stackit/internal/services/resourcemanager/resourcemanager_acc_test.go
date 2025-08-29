@@ -2,176 +2,420 @@ package resourcemanager_test
 
 import (
 	"context"
+	_ "embed"
+	"errors"
 	"fmt"
+	"maps"
+	"sync"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	sdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-// Project resource data
-var projectResource = map[string]string{
-	"name":                fmt.Sprintf("acc-pj-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
-	"parent_container_id": testutil.TestProjectParentContainerID,
-	"parent_uuid":         testutil.TestProjectParentUUID,
-	"billing_reference":   "TEST-REF",
-	"new_label":           "a-label",
+//go:embed testdata/resource-project.tf
+var resourceProject string
+
+//go:embed testdata/resource-folder.tf
+var resourceFolder string
+
+var defaultLabels = config.ObjectVariable(
+	map[string]config.Variable{
+		"env": config.StringVariable("prod"),
+	},
+)
+
+var projectNameParentContainerId = fmt.Sprintf("tfe2e-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+var projectNameParentContainerIdUpdated = fmt.Sprintf("%s-updated", projectNameParentContainerId)
+
+var projectNameParentUUID = fmt.Sprintf("tfe2e-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+var projectNameParentUUIDUpdated = fmt.Sprintf("%s-updated", projectNameParentUUID)
+
+var folderNameParentContainerId = fmt.Sprintf("tfe2e-folder-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+var folderNameParentContainerIdUpdated = fmt.Sprintf("%s-updated", folderNameParentContainerId)
+
+var folderNameParentUUID = fmt.Sprintf("tfe2e-folder-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+var folderNameParentUUIDUpdated = fmt.Sprintf("%s-updated", folderNameParentUUID)
+
+var testConfigResourceProjectParentContainerId = config.Variables{
+	"name":                config.StringVariable(projectNameParentContainerId),
+	"owner_email":         config.StringVariable(testutil.TestProjectServiceAccountEmail),
+	"parent_container_id": config.StringVariable(testutil.TestProjectParentContainerID),
+	"labels": config.ObjectVariable(
+		map[string]config.Variable{
+			"env": config.StringVariable("prod"),
+		},
+	),
 }
 
-func resourceConfig(name string, label *string) string {
-	labelConfig := ""
-	if label != nil {
-		labelConfig = fmt.Sprintf("new_label = %q", *label)
-	}
-	return fmt.Sprintf(`
-				%[1]s
-
-				resource "stackit_resourcemanager_project" "parent_by_container" {
-					parent_container_id = "%[2]s"
-					name = "%[3]s"
-					labels = {
-						"billing_reference" = "%[4]s"
-						%[5]s
-					}
-					owner_email = "%[7]s"
-				}
-
-				resource "stackit_resourcemanager_project" "parent_by_uuid" {
-					parent_container_id = "%[6]s"
-					name = "%[3]s-uuid"
-                    owner_email = "%[7]s"
-				}
-				`,
-		testutil.ResourceManagerProviderConfig(),
-		projectResource["parent_container_id"],
-		name,
-		projectResource["billing_reference"],
-		labelConfig,
-		projectResource["parent_uuid"],
-		testutil.TestProjectServiceAccountEmail,
-	)
+var testConfigResourceProjectParentUUID = config.Variables{
+	"name":                config.StringVariable(projectNameParentUUID),
+	"owner_email":         config.StringVariable(testutil.TestProjectServiceAccountEmail),
+	"parent_container_id": config.StringVariable(testutil.TestProjectParentUUID),
+	"labels":              defaultLabels,
 }
 
-func TestAccResourceManagerResource(t *testing.T) {
+var testConfigResourceFolderParentContainerId = config.Variables{
+	"name":                config.StringVariable(folderNameParentContainerId),
+	"owner_email":         config.StringVariable(testutil.TestProjectServiceAccountEmail),
+	"parent_container_id": config.StringVariable(testutil.TestProjectParentContainerID),
+	"labels":              defaultLabels,
+}
+
+var testConfigResourceFolderParentUUID = config.Variables{
+	"name":                config.StringVariable(folderNameParentUUID),
+	"owner_email":         config.StringVariable(testutil.TestProjectServiceAccountEmail),
+	"parent_container_id": config.StringVariable(testutil.TestProjectParentUUID),
+	"labels":              defaultLabels,
+}
+
+func testConfigProjectNameParentContainerIdUpdated() config.Variables {
+	tempConfig := make(config.Variables, len(testConfigResourceProjectParentContainerId))
+	maps.Copy(tempConfig, testConfigResourceProjectParentContainerId)
+	tempConfig["name"] = config.StringVariable(projectNameParentContainerIdUpdated)
+	return tempConfig
+}
+
+func testConfigProjectNameParentUUIDUpdated() config.Variables {
+	tempConfig := make(config.Variables, len(testConfigResourceProjectParentUUID))
+	maps.Copy(tempConfig, testConfigResourceProjectParentUUID)
+	tempConfig["name"] = config.StringVariable(projectNameParentUUIDUpdated)
+	return tempConfig
+}
+
+func testConfigFolderNameParentContainerIdUpdated() config.Variables {
+	tempConfig := make(config.Variables, len(testConfigResourceFolderParentContainerId))
+	maps.Copy(tempConfig, testConfigResourceFolderParentContainerId)
+	tempConfig["name"] = config.StringVariable(folderNameParentContainerIdUpdated)
+	return tempConfig
+}
+
+func testConfigFolderNameParentUUIDUpdated() config.Variables {
+	tempConfig := make(config.Variables, len(testConfigResourceFolderParentUUID))
+	maps.Copy(tempConfig, testConfigResourceFolderParentUUID)
+	tempConfig["name"] = config.StringVariable(folderNameParentUUIDUpdated)
+	return tempConfig
+}
+
+func TestAccResourceManagerProjectContainerId(t *testing.T) {
+	t.Logf("TestAccResourceManagerProjectContainerId name: %s", testutil.ConvertConfigVariable(testConfigResourceProjectParentContainerId["name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckResourceManagerDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
-			// Creation
+			// Create
 			{
-				Config: resourceConfig(projectResource["name"], nil),
+				ConfigVariables: testConfigResourceProjectParentContainerId,
+				Config:          testutil.ResourceManagerProviderConfig() + resourceProject,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Parent container id project data
-					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.parent_by_container", "container_id"),
-					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.parent_by_container", "project_id"),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.parent_by_container", "name", projectResource["name"]),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.parent_by_container", "parent_container_id", projectResource["parent_container_id"]),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.parent_by_container", "labels.%", "1"),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.parent_by_container", "labels.billing_reference", projectResource["billing_reference"]),
-
-					// Parent UUID project data
-					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.parent_by_uuid", "container_id"),
-					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.parent_by_uuid", "project_id"),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.parent_by_uuid", "name", fmt.Sprintf("%s-uuid", projectResource["name"])),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.parent_by_uuid", "parent_container_id", projectResource["parent_uuid"]),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "name", testutil.ConvertConfigVariable(testConfigResourceProjectParentContainerId["name"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceProjectParentContainerId["parent_container_id"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "owner_email", testutil.ConvertConfigVariable(testConfigResourceProjectParentContainerId["owner_email"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "labels.env", "prod"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "container_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "project_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "owner_email"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "id"),
 				),
 			},
-			// Data source
+			// Data Source
 			{
+				ConfigVariables: testConfigResourceProjectParentContainerId,
 				Config: fmt.Sprintf(`
-					%s
+                    %s
+                    %s
 
-					data "stackit_resourcemanager_project" "project_by_container" {
-						container_id = stackit_resourcemanager_project.parent_by_container.container_id
-					}
-					
-					data "stackit_resourcemanager_project" "project_by_uuid" {
-						project_id = stackit_resourcemanager_project.parent_by_container.project_id
-					}
-
-					data "stackit_resourcemanager_project" "project_by_both" {
-						container_id = stackit_resourcemanager_project.parent_by_container.container_id
-						project_id = stackit_resourcemanager_project.parent_by_container.project_id
-					}
-					`,
-					resourceConfig(projectResource["name"], nil),
-				),
+                    data "stackit_resourcemanager_project" "example" {
+                        project_id = stackit_resourcemanager_project.example.project_id
+                    }
+                `, testutil.ResourceManagerProviderConfig(), resourceProject),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Container project data
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_by_container", "id"),
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_by_container", "container_id"),
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_by_container", "project_id"),
-					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_by_container", "name", projectResource["name"]),
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_by_container", "parent_container_id"),
-					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_by_container", "labels.%", "1"),
-					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_by_container", "labels.billing_reference", projectResource["billing_reference"]),
-
-					// UUID project data
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_by_uuid", "id"),
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_by_uuid", "container_id"),
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_by_uuid", "project_id"),
-					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_by_uuid", "name", projectResource["name"]),
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_by_uuid", "parent_container_id"),
-					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_by_uuid", "labels.%", "1"),
-					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_by_uuid", "labels.billing_reference", projectResource["billing_reference"]),
-
-					// Both project data
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_by_both", "id"),
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_by_both", "container_id"),
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_by_both", "project_id"),
-					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_by_both", "name", projectResource["name"]),
-					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.project_by_both", "parent_container_id"),
-					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_by_both", "labels.%", "1"),
-					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.project_by_both", "labels.billing_reference", projectResource["billing_reference"]),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.example", "name", testutil.ConvertConfigVariable(testConfigResourceProjectParentContainerId["name"])),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.example", "parent_container_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.example", "container_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.example", "project_id"),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.example", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.example", "labels.env", "prod"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.example", "id"),
 				),
 			},
 			// Import
 			{
-				ResourceName: "stackit_resourcemanager_project.parent_by_container",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_resourcemanager_project.parent_by_container"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_resourcemanager_project.parent_by_container")
-					}
-					containerId, ok := r.Primary.Attributes["container_id"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find attribute container_id")
-					}
-
-					return containerId, nil
-				},
+				ConfigVariables:   testConfigResourceProjectParentContainerId,
+				ResourceName:      "stackit_resourcemanager_project.example",
 				ImportState:       true,
 				ImportStateVerify: true,
-				// The owner_email attributes don't exist in the
-				// API, therefore there is no value for it during import.
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					return getImportIdFromID(s, "stackit_resourcemanager_project.example", "container_id")
+				},
 				ImportStateVerifyIgnore: []string{"owner_email"},
 			},
 			// Update
 			{
-				Config: resourceConfig(fmt.Sprintf("%s-new", projectResource["name"]), utils.Ptr("a-label")),
+				ConfigVariables: testConfigProjectNameParentContainerIdUpdated(),
+				Config:          testutil.ResourceManagerProviderConfig() + resourceProject,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Project data
-					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.parent_by_container", "container_id"),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.parent_by_container", "name", fmt.Sprintf("%s-new", projectResource["name"])),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.parent_by_container", "parent_container_id", projectResource["parent_container_id"]),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.parent_by_container", "labels.%", "2"),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.parent_by_container", "labels.billing_reference", projectResource["billing_reference"]),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.parent_by_container", "labels.new_label", projectResource["new_label"]),
-					resource.TestCheckResourceAttr("stackit_resourcemanager_project.parent_by_container", "owner_email", testutil.TestProjectServiceAccountEmail),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "name", testutil.ConvertConfigVariable(testConfigProjectNameParentContainerIdUpdated()["name"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceProjectParentContainerId["parent_container_id"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "owner_email", testutil.ConvertConfigVariable(testConfigResourceProjectParentContainerId["owner_email"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "labels.env", "prod"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "container_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "project_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "owner_email"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "id"),
 				),
 			},
-			// Deletion is done by the framework implicitly
 		},
 	})
 }
 
-func testAccCheckResourceManagerDestroy(s *terraform.State) error {
+func TestAccResourceManagerProjectParentUUID(t *testing.T) {
+	t.Logf("TestAccResourceManagerProjectParentUUID name: %s", testutil.ConvertConfigVariable(testConfigResourceProjectParentUUID["name"]))
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Create
+			{
+				ConfigVariables: testConfigResourceProjectParentUUID,
+				Config:          testutil.ResourceManagerProviderConfig() + resourceProject,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "name", testutil.ConvertConfigVariable(testConfigResourceProjectParentUUID["name"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceProjectParentUUID["parent_container_id"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "owner_email", testutil.ConvertConfigVariable(testConfigResourceProjectParentUUID["owner_email"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "labels.env", "prod"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "container_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "project_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "owner_email"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "id"),
+				),
+			},
+			// Data Source
+			{
+				ConfigVariables: testConfigResourceProjectParentUUID,
+				Config: fmt.Sprintf(`
+                    %s
+                    %s
+
+                    data "stackit_resourcemanager_project" "example" {
+                        project_id = stackit_resourcemanager_project.example.project_id
+                    }
+                `, testutil.ResourceManagerProviderConfig(), resourceProject),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.example", "name", testutil.ConvertConfigVariable(testConfigResourceProjectParentUUID["name"])),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.example", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.example", "labels.env", "prod"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.example", "parent_container_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.example", "container_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.example", "project_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_project.example", "id"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables:   testConfigResourceProjectParentUUID,
+				ResourceName:      "stackit_resourcemanager_project.example",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					return getImportIdFromID(s, "stackit_resourcemanager_project.example", "container_id")
+				},
+				ImportStateVerifyIgnore: []string{"owner_email", "parent_container_id"},
+			},
+			// Update
+			{
+				ConfigVariables: testConfigProjectNameParentUUIDUpdated(),
+				Config:          testutil.ResourceManagerProviderConfig() + resourceProject,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "name", testutil.ConvertConfigVariable(testConfigProjectNameParentUUIDUpdated()["name"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceProjectParentUUID["parent_container_id"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "owner_email", testutil.ConvertConfigVariable(testConfigResourceProjectParentUUID["owner_email"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "labels.env", "prod"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "container_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "project_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "owner_email"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_project.example", "id"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccResourceManagerFolderContainerId(t *testing.T) {
+	t.Logf("TestAccResourceManagerFolderContainerId name: %s", testutil.ConvertConfigVariable(testConfigResourceFolderParentContainerId["name"]))
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Create
+			{
+				ConfigVariables: testConfigResourceFolderParentContainerId,
+				Config:          testutil.ResourceManagerProviderConfigBetaEnabled() + resourceFolder,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigResourceFolderParentContainerId["name"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceFolderParentContainerId["parent_container_id"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "owner_email", testutil.ConvertConfigVariable(testConfigResourceFolderParentContainerId["owner_email"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "labels.env", "prod"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_folder.example", "container_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_folder.example", "id"),
+				),
+			},
+			// Data Source
+			{
+				ConfigVariables: testConfigResourceFolderParentContainerId,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+	
+					data "stackit_resourcemanager_folder" "example" {
+						container_id = stackit_resourcemanager_folder.example.container_id
+					}
+				`, testutil.ResourceManagerProviderConfigBetaEnabled(), resourceFolder),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigResourceFolderParentContainerId["name"])),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_folder.example", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_folder.example", "labels.env", "prod"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_folder.example", "parent_container_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_folder.example", "container_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_folder.example", "id"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables:   testConfigResourceFolderParentContainerId,
+				ResourceName:      "stackit_resourcemanager_folder.example",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					return getImportIdFromID(s, "stackit_resourcemanager_folder.example", "container_id")
+				},
+				ImportStateVerifyIgnore: []string{"owner_email"},
+			},
+			// Update
+			{
+				ConfigVariables: testConfigFolderNameParentContainerIdUpdated(),
+				Config:          testutil.ResourceManagerProviderConfigBetaEnabled() + resourceFolder,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigFolderNameParentContainerIdUpdated()["name"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigFolderNameParentContainerIdUpdated()["parent_container_id"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "owner_email", testutil.ConvertConfigVariable(testConfigFolderNameParentContainerIdUpdated()["owner_email"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "labels.env", "prod"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_folder.example", "container_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_folder.example", "id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_folder.example", "owner_email"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccResourceManagerFolderParentUUID(t *testing.T) {
+	t.Logf("TestAccResourceManagerFolderParentUUID name: %s", testutil.ConvertConfigVariable(testConfigResourceFolderParentContainerId["name"]))
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Create
+			{
+				ConfigVariables: testConfigResourceFolderParentUUID,
+				Config:          testutil.ResourceManagerProviderConfigBetaEnabled() + resourceFolder,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigResourceFolderParentUUID["name"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceFolderParentUUID["parent_container_id"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "owner_email", testutil.ConvertConfigVariable(testConfigResourceFolderParentUUID["owner_email"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "labels.env", "prod"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_folder.example", "container_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_folder.example", "id"),
+				),
+			},
+			// Data Source
+			{
+				ConfigVariables: testConfigResourceFolderParentUUID,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+	
+					data "stackit_resourcemanager_folder" "example" {
+						container_id = stackit_resourcemanager_folder.example.container_id
+					}
+				`, testutil.ResourceManagerProviderConfigBetaEnabled(), resourceFolder),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigResourceFolderParentUUID["name"])),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_folder.example", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_resourcemanager_folder.example", "labels.env", "prod"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_folder.example", "parent_container_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_folder.example", "container_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_resourcemanager_folder.example", "id"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables:   testConfigResourceFolderParentUUID,
+				ResourceName:      "stackit_resourcemanager_folder.example",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					return getImportIdFromID(s, "stackit_resourcemanager_folder.example", "container_id")
+				},
+				ImportStateVerifyIgnore: []string{"owner_email", "parent_container_id"},
+			},
+			// Update
+			{
+				ConfigVariables: testConfigFolderNameParentUUIDUpdated(),
+				Config:          testutil.ResourceManagerProviderConfigBetaEnabled() + resourceFolder,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigFolderNameParentUUIDUpdated()["name"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigFolderNameParentUUIDUpdated()["parent_container_id"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "owner_email", testutil.ConvertConfigVariable(testConfigFolderNameParentUUIDUpdated()["owner_email"])),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "labels.env", "prod"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_folder.example", "container_id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_folder.example", "id"),
+					resource.TestCheckResourceAttrSet("stackit_resourcemanager_folder.example", "owner_email"),
+				),
+			},
+		},
+	})
+}
+
+func testAccCheckDestroy(s *terraform.State) error {
+	checkFunctions := []func(s *terraform.State) error{
+		testAccCheckResourceManagerProjectsDestroy,
+		testAccCheckResourceManagerFoldersDestroy,
+	}
+	var errs []error
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(checkFunctions))
+
+	for _, f := range checkFunctions {
+		go func() {
+			err := f(s)
+			if err != nil {
+				errs = append(errs, err)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+	return errors.Join(errs...)
+}
+
+func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *resourcemanager.APIClient
 	var err error
@@ -179,7 +423,7 @@ func testAccCheckResourceManagerDestroy(s *terraform.State) error {
 		client, err = resourcemanager.NewAPIClient()
 	} else {
 		client, err = resourcemanager.NewAPIClient(
-			config.WithEndpoint(testutil.ResourceManagerCustomEndpoint),
+			sdkConfig.WithEndpoint(testutil.ResourceManagerCustomEndpoint),
 		)
 	}
 	if err != nil {
@@ -196,7 +440,17 @@ func testAccCheckResourceManagerDestroy(s *terraform.State) error {
 		projectsToDestroy = append(projectsToDestroy, containerId)
 	}
 
-	projectsResp, err := client.ListProjects(ctx).ContainerParentId(projectResource["parent_container_id"]).Execute()
+	var containerParentId string
+	switch {
+	case testutil.TestProjectParentContainerID != "":
+		containerParentId = testutil.TestProjectParentContainerID
+	case testutil.TestProjectParentUUID != "":
+		containerParentId = testutil.TestProjectParentUUID
+	default:
+		return fmt.Errorf("either TestProjectParentContainerID or TestProjectParentUUID must be set")
+	}
+
+	projectsResp, err := client.ListProjects(ctx).ContainerParentId(containerParentId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting projectsResp: %w", err)
 	}
@@ -220,4 +474,70 @@ func testAccCheckResourceManagerDestroy(s *terraform.State) error {
 		}
 	}
 	return nil
+}
+
+func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var client *resourcemanager.APIClient
+	var err error
+	if testutil.ResourceManagerCustomEndpoint == "" {
+		client, err = resourcemanager.NewAPIClient()
+	} else {
+		client, err = resourcemanager.NewAPIClient(
+			sdkConfig.WithEndpoint(testutil.ResourceManagerCustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	foldersToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_resourcemanager_folder" {
+			continue
+		}
+		// project terraform ID: "[container_id]"
+		containerId := rs.Primary.ID
+		foldersToDestroy = append(foldersToDestroy, containerId)
+	}
+
+	var containerParentId string
+	switch {
+	case testutil.TestProjectParentContainerID != "":
+		containerParentId = testutil.TestProjectParentContainerID
+	case testutil.TestProjectParentUUID != "":
+		containerParentId = testutil.TestProjectParentUUID
+	default:
+		return fmt.Errorf("either TestProjectParentContainerID or TestProjectParentUUID must be set")
+	}
+
+	projectsResp, err := client.ListFolders(ctx).ContainerParentId(containerParentId).Execute()
+	if err != nil {
+		return fmt.Errorf("getting projectsResp: %w", err)
+	}
+
+	items := *projectsResp.Items
+	for i := range items {
+		if !utils.Contains(foldersToDestroy, *items[i].ContainerId) {
+			continue
+		}
+
+		err := client.DeleteFolder(ctx, *items[i].ContainerId).Execute()
+		if err != nil {
+			return fmt.Errorf("destroying folder %s during CheckDestroy: %w", *items[i].ContainerId, err)
+		}
+	}
+	return nil
+}
+
+func getImportIdFromID(s *terraform.State, resourceName, keyName string) (string, error) {
+	r, ok := s.RootModule().Resources[resourceName]
+	if !ok {
+		return "", fmt.Errorf("couldn't find resource %s", resourceName)
+	}
+	id, ok := r.Primary.Attributes[keyName]
+	if !ok {
+		return "", fmt.Errorf("couldn't find attribute %s", keyName)
+	}
+	return id, nil
 }
