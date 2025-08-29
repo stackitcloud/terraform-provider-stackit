@@ -27,6 +27,11 @@ resource "stackit_network_interface" "network_interface" {
   project_id = stackit_network.network.project_id
   network_id = stackit_network.network.network_id
   name       = "name"
+  lifecycle {
+    ignore_changes = [
+      security_group_ids,
+    ]
+  }
 }
 
 resource "stackit_public_ip" "public_ip" {
