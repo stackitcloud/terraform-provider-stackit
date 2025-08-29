@@ -2081,7 +2081,7 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*observability.Up
 	var groupByPayload *[]string
 	var matchPayload *map[string]interface{}
 	var matchRegexPayload *map[string]interface{}
-	var childRoutesPayload *[]observability.CreateAlertConfigRoutePayloadRoutesInner
+	var childRoutesPayload *[]observability.UpdateAlertConfigsPayloadRouteRoutesInner
 
 	if !routeTF.GroupBy.IsNull() && !routeTF.GroupBy.IsUnknown() {
 		groupByPayload = &[]string{}
@@ -2134,7 +2134,7 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*observability.Up
 			}
 		}
 
-		childRoutesList := []observability.CreateAlertConfigRoutePayloadRoutesInner{}
+		childRoutesList := []observability.UpdateAlertConfigsPayloadRouteRoutesInner{}
 		for i := range childRoutes {
 			childRoute := childRoutes[i]
 			childRoutePayload, err := toRoutePayload(ctx, &childRoute)
@@ -2159,11 +2159,11 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*observability.Up
 	}, nil
 }
 
-func toChildRoutePayload(in *observability.UpdateAlertConfigsPayloadRoute) *observability.CreateAlertConfigRoutePayloadRoutesInner {
+func toChildRoutePayload(in *observability.UpdateAlertConfigsPayloadRoute) *observability.UpdateAlertConfigsPayloadRouteRoutesInner {
 	if in == nil {
 		return nil
 	}
-	return &observability.CreateAlertConfigRoutePayloadRoutesInner{
+	return &observability.UpdateAlertConfigsPayloadRouteRoutesInner{
 		GroupBy:        in.GroupBy,
 		GroupInterval:  in.GroupInterval,
 		GroupWait:      in.GroupWait,

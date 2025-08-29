@@ -175,7 +175,7 @@ func fixtureRoutePayload() *observability.UpdateAlertConfigsPayloadRoute {
 		MatchRe:        &map[string]interface{}{"key": "value"},
 		Receiver:       utils.Ptr("name"),
 		RepeatInterval: utils.Ptr("1m"),
-		Routes: &[]observability.CreateAlertConfigRoutePayloadRoutesInner{
+		Routes: &[]observability.UpdateAlertConfigsPayloadRouteRoutesInner{
 			{
 				GroupBy:        utils.Ptr([]string{"label1", "label2"}),
 				GroupInterval:  utils.Ptr("1m"),
