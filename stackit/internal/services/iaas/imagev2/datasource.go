@@ -429,7 +429,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 		}
 
 		// Step 3: Apply additional filtering based on OS, distro, version, UEFI, secure boot, etc.
-		filteredImages := make([]*iaas.Image, 0, len(matchedImages))
+		var filteredImages []*iaas.Image
 		for _, img := range matchedImages {
 			if imageMatchesFilter(img, &filter) {
 				filteredImages = append(filteredImages, img)
