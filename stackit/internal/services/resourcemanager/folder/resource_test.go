@@ -16,7 +16,8 @@ import (
 )
 
 func TestMapFolderFields(t *testing.T) {
-	testUUID := "73b2d741-bddd-471f-8d47-3d1aa677a19c"
+	parentContainerUUID := uuid.New().String()
+	folderUUID := uuid.New().String()
 
 	// Create base timestamps for reuse
 	baseTime := time.Now()
@@ -26,6 +27,7 @@ func TestMapFolderFields(t *testing.T) {
 	tests := []struct {
 		description           string
 		uuidContainerParentId bool
+		respFolderId          *string
 		respContainerId       *string
 		respName              *string
 		respCreateTime        *time.Time
@@ -39,7 +41,8 @@ func TestMapFolderFields(t *testing.T) {
 		{
 			description:           "valid input with UUID parent ID",
 			uuidContainerParentId: true,
-			respContainerId:       utils.Ptr("folder-cid-uuid"),
+			respFolderId:          &folderUUID,
+			respContainerId:       utils.Ptr("folder-human-readable-id"),
 			respName:              utils.Ptr("folder-name"),
 			respCreateTime:        &createTime,
 			respUpdateTime:        &updateTime,
@@ -47,12 +50,13 @@ func TestMapFolderFields(t *testing.T) {
 				"env": "prod",
 			},
 			parent: &resourcemanager.Parent{
-				Id: utils.Ptr(testUUID),
+				Id: utils.Ptr(parentContainerUUID),
 			},
 			expected: Model{
-				Id:                types.StringValue("folder-cid-uuid"),
-				ContainerId:       types.StringValue("folder-cid-uuid"),
-				ContainerParentId: types.StringValue(testUUID),
+				Id:                types.StringValue("folder-human-readable-id"),
+				FolderId:          types.StringValue(folderUUID),
+				ContainerId:       types.StringValue("folder-human-readable-id"),
+				ContainerParentId: types.StringValue(parentContainerUUID),
 				Name:              types.StringValue("folder-name"),
 				CreationTime:      types.StringValue(createTime.Format(time.RFC3339)),
 				UpdateTime:        types.StringValue(updateTime.Format(time.RFC3339)),
@@ -65,18 +69,20 @@ func TestMapFolderFields(t *testing.T) {
 		{
 			description:           "valid input with UUID parent ID no labels",
 			uuidContainerParentId: true,
-			respContainerId:       utils.Ptr("folder-cid-uuid"),
+			respFolderId:          &folderUUID,
+			respContainerId:       utils.Ptr("folder-human-readable-id"),
 			respName:              utils.Ptr("folder-name"),
 			respCreateTime:        &createTime,
 			respUpdateTime:        &updateTime,
 			labels:                nil,
 			parent: &resourcemanager.Parent{
-				Id: utils.Ptr(testUUID),
+				Id: utils.Ptr(parentContainerUUID),
 			},
 			expected: Model{
-				Id:                types.StringValue("folder-cid-uuid"),
-				ContainerId:       types.StringValue("folder-cid-uuid"),
-				ContainerParentId: types.StringValue(testUUID),
+				Id:                types.StringValue("folder-human-readable-id"),
+				FolderId:          types.StringValue(folderUUID),
+				ContainerId:       types.StringValue("folder-human-readable-id"),
+				ContainerParentId: types.StringValue(parentContainerUUID),
 				Name:              types.StringValue("folder-name"),
 				CreationTime:      types.StringValue(createTime.Format(time.RFC3339)),
 				UpdateTime:        types.StringValue(updateTime.Format(time.RFC3339)),
@@ -87,7 +93,8 @@ func TestMapFolderFields(t *testing.T) {
 		{
 			description:           "valid input with ContainerId as parent",
 			uuidContainerParentId: false,
-			respContainerId:       utils.Ptr("folder-cid"),
+			respFolderId:          &folderUUID,
+			respContainerId:       utils.Ptr("folder-human-readable-id"),
 			respName:              utils.Ptr("folder-name"),
 			respCreateTime:        &createTime,
 			respUpdateTime:        &updateTime,
@@ -98,8 +105,9 @@ func TestMapFolderFields(t *testing.T) {
 				ContainerId: utils.Ptr("parent-container-id"),
 			},
 			expected: Model{
-				Id:                types.StringValue("folder-cid"),
-				ContainerId:       types.StringValue("folder-cid"),
+				Id:                types.StringValue("folder-human-readable-id"),
+				FolderId:          types.StringValue(folderUUID),
+				ContainerId:       types.StringValue("folder-human-readable-id"),
 				ContainerParentId: types.StringValue("parent-container-id"),
 				Name:              types.StringValue("folder-name"),
 				CreationTime:      types.StringValue(createTime.Format(time.RFC3339)),
@@ -113,7 +121,8 @@ func TestMapFolderFields(t *testing.T) {
 		{
 			description:           "valid input with ContainerId as parent no labels",
 			uuidContainerParentId: false,
-			respContainerId:       utils.Ptr("folder-cid"),
+			respFolderId:          &folderUUID,
+			respContainerId:       utils.Ptr("folder-human-readable-id"),
 			respName:              utils.Ptr("folder-name"),
 			respCreateTime:        &createTime,
 			respUpdateTime:        &updateTime,
@@ -122,8 +131,9 @@ func TestMapFolderFields(t *testing.T) {
 				ContainerId: utils.Ptr("parent-container-id"),
 			},
 			expected: Model{
-				Id:                types.StringValue("folder-cid"),
-				ContainerId:       types.StringValue("folder-cid"),
+				Id:                types.StringValue("folder-human-readable-id"),
+				FolderId:          types.StringValue(folderUUID),
+				ContainerId:       types.StringValue("folder-human-readable-id"),
 				ContainerParentId: types.StringValue("parent-container-id"),
 				Name:              types.StringValue("folder-name"),
 				CreationTime:      types.StringValue(createTime.Format(time.RFC3339)),
@@ -135,15 +145,17 @@ func TestMapFolderFields(t *testing.T) {
 		{
 			description:           "nil labels",
 			uuidContainerParentId: false,
-			respContainerId:       utils.Ptr("folder-cid"),
+			respFolderId:          &folderUUID,
+			respContainerId:       utils.Ptr("folder-human-readable-id"),
 			respName:              utils.Ptr("folder-name"),
 			respCreateTime:        &createTime,
 			respUpdateTime:        &updateTime,
 			labels:                nil,
 			parent:                nil,
 			expected: Model{
-				Id:                types.StringValue("folder-cid"),
-				ContainerId:       types.StringValue("folder-cid"),
+				Id:                types.StringValue("folder-human-readable-id"),
+				FolderId:          types.StringValue(folderUUID),
+				ContainerId:       types.StringValue("folder-human-readable-id"),
 				ContainerParentId: types.StringNull(),
 				Name:              types.StringValue("folder-name"),
 				CreationTime:      types.StringValue(createTime.Format(time.RFC3339)),
@@ -196,7 +208,7 @@ func TestMapFolderFields(t *testing.T) {
 			// Simulate ContainerParentId configuration based on UUID detection logic
 			var containerParentId basetypes.StringValue
 			if tt.uuidContainerParentId {
-				containerParentId = types.StringValue(testUUID)
+				containerParentId = types.StringValue(parentContainerUUID)
 			} else if tt.parent != nil && tt.parent.ContainerId != nil {
 				containerParentId = types.StringValue(*tt.parent.ContainerId)
 			} else {
@@ -212,6 +224,7 @@ func TestMapFolderFields(t *testing.T) {
 				context.Background(),
 				tt.respContainerId,
 				tt.respName,
+				tt.respFolderId,
 				tt.labels,
 				tt.parent,
 				tt.respCreateTime,
@@ -245,7 +258,8 @@ func TestMapFolderCreateFields(t *testing.T) {
 	updateTime := baseTime.Add(1 * time.Hour)
 
 	resp := &resourcemanager.FolderResponse{
-		ContainerId: utils.Ptr("folder-id"),
+		FolderId:    utils.Ptr("folder-uuid"),
+		ContainerId: utils.Ptr("folder-human-readable-id"),
 		Name:        utils.Ptr("my-folder"),
 		Labels:      &labels,
 		Parent: &resourcemanager.Parent{
@@ -266,8 +280,9 @@ func TestMapFolderCreateFields(t *testing.T) {
 
 	cbLabels, _ := conversion.ToTerraformStringMap(context.Background(), labels)
 	expected := Model{
-		Id:                types.StringValue("folder-id"),
-		ContainerId:       types.StringValue("folder-id"),
+		Id:                types.StringValue("folder-human-readable-id"),
+		FolderId:          types.StringValue("folder-uuid"),
+		ContainerId:       types.StringValue("folder-human-readable-id"),
 		ContainerParentId: types.StringValue(*resp.Parent.Id),
 		Name:              types.StringValue("my-folder"),
 		Labels:            cbLabels,
@@ -286,7 +301,8 @@ func TestMapFolderDetailsFields(t *testing.T) {
 	updateTime := baseTime.Add(1 * time.Hour)
 
 	resp := &resourcemanager.GetFolderDetailsResponse{
-		ContainerId: utils.Ptr("folder-id"),
+		FolderId:    utils.Ptr("folder-uuid"),
+		ContainerId: utils.Ptr("folder-human-readable-id"),
 		Name:        utils.Ptr("details-folder"),
 		Labels: &map[string]string{
 			"foo": "bar",
@@ -307,8 +323,9 @@ func TestMapFolderDetailsFields(t *testing.T) {
 	tfLabels, _ := conversion.ToTerraformStringMap(context.Background(), *resp.Labels)
 
 	expected := Model{
-		Id:                types.StringValue("folder-id"),
-		ContainerId:       types.StringValue("folder-id"),
+		Id:                types.StringValue("folder-human-readable-id"),
+		FolderId:          types.StringValue("folder-uuid"),
+		ContainerId:       types.StringValue("folder-human-readable-id"),
 		ContainerParentId: types.StringValue("parent-container"),
 		Name:              types.StringValue("details-folder"),
 		Labels:            tfLabels,

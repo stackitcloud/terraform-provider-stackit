@@ -45,6 +45,7 @@ const (
 
 type Model struct {
 	Id                types.String `tfsdk:"id"` // needed by TF
+	FolderId          types.String `tfsdk:"folder_id"`
 	ContainerId       types.String `tfsdk:"container_id"`
 	ContainerParentId types.String `tfsdk:"parent_container_id"`
 	Name              types.String `tfsdk:"name"`
@@ -99,6 +100,7 @@ func (r *folderResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		"main":                "Resource Manager folder resource schema.",
 		"id":                  "Terraform's internal resource ID. It is structured as \"`container_id`\".",
 		"container_id":        "Folder container ID. Globally unique, user-friendly identifier.",
+		"folder_id":           "Folder UUID identifier. Globally unique folder identifier",
 		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported.",
 		"name":                "The name of the folder.",
 		"labels":              "Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}.",
@@ -125,6 +127,16 @@ func (r *folderResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 				Validators: []validator.String{
 					validate.NoSeparator(),
+				},
+			},
+			"folder_id": schema.StringAttribute{
+				Description: descriptions["folder_id"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
 				},
 			},
 			"parent_container_id": schema.StringAttribute{
@@ -351,7 +363,7 @@ func (r *folderResource) ImportState(ctx context.Context, req resource.ImportSta
 // mapFolderFields maps folder fields from a response into the Terraform model and optionally updates state.
 func mapFolderFields(
 	ctx context.Context,
-	containerId, name *string,
+	containerId, name, folderId *string,
 	labels *map[string]string, //nolint:gocritic
 	containerParent *resourcemanager.Parent,
 	creationTime *time.Time,
@@ -388,6 +400,7 @@ func mapFolderFields(
 	}
 
 	model.Id = types.StringValue(*containerId)
+	model.FolderId = types.StringValue(*folderId)
 	model.ContainerId = types.StringValue(*containerId)
 	model.ContainerParentId = containerParentIdTF
 	model.Name = types.StringPointerValue(name)
@@ -398,8 +411,9 @@ func mapFolderFields(
 	if state != nil {
 		diags := diag.Diagnostics{}
 		diags.Append(state.SetAttribute(ctx, path.Root("id"), model.Id)...)
-		diags.Append(state.SetAttribute(ctx, path.Root("parent_container_id"), model.ContainerParentId)...)
+		diags.Append(state.SetAttribute(ctx, path.Root("folder_id"), model.FolderId)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("container_id"), model.ContainerId)...)
+		diags.Append(state.SetAttribute(ctx, path.Root("parent_container_id"), model.ContainerParentId)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("name"), model.Name)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("labels"), model.Labels)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("creation_time"), model.CreationTime)...)
@@ -414,12 +428,12 @@ func mapFolderFields(
 
 // mapFolderCreateFields maps the Create Folder API response to the Terraform model and update the Terraform state
 func mapFolderCreateFields(ctx context.Context, resp *resourcemanager.FolderResponse, model *Model, state *tfsdk.State) error {
-	return mapFolderFields(ctx, resp.ContainerId, resp.Name, resp.Labels, resp.Parent, resp.CreationTime, resp.UpdateTime, model, state)
+	return mapFolderFields(ctx, resp.ContainerId, resp.Name, resp.FolderId, resp.Labels, resp.Parent, resp.CreationTime, resp.UpdateTime, model, state)
 }
 
 // mapFolderDetailsFields maps the GetDetails API response to the Terraform model and update the Terraform state
 func mapFolderDetailsFields(ctx context.Context, resp *resourcemanager.GetFolderDetailsResponse, model *Model, state *tfsdk.State) error {
-	return mapFolderFields(ctx, resp.ContainerId, resp.Name, resp.Labels, resp.Parent, resp.CreationTime, resp.UpdateTime, model, state)
+	return mapFolderFields(ctx, resp.ContainerId, resp.Name, resp.FolderId, resp.Labels, resp.Parent, resp.CreationTime, resp.UpdateTime, model, state)
 }
 
 func toMembersPayload(model *ResourceModel) (*[]resourcemanager.Member, error) {
