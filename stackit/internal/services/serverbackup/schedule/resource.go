@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	serverbackupUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -456,14 +458,26 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 		model.BackupProperties = nil
 		return nil
 	}
-	ids, diags := types.ListValueFrom(ctx, types.StringType, schedule.BackupProperties.VolumeIds)
-	if diags.HasError() {
-		return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
+	volIds := basetypes.NewListNull(types.StringType)
+	if schedule.BackupProperties.VolumeIds != nil {
+		modelVolIds, err := utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
+		if err != nil {
+			return err
+		}
+
+		respVolIds := *schedule.BackupProperties.VolumeIds
+		reconciledVolIds := utils.ReconcileStringSlices(modelVolIds, respVolIds)
+
+		var diags diag.Diagnostics
+		volIds, diags = types.ListValueFrom(ctx, types.StringType, reconciledVolIds)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map volumeIds: %w", core.DiagsToError(diags))
+		}
 	}
 	model.BackupProperties = &scheduleBackupPropertiesModel{
 		BackupName:      types.StringValue(*schedule.BackupProperties.Name),
 		RetentionPeriod: types.Int64Value(*schedule.BackupProperties.RetentionPeriod),
-		VolumeIds:       ids,
+		VolumeIds:       volIds,
 	}
 	model.Region = types.StringValue(region)
 	return nil
