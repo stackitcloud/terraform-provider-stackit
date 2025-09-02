@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	serverbackupUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -208,7 +207,6 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"volume_ids": schema.ListAttribute{
 						ElementType: types.StringType,
 						Optional:    true,
-						Computed:    true,
 					},
 					"name": schema.StringAttribute{
 						Required: true,
@@ -458,7 +456,9 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 		model.BackupProperties = nil
 		return nil
 	}
-	volIds := basetypes.NewListNull(types.StringType)
+
+	model.BackupProperties.BackupName = types.StringValue(*schedule.BackupProperties.Name)
+	model.BackupProperties.RetentionPeriod = types.Int64Value(*schedule.BackupProperties.RetentionPeriod)
 	if schedule.BackupProperties.VolumeIds != nil {
 		modelVolIds, err := utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
 		if err != nil {
@@ -469,15 +469,11 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 		reconciledVolIds := utils.ReconcileStringSlices(modelVolIds, respVolIds)
 
 		var diags diag.Diagnostics
-		volIds, diags = types.ListValueFrom(ctx, types.StringType, reconciledVolIds)
+		volIds, diags := types.ListValueFrom(ctx, types.StringType, reconciledVolIds)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map volumeIds: %w", core.DiagsToError(diags))
 		}
-	}
-	model.BackupProperties = &scheduleBackupPropertiesModel{
-		BackupName:      types.StringValue(*schedule.BackupProperties.Name),
-		RetentionPeriod: types.Int64Value(*schedule.BackupProperties.RetentionPeriod),
-		VolumeIds:       volIds,
+		model.BackupProperties.VolumeIds = volIds
 	}
 	model.Region = types.StringValue(region)
 	return nil
