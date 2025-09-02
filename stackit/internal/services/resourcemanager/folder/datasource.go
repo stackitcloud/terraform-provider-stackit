@@ -71,6 +71,8 @@ func (d *folderDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		"name":                "The name of the folder.",
 		"labels":              "Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}.",
 		"owner_email":         "Email address of the owner of the folder. This value is only considered during creation. Changing it afterwards will have no effect.",
+		"creation_time":       "Date-time at which the folder was created.",
+		"update_time":         "Date-time at which the folder was last modified.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -118,6 +120,14 @@ func (d *folderDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 							"must match expression"),
 					),
 				},
+			},
+			"creation_time": schema.StringAttribute{
+				Description: descriptions["creation_time"],
+				Computed:    true,
+			},
+			"update_time": schema.StringAttribute{
+				Description: descriptions["update_time"],
+				Computed:    true,
 			},
 		},
 	}

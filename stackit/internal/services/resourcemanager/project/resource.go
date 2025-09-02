@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
 
@@ -51,6 +52,8 @@ type Model struct {
 	ContainerParentId types.String `tfsdk:"parent_container_id"`
 	Name              types.String `tfsdk:"name"`
 	Labels            types.Map    `tfsdk:"labels"`
+	CreationTime      types.String `tfsdk:"creation_time"`
+	UpdateTime        types.String `tfsdk:"update_time"`
 }
 
 type ResourceModel struct {
@@ -102,6 +105,8 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		"name":                "Project name.",
 		"labels":              "Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}.  \nTo create a project within a STACKIT Network Area, setting the label `networkArea=<networkAreaID>` is required. This can not be changed after project creation.",
 		"owner_email":         "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
+		"creation_time":       "Date-time at which the folder was created.",
+		"update_time":         "Date-time at which the folder was last modified.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -169,6 +174,14 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"owner_email": schema.StringAttribute{
 				Description: descriptions["owner_email"],
 				Required:    true,
+			},
+			"creation_time": schema.StringAttribute{
+				Description: descriptions["creation_time"],
+				Computed:    true,
+			},
+			"update_time": schema.StringAttribute{
+				Description: descriptions["update_time"],
+				Computed:    true,
 			},
 		},
 	}
@@ -409,6 +422,8 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 	model.ContainerId = types.StringValue(containerId)
 	model.Name = types.StringPointerValue(projectResp.Name)
 	model.Labels = labels
+	model.CreationTime = types.StringValue(projectResp.CreationTime.Format(time.RFC3339))
+	model.UpdateTime = types.StringValue(projectResp.UpdateTime.Format(time.RFC3339))
 
 	if state != nil {
 		diags := diag.Diagnostics{}
@@ -418,6 +433,8 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 		diags.Append(state.SetAttribute(ctx, path.Root("container_id"), model.ContainerId)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("name"), model.Name)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("labels"), model.Labels)...)
+		diags.Append(state.SetAttribute(ctx, path.Root("creation_time"), model.CreationTime)...)
+		diags.Append(state.SetAttribute(ctx, path.Root("update_time"), model.UpdateTime)...)
 		if diags.HasError() {
 			return fmt.Errorf("update terraform state: %w", core.DiagsToError(diags))
 		}
