@@ -80,7 +80,7 @@ Required:
 
 Optional:
 
-- `global` (Attributes) Global configuration for the alerts. (see [below for nested schema](#nestedatt--alert_config--global))
+- `global` (Attributes) Global configuration for the alerts. If nothing passed the default argus config will be used. It is only possible to update the entire global part, not individual attributes. (see [below for nested schema](#nestedatt--alert_config--global))
 
 <a id="nestedatt--alert_config--receivers"></a>
 ### Nested Schema for `alert_config.receivers`

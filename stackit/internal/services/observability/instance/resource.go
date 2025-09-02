@@ -727,7 +727,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						},
 					},
 					"global": schema.SingleNestedAttribute{
-						Description: "Global configuration for the alerts.",
+						Description: "Global configuration for the alerts. If nothing passed the default argus config will be used. It is only possible to update the entire global part, not individual attributes.",
 						Optional:    true,
 						Computed:    true,
 						Attributes: map[string]schema.Attribute{
