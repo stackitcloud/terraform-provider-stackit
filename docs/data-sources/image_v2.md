@@ -20,6 +20,10 @@ description: |-
     }
   }
   
+  You can also list available images using the STACKIT CLI https://github.com/stackitcloud/stackit-cli:
+  
+  stackit image list
+  
   ~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
@@ -45,6 +49,12 @@ resource "stackit_server" "example" {
     ignore_changes = [boot_volume[0].source_id]
   }
 }
+```
+
+You can also list available images using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
+
+```bash
+stackit image list
 ```
 
 ~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.

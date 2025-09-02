@@ -100,7 +100,10 @@ Examples:
 - extraSpecs.cpu == "intel-icelake-generic"
 - extraSpecs.cpu == "intel-icelake-generic" && vcpus == 2
 
-See https://expr-lang.org/docs/language-definition for syntax.`,
+Syntax reference: https://expr-lang.org/docs/language-definition
+
+To list all available machine-types, query our machine api: stackit curl 'https://iaas.api.eu01.stackit.cloud/v1/projects/<project-id>/machine-types'
+`,
 				Required: true,
 			},
 			"description": schema.StringAttribute{
