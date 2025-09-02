@@ -40,5 +40,6 @@ resource "stackit_resourcemanager_folder" "example" {
 
 - `container_id` (String) Folder container ID. Globally unique, user-friendly identifier.
 - `creation_time` (String) Date-time at which the folder was created.
+- `folder_id` (String) Folder UUID identifier. Globally unique folder identifier
 - `id` (String) Terraform's internal resource ID. It is structured as "`container_id`".
 - `update_time` (String) Date-time at which the folder was last modified.
