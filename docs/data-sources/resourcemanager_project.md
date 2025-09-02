@@ -29,7 +29,9 @@ data "stackit_resourcemanager_project" "example" {
 
 ### Read-Only
 
+- `creation_time` (String) Date-time at which the folder was created.
 - `id` (String) Terraform's internal data source. ID. It is structured as "`container_id`".
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}
 - `name` (String) Project name.
 - `parent_container_id` (String) Parent resource identifier. Both container ID (user-friendly) and UUID are supported
+- `update_time` (String) Date-time at which the folder was last modified.
