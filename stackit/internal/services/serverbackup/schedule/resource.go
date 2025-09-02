@@ -206,6 +206,7 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"volume_ids": schema.ListAttribute{
 						ElementType: types.StringType,
 						Optional:    true,
+						Computed:    true,
 					},
 					"name": schema.StringAttribute{
 						Required: true,
