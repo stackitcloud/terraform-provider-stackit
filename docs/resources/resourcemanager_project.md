@@ -3,13 +3,13 @@
 page_title: "stackit_resourcemanager_project Resource - stackit"
 subcategory: ""
 description: |-
-  Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.
+  Resource Manager project resource schema.
   -> In case you're getting started with an empty STACKIT organization and want to use this resource to create projects in it, check out this guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/stackit_org_service_account for how to create a service account which you can use for authentication in the STACKIT Terraform provider.
 ---
 
 # stackit_resourcemanager_project (Resource)
 
-Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.
+Resource Manager project resource schema.
 
 -> In case you're getting started with an empty STACKIT organization and want to use this resource to create projects in it, check out [this guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/stackit_org_service_account) for how to create a service account which you can use for authentication in the STACKIT Terraform provider.
 
