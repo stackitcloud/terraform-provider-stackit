@@ -463,9 +463,13 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 
 	volIds := types.ListNull(types.StringType)
 	if schedule.BackupProperties.VolumeIds != nil {
-		modelVolIds, err := utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
-		if err != nil {
-			return err
+		var modelVolIds []string
+		if model.BackupProperties != nil {
+			var err error
+			modelVolIds, err = utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
+			if err != nil {
+				return err
+			}
 		}
 
 		respVolIds := *schedule.BackupProperties.VolumeIds
@@ -476,7 +480,6 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 		if diags.HasError() {
 			return fmt.Errorf("failed to map volumeIds: %w", core.DiagsToError(diags))
 		}
-		model.BackupProperties.VolumeIds = volIds
 	}
 	model.BackupProperties = &scheduleBackupPropertiesModel{
 		BackupName:      types.StringValue(*schedule.BackupProperties.Name),
