@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	serverbackupUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -206,6 +208,9 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"volume_ids": schema.ListAttribute{
 						ElementType: types.StringType,
 						Optional:    true,
+						Validators: []validator.List{
+							listvalidator.SizeAtLeast(1),
+						},
 					},
 					"name": schema.StringAttribute{
 						Required: true,
@@ -456,11 +461,7 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 		return nil
 	}
 
-	model.BackupProperties = &scheduleBackupPropertiesModel{
-		BackupName:      types.StringValue(*schedule.BackupProperties.Name),
-		RetentionPeriod: types.Int64Value(*schedule.BackupProperties.RetentionPeriod),
-		VolumeIds:       types.ListNull(types.StringType),
-	}
+	volIds := types.ListNull(types.StringType)
 	if schedule.BackupProperties.VolumeIds != nil {
 		modelVolIds, err := utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
 		if err != nil {
@@ -470,11 +471,17 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 		respVolIds := *schedule.BackupProperties.VolumeIds
 		reconciledVolIds := utils.ReconcileStringSlices(modelVolIds, respVolIds)
 
-		volIds, diags := types.ListValueFrom(ctx, types.StringType, reconciledVolIds)
+		var diags diag.Diagnostics
+		volIds, diags = types.ListValueFrom(ctx, types.StringType, reconciledVolIds)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map volumeIds: %w", core.DiagsToError(diags))
 		}
 		model.BackupProperties.VolumeIds = volIds
+	}
+	model.BackupProperties = &scheduleBackupPropertiesModel{
+		BackupName:      types.StringValue(*schedule.BackupProperties.Name),
+		RetentionPeriod: types.Int64Value(*schedule.BackupProperties.RetentionPeriod),
+		VolumeIds:       volIds,
 	}
 	model.Region = types.StringValue(region)
 	return nil
