@@ -54,7 +54,11 @@ Examples:
 
 Syntax reference: https://expr-lang.org/docs/language-definition
 
-To list all available machine-types, query our machine api: stackit curl 'https://iaas.api.eu01.stackit.cloud/v1/projects/<project-id>/machine-types'
+You can also list available machine-types using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
+
+```bash
+stackit server machine-type list
+```
 - `project_id` (String) STACKIT Project ID.
 
 ### Optional
