@@ -52,7 +52,13 @@ Examples:
 - extraSpecs.cpu == "intel-icelake-generic"
 - extraSpecs.cpu == "intel-icelake-generic" && vcpus == 2
 
-See https://expr-lang.org/docs/language-definition for syntax.
+Syntax reference: https://expr-lang.org/docs/language-definition
+
+You can also list available machine-types using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
+
+```bash
+stackit server machine-type list
+```
 - `project_id` (String) STACKIT Project ID.
 
 ### Optional

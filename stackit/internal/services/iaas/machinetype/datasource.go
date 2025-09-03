@@ -92,15 +92,17 @@ func (d *machineTypeDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Optional:    true,
 			},
 			"filter": schema.StringAttribute{
-				Description: `Expr-lang filter for filtering machine types.
-
-Examples:
-- vcpus == 2
-- ram >= 2048
-- extraSpecs.cpu == "intel-icelake-generic"
-- extraSpecs.cpu == "intel-icelake-generic" && vcpus == 2
-
-See https://expr-lang.org/docs/language-definition for syntax.`,
+				Description: "Expr-lang filter for filtering machine types.\n\n" +
+					"Examples:\n" +
+					"- vcpus == 2\n" +
+					"- ram >= 2048\n" +
+					"- extraSpecs.cpu == \"intel-icelake-generic\"\n" +
+					"- extraSpecs.cpu == \"intel-icelake-generic\" && vcpus == 2\n\n" +
+					"Syntax reference: https://expr-lang.org/docs/language-definition\n\n" +
+					"You can also list available machine-types using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n\n" +
+					"```bash\n" +
+					"stackit server machine-type list\n" +
+					"```",
 				Required: true,
 			},
 			"description": schema.StringAttribute{
