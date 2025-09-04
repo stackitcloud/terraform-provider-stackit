@@ -52,7 +52,7 @@ To create a project within a STACKIT Network Area, setting the label `networkAre
 ### Read-Only
 
 - `container_id` (String) Project container ID. Globally unique, user-friendly identifier.
-- `creation_time` (String) Date-time at which the folder was created.
+- `creation_time` (String) Date-time at which the project was created.
 - `id` (String) Terraform's internal resource ID. It is structured as "`container_id`".
 - `project_id` (String) Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.
-- `update_time` (String) Date-time at which the folder was last modified.
+- `update_time` (String) Date-time at which the project was last modified.
