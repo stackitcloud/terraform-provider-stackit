@@ -9,6 +9,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -89,6 +90,33 @@ func (r *customDomainDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed:    true,
 				Description: customDomainSchemaDescriptions["errors"],
 			},
+			"certificate": schema.SingleNestedAttribute{
+				Description: certificateSchemaDescriptions["main"],
+				Optional:    true,
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						Description: certificateSchemaDescriptions["type"],
+						Required:    true,
+						Validators: []validator.String{
+							stringvalidator.OneOf("managed", "custom"),
+						},
+					},
+					"certificate": schema.StringAttribute{
+						Description: certificateSchemaDescriptions["certificate"],
+						Optional:    true,
+					},
+					"private_key": schema.StringAttribute{
+						Description: certificateSchemaDescriptions["private_key"],
+						Optional:    true,
+						Sensitive:   true,
+					},
+					"version": schema.Int64Attribute{
+						Description: certificateSchemaDescriptions["version"],
+						Computed:    true,
+					},
+				},
+			},
 		},
 	}
 }
@@ -121,7 +149,7 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	err = mapCustomDomainFields(customDomainResp.CustomDomain, &model)
+	err = mapCustomDomainFields(customDomainResp.CustomDomain, &model, customDomainResp.Certificate)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
 		return
