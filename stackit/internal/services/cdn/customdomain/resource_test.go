@@ -2,7 +2,6 @@ package cdn
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -96,9 +95,6 @@ func TestMapFields(t *testing.T) {
 	}
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			if tn == "happy_path" {
-				fmt.Println("AS")
-			}
 			model := &CustomDomainModel{}
 			model.DistributionId = tc.Expected.DistributionId
 			model.ProjectId = tc.Expected.ProjectId
