@@ -90,7 +90,7 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          resourceMinConfig,
+				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -177,7 +177,7 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          resourceMaxConfig,
+				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),

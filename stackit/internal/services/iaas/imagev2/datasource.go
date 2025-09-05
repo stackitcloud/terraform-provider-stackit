@@ -178,6 +178,10 @@ func (d *imageDataV2Source) Schema(_ context.Context, _ datasource.SchemaRequest
 			"    ignore_changes = [boot_volume[0].source_id]\n"+
 			"  }\n"+
 			"}\n"+
+			"```\n\n"+
+			"You can also list available images using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n\n"+
+			"```bash\n"+
+			"stackit image list\n"+
 			"```",
 	), core.Datasource)
 	resp.Schema = schema.Schema{

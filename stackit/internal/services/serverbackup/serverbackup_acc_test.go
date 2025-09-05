@@ -88,7 +88,7 @@ func TestAccServerBackupScheduleMinResource(t *testing.T) {
 			},
 			// Creation
 			{
-				Config:          resourceMinConfig,
+				Config:          testutil.ServerBackupProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Backup schedule data
@@ -180,7 +180,7 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 			},
 			// Creation
 			{
-				Config:          resourceMaxConfig,
+				Config:          testutil.ServerBackupProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Backup schedule data
