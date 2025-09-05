@@ -2,7 +2,7 @@ resource "stackit_cdn_custom_domain" "example" {
   project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   distribution_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name            = "https://xxx.xxx"
-  certificate     = {
+  certificate = {
     certificate = "-----BEGIN CERTIFICATE-----\nY2VydGlmaWNhdGVfZGF0YQ==\n-----END CERTIFICATE---"
     private_key = "-----BEGIN CERTIFICATE-----\nY2VydGlmaWNhdGVfZGF0YQ==\n-----END CERTIFICATE---"
   }
