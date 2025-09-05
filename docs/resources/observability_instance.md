@@ -36,7 +36,7 @@ import {
 ### Required
 
 - `name` (String) The name of the Observability instance.
-- `plan_name` (String) Specifies the Observability plan. E.g. `Observability-Monitoring-Medium-EU01`.
+- `plan_name` (String) Specifies the Observability plan. E.g. `Observability-Monitoring-Medium-EU01`. Some configuration options are only applied if the correct plan is set e.g. some plans do not offer alerting or storage for traces and logs.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 
 ### Optional
