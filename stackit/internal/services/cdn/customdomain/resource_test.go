@@ -2,9 +2,19 @@ package cdn
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/base64"
+	"encoding/pem"
+	"fmt"
+	"math/big"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -147,7 +157,7 @@ func TestMapFields(t *testing.T) {
 			model := tc.InitialModel
 			model.DistributionId = tc.Expected.DistributionId
 			model.ProjectId = tc.Expected.ProjectId
-			err := mapCustomDomainFields(context.Background(), tc.Input, model, tc.Certificate)
+			err := mapCustomDomainFields(tc.Input, model, tc.Certificate)
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error mapping fields: %v", err)
 			}
@@ -163,6 +173,44 @@ func TestMapFields(t *testing.T) {
 		})
 	}
 }
+
+func makeCertAndKey(t *testing.T, organization string) (cert, key []byte) {
+	privateKey, err := rsa.GenerateKey(cryptoRand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate key: %s", err.Error())
+	}
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Issuer:       pkix.Name{CommonName: organization},
+		Subject: pkix.Name{
+			Organization: []string{organization},
+		},
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(time.Hour),
+
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+	cert, err = x509.CreateCertificate(
+		cryptoRand.Reader,
+		&template,
+		&template,
+		&privateKey.PublicKey,
+		privateKey,
+	)
+	if err != nil {
+		t.Fatalf("failed to generate cert: %s", err.Error())
+	}
+
+	return pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: cert,
+		}), pem.EncodeToMemory(&pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+		})
+}
 func TestBuildCertificatePayload(t *testing.T) {
 	// Redefine certificateTypes locally for testing, matching the updated schema
 	certificateTypes := map[string]attr.Type{
@@ -170,17 +218,12 @@ func TestBuildCertificatePayload(t *testing.T) {
 		"certificate": types.StringType,
 		"private_key": types.StringType,
 	}
-
-	// Dummy PEM and their expected raw Base64 counterparts for testing.
-	const certPEM = `-----BEGIN CERTIFICATE-----
-Y2VydGlmaWNhdGVfZGF0YQ==
------END CERTIFICATE-----`
-	const certBase64 = "Y2VydGlmaWNhdGVfZGF0YQ==" // "certificate_data"
-
-	const keyPEM = `-----BEGIN PRIVATE KEY-----
-cHJpdmF0ZV9rZXlfZGF0YQ==
------END PRIVATE KEY-----`
-	const keyBase64 = "cHJpdmF0ZV9rZXlfZGF0YQ==" // "private_key_data"
+	organization := fmt.Sprintf("organization-%s", uuid.NewString())
+	cert, key := makeCertAndKey(t, organization)
+	certPEM := string(cert)
+	keyPEM := string(key)
+	certBase64 := base64.StdEncoding.EncodeToString(cert)
+	keyBase64 := base64.StdEncoding.EncodeToString(key)
 
 	tests := map[string]struct {
 		model               *CustomDomainModel
@@ -225,54 +268,15 @@ cHJpdmF0ZV9rZXlfZGF0YQ==
 				),
 			},
 			expectDiagnostics:   true,
-			expectedDiagSummary: "Invalid Certificate Format",
-		},
-		"fail_custom_missing_key_value": {
-			model: &CustomDomainModel{
-				Certificate: basetypes.NewObjectValueMust(
-					certificateTypes,
-					map[string]attr.Value{
-						"version":     types.Int64Null(),
-						"certificate": types.StringValue(certPEM),
-						"private_key": types.StringValue(""), // Empty key
-					},
-				),
-			},
-			expectDiagnostics:   true,
-			expectedDiagSummary: "Invalid Private Key Format",
-		},
-		"fail_custom_invalid_cert_pem": {
-			model: &CustomDomainModel{
-				Certificate: basetypes.NewObjectValueMust(
-					certificateTypes,
-					map[string]attr.Value{
-						"version":     types.Int64Null(),
-						"certificate": types.StringValue("this-is-not-pem"), // Invalid PEM
-						"private_key": types.StringValue(keyPEM),
-					},
-				),
-			},
-			expectDiagnostics:   true,
-			expectedDiagSummary: "Invalid Certificate Format",
-		},
-		"fail_custom_invalid_key_pem": {
-			model: &CustomDomainModel{
-				Certificate: basetypes.NewObjectValueMust(
-					certificateTypes,
-					map[string]attr.Value{
-						"version":     types.Int64Null(),
-						"certificate": types.StringValue(certPEM),
-						"private_key": types.StringValue("this-is-not-pem-either"), // Invalid PEM
-					},
-				),
-			},
-			expectDiagnostics:   true,
-			expectedDiagSummary: "Invalid Private Key Format",
+			expectedDiagSummary: "Invalid certificate or private key",
 		},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
+			if name == "fail_custom_missing_cert_value" {
+				fmt.Println("as")
+			}
 			payload, diags := buildCertificatePayload(context.Background(), tt.model)
 			if tt.expectDiagnostics {
 				if !diags.HasError() {

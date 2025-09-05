@@ -96,6 +96,7 @@ func (r *customDomainDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 					"certificate": schema.StringAttribute{
 						Description: certificateSchemaDescriptions["certificate"],
 						Optional:    true,
+						Sensitive:   true,
 					},
 					"private_key": schema.StringAttribute{
 						Description: certificateSchemaDescriptions["private_key"],
@@ -140,7 +141,7 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	err = mapCustomDomainFields(ctx, customDomainResp.CustomDomain, &model, customDomainResp.Certificate)
+	err = mapCustomDomainFields(customDomainResp.CustomDomain, &model, customDomainResp.Certificate)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
 		return
