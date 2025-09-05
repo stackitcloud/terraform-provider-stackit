@@ -16,7 +16,6 @@ import (
 	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 
 	"github.com/google/uuid"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -43,15 +42,13 @@ var (
 	_ resource.ResourceWithImportState = &customDomainResource{}
 )
 var certificateSchemaDescriptions = map[string]string{
-	"main":        "The TLS certificate for the custom domain. If omitted, a managed certificate will be used.",
-	"type":        "The type of certificate. Can be `managed` or `custom`.",
-	"certificate": "The PEM-encoded TLS certificate. Required if `type` is `custom`.",
-	"private_key": "The PEM-encoded private key for the certificate. Required if `type` is `custom`.",
+	"main":        "The TLS certificate for the custom domain. If omitted, a managed certificate will be used. If the block is specified, a custom certificate is used.",
+	"certificate": "The PEM-encoded TLS certificate. Required for custom certificates.",
+	"private_key": "The PEM-encoded private key for the certificate. Required for custom certificates.",
 	"version":     "A version identifier for the certificate. The certificate will be updated if this field is changed.",
 }
 
 var certificateTypes = map[string]attr.Type{
-	"type":        types.StringType,
 	"version":     types.Int64Type,
 	"certificate": types.StringType,
 	"private_key": types.StringType,
@@ -148,23 +145,14 @@ func (r *customDomainResource) Schema(_ context.Context, _ resource.SchemaReques
 			"certificate": schema.SingleNestedAttribute{
 				Description: certificateSchemaDescriptions["main"],
 				Optional:    true,
-				Computed:    true,
 				Attributes: map[string]schema.Attribute{
-					"type": schema.StringAttribute{
-						Description: certificateSchemaDescriptions["type"],
-						Required:    true,
-						Validators: []validator.String{
-							stringvalidator.OneOf("managed", "custom"),
-						},
-					},
 					"certificate": schema.StringAttribute{
 						Description: certificateSchemaDescriptions["certificate"],
-						Optional:    true,
+						Required:    true,
 					},
 					"private_key": schema.StringAttribute{
 						Description: certificateSchemaDescriptions["private_key"],
-						Optional:    true,
-						Sensitive:   true,
+						Required:    true,
 					},
 					"version": schema.Int64Attribute{
 						Description: certificateSchemaDescriptions["version"],
@@ -219,7 +207,7 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	err = mapCustomDomainFields(waitResp, &model, respPutCustomDomain.Certificate)
+	err = mapCustomDomainFields(ctx, waitResp, &model, respPutCustomDomain.Certificate)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -262,7 +250,7 @@ func (r *customDomainResource) Read(ctx context.Context, req resource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	err = mapCustomDomainFields(customDomainResp.CustomDomain, &model, customDomainResp.Certificate)
+	err = mapCustomDomainFields(ctx, customDomainResp.CustomDomain, &model, customDomainResp.Certificate)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -376,7 +364,7 @@ func pemToBase64(pemString string) (string, error) {
 }
 
 // buildCertificatePayload constructs the certificate part of the payload for the API request.
-// It handles both "managed" and "custom" certificate types based on the Terraform model.
+// It defaults to a managed certificate if the certificate block is omitted, otherwise it creates a custom certificate.
 func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cdn.PutCustomDomainPayloadCertificate, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
@@ -387,9 +375,8 @@ func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cd
 		return &certPayload, diags
 	}
 
-	// Define a temporary struct to map the Terraform object attributes.
+	// If the certificate block is specified, it must be a custom certificate.
 	var certModel struct {
-		Type        types.String `tfsdk:"type"`
 		Certificate types.String `tfsdk:"certificate"`
 		PrivateKey  types.String `tfsdk:"private_key"`
 		Version     types.Int64  `tfsdk:"version"`
@@ -402,80 +389,41 @@ func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cd
 		return nil, diags
 	}
 
-	var certPayload cdn.PutCustomDomainPayloadCertificate
-	certType := certModel.Type.ValueString()
-
-	switch certType {
-	case "managed":
-		// Create a payload for a managed certificate.
-		managedCert := cdn.NewPutCustomDomainManagedCertificate("managed")
-		certPayload = cdn.PutCustomDomainManagedCertificateAsPutCustomDomainPayloadCertificate(managedCert)
-
-	case "custom":
-		// For a custom certificate, validate that the certificate and private key are provided.
-		if certModel.Certificate.IsNull() || certModel.Certificate.ValueString() == "" {
-			diags.AddAttributeError(
-				path.Root("certificate").AtName("certificate"),
-				"Missing Certificate",
-				"The 'certificate' attribute is required when the certificate type is 'custom'.",
-			)
-		}
-		if certModel.PrivateKey.IsNull() || certModel.PrivateKey.ValueString() == "" {
-			diags.AddAttributeError(
-				path.Root("certificate").AtName("private_key"),
-				"Missing Private Key",
-				"The 'private_key' attribute is required when the certificate type is 'custom'.",
-			)
-		}
-		if diags.HasError() {
-			return nil, diags
-		}
-
-		// Process the PEM strings to get raw Base64 strings for the SDK.
-		certBase64, err := pemToBase64(certModel.Certificate.ValueString())
-		if err != nil {
-			diags.AddAttributeError(
-				path.Root("certificate").AtName("certificate"),
-				"Invalid Certificate Format",
-				"The provided certificate is not a valid PEM-encoded string.",
-			)
-		}
-
-		keyBase64, err := pemToBase64(certModel.PrivateKey.ValueString())
-		if err != nil {
-			diags.AddAttributeError(
-				path.Root("certificate").AtName("private_key"),
-				"Invalid Private Key Format",
-				"The provided private key is not a valid PEM-encoded string.",
-			)
-		}
-
-		if diags.HasError() {
-			return nil, diags
-		}
-
-		// Create a payload for a custom certificate using the processed Base64 strings.
-		customCert := cdn.NewPutCustomDomainCustomCertificate(
-			certBase64,
-			keyBase64,
-			"custom",
-		)
-		certPayload = cdn.PutCustomDomainCustomCertificateAsPutCustomDomainPayloadCertificate(customCert)
-
-	default:
-		// This case should ideally be caught by the schema validator, but it's good practice to handle it.
+	// Process the PEM strings to get raw Base64 strings for the SDK.
+	certBase64, err := pemToBase64(certModel.Certificate.ValueString())
+	if err != nil {
 		diags.AddAttributeError(
-			path.Root("certificate").AtName("type"),
-			"Invalid Certificate Type",
-			fmt.Sprintf("Expected 'managed' or 'custom', but got: %s", certType),
+			path.Root("certificate").AtName("certificate"),
+			"Invalid Certificate Format",
+			"The provided certificate is not a valid PEM-encoded string.",
 		)
+	}
+
+	keyBase64, err := pemToBase64(certModel.PrivateKey.ValueString())
+	if err != nil {
+		diags.AddAttributeError(
+			path.Root("certificate").AtName("private_key"),
+			"Invalid Private Key Format",
+			"The provided private key is not a valid PEM-encoded string.",
+		)
+	}
+
+	if diags.HasError() {
 		return nil, diags
 	}
+
+	// Create a payload for a custom certificate using the processed Base64 strings.
+	customCert := cdn.NewPutCustomDomainCustomCertificate(
+		certBase64,
+		keyBase64,
+		"custom",
+	)
+	certPayload := cdn.PutCustomDomainCustomCertificateAsPutCustomDomainPayloadCertificate(customCert)
 
 	return &certPayload, diags
 }
 
-func mapCustomDomainFields(customDomain *cdn.CustomDomain, model *CustomDomainModel, certificateInput interface{}) error {
+func mapCustomDomainFields(ctx context.Context, customDomain *cdn.CustomDomain, model *CustomDomainModel, certificateInput interface{}) error {
 	if customDomain == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -490,27 +438,48 @@ func mapCustomDomainFields(customDomain *cdn.CustomDomain, model *CustomDomainMo
 	if customDomain.Status == nil {
 		return fmt.Errorf("Status missing in response")
 	}
-	certificate, err := normalizeCertificate(certificateInput)
+	normalizedCert, err := normalizeCertificate(certificateInput)
 	if err != nil {
-		return fmt.Errorf("Certificate error in nomalizer: %s", err)
+		return fmt.Errorf("Certificate error in normalizer: %s", err)
 	}
 	var diags diag.Diagnostics
-	certAttributes := map[string]attr.Value{
-		"type":        types.StringValue(certificate.Type),
-		"version":     types.Int64Null(),
-		"certificate": types.StringNull(),
-		"private_key": types.StringNull(),
-	}
-	if certificate.Version != nil {
-		certAttributes["version"] = types.Int64Value(*certificate.Version)
-	}
-	certificateObj, conversionDiags := types.ObjectValue(certificateTypes, certAttributes)
-	diags.Append(conversionDiags...)
-	if diags.HasError() {
-		return core.DiagsToError(diags)
+
+	// If the certificate is managed, the certificate block in the state should be null.
+	if normalizedCert.Type == "managed" {
+		model.Certificate = types.ObjectNull(certificateTypes)
+	} else {
+		// If the certificate is custom, we need to preserve the user-configured
+		// certificate and private key from the plan/state, and only update the computed version.
+		certAttributes := map[string]attr.Value{
+			"certificate": types.StringNull(), // Default to null
+			"private_key": types.StringNull(), // Default to null
+			"version":     types.Int64Null(),
+		}
+
+		// Get existing values from the model's certificate object if it exists
+		if !model.Certificate.IsNull() {
+			existingAttrs := model.Certificate.Attributes()
+			if val, ok := existingAttrs["certificate"]; ok {
+				certAttributes["certificate"] = val
+			}
+			if val, ok := existingAttrs["private_key"]; ok {
+				certAttributes["private_key"] = val
+			}
+		}
+
+		// Set the computed version from the API response
+		if normalizedCert.Version != nil {
+			certAttributes["version"] = types.Int64Value(*normalizedCert.Version)
+		}
+
+		certificateObj, conversionDiags := types.ObjectValue(certificateTypes, certAttributes)
+		diags.Append(conversionDiags...)
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+		model.Certificate = certificateObj
 	}
 
-	model.Certificate = certificateObj
 	model.ID = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.DistributionId.ValueString(), *customDomain.Name)
 	model.Status = types.StringValue(string(*customDomain.Status))
 

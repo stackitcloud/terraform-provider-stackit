@@ -12,14 +12,26 @@ import (
 )
 
 func TestMapFields(t *testing.T) {
+	// Redefine certificateTypes locally for testing, matching the updated schema
+	certificateTypes := map[string]attr.Type{
+		"version":     types.Int64Type,
+		"certificate": types.StringType,
+		"private_key": types.StringType,
+	}
+
+	const dummyCert = "dummy-cert-pem"
+	const dummyKey = "dummy-key-pem"
+
 	emtpyErrorsList := types.ListValueMust(types.StringType, []attr.Value{})
+
+	// Expected object when a custom certificate is returned
 	certAttributes := map[string]attr.Value{
-		"type":        types.StringValue("custom"),
 		"version":     types.Int64Value(3),
-		"certificate": types.StringNull(),
-		"private_key": types.StringNull(),
+		"certificate": types.StringValue(dummyCert),
+		"private_key": types.StringValue(dummyKey),
 	}
 	certificateObj, _ := types.ObjectValue(certificateTypes, certAttributes)
+
 	expectedModel := func(mods ...func(*CustomDomainModel)) *CustomDomainModel {
 		model := &CustomDomainModel{
 			ID:             types.StringValue("test-project-id,test-distribution-id,https://testdomain.com"),
@@ -34,6 +46,7 @@ func TestMapFields(t *testing.T) {
 		}
 		return model
 	}
+
 	customType := "custom"
 	customVersion := int64(3)
 	getRespCustom := cdn.GetCustomDomainResponseGetCertificateAttributeType(&cdn.GetCustomDomainResponseCertificate{
@@ -42,6 +55,14 @@ func TestMapFields(t *testing.T) {
 			Version: &customVersion,
 		},
 	})
+
+	managedType := "managed"
+	getRespManaged := cdn.GetCustomDomainResponseGetCertificateAttributeType(&cdn.GetCustomDomainResponseCertificate{
+		GetCustomDomainManagedCertificate: &cdn.GetCustomDomainManagedCertificate{
+			Type: &managedType,
+		},
+	})
+
 	customDomainFixture := func(mods ...func(*cdn.CustomDomain)) *cdn.CustomDomain {
 		distribution := &cdn.CustomDomain{
 			Errors: &[]cdn.StatusError{},
@@ -53,19 +74,38 @@ func TestMapFields(t *testing.T) {
 		}
 		return distribution
 	}
+
 	tests := map[string]struct {
-		Input       *cdn.CustomDomain
-		Certificate interface{}
-		Expected    *CustomDomainModel
-		IsValid     bool
+		Input          *cdn.CustomDomain
+		Certificate    interface{}
+		Expected       *CustomDomainModel
+		InitialModel   *CustomDomainModel
+		IsValid        bool
+		SkipInitialNil bool
 	}{
-		"happy_path": {
+		"happy_path_custom_cert": {
 			Expected: expectedModel(func(m *CustomDomainModel) {
 				m.Certificate = certificateObj
 			}),
-			Input:       customDomainFixture(),
-			IsValid:     true,
+			Input:   customDomainFixture(),
+			IsValid: true,
+			InitialModel: expectedModel(func(m *CustomDomainModel) {
+				m.Certificate = basetypes.NewObjectValueMust(certificateTypes, map[string]attr.Value{
+					"certificate": types.StringValue(dummyCert),
+					"private_key": types.StringValue(dummyKey),
+					"version":     types.Int64Null(),
+				})
+			}),
 			Certificate: getRespCustom,
+		},
+		"happy_path_managed_cert": {
+			Expected: expectedModel(func(m *CustomDomainModel) {
+				m.Certificate = types.ObjectNull(certificateTypes)
+			}),
+			Input:        customDomainFixture(),
+			IsValid:      true,
+			InitialModel: expectedModel(func(m *CustomDomainModel) { m.Certificate = types.ObjectNull(certificateTypes) }),
+			Certificate:  getRespManaged,
 		},
 		"happy_path_status_error": {
 			Expected: expectedModel(func(m *CustomDomainModel) {
@@ -75,30 +115,39 @@ func TestMapFields(t *testing.T) {
 			Input: customDomainFixture(func(d *cdn.CustomDomain) {
 				d.Status = cdn.DOMAINSTATUS_ERROR.Ptr()
 			}),
-			IsValid:     true,
+			IsValid: true,
+			InitialModel: expectedModel(func(m *CustomDomainModel) {
+				m.Certificate = basetypes.NewObjectValueMust(certificateTypes, map[string]attr.Value{
+					"certificate": types.StringValue(dummyCert),
+					"private_key": types.StringValue(dummyKey),
+					"version":     types.Int64Null(),
+				})
+			}),
 			Certificate: getRespCustom,
 		},
 		"sad_path_custom_domain_nil": {
-			Expected:    expectedModel(),
-			Input:       nil,
-			IsValid:     false,
-			Certificate: getRespCustom,
+			Expected:     expectedModel(),
+			Input:        nil,
+			IsValid:      false,
+			InitialModel: &CustomDomainModel{},
+			Certificate:  getRespCustom,
 		},
 		"sad_path_name_missing": {
 			Expected: expectedModel(),
 			Input: customDomainFixture(func(d *cdn.CustomDomain) {
 				d.Name = nil
 			}),
-			IsValid:     false,
-			Certificate: getRespCustom,
+			IsValid:      false,
+			InitialModel: &CustomDomainModel{},
+			Certificate:  getRespCustom,
 		},
 	}
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			model := &CustomDomainModel{}
+			model := tc.InitialModel
 			model.DistributionId = tc.Expected.DistributionId
 			model.ProjectId = tc.Expected.ProjectId
-			err := mapCustomDomainFields(tc.Input, model, tc.Certificate)
+			err := mapCustomDomainFields(context.Background(), tc.Input, model, tc.Certificate)
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error mapping fields: %v", err)
 			}
@@ -106,15 +155,22 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should have failed")
 			}
 			if tc.IsValid {
-				diff := cmp.Diff(model, tc.Expected)
+				diff := cmp.Diff(tc.Expected, model)
 				if diff != "" {
-					t.Fatalf("Create Payload not as expected: %s", diff)
+					t.Fatalf("Mapped model not as expected (-want +got):\n%s", diff)
 				}
 			}
 		})
 	}
 }
 func TestBuildCertificatePayload(t *testing.T) {
+	// Redefine certificateTypes locally for testing, matching the updated schema
+	certificateTypes := map[string]attr.Type{
+		"version":     types.Int64Type,
+		"certificate": types.StringType,
+		"private_key": types.StringType,
+	}
+
 	// Dummy PEM and their expected raw Base64 counterparts for testing.
 	const certPEM = `-----BEGIN CERTIFICATE-----
 Y2VydGlmaWNhdGVfZGF0YQ==
@@ -132,24 +188,7 @@ cHJpdmF0ZV9rZXlfZGF0YQ==
 		expectDiagnostics   bool
 		expectedDiagSummary string
 	}{
-		"success_managed_type": {
-			model: &CustomDomainModel{
-				Certificate: basetypes.NewObjectValueMust(
-					certificateTypes,
-					map[string]attr.Value{
-						"type":        types.StringValue("managed"),
-						"version":     types.Int64Null(),
-						"certificate": types.StringNull(),
-						"private_key": types.StringNull(),
-					},
-				),
-			},
-			expectedPayload: &cdn.PutCustomDomainPayloadCertificate{
-				PutCustomDomainManagedCertificate: cdn.NewPutCustomDomainManagedCertificate("managed"),
-			},
-			expectDiagnostics: false,
-		},
-		"success_nil_certificate_block": {
+		"success_managed_when_certificate_block_is_nil": {
 			model: &CustomDomainModel{
 				Certificate: types.ObjectNull(certificateTypes),
 			},
@@ -158,12 +197,11 @@ cHJpdmF0ZV9rZXlfZGF0YQ==
 			},
 			expectDiagnostics: false,
 		},
-		"success_custom_type": {
+		"success_custom_certificate": {
 			model: &CustomDomainModel{
 				Certificate: basetypes.NewObjectValueMust(
 					certificateTypes,
 					map[string]attr.Value{
-						"type":        types.StringValue("custom"),
 						"version":     types.Int64Null(),
 						"certificate": types.StringValue(certPEM),
 						"private_key": types.StringValue(keyPEM),
@@ -175,42 +213,39 @@ cHJpdmF0ZV9rZXlfZGF0YQ==
 			},
 			expectDiagnostics: false,
 		},
-		"fail_custom_type_missing_cert": {
+		"fail_custom_missing_cert_value": {
 			model: &CustomDomainModel{
 				Certificate: basetypes.NewObjectValueMust(
 					certificateTypes,
 					map[string]attr.Value{
-						"type":        types.StringValue("custom"),
 						"version":     types.Int64Null(),
-						"certificate": types.StringNull(), // Missing certificate
+						"certificate": types.StringValue(""), // Empty certificate
 						"private_key": types.StringValue(keyPEM),
 					},
 				),
 			},
 			expectDiagnostics:   true,
-			expectedDiagSummary: "Missing Certificate",
+			expectedDiagSummary: "Invalid Certificate Format",
 		},
-		"fail_custom_type_missing_key": {
+		"fail_custom_missing_key_value": {
 			model: &CustomDomainModel{
 				Certificate: basetypes.NewObjectValueMust(
 					certificateTypes,
 					map[string]attr.Value{
-						"type":        types.StringValue("custom"),
 						"version":     types.Int64Null(),
 						"certificate": types.StringValue(certPEM),
-						"private_key": types.StringNull(), // Missing key
+						"private_key": types.StringValue(""), // Empty key
 					},
 				),
 			},
 			expectDiagnostics:   true,
-			expectedDiagSummary: "Missing Private Key",
+			expectedDiagSummary: "Invalid Private Key Format",
 		},
-		"fail_custom_type_invalid_cert_pem": {
+		"fail_custom_invalid_cert_pem": {
 			model: &CustomDomainModel{
 				Certificate: basetypes.NewObjectValueMust(
 					certificateTypes,
 					map[string]attr.Value{
-						"type":        types.StringValue("custom"),
 						"version":     types.Int64Null(),
 						"certificate": types.StringValue("this-is-not-pem"), // Invalid PEM
 						"private_key": types.StringValue(keyPEM),
@@ -220,12 +255,11 @@ cHJpdmF0ZV9rZXlfZGF0YQ==
 			expectDiagnostics:   true,
 			expectedDiagSummary: "Invalid Certificate Format",
 		},
-		"fail_custom_type_invalid_key_pem": {
+		"fail_custom_invalid_key_pem": {
 			model: &CustomDomainModel{
 				Certificate: basetypes.NewObjectValueMust(
 					certificateTypes,
 					map[string]attr.Value{
-						"type":        types.StringValue("custom"),
 						"version":     types.Int64Null(),
 						"certificate": types.StringValue(certPEM),
 						"private_key": types.StringValue("this-is-not-pem-either"), // Invalid PEM
