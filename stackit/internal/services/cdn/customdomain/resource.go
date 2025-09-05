@@ -3,7 +3,6 @@ package cdn
 import (
 	"context"
 	"encoding/base64"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/http"
@@ -148,11 +147,13 @@ func (r *customDomainResource) Schema(_ context.Context, _ resource.SchemaReques
 				Attributes: map[string]schema.Attribute{
 					"certificate": schema.StringAttribute{
 						Description: certificateSchemaDescriptions["certificate"],
-						Required:    true,
+						Optional:    true,
+						Sensitive:   true,
 					},
 					"private_key": schema.StringAttribute{
 						Description: certificateSchemaDescriptions["private_key"],
-						Required:    true,
+						Optional:    true,
+						Sensitive:   true,
 					},
 					"version": schema.Int64Attribute{
 						Description: certificateSchemaDescriptions["version"],
@@ -207,7 +208,7 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	err = mapCustomDomainFields(ctx, waitResp, &model, respPutCustomDomain.Certificate)
+	err = mapCustomDomainFields(waitResp, &model, respPutCustomDomain.Certificate)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -250,7 +251,7 @@ func (r *customDomainResource) Read(ctx context.Context, req resource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	err = mapCustomDomainFields(ctx, customDomainResp.CustomDomain, &model, customDomainResp.Certificate)
+	err = mapCustomDomainFields(customDomainResp.CustomDomain, &model, customDomainResp.Certificate)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -350,19 +351,6 @@ func normalizeCertificate(certInput interface{}) (Certificate, error) {
 	return Certificate{}, errors.New("certificate structure is empty, neither custom nor managed is set")
 }
 
-// pemToBase64 decodes a PEM-formatted string, extracts the raw data,
-// and re-encodes it into a standard single-line Base64 string.
-func pemToBase64(pemString string) (string, error) {
-	// pem.Decode will find the first PEM formatted block (e.g. -----BEGIN...-----)
-	block, _ := pem.Decode([]byte(pemString))
-	if block == nil {
-		return "", fmt.Errorf("failed to decode PEM block from the provided string")
-	}
-	// The block.Bytes field contains the raw data without headers or footers.
-	// We re-encode this raw data to standard Base64.
-	return base64.StdEncoding.EncodeToString(block.Bytes), nil
-}
-
 // buildCertificatePayload constructs the certificate part of the payload for the API request.
 // It defaults to a managed certificate if the certificate block is omitted, otherwise it creates a custom certificate.
 func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cdn.PutCustomDomainPayloadCertificate, diag.Diagnostics) {
@@ -388,34 +376,17 @@ func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cd
 	if diags.HasError() {
 		return nil, diags
 	}
+	certStr := base64.StdEncoding.EncodeToString([]byte(certModel.Certificate.ValueString()))
+	keyStr := base64.StdEncoding.EncodeToString([]byte(certModel.PrivateKey.ValueString()))
 
-	// Process the PEM strings to get raw Base64 strings for the SDK.
-	certBase64, err := pemToBase64(certModel.Certificate.ValueString())
-	if err != nil {
-		diags.AddAttributeError(
-			path.Root("certificate").AtName("certificate"),
-			"Invalid Certificate Format",
-			"The provided certificate is not a valid PEM-encoded string.",
-		)
-	}
-
-	keyBase64, err := pemToBase64(certModel.PrivateKey.ValueString())
-	if err != nil {
-		diags.AddAttributeError(
-			path.Root("certificate").AtName("private_key"),
-			"Invalid Private Key Format",
-			"The provided private key is not a valid PEM-encoded string.",
-		)
-	}
-
-	if diags.HasError() {
+	if certStr == "" || keyStr == "" {
+		diags.Append(diag.NewErrorDiagnostic("Invalid certificate or private key", "Please check if the string of the public certificate and private key in PEM format"))
 		return nil, diags
 	}
 
-	// Create a payload for a custom certificate using the processed Base64 strings.
 	customCert := cdn.NewPutCustomDomainCustomCertificate(
-		certBase64,
-		keyBase64,
+		certStr,
+		keyStr,
 		"custom",
 	)
 	certPayload := cdn.PutCustomDomainCustomCertificateAsPutCustomDomainPayloadCertificate(customCert)
@@ -423,7 +394,7 @@ func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cd
 	return &certPayload, diags
 }
 
-func mapCustomDomainFields(ctx context.Context, customDomain *cdn.CustomDomain, model *CustomDomainModel, certificateInput interface{}) error {
+func mapCustomDomainFields(customDomain *cdn.CustomDomain, model *CustomDomainModel, certificateInput interface{}) error {
 	if customDomain == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -440,7 +411,7 @@ func mapCustomDomainFields(ctx context.Context, customDomain *cdn.CustomDomain, 
 	}
 	normalizedCert, err := normalizeCertificate(certificateInput)
 	if err != nil {
-		return fmt.Errorf("Certificate error in normalizer: %s", err)
+		return fmt.Errorf("Certificate error in normalizer: %w", err)
 	}
 	var diags diag.Diagnostics
 

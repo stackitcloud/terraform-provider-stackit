@@ -32,8 +32,24 @@ data "stackit_cdn_custom_domain" "example" {
 - `name` (String)
 - `project_id` (String) STACKIT project ID associated with the distribution
 
+### Optional
+
+- `certificate` (Attributes) The TLS certificate for the custom domain. If omitted, a managed certificate will be used. If the block is specified, a custom certificate is used. (see [below for nested schema](#nestedatt--certificate))
+
 ### Read-Only
 
 - `errors` (List of String) List of distribution errors
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`distribution_id`".
 - `status` (String) Status of the distribution
+
+<a id="nestedatt--certificate"></a>
+### Nested Schema for `certificate`
+
+Optional:
+
+- `certificate` (String, Sensitive) The PEM-encoded TLS certificate. Required for custom certificates.
+- `private_key` (String, Sensitive) The PEM-encoded private key for the certificate. Required for custom certificates.
+
+Read-Only:
+
+- `version` (Number) A version identifier for the certificate. The certificate will be updated if this field is changed.
