@@ -73,6 +73,9 @@ variable "scrapeconfig_timeout" {}
 variable "scrapeconfig_auth_username" {}
 variable "scrapeconfig_auth_password" {}
 
+variable "http_check_url" {}
+variable "cert_check_source" {}
+
 resource "stackit_observability_alertgroup" "alertgroup" {
   project_id  = var.project_id
   instance_id = stackit_observability_instance.instance.instance_id
@@ -231,4 +234,16 @@ resource "stackit_observability_scrapeconfig" "scrapeconfig" {
     enable_url_parameters = var.scrapeconfig_enable_url_params
   }
 
+}
+
+resource "stackit_observability_http_check" "httpcheck" {
+  project_id  = var.project_id
+  instance_id = stackit_observability_instance.instance.instance_id
+  url         = var.http_check_url
+}
+
+resource "stackit_observability_cert_check" "certcheck" {
+  project_id  = var.project_id
+  instance_id = stackit_observability_instance.instance.instance_id
+  source      = var.cert_check_source
 }

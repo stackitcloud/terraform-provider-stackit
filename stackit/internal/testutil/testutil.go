@@ -108,6 +108,23 @@ func ObservabilityProviderConfig() string {
 		ObservabilityCustomEndpoint,
 	)
 }
+
+func ObservabilityProviderConfigBetaEnabled() string {
+	if ObservabilityCustomEndpoint == "" {
+		return `provider "stackit" {
+			enable_beta_resources = true
+			default_region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			enable_beta_resources = true
+			observability_custom_endpoint = "%s"
+		}`,
+		ObservabilityCustomEndpoint,
+	)
+}
+
 func CdnProviderConfig() string {
 	if CdnCustomEndpoint == "" {
 		return `
