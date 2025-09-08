@@ -114,6 +114,7 @@ resource "stackit_loadbalancer" "example" {
 # network and the target server is in another. This requires manual
 # security group configuration using the `disable_security_group_assignment`
 # and `security_group_id` attributes.
+# test comment
 
 # We create two separate networks: one for the load balancer and one for the target.
 resource "stackit_network" "lb_network" {
