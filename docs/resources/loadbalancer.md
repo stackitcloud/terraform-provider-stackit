@@ -114,7 +114,6 @@ resource "stackit_loadbalancer" "example" {
 # network and the target server is in another. This requires manual
 # security group configuration using the `disable_security_group_assignment`
 # and `security_group_id` attributes.
-# test comment
 
 # We create two separate networks: one for the load balancer and one for the target.
 resource "stackit_network" "lb_network" {
@@ -193,7 +192,7 @@ resource "stackit_security_group_rule" "allow_lb_ingress" {
 resource "stackit_server" "example" {
   project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name              = "example-remote-target"
-  machine_type      = "c1.1"
+  machine_type      = "g2i.2"
   availability_zone = "eu01-1"
 
   boot_volume = {
