@@ -53,6 +53,7 @@ var testConfigVarsMax = config.Variables{
 	"network_name":                      config.StringVariable(fmt.Sprintf("tf-acc-n%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
 	"server_name":                       config.StringVariable(fmt.Sprintf("tf-acc-s%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
 	"loadbalancer_name":                 config.StringVariable(fmt.Sprintf("tf-acc-l%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"security_group_id":                 config.StringVariable("123abc-a123-123a-1234-abc123def456"),
 	"target_pool_name":                  config.StringVariable("example-target-pool"),
 	"target_port":                       config.StringVariable("5432"),
 	"target_display_name":               config.StringVariable("example-target"),
