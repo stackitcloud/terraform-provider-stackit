@@ -394,7 +394,7 @@ func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cd
 	return &certPayload, diags
 }
 
-func mapCustomDomainFields(customDomain *cdn.CustomDomain, model *CustomDomainModel, certificateInput interface{}) error {
+func mapCustomDomainFields(customDomain *cdn.GetCustomDomainResponse, model *CustomDomainModel) error {
 	if customDomain == nil {
 		return fmt.Errorf("response input is nil")
 	}
