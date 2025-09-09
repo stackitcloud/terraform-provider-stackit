@@ -208,7 +208,12 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	err = mapCustomDomainFields(waitResp, &model, respPutCustomDomain.Certificate)
+	respCustomDomain, err := r.client.GetCustomDomainExecute(ctx, projectId, distributionId, name)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+	err = mapCustomDomainFields(respCustomDomain, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
 		return
