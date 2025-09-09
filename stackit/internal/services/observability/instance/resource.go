@@ -40,7 +40,7 @@ import (
 )
 
 // Currently, due to incorrect types in the API, the maximum recursion level for child routes is set to 1.
-// Once this is fixed, the value should be set to 10.
+// Once this is fixed, the value should be set to 10 and toRoutePayload needs to be adjusted, to support it.
 const childRouteMaxRecursionLevel = 1
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -2036,7 +2036,7 @@ func toRoutePayload(ctx context.Context, routeTF *mainRouteModel) (*observabilit
 	}
 
 	var groupByPayload *[]string
-	var childRoutesPayload *[]observability.CreateAlertConfigRoutePayloadRoutesInner
+	var childRoutesPayload *[]observability.UpdateAlertConfigsPayloadRouteRoutesInner
 
 	if !routeTF.GroupBy.IsNull() && !routeTF.GroupBy.IsUnknown() {
 		groupByPayload = &[]string{}
@@ -2074,14 +2074,14 @@ func toRoutePayload(ctx context.Context, routeTF *mainRouteModel) (*observabilit
 			}
 		}
 
-		childRoutesList := []observability.CreateAlertConfigRoutePayloadRoutesInner{}
+		childRoutesList := []observability.UpdateAlertConfigsPayloadRouteRoutesInner{}
 		for i := range childRoutes {
 			childRoute := childRoutes[i]
-			childRoutePayload, err := toMiddleRoutesToPayload(ctx, &childRoute)
+			childRoutePayload, err := toChildRoutePayload(ctx, &childRoute)
 			if err != nil {
 				return nil, fmt.Errorf("mapping child route: %w", err)
 			}
-			childRoutesList = append(childRoutesList, *toChildRoutePayload(childRoutePayload))
+			childRoutesList = append(childRoutesList, *childRoutePayload)
 		}
 
 		childRoutesPayload = &childRoutesList
@@ -2097,7 +2097,7 @@ func toRoutePayload(ctx context.Context, routeTF *mainRouteModel) (*observabilit
 	}, nil
 }
 
-func toMiddleRoutesToPayload(ctx context.Context, routeTF *routeModelMiddle) (*observability.UpdateAlertConfigsPayloadRoute, error) {
+func toChildRoutePayload(ctx context.Context, routeTF *routeModelMiddle) (*observability.UpdateAlertConfigsPayloadRouteRoutesInner, error) {
 	if routeTF == nil {
 		return nil, fmt.Errorf("nil route model")
 	}
@@ -2105,7 +2105,6 @@ func toMiddleRoutesToPayload(ctx context.Context, routeTF *routeModelMiddle) (*o
 	var groupByPayload *[]string
 	var matchPayload *map[string]interface{}
 	var matchRegexPayload *map[string]interface{}
-	var childRoutesPayload *[]observability.UpdateAlertConfigsPayloadRouteRoutesInner
 	var matchersPayload *[]string
 
 	if !utils.IsUndefined(routeTF.GroupBy) {
@@ -2140,48 +2139,7 @@ func toMiddleRoutesToPayload(ctx context.Context, routeTF *routeModelMiddle) (*o
 		matchersPayload = matchersList
 	}
 
-	if !routeTF.Routes.IsNull() && !routeTF.Routes.IsUnknown() {
-		childRoutes := []routeModelMiddle{}
-		diags := routeTF.Routes.ElementsAs(ctx, &childRoutes, false)
-		if diags.HasError() {
-			// If there is an error, we will try to map the child routes as if they are the last child routes
-			// This is done because the last child routes in the recursion have a different structure (don't have the `routes` fields)
-			// and need to be unpacked to a different struct (routeModelNoRoutes)
-			lastChildRoutes := []routeModelNoRoutes{}
-			diags = routeTF.Routes.ElementsAs(ctx, &lastChildRoutes, true)
-			if diags.HasError() {
-				return nil, fmt.Errorf("mapping child routes: %w", core.DiagsToError(diags))
-			}
-			for i := range lastChildRoutes {
-				childRoute := routeModelMiddle{
-					GroupBy:        lastChildRoutes[i].GroupBy,
-					GroupInterval:  lastChildRoutes[i].GroupInterval,
-					GroupWait:      lastChildRoutes[i].GroupWait,
-					Match:          lastChildRoutes[i].Match,
-					MatchRegex:     lastChildRoutes[i].MatchRegex,
-					Matchers:       lastChildRoutes[i].Matchers,
-					Receiver:       lastChildRoutes[i].Receiver,
-					RepeatInterval: lastChildRoutes[i].RepeatInterval,
-					Routes:         types.ListNull(getRouteListType()),
-				}
-				childRoutes = append(childRoutes, childRoute)
-			}
-		}
-
-		childRoutesList := []observability.UpdateAlertConfigsPayloadRouteRoutesInner{}
-		for i := range childRoutes {
-			childRoute := childRoutes[i]
-			childRoutePayload, err := toMiddleRoutesToPayload(ctx, &childRoute)
-			if err != nil {
-				return nil, fmt.Errorf("mapping child route: %w", err)
-			}
-			childRoutesList = append(childRoutesList, *toChildRoutePayload(childRoutePayload))
-		}
-
-		childRoutesPayload = &childRoutesList
-	}
-
-	return &observability.UpdateAlertConfigsPayloadRoute{
+	return &observability.UpdateAlertConfigsPayloadRouteRoutesInner{
 		GroupBy:        groupByPayload,
 		GroupInterval:  conversion.StringValueToPointer(routeTF.GroupInterval),
 		GroupWait:      conversion.StringValueToPointer(routeTF.GroupWait),
@@ -2190,25 +2148,8 @@ func toMiddleRoutesToPayload(ctx context.Context, routeTF *routeModelMiddle) (*o
 		Matchers:       matchersPayload,
 		Receiver:       conversion.StringValueToPointer(routeTF.Receiver),
 		RepeatInterval: conversion.StringValueToPointer(routeTF.RepeatInterval),
-		Routes:         childRoutesPayload,
+		// Routes:         childRoutesPayload,
 	}, nil
-}
-
-func toChildRoutePayload(in *observability.UpdateAlertConfigsPayloadRoute) *observability.UpdateAlertConfigsPayloadRouteRoutesInner {
-	if in == nil {
-		return nil
-	}
-	return &observability.UpdateAlertConfigsPayloadRouteRoutesInner{
-		GroupBy:        in.GroupBy,
-		GroupInterval:  in.GroupInterval,
-		GroupWait:      in.GroupWait,
-		Match:          in.Match,
-		MatchRe:        in.MatchRe,
-		Matchers:       in.Matchers,
-		Receiver:       in.Receiver,
-		RepeatInterval: in.RepeatInterval,
-		// Routes not currently supported
-	}
 }
 
 func toGlobalConfigPayload(ctx context.Context, model *alertConfigModel) (*observability.UpdateAlertConfigsPayloadGlobal, error) {
