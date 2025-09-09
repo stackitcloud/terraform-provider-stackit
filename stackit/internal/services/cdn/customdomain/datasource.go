@@ -141,7 +141,7 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	err = mapCustomDomainFields(customDomainResp.CustomDomain, &model, customDomainResp.Certificate)
+	err = mapCustomDomainFields(customDomainResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
 		return
