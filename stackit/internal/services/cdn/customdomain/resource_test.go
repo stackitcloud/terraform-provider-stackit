@@ -73,20 +73,25 @@ func TestMapFields(t *testing.T) {
 		},
 	})
 
-	customDomainFixture := func(mods ...func(*cdn.CustomDomain)) *cdn.CustomDomain {
+	customDomainFixture := func(mods ...func(*cdn.GetCustomDomainResponse)) *cdn.GetCustomDomainResponse {
 		distribution := &cdn.CustomDomain{
 			Errors: &[]cdn.StatusError{},
 			Name:   cdn.PtrString("https://testdomain.com"),
 			Status: cdn.DOMAINSTATUS_ACTIVE.Ptr(),
 		}
-		for _, mod := range mods {
-			mod(distribution)
+		customDomainResponse := &cdn.GetCustomDomainResponse{
+			CustomDomain: distribution,
+			Certificate:  getRespCustom,
 		}
-		return distribution
+
+		for _, mod := range mods {
+			mod(customDomainResponse)
+		}
+		return customDomainResponse
 	}
 
 	tests := map[string]struct {
-		Input          *cdn.CustomDomain
+		Input          *cdn.GetCustomDomainResponse
 		Certificate    interface{}
 		Expected       *CustomDomainModel
 		InitialModel   *CustomDomainModel
@@ -106,24 +111,24 @@ func TestMapFields(t *testing.T) {
 					"version":     types.Int64Null(),
 				})
 			}),
-			Certificate: getRespCustom,
 		},
 		"happy_path_managed_cert": {
 			Expected: expectedModel(func(m *CustomDomainModel) {
 				m.Certificate = types.ObjectNull(certificateTypes)
 			}),
-			Input:        customDomainFixture(),
+			Input: customDomainFixture(func(gcdr *cdn.GetCustomDomainResponse) {
+				gcdr.Certificate = getRespManaged
+			}),
 			IsValid:      true,
 			InitialModel: expectedModel(func(m *CustomDomainModel) { m.Certificate = types.ObjectNull(certificateTypes) }),
-			Certificate:  getRespManaged,
 		},
 		"happy_path_status_error": {
 			Expected: expectedModel(func(m *CustomDomainModel) {
 				m.Status = types.StringValue("ERROR")
 				m.Certificate = certificateObj
 			}),
-			Input: customDomainFixture(func(d *cdn.CustomDomain) {
-				d.Status = cdn.DOMAINSTATUS_ERROR.Ptr()
+			Input: customDomainFixture(func(d *cdn.GetCustomDomainResponse) {
+				d.CustomDomain.Status = cdn.DOMAINSTATUS_ERROR.Ptr()
 			}),
 			IsValid: true,
 			InitialModel: expectedModel(func(m *CustomDomainModel) {
@@ -133,23 +138,20 @@ func TestMapFields(t *testing.T) {
 					"version":     types.Int64Null(),
 				})
 			}),
-			Certificate: getRespCustom,
 		},
 		"sad_path_custom_domain_nil": {
 			Expected:     expectedModel(),
 			Input:        nil,
 			IsValid:      false,
 			InitialModel: &CustomDomainModel{},
-			Certificate:  getRespCustom,
 		},
 		"sad_path_name_missing": {
 			Expected: expectedModel(),
-			Input: customDomainFixture(func(d *cdn.CustomDomain) {
-				d.Name = nil
+			Input: customDomainFixture(func(d *cdn.GetCustomDomainResponse) {
+				d.CustomDomain.Name = nil
 			}),
 			IsValid:      false,
 			InitialModel: &CustomDomainModel{},
-			Certificate:  getRespCustom,
 		},
 	}
 	for tn, tc := range tests {
@@ -157,7 +159,7 @@ func TestMapFields(t *testing.T) {
 			model := tc.InitialModel
 			model.DistributionId = tc.Expected.DistributionId
 			model.ProjectId = tc.Expected.ProjectId
-			err := mapCustomDomainFields(tc.Input, model, tc.Certificate)
+			err := mapCustomDomainFields(tc.Input, model)
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error mapping fields: %v", err)
 			}

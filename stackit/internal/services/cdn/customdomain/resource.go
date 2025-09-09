@@ -197,12 +197,12 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 		IntentId:    cdn.PtrString(uuid.NewString()),
 		Certificate: certificate,
 	}
-	respPutCustomDomain, err := r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
+	_, err := r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	waitResp, err := wait.CreateCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.CreateCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Waiting for create: %v", err))
 		return
@@ -314,29 +314,15 @@ func (r *customDomainResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, "CDN custom domain state imported")
 }
 
-func normalizeCertificate(certInput interface{}) (Certificate, error) {
+func normalizeCertificate(certInput cdn.GetCustomDomainResponseGetCertificateAttributeType) (Certificate, error) {
 	var customCert *cdn.GetCustomDomainCustomCertificate
 	var managedCert *cdn.GetCustomDomainManagedCertificate
 
-	// We use a type switch to safely extract the inner certificates
-	switch c := certInput.(type) {
-	case cdn.GetCustomDomainResponseGetCertificateAttributeType:
-		if c == nil {
-			return Certificate{}, errors.New("input of type GetCustomDomainResponseCertificate is nil")
-		}
-		customCert = c.GetCustomDomainCustomCertificate
-		managedCert = c.GetCustomDomainManagedCertificate
-
-	case cdn.PutCustomDomainResponseGetCertificateAttributeType:
-		if c == nil {
-			return Certificate{}, errors.New("input of type PutCustomDomainResponseCertificate is nil")
-		}
-		customCert = c.GetCustomDomainCustomCertificate
-		managedCert = c.GetCustomDomainManagedCertificate
-
-	default:
-		return Certificate{}, fmt.Errorf("unsupported input type: %T", certInput)
+	if certInput == nil {
+		return Certificate{}, errors.New("input of type GetCustomDomainResponseCertificate is nil")
 	}
+	customCert = certInput.GetCustomDomainCustomCertificate
+	managedCert = certInput.GetCustomDomainManagedCertificate
 
 	// Now we process the extracted certificates
 	if customCert != nil && customCert.Type != nil && customCert.Version != nil {
@@ -399,22 +385,22 @@ func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cd
 	return &certPayload, diags
 }
 
-func mapCustomDomainFields(customDomain *cdn.GetCustomDomainResponse, model *CustomDomainModel) error {
-	if customDomain == nil {
+func mapCustomDomainFields(customDomainResponse *cdn.GetCustomDomainResponse, model *CustomDomainModel) error {
+	if customDomainResponse == nil {
 		return fmt.Errorf("response input is nil")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
-	if customDomain.Name == nil {
-		return fmt.Errorf("Name is missing in response")
+	if customDomainResponse.CustomDomain.Name == nil {
+		return fmt.Errorf("name is missing in response")
 	}
 
-	if customDomain.Status == nil {
-		return fmt.Errorf("Status missing in response")
+	if customDomainResponse.CustomDomain.Status == nil {
+		return fmt.Errorf("status missing in response")
 	}
-	normalizedCert, err := normalizeCertificate(certificateInput)
+	normalizedCert, err := normalizeCertificate(customDomainResponse.Certificate)
 	if err != nil {
 		return fmt.Errorf("Certificate error in normalizer: %w", err)
 	}
@@ -456,14 +442,14 @@ func mapCustomDomainFields(customDomain *cdn.GetCustomDomainResponse, model *Cus
 		model.Certificate = certificateObj
 	}
 
-	model.ID = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.DistributionId.ValueString(), *customDomain.Name)
-	model.Status = types.StringValue(string(*customDomain.Status))
+	model.ID = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.DistributionId.ValueString(), *customDomainResponse.CustomDomain.Name)
+	model.Status = types.StringValue(string(*customDomainResponse.CustomDomain.Status))
 
 	customDomainErrors := []attr.Value{}
-	if customDomain.Errors != nil {
-		for _, e := range *customDomain.Errors {
+	if customDomainResponse.CustomDomain.Errors != nil {
+		for _, e := range *customDomainResponse.CustomDomain.Errors {
 			if e.En == nil {
-				return fmt.Errorf("Error description missing")
+				return fmt.Errorf("error description missing")
 			}
 			customDomainErrors = append(customDomainErrors, types.StringValue(*e.En))
 		}
