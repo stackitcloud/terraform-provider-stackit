@@ -380,6 +380,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "The network ranges (in CIDR notation) used by pods of the cluster.",
 				Computed:    true,
 				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"node_pools": schema.ListNestedAttribute{
 				Description: "One or more `node_pool` block as defined below.",
