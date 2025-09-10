@@ -53,7 +53,7 @@ var testConfigVarsMax = config.Variables{
 	"network_name":                      config.StringVariable(fmt.Sprintf("tf-acc-n%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
 	"server_name":                       config.StringVariable(fmt.Sprintf("tf-acc-s%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
 	"loadbalancer_name":                 config.StringVariable(fmt.Sprintf("tf-acc-l%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
-	"security_group_id":                 config.StringVariable("123abc-a123-123a-1234-abc123def456"),
+	"security_group_id":                 config.StringVariable("95cfd576-131a-457b-8f18-037b3e25d264"),
 	"target_pool_name":                  config.StringVariable("example-target-pool"),
 	"target_port":                       config.StringVariable("5432"),
 	"target_display_name":               config.StringVariable("example-target"),
@@ -312,7 +312,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "networks.0.role", testutil.ConvertConfigVariable(testConfigVarsMax["network_role"])),
 					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "external_address"),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "disable_security_group_assignment", testutil.ConvertConfigVariable(testConfigVarsMax["disable_security_group_assignment"])),
-					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "security_group_id", testutil.ConvertConfigVariable(testConfigVarsMax["security_group_id"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "security_group_id", testutil.ConvertConfigVariable(testConfigVarsMax["security_group_id"])),
 
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.healthy_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["healthy_threshold"])),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval", testutil.ConvertConfigVariable(testConfigVarsMax["health_interval"])),
