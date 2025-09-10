@@ -133,9 +133,9 @@ type routeModelMiddle struct {
 	GroupBy       types.List   `tfsdk:"group_by"`
 	GroupInterval types.String `tfsdk:"group_interval"`
 	GroupWait     types.String `tfsdk:"group_wait"`
-	// Deprecated: Match is deprecated and will be removed after 16th January 2026. Use Matchers instead
+	// Deprecated: Match is deprecated and will be removed after 10th March 2026. Use Matchers instead
 	Match types.Map `tfsdk:"match"`
-	// Deprecated: MatchRegex is deprecated and will be removed after 16th January 2026. Use Matchers instead
+	// Deprecated: MatchRegex is deprecated and will be removed after 10th March 2026. Use Matchers instead
 	MatchRegex     types.Map    `tfsdk:"match_regex"`
 	Matchers       types.List   `tfsdk:"matchers"`
 	Receiver       types.String `tfsdk:"receiver"`
@@ -149,9 +149,9 @@ type routeModelNoRoutes struct {
 	GroupBy       types.List   `tfsdk:"group_by"`
 	GroupInterval types.String `tfsdk:"group_interval"`
 	GroupWait     types.String `tfsdk:"group_wait"`
-	// Deprecated: Match is deprecated and will be removed after 16th January 2026. Use Matchers instead
+	// Deprecated: Match is deprecated and will be removed after 10th March 2026. Use Matchers instead
 	Match types.Map `tfsdk:"match"`
-	// Deprecated: MatchRegex is deprecated and will be removed after 16th January 2026. Use Matchers instead
+	// Deprecated: MatchRegex is deprecated and will be removed after 10th March 2026. Use Matchers instead
 	MatchRegex     types.Map    `tfsdk:"match_regex"`
 	Matchers       types.List   `tfsdk:"matchers"`
 	Receiver       types.String `tfsdk:"receiver"`
@@ -233,8 +233,8 @@ var routeDescriptions = map[string]string{
 	"group_by":        "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
 	"group_interval":  "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
 	"group_wait":      "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.)",
-	"match":           "A set of equality matchers an alert has to fulfill to match the node. This field is deprecated and will be removed after 16th January 2026, use `matchers` in the `routes` instead",
-	"match_regex":     "A set of regex-matchers an alert has to fulfill to match the node. This field is deprecated and will be removed after 16th January 2026, use `matchers` in the `routes` instead",
+	"match":           "A set of equality matchers an alert has to fulfill to match the node. This field is deprecated and will be removed after 10th March 2026, use `matchers` in the `routes` instead",
+	"match_regex":     "A set of regex-matchers an alert has to fulfill to match the node. This field is deprecated and will be removed after 10th March 2026, use `matchers` in the `routes` instead",
 	"matchers":        "A list of matchers that an alert has to fulfill to match the node. A matcher is a string with a syntax inspired by PromQL and OpenMetrics.",
 	"receiver":        "The name of the receiver to route the alerts to.",
 	"repeat_interval": "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
