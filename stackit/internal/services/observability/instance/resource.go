@@ -2148,7 +2148,7 @@ func toChildRoutePayload(ctx context.Context, routeTF *routeModelMiddle) (*obser
 		Matchers:       matchersPayload,
 		Receiver:       conversion.StringValueToPointer(routeTF.Receiver),
 		RepeatInterval: conversion.StringValueToPointer(routeTF.RepeatInterval),
-		// Routes:         childRoutesPayload,
+		// Routes not currently supported
 	}, nil
 }
 
