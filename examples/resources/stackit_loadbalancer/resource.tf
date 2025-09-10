@@ -173,7 +173,7 @@ resource "stackit_security_group_rule" "allow_lb_ingress" {
 resource "stackit_server" "example" {
   project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name              = "example-remote-target"
-  machine_type      = "c1.1"
+  machine_type      = "g2i.2"
   availability_zone = "eu01-1"
 
   boot_volume = {
@@ -192,6 +192,7 @@ resource "stackit_network_interface" "nic" {
   network_id         = stackit_network.target_network.network_id
   security_group_ids = [stackit_security_group.target_sg.security_group_id]
 }
+# End of advanced example
 
 # Only use the import statement, if you want to import an existing loadbalancer
 import {

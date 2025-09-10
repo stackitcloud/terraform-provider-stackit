@@ -211,6 +211,7 @@ resource "stackit_network_interface" "nic" {
   network_id         = stackit_network.target_network.network_id
   security_group_ids = [stackit_security_group.target_sg.security_group_id]
 }
+# End of advanced example
 
 # Only use the import statement, if you want to import an existing loadbalancer
 import {
