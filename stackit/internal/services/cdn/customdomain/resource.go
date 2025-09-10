@@ -187,9 +187,9 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 	name := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "name", name)
-	certificate, diags := buildCertificatePayload(ctx, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+	certificate, err := buildCertificatePayload(ctx, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
@@ -197,7 +197,7 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 		IntentId:    cdn.PtrString(uuid.NewString()),
 		Certificate: certificate,
 	}
-	_, err := r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
+	_, err = r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -285,9 +285,9 @@ func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRe
 	name := plan.Name.ValueString()
 	ctx = tflog.SetField(ctx, "name", name)
 
-	certificate, diags := buildCertificatePayload(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+	certificate, err := buildCertificatePayload(ctx, &plan)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
@@ -295,7 +295,7 @@ func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRe
 		IntentId:    cdn.PtrString(uuid.NewString()),
 		Certificate: certificate,
 	}
-	_, err := r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
+	_, err = r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -395,13 +395,11 @@ func normalizeCertificate(certInput cdn.GetCustomDomainResponseGetCertificateAtt
 // buildCertificatePayload constructs the certificate part of the payload for the API request.
 // It defaults to a managed certificate if the certificate block is omitted, otherwise it creates a custom certificate.
 func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cdn.PutCustomDomainPayloadCertificate, error) {
-	var diags diag.Diagnostics
-
 	// If the certificate block is not specified, default to a managed certificate.
 	if model.Certificate.IsNull() {
 		managedCert := cdn.NewPutCustomDomainManagedCertificate("managed")
 		certPayload := cdn.PutCustomDomainManagedCertificateAsPutCustomDomainPayloadCertificate(managedCert)
-		return &certPayload, diags
+		return &certPayload, nil
 	}
 
 	// If the certificate block is specified, it must be a custom certificate.
@@ -413,16 +411,14 @@ func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cd
 
 	// Unpack the Terraform object into the temporary struct.
 	respDiags := model.Certificate.As(ctx, &certModel, basetypes.ObjectAsOptions{})
-	diags.Append(respDiags...)
-	if diags.HasError() {
-		return nil, diags
+	if respDiags.HasError() {
+		return nil, fmt.Errorf("invalid certificate or private key: %w", core.DiagsToError(respDiags))
 	}
 	certStr := base64.StdEncoding.EncodeToString([]byte(certModel.Certificate.ValueString()))
 	keyStr := base64.StdEncoding.EncodeToString([]byte(certModel.PrivateKey.ValueString()))
 
 	if certStr == "" || keyStr == "" {
-		diags.Append(diag.NewErrorDiagnostic("Invalid certificate or private key", "Please check if the string of the public certificate and private key in PEM format"))
-		return nil, diags
+		return nil, errors.New("invalid certificate or private key. Please check if the string of the public certificate and private key in PEM format")
 	}
 
 	customCert := cdn.NewPutCustomDomainCustomCertificate(
@@ -432,7 +428,7 @@ func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cd
 	)
 	certPayload := cdn.PutCustomDomainCustomCertificateAsPutCustomDomainPayloadCertificate(customCert)
 
-	return &certPayload, diags
+	return &certPayload, nil
 }
 
 func mapCustomDomainFields(customDomainResponse *cdn.GetCustomDomainResponse, model *CustomDomainModel) error {
