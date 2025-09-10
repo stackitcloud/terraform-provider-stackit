@@ -344,7 +344,7 @@ func normalizeCertificate(certInput cdn.GetCustomDomainResponseGetCertificateAtt
 
 // buildCertificatePayload constructs the certificate part of the payload for the API request.
 // It defaults to a managed certificate if the certificate block is omitted, otherwise it creates a custom certificate.
-func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cdn.PutCustomDomainPayloadCertificate, diag.Diagnostics) {
+func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cdn.PutCustomDomainPayloadCertificate, error) {
 	var diags diag.Diagnostics
 
 	// If the certificate block is not specified, default to a managed certificate.
