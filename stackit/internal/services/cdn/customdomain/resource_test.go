@@ -228,10 +228,10 @@ func TestBuildCertificatePayload(t *testing.T) {
 	keyBase64 := base64.StdEncoding.EncodeToString(key)
 
 	tests := map[string]struct {
-		model               *CustomDomainModel
-		expectedPayload     *cdn.PutCustomDomainPayloadCertificate
-		expectDiagnostics   bool
-		expectedDiagSummary string
+		model           *CustomDomainModel
+		expectedPayload *cdn.PutCustomDomainPayloadCertificate
+		expectErr       bool
+		expectedErrMsg  string
 	}{
 		"success_managed_when_certificate_block_is_nil": {
 			model: &CustomDomainModel{
@@ -240,7 +240,7 @@ func TestBuildCertificatePayload(t *testing.T) {
 			expectedPayload: &cdn.PutCustomDomainPayloadCertificate{
 				PutCustomDomainManagedCertificate: cdn.NewPutCustomDomainManagedCertificate("managed"),
 			},
-			expectDiagnostics: false,
+			expectErr: false,
 		},
 		"success_custom_certificate": {
 			model: &CustomDomainModel{
@@ -256,7 +256,7 @@ func TestBuildCertificatePayload(t *testing.T) {
 			expectedPayload: &cdn.PutCustomDomainPayloadCertificate{
 				PutCustomDomainCustomCertificate: cdn.NewPutCustomDomainCustomCertificate(certBase64, keyBase64, "custom"),
 			},
-			expectDiagnostics: false,
+			expectErr: false,
 		},
 		"fail_custom_missing_cert_value": {
 			model: &CustomDomainModel{
@@ -269,8 +269,8 @@ func TestBuildCertificatePayload(t *testing.T) {
 					},
 				),
 			},
-			expectDiagnostics:   true,
-			expectedDiagSummary: "Invalid certificate or private key",
+			expectErr:      true,
+			expectedErrMsg: "invalid certificate or private key. Please check if the string of the public certificate and private key in PEM format",
 		},
 	}
 
@@ -279,19 +279,19 @@ func TestBuildCertificatePayload(t *testing.T) {
 			if name == "fail_custom_missing_cert_value" {
 				fmt.Println("as")
 			}
-			payload, diags := buildCertificatePayload(context.Background(), tt.model)
-			if tt.expectDiagnostics {
-				if !diags.HasError() {
-					t.Fatalf("expected diagnostics, but got none")
+			payload, err := buildCertificatePayload(context.Background(), tt.model)
+			if tt.expectErr {
+				if err == nil {
+					t.Fatalf("expected err, but got none")
 				}
-				if summary := diags.Errors()[0].Summary(); summary != tt.expectedDiagSummary {
-					t.Fatalf("expected diagnostic summary '%s', got '%s'", tt.expectedDiagSummary, summary)
+				if err.Error() != tt.expectedErrMsg {
+					t.Fatalf("expected err '%s', got '%s'", tt.expectedErrMsg, err.Error())
 				}
 				return // Test ends here for failing cases
 			}
 
-			if diags.HasError() {
-				t.Fatalf("did not expect diagnostics, but got: %v", diags)
+			if err != nil {
+				t.Fatalf("did not expect err, but got: %s", err.Error())
 			}
 
 			if diff := cmp.Diff(tt.expectedPayload, payload); diff != "" {
