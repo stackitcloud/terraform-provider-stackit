@@ -43,8 +43,8 @@ var (
 var certificateSchemaDescriptions = map[string]string{
 	"main":        "The TLS certificate for the custom domain. If omitted, a managed certificate will be used. If the block is specified, a custom certificate is used.",
 	"certificate": "The PEM-encoded TLS certificate. Required for custom certificates.",
-	"private_key": "The PEM-encoded private key for the certificate. Required for custom certificates.",
-	"version":     "A version identifier for the certificate. The certificate will be updated if this field is changed.",
+	"private_key": "The PEM-encoded private key for the certificate. Required for custom certificates. The certificate will be updated if this field is changed.",
+	"version":     "A version identifier for the certificate. Required for custom certificates. The certificate will be updated if this field is changed.",
 }
 
 var certificateTypes = map[string]attr.Type{
@@ -270,9 +270,59 @@ func (r *customDomainResource) Read(ctx context.Context, req resource.ReadReques
 	tflog.Info(ctx, "CDN custom domain read")
 }
 
-func (r *customDomainResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Update shouldn't be called; custom domains have only computed fields and fields that require replacement when changed
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain", "Custom domain cannot be updated")
+func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	var plan CustomDomainModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	projectId := plan.ProjectId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	distributionId := plan.DistributionId.ValueString()
+	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
+	name := plan.Name.ValueString()
+	ctx = tflog.SetField(ctx, "name", name)
+
+	certificate, diags := buildCertificatePayload(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	payload := cdn.PutCustomDomainPayload{
+		IntentId:    cdn.PtrString(uuid.NewString()),
+		Certificate: certificate,
+	}
+	_, err := r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	_, err = wait.CreateCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Waiting for update: %v", err))
+		return
+	}
+
+	respCustomDomain, err := r.client.GetCustomDomainExecute(ctx, projectId, distributionId, name)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Calling API to read final state: %v", err))
+		return
+	}
+	err = mapCustomDomainFields(respCustomDomain, &plan)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+	diags = resp.State.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "CDN custom domain certificate updated")
 }
 
 func (r *customDomainResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform

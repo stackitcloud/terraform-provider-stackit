@@ -148,6 +148,9 @@ func makeCertAndKey(t *testing.T, organization string) (cert, key []byte) {
 func TestAccCDNDistributionResource(t *testing.T) {
 	organization := fmt.Sprintf("organization-%s", uuid.NewString())
 	cert, key := makeCertAndKey(t, organization)
+
+	organization_updated := fmt.Sprintf("organization-updated-%s", uuid.NewString())
+	cert_updated, key_updated := makeCertAndKey(t, organization_updated)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckCDNDistributionDestroy,
@@ -265,9 +268,16 @@ func TestAccCDNDistributionResource(t *testing.T) {
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "distribution_id", "stackit_cdn_custom_domain.custom_domain", "distribution_id"),
 				),
 			},
+			// Check if the credentials not update
+			{
+				Config: configDatasources(instanceResource["config_regions"], string(cert), string(key)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "certificate.version", "1"),
+				),
+			},
 			// Update
 			{
-				Config: configCustomDomainResources(instanceResource["config_regions_updated"], string(cert), string(key)),
+				Config: configCustomDomainResources(instanceResource["config_regions_updated"], string(cert_updated), string(key_updated)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "created_at"),
@@ -290,6 +300,7 @@ func TestAccCDNDistributionResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
+					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "certificate.version", "2"),
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "name", instanceResource["custom_domain_prefix"]+".cdntest-zone.stackit.gg"),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "distribution_id", "stackit_cdn_custom_domain.custom_domain", "distribution_id"),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "project_id", "stackit_cdn_custom_domain.custom_domain", "project_id"),
