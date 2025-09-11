@@ -12,6 +12,7 @@ variable "listener_port" {}
 variable "listener_protocol" {}
 variable "network_role" {}
 variable "disable_security_group_assignment" {}
+variable "security_group_id" {}
 
 variable "listener_display_name" {}
 variable "listener_server_name_indicators" {}
@@ -45,6 +46,7 @@ resource "stackit_network_interface" "network_interface" {
   project_id = stackit_network.network.project_id
   network_id = stackit_network.network.network_id
   name       = "name"
+  security_group_id = var.security_group_id
 }
 
 resource "stackit_public_ip" "public_ip" {
