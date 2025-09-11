@@ -233,7 +233,7 @@ import {
 
 ### Optional
 
-- `disable_security_group_assignment` (Boolean) If set to true, this will disable the automatic assignment of a security group to the load balancer's targets. This option is primarily used to allow targets that are not within the load balancer's own network or SNA. When this is enabled, you are fully responsible for ensuring network connectivity to the targets, including managing all routing and security group rules manually. This setting cannot be changed after the load balancer is created.
+- `disable_security_group_assignment` (Boolean) If set to true, this will disable the automatic assignment of a security group to the load balancer's targets. This option is primarily used to allow targets that are not within the load balancer's own network or SNA (STACKIT network area). When this is enabled, you are fully responsible for ensuring network connectivity to the targets, including managing all routing and security group rules manually. This setting cannot be changed after the load balancer is created.
 - `external_address` (String) External Load Balancer IP address where this Load Balancer is exposed.
 - `options` (Attributes) Defines any optional functionality you want to have enabled on your load balancer. (see [below for nested schema](#nestedatt--options))
 - `plan_id` (String) The service plan ID. If not defined, the default service plan is `p10`. Possible values are: `p10`, `p50`, `p250`, `p750`.
@@ -243,7 +243,7 @@ import {
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`","region","`name`".
 - `private_address` (String) Transient private Load Balancer IP address. It can change any time.
-- `security_group_id` (String) The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT NETWORK AREAS (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.
+- `security_group_id` (String) The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT network areas (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.
 
 <a id="nestedatt--listeners"></a>
 ### Nested Schema for `listeners`
