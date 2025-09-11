@@ -125,7 +125,7 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.logs.push_url"),
 					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
 					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.metrics.push_url"),
-					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "security_group_id"),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "security_group_id"),
 
 					// Loadbalancer observability credentials resource
 					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.obs_credential", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -177,7 +177,7 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.logs.push_url"),
 					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
 					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.metrics.push_url"),
-					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "security_group_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "security_group_id"),
 				)},
 			// Import
 			{
