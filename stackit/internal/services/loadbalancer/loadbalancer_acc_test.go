@@ -29,17 +29,18 @@ var resourceMinConfig string
 var resourceMaxConfig string
 
 var testConfigVarsMin = config.Variables{
-	"project_id":          config.StringVariable(testutil.ProjectId),
-	"plan_id":             config.StringVariable("p10"),
-	"network_name":        config.StringVariable(fmt.Sprintf("tf-acc-n%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
-	"server_name":         config.StringVariable(fmt.Sprintf("tf-acc-s%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
-	"loadbalancer_name":   config.StringVariable(fmt.Sprintf("tf-acc-l%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
-	"target_pool_name":    config.StringVariable("example-target-pool"),
-	"target_port":         config.StringVariable("5432"),
-	"target_display_name": config.StringVariable("example-target"),
-	"listener_port":       config.StringVariable("5432"),
-	"listener_protocol":   config.StringVariable("PROTOCOL_TLS_PASSTHROUGH"),
-	"network_role":        config.StringVariable("ROLE_LISTENERS_AND_TARGETS"),
+	"project_id":                        config.StringVariable(testutil.ProjectId),
+	"plan_id":                           config.StringVariable("p10"),
+	"disable_security_group_assignment": config.BoolVariable(false),
+	"network_name":                      config.StringVariable(fmt.Sprintf("tf-acc-n%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"server_name":                       config.StringVariable(fmt.Sprintf("tf-acc-s%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"loadbalancer_name":                 config.StringVariable(fmt.Sprintf("tf-acc-l%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"target_pool_name":                  config.StringVariable("example-target-pool"),
+	"target_port":                       config.StringVariable("5432"),
+	"target_display_name":               config.StringVariable("example-target"),
+	"listener_port":                     config.StringVariable("5432"),
+	"listener_protocol":                 config.StringVariable("PROTOCOL_TLS_PASSTHROUGH"),
+	"network_role":                      config.StringVariable("ROLE_LISTENERS_AND_TARGETS"),
 
 	"obs_display_name": config.StringVariable("obs-user"),
 	"obs_username":     config.StringVariable("obs-username"),
@@ -53,7 +54,6 @@ var testConfigVarsMax = config.Variables{
 	"network_name":                      config.StringVariable(fmt.Sprintf("tf-acc-n%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
 	"server_name":                       config.StringVariable(fmt.Sprintf("tf-acc-s%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
 	"loadbalancer_name":                 config.StringVariable(fmt.Sprintf("tf-acc-l%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
-	"security_group_id":                 config.StringVariable("95cfd576-131a-457b-8f18-037b3e25d264"),
 	"target_pool_name":                  config.StringVariable("example-target-pool"),
 	"target_port":                       config.StringVariable("5432"),
 	"target_display_name":               config.StringVariable("example-target"),
@@ -125,7 +125,7 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.logs.push_url"),
 					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
 					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.metrics.push_url"),
-					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "security_group_id"),
+					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "security_group_id"),
 
 					// Loadbalancer observability credentials resource
 					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.obs_credential", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -177,7 +177,7 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.logs.push_url"),
 					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
 					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.metrics.push_url"),
-					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "security_group_id"),
+					resource.TestCheckNoResourceAttr("data.stackit_loadbalancer.loadbalancer", "security_group_id"),
 				)},
 			// Import
 			{
@@ -241,7 +241,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "networks.0.role", testutil.ConvertConfigVariable(testConfigVarsMax["network_role"])),
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "external_address"),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "disable_security_group_assignment", testutil.ConvertConfigVariable(testConfigVarsMax["disable_security_group_assignment"])),
-					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "security_group_id", testutil.ConvertConfigVariable(testConfigVarsMax["security_group_id"])),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "security_group_id"),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.healthy_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["healthy_threshold"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval", testutil.ConvertConfigVariable(testConfigVarsMax["health_interval"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval_jitter", testutil.ConvertConfigVariable(testConfigVarsMax["health_interval_jitter"])),
@@ -312,7 +312,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "networks.0.role", testutil.ConvertConfigVariable(testConfigVarsMax["network_role"])),
 					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "external_address"),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "disable_security_group_assignment", testutil.ConvertConfigVariable(testConfigVarsMax["disable_security_group_assignment"])),
-					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "security_group_id", testutil.ConvertConfigVariable(testConfigVarsMax["security_group_id"])),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "security_group_id"),
 
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.healthy_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["healthy_threshold"])),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval", testutil.ConvertConfigVariable(testConfigVarsMax["health_interval"])),
