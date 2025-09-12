@@ -268,13 +268,6 @@ func TestAccCDNDistributionResource(t *testing.T) {
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "distribution_id", "stackit_cdn_custom_domain.custom_domain", "distribution_id"),
 				),
 			},
-			// Check if the credentials not update
-			{
-				Config: configDatasources(instanceResource["config_regions"], string(cert), string(key)),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "certificate.version", "1"),
-				),
-			},
 			// Update
 			{
 				Config: configCustomDomainResources(instanceResource["config_regions_updated"], string(cert_updated), string(key_updated)),

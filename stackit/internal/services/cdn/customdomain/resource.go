@@ -16,7 +16,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -59,6 +58,12 @@ var customDomainSchemaDescriptions = map[string]string{
 	"project_id":      "STACKIT project ID associated with the distribution",
 	"status":          "Status of the distribution",
 	"errors":          "List of distribution errors",
+}
+
+type CertificateModel struct {
+	Certificate types.String `tfsdk:"certificate"`
+	PrivateKey  types.String `tfsdk:"private_key"`
+	Version     types.Int64  `tfsdk:"version"`
 }
 
 type CustomDomainModel struct {
@@ -402,13 +407,7 @@ func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cd
 		return &certPayload, nil
 	}
 
-	// If the certificate block is specified, it must be a custom certificate.
-	var certModel struct {
-		Certificate types.String `tfsdk:"certificate"`
-		PrivateKey  types.String `tfsdk:"private_key"`
-		Version     types.Int64  `tfsdk:"version"`
-	}
-
+	var certModel CertificateModel
 	// Unpack the Terraform object into the temporary struct.
 	respDiags := model.Certificate.As(ctx, &certModel, basetypes.ObjectAsOptions{})
 	if respDiags.HasError() {
@@ -450,7 +449,6 @@ func mapCustomDomainFields(customDomainResponse *cdn.GetCustomDomainResponse, mo
 	if err != nil {
 		return fmt.Errorf("Certificate error in normalizer: %w", err)
 	}
-	var diags diag.Diagnostics
 
 	// If the certificate is managed, the certificate block in the state should be null.
 	if normalizedCert.Type == "managed" {
@@ -480,10 +478,9 @@ func mapCustomDomainFields(customDomainResponse *cdn.GetCustomDomainResponse, mo
 			certAttributes["version"] = types.Int64Value(*normalizedCert.Version)
 		}
 
-		certificateObj, conversionDiags := types.ObjectValue(certificateTypes, certAttributes)
-		diags.Append(conversionDiags...)
+		certificateObj, diags := types.ObjectValue(certificateTypes, certAttributes)
 		if diags.HasError() {
-			return core.DiagsToError(diags)
+			return fmt.Errorf("failed to map certificate: %w", core.DiagsToError(diags))
 		}
 		model.Certificate = certificateObj
 	}
