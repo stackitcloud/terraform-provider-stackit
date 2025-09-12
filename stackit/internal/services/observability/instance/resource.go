@@ -2102,10 +2102,8 @@ func toChildRoutePayload(ctx context.Context, routeTF *routeModelMiddle) (*obser
 		return nil, fmt.Errorf("nil route model")
 	}
 
-	var groupByPayload *[]string
-	var matchPayload *map[string]interface{}
-	var matchRegexPayload *map[string]interface{}
-	var matchersPayload *[]string
+	var groupByPayload, matchersPayload *[]string
+	var matchPayload, matchRegexPayload *map[string]interface{}
 
 	if !utils.IsUndefined(routeTF.GroupBy) {
 		groupByPayload = &[]string{}
