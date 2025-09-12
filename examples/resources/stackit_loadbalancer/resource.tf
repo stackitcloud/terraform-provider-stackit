@@ -188,7 +188,7 @@ resource "stackit_server" "example" {
 }
 
 resource "stackit_network_interface" "nic" {
-  project_id         = var.project_id
+  project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   network_id         = stackit_network.target_network.network_id
   security_group_ids = [stackit_security_group.target_sg.security_group_id]
 }
