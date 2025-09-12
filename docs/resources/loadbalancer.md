@@ -110,6 +110,109 @@ resource "stackit_loadbalancer" "example" {
   }
 }
 
+# This example demonstrates an advanced setup where the Load Balancer is in one
+# network and the target server is in another. This requires manual
+# security group configuration using the `disable_security_group_assignment`
+# and `security_group_id` attributes.
+
+# We create two separate networks: one for the load balancer and one for the target.
+resource "stackit_network" "lb_network" {
+  project_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name             = "lb-network-example"
+  ipv4_prefix      = "192.168.1.0/24"
+  ipv4_nameservers = ["8.8.8.8"]
+}
+
+resource "stackit_network" "target_network" {
+  project_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name             = "target-network-example"
+  ipv4_prefix      = "192.168.2.0/24"
+  ipv4_nameservers = ["8.8.8.8"]
+}
+
+resource "stackit_public_ip" "example" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+
+resource "stackit_loadbalancer" "example" {
+  project_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name             = "example-advanced-lb"
+  external_address = stackit_public_ip.example.ip
+
+  # Key setting for manual mode: disables automatic security group handling.
+  disable_security_group_assignment = true
+
+  networks = [{
+    network_id = stackit_network.lb_network.network_id
+    role       = "ROLE_LISTENERS_AND_TARGETS"
+  }]
+
+  listeners = [{
+    port        = 80
+    protocol    = "PROTOCOL_TCP"
+    target_pool = "cross-network-pool"
+  }]
+
+  target_pools = [{
+    name        = "cross-network-pool"
+    target_port = 80
+    targets = [{
+      display_name = stackit_server.example.name
+      ip           = stackit_network_interface.nic.ipv4
+    }]
+  }]
+}
+
+# Create a new security group to be assigned to the target server.
+resource "stackit_security_group" "target_sg" {
+  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name        = "target-sg-for-lb-access"
+  description = "Allows ingress traffic from the example load balancer."
+}
+
+# Create a rule to allow traffic FROM the load balancer.
+# This rule uses the computed `security_group_id` of the load balancer.
+resource "stackit_security_group_rule" "allow_lb_ingress" {
+  project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  security_group_id = stackit_security_group.target_sg.security_group_id
+  direction         = "ingress"
+  protocol = {
+    name = "tcp"
+  }
+
+  # This is the crucial link: it allows traffic from the LB's security group.
+  remote_security_group_id = stackit_loadbalancer.example.security_group_id
+
+  port_range = {
+    min = 80
+    max = 80
+  }
+}
+
+resource "stackit_server" "example" {
+  project_id        = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name              = "example-remote-target"
+  machine_type      = "g2i.2"
+  availability_zone = "eu01-1"
+
+  boot_volume = {
+    source_type = "image"
+    source_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    size        = 10
+  }
+
+  network_interfaces = [
+    stackit_network_interface.nic.network_interface_id
+  ]
+}
+
+resource "stackit_network_interface" "nic" {
+  project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  network_id         = stackit_network.target_network.network_id
+  security_group_ids = [stackit_security_group.target_sg.security_group_id]
+}
+# End of advanced example
+
 # Only use the import statement, if you want to import an existing loadbalancer
 import {
   to = stackit_loadbalancer.import-example
@@ -130,6 +233,7 @@ import {
 
 ### Optional
 
+- `disable_security_group_assignment` (Boolean) If set to true, this will disable the automatic assignment of a security group to the load balancer's targets. This option is primarily used to allow targets that are not within the load balancer's own network or SNA (STACKIT network area). When this is enabled, you are fully responsible for ensuring network connectivity to the targets, including managing all routing and security group rules manually. This setting cannot be changed after the load balancer is created.
 - `external_address` (String) External Load Balancer IP address where this Load Balancer is exposed.
 - `options` (Attributes) Defines any optional functionality you want to have enabled on your load balancer. (see [below for nested schema](#nestedatt--options))
 - `plan_id` (String) The service plan ID. If not defined, the default service plan is `p10`. Possible values are: `p10`, `p50`, `p250`, `p750`.
@@ -139,6 +243,7 @@ import {
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`","region","`name`".
 - `private_address` (String) Transient private Load Balancer IP address. It can change any time.
+- `security_group_id` (String) The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT network areas (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.
 
 <a id="nestedatt--listeners"></a>
 ### Nested Schema for `listeners`
