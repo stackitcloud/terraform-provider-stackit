@@ -93,16 +93,6 @@ func (r *customDomainDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Description: certificateSchemaDescriptions["main"],
 				Optional:    true,
 				Attributes: map[string]schema.Attribute{
-					"certificate": schema.StringAttribute{
-						Description: certificateSchemaDescriptions["certificate"],
-						Optional:    true,
-						Sensitive:   true,
-					},
-					"private_key": schema.StringAttribute{
-						Description: certificateSchemaDescriptions["private_key"],
-						Optional:    true,
-						Sensitive:   true,
-					},
 					"version": schema.Int64Attribute{
 						Description: certificateSchemaDescriptions["version"],
 						Computed:    true,
