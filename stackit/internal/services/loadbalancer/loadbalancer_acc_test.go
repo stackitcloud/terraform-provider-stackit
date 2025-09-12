@@ -180,7 +180,7 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "security_group_id"),
 					resource.TestCheckResourceAttrPair(
 						"stackit_loadbalancer.loadbalancer", "security_group_id",
-						"data.stackit_security_group.security_group", "security_group_id",
+						"data.stackit_loadbalancer.loadbalancer", "security_group_id",
 					),
 				)},
 			// Import
@@ -196,8 +196,11 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
-
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, name), nil
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
@@ -317,10 +320,6 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "external_address"),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "disable_security_group_assignment", testutil.ConvertConfigVariable(testConfigVarsMax["disable_security_group_assignment"])),
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "security_group_id"),
-					resource.TestCheckResourceAttrPair(
-						"stackit_loadbalancer.loadbalancer", "security_group_id",
-						"data.stackit_security_group.security_group", "security_group_id",
-					),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.healthy_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["healthy_threshold"])),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval", testutil.ConvertConfigVariable(testConfigVarsMax["health_interval"])),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval_jitter", testutil.ConvertConfigVariable(testConfigVarsMax["health_interval_jitter"])),
@@ -334,6 +333,10 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
 					resource.TestCheckResourceAttrPair("stackit_loadbalancer_observability_credential.metrics", "credentials_ref", "data.stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "options.observability.metrics.push_url", testutil.ConvertConfigVariable(testConfigVarsMax["observability_metrics_push_url"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_loadbalancer.loadbalancer", "security_group_id",
+						"data.stackit_loadbalancer.loadbalancer", "security_group_id",
+					),
 				)},
 			// Import
 			{
@@ -348,8 +351,11 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
-
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, name), nil
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
