@@ -188,6 +188,7 @@ type emailConfigsModel struct {
 	AuthPassword types.String `tfsdk:"auth_password"`
 	AuthUsername types.String `tfsdk:"auth_username"`
 	From         types.String `tfsdk:"from"`
+	SendResolved types.Bool   `tfsdk:"send_resolved"`
 	Smarthost    types.String `tfsdk:"smart_host"`
 	To           types.String `tfsdk:"to"`
 }
@@ -197,36 +198,41 @@ var emailConfigsTypes = map[string]attr.Type{
 	"auth_password": types.StringType,
 	"auth_username": types.StringType,
 	"from":          types.StringType,
+	"send_resolved": types.BoolType,
 	"smart_host":    types.StringType,
 	"to":            types.StringType,
 }
 
 // Struct corresponding to Model.AlertConfig.receivers.opsGenieConfigs
 type opsgenieConfigsModel struct {
-	ApiKey   types.String `tfsdk:"api_key"`
-	ApiUrl   types.String `tfsdk:"api_url"`
-	Tags     types.String `tfsdk:"tags"`
-	Priority types.String `tfsdk:"priority"`
+	ApiKey       types.String `tfsdk:"api_key"`
+	ApiUrl       types.String `tfsdk:"api_url"`
+	Tags         types.String `tfsdk:"tags"`
+	Priority     types.String `tfsdk:"priority"`
+	SendResolved types.Bool   `tfsdk:"send_resolved"`
 }
 
 var opsgenieConfigsTypes = map[string]attr.Type{
-	"api_key":  types.StringType,
-	"api_url":  types.StringType,
-	"tags":     types.StringType,
-	"priority": types.StringType,
+	"api_key":       types.StringType,
+	"api_url":       types.StringType,
+	"tags":          types.StringType,
+	"priority":      types.StringType,
+	"send_resolved": types.BoolType,
 }
 
 // Struct corresponding to Model.AlertConfig.receivers.webHooksConfigs
 type webHooksConfigsModel struct {
-	Url        types.String `tfsdk:"url"`
-	MsTeams    types.Bool   `tfsdk:"ms_teams"`
-	GoogleChat types.Bool   `tfsdk:"google_chat"`
+	Url          types.String `tfsdk:"url"`
+	MsTeams      types.Bool   `tfsdk:"ms_teams"`
+	GoogleChat   types.Bool   `tfsdk:"google_chat"`
+	SendResolved types.Bool   `tfsdk:"send_resolved"`
 }
 
 var webHooksConfigsTypes = map[string]attr.Type{
-	"url":         types.StringType,
-	"ms_teams":    types.BoolType,
-	"google_chat": types.BoolType,
+	"url":           types.StringType,
+	"ms_teams":      types.BoolType,
+	"google_chat":   types.BoolType,
+	"send_resolved": types.BoolType,
 }
 
 var routeDescriptions = map[string]string{
@@ -629,6 +635,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 												Description: "The sender email address. Must be a valid email address",
 												Optional:    true,
 											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
+												Optional:    true,
+											},
 											"smart_host": schema.StringAttribute{
 												Description: "The SMTP host through which emails are sent.",
 												Optional:    true,
@@ -664,6 +674,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 												Description: "Priority of the alert. " + utils.FormatPossibleValues("P1", "P2", "P3", "P4", "P5"),
 												Optional:    true,
 											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
+												Optional:    true,
+											},
 										},
 									},
 								},
@@ -694,6 +708,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 												Optional:    true,
 												Computed:    true,
 												Default:     booldefault.StaticBool(false),
+											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
+												Optional:    true,
 											},
 										},
 									},
@@ -1490,6 +1508,7 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 	mockEmailConfig, diags := types.ObjectValue(emailConfigsTypes, map[string]attr.Value{
 		"to":            types.StringValue("123@gmail.com"),
 		"smart_host":    types.StringValue("smtp.gmail.com:587"),
+		"send_resolved": types.BoolValue(false),
 		"from":          types.StringValue("xxxx@gmail.com"),
 		"auth_username": types.StringValue("xxxx@gmail.com"),
 		"auth_password": types.StringValue("xxxxxxxxx"),
@@ -1635,6 +1654,7 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 					"auth_password": types.StringPointerValue(emailConfig.AuthPassword),
 					"auth_username": types.StringPointerValue(emailConfig.AuthUsername),
 					"from":          types.StringPointerValue(emailConfig.From),
+					"send_resolved": types.BoolPointerValue(emailConfig.SendResolved),
 					"smart_host":    types.StringPointerValue(emailConfig.Smarthost),
 					"to":            types.StringPointerValue(emailConfig.To),
 				}
@@ -1650,10 +1670,11 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		if receiver.OpsgenieConfigs != nil {
 			for _, opsgenieConfig := range *receiver.OpsgenieConfigs {
 				opsGenieConfigMap := map[string]attr.Value{
-					"api_key":  types.StringPointerValue(opsgenieConfig.ApiKey),
-					"api_url":  types.StringPointerValue(opsgenieConfig.ApiUrl),
-					"tags":     types.StringPointerValue(opsgenieConfig.Tags),
-					"priority": types.StringPointerValue(opsgenieConfig.Priority),
+					"api_key":       types.StringPointerValue(opsgenieConfig.ApiKey),
+					"api_url":       types.StringPointerValue(opsgenieConfig.ApiUrl),
+					"tags":          types.StringPointerValue(opsgenieConfig.Tags),
+					"priority":      types.StringPointerValue(opsgenieConfig.Priority),
+					"send_resolved": types.BoolPointerValue(opsgenieConfig.SendResolved),
 				}
 				opsGenieConfigModel, diags := types.ObjectValue(opsgenieConfigsTypes, opsGenieConfigMap)
 				if diags.HasError() {
@@ -1666,13 +1687,11 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		webhooksConfigList := []attr.Value{}
 		if receiver.WebHookConfigs != nil {
 			for _, webhookConfig := range *receiver.WebHookConfigs {
-				msTeamsValue := types.BoolPointerValue(webhookConfig.MsTeams)
-				googleChatValue := types.BoolPointerValue(webhookConfig.GoogleChat)
-
 				webHookConfigsMap := map[string]attr.Value{
-					"url":         types.StringPointerValue(webhookConfig.Url),
-					"ms_teams":    msTeamsValue,
-					"google_chat": googleChatValue,
+					"url":           types.StringPointerValue(webhookConfig.Url),
+					"ms_teams":      types.BoolPointerValue(webhookConfig.MsTeams),
+					"google_chat":   types.BoolPointerValue(webhookConfig.GoogleChat),
+					"send_resolved": types.BoolPointerValue(webhookConfig.SendResolved),
 				}
 				webHookConfigsModel, diags := types.ObjectValue(webHooksConfigsTypes, webHookConfigsMap)
 				if diags.HasError() {
@@ -1981,6 +2000,7 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]observa
 					AuthPassword: conversion.StringValueToPointer(emailConfig.AuthPassword),
 					AuthUsername: conversion.StringValueToPointer(emailConfig.AuthUsername),
 					From:         conversion.StringValueToPointer(emailConfig.From),
+					SendResolved: conversion.BoolValueToPointer(emailConfig.SendResolved),
 					Smarthost:    conversion.StringValueToPointer(emailConfig.Smarthost),
 					To:           conversion.StringValueToPointer(emailConfig.To),
 				})
@@ -1998,10 +2018,11 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]observa
 			for i := range opsgenieConfigs {
 				opsgenieConfig := opsgenieConfigs[i]
 				payloadOpsGenieConfigs = append(payloadOpsGenieConfigs, observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{
-					ApiKey:   conversion.StringValueToPointer(opsgenieConfig.ApiKey),
-					ApiUrl:   conversion.StringValueToPointer(opsgenieConfig.ApiUrl),
-					Tags:     conversion.StringValueToPointer(opsgenieConfig.Tags),
-					Priority: conversion.StringValueToPointer(opsgenieConfig.Priority),
+					ApiKey:       conversion.StringValueToPointer(opsgenieConfig.ApiKey),
+					ApiUrl:       conversion.StringValueToPointer(opsgenieConfig.ApiUrl),
+					Tags:         conversion.StringValueToPointer(opsgenieConfig.Tags),
+					Priority:     conversion.StringValueToPointer(opsgenieConfig.Priority),
+					SendResolved: conversion.BoolValueToPointer(opsgenieConfig.SendResolved),
 				})
 			}
 			receiverPayload.OpsgenieConfigs = &payloadOpsGenieConfigs
@@ -2017,9 +2038,10 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]observa
 			for i := range receiverWebHooksConfigs {
 				webHooksConfig := receiverWebHooksConfigs[i]
 				payloadWebHooksConfigs = append(payloadWebHooksConfigs, observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
-					Url:        conversion.StringValueToPointer(webHooksConfig.Url),
-					MsTeams:    conversion.BoolValueToPointer(webHooksConfig.MsTeams),
-					GoogleChat: conversion.BoolValueToPointer(webHooksConfig.GoogleChat),
+					Url:          conversion.StringValueToPointer(webHooksConfig.Url),
+					MsTeams:      conversion.BoolValueToPointer(webHooksConfig.MsTeams),
+					GoogleChat:   conversion.BoolValueToPointer(webHooksConfig.GoogleChat),
+					SendResolved: conversion.BoolValueToPointer(webHooksConfig.SendResolved),
 				})
 			}
 			receiverPayload.WebHookConfigs = &payloadWebHooksConfigs

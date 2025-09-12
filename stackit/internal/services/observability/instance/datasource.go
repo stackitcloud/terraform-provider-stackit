@@ -220,6 +220,10 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 												Description: "The sender email address. Must be a valid email address",
 												Computed:    true,
 											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
+												Computed:    true,
+											},
 											"smart_host": schema.StringAttribute{
 												Description: "The SMTP host through which emails are sent.",
 												Computed:    true,
@@ -252,6 +256,10 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 												Description: "Priority of the alert. " + utils.FormatPossibleValues([]string{"P1", "P2", "P3", "P4", "P5"}...),
 												Computed:    true,
 											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
+												Computed:    true,
+											},
 										},
 									},
 								},
@@ -271,6 +279,10 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 											},
 											"google_chat": schema.BoolAttribute{
 												Description: "Google Chat webhooks require special handling, set this to true if the webhook is for Google Chat.",
+												Computed:    true,
+											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
 												Computed:    true,
 											},
 										},
