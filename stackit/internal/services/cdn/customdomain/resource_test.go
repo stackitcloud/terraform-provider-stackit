@@ -272,6 +272,23 @@ func TestBuildCertificatePayload(t *testing.T) {
 			expectErr:      true,
 			expectedErrMsg: "invalid certificate or private key. Please check if the string of the public certificate and private key in PEM format",
 		},
+
+		"success_managed_when_certificate_attributes_are_nil": {
+			model: &CustomDomainModel{
+				Certificate: basetypes.NewObjectValueMust(
+					certificateTypes,
+					map[string]attr.Value{
+						"version":     types.Int64Null(),
+						"certificate": types.StringNull(),
+						"private_key": types.StringNull(),
+					},
+				),
+			},
+			expectedPayload: &cdn.PutCustomDomainPayloadCertificate{
+				PutCustomDomainManagedCertificate: cdn.NewPutCustomDomainManagedCertificate("managed"),
+			},
+			expectErr: false,
+		},
 	}
 
 	for name, tt := range tests {
