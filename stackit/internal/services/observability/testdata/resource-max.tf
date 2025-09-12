@@ -42,6 +42,7 @@ variable "smtp_from" {}
 variable "smtp_smart_host" {}
 variable "match" {}
 variable "match_regex" {}
+variable "matchers" {}
 
 variable "logalertgroup_name" {}
 variable "logalertgroup_alert" {}
@@ -151,6 +152,9 @@ resource "stackit_observability_instance" "instance" {
           match_regex = {
             match_regex1 = var.match_regex
           }
+          matchers = [
+            var.matchers
+          ]
         }
       ]
     },

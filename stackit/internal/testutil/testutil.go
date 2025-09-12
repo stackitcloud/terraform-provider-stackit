@@ -556,7 +556,10 @@ func ConvertConfigVariable(variable config.Variable) string {
 	tmpByteArray, _ := variable.MarshalJSON()
 	// In case the variable is a string, the quotes should be removed
 	if tmpByteArray[0] == '"' && tmpByteArray[len(tmpByteArray)-1] == '"' {
-		return string(tmpByteArray[1 : len(tmpByteArray)-1])
+		result := string(tmpByteArray[1 : len(tmpByteArray)-1])
+		// Replace escaped quotes which where added MarshalJSON
+		rawString := strings.ReplaceAll(result, `\"`, `"`)
+		return rawString
 	}
 	return string(tmpByteArray)
 }
