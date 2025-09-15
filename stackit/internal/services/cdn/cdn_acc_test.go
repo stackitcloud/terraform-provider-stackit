@@ -32,6 +32,7 @@ var instanceResource = map[string]string{
 	"config_regions_updated":    "\"EU\", \"US\", \"ASIA\"",
 	"blocked_countries":         "\"CU\", \"AQ\"", // Do NOT use DE or AT here, because the request might be blocked by bunny at the time of creation - don't lock yourself out
 	"custom_domain_prefix":      uuid.NewString(), // we use a different domain prefix each test run due to inconsistent upstream release of domains, which might impair consecutive test runs
+	"dns_name":                  fmt.Sprintf("tf-acc-%s.stackit.gg", strings.Split(uuid.NewString(), "-")[0]),
 }
 
 func configResources(regions string) string {
@@ -57,7 +58,7 @@ func configResources(regions string) string {
 				resource "stackit_dns_zone" "dns_zone" {
 					project_id    = "%s"
 					name          = "cdn_acc_test_zone"
-					dns_name      = "cdntest-zone.stackit.gg"
+					dns_name      = "%s"
 					contact_email = "aa@bb.cc"
 					type          = "primary"
 					default_ttl   = 3600
@@ -70,7 +71,7 @@ func configResources(regions string) string {
 					records    = ["${stackit_cdn_distribution.distribution.domains[0].name}."]
 				}
 		`, testutil.CdnProviderConfig(), testutil.ProjectId, instanceResource["config_backend_origin_url"],
-		regions, instanceResource["blocked_countries"], testutil.ProjectId,
+		regions, instanceResource["blocked_countries"], testutil.ProjectId, instanceResource["dns_name"],
 		testutil.ProjectId, instanceResource["custom_domain_prefix"])
 }
 
@@ -81,7 +82,7 @@ func configCustomDomainResources(regions, cert, key string) string {
 		        resource "stackit_cdn_custom_domain" "custom_domain" {
 					project_id = stackit_cdn_distribution.distribution.project_id
 					distribution_id = stackit_cdn_distribution.distribution.distribution_id
-		            name = "${stackit_dns_record_set.dns_record.name}.cdntest-zone.stackit.gg"
+		            name = "${stackit_dns_record_set.dns_record.name}.${stackit_dns_zone.dns_zone.dns_name}"
 					certificate = {
 						certificate = %q
 						private_key = %q
@@ -145,6 +146,7 @@ func makeCertAndKey(t *testing.T, organization string) (cert, key []byte) {
 		})
 }
 func TestAccCDNDistributionResource(t *testing.T) {
+	fullDomainName := fmt.Sprintf("%s.%s", instanceResource["custom_domain_prefix"], instanceResource["dns_name"])
 	organization := fmt.Sprintf("organization-%s", uuid.NewString())
 	cert, key := makeCertAndKey(t, organization)
 
@@ -180,7 +182,7 @@ func TestAccCDNDistributionResource(t *testing.T) {
 			{
 				Config: configResources(instanceResource["config_regions"]),
 				Check: func(_ *terraform.State) error {
-					_, err := blockUntilDomainResolves(instanceResource["custom_domain_prefix"] + ".cdntest-zone.stackit.gg")
+					_, err := blockUntilDomainResolves(fullDomainName)
 					return err
 				},
 			},
@@ -189,7 +191,7 @@ func TestAccCDNDistributionResource(t *testing.T) {
 				Config: configCustomDomainResources(instanceResource["config_regions"], string(cert), string(key)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
-					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "name", instanceResource["custom_domain_prefix"]+".cdntest-zone.stackit.gg"),
+					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "name", fullDomainName),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "distribution_id", "stackit_cdn_custom_domain.custom_domain", "distribution_id"),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "project_id", "stackit_cdn_custom_domain.custom_domain", "project_id"),
 				),
@@ -247,7 +249,7 @@ func TestAccCDNDistributionResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.distribution", "updated_at"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.#", "2"),
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.distribution", "domains.0.name"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.1.name", instanceResource["custom_domain_prefix"]+".cdntest-zone.stackit.gg"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.1.name", fullDomainName),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.0.status", "ACTIVE"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.1.status", "ACTIVE"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.0.type", "managed"),
@@ -263,7 +265,7 @@ func TestAccCDNDistributionResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "certificate.version", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "name", instanceResource["custom_domain_prefix"]+".cdntest-zone.stackit.gg"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "name", fullDomainName),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "distribution_id", "stackit_cdn_custom_domain.custom_domain", "distribution_id"),
 				),
 			},
@@ -276,7 +278,7 @@ func TestAccCDNDistributionResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "updated_at"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.#", "2"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "domains.0.name"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.1.name", instanceResource["custom_domain_prefix"]+".cdntest-zone.stackit.gg"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.1.name", fullDomainName),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.0.status", "ACTIVE"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.1.status", "ACTIVE"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.0.type", "managed"),
@@ -293,7 +295,7 @@ func TestAccCDNDistributionResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "certificate.version", "2"),
-					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "name", instanceResource["custom_domain_prefix"]+".cdntest-zone.stackit.gg"),
+					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "name", fullDomainName),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "distribution_id", "stackit_cdn_custom_domain.custom_domain", "distribution_id"),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "project_id", "stackit_cdn_custom_domain.custom_domain", "project_id"),
 				),
