@@ -65,6 +65,7 @@ func fixtureReceiverModel(emailConfigs, opsGenieConfigs, webHooksConfigs basetyp
 
 func fixtureRouteModel() basetypes.ObjectValue {
 	return types.ObjectValueMust(routeTypes, map[string]attr.Value{
+		"continue": types.BoolValue(true),
 		"group_by": types.ListValueMust(types.StringType, []attr.Value{
 			types.StringValue("label1"),
 			types.StringValue("label2"),
@@ -76,6 +77,7 @@ func fixtureRouteModel() basetypes.ObjectValue {
 		// "routes":          types.ListNull(getRouteListType()),
 		"routes": types.ListValueMust(getRouteListType(), []attr.Value{
 			types.ObjectValueMust(getRouteListType().AttrTypes, map[string]attr.Value{
+				"continue": types.BoolValue(false),
 				"group_by": types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("label1"),
 					types.StringValue("label2"),
@@ -97,6 +99,7 @@ func fixtureRouteModel() basetypes.ObjectValue {
 
 func fixtureNullRouteModel() basetypes.ObjectValue {
 	return types.ObjectValueMust(routeTypes, map[string]attr.Value{
+		"continue":        types.BoolNull(),
 		"group_by":        types.ListNull(types.StringType),
 		"group_interval":  types.StringNull(),
 		"group_wait":      types.StringNull(),
@@ -174,6 +177,7 @@ func fixtureReceiverPayload(emailConfigs *[]observability.CreateAlertConfigRecei
 
 func fixtureRoutePayload() *observability.UpdateAlertConfigsPayloadRoute {
 	return &observability.UpdateAlertConfigsPayloadRoute{
+		Continue:       utils.Ptr(true),
 		GroupBy:        utils.Ptr([]string{"label1", "label2"}),
 		GroupInterval:  utils.Ptr("1m"),
 		GroupWait:      utils.Ptr("1m"),
@@ -181,6 +185,7 @@ func fixtureRoutePayload() *observability.UpdateAlertConfigsPayloadRoute {
 		RepeatInterval: utils.Ptr("1m"),
 		Routes: &[]observability.UpdateAlertConfigsPayloadRouteRoutesInner{
 			{
+				Continue:       utils.Ptr(false),
 				GroupBy:        utils.Ptr([]string{"label1", "label2"}),
 				GroupInterval:  utils.Ptr("1m"),
 				GroupWait:      utils.Ptr("1m"),
@@ -249,6 +254,7 @@ func fixtureWebHooksConfigsResponse() observability.WebHook {
 
 func fixtureRouteResponse() *observability.Route {
 	return &observability.Route{
+		Continue:       utils.Ptr(true),
 		GroupBy:        utils.Ptr([]string{"label1", "label2"}),
 		GroupInterval:  utils.Ptr("1m"),
 		GroupWait:      utils.Ptr("1m"),
@@ -259,6 +265,7 @@ func fixtureRouteResponse() *observability.Route {
 		RepeatInterval: utils.Ptr("1m"),
 		Routes: &[]observability.RouteSerializer{
 			{
+				Continue:       utils.Ptr(false),
 				GroupBy:        utils.Ptr([]string{"label1", "label2"}),
 				GroupInterval:  utils.Ptr("1m"),
 				GroupWait:      utils.Ptr("1m"),
@@ -287,6 +294,11 @@ func fixtureGlobalConfigResponse() *observability.Global {
 
 func fixtureRouteAttributeSchema(route *schema.ListNestedAttribute, isDatasource bool) map[string]schema.Attribute {
 	attributeMap := map[string]schema.Attribute{
+		"continue": schema.BoolAttribute{
+			Description: routeDescriptions["continue"],
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
+		},
 		"group_by": schema.ListAttribute{
 			Description: routeDescriptions["group_by"],
 			Optional:    !isDatasource,
@@ -1497,6 +1509,7 @@ func TestGetRouteListTypeAux(t *testing.T) {
 			1,
 			types.ObjectType{
 				AttrTypes: map[string]attr.Type{
+					"continue":        types.BoolType,
 					"group_by":        types.ListType{ElemType: types.StringType},
 					"group_interval":  types.StringType,
 					"group_wait":      types.StringType,
@@ -1514,6 +1527,7 @@ func TestGetRouteListTypeAux(t *testing.T) {
 			2,
 			types.ObjectType{
 				AttrTypes: map[string]attr.Type{
+					"continue":        types.BoolType,
 					"group_by":        types.ListType{ElemType: types.StringType},
 					"group_interval":  types.StringType,
 					"group_wait":      types.StringType,
@@ -1523,6 +1537,7 @@ func TestGetRouteListTypeAux(t *testing.T) {
 					"receiver":        types.StringType,
 					"repeat_interval": types.StringType,
 					"routes": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{
+						"continue":        types.BoolType,
 						"group_by":        types.ListType{ElemType: types.StringType},
 						"group_interval":  types.StringType,
 						"group_wait":      types.StringType,
@@ -1541,6 +1556,7 @@ func TestGetRouteListTypeAux(t *testing.T) {
 			2,
 			types.ObjectType{
 				AttrTypes: map[string]attr.Type{
+					"continue":        types.BoolType,
 					"group_by":        types.ListType{ElemType: types.StringType},
 					"group_interval":  types.StringType,
 					"group_wait":      types.StringType,
