@@ -443,6 +443,9 @@ func mapCustomDomainResourceFields(customDomainResponse *cdn.GetCustomDomainResp
 		return fmt.Errorf("model input is nil")
 	}
 
+	if customDomainResponse.CustomDomain == nil {
+		return fmt.Errorf("CustomDomain is missing in response")
+	}
 	if customDomainResponse.CustomDomain.Name == nil {
 		return fmt.Errorf("name is missing in response")
 	}
