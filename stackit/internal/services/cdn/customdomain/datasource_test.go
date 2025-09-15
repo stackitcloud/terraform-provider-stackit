@@ -10,11 +10,6 @@ import (
 )
 
 func TestMapDataSourceFields(t *testing.T) {
-	// Define certificateTypes for the data source schema
-	certificateDataSourceTypes := map[string]attr.Type{
-		"version": types.Int64Type,
-	}
-
 	emtpyErrorsList := types.ListValueMust(types.StringType, []attr.Value{})
 
 	// Expected certificate object when a custom certificate is returned
