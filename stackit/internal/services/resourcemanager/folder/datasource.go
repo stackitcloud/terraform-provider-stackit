@@ -24,7 +24,8 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ datasource.DataSource = &folderDataSource{}
+	_ datasource.DataSource              = &folderDataSource{}
+	_ datasource.DataSourceWithConfigure = &folderDataSource{}
 )
 
 // NewFolderDataSource is a helper function to simplify the provider implementation.
@@ -77,7 +78,7 @@ func (d *folderDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 	}
 
 	resp.Schema = schema.Schema{
-		Description: descriptions["main"],
+		Description: features.AddBetaDescription(descriptions["main"], core.Datasource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -169,7 +170,7 @@ func (d *folderDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	err = mapFolderDetailsFields(ctx, folderResp, &model, &resp.State)
+	err = mapFolderFields(ctx, folderResp, &model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading folder", fmt.Sprintf("Processing API response: %v", err))
 		return

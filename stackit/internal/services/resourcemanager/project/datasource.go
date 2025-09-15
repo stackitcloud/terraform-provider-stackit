@@ -25,7 +25,8 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ datasource.DataSource = &projectDataSource{}
+	_ datasource.DataSource              = &projectDataSource{}
+	_ datasource.DataSourceWithConfigure = &projectDataSource{}
 )
 
 // NewProjectDataSource is a helper function to simplify the provider implementation.

@@ -209,20 +209,31 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	folderResp, err := r.client.CreateFolder(ctx).CreateFolderPayload(*payload).Execute()
+	folderCreateResp, err := r.client.CreateFolder(ctx).CreateFolderPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	err = mapFolderCreateFields(ctx, folderResp, &model.Model, &resp.State)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "API response processing error", err.Error())
+	if folderCreateResp.ContainerId == nil || *folderCreateResp.ContainerId == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", "Container ID is missing")
 		return
 	}
 
 	// This sleep is currently needed due to the IAM Cache.
 	time.Sleep(10 * time.Second)
+
+	folderGetResponse, err := r.client.GetFolderDetails(ctx, *folderCreateResp.ContainerId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	err = mapFolderFields(ctx, folderGetResponse, &model.Model, &resp.State)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "API response processing error", err.Error())
+		return
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
 	tflog.Info(ctx, "Folder created")
@@ -253,7 +264,7 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	err = mapFolderDetailsFields(ctx, folderResp, &model.Model, &resp.State)
+	err = mapFolderFields(ctx, folderResp, &model.Model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading folder", fmt.Sprintf("Processing API response: %v", err))
 		return
@@ -300,7 +311,7 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	err = mapFolderDetailsFields(ctx, folderResp, &model.Model, &resp.State)
+	err = mapFolderFields(ctx, folderResp, &model.Model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Processing API response: %v", err))
 		return
@@ -334,7 +345,7 @@ func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest,
 			ctx,
 			&resp.Diagnostics,
 			"Error deleting folder. Deletion may fail because associated projects remain hidden for up to 7 days after user deletion due to technical requirements.",
-			fmt.Sprintf("API call failed: %v", err),
+			fmt.Sprintf("Calling API: %v", err),
 		)
 		return
 	}
@@ -363,22 +374,36 @@ func (r *folderResource) ImportState(ctx context.Context, req resource.ImportSta
 // mapFolderFields maps folder fields from a response into the Terraform model and optionally updates state.
 func mapFolderFields(
 	ctx context.Context,
-	containerId, name, folderId *string,
-	labels *map[string]string, //nolint:gocritic
-	containerParent *resourcemanager.Parent,
-	creationTime *time.Time,
-	updateTime *time.Time,
+	folderGetResponse *resourcemanager.GetFolderDetailsResponse,
 	model *Model,
 	state *tfsdk.State,
 ) error {
-	if containerId == nil || *containerId == "" {
-		return fmt.Errorf("container id is present")
+	if folderGetResponse == nil {
+		return fmt.Errorf("folder get response is nil")
+	}
+
+	var folderId string
+	if model.FolderId.ValueString() != "" {
+		folderId = model.FolderId.ValueString()
+	} else if folderGetResponse.FolderId != nil {
+		folderId = *folderGetResponse.FolderId
+	} else {
+		return fmt.Errorf("folder id not present")
+	}
+
+	var containerId string
+	if model.ContainerId.ValueString() != "" {
+		containerId = model.ContainerId.ValueString()
+	} else if folderGetResponse.ContainerId != nil {
+		containerId = *folderGetResponse.ContainerId
+	} else {
+		return fmt.Errorf("container id not present")
 	}
 
 	var err error
 	var tfLabels basetypes.MapValue
-	if labels != nil && len(*labels) > 0 {
-		tfLabels, err = conversion.ToTerraformStringMap(ctx, *labels)
+	if folderGetResponse.Labels != nil && len(*folderGetResponse.Labels) > 0 {
+		tfLabels, err = conversion.ToTerraformStringMap(ctx, *folderGetResponse.Labels)
 		if err != nil {
 			return fmt.Errorf("converting to StringValue map: %w", err)
 		}
@@ -387,26 +412,26 @@ func mapFolderFields(
 	}
 
 	var containerParentIdTF basetypes.StringValue
-	if containerParent != nil {
+	if folderGetResponse.Parent != nil {
 		if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
 			// the provided containerParent is the UUID identifier
-			containerParentIdTF = types.StringPointerValue(containerParent.Id)
+			containerParentIdTF = types.StringPointerValue(folderGetResponse.Parent.Id)
 		} else {
 			// the provided containerParent is the user-friendly container id
-			containerParentIdTF = types.StringPointerValue(containerParent.ContainerId)
+			containerParentIdTF = types.StringPointerValue(folderGetResponse.Parent.ContainerId)
 		}
 	} else {
 		containerParentIdTF = types.StringNull()
 	}
 
-	model.Id = types.StringValue(*containerId)
-	model.FolderId = types.StringValue(*folderId)
-	model.ContainerId = types.StringValue(*containerId)
+	model.Id = types.StringValue(containerId)
+	model.FolderId = types.StringValue(folderId)
+	model.ContainerId = types.StringValue(containerId)
 	model.ContainerParentId = containerParentIdTF
-	model.Name = types.StringPointerValue(name)
+	model.Name = types.StringPointerValue(folderGetResponse.Name)
 	model.Labels = tfLabels
-	model.CreationTime = types.StringValue(creationTime.Format(time.RFC3339))
-	model.UpdateTime = types.StringValue(updateTime.Format(time.RFC3339))
+	model.CreationTime = types.StringValue(folderGetResponse.CreationTime.Format(time.RFC3339))
+	model.UpdateTime = types.StringValue(folderGetResponse.UpdateTime.Format(time.RFC3339))
 
 	if state != nil {
 		diags := diag.Diagnostics{}
@@ -424,16 +449,6 @@ func mapFolderFields(
 	}
 
 	return nil
-}
-
-// mapFolderCreateFields maps the Create Folder API response to the Terraform model and update the Terraform state
-func mapFolderCreateFields(ctx context.Context, resp *resourcemanager.FolderResponse, model *Model, state *tfsdk.State) error {
-	return mapFolderFields(ctx, resp.ContainerId, resp.Name, resp.FolderId, resp.Labels, resp.Parent, resp.CreationTime, resp.UpdateTime, model, state)
-}
-
-// mapFolderDetailsFields maps the GetDetails API response to the Terraform model and update the Terraform state
-func mapFolderDetailsFields(ctx context.Context, resp *resourcemanager.GetFolderDetailsResponse, model *Model, state *tfsdk.State) error {
-	return mapFolderFields(ctx, resp.ContainerId, resp.Name, resp.FolderId, resp.Labels, resp.Parent, resp.CreationTime, resp.UpdateTime, model, state)
 }
 
 func toMembersPayload(model *ResourceModel) (*[]resourcemanager.Member, error) {
