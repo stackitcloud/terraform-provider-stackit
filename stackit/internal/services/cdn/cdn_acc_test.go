@@ -92,22 +92,21 @@ func configCustomDomainResources(regions, cert, key string) string {
 
 func configDatasources(regions, cert, key string) string {
 	return fmt.Sprintf(`
-				%s
+        %s 
 
-				data "stackit_cdn_distribution" "distribution" {
+        data "stackit_cdn_distribution" "distribution" {
 					project_id = stackit_cdn_distribution.distribution.project_id
-					distribution_id = stackit_cdn_distribution.distribution.distribution_id
-				}
-				
-				data "stackit_cdn_custom_domain" "custom_domain" {
+            distribution_id = stackit_cdn_distribution.distribution.distribution_id
+        }
+        
+        data "stackit_cdn_custom_domain" "custom_domain" {
 					project_id = stackit_cdn_custom_domain.custom_domain.project_id
 					distribution_id = stackit_cdn_custom_domain.custom_domain.distribution_id
 					name = stackit_cdn_custom_domain.custom_domain.name
 
-				}
+        }
 		`, configCustomDomainResources(regions, cert, key))
 }
-
 func makeCertAndKey(t *testing.T, organization string) (cert, key []byte) {
 	privateKey, err := rsa.GenerateKey(cryptoRand.Reader, 2048)
 	if err != nil {

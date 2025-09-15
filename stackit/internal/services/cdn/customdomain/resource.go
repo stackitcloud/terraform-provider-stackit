@@ -218,7 +218,7 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	err = mapCustomDomainFields(respCustomDomain, &model)
+	err = mapCustomDomainResourceFields(respCustomDomain, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -261,7 +261,7 @@ func (r *customDomainResource) Read(ctx context.Context, req resource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	err = mapCustomDomainFields(customDomainResp, &model)
+	err = mapCustomDomainResourceFields(customDomainResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -276,21 +276,21 @@ func (r *customDomainResource) Read(ctx context.Context, req resource.ReadReques
 }
 
 func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	var plan CustomDomainModel
-	diags := req.Plan.Get(ctx, &plan)
+	var model CustomDomainModel
+	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	projectId := plan.ProjectId.ValueString()
+	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	distributionId := plan.DistributionId.ValueString()
+	distributionId := model.DistributionId.ValueString()
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
-	name := plan.Name.ValueString()
+	name := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "name", name)
 
-	certificate, err := buildCertificatePayload(ctx, &plan)
+	certificate, err := buildCertificatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -317,12 +317,12 @@ func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Calling API to read final state: %v", err))
 		return
 	}
-	err = mapCustomDomainFields(respCustomDomain, &plan)
+	err = mapCustomDomainResourceFields(respCustomDomain, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-	diags = resp.State.Set(ctx, plan)
+	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -369,7 +369,7 @@ func (r *customDomainResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, "CDN custom domain state imported")
 }
 
-func normalizeCertificate(certInput cdn.GetCustomDomainResponseGetCertificateAttributeType) (Certificate, error) {
+func NormalizeCertificate(certInput cdn.GetCustomDomainResponseGetCertificateAttributeType) (Certificate, error) {
 	var customCert *cdn.GetCustomDomainCustomCertificate
 	var managedCert *cdn.GetCustomDomainManagedCertificate
 
@@ -430,7 +430,7 @@ func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cd
 	return &certPayload, nil
 }
 
-func mapCustomDomainFields(customDomainResponse *cdn.GetCustomDomainResponse, model *CustomDomainModel) error {
+func mapCustomDomainResourceFields(customDomainResponse *cdn.GetCustomDomainResponse, model *CustomDomainModel) error {
 	if customDomainResponse == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -445,7 +445,7 @@ func mapCustomDomainFields(customDomainResponse *cdn.GetCustomDomainResponse, mo
 	if customDomainResponse.CustomDomain.Status == nil {
 		return fmt.Errorf("status missing in response")
 	}
-	normalizedCert, err := normalizeCertificate(customDomainResponse.Certificate)
+	normalizedCert, err := NormalizeCertificate(customDomainResponse.Certificate)
 	if err != nil {
 		return fmt.Errorf("Certificate error in normalizer: %w", err)
 	}
