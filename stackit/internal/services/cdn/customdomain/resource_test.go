@@ -285,7 +285,7 @@ func TestBuildCertificatePayload(t *testing.T) {
 				),
 			},
 			expectErr:      true,
-			expectedErrMsg: "invalid certificate or private key. Please check if the string of the public certificate and private key in PEM format",
+			expectedErrMsg: `"certificate" and "private_key" must be set`,
 		},
 	}
 

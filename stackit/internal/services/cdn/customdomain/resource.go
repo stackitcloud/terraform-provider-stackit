@@ -413,6 +413,11 @@ func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cd
 	if respDiags.HasError() {
 		return nil, fmt.Errorf("invalid certificate or private key: %w", core.DiagsToError(respDiags))
 	}
+
+	if utils.IsUndefined(certModel.Certificate) || utils.IsUndefined(certModel.PrivateKey) {
+		return nil, fmt.Errorf(`"certificate" and "private_key" must be set`)
+	}
+
 	certStr := base64.StdEncoding.EncodeToString([]byte(certModel.Certificate.ValueString()))
 	keyStr := base64.StdEncoding.EncodeToString([]byte(certModel.PrivateKey.ValueString()))
 
