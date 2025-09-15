@@ -213,13 +213,7 @@ func makeCertAndKey(t *testing.T, organization string) (cert, key []byte) {
 			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 		})
 }
-func TestBuildCertificatePayload(t *testing.T) {
-	// Redefine certificateTypes locally for testing, matching the updated schema
-	certificateTypes := map[string]attr.Type{
-		"version":     types.Int64Type,
-		"certificate": types.StringType,
-		"private_key": types.StringType,
-	}
+func TestToCertificatePayload(t *testing.T) {
 	organization := fmt.Sprintf("organization-%s", uuid.NewString())
 	cert, key := makeCertAndKey(t, organization)
 	certPEM := string(cert)
@@ -291,7 +285,7 @@ func TestBuildCertificatePayload(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			payload, err := buildCertificatePayload(context.Background(), tt.model)
+			payload, err := toCertificatePayload(context.Background(), tt.model)
 			if tt.expectErr {
 				if err == nil {
 					t.Fatalf("expected err, but got none")

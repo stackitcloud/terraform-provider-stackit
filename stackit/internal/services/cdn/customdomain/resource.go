@@ -192,7 +192,7 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 	name := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "name", name)
-	certificate, err := buildCertificatePayload(ctx, &model)
+	certificate, err := toCertificatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -290,7 +290,7 @@ func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRe
 	name := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "name", name)
 
-	certificate, err := buildCertificatePayload(ctx, &model)
+	certificate, err := toCertificatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -397,9 +397,9 @@ func normalizeCertificate(certInput cdn.GetCustomDomainResponseGetCertificateAtt
 	return Certificate{}, errors.New("certificate structure is empty, neither custom nor managed is set")
 }
 
-// buildCertificatePayload constructs the certificate part of the payload for the API request.
+// toCertificatePayload constructs the certificate part of the payload for the API request.
 // It defaults to a managed certificate if the certificate block is omitted, otherwise it creates a custom certificate.
-func buildCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cdn.PutCustomDomainPayloadCertificate, error) {
+func toCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cdn.PutCustomDomainPayloadCertificate, error) {
 	// If the certificate block is not specified, default to a managed certificate.
 	if model.Certificate.IsNull() {
 		managedCert := cdn.NewPutCustomDomainManagedCertificate("managed")
