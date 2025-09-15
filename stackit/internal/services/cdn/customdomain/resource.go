@@ -369,7 +369,7 @@ func (r *customDomainResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, "CDN custom domain state imported")
 }
 
-func NormalizeCertificate(certInput cdn.GetCustomDomainResponseGetCertificateAttributeType) (Certificate, error) {
+func normalizeCertificate(certInput cdn.GetCustomDomainResponseGetCertificateAttributeType) (Certificate, error) {
 	var customCert *cdn.GetCustomDomainCustomCertificate
 	var managedCert *cdn.GetCustomDomainManagedCertificate
 
