@@ -20,7 +20,7 @@ resource "stackit_cdn_custom_domain" "example" {
   project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   distribution_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name            = "https://xxx.xxx"
-  certificate     = {
+  certificate = {
     certificate = "-----BEGIN CERTIFICATE-----\nY2VydGlmaWNhdGVfZGF0YQ==\n-----END CERTIFICATE---"
     private_key = "-----BEGIN CERTIFICATE-----\nY2VydGlmaWNhdGVfZGF0YQ==\n-----END CERTIFICATE---"
   }
@@ -58,8 +58,8 @@ import {
 Optional:
 
 - `certificate` (String, Sensitive) The PEM-encoded TLS certificate. Required for custom certificates.
-- `private_key` (String, Sensitive) The PEM-encoded private key for the certificate. Required for custom certificates.
+- `private_key` (String, Sensitive) The PEM-encoded private key for the certificate. Required for custom certificates. The certificate will be updated if this field is changed.
 
 Read-Only:
 
-- `version` (Number) A version identifier for the certificate. The certificate will be updated if this field is changed.
+- `version` (Number) A version identifier for the certificate. Required for custom certificates. The certificate will be updated if this field is changed.
