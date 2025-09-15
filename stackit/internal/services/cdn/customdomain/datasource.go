@@ -28,6 +28,10 @@ var (
 	_ datasource.DataSourceWithConfigure = &customDomainDataSource{}
 )
 
+var certificateDataSourceTypes = map[string]attr.Type{
+	"version": types.Int64Type,
+}
+
 type customDomainDataSource struct {
 	client *cdn.APIClient
 }
@@ -158,10 +162,6 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 	tflog.Info(ctx, "CDN custom domain read")
 }
 
-var certificateDataSourceTypes = map[string]attr.Type{
-	"version": types.Int64Type,
-}
-
 func mapCustomDomainDataSourceFields(customDomainResponse *cdn.GetCustomDomainResponse, model *customDomainDataSourceModel, projectId, distributionId string) error {
 	if customDomainResponse == nil {
 		return fmt.Errorf("response input is nil")
@@ -176,7 +176,7 @@ func mapCustomDomainDataSourceFields(customDomainResponse *cdn.GetCustomDomainRe
 		return fmt.Errorf("status missing in response")
 	}
 
-	normalizedCert, err := NormalizeCertificate(customDomainResponse.Certificate)
+	normalizedCert, err := normalizeCertificate(customDomainResponse.Certificate)
 	if err != nil {
 		return fmt.Errorf("Certificate error in normalizer: %w", err)
 	}

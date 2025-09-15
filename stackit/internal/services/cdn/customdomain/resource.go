@@ -445,7 +445,7 @@ func mapCustomDomainResourceFields(customDomainResponse *cdn.GetCustomDomainResp
 	if customDomainResponse.CustomDomain.Status == nil {
 		return fmt.Errorf("status missing in response")
 	}
-	normalizedCert, err := NormalizeCertificate(customDomainResponse.Certificate)
+	normalizedCert, err := normalizeCertificate(customDomainResponse.Certificate)
 	if err != nil {
 		return fmt.Errorf("Certificate error in normalizer: %w", err)
 	}
