@@ -36,10 +36,6 @@ func NewCustomDomainDataSource() datasource.DataSource {
 	return &customDomainDataSource{}
 }
 
-type certificateDataSourceModel struct {
-	Version types.Int64 `tfsdk:"version"`
-}
-
 type customDomainDataSourceModel struct {
 	ID             types.String `tfsdk:"id"`
 	DistributionId types.String `tfsdk:"distribution_id"`

@@ -45,11 +45,6 @@ data "stackit_cdn_custom_domain" "example" {
 <a id="nestedatt--certificate"></a>
 ### Nested Schema for `certificate`
 
-Optional:
-
-- `certificate` (String, Sensitive) The PEM-encoded TLS certificate. Required for custom certificates.
-- `private_key` (String, Sensitive) The PEM-encoded private key for the certificate. Required for custom certificates.
-
 Read-Only:
 
-- `version` (Number) A version identifier for the certificate. The certificate will be updated if this field is changed.
+- `version` (Number) A version identifier for the certificate. Required for custom certificates. The certificate will be updated if this field is changed.
