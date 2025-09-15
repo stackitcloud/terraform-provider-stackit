@@ -284,10 +284,8 @@ func TestBuildCertificatePayload(t *testing.T) {
 					},
 				),
 			},
-			expectedPayload: &cdn.PutCustomDomainPayloadCertificate{
-				PutCustomDomainManagedCertificate: cdn.NewPutCustomDomainManagedCertificate("managed"),
-			},
-			expectErr: false,
+			expectErr:      true,
+			expectedErrMsg: "invalid certificate or private key. Please check if the string of the public certificate and private key in PEM format",
 		},
 	}
 
