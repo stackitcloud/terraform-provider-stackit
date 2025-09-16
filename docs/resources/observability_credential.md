@@ -16,6 +16,7 @@ Observability credential resource schema. Must have a `region` specified in the 
 resource "stackit_observability_credential" "example" {
   project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   instance_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  description = "Description of the credential."
 }
 ```
 
@@ -26,6 +27,10 @@ resource "stackit_observability_credential" "example" {
 
 - `instance_id` (String) The Observability Instance ID the credential belongs to.
 - `project_id` (String) STACKIT project ID to which the credential is associated.
+
+### Optional
+
+- `description` (String) A description of the credential.
 
 ### Read-Only
 
