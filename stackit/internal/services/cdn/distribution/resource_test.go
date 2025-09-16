@@ -17,10 +17,18 @@ func TestToCreatePayload(t *testing.T) {
 		"testHeader1": types.StringValue("testHeaderValue1"),
 	}
 	originRequestHeaders := types.MapValueMust(types.StringType, headers)
+	geofencingCountries := types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("DE"),
+		types.StringValue("FR"),
+	})
+	geofencing := types.MapValueMust(geofencingTypes.ElemType, map[string]attr.Value{
+		"https://de.mycoolapp.com": geofencingCountries,
+	})
 	backend := types.ObjectValueMust(backendTypes, map[string]attr.Value{
 		"type":                   types.StringValue("http"),
 		"origin_url":             types.StringValue("https://www.mycoolapp.com"),
 		"origin_request_headers": originRequestHeaders,
+		"geofencing":             geofencing,
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
@@ -61,6 +69,9 @@ func TestToCreatePayload(t *testing.T) {
 				OriginUrl:        cdn.PtrString("https://www.mycoolapp.com"),
 				Regions:          &[]cdn.Region{"EU", "US"},
 				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+				Geofencing: &map[string][]string{
+					"https://de.mycoolapp.com": {"DE", "FR"},
+				},
 			},
 			IsValid: true,
 		},
@@ -82,6 +93,9 @@ func TestToCreatePayload(t *testing.T) {
 				Regions:          &[]cdn.Region{"EU", "US"},
 				Optimizer:        cdn.NewOptimizer(true),
 				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+				Geofencing: &map[string][]string{
+					"https://de.mycoolapp.com": {"DE", "FR"},
+				},
 			},
 			IsValid: true,
 		},
@@ -126,10 +140,18 @@ func TestConvertConfig(t *testing.T) {
 		"testHeader1": types.StringValue("testHeaderValue1"),
 	}
 	originRequestHeaders := types.MapValueMust(types.StringType, headers)
+	geofencingCountries := types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("DE"),
+		types.StringValue("FR"),
+	})
+	geofencing := types.MapValueMust(geofencingTypes.ElemType, map[string]attr.Value{
+		"https://de.mycoolapp.com": geofencingCountries,
+	})
 	backend := types.ObjectValueMust(backendTypes, map[string]attr.Value{
 		"type":                   types.StringValue("http"),
 		"origin_url":             types.StringValue("https://www.mycoolapp.com"),
 		"origin_request_headers": originRequestHeaders,
+		"geofencing":             geofencing,
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
@@ -169,6 +191,9 @@ func TestConvertConfig(t *testing.T) {
 						},
 						OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
 						Type:      cdn.PtrString("http"),
+						Geofencing: &map[string][]string{
+							"https://de.mycoolapp.com": {"DE", "FR"},
+						},
 					},
 				},
 				Regions:          &[]cdn.Region{"EU", "US"},
@@ -194,6 +219,9 @@ func TestConvertConfig(t *testing.T) {
 						},
 						OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
 						Type:      cdn.PtrString("http"),
+						Geofencing: &map[string][]string{
+							"https://de.mycoolapp.com": {"DE", "FR"},
+						},
 					},
 				},
 				Regions:          &[]cdn.Region{"EU", "US"},
