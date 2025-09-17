@@ -734,6 +734,12 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: "Route configuration for the alerts.",
 						Required:    true,
 						Attributes: map[string]schema.Attribute{
+							"continue": schema.BoolAttribute{
+								Description: routeDescriptions["continue"],
+								Optional:    true,
+								Computed:    true,
+								Default:     booldefault.StaticBool(false),
+							},
 							"group_by": schema.ListAttribute{
 								Description: routeDescriptions["group_by"],
 								Optional:    true,
