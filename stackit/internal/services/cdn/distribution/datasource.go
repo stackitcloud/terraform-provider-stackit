@@ -142,6 +142,13 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 								Description: schemaDescriptions["config_backend_origin_request_headers"],
 								ElementType: types.StringType,
 							},
+							"geofencing": schema.MapAttribute{
+								Description: "A map of URLs to a list of countries where content is allowed.",
+								Optional:    true,
+								ElementType: types.ListType{
+									ElemType: types.StringType,
+								},
+							},
 						},
 					},
 					"regions": schema.ListAttribute{

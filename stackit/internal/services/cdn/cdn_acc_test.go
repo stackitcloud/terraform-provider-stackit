@@ -45,6 +45,9 @@ func configResources(regions string) string {
 						backend = {
 							type = "http"
 							origin_url = "%s"
+							geofencing = {
+								"%s" = ["DE"]  
+							}
 						}
 						regions           = [%s]
 						blocked_countries = [%s]
@@ -70,7 +73,7 @@ func configResources(regions string) string {
 					type       = "CNAME"
 					records    = ["${stackit_cdn_distribution.distribution.domains[0].name}."]
 				}
-		`, testutil.CdnProviderConfig(), testutil.ProjectId, instanceResource["config_backend_origin_url"],
+		`, testutil.CdnProviderConfig(), testutil.ProjectId, instanceResource["config_backend_origin_url"], instanceResource["config_backend_origin_url"],
 		regions, instanceResource["blocked_countries"], testutil.ProjectId, instanceResource["dns_name"],
 		testutil.ProjectId, instanceResource["custom_domain_prefix"])
 }
@@ -173,6 +176,11 @@ func TestAccCDNDistributionResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "2"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.0", "CU"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.1", "AQ"),
+					resource.TestCheckResourceAttr(
+						"stackit_cdn_distribution.distribution",
+						fmt.Sprintf("config.backend.geofencing.%s.0", instanceResource["config_backend_origin_url"]),
+						"DE",
+					),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", "true"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),

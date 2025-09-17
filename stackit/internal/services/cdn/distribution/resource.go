@@ -599,7 +599,7 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 		}
 	}
 	// geofencing
-	geofencingVal := types.MapNull(geofencingTypes)
+	geofencingVal := types.MapNull(geofencingTypes.ElemType)
 	if geofencingAPI := distribution.Config.Backend.HttpBackend.Geofencing; geofencingAPI != nil && len(*geofencingAPI) > 0 {
 		geofencingMap := make(map[string]attr.Value)
 		for url, countries := range *geofencingAPI {

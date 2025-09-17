@@ -274,11 +274,17 @@ func TestMapFields(t *testing.T) {
 		"type":                   types.StringValue("http"),
 		"origin_url":             types.StringValue("https://www.mycoolapp.com"),
 		"origin_request_headers": originRequestHeaders,
+		"geofencing":             types.MapNull(geofencingTypes.ElemType),
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
 	blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
 	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
+	geofencingCountries := types.ListValueMust(types.StringType, []attr.Value{types.StringValue("DE"), types.StringValue("BR")})
+	geofencing := types.MapValueMust(geofencingTypes.ElemType, map[string]attr.Value{
+		"test/": geofencingCountries,
+	})
+	geofencingInput := map[string][]string{"test/": []string{"DE", "BR"}}
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{
 		"enabled": types.BoolValue(true),
 	})
@@ -361,6 +367,7 @@ func TestMapFields(t *testing.T) {
 		},
 		"happy_path_with_optimizer": {
 			Expected: expectedModel(func(m *Model) {
+
 				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
 					"backend":           backend,
 					"regions":           regionsFixture,
@@ -372,6 +379,26 @@ func TestMapFields(t *testing.T) {
 				d.Config.Optimizer = &cdn.Optimizer{
 					Enabled: cdn.PtrBool(true),
 				}
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_geofencing": {
+			Expected: expectedModel(func(m *Model) {
+				backendWithGeofencing := types.ObjectValueMust(backendTypes, map[string]attr.Value{
+					"type":                   types.StringValue("http"),
+					"origin_url":             types.StringValue("https://www.mycoolapp.com"),
+					"origin_request_headers": originRequestHeaders,
+					"geofencing":             geofencing,
+				})
+				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+					"backend":           backendWithGeofencing,
+					"regions":           regionsFixture,
+					"optimizer":         types.ObjectNull(optimizerTypes),
+					"blocked_countries": blockedCountriesFixture,
+				})
+			}),
+			Input: distributionFixture(func(d *cdn.Distribution) {
+				d.Config.Backend.HttpBackend.Geofencing = &geofencingInput
 			}),
 			IsValid: true,
 		},
