@@ -80,6 +80,7 @@ Required:
 
 Optional:
 
+- `geofencing` (Map of List of String) A map of URLs to a list of countries where content is allowed.
 - `origin_request_headers` (Map of String) The configured origin request headers for the backend
 
 
