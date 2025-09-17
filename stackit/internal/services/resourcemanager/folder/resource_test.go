@@ -61,7 +61,7 @@ func TestMapFolderFields(t *testing.T) {
 				},
 				Parent: &resourcemanager.Parent{
 					ContainerId: utils.Ptr("parent_cid"),
-					Id:          utils.Ptr("parent_pid"),
+					Id:          utils.Ptr(testUUID),
 				},
 				Name:         utils.Ptr("name"),
 				CreationTime: &createTime,

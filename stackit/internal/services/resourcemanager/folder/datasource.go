@@ -65,7 +65,7 @@ func (d *folderDataSource) Configure(ctx context.Context, req datasource.Configu
 // Schema defines the schema for the data source.
 func (d *folderDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                "Resource Manager folder data source schema. To identify the folder, you need to provider the container_id.",
+		"main":                "Resource Manager folder data source schema. To identify the folder, you need to provide the container_id.",
 		"id":                  "Terraform's internal resource ID. It is structured as \"`container_id`\".",
 		"container_id":        "Folder container ID. Globally unique, user-friendly identifier.",
 		"folder_id":           "Folder UUID identifier. Globally unique folder identifier",
