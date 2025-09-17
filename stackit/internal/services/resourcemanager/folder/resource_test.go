@@ -1,4 +1,4 @@
-package project
+package folder
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 )
 
-func TestMapProjectFields(t *testing.T) {
+func TestMapFolderFields(t *testing.T) {
 	testUUID := uuid.New().String()
 	baseTime := time.Now()
 	createTime := baseTime
@@ -23,7 +23,7 @@ func TestMapProjectFields(t *testing.T) {
 	tests := []struct {
 		description           string
 		uuidContainerParentId bool
-		projectResp           *resourcemanager.GetProjectResponse
+		projectResp           *resourcemanager.GetFolderDetailsResponse
 		expected              Model
 		expectedLabels        *map[string]string
 		isValid               bool
@@ -31,16 +31,16 @@ func TestMapProjectFields(t *testing.T) {
 		{
 			description:           "default_ok",
 			uuidContainerParentId: false,
-			projectResp: &resourcemanager.GetProjectResponse{
+			projectResp: &resourcemanager.GetFolderDetailsResponse{
 				ContainerId:  utils.Ptr("cid"),
-				ProjectId:    utils.Ptr("pid"),
+				FolderId:     utils.Ptr("fid"),
 				CreationTime: &createTime,
 				UpdateTime:   &updateTime,
 			},
 			expected: Model{
 				Id:                types.StringValue("cid"),
 				ContainerId:       types.StringValue("cid"),
-				ProjectId:         types.StringValue("pid"),
+				FolderId:          types.StringValue("fid"),
 				ContainerParentId: types.StringNull(),
 				Name:              types.StringNull(),
 				CreationTime:      types.StringValue(createTime.Format(time.RFC3339)),
@@ -52,16 +52,16 @@ func TestMapProjectFields(t *testing.T) {
 		{
 			description:           "container_parent_id_ok",
 			uuidContainerParentId: false,
-			projectResp: &resourcemanager.GetProjectResponse{
+			projectResp: &resourcemanager.GetFolderDetailsResponse{
 				ContainerId: utils.Ptr("cid"),
-				ProjectId:   utils.Ptr("pid"),
+				FolderId:    utils.Ptr("fid"),
 				Labels: &map[string]string{
 					"label1": "ref1",
 					"label2": "ref2",
 				},
 				Parent: &resourcemanager.Parent{
 					ContainerId: utils.Ptr("parent_cid"),
-					Id:          utils.Ptr("parent_pid"),
+					Id:          utils.Ptr(testUUID),
 				},
 				Name:         utils.Ptr("name"),
 				CreationTime: &createTime,
@@ -70,7 +70,7 @@ func TestMapProjectFields(t *testing.T) {
 			expected: Model{
 				Id:                types.StringValue("cid"),
 				ContainerId:       types.StringValue("cid"),
-				ProjectId:         types.StringValue("pid"),
+				FolderId:          types.StringValue("fid"),
 				ContainerParentId: types.StringValue("parent_cid"),
 				Name:              types.StringValue("name"),
 				CreationTime:      types.StringValue(createTime.Format(time.RFC3339)),
@@ -85,9 +85,9 @@ func TestMapProjectFields(t *testing.T) {
 		{
 			description:           "uuid_parent_id_ok",
 			uuidContainerParentId: true,
-			projectResp: &resourcemanager.GetProjectResponse{
+			projectResp: &resourcemanager.GetFolderDetailsResponse{
 				ContainerId: utils.Ptr("cid"),
-				ProjectId:   utils.Ptr("pid"),
+				FolderId:    utils.Ptr("fid"),
 				Labels: &map[string]string{
 					"label1": "ref1",
 					"label2": "ref2",
@@ -103,7 +103,7 @@ func TestMapProjectFields(t *testing.T) {
 			expected: Model{
 				Id:                types.StringValue("cid"),
 				ContainerId:       types.StringValue("cid"),
-				ProjectId:         types.StringValue("pid"),
+				FolderId:          types.StringValue("fid"),
 				ContainerParentId: types.StringValue(testUUID),
 				Name:              types.StringValue("name"),
 				CreationTime:      types.StringValue(createTime.Format(time.RFC3339)),
@@ -126,7 +126,7 @@ func TestMapProjectFields(t *testing.T) {
 		{
 			description:           "no_resource_id",
 			uuidContainerParentId: false,
-			projectResp:           &resourcemanager.GetProjectResponse{},
+			projectResp:           &resourcemanager.GetFolderDetailsResponse{},
 			expected:              Model{},
 			expectedLabels:        nil,
 			isValid:               false,
@@ -156,7 +156,7 @@ func TestMapProjectFields(t *testing.T) {
 				ContainerParentId: containerParentId,
 			}
 
-			err := mapProjectFields(context.Background(), tt.projectResp, model, nil)
+			err := mapFolderFields(context.Background(), tt.projectResp, model, nil)
 
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
@@ -179,7 +179,7 @@ func TestToCreatePayload(t *testing.T) {
 		description string
 		input       *ResourceModel
 		inputLabels *map[string]string
-		expected    *resourcemanager.CreateProjectPayload
+		expected    *resourcemanager.CreateFolderPayload
 		isValid     bool
 	}{
 		{
@@ -195,7 +195,7 @@ func TestToCreatePayload(t *testing.T) {
 				"label1": "1",
 				"label2": "2",
 			},
-			&resourcemanager.CreateProjectPayload{
+			&resourcemanager.CreateFolderPayload{
 				ContainerParentId: utils.Ptr("pid"),
 				Labels: &map[string]string{
 					"label1": "1",
@@ -266,14 +266,14 @@ func TestToUpdatePayload(t *testing.T) {
 		description string
 		input       *ResourceModel
 		inputLabels *map[string]string
-		expected    *resourcemanager.PartialUpdateProjectPayload
+		expected    *resourcemanager.PartialUpdateFolderPayload
 		isValid     bool
 	}{
 		{
 			"default_ok",
 			&ResourceModel{},
 			nil,
-			&resourcemanager.PartialUpdateProjectPayload{
+			&resourcemanager.PartialUpdateFolderPayload{
 				ContainerParentId: nil,
 				Labels:            nil,
 				Name:              nil,
@@ -293,7 +293,7 @@ func TestToUpdatePayload(t *testing.T) {
 				"label1": "1",
 				"label2": "2",
 			},
-			&resourcemanager.PartialUpdateProjectPayload{
+			&resourcemanager.PartialUpdateFolderPayload{
 				ContainerParentId: utils.Ptr("pid"),
 				Labels: &map[string]string{
 					"label1": "1",
