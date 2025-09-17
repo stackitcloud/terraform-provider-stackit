@@ -284,7 +284,7 @@ func TestMapFields(t *testing.T) {
 	geofencing := types.MapValueMust(geofencingTypes.ElemType, map[string]attr.Value{
 		"test/": geofencingCountries,
 	})
-	geofencingInput := map[string][]string{"test/": []string{"DE", "BR"}}
+	geofencingInput := map[string][]string{"test/": {"DE", "BR"}}
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{
 		"enabled": types.BoolValue(true),
 	})
@@ -367,7 +367,6 @@ func TestMapFields(t *testing.T) {
 		},
 		"happy_path_with_optimizer": {
 			Expected: expectedModel(func(m *Model) {
-
 				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
 					"backend":           backend,
 					"regions":           regionsFixture,

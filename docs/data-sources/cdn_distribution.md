@@ -56,6 +56,10 @@ Read-Only:
 <a id="nestedatt--config--backend"></a>
 ### Nested Schema for `config.backend`
 
+Optional:
+
+- `geofencing` (Map of List of String) A map of URLs to a list of countries where content is allowed.
+
 Read-Only:
 
 - `origin_request_headers` (Map of String) The configured origin request headers for the backend
