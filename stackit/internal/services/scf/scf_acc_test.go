@@ -211,7 +211,7 @@ func TestAccScfOrgMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_scf_organization.org", "org_id"),
 					resource.TestCheckResourceAttrSet("stackit_scf_organization.org", "region"),
 					resource.TestCheckResourceAttrSet("stackit_scf_organization.org", "updated_at"),
-					resource.TestCheckResourceAttr("data.stackit_scf_platform.scf_platform", "guid", testutil.ConvertConfigVariable(testConfigVarsMax["platform_id"])),
+					resource.TestCheckResourceAttr("data.stackit_scf_platform.scf_platform", "platform_id", testutil.ConvertConfigVariable(testConfigVarsMax["platform_id"])),
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.scf_platform", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.scf_platform", "display_name", testutil.ConvertConfigVariable(platformName)),
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.scf_platform", "system_id", testutil.ConvertConfigVariable(platformSystemId)),
@@ -238,7 +238,7 @@ func TestAccScfOrgMax(t *testing.T) {
 	                	project_id = stackit_scf_organization.org.project_id
 	                }
 					data "stackit_scf_platform" "platform" {
-	                	guid = stackit_scf_organization.org.platform_id
+	                	platform_id = stackit_scf_organization.org.platform_id
 	                	project_id = stackit_scf_organization.org.project_id
 	                }
 					`, testutil.ScfProviderConfig()+resourceMax,
@@ -288,7 +288,7 @@ func TestAccScfOrgMax(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrPair(
 						"stackit_scf_organization.org", "platform_id",
-						"data.stackit_scf_platform.platform", "guid",
+						"data.stackit_scf_platform.platform", "platform_id",
 					),
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.platform", "display_name", testutil.ConvertConfigVariable(platformName)),
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.platform", "system_id", testutil.ConvertConfigVariable(platformSystemId)),

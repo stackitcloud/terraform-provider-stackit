@@ -30,7 +30,7 @@ STACKIT Cloud Foundry organization resource schema. Must have a `region` specifi
 
 - `created_at` (String) The time when the organization was created
 - `id` (String) Terraform's internal resource ID, structured as "`project_id`,`org_id`".
-- `org_id` (String) The ID of the organization
+- `org_id` (String) The ID of the Cloud Foundry Organization
 - `region` (String) The region where the organization is located
 - `status` (String) The status of the organization (e.g., deleting, delete_failed)
 - `updated_at` (String) The time when the organization was last updated

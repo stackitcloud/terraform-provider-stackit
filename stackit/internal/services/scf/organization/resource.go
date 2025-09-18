@@ -73,7 +73,7 @@ var descriptions = map[string]string{
 	"region":      "The region where the organization is located",
 	"status":      "The status of the organization (e.g., deleting, delete_failed)",
 	"suspended":   "A boolean indicating whether the organization is suspended",
-	"org_id":      "The ID of the organization",
+	"org_id":      "The ID of the Cloud Foundry Organization",
 	"updated_at":  "The time when the organization was last updated",
 }
 

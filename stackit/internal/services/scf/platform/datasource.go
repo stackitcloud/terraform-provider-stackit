@@ -59,7 +59,7 @@ func (s *scfPlatformDataSource) Metadata(_ context.Context, request datasource.M
 
 type Model struct {
 	Id          types.String `tfsdk:"id"` // Required by Terraform
-	Guid        types.String `tfsdk:"guid"`
+	PlatformId  types.String `tfsdk:"platform_id"`
 	ProjectId   types.String `tfsdk:"project_id"`
 	SystemId    types.String `tfsdk:"system_id"`
 	DisplayName types.String `tfsdk:"display_name"`
@@ -71,7 +71,7 @@ type Model struct {
 // descriptions for the attributes in the Schema
 var descriptions = map[string]string{
 	"id":           "Terraform's internal resource ID, structured as \"`project_id`,`guid`\".",
-	"guid":         "The unique id of the platform",
+	"platform_id":  "The unique id of the platform",
 	"project_id":   "The ID of the project associated with the platform",
 	"system_id":    "The ID of the platform System",
 	"display_name": "The name of the platform",
@@ -87,8 +87,8 @@ func (s *scfPlatformDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Description: descriptions["id"],
 				Computed:    true,
 			},
-			"guid": schema.StringAttribute{
-				Description: descriptions["guid"],
+			"platform_id": schema.StringAttribute{
+				Description: descriptions["platform_id"],
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -139,7 +139,7 @@ func (s *scfPlatformDataSource) Read(ctx context.Context, request datasource.Rea
 
 	// Extract the project ID and instance id of the model
 	projectId := model.ProjectId.ValueString()
-	platformId := model.Guid.ValueString()
+	platformId := model.PlatformId.ValueString()
 
 	region := model.Region.ValueString()
 	if region == "" {
@@ -186,7 +186,7 @@ func mapFields(response *scf.Platforms, model *Model) error {
 
 	// Build the ID by combining the project ID and platform id and assign the model's fields.
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), *response.Guid)
-	model.Guid = types.StringPointerValue(response.Guid)
+	model.PlatformId = types.StringPointerValue(response.Guid)
 	model.ProjectId = types.StringPointerValue(model.ProjectId.ValueStringPointer())
 	model.SystemId = types.StringPointerValue(response.SystemId)
 	model.DisplayName = types.StringPointerValue(response.DisplayName)

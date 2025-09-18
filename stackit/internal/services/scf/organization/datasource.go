@@ -76,7 +76,6 @@ func (s *scfOrganizationDataSource) Schema(_ context.Context, _ datasource.Schem
 			},
 			"platform_id": schema.StringAttribute{
 				Description: descriptions["platform_id"],
-				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -101,7 +100,6 @@ func (s *scfOrganizationDataSource) Schema(_ context.Context, _ datasource.Schem
 			},
 			"quota_id": schema.StringAttribute{
 				Description: descriptions["quota_id"],
-				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -119,7 +117,6 @@ func (s *scfOrganizationDataSource) Schema(_ context.Context, _ datasource.Schem
 			},
 			"suspended": schema.BoolAttribute{
 				Description: descriptions["suspended"],
-				Optional:    true,
 				Computed:    true,
 			},
 			"updated_at": schema.StringAttribute{

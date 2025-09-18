@@ -19,6 +19,6 @@ resource "stackit_scf_organization_manager" "orgmanager" {
   org_id     = stackit_scf_organization.org.org_id
 }
 data "stackit_scf_platform" "scf_platform" {
-  project_id = var.project_id
-  guid       = stackit_scf_organization.org.platform_id
+  project_id  = var.project_id
+  platform_id = stackit_scf_organization.org.platform_id
 }

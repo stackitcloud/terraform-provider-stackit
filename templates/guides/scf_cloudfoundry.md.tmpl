@@ -74,8 +74,8 @@ resource "stackit_scf_organization" "scf_org" {
 }
 
 data "stackit_scf_platform" "scf_platform" {
-  project_id = var.project_id
-  guid       = stackit_scf_organization.scf_org.platform_id
+  project_id  = var.project_id
+  platform_id = stackit_scf_organization.scf_org.platform_id
 }
 
 resource "stackit_scf_organization_manager" "scf_manager" {
@@ -173,8 +173,8 @@ is automatically deleted when the organization is removed.
 
 ```
 data "stackit_scf_platform" "scf_platform" {
-  project_id = var.project_id
-  guid       = stackit_scf_organization.scf_org.platform_id
+  project_id  = var.project_id
+  platform_id = stackit_scf_organization.scf_org.platform_id
 }
 ```
 

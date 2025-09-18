@@ -31,7 +31,7 @@ func TestMapFields(t *testing.T) {
 			},
 			expected: &Model{
 				Id:          types.StringValue(fmt.Sprintf("%s,%s", testProjectId, testPlatformId)),
-				Guid:        types.StringValue(testPlatformId),
+				PlatformId:  types.StringValue(testPlatformId),
 				ProjectId:   types.StringValue(testProjectId),
 				Region:      types.StringNull(),
 				SystemId:    types.StringNull(),
@@ -54,7 +54,7 @@ func TestMapFields(t *testing.T) {
 			expected: &Model{
 				Id:          types.StringValue(fmt.Sprintf("%s,%s", testProjectId, testPlatformId)),
 				ProjectId:   types.StringValue(testProjectId),
-				Guid:        types.StringValue(testPlatformId),
+				PlatformId:  types.StringValue(testPlatformId),
 				Region:      types.StringValue(testRegion),
 				SystemId:    types.StringValue("eu01.01"),
 				DisplayName: types.StringValue("scf-full-org"),

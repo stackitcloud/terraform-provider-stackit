@@ -14,8 +14,8 @@ STACKIT Cloud Foundry Platform datasource schema.
 
 ```terraform
 data "stackit_scf_platform" "example" {
-  guid       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  platform_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 ```
 
@@ -24,7 +24,7 @@ data "stackit_scf_platform" "example" {
 
 ### Required
 
-- `guid` (String) The unique id of the platform
+- `platform_id` (String) The unique id of the platform
 - `project_id` (String) The ID of the project associated with the platform
 
 ### Read-Only

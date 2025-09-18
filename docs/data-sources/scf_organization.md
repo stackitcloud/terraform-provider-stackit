@@ -14,8 +14,8 @@ STACKIT Cloud Foundry organization datasource schema. Must have a `region` speci
 
 ```terraform
 data "stackit_scf_organization" "example" {
-  guid       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  guid       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 ```
 
@@ -24,20 +24,20 @@ data "stackit_scf_organization" "example" {
 
 ### Required
 
-- `org_id` (String) The ID of the organization
+- `org_id` (String) The ID of the Cloud Foundry Organization
 - `project_id` (String) The ID of the project associated with the organization
 
 ### Optional
 
-- `platform_id` (String) The ID of the platform associated with the organization
-- `quota_id` (String) The ID of the quota associated with the organization
 - `region` (String) The region where the organization is located
-- `suspended` (Boolean) A boolean indicating whether the organization is suspended
 
 ### Read-Only
 
 - `created_at` (String) The time when the organization was created
 - `id` (String) Terraform's internal resource ID, structured as "`project_id`,`org_id`".
 - `name` (String) The name of the organization
+- `platform_id` (String) The ID of the platform associated with the organization
+- `quota_id` (String) The ID of the quota associated with the organization
 - `status` (String) The status of the organization (e.g., deleting, delete_failed)
+- `suspended` (Boolean) A boolean indicating whether the organization is suspended
 - `updated_at` (String) The time when the organization was last updated
