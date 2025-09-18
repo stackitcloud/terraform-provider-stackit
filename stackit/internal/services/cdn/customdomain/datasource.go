@@ -9,6 +9,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -27,12 +28,26 @@ var (
 	_ datasource.DataSourceWithConfigure = &customDomainDataSource{}
 )
 
+var certificateDataSourceTypes = map[string]attr.Type{
+	"version": types.Int64Type,
+}
+
 type customDomainDataSource struct {
 	client *cdn.APIClient
 }
 
 func NewCustomDomainDataSource() datasource.DataSource {
 	return &customDomainDataSource{}
+}
+
+type customDomainDataSourceModel struct {
+	ID             types.String `tfsdk:"id"`
+	DistributionId types.String `tfsdk:"distribution_id"`
+	ProjectId      types.String `tfsdk:"project_id"`
+	Name           types.String `tfsdk:"name"`
+	Status         types.String `tfsdk:"status"`
+	Errors         types.List   `tfsdk:"errors"`
+	Certificate    types.Object `tfsdk:"certificate"`
 }
 
 func (d *customDomainDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -89,12 +104,22 @@ func (r *customDomainDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed:    true,
 				Description: customDomainSchemaDescriptions["errors"],
 			},
+			"certificate": schema.SingleNestedAttribute{
+				Description: certificateSchemaDescriptions["main"],
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"version": schema.Int64Attribute{
+						Description: certificateSchemaDescriptions["version"],
+						Computed:    true,
+					},
+				},
+			},
 		},
 	}
 }
 
 func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model CustomDomainModel
+	var model customDomainDataSourceModel // Use the new data source model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -111,7 +136,6 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 	customDomainResp, err := r.client.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		// n.b. err is caught here if of type *oapierror.GenericOpenAPIError, which the stackit SDK client returns
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
@@ -121,11 +145,14 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	err = mapCustomDomainFields(customDomainResp.CustomDomain, &model)
+
+	// Call the new data source mapping function
+	err = mapCustomDomainDataSourceFields(customDomainResp, &model, projectId, distributionId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
@@ -133,4 +160,73 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 	tflog.Info(ctx, "CDN custom domain read")
+}
+
+func mapCustomDomainDataSourceFields(customDomainResponse *cdn.GetCustomDomainResponse, model *customDomainDataSourceModel, projectId, distributionId string) error {
+	if customDomainResponse == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	if customDomainResponse.CustomDomain == nil {
+		return fmt.Errorf("CustomDomain is missing in response")
+	}
+
+	if customDomainResponse.CustomDomain.Name == nil {
+		return fmt.Errorf("name is missing in response")
+	}
+	if customDomainResponse.CustomDomain.Status == nil {
+		return fmt.Errorf("status missing in response")
+	}
+
+	normalizedCert, err := normalizeCertificate(customDomainResponse.Certificate)
+	if err != nil {
+		return fmt.Errorf("Certificate error in normalizer: %w", err)
+	}
+
+	// If the certificate is managed, the certificate block in the state should be null.
+	if normalizedCert.Type == "managed" {
+		model.Certificate = types.ObjectNull(certificateDataSourceTypes)
+	} else {
+		// For custom certificates, we only care about the version.
+		version := types.Int64Null()
+		if normalizedCert.Version != nil {
+			version = types.Int64Value(*normalizedCert.Version)
+		}
+
+		certificateObj, diags := types.ObjectValue(certificateDataSourceTypes, map[string]attr.Value{
+			"version": version,
+		})
+		if diags.HasError() {
+			return fmt.Errorf("failed to map certificate: %w", core.DiagsToError(diags))
+		}
+		model.Certificate = certificateObj
+	}
+
+	model.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, distributionId, *customDomainResponse.CustomDomain.Name))
+	model.Status = types.StringValue(string(*customDomainResponse.CustomDomain.Status))
+
+	customDomainErrors := []attr.Value{}
+	if customDomainResponse.CustomDomain.Errors != nil {
+		for _, e := range *customDomainResponse.CustomDomain.Errors {
+			if e.En == nil {
+				return fmt.Errorf("error description missing")
+			}
+			customDomainErrors = append(customDomainErrors, types.StringValue(*e.En))
+		}
+	}
+	modelErrors, diags := types.ListValue(types.StringType, customDomainErrors)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+	model.Errors = modelErrors
+
+	// Also map the fields back to the model from the config
+	model.ProjectId = types.StringValue(projectId)
+	model.DistributionId = types.StringValue(distributionId)
+	model.Name = types.StringValue(*customDomainResponse.CustomDomain.Name)
+
+	return nil
 }
