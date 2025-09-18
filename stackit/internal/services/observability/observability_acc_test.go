@@ -105,6 +105,8 @@ var testConfigVarsMax = config.Variables{
 	"match_regex":                            config.StringVariable("alert1"),
 	"matchers":                               config.StringVariable("instance =~ \".*\""),
 	"continue":                               config.StringVariable("true"),
+	// credential
+	"credential_description": config.StringVariable("This is a description for the test credential."),
 	// logalertgroup
 	"logalertgroup_for_time":   config.StringVariable("60s"),
 	"logalertgroup_label":      config.StringVariable("label1"),
@@ -195,6 +197,7 @@ func TestAccResourceMin(t *testing.T) {
 						"stackit_observability_instance.instance", "instance_id",
 						"stackit_observability_credential.credential", "instance_id",
 					),
+					resource.TestCheckNoResourceAttr("stackit_observability_credential.credential", "description"),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "username"),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "password"),
 
@@ -437,6 +440,7 @@ func TestAccResourceMin(t *testing.T) {
 						"stackit_observability_instance.instance", "instance_id",
 						"stackit_observability_credential.credential", "instance_id",
 					),
+					resource.TestCheckNoResourceAttr("stackit_observability_credential.credential", "description"),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "username"),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "password"),
 
@@ -578,6 +582,7 @@ func TestAccResourceMax(t *testing.T) {
 						"stackit_observability_instance.instance", "instance_id",
 						"stackit_observability_credential.credential", "instance_id",
 					),
+					resource.TestCheckResourceAttr("stackit_observability_credential.credential", "description", testutil.ConvertConfigVariable(testConfigVarsMax["credential_description"])),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "username"),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "password"),
 
@@ -973,6 +978,7 @@ func TestAccResourceMax(t *testing.T) {
 						"stackit_observability_instance.instance", "instance_id",
 						"stackit_observability_credential.credential", "instance_id",
 					),
+					resource.TestCheckResourceAttr("stackit_observability_credential.credential", "description", testutil.ConvertConfigVariable(testConfigVarsMax["credential_description"])),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "username"),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "password"),
 

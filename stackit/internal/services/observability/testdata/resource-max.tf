@@ -48,6 +48,8 @@ variable "match_regex" {}
 variable "matchers" {}
 variable "continue" {}
 
+variable "credential_description" {}
+
 variable "logalertgroup_name" {}
 variable "logalertgroup_alert" {}
 variable "logalertgroup_expression" {}
@@ -92,6 +94,7 @@ resource "stackit_observability_alertgroup" "alertgroup" {
 resource "stackit_observability_credential" "credential" {
   project_id  = var.project_id
   instance_id = stackit_observability_instance.instance.instance_id
+  description = var.credential_description
 }
 
 resource "stackit_observability_instance" "instance" {

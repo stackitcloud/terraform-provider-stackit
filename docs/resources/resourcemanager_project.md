@@ -3,13 +3,13 @@
 page_title: "stackit_resourcemanager_project Resource - stackit"
 subcategory: ""
 description: |-
-  Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.
+  Resource Manager project resource schema.
   -> In case you're getting started with an empty STACKIT organization and want to use this resource to create projects in it, check out this guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/stackit_org_service_account for how to create a service account which you can use for authentication in the STACKIT Terraform provider.
 ---
 
 # stackit_resourcemanager_project (Resource)
 
-Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.
+Resource Manager project resource schema.
 
 -> In case you're getting started with an empty STACKIT organization and want to use this resource to create projects in it, check out [this guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/stackit_org_service_account) for how to create a service account which you can use for authentication in the STACKIT Terraform provider.
 
@@ -52,5 +52,7 @@ To create a project within a STACKIT Network Area, setting the label `networkAre
 ### Read-Only
 
 - `container_id` (String) Project container ID. Globally unique, user-friendly identifier.
+- `creation_time` (String) Date-time at which the project was created.
 - `id` (String) Terraform's internal resource ID. It is structured as "`container_id`".
 - `project_id` (String) Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.
+- `update_time` (String) Date-time at which the project was last modified.

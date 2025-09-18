@@ -185,6 +185,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: descriptions["credentials_group_id"],
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 					stringplanmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.String{
