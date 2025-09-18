@@ -27,11 +27,14 @@ data "stackit_scf_platform" "example" {
 - `platform_id` (String) The unique id of the platform
 - `project_id` (String) The ID of the project associated with the platform
 
+### Optional
+
+- `region` (String) The region where the platform is located. If not defined, the provider region is used
+
 ### Read-Only
 
 - `api_url` (String) The CF API Url of the platform
 - `console_url` (String) The Stratos URL of the platform
 - `display_name` (String) The name of the platform
-- `id` (String) Terraform's internal resource ID, structured as "`project_id`,`guid`".
-- `region` (String) The region where the platform is located
+- `id` (String) Terraform's internal resource ID, structured as "`project_id`,`region`,`platform_id`".
 - `system_id` (String) The ID of the platform System

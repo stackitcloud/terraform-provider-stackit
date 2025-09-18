@@ -45,13 +45,13 @@ import {
 
 - `platform_id` (String) The ID of the platform associated with the organization
 - `quota_id` (String) The ID of the quota associated with the organization
+- `region` (String) The resource region. If not defined, the provider region is used
 - `suspended` (Boolean) A boolean indicating whether the organization is suspended
 
 ### Read-Only
 
 - `created_at` (String) The time when the organization was created
-- `id` (String) Terraform's internal resource ID, structured as "`project_id`,`org_id`".
+- `id` (String) Terraform's internal resource ID, structured as "`project_id``region`,`org_id`".
 - `org_id` (String) The ID of the Cloud Foundry Organization
-- `region` (String) The region where the organization is located
 - `status` (String) The status of the organization (e.g., deleting, delete_failed)
 - `updated_at` (String) The time when the organization was last updated

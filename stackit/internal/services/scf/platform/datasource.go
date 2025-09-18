@@ -70,12 +70,12 @@ type Model struct {
 
 // descriptions for the attributes in the Schema
 var descriptions = map[string]string{
-	"id":           "Terraform's internal resource ID, structured as \"`project_id`,`guid`\".",
+	"id":           "Terraform's internal resource ID, structured as \"`project_id`,`region`,`platform_id`\".",
 	"platform_id":  "The unique id of the platform",
 	"project_id":   "The ID of the project associated with the platform",
 	"system_id":    "The ID of the platform System",
 	"display_name": "The name of the platform",
-	"region":       "The region where the platform is located",
+	"region":       "The region where the platform is located. If not defined, the provider region is used",
 	"api_url":      "The CF API Url of the platform",
 	"console_url":  "The Stratos URL of the platform",
 }
@@ -113,6 +113,7 @@ func (s *scfPlatformDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 			},
 			"region": schema.StringAttribute{
 				Description: descriptions["region"],
+				Optional:    true,
 				Computed:    true,
 			},
 			"api_url": schema.StringAttribute{
@@ -137,16 +138,12 @@ func (s *scfPlatformDataSource) Read(ctx context.Context, request datasource.Rea
 		return
 	}
 
-	// Extract the project ID and instance id of the model
+	// Extract the project ID region and platform id of the model
 	projectId := model.ProjectId.ValueString()
 	platformId := model.PlatformId.ValueString()
+	region := s.providerData.GetRegionWithOverride(model.Region)
 
-	region := model.Region.ValueString()
-	if region == "" {
-		region = s.providerData.GetRegion()
-	}
-
-	// Read the current scf organization via guid
+	// Read the scf platform
 	scfPlatformResponse, err := s.client.GetPlatformExecute(ctx, projectId, region, platformId)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -171,7 +168,7 @@ func (s *scfPlatformDataSource) Read(ctx context.Context, request datasource.Rea
 	tflog.Info(ctx, fmt.Sprintf("read scf Platform %s", platformId))
 }
 
-// mapFields maps a SCF Organization response to the model.
+// mapFields maps a SCF Platform response to the model.
 func mapFields(response *scf.Platforms, model *Model) error {
 	if response == nil {
 		return fmt.Errorf("response input is nil")
@@ -180,17 +177,37 @@ func mapFields(response *scf.Platforms, model *Model) error {
 		return fmt.Errorf("model input is nil")
 	}
 
-	if response.Guid == nil {
-		return fmt.Errorf("SCF organization guid not present")
+	var projectId string
+	if model.ProjectId.ValueString() == "" {
+		return fmt.Errorf("project id is not present")
+	}
+	projectId = model.ProjectId.ValueString()
+
+	var region string
+	if response.Region != nil {
+		region = *response.Region
+	} else if model.Region.ValueString() != "" {
+		region = model.Region.ValueString()
+	} else {
+		return fmt.Errorf("region is not present")
 	}
 
-	// Build the ID by combining the project ID and platform id and assign the model's fields.
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), *response.Guid)
-	model.PlatformId = types.StringPointerValue(response.Guid)
-	model.ProjectId = types.StringPointerValue(model.ProjectId.ValueStringPointer())
+	var platformId string
+	if response.Guid != nil {
+		platformId = *response.Guid
+	} else if model.PlatformId.ValueString() != "" {
+		platformId = model.PlatformId.ValueString()
+	} else {
+		return fmt.Errorf("platform id is not present")
+	}
+
+	// Build the ID
+	model.Id = utils.BuildInternalTerraformId(projectId, region, platformId)
+	model.PlatformId = types.StringValue(platformId)
+	model.ProjectId = types.StringValue(projectId)
 	model.SystemId = types.StringPointerValue(response.SystemId)
 	model.DisplayName = types.StringPointerValue(response.DisplayName)
-	model.Region = types.StringPointerValue(response.Region)
+	model.Region = types.StringValue(region)
 	model.ApiUrl = types.StringPointerValue(response.ApiUrl)
 	model.ConsoleUrl = types.StringPointerValue(response.ConsoleUrl)
 	return nil

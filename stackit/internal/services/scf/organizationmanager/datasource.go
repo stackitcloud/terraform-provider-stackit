@@ -124,7 +124,7 @@ func (s *scfOrganizationManagerDataSource) Schema(_ context.Context, _ datasourc
 				Computed:    true,
 			},
 		},
-		Description: "STACKIT Cloud Foundry organization manager datasource schema. Must have a `region` specified in the provider configuration.",
+		Description: "STACKIT Cloud Foundry organization manager datasource schema.",
 	}
 }
 
@@ -141,20 +141,7 @@ func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request dat
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
 
-	region := model.Region.ValueString()
-	if region == "" {
-		region = s.providerData.GetRegion()
-	}
-
-	if projectId == "" {
-		panic("projectId is nil")
-	}
-	if orgId == "" {
-		panic("orgId is nil")
-	}
-	if region == "" {
-		panic("region is nil")
-	}
+	region := s.providerData.GetRegionWithOverride(model.Region)
 
 	// Read the current scf organization manager via orgId
 	ScfOrgManager, err := s.client.GetOrgManagerExecute(ctx, projectId, region, orgId)

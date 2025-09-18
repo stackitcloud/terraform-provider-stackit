@@ -166,7 +166,11 @@ func TestAccScfOrganizationMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute org_id")
 					}
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, orgId), nil
+					regionInAttributes, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, regionInAttributes, orgId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -309,7 +313,11 @@ func TestAccScfOrgMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute org_id")
 					}
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, orgId), nil
+					regionInAttributes, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, regionInAttributes, orgId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,

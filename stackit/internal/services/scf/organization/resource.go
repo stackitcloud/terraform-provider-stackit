@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -64,13 +63,13 @@ type scfOrganizationResource struct {
 
 // descriptions for the attributes in the Schema
 var descriptions = map[string]string{
-	"id":          "Terraform's internal resource ID, structured as \"`project_id`,`org_id`\".",
+	"id":          "Terraform's internal resource ID, structured as \"`project_id``region`,`org_id`\".",
 	"created_at":  "The time when the organization was created",
 	"name":        "The name of the organization",
 	"platform_id": "The ID of the platform associated with the organization",
 	"project_id":  "The ID of the project associated with the organization",
 	"quota_id":    "The ID of the quota associated with the organization",
-	"region":      "The region where the organization is located",
+	"region":      "The resource region. If not defined, the provider region is used",
 	"status":      "The status of the organization (e.g., deleting, delete_failed)",
 	"suspended":   "A boolean indicating whether the organization is suspended",
 	"org_id":      "The ID of the Cloud Foundry Organization",
@@ -96,25 +95,34 @@ func (s *scfOrganizationResource) Metadata(_ context.Context, request resource.M
 	response.TypeName = request.ProviderTypeName + "_scf_organization"
 }
 
-func (s *scfOrganizationResource) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	// Split the import identifier to extract project ID and email.
-	idParts := strings.Split(request.ID, core.Separator)
-
-	// Ensure the import identifier format is correct.
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
-		core.LogAndAddError(ctx, &response.Diagnostics,
-			"Error importing scf organization",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[org_id]  Got: %q", request.ID),
-		)
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *scfOrganizationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	projectId := idParts[0]
-	orgId := idParts[1]
-	// Set the project id and organization id in the state
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("org_id"), orgId)...)
-	tflog.Info(ctx, "Scf organization state imported")
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func (s *scfOrganizationResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -187,6 +195,7 @@ func (s *scfOrganizationResource) Schema(_ context.Context, _ resource.SchemaReq
 			},
 			"region": schema.StringAttribute{
 				Description: descriptions["region"],
+				Optional:    true,
 				Computed:    true,
 			},
 			"status": schema.StringAttribute{
@@ -221,9 +230,6 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 
 	// Set logging context with the project ID and instance ID.
 	region := model.Region.ValueString()
-	if region == "" {
-		region = s.providerData.GetRegion()
-	}
 	projectId := model.ProjectId.ValueString()
 	orgName := model.Name.ValueString()
 	quotaId := model.QuotaId.ValueString()
@@ -307,13 +313,6 @@ func (s *scfOrganizationResource) Read(ctx context.Context, request resource.Rea
 	// Extract the project ID and instance id of the model
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
-	if projectId == "" {
-		panic("projectId is nil")
-	}
-	if orgId == "" {
-		panic("orgId is nil")
-	}
-
 	// Extract the region
 	region := s.providerData.GetRegionWithOverride(model.Region)
 
@@ -368,16 +367,6 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 	response.Diagnostics.Append(diags...)
 	if response.Diagnostics.HasError() {
 		return
-	}
-
-	if projectId == "" {
-		panic("projectId is nil")
-	}
-	if orgId == "" {
-		panic("orgId is nil")
-	}
-	if region == "" {
-		panic("region is nil")
 	}
 
 	org, err := s.client.GetOrganization(ctx, projectId, region, orgId).Execute()
@@ -463,6 +452,29 @@ func (s *scfOrganizationResource) Delete(ctx context.Context, request resource.D
 	tflog.Info(ctx, "Scf organization deleted")
 }
 
+func (s *scfOrganizationResource) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	// Split the import identifier to extract project ID and email.
+	idParts := strings.Split(request.ID, core.Separator)
+
+	// Ensure the import identifier format is correct.
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+		core.LogAndAddError(ctx, &response.Diagnostics,
+			"Error importing scf organization",
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[org_id]  Got: %q", request.ID),
+		)
+		return
+	}
+
+	projectId := idParts[0]
+	region := idParts[1]
+	orgId := idParts[2]
+	// Set the project id and organization id in the state
+	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
+	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("region"), region)...)
+	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("org_id"), orgId)...)
+	tflog.Info(ctx, "Scf organization state imported")
+}
+
 // mapFields maps a SCF Organization response to the model.
 func mapFields(response *scf.Organization, model *Model) error {
 	if response == nil {
@@ -473,36 +485,49 @@ func mapFields(response *scf.Organization, model *Model) error {
 	}
 
 	var orgId string
-	if model.OrgId.ValueString() != "" {
-		orgId = model.OrgId.ValueString()
-	} else if response.Guid != nil {
+	if response.Guid != nil {
 		orgId = *response.Guid
+	} else if model.OrgId.ValueString() != "" {
+		orgId = model.OrgId.ValueString()
 	} else {
 		return fmt.Errorf("org id is not present")
 	}
 
+	var projectId string
+	if response.ProjectId != nil {
+		projectId = *response.ProjectId
+	} else if model.ProjectId.ValueString() != "" {
+		projectId = model.ProjectId.ValueString()
+	} else {
+		return fmt.Errorf("project id is not present")
+	}
+
+	var region string
+	if response.Region != nil {
+		region = *response.Region
+	} else if model.Region.ValueString() != "" {
+		region = model.Region.ValueString()
+	} else {
+		return fmt.Errorf("region is not present")
+	}
+
 	// Build the ID by combining the project ID and organization id and assign the model's fields.
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), *response.Guid)
-	model.ProjectId = types.StringPointerValue(response.ProjectId)
-	model.Region = types.StringPointerValue(response.Region)
+	model.Id = utils.BuildInternalTerraformId(projectId, region, orgId)
+	model.ProjectId = types.StringValue(projectId)
+	model.Region = types.StringValue(region)
 	model.PlatformId = types.StringPointerValue(response.PlatformId)
-	model.OrgId = types.StringPointerValue(response.Guid)
+	model.OrgId = types.StringValue(orgId)
 	model.Name = types.StringPointerValue(response.Name)
 	model.Status = types.StringPointerValue(response.Status)
 	model.Suspended = types.BoolPointerValue(response.Suspended)
 	model.QuotaId = types.StringPointerValue(response.QuotaId)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
-	if model.OrgId.IsNull() {
-		panic("orgId is nil")
-	}
 	return nil
 }
 
 // toCreatePayload creates the payload to create a scf organization instance
 func toCreatePayload(model *Model) (scf.CreateOrganizationPayload, error) {
-	diags := diag.Diagnostics{}
-
 	if model == nil {
 		return scf.CreateOrganizationPayload{}, fmt.Errorf("nil model")
 	}
@@ -513,35 +538,5 @@ func toCreatePayload(model *Model) (scf.CreateOrganizationPayload, error) {
 	if !model.PlatformId.IsNull() && !model.PlatformId.IsUnknown() {
 		payload.PlatformId = model.PlatformId.ValueStringPointer()
 	}
-	return payload, diags
-}
-
-// ModifyPlan implements resource.ResourceWithModifyPlan.
-// Use the modifier to set the effective region in the current plan.
-func (r *scfOrganizationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
-	var configModel Model
-	// skip initial empty configuration to avoid follow-up errors
-	if req.Config.Raw.IsNull() {
-		return
-	}
-	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	var planModel Model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	return payload, nil
 }

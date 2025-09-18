@@ -3,12 +3,12 @@
 page_title: "stackit_scf_organization_manager Data Source - stackit"
 subcategory: ""
 description: |-
-  STACKIT Cloud Foundry organization manager datasource schema. Must have a region specified in the provider configuration.
+  STACKIT Cloud Foundry organization manager datasource schema.
 ---
 
 # stackit_scf_organization_manager (Data Source)
 
-STACKIT Cloud Foundry organization manager datasource schema. Must have a `region` specified in the provider configuration.
+STACKIT Cloud Foundry organization manager datasource schema.
 
 ## Example Usage
 
@@ -29,12 +29,12 @@ data "stackit_scf_organization_manager" "example" {
 
 ### Optional
 
-- `region` (String) The region where the organization of the organization manager is located
+- `region` (String) The region where the organization of the organization manager is located. If not defined, the provider region is used
 
 ### Read-Only
 
 - `created_at` (String) The time when the organization manager was created
-- `id` (String) Terraform's internal resource ID, structured as "`project_id`,`org_id`,`user_id`".
+- `id` (String) Terraform's internal resource ID, structured as "`project_id`,`region`,`org_id`,`user_id`".
 - `password` (String) An auto-generated password
 - `platform_id` (String) The ID of the platform associated with the organization of the organization manager
 - `updated_at` (String) The time when the organization manager was last updated

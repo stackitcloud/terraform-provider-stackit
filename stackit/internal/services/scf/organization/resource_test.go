@@ -37,14 +37,15 @@ func TestMapFields(t *testing.T) {
 			input: &scf.Organization{
 				Guid:      utils.Ptr(testOrgId),
 				Name:      utils.Ptr("scf-org-min-instance"),
+				Region:    utils.Ptr(testRegion),
 				CreatedAt: &createdTime,
 				UpdatedAt: &createdTime,
 				ProjectId: utils.Ptr(testProjectId),
 			},
 			expected: &Model{
-				Id:         types.StringValue(fmt.Sprintf("%s,%s", testProjectId, testOrgId)),
+				Id:         types.StringValue(fmt.Sprintf("%s,%s,%s", testProjectId, testRegion, testOrgId)),
 				ProjectId:  types.StringValue(testProjectId),
-				Region:     types.StringNull(),
+				Region:     types.StringValue(testRegion),
 				Name:       types.StringValue("scf-org-min-instance"),
 				PlatformId: types.StringNull(),
 				OrgId:      types.StringValue(testOrgId),
@@ -71,7 +72,7 @@ func TestMapFields(t *testing.T) {
 				UpdatedAt:  &createdTime,
 			},
 			expected: &Model{
-				Id:         types.StringValue(fmt.Sprintf("%s,%s", testProjectId, testOrgId)),
+				Id:         types.StringValue(fmt.Sprintf("%s,%s,%s", testProjectId, testRegion, testOrgId)),
 				ProjectId:  types.StringValue(testProjectId),
 				OrgId:      types.StringValue(testOrgId),
 				Name:       types.StringValue("scf-full-org"),
@@ -152,20 +153,20 @@ func TestToCreatePayload(t *testing.T) {
 			description: "nil input model",
 			input:       nil,
 			expected:    scf.CreateOrganizationPayload{},
-			expectError: false,
+			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, diags := toCreatePayload(tt.input)
+			output, err := toCreatePayload(tt.input)
 
-			if tt.expectError && !diags.HasError() {
+			if tt.expectError && err == nil {
 				t.Fatalf("expected diagnostics error but got none")
 			}
 
-			if !tt.expectError && diags.HasError() {
-				t.Fatalf("unexpected diagnostics error: %v", diags)
+			if !tt.expectError && err != nil {
+				t.Fatalf("unexpected diagnostics error: %v", err)
 			}
 
 			if diff := cmp.Diff(tt.expected, output); diff != "" {

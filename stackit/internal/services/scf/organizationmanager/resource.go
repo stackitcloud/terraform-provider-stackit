@@ -57,8 +57,8 @@ type scfOrganizationManagerResource struct {
 
 // descriptions for the attributes in the Schema
 var descriptions = map[string]string{
-	"id":          "Terraform's internal resource ID, structured as \"`project_id`,`org_id`,`user_id`\".",
-	"region":      "The region where the organization of the organization manager is located",
+	"id":          "Terraform's internal resource ID, structured as \"`project_id`,`region`,`org_id`,`user_id`\".",
+	"region":      "The region where the organization of the organization manager is located. If not defined, the provider region is used",
 	"platform_id": "The ID of the platform associated with the organization of the organization manager",
 	"project_id":  "The ID of the project associated with the organization of the organization manager",
 	"org_id":      "The ID of the Cloud Foundry Organization",
@@ -86,29 +86,6 @@ func (s *scfOrganizationManagerResource) Configure(ctx context.Context, request 
 
 func (s *scfOrganizationManagerResource) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) { // nolint:gocritic // function signature required by Terraform
 	response.TypeName = request.ProviderTypeName + "_scf_organization_manager"
-}
-
-func (s *scfOrganizationManagerResource) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Split the import identifier to extract project ID and email.
-	idParts := strings.Split(request.ID, core.Separator)
-
-	// Ensure the import identifier format is correct.
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
-		core.LogAndAddError(ctx, &response.Diagnostics,
-			"Error importing scf organization manager",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[org_id],[user_id]  Got: %q", request.ID),
-		)
-		return
-	}
-
-	projectId := idParts[0]
-	orgId := idParts[1]
-	userId := idParts[2]
-	// Set the project id and organization id in the state
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("org_id"), orgId)...)
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("user_id"), userId)...)
-	tflog.Info(ctx, "Scf organization manager state imported")
 }
 
 func (s *scfOrganizationManagerResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) { // nolint:gocritic // function signature required by Terraform
@@ -178,7 +155,7 @@ func (s *scfOrganizationManagerResource) Schema(_ context.Context, _ resource.Sc
 				Computed:    true,
 			},
 		},
-		Description: "STACKIT Cloud Foundry organization manager resource schema. Must have a `region` specified in the provider configuration.",
+		Description: "STACKIT Cloud Foundry organization manager resource schema.",
 	}
 }
 
@@ -191,17 +168,14 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 		return
 	}
 
-	// Set logging context with the project ID and instance ID.
+	// Set logging context with the project ID and username.
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
 	userName := model.UserName.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "username", userName)
 
-	region := model.Region.ValueString()
-	if region == "" {
-		region = s.providerData.GetRegion()
-	}
+	region := s.providerData.GetRegionWithOverride(model.Region)
 
 	response.Diagnostics.Append(diags...)
 	if response.Diagnostics.HasError() {
@@ -239,13 +213,10 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 		return
 	}
 
-	// Extract the project ID and instance id of the model
+	// Extract the project ID, region and org id of the model
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = s.providerData.GetRegion()
-	}
+	region := s.providerData.GetRegionWithOverride(model.Region)
 
 	// Read the current scf organization manager via orgId
 	scfOrgManager, err := s.client.GetOrgManagerExecute(ctx, projectId, region, orgId)
@@ -289,15 +260,12 @@ func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request res
 
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
-	region := model.Region.ValueString()
-	if region == "" {
-		region = s.providerData.GetRegion()
-	}
+	region := s.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "org_id", orgId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// Call API to delete the existing scf organization.
+	// Call API to delete the existing scf organization manager.
 	_, err := s.client.DeleteOrgManagerExecute(ctx, projectId, region, orgId)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -312,6 +280,31 @@ func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request res
 	tflog.Info(ctx, "Scf organization manager deleted")
 }
 
+func (s *scfOrganizationManagerResource) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) { // nolint:gocritic // function signature required by Terraform
+	// Split the import identifier to extract project ID, region org ID and user ID.
+	idParts := strings.Split(request.ID, core.Separator)
+
+	// Ensure the import identifier format is correct.
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
+		core.LogAndAddError(ctx, &response.Diagnostics,
+			"Error importing scf organization manager",
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[org_id],[user_id]  Got: %q", request.ID),
+		)
+		return
+	}
+
+	projectId := idParts[0]
+	region := idParts[1]
+	orgId := idParts[2]
+	userId := idParts[3]
+	// Set the project id, region organization id and user id in the state
+	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
+	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("region"), region)...)
+	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("org_id"), orgId)...)
+	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("user_id"), userId)...)
+	tflog.Info(ctx, "Scf organization manager state imported")
+}
+
 func mapFieldsCreate(response *scf.OrgManagerResponse, model *Model) error {
 	if response == nil {
 		return fmt.Errorf("response input is nil")
@@ -320,17 +313,48 @@ func mapFieldsCreate(response *scf.OrgManagerResponse, model *Model) error {
 		return fmt.Errorf("model input is nil")
 	}
 
-	if response.Guid == nil {
-		return fmt.Errorf("SCF organization manager user_id not present")
+	var projectId string
+	if response.ProjectId != nil {
+		projectId = *response.ProjectId
+	} else if model.ProjectId.ValueString() != "" {
+		projectId = model.ProjectId.ValueString()
+	} else {
+		return fmt.Errorf("project id is not present")
 	}
 
-	// Build the ID by combining the project ID and organization id and assign the model's fields.
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), *response.OrgId, *response.Guid)
-	model.Region = types.StringPointerValue(response.Region)
+	var region string
+	if response.Region != nil {
+		region = *response.Region
+	} else if model.Region.ValueString() != "" {
+		region = model.Region.ValueString()
+	} else {
+		return fmt.Errorf("region is not present")
+	}
+
+	var orgId string
+	if response.OrgId != nil {
+		orgId = *response.OrgId
+	} else if model.OrgId.ValueString() != "" {
+		orgId = model.OrgId.ValueString()
+	} else {
+		return fmt.Errorf("org id is not present")
+	}
+
+	var userId string
+	if response.Guid != nil {
+		userId = *response.Guid
+	} else if model.UserId.ValueString() != "" {
+		userId = model.UserId.ValueString()
+	} else {
+		return fmt.Errorf("user id is not present")
+	}
+
+	model.Id = utils.BuildInternalTerraformId(projectId, region, orgId, userId)
+	model.Region = types.StringValue(region)
 	model.PlatformId = types.StringPointerValue(response.PlatformId)
-	model.ProjectId = types.StringPointerValue(response.ProjectId)
-	model.OrgId = types.StringPointerValue(response.OrgId)
-	model.UserId = types.StringPointerValue(response.Guid)
+	model.ProjectId = types.StringValue(projectId)
+	model.OrgId = types.StringValue(orgId)
+	model.UserId = types.StringValue(userId)
 	model.UserName = types.StringPointerValue(response.Username)
 	model.Password = types.StringPointerValue(response.Password)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
@@ -346,17 +370,48 @@ func mapFieldsUpdate(response *scf.OrgManager, model *Model) error {
 		return fmt.Errorf("model input is nil")
 	}
 
-	if response.Guid == nil {
-		return fmt.Errorf("SCF organization manager user_id not present")
+	var projectId string
+	if response.ProjectId != nil {
+		projectId = *response.ProjectId
+	} else if model.ProjectId.ValueString() != "" {
+		projectId = model.ProjectId.ValueString()
+	} else {
+		return fmt.Errorf("project id is not present")
 	}
 
-	// Build the ID by combining the project ID and organization id and assign the model's fields.
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), *response.OrgId, *response.Guid)
-	model.Region = types.StringPointerValue(response.Region)
+	var region string
+	if response.Region != nil {
+		region = *response.Region
+	} else if model.Region.ValueString() != "" {
+		region = model.Region.ValueString()
+	} else {
+		return fmt.Errorf("region is not present")
+	}
+
+	var orgId string
+	if response.OrgId != nil {
+		orgId = *response.OrgId
+	} else if model.OrgId.ValueString() != "" {
+		orgId = model.OrgId.ValueString()
+	} else {
+		return fmt.Errorf("org id is not present")
+	}
+
+	var userId string
+	if response.Guid != nil {
+		userId = *response.Guid
+	} else if model.UserId.ValueString() != "" {
+		userId = model.UserId.ValueString()
+	} else {
+		return fmt.Errorf("user id is not present")
+	}
+
+	model.Id = utils.BuildInternalTerraformId(projectId, region, orgId, userId)
+	model.Region = types.StringValue(region)
 	model.PlatformId = types.StringPointerValue(response.PlatformId)
-	model.ProjectId = types.StringPointerValue(response.ProjectId)
-	model.OrgId = types.StringPointerValue(response.OrgId)
-	model.UserId = types.StringPointerValue(response.Guid)
+	model.ProjectId = types.StringValue(projectId)
+	model.OrgId = types.StringValue(orgId)
+	model.UserId = types.StringValue(userId)
 	model.UserName = types.StringPointerValue(response.Username)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())

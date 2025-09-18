@@ -27,13 +27,14 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "minimal_input",
 			input: &scf.Platforms{
-				Guid: utils.Ptr(testPlatformId),
+				Guid:   utils.Ptr(testPlatformId),
+				Region: utils.Ptr(testRegion),
 			},
 			expected: &Model{
-				Id:          types.StringValue(fmt.Sprintf("%s,%s", testProjectId, testPlatformId)),
+				Id:          types.StringValue(fmt.Sprintf("%s,%s,%s", testProjectId, testRegion, testPlatformId)),
 				PlatformId:  types.StringValue(testPlatformId),
 				ProjectId:   types.StringValue(testProjectId),
-				Region:      types.StringNull(),
+				Region:      types.StringValue(testRegion),
 				SystemId:    types.StringNull(),
 				DisplayName: types.StringNull(),
 				ApiUrl:      types.StringNull(),
@@ -52,7 +53,7 @@ func TestMapFields(t *testing.T) {
 				ConsoleUrl:  utils.Ptr("https://example.console.scf.stackit.cloud"),
 			},
 			expected: &Model{
-				Id:          types.StringValue(fmt.Sprintf("%s,%s", testProjectId, testPlatformId)),
+				Id:          types.StringValue(fmt.Sprintf("%s,%s,%s", testProjectId, testRegion, testPlatformId)),
 				ProjectId:   types.StringValue(testProjectId),
 				PlatformId:  types.StringValue(testPlatformId),
 				Region:      types.StringValue(testRegion),

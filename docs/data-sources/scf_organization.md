@@ -29,12 +29,12 @@ data "stackit_scf_organization" "example" {
 
 ### Optional
 
-- `region` (String) The region where the organization is located
+- `region` (String) The resource region. If not defined, the provider region is used
 
 ### Read-Only
 
 - `created_at` (String) The time when the organization was created
-- `id` (String) Terraform's internal resource ID, structured as "`project_id`,`org_id`".
+- `id` (String) Terraform's internal resource ID, structured as "`project_id``region`,`org_id`".
 - `name` (String) The name of the organization
 - `platform_id` (String) The ID of the platform associated with the organization
 - `quota_id` (String) The ID of the quota associated with the organization
