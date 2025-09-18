@@ -15,7 +15,7 @@ STACKIT Cloud Foundry organization datasource schema. Must have a `region` speci
 ```terraform
 data "stackit_scf_organization" "example" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  guid       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  org_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 ```
 

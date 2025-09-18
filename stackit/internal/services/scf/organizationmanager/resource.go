@@ -61,7 +61,7 @@ var descriptions = map[string]string{
 	"region":      "The region where the organization of the organization manager is located",
 	"platform_id": "The ID of the platform associated with the organization of the organization manager",
 	"project_id":  "The ID of the project associated with the organization of the organization manager",
-	"org_id":      "The ID of the organization",
+	"org_id":      "The ID of the Cloud Foundry Organization",
 	"user_id":     "The ID of the organization manager user",
 	"username":    "An auto-generated organization manager user name",
 	"password":    "An auto-generated password",

@@ -24,7 +24,7 @@ data "stackit_scf_organization_manager" "example" {
 
 ### Required
 
-- `org_id` (String) The ID of the organization
+- `org_id` (String) The ID of the Cloud Foundry Organization
 - `project_id` (String) The ID of the project associated with the organization of the organization manager
 
 ### Optional
