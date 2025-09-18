@@ -142,12 +142,9 @@ func (s *scfOrganizationDataSource) Read(ctx context.Context, request datasource
 	orgId := model.OrgId.ValueString()
 
 	// Extract the region
-	region := model.Region.ValueString()
-	if region == "" {
-		region = s.providerData.GetRegion()
-	}
+	region := s.providerData.GetRegionWithOverride(model.Region)
 
-	// Read the current scf organization via guid
+	// Read the current scf organization via orgId
 	scfOrgResponse, err := s.client.GetOrganization(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError

@@ -231,9 +231,9 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "org_name", orgName)
 
-	payload, diags := toCreatePayload(&model)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
+	payload, err := toCreatePayload(&model)
+	if err != nil {
+		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Creating API payload: %v\n", err))
 		return
 	}
 
@@ -315,10 +315,7 @@ func (s *scfOrganizationResource) Read(ctx context.Context, request resource.Rea
 	}
 
 	// Extract the region
-	region := model.Region.ValueString()
-	if region == "" {
-		region = s.providerData.GetRegion()
-	}
+	region := s.providerData.GetRegionWithOverride(model.Region)
 
 	// Read the current scf organization via guid
 	scfOrgResponse, err := s.client.GetOrganization(ctx, projectId, region, orgId).Execute()
@@ -355,9 +352,6 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 		return
 	}
 	region := model.Region.ValueString()
-	if region == "" {
-		region = s.providerData.GetRegion()
-	}
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
 	name := model.Name.ValueString()
@@ -448,9 +442,6 @@ func (s *scfOrganizationResource) Delete(ctx context.Context, request resource.D
 
 	// Extract the region
 	region := model.Region.ValueString()
-	if region == "" {
-		region = s.providerData.GetRegion()
-	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "org_id", orgId)
@@ -481,8 +472,13 @@ func mapFields(response *scf.Organization, model *Model) error {
 		return fmt.Errorf("model input is nil")
 	}
 
-	if response.Guid == nil {
-		return fmt.Errorf("SCF organization guid not present")
+	var orgId string
+	if model.OrgId.ValueString() != "" {
+		orgId = model.OrgId.ValueString()
+	} else if response.Guid != nil {
+		orgId = *response.Guid
+	} else {
+		return fmt.Errorf("org id is not present")
 	}
 
 	// Build the ID by combining the project ID and organization id and assign the model's fields.
@@ -504,11 +500,11 @@ func mapFields(response *scf.Organization, model *Model) error {
 }
 
 // toCreatePayload creates the payload to create a scf organization instance
-func toCreatePayload(model *Model) (scf.CreateOrganizationPayload, diag.Diagnostics) {
+func toCreatePayload(model *Model) (scf.CreateOrganizationPayload, error) {
 	diags := diag.Diagnostics{}
 
 	if model == nil {
-		return scf.CreateOrganizationPayload{}, diags
+		return scf.CreateOrganizationPayload{}, fmt.Errorf("nil model")
 	}
 
 	payload := scf.CreateOrganizationPayload{
