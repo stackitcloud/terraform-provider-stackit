@@ -1568,8 +1568,7 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		return alertConfigModel{}, fmt.Errorf("mapping group by list: %w", core.DiagsToError(diags))
 	}
 
-	mockRoute, diags := types.ObjectValue(routeTypes, map[string]attr.Value{
-		"continue":        types.BoolNull(),
+	mockRoute, diags := types.ObjectValue(mainRouteTypes, map[string]attr.Value{
 		"receiver":        types.StringValue("email-me"),
 		"group_by":        mockGroupByList,
 		"group_wait":      types.StringValue("30s"),

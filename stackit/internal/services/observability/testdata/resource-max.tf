@@ -149,7 +149,6 @@ resource "stackit_observability_instance" "instance" {
       group_wait      = var.group_wait
       receiver        = var.receiver_name
       repeat_interval = var.repeat_interval
-      continue        = var.continue
       routes = [
         {
           group_by        = [var.group_by]
