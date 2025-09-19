@@ -46,6 +46,7 @@ variable "smtp_smart_host" {}
 variable "match" {}
 variable "match_regex" {}
 variable "matchers" {}
+variable "continue" {}
 
 variable "credential_description" {}
 
@@ -155,6 +156,7 @@ resource "stackit_observability_instance" "instance" {
           group_wait      = var.group_wait
           receiver        = var.receiver_name
           repeat_interval = var.repeat_interval
+          continue        = var.continue
           match = {
             match1 = var.match
           }

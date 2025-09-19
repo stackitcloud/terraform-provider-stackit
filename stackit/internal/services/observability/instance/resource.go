@@ -90,7 +90,7 @@ type alertConfigModel struct {
 
 var alertConfigTypes = map[string]attr.Type{
 	"receivers": types.ListType{ElemType: types.ObjectType{AttrTypes: receiversTypes}},
-	"route":     types.ObjectType{AttrTypes: routeTypes},
+	"route":     types.ObjectType{AttrTypes: mainRouteTypes},
 	"global":    types.ObjectType{AttrTypes: globalConfigurationTypes},
 }
 
@@ -130,6 +130,7 @@ type mainRouteModel struct {
 // Struct corresponding to Model.AlertConfig.route
 // This is used to map the routes between the mainRouteModel and the last level of recursion of the routes field
 type routeModelMiddle struct {
+	Continue      types.Bool   `tfsdk:"continue"`
 	GroupBy       types.List   `tfsdk:"group_by"`
 	GroupInterval types.String `tfsdk:"group_interval"`
 	GroupWait     types.String `tfsdk:"group_wait"`
@@ -146,6 +147,7 @@ type routeModelMiddle struct {
 // Struct corresponding to Model.AlertConfig.route but without the recursive routes field
 // This is used to map the last level of recursion of the routes field
 type routeModelNoRoutes struct {
+	Continue      types.Bool   `tfsdk:"continue"`
 	GroupBy       types.List   `tfsdk:"group_by"`
 	GroupInterval types.String `tfsdk:"group_interval"`
 	GroupWait     types.String `tfsdk:"group_wait"`
@@ -158,7 +160,7 @@ type routeModelNoRoutes struct {
 	RepeatInterval types.String `tfsdk:"repeat_interval"`
 }
 
-var routeTypes = map[string]attr.Type{
+var mainRouteTypes = map[string]attr.Type{
 	"group_by":        types.ListType{ElemType: types.StringType},
 	"group_interval":  types.StringType,
 	"group_wait":      types.StringType,
@@ -236,6 +238,7 @@ var webHooksConfigsTypes = map[string]attr.Type{
 }
 
 var routeDescriptions = map[string]string{
+	"continue":        "Whether an alert should continue matching subsequent sibling nodes.",
 	"group_by":        "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
 	"group_interval":  "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
 	"group_wait":      "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.)",
@@ -258,6 +261,7 @@ func getRouteListType() types.ObjectType {
 // The level should be lower or equal to the limit, if higher, the function will produce a stack overflow.
 func getRouteListTypeAux(level, limit int) types.ObjectType {
 	attributeTypes := map[string]attr.Type{
+		"continue":        types.BoolType,
 		"group_by":        types.ListType{ElemType: types.StringType},
 		"group_interval":  types.StringType,
 		"group_wait":      types.StringType,
@@ -290,6 +294,11 @@ func getDatasourceRouteNestedObject() schema.ListNestedAttribute {
 // The level should be lower or equal to the limit, if higher, the function will produce a stack overflow.
 func getRouteNestedObjectAux(isDatasource bool, level, limit int) schema.ListNestedAttribute {
 	attributesMap := map[string]schema.Attribute{
+		"continue": schema.BoolAttribute{
+			Description: routeDescriptions["continue"],
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
+		},
 		"group_by": schema.ListAttribute{
 			Description: routeDescriptions["group_by"],
 			Optional:    !isDatasource,
@@ -1549,7 +1558,7 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		return alertConfigModel{}, fmt.Errorf("mapping group by list: %w", core.DiagsToError(diags))
 	}
 
-	mockRoute, diags := types.ObjectValue(routeTypes, map[string]attr.Value{
+	mockRoute, diags := types.ObjectValue(mainRouteTypes, map[string]attr.Value{
 		"receiver":        types.StringValue("email-me"),
 		"group_by":        mockGroupByList,
 		"group_wait":      types.StringValue("30s"),
@@ -1759,17 +1768,17 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 
 func mapRouteToAttributes(ctx context.Context, route *observability.Route) (attr.Value, error) {
 	if route == nil {
-		return types.ObjectNull(routeTypes), nil
+		return types.ObjectNull(mainRouteTypes), nil
 	}
 
 	groupByModel, diags := types.ListValueFrom(ctx, types.StringType, route.GroupBy)
 	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
+		return types.ObjectNull(mainRouteTypes), fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
 	}
 
 	childRoutes, err := mapChildRoutesToAttributes(ctx, route.Routes)
 	if err != nil {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping child routes: %w", err)
+		return types.ObjectNull(mainRouteTypes), fmt.Errorf("mapping child routes: %w", err)
 	}
 
 	routeMap := map[string]attr.Value{
@@ -1781,9 +1790,9 @@ func mapRouteToAttributes(ctx context.Context, route *observability.Route) (attr
 		"routes":          childRoutes,
 	}
 
-	routeModel, diags := types.ObjectValue(routeTypes, routeMap)
+	routeModel, diags := types.ObjectValue(mainRouteTypes, routeMap)
 	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("converting route to TF types: %w", core.DiagsToError(diags))
+		return types.ObjectNull(mainRouteTypes), fmt.Errorf("converting route to TF types: %w", core.DiagsToError(diags))
 	}
 
 	return routeModel, nil
@@ -1822,6 +1831,7 @@ func mapChildRoutesToAttributes(ctx context.Context, routes *[]observability.Rou
 		}
 
 		routeMap := map[string]attr.Value{
+			"continue":        types.BoolPointerValue(route.Continue),
 			"group_by":        groupByModel,
 			"group_interval":  types.StringPointerValue(route.GroupInterval),
 			"group_wait":      types.StringPointerValue(route.GroupWait),
@@ -2082,6 +2092,7 @@ func toRoutePayload(ctx context.Context, routeTF *mainRouteModel) (*observabilit
 			}
 			for i := range lastChildRoutes {
 				childRoute := routeModelMiddle{
+					Continue:       lastChildRoutes[i].Continue,
 					GroupBy:        lastChildRoutes[i].GroupBy,
 					GroupInterval:  lastChildRoutes[i].GroupInterval,
 					GroupWait:      lastChildRoutes[i].GroupWait,
@@ -2160,6 +2171,7 @@ func toChildRoutePayload(ctx context.Context, routeTF *routeModelMiddle) (*obser
 	}
 
 	return &observability.UpdateAlertConfigsPayloadRouteRoutesInner{
+		Continue:       conversion.BoolValueToPointer(routeTF.Continue),
 		GroupBy:        groupByPayload,
 		GroupInterval:  conversion.StringValueToPointer(routeTF.GroupInterval),
 		GroupWait:      conversion.StringValueToPointer(routeTF.GroupWait),
