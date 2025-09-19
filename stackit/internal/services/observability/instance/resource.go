@@ -90,7 +90,7 @@ type alertConfigModel struct {
 
 var alertConfigTypes = map[string]attr.Type{
 	"receivers": types.ListType{ElemType: types.ObjectType{AttrTypes: receiversTypes}},
-	"route":     types.ObjectType{AttrTypes: routeTypes},
+	"route":     types.ObjectType{AttrTypes: mainRouteTypes},
 	"global":    types.ObjectType{AttrTypes: globalConfigurationTypes},
 }
 
@@ -119,7 +119,6 @@ var globalConfigurationTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.AlertConfig.route
 type mainRouteModel struct {
-	Continue       types.Bool   `tfsdk:"continue"`
 	GroupBy        types.List   `tfsdk:"group_by"`
 	GroupInterval  types.String `tfsdk:"group_interval"`
 	GroupWait      types.String `tfsdk:"group_wait"`
@@ -159,6 +158,15 @@ type routeModelNoRoutes struct {
 	Matchers       types.List   `tfsdk:"matchers"`
 	Receiver       types.String `tfsdk:"receiver"`
 	RepeatInterval types.String `tfsdk:"repeat_interval"`
+}
+
+var mainRouteTypes = map[string]attr.Type{
+	"group_by":        types.ListType{ElemType: types.StringType},
+	"group_interval":  types.StringType,
+	"group_wait":      types.StringType,
+	"receiver":        types.StringType,
+	"repeat_interval": types.StringType,
+	"routes":          types.ListType{ElemType: getRouteListType()},
 }
 
 var routeTypes = map[string]attr.Type{
@@ -734,12 +742,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: "Route configuration for the alerts.",
 						Required:    true,
 						Attributes: map[string]schema.Attribute{
-							"continue": schema.BoolAttribute{
-								Description: routeDescriptions["continue"],
-								Optional:    true,
-								Computed:    true,
-								Default:     booldefault.StaticBool(false),
-							},
 							"group_by": schema.ListAttribute{
 								Description: routeDescriptions["group_by"],
 								Optional:    true,
@@ -1777,21 +1779,20 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 
 func mapRouteToAttributes(ctx context.Context, route *observability.Route) (attr.Value, error) {
 	if route == nil {
-		return types.ObjectNull(routeTypes), nil
+		return types.ObjectNull(mainRouteTypes), nil
 	}
 
 	groupByModel, diags := types.ListValueFrom(ctx, types.StringType, route.GroupBy)
 	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
+		return types.ObjectNull(mainRouteTypes), fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
 	}
 
 	childRoutes, err := mapChildRoutesToAttributes(ctx, route.Routes)
 	if err != nil {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping child routes: %w", err)
+		return types.ObjectNull(mainRouteTypes), fmt.Errorf("mapping child routes: %w", err)
 	}
 
 	routeMap := map[string]attr.Value{
-		"continue":        types.BoolPointerValue(route.Continue),
 		"group_by":        groupByModel,
 		"group_interval":  types.StringPointerValue(route.GroupInterval),
 		"group_wait":      types.StringPointerValue(route.GroupWait),
@@ -1800,9 +1801,9 @@ func mapRouteToAttributes(ctx context.Context, route *observability.Route) (attr
 		"routes":          childRoutes,
 	}
 
-	routeModel, diags := types.ObjectValue(routeTypes, routeMap)
+	routeModel, diags := types.ObjectValue(mainRouteTypes, routeMap)
 	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("converting route to TF types: %w", core.DiagsToError(diags))
+		return types.ObjectNull(mainRouteTypes), fmt.Errorf("converting route to TF types: %w", core.DiagsToError(diags))
 	}
 
 	return routeModel, nil
@@ -2131,7 +2132,6 @@ func toRoutePayload(ctx context.Context, routeTF *mainRouteModel) (*observabilit
 	}
 
 	return &observability.UpdateAlertConfigsPayloadRoute{
-		Continue:       conversion.BoolValueToPointer(routeTF.Continue),
 		GroupBy:        groupByPayload,
 		GroupInterval:  conversion.StringValueToPointer(routeTF.GroupInterval),
 		GroupWait:      conversion.StringValueToPointer(routeTF.GroupWait),
