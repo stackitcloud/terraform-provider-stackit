@@ -100,14 +100,14 @@ resource "stackit_loadbalancer" "example" {
 resource "stackit_network" "lb_network" {
   project_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name             = "lb-network-example"
-  ipv4_prefix      = "192.168.1.0/24"
+  ipv4_prefix      = "192.168.10.0/25"
   ipv4_nameservers = ["8.8.8.8"]
 }
 
 resource "stackit_network" "target_network" {
   project_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name             = "target-network-example"
-  ipv4_prefix      = "192.168.2.0/24"
+  ipv4_prefix      = "192.168.10.0/25"
   ipv4_nameservers = ["8.8.8.8"]
 }
 
