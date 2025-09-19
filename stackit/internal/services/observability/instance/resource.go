@@ -169,16 +169,6 @@ var mainRouteTypes = map[string]attr.Type{
 	"routes":          types.ListType{ElemType: getRouteListType()},
 }
 
-var routeTypes = map[string]attr.Type{
-	"continue":        types.BoolType,
-	"group_by":        types.ListType{ElemType: types.StringType},
-	"group_interval":  types.StringType,
-	"group_wait":      types.StringType,
-	"receiver":        types.StringType,
-	"repeat_interval": types.StringType,
-	"routes":          types.ListType{ElemType: getRouteListType()},
-}
-
 // Struct corresponding to Model.AlertConfig.receivers
 type receiversModel struct {
 	Name            types.String `tfsdk:"name"`
