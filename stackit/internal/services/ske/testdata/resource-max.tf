@@ -32,6 +32,7 @@ variable "maintenance_end" {}
 variable "region" {}
 variable "expiration" {}
 variable "refresh" {}
+variable "refresh_before" {}
 variable "dns_zone_name" {}
 variable "dns_name" {}
 
@@ -94,10 +95,11 @@ resource "stackit_ske_cluster" "cluster" {
 }
 
 resource "stackit_ske_kubeconfig" "kubeconfig" {
-  project_id   = stackit_ske_cluster.cluster.project_id
-  cluster_name = stackit_ske_cluster.cluster.name
-  expiration   = var.expiration
-  refresh      = var.refresh
+  project_id     = stackit_ske_cluster.cluster.project_id
+  cluster_name   = stackit_ske_cluster.cluster.name
+  expiration     = var.expiration
+  refresh        = var.refresh
+  refresh_before = var.refresh_before
 }
 
 data "stackit_ske_cluster" "cluster" {
