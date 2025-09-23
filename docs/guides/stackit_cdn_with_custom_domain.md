@@ -1,61 +1,260 @@
 ---
-page_title: "Using STACKIT CDN with your own domain"
+page_title: "Using STACKIT CDN to service static files from an HTTP Origin with STACKIT CDN and Terraform"
 ---
-# Using STACKIT CDN with your own domain
 
-## Overview
+# Using STACKIT CDN to service static files from an HTTP Origin with STACKIT CDN and Terraform
 
-This guide outlines the process of creating a STACKIT CDN distribution and configuring it to make use of an existing domain using STACKIT DNS.
+This guide will walk you through the process of setting up a STACKIT CDN distribution to serve static files from a
+generic HTTP origin using Terraform. This is a common use case for developers who want to deliver content with low
+latency and high data transfer speeds.
 
-## Steps
+---
 
-1. **Create a STACKIT CDN and DNS Zone**
-    
-    Create the CDN distribution and the DNS zone.
-    
-    ```terraform
-    resource "stackit_cdn_distribution" "example_distribution" {
-      project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      config = {
-        backend = {
-          type       = "http"
-          origin_url = "mybackend.onstackit.cloud"
-        }
-        regions           = ["EU", "US", "ASIA", "AF", "SA"]
-        blocked_countries = ["DE", "AT", "CH"]
-      }
+## Prerequisites
+
+Before you begin, make sure you have the following:
+
+* A **STACKIT project** and a user account with the necessary permissions for the CDN.
+* **Terraform** installed on your local machine.
+* The STACKIT provider for Terraform configured. You can find more information on how to do this in the
+  official [STACKIT provider documentation](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs).
+
+---
+
+## Step 1: Configure the Terraform Provider
+
+First, you need to configure the STACKIT provider in your Terraform configuration. Create a file named `main.tf` and add
+the following code. This block tells Terraform to download and use the STACKIT provider.
+
+```terraform
+terraform {
+  required_providers {
+    stackit = {
+      source  = "stackitcloud/stackit"
+      version = ">= 0.66.0"
     }
-    
-    resource "stackit_dns_zone" "example_zone" {
-      project_id    = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      name          = "My DNS zone"
-      dns_name      = "myapp.runs.onstackit.cloud"
-      contact_email = "aa@bb.ccc"
-      type          = "primary"
-    }
-    ```
-    
-2. **Add CNAME record to your DNS zone**
+  }
+}
 
-    If you want to redirect your entire domain to the CDN, you can instead use an A record.
-    ```terraform
-    resource "stackit_dns_record_set" "example" {
-      project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      zone_id    = stackit_dns_zone.example_zone.zone_id
-      name       = "cdn"
-      type       = "CNAME"
-      records    = ["${stackit_cdn_distribution.domains[0].name}."]
+variable "service_account_token" {
+  type      = string
+  default   = "your token"
+  sensitive = true
+}
+
+variable "project_id" {
+  type    = string
+  default = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # Your project ID
+}
+
+provider "stackit" {
+  # Your STACKIT credentials can be set here or through environment variables.
+  # For example, using STACKIT_SERVICE_ACCOUNT_TOKEN 
+  # Read more about getting tokens here: 
+  # https://docs.stackit.cloud/stackit/en/acquire-a-bearer-token-with-service-account-keys-175112464.html
+  default_region        = "eu01"
+  service_account_token = var.service_account_token
+}
+
+```
+
+## Step 2: Create the DNS Zone
+
+The first resource you'll create is the DNS zone, which will manage the records for your domain.
+
+```terraform
+resource "stackit_dns_zone" "example_zone" {
+  project_id    = var.project_id
+  name          = "My DNS zone"
+  dns_name      = "myapp.runs.onstackit.cloud"
+  contact_email = "aa@bb.ccc"
+  type          = "primary"
+}
+```
+
+## Step 3: Create the CDN Distribution
+
+Next, define the CDN distribution. This is the core service that will cache and serve your content from its origin.
+
+```terraform
+resource "stackit_cdn_distribution" "example_distribution" {
+  project_id = var.project_id
+
+  config = {
+    # Define the backend configuration
+    backend = {
+      type = "http"
+
+      # Replace with the URL of your HTTP origin
+      origin_url = "https://your-origin-server.com"
     }
-    ```
-    
-3. **Create a STACKIT CDN Custom Domain**
-    ```terraform
-    # Create a CDN custom domain
-    resource "stackit_cdn_custom_domain" "example" {
-      project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      distribution_id = stackit_cdn_distribution.example_distribution.distribution_id
-      name            = "${stackit_dns_record_set.example.name}.${stackit_dns_zone.example_zone.dns_name}"
+
+    # The regions where content will be hosted
+    regions = ["EU", "US", "ASIA", "AF", "SA"]
+    blocked_countries = []
+  }
+
+}
+```
+
+## Step 4: Create the DNS CNAME Record
+
+Finally, create the **CNAME record** to point your custom domain to the CDN. This step must come after the CDN is
+created because it needs the CDN's unique domain name as its target.
+
+```terraform
+resource "stackit_dns_record_set" "cname_record" {
+  project_id = stackit_dns_zone.example_zone.project_id
+  zone_id = stackit_dns_zone.example_zone.zone_id
+
+  # This is the custom domain name which will be added to your zone
+  name = "cdn"
+  type = "CNAME"
+  ttl  = 3600
+
+  # Points to the CDN distribution's unique domain.
+  # Notice the added dot at the end of the domain name to point to a FQDN.
+  records = ["${stackit_cdn_distribution.example_distribution.domains[0].name}."]
+}
+
+```
+
+This record directs traffic from your custom domain to the STACKIT CDN infrastructure.
+
+## Step 5: Add a Custom Domain to the CDN
+
+To provide a user-friendly URL, associate a custom domain (like `cdn.myapp.runs.onstackit.cloud`) with your
+distribution.
+
+```terraform
+resource "stackit_cdn_custom_domain" "example_custom_domain" {
+  project_id = stackit_cdn_distribution.example_distribution.project_id
+  distribution_id = stackit_cdn_distribution.example_distribution.distribution_id
+
+  # Creates "cdn.myapp.runs.onstackit.cloud" dynamically
+  name = "${stackit_dns_record_set.cname_record.name}.${stackit_dns_zone.example_zone.dns_name}"
+}
+
+```
+
+This resource links the subdomain you created in the previous step to the CDN distribution.
+
+## Complete Terraform Configuration
+
+Here is the complete `main.tf` file, which follows the logical order of operations.
+
+```terraform
+# This configuration file sets up a complete STACKIT CDN distribution
+# with a custom domain managed by STACKIT DNS.
+
+# -----------------------------------------------------------------------------
+# PROVIDER CONFIGURATION
+# -----------------------------------------------------------------------------
+
+terraform {
+  required_providers {
+    stackit = {
+      source  = "stackitcloud/stackit"
+      version = ">= 0.66.0"
     }
-    ```
-    
-    Now, you can access your content on the url `cdn.myapp.runs.onstackit.cloud`.
+  }
+}
+
+variable "service_account_token" {
+  type        = string
+  description = "Your STACKIT service account token."
+  sensitive   = true
+  default     = "your token"
+}
+
+variable "project_id" {
+  type        = string
+  description = "Your STACKIT project ID."
+  default     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+
+provider "stackit" {
+  # The STACKIT provider is configured using the defined variables.
+  default_region        = "eu01"
+  service_account_token = var.service_account_token
+}
+
+# -----------------------------------------------------------------------------
+# DNS ZONE RESOURCE
+# -----------------------------------------------------------------------------
+# The DNS zone manages all records for your domain.
+# It's the first resource to be created.
+# -----------------------------------------------------------------------------
+
+resource "stackit_dns_zone" "example_zone" {
+  project_id    = var.project_id
+  name          = "My DNS zone"
+  dns_name      = "myapp.runs.onstackit.cloud"
+  contact_email = "aa@bb.ccc"
+  type          = "primary"
+}
+
+# -----------------------------------------------------------------------------
+# CDN DISTRIBUTION RESOURCE
+# -----------------------------------------------------------------------------
+# This resource defines the CDN, its origin, and caching regions.
+# -----------------------------------------------------------------------------
+
+resource "stackit_cdn_distribution" "example_distribution" {
+  project_id = var.project_id
+
+  config = {
+    # Define the backend configuration
+    backend = {
+      type = "http"
+
+      # Replace with the URL of your HTTP origin
+      origin_url = "https://your-origin-server.com"
+    }
+
+    # The regions where content will be hosted
+    regions = ["EU", "US", "ASIA", "AF", "SA"]
+    blocked_countries = []
+  }
+}
+
+# -----------------------------------------------------------------------------
+# CUSTOM DOMAIN AND DNS RECORD
+# -----------------------------------------------------------------------------
+# These resources link your CDN to a user-friendly custom domain and create
+# the necessary DNS record to route traffic.
+# -----------------------------------------------------------------------------
+
+resource "stackit_dns_record_set" "cname_record" {
+  project_id = stackit_dns_zone.example_zone.project_id
+  zone_id = stackit_dns_zone.example_zone.zone_id
+  # This is the custom domain name which will be added to your zone
+  name       = "cdn"
+  type       = "CNAME"
+  ttl        = 3600
+  # Points to the CDN distribution's unique domain.
+  # The dot at the end makes it a fully qualified domain name (FQDN).
+  records = ["${stackit_cdn_distribution.example_distribution.domains[0].name}."]
+
+}
+
+resource "stackit_cdn_custom_domain" "example_custom_domain" {
+  project_id = stackit_cdn_distribution.example_distribution.project_id
+  distribution_id = stackit_cdn_distribution.example_distribution.distribution_id
+
+  # Creates "cdn.myapp.runs.onstackit.cloud" dynamically
+  name = "${stackit_dns_record_set.cname_record.name}.${stackit_dns_zone.example_zone.dns_name}"
+}
+
+# -----------------------------------------------------------------------------
+# OUTPUTS
+# -----------------------------------------------------------------------------
+# This output will display the final custom URL after `terraform apply` is run.
+# -----------------------------------------------------------------------------
+
+output "custom_cdn_url" {
+  description = "The final custom domain URL for the CDN distribution."
+  value       = "https://${stackit_cdn_custom_domain.example_custom_domain.name}"
+}
+
+```
