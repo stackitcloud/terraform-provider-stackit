@@ -17,15 +17,12 @@ KMS Key Ring resource schema.
 
 ### Required
 
-- `display_name` (String) A user chosen description to distinguish multiple key rings.
 - `key_ring_id` (String) An auto generated unique id which identifies the key ring.
 - `project_id` (String) STACKIT project ID to which the key ring is associated.
 
-### Optional
-
-- `description` (String) A user chosen description to distinguish multiple key rings.
-- `region` (String) The resource region. If not defined, the provider region is used.
-
 ### Read-Only
 
+- `description` (String) A user chosen description to distinguish multiple key rings.
+- `display_name` (String) A user chosen description to distinguish multiple key rings.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
+- `region` (String) The resource region. If not defined, the provider region is used.

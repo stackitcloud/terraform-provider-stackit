@@ -74,9 +74,9 @@ func (k *keyRingResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		"description":  "A user chosen description to distinguish multiple key rings.",
 		"display_name": "The display name to distinguish multiple key rings.",
 		"key_ring_id":  "An auto generated unique id which identifies the key ring.",
-		"id":           "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
+		"id":           "Terraform's internal resource ID. It is structured as \"`project_id`,`key_ring_id`\".",
 		"project_id":   "STACKIT project ID to which the key ring is associated.",
-		"region_id":    "The STACKIT region name the key ring is located in.",
+		"region":       "The STACKIT region name the key ring is located in.",
 	}
 
 	response.Schema = schema.Schema{
@@ -85,12 +85,7 @@ func (k *keyRingResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"description": schema.StringAttribute{
 				Description: descriptions["description"],
 				Optional:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
+				Computed:    true,
 			},
 			"display_name": schema.StringAttribute{
 				Description: descriptions["description"],

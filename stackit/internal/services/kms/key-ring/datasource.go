@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -59,7 +58,7 @@ func (k *keyRingDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 		"key_ring_id":  "An auto generated unique id which identifies the key ring.",
 		"id":           "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
 		"project_id":   "STACKIT project ID to which the key ring is associated.",
-		"region_id":    "The STACKIT region name the key ring is located in.",
+		"region":       "The STACKIT region name the key ring is located in.",
 	}
 
 	response.Schema = schema.Schema{
@@ -67,17 +66,11 @@ func (k *keyRingDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 		Attributes: map[string]schema.Attribute{
 			"description": schema.StringAttribute{
 				Description: descriptions["description"],
-				Optional:    true,
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
+				Computed:    true,
 			},
 			"display_name": schema.StringAttribute{
 				Description: descriptions["description"],
-				Required:    true,
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
+				Computed:    true,
 			},
 			"key_ring_id": schema.StringAttribute{
 				Description: descriptions["key_ring_id"],
@@ -101,7 +94,6 @@ func (k *keyRingDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				},
 			},
 			"region": schema.StringAttribute{
-				Optional:    true,
 				Computed:    true,
 				Description: "The resource region. If not defined, the provider region is used.",
 			},

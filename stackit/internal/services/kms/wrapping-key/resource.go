@@ -80,7 +80,7 @@ func (w *wrappingKeyResource) Schema(_ context.Context, _ resource.SchemaRequest
 		"key_ring_id":     "The ID of the associated key ring",
 		"purpose":         "The purpose for which the key will be used",
 		"project_id":      "STACKIT project ID to which the key ring is associated.",
-		"region_id":       "The STACKIT region name the key ring is located in.",
+		"region":          "The STACKIT region name the key ring is located in.",
 		"wrapping_key_id": "The ID of the wrapping key",
 	}
 
