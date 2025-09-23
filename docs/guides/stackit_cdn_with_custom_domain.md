@@ -1,8 +1,8 @@
 ---
-page_title: "Using STACKIT CDN to service static files from an HTTP Origin with STACKIT CDN and Terraform"
+page_title: "Using STACKIT CDN to service static files from an HTTP Origin with STACKIT CDN"
 ---
 
-# Using STACKIT CDN to service static files from an HTTP Origin with STACKIT CDN and Terraform
+# Using STACKIT CDN to service static files from an HTTP Origin with STACKIT CDN
 
 This guide will walk you through the process of setting up a STACKIT CDN distribution to serve static files from a
 generic HTTP origin using Terraform. This is a common use case for developers who want to deliver content with low
@@ -49,8 +49,8 @@ variable "project_id" {
 
 provider "stackit" {
   # Your STACKIT credentials can be set here or through environment variables.
-  # For example, using STACKIT_SERVICE_ACCOUNT_TOKEN 
-  # Read more about getting tokens here: 
+  # For example, using STACKIT_SERVICE_ACCOUNT_TOKEN
+  # Read more about getting tokens here:
   # https://docs.stackit.cloud/stackit/en/acquire-a-bearer-token-with-service-account-keys-175112464.html
   default_region        = "eu01"
   service_account_token = var.service_account_token
