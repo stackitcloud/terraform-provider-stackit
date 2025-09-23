@@ -88,9 +88,10 @@ type optimizerConfig struct {
 }
 
 type backend struct {
-	Type                 string             `tfsdk:"type"`                   // The type of the backend. Currently, only "http" backend is supported
-	OriginURL            string             `tfsdk:"origin_url"`             // The origin URL of the backend
-	OriginRequestHeaders *map[string]string `tfsdk:"origin_request_headers"` // Request headers that should be added by the CDN distribution to incoming requests
+	Type                 string               `tfsdk:"type"`                   // The type of the backend. Currently, only "http" backend is supported
+	OriginURL            string               `tfsdk:"origin_url"`             // The origin URL of the backend
+	OriginRequestHeaders *map[string]string   `tfsdk:"origin_request_headers"` // Request headers that should be added by the CDN distribution to incoming requests
+	Geofencing           *map[string][]string `tfsdk:"geofencing"`             // The geofencing is an object mapping multiple alternative origins to country codes.
 }
 
 var configTypes = map[string]attr.Type{
@@ -106,10 +107,15 @@ var optimizerTypes = map[string]attr.Type{
 	"enabled": types.BoolType,
 }
 
+var geofencingTypes = types.MapType{ElemType: types.ListType{
+	ElemType: types.StringType,
+}}
+
 var backendTypes = map[string]attr.Type{
 	"type":                   types.StringType,
 	"origin_url":             types.StringType,
 	"origin_request_headers": types.MapType{ElemType: types.StringType},
+	"geofencing":             geofencingTypes,
 }
 
 var domainTypes = map[string]attr.Type{
@@ -255,6 +261,13 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Optional:    true,
 								Description: schemaDescriptions["config_backend_origin_request_headers"],
 								ElementType: types.StringType,
+							},
+							"geofencing": schema.MapAttribute{
+								Description: "A map of URLs to a list of countries where content is allowed.",
+								Optional:    true,
+								ElementType: types.ListType{
+									ElemType: types.StringType,
+								},
 							},
 						},
 					},
@@ -414,6 +427,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 				OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
 				OriginUrl:            &configModel.Backend.OriginURL,
 				Type:                 &configModel.Backend.Type,
+				Geofencing:           configModel.Backend.Geofencing,
 			},
 		},
 		Regions:          &regions,
@@ -584,11 +598,34 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 			return core.DiagsToError(diags)
 		}
 	}
+	// geofencing
+	geofencingVal := types.MapNull(geofencingTypes.ElemType)
+	if geofencingAPI := distribution.Config.Backend.HttpBackend.Geofencing; geofencingAPI != nil && len(*geofencingAPI) > 0 {
+		geofencingMap := make(map[string]attr.Value)
+		for url, countries := range *geofencingAPI {
+			countryVals := []attr.Value{}
+			for _, country := range countries {
+				countryVals = append(countryVals, types.StringValue(country))
+			}
+			listVal, diags := types.ListValue(types.StringType, countryVals)
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
+			geofencingMap[url] = listVal
+		}
+
+		mappedGeofencing, diags := types.MapValue(geofencingTypes.ElemType, geofencingMap)
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+		geofencingVal = mappedGeofencing
+	}
 	// note that httpbackend is hardcoded here as long as it is the only available backend
 	backend, diags := types.ObjectValue(backendTypes, map[string]attr.Value{
 		"type":                   types.StringValue(*distribution.Config.Backend.HttpBackend.Type),
 		"origin_url":             types.StringValue(*distribution.Config.Backend.HttpBackend.OriginUrl),
 		"origin_request_headers": originRequestHeaders,
+		"geofencing":             geofencingVal,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -678,6 +715,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 		Regions:              cfg.Regions,
 		BlockedCountries:     cfg.BlockedCountries,
 		OriginRequestHeaders: cfg.Backend.HttpBackend.OriginRequestHeaders,
+		Geofencing:           cfg.Backend.HttpBackend.Geofencing,
 		Optimizer:            optimizer,
 	}
 
@@ -722,6 +760,22 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 		}
 	}
 
+	// geofencing
+	geofencing := map[string][]string{}
+	if configModel.Backend.Geofencing != nil {
+		for endpoint, countryCodes := range *configModel.Backend.Geofencing {
+			geofencingContry := make([]string, len(countryCodes))
+			for i, countryCode := range countryCodes {
+				validatedBlockedCountry, err := validateCountryCode(countryCode)
+				if err != nil {
+					return nil, err
+				}
+				geofencingContry[i] = validatedBlockedCountry
+			}
+			geofencing[endpoint] = geofencingContry
+		}
+	}
+
 	// originRequestHeaders
 	originRequestHeaders := map[string]string{}
 	if configModel.Backend.OriginRequestHeaders != nil {
@@ -736,6 +790,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 				OriginRequestHeaders: &originRequestHeaders,
 				OriginUrl:            &configModel.Backend.OriginURL,
 				Type:                 &configModel.Backend.Type,
+				Geofencing:           &geofencing,
 			},
 		},
 		Regions:          &regions,
