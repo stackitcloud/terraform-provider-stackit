@@ -63,6 +63,7 @@ type Model struct {
 	TargetPools                    types.List   `tfsdk:"target_pools"`
 	Region                         types.String `tfsdk:"region"`
 	SecurityGroupId                types.String `tfsdk:"security_group_id"`
+	LoadBalancerSecurityGroupId    types.String `tfsdk:"load_balancer_security_group_id"`
 }
 
 // Struct corresponding to Model.Listeners[i]
@@ -1246,6 +1247,12 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, reg
 	m.ExternalAddress = types.StringPointerValue(lb.ExternalAddress)
 	m.PrivateAddress = types.StringPointerValue(lb.PrivateAddress)
 	m.DisableSecurityGroupAssignment = types.BoolPointerValue(lb.DisableTargetSecurityGroupAssignment)
+
+	if lb.LoadBalancerSecurityGroup != nil {
+		m.LoadBalancerSecurityGroupId = types.StringPointerValue(lb.LoadBalancerSecurityGroup.Id)
+	} else {
+		m.LoadBalancerSecurityGroupId = types.StringNull()
+	}
 
 	if lb.TargetSecurityGroup != nil {
 		m.SecurityGroupId = types.StringPointerValue(lb.TargetSecurityGroup.Id)
