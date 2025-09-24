@@ -31,6 +31,7 @@ var (
 	_ resource.Resource                = &routeResource{}
 	_ resource.ResourceWithConfigure   = &routeResource{}
 	_ resource.ResourceWithImportState = &routeResource{}
+	_ resource.ResourceWithModifyPlan  = &routeResource{}
 )
 
 // NewRoutingTableRouteResource is a helper function to simplify the provider implementation.
@@ -68,6 +69,36 @@ func (r *routeResource) Configure(ctx context.Context, req resource.ConfigureReq
 	}
 	r.client = apiClient
 	tflog.Info(ctx, "IaaS alpha client configured")
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *routeResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+
+	var configModel shared.RouteModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	var planModel shared.RouteModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Schema defines the schema for the resource.
