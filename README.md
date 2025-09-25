@@ -222,23 +222,13 @@ Terraform acceptance tests are run using the command `make test-acceptance-tf`. 
 
 Additionally:
 
-- For the authorization service:
-  - The env var `TF_ACC_ORGANIZATION_ID` must be set with ID of the STACKIT test organization to test it.
-  - The env var `TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL` must be set as the email of the service account
-
-- For the iaas service:
-  - The env var `TF_ACC_ORGANIZATION_ID` must be set with ID of the STACKIT test organization to test it.
-
-- For the serverbackup and serverupdate service:
-  - The env var `TF_ACC_SERVER_ID` must be set with the ID of a Server within `TF_ACC_PROJECT_ID` with enabled STACKIT Server Agent
-
-- For the Resource Manager service:
-  - A service account with permissions to create and delete projects is required
-  - The env var `TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL` must be set as the email of the service account
-  - The env var `TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN` must be set as a valid token of the service account. Can also be set in the credentials file used by authentication (see [Authentication](#authentication) for more details)
-  - The env var `TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID` must be set as a valid project parent container id under which projects and folders will be created. A folder within an organization or the organization itself.
-  - The env var `TF_ACC_TEST_PROJECT_PARENT_UUID` must be set as a valid project parent uuid under which projects and folders will be created. A folder within an organization or the organization itself.
-  - The env var `TF_ACC_PROJECT_ID` is ignored
+| Env var                                     | Value                                                                                                   | Example value                          | needed for Acc tests of the following services |
+|---------------------------------------------|---------------------------------------------------------------------------------------------------------|----------------------------------------|------------------------------------------------|
+| `TF_ACC_ORGANIZATION_ID`                    | ID of the STACKIT test organization                                                                     | `5353ccfa-a984-4b96-a71d-b863dd2b7087` | `authorization`, `iaas`                        |
+| `TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL` | Email of the STACKIT service account                                                                    | `abc-serviceaccount@sa.stackit.cloud`  | `authorization`, `resourcemanager`             |
+| `TF_ACC_SERVER_ID`                          | ID of a STACKIT Server with STACKIT Server Agent enabled                                                | `5353ccfa-a984-4b96-a71d-b863dd2b7087` | `serverbackup`, `serverupdate`                 |
+| `TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID`   | Container ID of the project parent container (folder within an organization or the organization itself) | `organization-d2b7087`                 | `resourcemanager`                              |
+| `TF_ACC_TEST_PROJECT_PARENT_UUID`           | UUID ID of the project parent container (folder within an organization or the organization itself)      | `5353ccfa-a984-4b96-a71d-b863dd2b7087` | `resourcemanager`                              |
 
 ### Run Acceptance Tests of a single service
 
@@ -252,10 +242,23 @@ Set the env var `TF_ACC=1`, to enable the acceptance tests.
 
 Start the acceptance tests:
 
-```sh
-$ go test -timeout=60m -v stackit/internal/services/<service>/<service>_acc_test.go
-```
-or
+1. Configure your env vars in a file, e.g.
+   ```sh
+   # acc-tests.env
+   export TF_ACC="1"
+   export TF_ACC_REGION="eu01"
+   ...
+   ```
+2. Read the env vars from the file
+   ```sh
+   source acc-tests.env
+   ```
+3. Start the acceptance tests
+    ```sh
+    $ go test -timeout=60m -v stackit/internal/services/<service>/<service>_acc_test.go
+    ```
+
+Alternative, set your env vars inline and start the acceptance test:
 ```sh
 $ TF_ACC=1 \
   TF_ACC_PROJECT_ID=<PROJECT_ID> \

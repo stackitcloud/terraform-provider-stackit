@@ -165,8 +165,14 @@ To make your contribution, follow these steps:
 6. The pull request will be reviewed by the repo maintainers. If you need to make further changes, make additional commits to keep commit history. When the PR is merged, commits will be squashed.
 
 > [!TIP]
-> Separate bigger changes into multiple smaller PRs. You will get earlier feedback, and it's easier for us to review your PR.
-> If you already want feedback during the implementation process, feel free to create a draft PR, so that we can have a look.
+> 
+> To ensure smooth review and integration of your code contributions, follow these guidelines:
+>
+> **Break down large changes into smaller PRs**: Separate new features or bigger changes into multiple smaller Pull Requests.
+> This allows us to provide earlier feedback and makes it easier to review your PR.
+> 
+> **Create a draft PR for early feedback**: If you want feedback during the implementation process, create a draft PR so we can have a look. 
+
 
 ## Bug Reports
 
