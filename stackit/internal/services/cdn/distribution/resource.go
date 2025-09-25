@@ -268,6 +268,9 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								ElementType: types.ListType{
 									ElemType: types.StringType,
 								},
+								Validators: []validator.Map{
+									mapvalidator.SizeAtLeast(1),
+								},
 							},
 						},
 					},
