@@ -53,7 +53,6 @@ var testConfigVarsMin = config.Variables{
 
 var testConfigVarsMax = config.Variables{
 	"project_id":                                       config.StringVariable(testutil.ProjectId),
-	"organization_id":                                  config.StringVariable(testutil.OrganizationId),
 	"name":                                             config.StringVariable(maxTestName),
 	"nodepool_availability_zone1":                      config.StringVariable(fmt.Sprintf("%s-1", testutil.Region)),
 	"nodepool_machine_type":                            config.StringVariable("g2i.2"),
