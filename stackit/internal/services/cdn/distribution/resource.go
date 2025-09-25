@@ -767,7 +767,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 	geofencing := map[string][]string{}
 	if configModel.Backend.Geofencing != nil {
 		for endpoint, countryCodes := range *configModel.Backend.Geofencing {
-			geofencingContry := make([]string, len(countryCodes))
+			geofencingCountry := make([]string, len(countryCodes))
 			for i, countryCode := range countryCodes {
 				validatedBlockedCountry, err := validateCountryCode(countryCode)
 				if err != nil {
