@@ -126,6 +126,7 @@ resource "stackit_network" "lb_network" {
 resource "stackit_network" "target_network" {
   project_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name             = "target-network-example"
+  routed           = true
   ipv4_prefix      = "192.168.10.0/25"
   ipv4_nameservers = ["8.8.8.8"]
 }
@@ -181,7 +182,7 @@ resource "stackit_security_group_rule" "allow_lb_ingress" {
   }
 
   # This is the crucial link: it allows traffic from the LB's security group.
-  remote_security_group_id = stackit_loadbalancer.example.security_group_id
+  remote_security_group_id = stackit_loadbalancer.example.load_balancer_security_group_id
 
   port_range = {
     min = 80
@@ -201,15 +202,19 @@ resource "stackit_server" "example" {
     size        = 10
   }
 
-  network_interfaces = [
-    stackit_network_interface.nic.network_interface_id
-  ]
+  network_interfaces = [stackit_network_interface.nic.network_interface_id]
+
 }
 
 resource "stackit_network_interface" "nic" {
   project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   network_id         = stackit_network.target_network.network_id
   security_group_ids = [stackit_security_group.target_sg.security_group_id]
+  lifecycle {
+    ignore_changes = [
+      security_group_ids,
+    ]
+  }
 }
 # End of advanced example
 
