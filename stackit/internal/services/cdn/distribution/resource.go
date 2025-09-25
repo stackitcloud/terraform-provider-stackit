@@ -91,7 +91,7 @@ type backend struct {
 	Type                 string               `tfsdk:"type"`                   // The type of the backend. Currently, only "http" backend is supported
 	OriginURL            string               `tfsdk:"origin_url"`             // The origin URL of the backend
 	OriginRequestHeaders *map[string]string   `tfsdk:"origin_request_headers"` // Request headers that should be added by the CDN distribution to incoming requests
-	Geofencing           *map[string][]string `tfsdk:"geofencing"`             // The geofencing is an object mapping multiple alternative origins to country codes.
+	Geofencing           *map[string][]*string `tfsdk:"geofencing"`             // The geofencing is an object mapping multiple alternative origins to country codes.
 }
 
 var configTypes = map[string]attr.Type{
