@@ -70,7 +70,8 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		"project_id":                            "STACKIT project ID to which the Load Balancer is associated.",
 		"external_address":                      "External Load Balancer IP address where this Load Balancer is exposed.",
 		"disable_security_group_assignment":     "If set to true, this will disable the automatic assignment of a security group to the load balancer's targets. This option is primarily used to allow targets that are not within the load balancer's own network or SNA (STACKIT Network area). When this is enabled, you are fully responsible for ensuring network connectivity to the targets, including managing all routing and security group rules manually. This setting cannot be changed after the load balancer is created.",
-		"security_group_id":                     "The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT Network areas (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.",
+		"load_balancer_security_group_id":       "The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT Network areas (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.",
+		"security_group_id":                     "The ID of the backend security group",
 		"listeners":                             "List of all listeners which will accept traffic. Limited to 20.",
 		"port":                                  "Port number where we listen for traffic.",
 		"protocol":                              "Protocol is the highest network protocol we understand to load balance.",
@@ -347,6 +348,10 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			},
 			"security_group_id": schema.StringAttribute{
 				Description: descriptions["security_group_id"],
+				Computed:    true,
+			},
+			"load_balancer_security_group_id": schema.StringAttribute{
+				Description: descriptions["load_balancer_security_group_id"],
 				Computed:    true,
 			},
 		},
