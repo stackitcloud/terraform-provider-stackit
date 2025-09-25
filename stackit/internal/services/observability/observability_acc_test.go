@@ -104,6 +104,7 @@ var testConfigVarsMax = config.Variables{
 	"match":                                  config.StringVariable("alert1"),
 	"match_regex":                            config.StringVariable("alert1"),
 	"matchers":                               config.StringVariable("instance =~ \".*\""),
+	"continue":                               config.StringVariable("true"),
 	// credential
 	"credential_description": config.StringVariable("This is a description for the test credential."),
 	// logalertgroup
@@ -536,6 +537,7 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.group_wait", testutil.ConvertConfigVariable(testConfigVarsMax["group_wait"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.receiver", testutil.ConvertConfigVariable(testConfigVarsMax["receiver_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.repeat_interval", testutil.ConvertConfigVariable(testConfigVarsMax["repeat_interval"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.continue", testutil.ConvertConfigVariable(testConfigVarsMax["continue"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.match.match1", testutil.ConvertConfigVariable(testConfigVarsMax["match"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.match_regex.match_regex1", testutil.ConvertConfigVariable(testConfigVarsMax["match_regex"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.matchers.0", testutil.ConvertConfigVariable(testConfigVarsMax["matchers"])),
@@ -702,6 +704,7 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.group_wait", testutil.ConvertConfigVariable(testConfigVarsMax["group_wait"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.receiver", testutil.ConvertConfigVariable(testConfigVarsMax["receiver_name"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.repeat_interval", testutil.ConvertConfigVariable(testConfigVarsMax["repeat_interval"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.continue", testutil.ConvertConfigVariable(testConfigVarsMax["continue"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.match.match1", testutil.ConvertConfigVariable(testConfigVarsMax["match"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.match_regex.match_regex1", testutil.ConvertConfigVariable(testConfigVarsMax["match_regex"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.matchers.0", testutil.ConvertConfigVariable(testConfigVarsMax["matchers"])),
@@ -928,6 +931,7 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.group_wait", testutil.ConvertConfigVariable(testConfigVarsMax["group_wait"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.receiver", testutil.ConvertConfigVariable(testConfigVarsMax["receiver_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.repeat_interval", testutil.ConvertConfigVariable(testConfigVarsMax["repeat_interval"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.continue", testutil.ConvertConfigVariable(testConfigVarsMax["continue"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.match.match1", testutil.ConvertConfigVariable(testConfigVarsMax["match"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.match_regex.match_regex1", testutil.ConvertConfigVariable(testConfigVarsMax["match_regex"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.matchers.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["matchers"])),
