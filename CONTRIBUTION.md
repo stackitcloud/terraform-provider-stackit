@@ -93,12 +93,13 @@ https://github.com/stackitcloud/terraform-provider-stackit/blob/1b9225598a007cda
 To test your changes locally, you have to compile the provider (requires Go 1.24) and configure the Terraform CLI to use the local version.
 
 1. Clone the repository.
+1. Run `$ make build` to build the Terraform provider binary in `<PATH_TO_REPO>/bin/`
 1. Create a `.terraformrc` config file in your home directory (`~`) for the terraform CLI with the following content:
 
 	```hcl
 	provider_installation {
    	   dev_overrides {
-	      "registry.terraform.io/stackitcloud/stackit" = "<PATH_TO_BINARY>"
+	      "registry.terraform.io/stackitcloud/stackit" = "<PATH_TO_REPO>/bin/"
 	   }
 
 	   # For all other providers, install them directly from their origin provider
@@ -162,6 +163,10 @@ To make your contribution, follow these steps:
 4. Commit your changes including a descriptive message
 5. Create a pull request with your changes.
 6. The pull request will be reviewed by the repo maintainers. If you need to make further changes, make additional commits to keep commit history. When the PR is merged, commits will be squashed.
+
+> [!TIP]
+> Separate bigger changes into multiple smaller PRs. You will get earlier feedback, and it's easier for us to review your PR.
+> If you already want feedback during the implementation process, feel free to create a draft PR, so that we can have a look.
 
 ## Bug Reports
 
