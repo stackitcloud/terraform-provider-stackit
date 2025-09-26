@@ -275,6 +275,16 @@ func TestAccCDNDistributionResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.0.type", "managed"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.1.type", "custom"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.regions.#", "2"),
+					resource.TestCheckResourceAttr(
+						"data.stackit_cdn_distribution.distribution",
+						fmt.Sprintf("config.backend.geofencing.%s.0", instanceResource["config_backend_origin_url"]),
+						"DE",
+					),
+					resource.TestCheckResourceAttr(
+						"data.stackit_cdn_distribution.distribution",
+						fmt.Sprintf("config.backend.geofencing.%s.1", instanceResource["config_backend_origin_url"]),
+						"ES",
+					),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.regions.0", "EU"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.regions.1", "US"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "2"),
