@@ -466,7 +466,7 @@ func TestMapFields(t *testing.T) {
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			model := &Model{}
-			err := mapFields(tc.Input, model)
+			err := mapFields(context.Background(), tc.Input, model)
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error mapping fields: %v", err)
 			}

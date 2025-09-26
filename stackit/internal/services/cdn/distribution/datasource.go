@@ -199,7 +199,7 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	err = mapFields(distributionResp.Distribution, &model)
+	err = mapFields(ctx, distributionResp.Distribution, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN distribution", fmt.Sprintf("Error processing API response: %v", err))
 		return
