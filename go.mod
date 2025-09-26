@@ -40,6 +40,10 @@ require (
 	golang.org/x/mod v0.28.0
 )
 
+replace (
+	github.com/stackitcloud/stackit-sdk-go/services/ske => /Users/uphoffm/GolandProjects/stackit-sdk-go/services/ske
+)
+
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	golang.org/x/telemetry v0.0.0-20250908211612-aef8a434d053 // indirect
