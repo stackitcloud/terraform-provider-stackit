@@ -41,6 +41,7 @@ type publicIpRangesDataSource struct {
 type Model struct {
 	Id             types.String `tfsdk:"id"` // needed by TF
 	PublicIpRanges types.List   `tfsdk:"public_ip_ranges"`
+	CidrList       types.List   `tfsdk:"cidr_list"`
 }
 
 var publicIpRangesTypes = map[string]attr.Type{
@@ -96,6 +97,11 @@ func (d *publicIpRangesDataSource) Schema(_ context.Context, _ datasource.Schema
 						},
 					},
 				},
+			},
+			"cidr_list": schema.ListAttribute{
+				Description: "A list of IP range strings (CIDRs) extracted from the public_ip_ranges for easy consumption.",
+				ElementType: types.StringType,
+				Computed:    true,
 			},
 		},
 	}
@@ -155,18 +161,19 @@ func mapFields(ctx context.Context, publicIpRangeResp *iaas.PublicNetworkListRes
 }
 
 // mapPublicIpRanges map the response publicIpRanges to the model
-func mapPublicIpRanges(_ context.Context, publicIpRanges *[]iaas.PublicNetwork, model *Model) error {
+func mapPublicIpRanges(ctx context.Context, publicIpRanges *[]iaas.PublicNetwork, model *Model) error {
 	if publicIpRanges == nil {
 		return fmt.Errorf("publicIpRanges input is nil")
 	}
 	if len(*publicIpRanges) == 0 {
 		model.PublicIpRanges = types.ListNull(types.ObjectType{AttrTypes: publicIpRangesTypes})
+		model.CidrList = types.ListNull(types.StringType)
 		return nil
 	}
 
 	var apiIpRanges []string
 	for _, ipRange := range *publicIpRanges {
-		if ipRange.Cidr != nil || *ipRange.Cidr != "" {
+		if ipRange.Cidr != nil && *ipRange.Cidr != "" {
 			apiIpRanges = append(apiIpRanges, *ipRange.Cidr)
 		}
 	}
@@ -197,5 +204,12 @@ func mapPublicIpRanges(_ context.Context, publicIpRanges *[]iaas.PublicNetwork, 
 	}
 
 	model.PublicIpRanges = ipRangesTF
+
+	cidrListTF, diags := types.ListValueFrom(ctx, types.StringType, apiIpRanges)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+	model.CidrList = cidrListTF
+
 	return nil
 }
