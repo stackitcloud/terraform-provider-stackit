@@ -154,8 +154,8 @@ github.com/skeema/knownhosts v1.3.1 h1:X2osQ+RAjK76shCbvhHHHVl3ZlgDm8apHEHFqRjnB
 github.com/skeema/knownhosts v1.3.1/go.mod h1:r7KTdC8l4uxWRyK2TpQZ/1o5HaSzh06ePQNxPwTcfiY=
 github.com/stackitcloud/stackit-sdk-go/core v0.17.3 h1:GsZGmRRc/3GJLmCUnsZswirr5wfLRrwavbnL/renOqg=
 github.com/stackitcloud/stackit-sdk-go/core v0.17.3/go.mod h1:HBCXJGPgdRulplDzhrmwC+Dak9B/x0nzNtmOpu+1Ahg=
-github.com/stackitcloud/stackit-sdk-go/services/authorization v0.8.1 h1:Kzr1G4g9PHI8ePFnHrHZEX06XtEJQYBK9JExje0aXl0=
-github.com/stackitcloud/stackit-sdk-go/services/authorization v0.8.1/go.mod h1:OwQ+fYpON4WQpEinvI9lCTuuwj9UBCnPPJcnDpK803U=
+github.com/stackitcloud/stackit-sdk-go/services/authorization v0.9.0 h1:7ZKd3b+E/R4TEVShLTXxx5FrsuDuJBOyuVOuKTMa4mo=
+github.com/stackitcloud/stackit-sdk-go/services/authorization v0.9.0/go.mod h1:/FoXa6hF77Gv8brrvLBCKa5ie1Xy9xn39yfHwaln9Tw=
 github.com/stackitcloud/stackit-sdk-go/services/cdn v1.5.0 h1:3sSDuOIWUWxkyItfi2ENdKFfHcMhX371INwDYxXeTzc=
 github.com/stackitcloud/stackit-sdk-go/services/cdn v1.5.0/go.mod h1:YGadfhuy8yoseczTxF7vN4t9ES2WxGQr0Pug14ii7y4=
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.1 h1:CnhAMLql0MNmAeq4roQKN8OpSKX4FSgTU6Eu6detB4I=
