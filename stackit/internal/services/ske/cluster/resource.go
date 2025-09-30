@@ -891,8 +891,27 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Cluster creation waiting: %v", err))
 		return
 	}
+
 	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == ske.RUNTIMEERRORCODE_OBSERVABILITY_INSTANCE_NOT_FOUND {
 		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid observability instance id, the cluster is usable but metrics won't be forwarded: %s", *waitResp.Status.Error.Message))
+	}
+
+	var errMsgs []string
+	if waitResp.Status.Errors != nil && len(*waitResp.Status.Errors) > 0 {
+		for _, clusterError := range *waitResp.Status.Errors {
+			if clusterError.Code != nil && clusterError.Message != nil {
+				errMsgs = append(errMsgs, fmt.Sprintf("- [%s] %s", *clusterError.Code, *clusterError.Message))
+			}
+		}
+
+		if len(errMsgs) > 0 {
+			core.LogAndAddWarning(
+				ctx,
+				diags,
+				"Warning during creating/updating cluster",
+				fmt.Sprintf("Cluster creation/update encountered the following issues:\n%s", strings.Join(errMsgs, "\n")),
+			)
+		}
 	}
 
 	err = mapFields(ctx, waitResp, model, region)
