@@ -38,6 +38,9 @@ var (
 	//go:embed testdata/datasource-image-v2-variants.tf
 	dataSourceImageVariants string
 
+	//go:embed testdata/datasource-public-ip-ranges.tf
+	datasourcePublicIpRanges string
+
 	//go:embed testdata/resource-image-min.tf
 	resourceImageMinConfig string
 
@@ -4153,6 +4156,25 @@ func TestAccImageV2DatasourceSearchVariants(t *testing.T) {
 
 						return nil
 					},
+				),
+			},
+		},
+	})
+}
+
+func TestAccDatasourcePublicIpRanges(t *testing.T) {
+	t.Log("TestDataSource STACKIT Public Ip Ranges")
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Read
+			{
+				ConfigVariables: config.Variables{},
+				Config:          fmt.Sprintf("%s\n%s", datasourcePublicIpRanges, testutil.IaaSProviderConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("data.stackit_public_ip_ranges.example", "id"),
+					resource.TestCheckResourceAttrSet("data.stackit_public_ip_ranges.example", "public_ip_ranges.0.cidr"),
+					resource.TestCheckResourceAttrSet("data.stackit_public_ip_ranges.example", "cidr_list.0"),
 				),
 			},
 		},
