@@ -16,7 +16,10 @@ SKE kubeconfig resource schema. Must have a `region` specified in the provider c
 resource "stackit_ske_kubeconfig" "example" {
   project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   cluster_name = "example-cluster"
-  refresh      = true
+
+  refresh        = true
+  expiration     = 7200 # 2 hours
+  refresh_before = 3600 # 1 hour
 }
 ```
 
@@ -32,6 +35,7 @@ resource "stackit_ske_kubeconfig" "example" {
 
 - `expiration` (Number) Expiration time of the kubeconfig, in seconds. Defaults to `3600`
 - `refresh` (Boolean) If set to true, the provider will check if the kubeconfig has expired and will generated a new valid one in-place
+- `refresh_before` (Number) Number of seconds before expiration to trigger refresh of the kubeconfig at. Only used if refresh is set to true.
 - `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
