@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/services/scf"
 
@@ -24,6 +25,18 @@ var (
 	_ datasource.DataSource              = &scfOrganizationManagerDataSource{}
 	_ datasource.DataSourceWithConfigure = &scfOrganizationManagerDataSource{}
 )
+
+type DataSourceModel struct {
+	Id         types.String `tfsdk:"id"` // Required by Terraform
+	Region     types.String `tfsdk:"region"`
+	PlatformId types.String `tfsdk:"platform_id"`
+	ProjectId  types.String `tfsdk:"project_id"`
+	OrgId      types.String `tfsdk:"org_id"`
+	UserId     types.String `tfsdk:"user_id"`
+	UserName   types.String `tfsdk:"username"`
+	CreateAt   types.String `tfsdk:"created_at"`
+	UpdatedAt  types.String `tfsdk:"updated_at"`
+}
 
 // NewScfOrganizationManagerDataSource creates a new instance of the scfOrganizationDataSource.
 func NewScfOrganizationManagerDataSource() datasource.DataSource {
@@ -107,14 +120,6 @@ func (s *scfOrganizationManagerDataSource) Schema(_ context.Context, _ datasourc
 					stringvalidator.LengthBetween(1, 255),
 				},
 			},
-			"password": schema.StringAttribute{
-				Description: descriptions["password"],
-				Computed:    true,
-				Sensitive:   true,
-				Validators: []validator.String{
-					stringvalidator.LengthBetween(1, 255),
-				},
-			},
 			"created_at": schema.StringAttribute{
 				Description: descriptions["created_at"],
 				Computed:    true,
@@ -129,7 +134,7 @@ func (s *scfOrganizationManagerDataSource) Schema(_ context.Context, _ datasourc
 
 func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request datasource.ReadRequest, response *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
-	var model Model
+	var model DataSourceModel
 	diags := request.Config.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
 	if response.Diagnostics.HasError() {
@@ -161,7 +166,7 @@ func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request dat
 		return
 	}
 
-	err = mapFieldsRead(ScfOrgManager, &model)
+	err = mapFieldsDataSource(ScfOrgManager, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading scf organization manager", fmt.Sprintf("Processing API response: %v", err))
 		return
@@ -171,4 +176,63 @@ func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request dat
 	diags = response.State.Set(ctx, &model)
 	response.Diagnostics.Append(diags...)
 	tflog.Info(ctx, fmt.Sprintf("read scf organization manager %s", orgId))
+}
+
+func mapFieldsDataSource(response *scf.OrgManager, model *DataSourceModel) error {
+	if response == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	var projectId string
+	if response.ProjectId != nil {
+		projectId = *response.ProjectId
+	} else if model.ProjectId.ValueString() != "" {
+		projectId = model.ProjectId.ValueString()
+	} else {
+		return fmt.Errorf("project id is not present")
+	}
+
+	var region string
+	if response.Region != nil {
+		region = *response.Region
+	} else if model.Region.ValueString() != "" {
+		region = model.Region.ValueString()
+	} else {
+		return fmt.Errorf("region is not present")
+	}
+
+	var orgId string
+	if response.OrgId != nil {
+		orgId = *response.OrgId
+	} else if model.OrgId.ValueString() != "" {
+		orgId = model.OrgId.ValueString()
+	} else {
+		return fmt.Errorf("org id is not present")
+	}
+
+	var userId string
+	if response.Guid != nil {
+		userId = *response.Guid
+		if model.UserId.ValueString() != "" && userId != model.UserId.ValueString() {
+			return fmt.Errorf("user id mismatch in response and model")
+		}
+	} else if model.UserId.ValueString() != "" {
+		userId = model.UserId.ValueString()
+	} else {
+		return fmt.Errorf("user id is not present")
+	}
+
+	model.Id = utils.BuildInternalTerraformId(projectId, region, orgId, userId)
+	model.Region = types.StringValue(region)
+	model.PlatformId = types.StringPointerValue(response.PlatformId)
+	model.ProjectId = types.StringValue(projectId)
+	model.OrgId = types.StringValue(orgId)
+	model.UserId = types.StringValue(userId)
+	model.UserName = types.StringPointerValue(response.Username)
+	model.CreateAt = types.StringValue(response.CreatedAt.String())
+	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
+	return nil
 }

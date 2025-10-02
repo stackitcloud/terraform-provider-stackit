@@ -35,7 +35,6 @@ data "stackit_scf_organization_manager" "example" {
 
 - `created_at` (String) The time when the organization manager was created
 - `id` (String) Terraform's internal resource ID, structured as "`project_id`,`region`,`org_id`,`user_id`".
-- `password` (String, Sensitive) An auto-generated password
 - `platform_id` (String) The ID of the platform associated with the organization of the organization manager
 - `updated_at` (String) The time when the organization manager was last updated
 - `user_id` (String) The ID of the organization manager user
