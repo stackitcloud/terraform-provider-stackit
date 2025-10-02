@@ -181,7 +181,8 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: parametersDescriptions["tls_ciphers"],
 						Computed:    true,
 					},
-					"tls_protocols": schema.StringAttribute{
+					"tls_protocols": schema.ListAttribute{
+						ElementType: types.StringType,
 						Description: parametersDescriptions["tls_protocols"],
 						Computed:    true,
 					},
