@@ -15,9 +15,8 @@ latency and high data transfer speeds.
 Before you begin, make sure you have the following:
 
 * A **STACKIT project** and a user account with the necessary permissions for the CDN.
-* **Terraform** installed on your local machine.
-* The STACKIT provider for Terraform configured. You can find more information on how to do this in the
-  official [STACKIT provider documentation](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs).
+* A **Service Account Key**: you can read about creating one here: [Create a Service Account Key
+](https://docs.stackit.cloud/stackit/en/create-a-service-account-key-175112456.html)
 
 ---
 
@@ -31,15 +30,15 @@ terraform {
   required_providers {
     stackit = {
       source  = "stackitcloud/stackit"
-      version = ">= 0.66.0"
     }
   }
 }
 
-variable "service_account_token" {
-  type      = string
-  default   = "your token"
-  sensitive = true
+variable "service_account_key" {
+  type        = string
+  description = "Your STACKIT service account key."
+  sensitive   = true
+  default     = "path/to/sa-key.json"
 }
 
 variable "project_id" {
@@ -48,12 +47,9 @@ variable "project_id" {
 }
 
 provider "stackit" {
-  # Your STACKIT credentials can be set here or through environment variables.
-  # For example, using STACKIT_SERVICE_ACCOUNT_TOKEN
-  # Read more about getting tokens here:
-  # https://docs.stackit.cloud/stackit/en/acquire-a-bearer-token-with-service-account-keys-175112464.html
-  default_region        = "eu01"
-  service_account_token = var.service_account_token
+  # The STACKIT provider is configured using the defined variables.
+  default_region           = "eu01"
+  service_account_key_path = var.service_account_key
 }
 
 ```
@@ -155,16 +151,15 @@ terraform {
   required_providers {
     stackit = {
       source  = "stackitcloud/stackit"
-      version = ">= 0.66.0"
     }
   }
 }
 
-variable "service_account_token" {
+variable "service_account_key" {
   type        = string
-  description = "Your STACKIT service account token."
+  description = "Your STACKIT service account key."
   sensitive   = true
-  default     = "your token"
+  default     = "path/to/sa-key.json"
 }
 
 variable "project_id" {
@@ -175,8 +170,8 @@ variable "project_id" {
 
 provider "stackit" {
   # The STACKIT provider is configured using the defined variables.
-  default_region        = "eu01"
-  service_account_token = var.service_account_token
+  default_region           = "eu01"
+  service_account_key_path = var.service_account_key
 }
 
 # -----------------------------------------------------------------------------
