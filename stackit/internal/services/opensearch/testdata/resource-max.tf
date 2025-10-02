@@ -14,7 +14,7 @@ variable "plugin" {}
 variable "sgw_acl" {}
 variable "syslog" {}
 variable "tls_ciphers" {}
-// variable "tls_protocols" {}
+variable "tls_protocols" {}
 
 variable "observability_instance_plan_name" {}
 
@@ -33,11 +33,11 @@ resource "stackit_opensearch_instance" "instance" {
     metrics_frequency = var.metrics_frequency
     metrics_prefix = var.metrics_prefix
     monitoring_instance_id = stackit_observability_instance.instance.instance_id
-    plugins = [var.plugin]
+    plugins = var.plugin != "" ? [var.plugin] : []
     sgw_acl = var.sgw_acl
     syslog = [var.syslog]
     tls_ciphers = [var.tls_ciphers]
-    // tls_protocols = [var.tls_protocols]
+    tls_protocols = [var.tls_protocols]
   }
 }
 
