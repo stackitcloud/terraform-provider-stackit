@@ -79,15 +79,18 @@ var testConfigVarsMax = config.Variables{
 	"auth_password":                          config.StringVariable("password"),
 	"auth_username":                          config.StringVariable("username"),
 	"email_from":                             config.StringVariable("aa@bb.ccc"),
+	"email_send_resolved":                    config.StringVariable("true"),
 	"smart_host":                             config.StringVariable("smtp.gmail.com:587"),
 	"email_to":                               config.StringVariable("bb@bb.ccc"),
 	"opsgenie_api_key":                       config.StringVariable("example-api-key"),
 	"opsgenie_api_tags":                      config.StringVariable("observability-alert"),
 	"opsgenie_api_url":                       config.StringVariable("https://api.eu.opsgenie.com"),
 	"opsgenie_priority":                      config.StringVariable("P3"),
+	"opsgenie_send_resolved":                 config.StringVariable("false"),
 	"webhook_configs_url":                    config.StringVariable("https://example.com"),
 	"ms_teams":                               config.StringVariable("true"),
 	"google_chat":                            config.StringVariable("false"),
+	"webhook_configs_send_resolved":          config.StringVariable("false"),
 	"group_by":                               config.StringVariable("alertname"),
 	"group_interval":                         config.StringVariable("10m"),
 	"group_wait":                             config.StringVariable("1m"),
@@ -100,6 +103,10 @@ var testConfigVarsMax = config.Variables{
 	"smtp_smart_host":                        config.StringVariable("smtp.gmail.com:587"),
 	"match":                                  config.StringVariable("alert1"),
 	"match_regex":                            config.StringVariable("alert1"),
+	"matchers":                               config.StringVariable("instance =~ \".*\""),
+	"continue":                               config.StringVariable("true"),
+	// credential
+	"credential_description": config.StringVariable("This is a description for the test credential."),
 	// logalertgroup
 	"logalertgroup_for_time":   config.StringVariable("60s"),
 	"logalertgroup_label":      config.StringVariable("label1"),
@@ -134,6 +141,7 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig["webhook_configs_url"] = config.StringVariable("https://chat.googleapis.com/api")
 	tempConfig["ms_teams"] = config.StringVariable("false")
 	tempConfig["google_chat"] = config.StringVariable("true")
+	tempConfig["matchers"] = config.StringVariable("instance =~ \"my.*\"")
 	return tempConfig
 }
 
@@ -189,6 +197,7 @@ func TestAccResourceMin(t *testing.T) {
 						"stackit_observability_instance.instance", "instance_id",
 						"stackit_observability_credential.credential", "instance_id",
 					),
+					resource.TestCheckNoResourceAttr("stackit_observability_credential.credential", "description"),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "username"),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "password"),
 
@@ -431,6 +440,7 @@ func TestAccResourceMin(t *testing.T) {
 						"stackit_observability_instance.instance", "instance_id",
 						"stackit_observability_credential.credential", "instance_id",
 					),
+					resource.TestCheckNoResourceAttr("stackit_observability_credential.credential", "description"),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "username"),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "password"),
 
@@ -527,8 +537,11 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.group_wait", testutil.ConvertConfigVariable(testConfigVarsMax["group_wait"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.receiver", testutil.ConvertConfigVariable(testConfigVarsMax["receiver_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.repeat_interval", testutil.ConvertConfigVariable(testConfigVarsMax["repeat_interval"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.continue", testutil.ConvertConfigVariable(testConfigVarsMax["continue"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.match.match1", testutil.ConvertConfigVariable(testConfigVarsMax["match"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.match_regex.match_regex1", testutil.ConvertConfigVariable(testConfigVarsMax["match_regex"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.matchers.0", testutil.ConvertConfigVariable(testConfigVarsMax["matchers"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.matchers.#", "1"),
 
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.global.opsgenie_api_key", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_key"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.global.opsgenie_api_url", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_url"])),
@@ -568,6 +581,7 @@ func TestAccResourceMax(t *testing.T) {
 						"stackit_observability_instance.instance", "instance_id",
 						"stackit_observability_credential.credential", "instance_id",
 					),
+					resource.TestCheckResourceAttr("stackit_observability_credential.credential", "description", testutil.ConvertConfigVariable(testConfigVarsMax["credential_description"])),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "username"),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "password"),
 
@@ -690,8 +704,11 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.group_wait", testutil.ConvertConfigVariable(testConfigVarsMax["group_wait"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.receiver", testutil.ConvertConfigVariable(testConfigVarsMax["receiver_name"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.repeat_interval", testutil.ConvertConfigVariable(testConfigVarsMax["repeat_interval"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.continue", testutil.ConvertConfigVariable(testConfigVarsMax["continue"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.match.match1", testutil.ConvertConfigVariable(testConfigVarsMax["match"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.match_regex.match_regex1", testutil.ConvertConfigVariable(testConfigVarsMax["match_regex"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.matchers.0", testutil.ConvertConfigVariable(testConfigVarsMax["matchers"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.route.routes.0.matchers.#", "1"),
 
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.global.opsgenie_api_key", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_key"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "alert_config.global.opsgenie_api_url", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_url"])),
@@ -914,8 +931,11 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.group_wait", testutil.ConvertConfigVariable(testConfigVarsMax["group_wait"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.receiver", testutil.ConvertConfigVariable(testConfigVarsMax["receiver_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.repeat_interval", testutil.ConvertConfigVariable(testConfigVarsMax["repeat_interval"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.continue", testutil.ConvertConfigVariable(testConfigVarsMax["continue"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.match.match1", testutil.ConvertConfigVariable(testConfigVarsMax["match"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.match_regex.match_regex1", testutil.ConvertConfigVariable(testConfigVarsMax["match_regex"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.matchers.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["matchers"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.matchers.#", "1"),
 
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.global.opsgenie_api_key", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_key"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.global.opsgenie_api_url", testutil.ConvertConfigVariable(testConfigVarsMax["opsgenie_api_url"])),
@@ -955,6 +975,7 @@ func TestAccResourceMax(t *testing.T) {
 						"stackit_observability_instance.instance", "instance_id",
 						"stackit_observability_credential.credential", "instance_id",
 					),
+					resource.TestCheckResourceAttr("stackit_observability_credential.credential", "description", testutil.ConvertConfigVariable(testConfigVarsMax["credential_description"])),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "username"),
 					resource.TestCheckResourceAttrSet("stackit_observability_credential.credential", "password"),
 

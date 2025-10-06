@@ -1,4 +1,4 @@
-package project
+package folder
 
 import (
 	"context"
@@ -8,37 +8,35 @@ import (
 	"strings"
 	"time"
 
-	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
-
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
-	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &projectResource{}
-	_ resource.ResourceWithConfigure   = &projectResource{}
-	_ resource.ResourceWithImportState = &projectResource{}
+	_ resource.Resource                = &folderResource{}
+	_ resource.ResourceWithConfigure   = &folderResource{}
+	_ resource.ResourceWithImportState = &folderResource{}
 )
 
 const (
@@ -47,7 +45,7 @@ const (
 
 type Model struct {
 	Id                types.String `tfsdk:"id"` // needed by TF
-	ProjectId         types.String `tfsdk:"project_id"`
+	FolderId          types.String `tfsdk:"folder_id"`
 	ContainerId       types.String `tfsdk:"container_id"`
 	ContainerParentId types.String `tfsdk:"parent_container_id"`
 	Name              types.String `tfsdk:"name"`
@@ -61,25 +59,30 @@ type ResourceModel struct {
 	OwnerEmail types.String `tfsdk:"owner_email"`
 }
 
-// NewProjectResource is a helper function to simplify the provider implementation.
-func NewProjectResource() resource.Resource {
-	return &projectResource{}
+// NewFolderResource is a helper function to simplify the provider implementation.
+func NewFolderResource() resource.Resource {
+	return &folderResource{}
 }
 
-// projectResource is the resource implementation.
-type projectResource struct {
+// folderResource is the resource implementation.
+type folderResource struct {
 	client *resourcemanager.APIClient
 }
 
 // Metadata returns the resource type name.
-func (r *projectResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_resourcemanager_project"
+func (r *folderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_resourcemanager_folder"
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *folderResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
+		return
+	}
+
+	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_resourcemanager_folder", "resource")
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -88,45 +91,32 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 		return
 	}
 	r.client = apiClient
-	tflog.Info(ctx, "Resource Manager project client configured")
+	tflog.Info(ctx, "Resource Manager client configured")
 }
 
 // Schema defines the schema for the resource.
-func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *folderResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main": fmt.Sprintf("%s\n\n%s",
-			"Resource Manager project resource schema.",
-			"-> In case you're getting started with an empty STACKIT organization and want to use this resource to create projects in it, check out [this guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/stackit_org_service_account) for how to create a service account which you can use for authentication in the STACKIT Terraform provider.",
-		),
+		"main":                "Resource Manager folder resource schema.",
 		"id":                  "Terraform's internal resource ID. It is structured as \"`container_id`\".",
-		"project_id":          "Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.",
-		"container_id":        "Project container ID. Globally unique, user-friendly identifier.",
-		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
-		"name":                "Project name.",
-		"labels":              "Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}.  \nTo create a project within a STACKIT Network Area, setting the label `networkArea=<networkAreaID>` is required. This can not be changed after project creation.",
-		"owner_email":         "Email address of the owner of the project. This value is only considered during creation. Changing it afterwards will have no effect.",
-		"creation_time":       "Date-time at which the project was created.",
-		"update_time":         "Date-time at which the project was last modified.",
+		"container_id":        "Folder container ID. Globally unique, user-friendly identifier.",
+		"folder_id":           "Folder UUID identifier. Globally unique folder identifier",
+		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported.",
+		"name":                "The name of the folder.",
+		"labels":              "Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}.",
+		"owner_email":         "Email address of the owner of the folder. This value is only considered during creation. Changing it afterwards will have no effect.",
+		"creation_time":       "Date-time at which the folder was created.",
+		"update_time":         "Date-time at which the folder was last modified.",
 	}
 
 	resp.Schema = schema.Schema{
-		Description: descriptions["main"],
+		Description: features.AddBetaDescription(descriptions["main"], core.Resource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"project_id": schema.StringAttribute{
-				Description: descriptions["project_id"],
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-				Validators: []validator.String{
-					validate.UUID(),
 				},
 			},
 			"container_id": schema.StringAttribute{
@@ -137,6 +127,16 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 				Validators: []validator.String{
 					validate.NoSeparator(),
+				},
+			},
+			"folder_id": schema.StringAttribute{
+				Description: descriptions["folder_id"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
 				},
 			},
 			"parent_container_id": schema.StringAttribute{
@@ -188,7 +188,8 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+	tflog.Info(ctx, "creating folder")
 	var model ResourceModel
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -196,71 +197,76 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	containerId := model.ContainerId.ValueString()
-	ctx = tflog.SetField(ctx, "project_container_id", containerId)
+	containerParentId := model.ContainerParentId.ValueString()
+	folderName := model.Name.ValueString()
+	ctx = tflog.SetField(ctx, "container_parent_id", containerParentId)
+	ctx = tflog.SetField(ctx, "folder_name", folderName)
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Creating API payload: %v", err))
-		return
-	}
-	// Create new project
-	createResp, err := r.client.CreateProject(ctx).CreateProjectPayload(*payload).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Calling API: %v", err))
-		return
-	}
-	respContainerId := *createResp.ContainerId
-
-	// If the request has not been processed yet and the containerId doesn't exist,
-	// the waiter will fail with authentication error, so wait some time before checking the creation
-	waitResp, err := wait.CreateProjectWaitHandler(ctx, r.client, respContainerId).WaitWithContext(ctx)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Instance creation waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
-	err = mapProjectFields(ctx, waitResp, &model.Model, &resp.State)
+	folderCreateResp, err := r.client.CreateFolder(ctx).CreateFolderPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Processing API response: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	// Set state to fully populated data
-	diags = resp.State.Set(ctx, model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+	if folderCreateResp.ContainerId == nil || *folderCreateResp.ContainerId == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", "Container ID is missing")
 		return
 	}
-	tflog.Info(ctx, "Resource Manager project created")
+
+	// This sleep is currently needed due to the IAM Cache.
+	time.Sleep(10 * time.Second)
+
+	folderGetResponse, err := r.client.GetFolderDetails(ctx, *folderCreateResp.ContainerId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	err = mapFolderFields(ctx, folderGetResponse, &model.Model, &resp.State)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "API response processing error", err.Error())
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+	tflog.Info(ctx, "Folder created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model ResourceModel
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	containerId := model.ContainerId.ValueString()
+	folderName := model.Name.ValueString()
+	ctx = tflog.SetField(ctx, "folder_name", folderName)
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
-	projectResp, err := r.client.GetProject(ctx, containerId).Execute()
+	folderResp, err := r.client.GetFolderDetails(ctx, containerId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading folder", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	err = mapProjectFields(ctx, projectResp, &model.Model, &resp.State)
+	err = mapFolderFields(ctx, folderResp, &model.Model, &resp.State)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading folder", fmt.Sprintf("Processing API response: %v", err))
 		return
 	}
 
@@ -270,11 +276,11 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Resource Manager project read")
+	tflog.Info(ctx, "Resource Manager folder read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model ResourceModel
 	diags := req.Plan.Get(ctx, &model)
@@ -288,26 +294,26 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	// Generate API request body from model
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	// Update existing project
-	_, err = r.client.PartialUpdateProject(ctx, containerId).PartialUpdateProjectPayload(*payload).Execute()
+	// Update existing folder
+	_, err = r.client.PartialUpdateFolder(ctx, containerId).PartialUpdateFolderPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Calling API: %v", err))
-		return
-	}
-
-	// Fetch updated project
-	projectResp, err := r.client.GetProject(ctx, containerId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Calling API for updated data: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	err = mapProjectFields(ctx, projectResp, &model.Model, &resp.State)
+	// Fetch updated folder
+	folderResp, err := r.client.GetFolderDetails(ctx, containerId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Processing API response: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Calling API for updated data: %v", err))
+		return
+	}
+
+	err = mapFolderFields(ctx, folderResp, &model.Model, &resp.State)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Processing API response: %v", err))
 		return
 	}
 
@@ -316,11 +322,11 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Resource Manager project updated")
+	tflog.Info(ctx, "Resource Manager folder updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model ResourceModel
 	diags := req.State.Get(ctx, &model)
@@ -332,29 +338,28 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	containerId := model.ContainerId.ValueString()
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
-	// Delete existing project
-	err := r.client.DeleteProject(ctx, containerId).Execute()
+	// Delete existing folder
+	err := r.client.DeleteFolder(ctx, containerId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error deleting folder. Deletion may fail because associated projects remain hidden for up to 7 days after user deletion due to technical requirements.",
+			fmt.Sprintf("Calling API: %v", err),
+		)
 		return
 	}
 
-	_, err = wait.DeleteProjectWaitHandler(ctx, r.client, containerId).WaitWithContext(ctx)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Instance deletion waiting: %v", err))
-		return
-	}
-
-	tflog.Info(ctx, "Resource Manager project deleted")
+	tflog.Info(ctx, "Resource Manager folder deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: container_id
-func (r *projectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *folderResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 1 || idParts[0] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
-			"Error importing project",
+			"Error importing folder",
 			fmt.Sprintf("Expected import identifier with format: [container_id]  Got: %q", req.ID),
 		)
 		return
@@ -363,74 +368,77 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 	ctx = tflog.SetField(ctx, "container_id", req.ID)
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("container_id"), req.ID)...)
-	tflog.Info(ctx, "Resource Manager Project state imported")
+	tflog.Info(ctx, "Resource Manager folder state imported")
 }
 
-// mapProjectFields maps the API response to the Terraform model and update the Terraform state
-func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, model *Model, state *tfsdk.State) (err error) {
-	if projectResp == nil {
-		return fmt.Errorf("response input is nil")
-	}
-	if model == nil {
-		return fmt.Errorf("model input is nil")
+// mapFolderFields maps folder fields from a response into the Terraform model and optionally updates state.
+func mapFolderFields(
+	ctx context.Context,
+	folderGetResponse *resourcemanager.GetFolderDetailsResponse,
+	model *Model,
+	state *tfsdk.State,
+) error {
+	if folderGetResponse == nil {
+		return fmt.Errorf("folder get response is nil")
 	}
 
-	var projectId string
-	if model.ProjectId.ValueString() != "" {
-		projectId = model.ProjectId.ValueString()
-	} else if projectResp.ProjectId != nil {
-		projectId = *projectResp.ProjectId
+	var folderId string
+	if model.FolderId.ValueString() != "" {
+		folderId = model.FolderId.ValueString()
+	} else if folderGetResponse.FolderId != nil {
+		folderId = *folderGetResponse.FolderId
 	} else {
-		return fmt.Errorf("project id not present")
+		return fmt.Errorf("folder id not present")
 	}
 
 	var containerId string
 	if model.ContainerId.ValueString() != "" {
 		containerId = model.ContainerId.ValueString()
-	} else if projectResp.ContainerId != nil {
-		containerId = *projectResp.ContainerId
+	} else if folderGetResponse.ContainerId != nil {
+		containerId = *folderGetResponse.ContainerId
 	} else {
 		return fmt.Errorf("container id not present")
 	}
 
-	var labels basetypes.MapValue
-	if projectResp.Labels != nil && len(*projectResp.Labels) != 0 {
-		labels, err = conversion.ToTerraformStringMap(ctx, *projectResp.Labels)
+	var err error
+	var tfLabels basetypes.MapValue
+	if folderGetResponse.Labels != nil && len(*folderGetResponse.Labels) > 0 {
+		tfLabels, err = conversion.ToTerraformStringMap(ctx, *folderGetResponse.Labels)
 		if err != nil {
 			return fmt.Errorf("converting to StringValue map: %w", err)
 		}
 	} else {
-		labels = types.MapNull(types.StringType)
+		tfLabels = types.MapNull(types.StringType)
 	}
 
 	var containerParentIdTF basetypes.StringValue
-	if projectResp.Parent != nil {
+	if folderGetResponse.Parent != nil {
 		if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
-			// the provided containerParentId is the UUID identifier
-			containerParentIdTF = types.StringPointerValue(projectResp.Parent.Id)
+			// the provided containerParent is the UUID identifier
+			containerParentIdTF = types.StringPointerValue(folderGetResponse.Parent.Id)
 		} else {
-			// the provided containerParentId is the user-friendly container id
-			containerParentIdTF = types.StringPointerValue(projectResp.Parent.ContainerId)
+			// the provided containerParent is the user-friendly container id
+			containerParentIdTF = types.StringPointerValue(folderGetResponse.Parent.ContainerId)
 		}
 	} else {
 		containerParentIdTF = types.StringNull()
 	}
 
 	model.Id = types.StringValue(containerId)
-	model.ProjectId = types.StringValue(projectId)
-	model.ContainerParentId = containerParentIdTF
+	model.FolderId = types.StringValue(folderId)
 	model.ContainerId = types.StringValue(containerId)
-	model.Name = types.StringPointerValue(projectResp.Name)
-	model.Labels = labels
-	model.CreationTime = types.StringValue(projectResp.CreationTime.Format(time.RFC3339))
-	model.UpdateTime = types.StringValue(projectResp.UpdateTime.Format(time.RFC3339))
+	model.ContainerParentId = containerParentIdTF
+	model.Name = types.StringPointerValue(folderGetResponse.Name)
+	model.Labels = tfLabels
+	model.CreationTime = types.StringValue(folderGetResponse.CreationTime.Format(time.RFC3339))
+	model.UpdateTime = types.StringValue(folderGetResponse.UpdateTime.Format(time.RFC3339))
 
 	if state != nil {
 		diags := diag.Diagnostics{}
 		diags.Append(state.SetAttribute(ctx, path.Root("id"), model.Id)...)
-		diags.Append(state.SetAttribute(ctx, path.Root("project_id"), model.ProjectId)...)
-		diags.Append(state.SetAttribute(ctx, path.Root("parent_container_id"), model.ContainerParentId)...)
+		diags.Append(state.SetAttribute(ctx, path.Root("folder_id"), model.FolderId)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("container_id"), model.ContainerId)...)
+		diags.Append(state.SetAttribute(ctx, path.Root("parent_container_id"), model.ContainerParentId)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("name"), model.Name)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("labels"), model.Labels)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("creation_time"), model.CreationTime)...)
@@ -459,7 +467,7 @@ func toMembersPayload(model *ResourceModel) (*[]resourcemanager.Member, error) {
 	}, nil
 }
 
-func toCreatePayload(model *ResourceModel) (*resourcemanager.CreateProjectPayload, error) {
+func toCreatePayload(model *ResourceModel) (*resourcemanager.CreateFolderPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -475,7 +483,7 @@ func toCreatePayload(model *ResourceModel) (*resourcemanager.CreateProjectPayloa
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &resourcemanager.CreateProjectPayload{
+	return &resourcemanager.CreateFolderPayload{
 		ContainerParentId: conversion.StringValueToPointer(model.ContainerParentId),
 		Labels:            labels,
 		Members:           members,
@@ -483,7 +491,7 @@ func toCreatePayload(model *ResourceModel) (*resourcemanager.CreateProjectPayloa
 	}, nil
 }
 
-func toUpdatePayload(model *ResourceModel) (*resourcemanager.PartialUpdateProjectPayload, error) {
+func toUpdatePayload(model *ResourceModel) (*resourcemanager.PartialUpdateFolderPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -494,7 +502,7 @@ func toUpdatePayload(model *ResourceModel) (*resourcemanager.PartialUpdateProjec
 		return nil, fmt.Errorf("converting to GO map: %w", err)
 	}
 
-	return &resourcemanager.PartialUpdateProjectPayload{
+	return &resourcemanager.PartialUpdateFolderPayload{
 		ContainerParentId: conversion.StringValueToPointer(model.ContainerParentId),
 		Name:              conversion.StringValueToPointer(model.Name),
 		Labels:            labels,

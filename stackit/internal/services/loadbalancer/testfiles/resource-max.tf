@@ -11,6 +11,7 @@ variable "target_display_name" {}
 variable "listener_port" {}
 variable "listener_protocol" {}
 variable "network_role" {}
+variable "disable_security_group_assignment" {}
 
 variable "listener_display_name" {}
 variable "listener_server_name_indicators" {}
@@ -44,6 +45,11 @@ resource "stackit_network_interface" "network_interface" {
   project_id = stackit_network.network.project_id
   network_id = stackit_network.network.network_id
   name       = "name"
+  lifecycle {
+    ignore_changes = [
+      security_group_ids,
+    ]
+  }
 }
 
 resource "stackit_public_ip" "public_ip" {
@@ -72,9 +78,10 @@ resource "stackit_server" "server" {
 }
 
 resource "stackit_loadbalancer" "loadbalancer" {
-  project_id = var.project_id
-  name       = var.loadbalancer_name
-  plan_id    = var.plan_id
+  project_id                        = var.project_id
+  name                              = var.loadbalancer_name
+  plan_id                           = var.plan_id
+  disable_security_group_assignment = var.disable_security_group_assignment
   target_pools = [
     {
       name        = var.target_pool_name
@@ -120,14 +127,14 @@ resource "stackit_loadbalancer" "loadbalancer" {
     private_network_only = var.private_network_only
     acl                  = [var.acl]
     observability = {
-    	logs = {
-    		credentials_ref = stackit_loadbalancer_observability_credential.logs.credentials_ref
-    		push_url = var.observability_logs_push_url
-    	}
-    	metrics = {
-    		credentials_ref = stackit_loadbalancer_observability_credential.metrics.credentials_ref
-    		push_url = var.observability_metrics_push_url
-    	}
+      logs = {
+        credentials_ref = stackit_loadbalancer_observability_credential.logs.credentials_ref
+        push_url        = var.observability_logs_push_url
+      }
+      metrics = {
+        credentials_ref = stackit_loadbalancer_observability_credential.metrics.credentials_ref
+        push_url        = var.observability_metrics_push_url
+      }
     }
   }
   external_address = stackit_public_ip.public_ip.ip

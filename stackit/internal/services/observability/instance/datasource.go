@@ -220,6 +220,10 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 												Description: "The sender email address. Must be a valid email address",
 												Computed:    true,
 											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
+												Computed:    true,
+											},
 											"smart_host": schema.StringAttribute{
 												Description: "The SMTP host through which emails are sent.",
 												Computed:    true,
@@ -252,6 +256,10 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 												Description: "Priority of the alert. " + utils.FormatPossibleValues([]string{"P1", "P2", "P3", "P4", "P5"}...),
 												Computed:    true,
 											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
+												Computed:    true,
+											},
 										},
 									},
 								},
@@ -271,6 +279,10 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 											},
 											"google_chat": schema.BoolAttribute{
 												Description: "Google Chat webhooks require special handling, set this to true if the webhook is for Google Chat.",
+												Computed:    true,
+											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
 												Computed:    true,
 											},
 										},
@@ -295,16 +307,6 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							"group_wait": schema.StringAttribute{
 								Description: "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.) .",
 								Computed:    true,
-							},
-							"match": schema.MapAttribute{
-								Description: "A set of equality matchers an alert has to fulfill to match the node.",
-								Computed:    true,
-								ElementType: types.StringType,
-							},
-							"match_regex": schema.MapAttribute{
-								Description: "A set of regex-matchers an alert has to fulfill to match the node.",
-								Computed:    true,
-								ElementType: types.StringType,
 							},
 							"receiver": schema.StringAttribute{
 								Description: "The name of the receiver to route the alerts to.",
@@ -400,18 +402,6 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	metricsRetentionResp, err := d.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get metrics retention: %v", err))
-		return
-	}
-
-	alertConfigResp, err := d.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get alert config: %v", err))
-		return
-	}
-
 	// Map response body to schema
 	err = mapFields(ctx, instanceResp, &model)
 	if err != nil {
@@ -423,6 +413,12 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	plan, err := loadPlanId(ctx, *d.client, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan: %v", err))
 		return
 	}
 
@@ -439,31 +435,48 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	// Map response body to schema
-	err = mapMetricsRetentionField(metricsRetentionResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
-		return
+	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
+		metricsRetentionResp, err := d.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get metrics retention: %v", err))
+			return
+		}
+		// Map response body to schema
+		err = mapMetricsRetentionField(metricsRetentionResp, &model)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
+			return
+		}
+		// Set state to fully populated data
+		diags := setMetricsRetentions(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
-	// Set state to fully populated data
-	diags = setMetricsRetentions(ctx, &resp.State, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	// There are plans where no alert matchers and receivers are present e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetAlertMatchers() != 0 && plan.GetAlertReceivers() != 0 {
+		alertConfigResp, err := d.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get alert config: %v", err))
+			return
+		}
+		// Map response body to schema
+		err = mapAlertConfigField(ctx, alertConfigResp, &model)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
+			return
+		}
+
+		// Set state to fully populated data
+		diags = setAlertConfig(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
-	err = mapAlertConfigField(ctx, alertConfigResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
-		return
-	}
-
-	// Set state to fully populated data
-	diags = setAlertConfig(ctx, &resp.State, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	tflog.Info(ctx, "Observability instance read")
 }

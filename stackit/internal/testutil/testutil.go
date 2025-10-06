@@ -325,10 +325,8 @@ func ResourceManagerProviderConfig() string {
 	if ResourceManagerCustomEndpoint == "" || AuthorizationCustomEndpoint == "" {
 		return fmt.Sprintf(`
 		provider "stackit" {
-			service_account_email = "%s"
 			service_account_token = "%s"
 		}`,
-			TestProjectServiceAccountEmail,
 			token,
 		)
 	}
@@ -336,12 +334,35 @@ func ResourceManagerProviderConfig() string {
 	provider "stackit" {
 		resourcemanager_custom_endpoint = "%s"
 		authorization_custom_endpoint = "%s"
-		service_account_email = "%s"
 		service_account_token = "%s"
 	}`,
 		ResourceManagerCustomEndpoint,
 		AuthorizationCustomEndpoint,
-		TestProjectServiceAccountEmail,
+		token,
+	)
+}
+
+func ResourceManagerProviderConfigBetaEnabled() string {
+	token := GetTestProjectServiceAccountToken("")
+	if ResourceManagerCustomEndpoint == "" || AuthorizationCustomEndpoint == "" {
+		return fmt.Sprintf(`
+		provider "stackit" {
+			service_account_token = "%s"
+			enable_beta_resources = true
+		}`,
+
+			token,
+		)
+	}
+	return fmt.Sprintf(`
+	provider "stackit" {
+		resourcemanager_custom_endpoint = "%s"
+		authorization_custom_endpoint = "%s"
+		service_account_token = "%s"
+		enable_beta_resources = true
+	}`,
+		ResourceManagerCustomEndpoint,
+		AuthorizationCustomEndpoint,
 		token,
 	)
 }
@@ -574,7 +595,10 @@ func ConvertConfigVariable(variable config.Variable) string {
 	tmpByteArray, _ := variable.MarshalJSON()
 	// In case the variable is a string, the quotes should be removed
 	if tmpByteArray[0] == '"' && tmpByteArray[len(tmpByteArray)-1] == '"' {
-		return string(tmpByteArray[1 : len(tmpByteArray)-1])
+		result := string(tmpByteArray[1 : len(tmpByteArray)-1])
+		// Replace escaped quotes which where added MarshalJSON
+		rawString := strings.ReplaceAll(result, `\"`, `"`)
+		return rawString
 	}
 	return string(tmpByteArray)
 }

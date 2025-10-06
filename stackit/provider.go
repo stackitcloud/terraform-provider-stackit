@@ -74,6 +74,7 @@ import (
 	rabbitMQInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/instance"
 	redisCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/credential"
 	redisInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/instance"
+	resourceManagerFolder "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/folder"
 	resourceManagerProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/project"
 	scfOrganization "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/organization"
 	scfOrganizationmanager "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/organizationmanager"
@@ -512,6 +513,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		scfOrganization.NewScfOrganizationDataSource,
 		scfOrganizationmanager.NewScfOrganizationManagerDataSource,
 		scfPlatform.NewScfPlatformDataSource,
+		resourceManagerFolder.NewFolderDataSource,
 		secretsManagerInstance.NewInstanceDataSource,
 		secretsManagerUser.NewUserDataSource,
 		sqlServerFlexInstance.NewInstanceDataSource,
@@ -580,6 +582,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		resourceManagerProject.NewProjectResource,
 		scfOrganization.NewScfOrganizationResource,
 		scfOrganizationmanager.NewScfOrganizationManagerResource,
+		resourceManagerFolder.NewFolderResource,
 		secretsManagerInstance.NewInstanceResource,
 		secretsManagerUser.NewUserResource,
 		sqlServerFlexInstance.NewInstanceResource,

@@ -104,6 +104,7 @@ Optional:
 - `auth_password` (String, Sensitive) SMTP authentication password.
 - `auth_username` (String) SMTP authentication username.
 - `from` (String) The sender email address. Must be a valid email address
+- `send_resolved` (Boolean) Whether to notify about resolved alerts.
 - `smart_host` (String) The SMTP host through which emails are sent.
 - `to` (String) The email address to send notifications to. Must be a valid email address
 
@@ -116,6 +117,7 @@ Optional:
 - `api_key` (String) The API key for OpsGenie.
 - `api_url` (String) The host to send OpsGenie API requests to. Must be a valid URL
 - `priority` (String) Priority of the alert. Possible values are: `P1`, `P2`, `P3`, `P4`, `P5`.
+- `send_resolved` (Boolean) Whether to notify about resolved alerts.
 - `tags` (String) Comma separated list of tags attached to the notifications.
 
 
@@ -126,6 +128,7 @@ Optional:
 
 - `google_chat` (Boolean) Google Chat webhooks require special handling, set this to true if the webhook is for Google Chat.
 - `ms_teams` (Boolean) Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.
+- `send_resolved` (Boolean) Whether to notify about resolved alerts.
 - `url` (String, Sensitive) The endpoint to send HTTP POST requests to. Must be a valid URL
 
 
@@ -142,8 +145,6 @@ Optional:
 - `group_by` (List of String) The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.
 - `group_interval` (String) How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)
 - `group_wait` (String) How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.)
-- `match` (Map of String) A set of equality matchers an alert has to fulfill to match the node.
-- `match_regex` (Map of String) A set of regex-matchers an alert has to fulfill to match the node.
 - `repeat_interval` (String) How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).
 - `routes` (Attributes List) List of child routes. (see [below for nested schema](#nestedatt--alert_config--route--routes))
 
@@ -156,11 +157,13 @@ Required:
 
 Optional:
 
+- `continue` (Boolean) Whether an alert should continue matching subsequent sibling nodes.
 - `group_by` (List of String) The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.
 - `group_interval` (String) How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)
 - `group_wait` (String) How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.)
-- `match` (Map of String) A set of equality matchers an alert has to fulfill to match the node.
-- `match_regex` (Map of String) A set of regex-matchers an alert has to fulfill to match the node.
+- `match` (Map of String, Deprecated) A set of equality matchers an alert has to fulfill to match the node. This field is deprecated and will be removed after 10th March 2026, use `matchers` in the `routes` instead
+- `match_regex` (Map of String, Deprecated) A set of regex-matchers an alert has to fulfill to match the node. This field is deprecated and will be removed after 10th March 2026, use `matchers` in the `routes` instead
+- `matchers` (List of String) A list of matchers that an alert has to fulfill to match the node. A matcher is a string with a syntax inspired by PromQL and OpenMetrics.
 - `repeat_interval` (String) How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).
 
 
