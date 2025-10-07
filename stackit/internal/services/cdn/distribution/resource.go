@@ -811,7 +811,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 			geofencingCountry := make([]string, len(countryCodes))
 			for i, countryCodePtr := range countryCodes {
 				if countryCodePtr == nil {
-					return nil, errors.New("country can not be nil")
+					return nil, fmt.Errorf("geofencing url %q has a null value", endpoint)
 				}
 				validatedCountry, err := validateCountryCode(*countryCodePtr)
 				if err != nil {
