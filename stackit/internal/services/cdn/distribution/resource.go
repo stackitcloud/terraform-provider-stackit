@@ -534,6 +534,36 @@ func (r *distributionResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, "CDN distribution state imported")
 }
 
+func (r *distributionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var model Model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !utils.IsUndefined(model.Config) {
+		var config distributionConfig
+		if !model.Config.IsNull() {
+			diags := model.Config.As(ctx, &config, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return
+			}
+			if geofencing := config.Backend.Geofencing; geofencing != nil {
+				for url, region := range *geofencing {
+					if region == nil {
+						core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring cdn distribution", fmt.Sprintf("Region for url %q is not set", url))
+						continue
+					}
+					if len(region) == 0 {
+						core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring cdn distribution", fmt.Sprintf("Region for url %q is empty", url))
+						continue
+					}
+				}
+			}
+		}
+	}
+}
+
 func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model) error {
 	if distribution == nil {
 		return fmt.Errorf("response input is nil")

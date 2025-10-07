@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
 
 func TestReconcileStrLists(t *testing.T) {
@@ -128,11 +129,6 @@ func TestListValuetoStrSlice(t *testing.T) {
 	}
 }
 
-// stringp is a helper function to return a pointer to a string.
-func stringp(s string) *string {
-	return &s
-}
-
 func TestConvertPointerSliceToStringSlice(t *testing.T) {
 	tests := []struct {
 		description string
@@ -151,12 +147,12 @@ func TestConvertPointerSliceToStringSlice(t *testing.T) {
 		},
 		{
 			description: "slice with valid pointers",
-			input:       []*string{stringp("apple"), stringp("banana"), stringp("cherry")},
+			input:       []*string{utils.Ptr("apple"), utils.Ptr("banana"), utils.Ptr("cherry")},
 			expected:    []string{"apple", "banana", "cherry"},
 		},
 		{
 			description: "slice with some nil pointers",
-			input:       []*string{stringp("apple"), nil, stringp("cherry"), nil},
+			input:       []*string{utils.Ptr("apple"), nil, utils.Ptr("cherry"), nil},
 			expected:    []string{"apple", "cherry"},
 		},
 		{
@@ -166,7 +162,7 @@ func TestConvertPointerSliceToStringSlice(t *testing.T) {
 		},
 		{
 			description: "slice with a pointer to an empty string",
-			input:       []*string{stringp("apple"), stringp(""), stringp("cherry")},
+			input:       []*string{utils.Ptr("apple"), utils.Ptr(""), utils.Ptr("cherry")},
 			expected:    []string{"apple", "", "cherry"},
 		},
 	}
