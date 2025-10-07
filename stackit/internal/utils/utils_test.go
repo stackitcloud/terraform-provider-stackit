@@ -128,6 +128,60 @@ func TestListValuetoStrSlice(t *testing.T) {
 	}
 }
 
+// stringp is a helper function to return a pointer to a string.
+func stringp(s string) *string {
+	return &s
+}
+
+func TestConvertPointerSliceToStringSlice(t *testing.T) {
+	tests := []struct {
+		description string
+		input       []*string
+		expected    []string
+	}{
+		{
+			description: "nil slice",
+			input:       nil,
+			expected:    []string{},
+		},
+		{
+			description: "empty slice",
+			input:       []*string{},
+			expected:    []string{},
+		},
+		{
+			description: "slice with valid pointers",
+			input:       []*string{stringp("apple"), stringp("banana"), stringp("cherry")},
+			expected:    []string{"apple", "banana", "cherry"},
+		},
+		{
+			description: "slice with some nil pointers",
+			input:       []*string{stringp("apple"), nil, stringp("cherry"), nil},
+			expected:    []string{"apple", "cherry"},
+		},
+		{
+			description: "slice with all nil pointers",
+			input:       []*string{nil, nil, nil},
+			expected:    []string{},
+		},
+		{
+			description: "slice with a pointer to an empty string",
+			input:       []*string{stringp("apple"), stringp(""), stringp("cherry")},
+			expected:    []string{"apple", "", "cherry"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output := ConvertPointerSliceToStringSlice(tt.input)
+			diff := cmp.Diff(output, tt.expected)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
 func TestSimplifyBackupSchedule(t *testing.T) {
 	tests := []struct {
 		description string
