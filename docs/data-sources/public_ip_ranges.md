@@ -15,11 +15,11 @@ A list of all public IP ranges that STACKIT uses.
 ```terraform
 data "stackit_public_ip_ranges" "example" {}
 
+# example usage: allow stackit services and customer vpn cidr to access observability apis
 locals {
   vpn_cidrs = ["X.X.X.X/32", "X.X.X.X/24"]
 }
 
-# example usage: allow stackit services and customer vpn cidr to access observability apis
 resource "stackit_observability_instance" "example" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name       = "example-instance"
