@@ -431,7 +431,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 			countryStrings := make([]string, len(countries))
 			for i, countryPtr := range countries {
 				if countryPtr == nil {
-					core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Geodencing url %q has a null value", url))
+					core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Geofencing url %q has a null value", url))
 					return
 				}
 				countryStrings[i] = *countryPtr
