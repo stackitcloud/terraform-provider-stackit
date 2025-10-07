@@ -430,9 +430,11 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		for url, countries := range *configModel.Backend.Geofencing {
 			countryStrings := make([]string, len(countries))
 			for i, countryPtr := range countries {
-				if countryPtr != nil {
-					countryStrings[i] = *countryPtr
+				if countryPtr == nil {
+					core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Geodencing url %q has a null value", url))
+					return
 				}
+				countryStrings[i] = *countryPtr
 			}
 			gf[url] = countryStrings
 		}
@@ -636,7 +638,7 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 		for url, newCountries := range newGeofencingMap {
 			oldCountriesPtrs := oldGeofencingMap[url]
 
-			oldCountries := convertPointerSliceToStringSlice(oldCountriesPtrs)
+			oldCountries := utils.ConvertPointerSliceToStringSlice(oldCountriesPtrs)
 
 			reconciledCountries := utils.ReconcileStringSlices(oldCountries, newCountries)
 			reconciledGeofencingData[url] = reconciledCountries
@@ -738,19 +740,6 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 	return nil
 }
 
-// convertPointerSliceToStringSlice safely converts a slice of string pointers to a slice of strings.
-func convertPointerSliceToStringSlice(pointerSlice []*string) []string {
-	if pointerSlice == nil {
-		return nil // Or []string{} depending on how you want to handle it
-	}
-	stringSlice := make([]string, 0, len(pointerSlice))
-	for _, strPtr := range pointerSlice {
-		if strPtr != nil { // Safely skip any nil pointers in the list
-			stringSlice = append(stringSlice, *strPtr)
-		}
-	}
-	return stringSlice
-}
 func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistributionPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("missing model")
@@ -822,7 +811,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 			geofencingCountry := make([]string, len(countryCodes))
 			for i, countryCodePtr := range countryCodes {
 				if countryCodePtr == nil {
-					continue
+					return nil, errors.New("country can not be nil")
 				}
 				validatedCountry, err := validateCountryCode(*countryCodePtr)
 				if err != nil {

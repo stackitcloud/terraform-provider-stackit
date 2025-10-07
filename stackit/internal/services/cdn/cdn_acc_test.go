@@ -38,7 +38,7 @@ var instanceResource = map[string]string{
 func configResources(regions string, geofencingCountries []string) string {
 	var quotedCountries []string
 	for _, country := range geofencingCountries {
-		quotedCountries = append(quotedCountries, fmt.Sprintf(`"%s"`, country))
+		quotedCountries = append(quotedCountries, fmt.Sprintf(`%q`, country))
 	}
 
 	geofencingList := strings.Join(quotedCountries, ",")
