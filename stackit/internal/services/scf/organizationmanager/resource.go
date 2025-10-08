@@ -237,7 +237,7 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 
 	err = mapFieldsCreate(scfOrgManagerCreateResponse, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Mapping fields: %v", err))
+		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization manager", fmt.Sprintf("Mapping fields: %v", err))
 		return
 	}
 
@@ -290,7 +290,7 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 	// Set the updated state.
 	diags = response.State.Set(ctx, &model)
 	response.Diagnostics.Append(diags...)
-	tflog.Info(ctx, fmt.Sprintf("read scf organization %s", orgId))
+	tflog.Info(ctx, fmt.Sprintf("read scf organization manager %s", orgId))
 }
 
 func (s *scfOrganizationManagerResource) Update(ctx context.Context, _ resource.UpdateRequest, response *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
