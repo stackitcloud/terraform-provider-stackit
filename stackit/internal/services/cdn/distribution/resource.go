@@ -562,7 +562,7 @@ func (r *distributionResource) ValidateConfig(ctx context.Context, req resource.
 					for i, countryPtr := range region {
 						if countryPtr == nil {
 							core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid geofencing config", fmt.Sprintf("Found a null value in the country list for URL %q at index %d.", url, i))
-							break
+							continue
 						}
 					}
 				}
