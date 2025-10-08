@@ -247,7 +247,7 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	if response.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Scf organization created")
+	tflog.Info(ctx, "Scf organization manager created")
 }
 
 func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
