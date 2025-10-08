@@ -424,7 +424,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		blockedCountries = &tempBlockedCountries
 	}
 
-	var geofencingPatch *map[string][]string
+	geofencingPatch := map[string][]string{}
 	if configModel.Backend.Geofencing != nil {
 		gf := make(map[string][]string)
 		for url, countries := range *configModel.Backend.Geofencing {
@@ -438,7 +438,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 			}
 			gf[url] = countryStrings
 		}
-		geofencingPatch = &gf
+		geofencingPatch = gf
 	}
 
 	configPatch := &cdn.ConfigPatch{
@@ -447,7 +447,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 				OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
 				OriginUrl:            &configModel.Backend.OriginURL,
 				Type:                 &configModel.Backend.Type,
-				Geofencing:           geofencingPatch, // Use the converted variable
+				Geofencing:           &geofencingPatch, // Use the converted variable
 			},
 		},
 		Regions:          &regions,
