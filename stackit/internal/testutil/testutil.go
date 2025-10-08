@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/config"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit"
 )
 
@@ -67,6 +68,7 @@ var (
 	RabbitMQCustomEndpoint        = os.Getenv("TF_ACC_RABBITMQ_CUSTOM_ENDPOINT")
 	RedisCustomEndpoint           = os.Getenv("TF_ACC_REDIS_CUSTOM_ENDPOINT")
 	ResourceManagerCustomEndpoint = os.Getenv("TF_ACC_RESOURCEMANAGER_CUSTOM_ENDPOINT")
+	ScfCustomEndpoint             = os.Getenv("TF_ACC_SCF_CUSTOM_ENDPOINT")
 	SecretsManagerCustomEndpoint  = os.Getenv("TF_ACC_SECRETSMANAGER_CUSTOM_ENDPOINT")
 	SQLServerFlexCustomEndpoint   = os.Getenv("TF_ACC_SQLSERVERFLEX_CUSTOM_ENDPOINT")
 	ServerBackupCustomEndpoint    = os.Getenv("TF_ACC_SERVER_BACKUP_CUSTOM_ENDPOINT")
@@ -492,6 +494,22 @@ func GitProviderConfig() string {
 			enable_beta_resources = true
 		}`,
 		GitCustomEndpoint,
+	)
+}
+
+func ScfProviderConfig() string {
+	if ScfCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			default_region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			default_region = "eu01"
+			scf_custom_endpoint = "%s"
+		}`,
+		ScfCustomEndpoint,
 	)
 }
 
