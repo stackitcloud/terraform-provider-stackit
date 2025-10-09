@@ -4,6 +4,9 @@ resource "stackit_cdn_distribution" "example_distribution" {
     backend = {
       type       = "http"
       origin_url = "https://mybackend.onstackit.cloud"
+      geofencing = {
+        "https://mybackend.onstackit.cloud" = ["DE"]
+      }
     }
     regions           = ["EU", "US", "ASIA", "AF", "SA"]
     blocked_countries = ["DE", "AT", "CH"]
