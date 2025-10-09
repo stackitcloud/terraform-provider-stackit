@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
@@ -461,6 +462,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Validators: []validator.String{
 					validate.UUID(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"parameters": schema.MapAttribute{
 				Description: "Additional parameters.",
@@ -528,16 +532,25 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Description: "Specifies for how many days the raw metrics are kept. Default is set to `90`.",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"metrics_retention_days_5m_downsampling": schema.Int64Attribute{
 				Description: "Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `90`.",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"metrics_retention_days_1h_downsampling": schema.Int64Attribute{
 				Description: "Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `90`.",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"metrics_url": schema.StringAttribute{
 				Description: "Specifies metrics URL.",
@@ -789,10 +802,18 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								Description: "The API key for OpsGenie.",
 								Optional:    true,
 								Sensitive:   true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"opsgenie_api_url": schema.StringAttribute{
 								Description: "The host to send OpsGenie API requests to. Must be a valid URL",
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"resolve_timeout": schema.StringAttribute{
 								Description: "The default value used by alertmanager if the alert does not include EndsAt. After this time passes, it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.",
@@ -805,24 +826,43 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"smtp_auth_identity": schema.StringAttribute{
 								Description: "SMTP authentication information. Must be a valid email address",
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"smtp_auth_password": schema.StringAttribute{
 								Description: "SMTP Auth using LOGIN and PLAIN.",
 								Optional:    true,
 								Sensitive:   true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"smtp_auth_username": schema.StringAttribute{
 								Description: "SMTP Auth using CRAM-MD5, LOGIN and PLAIN. If empty, Alertmanager doesn't authenticate to the SMTP server.",
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"smtp_from": schema.StringAttribute{
 								Description: "The default SMTP From header field. Must be a valid email address",
 								Optional:    true,
 								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"smtp_smart_host": schema.StringAttribute{
 								Description: "The default SMTP smarthost used for sending emails, including port number in format `host:port` (eg. `smtp.example.com:587`). Port number usually is 25, or 587 for SMTP over TLS (sometimes referred to as STARTTLS).",
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 						},
 					},
@@ -1816,10 +1856,21 @@ func mapGlobalConfigToAttributes(respGlobalConfigs *observability.Global, global
 			smtpAuthUsername = sdkUtils.Ptr(globalConfigsTF.SmtpAuthUsername.ValueString())
 		}
 	}
+	//handle nil value from api
+	opsgenieApiKey := respGlobalConfigs.OpsgenieApiKey
+	opsgenieApiUrl := respGlobalConfigs.OpsgenieApiUrl
+	if globalConfigsTF != nil {
+		if respGlobalConfigs.OpsgenieApiKey == nil {
+			opsgenieApiKey = sdkUtils.Ptr(globalConfigsTF.OpsgenieApiKey.ValueString())
+		}
+		if respGlobalConfigs.OpsgenieApiUrl == nil {
+			opsgenieApiUrl = sdkUtils.Ptr(globalConfigsTF.OpsgenieApiUrl.ValueString())
+		}
+	}
 
 	globalConfigObject, diags := types.ObjectValue(globalConfigurationTypes, map[string]attr.Value{
-		"opsgenie_api_key":   types.StringPointerValue(respGlobalConfigs.OpsgenieApiKey),
-		"opsgenie_api_url":   types.StringPointerValue(respGlobalConfigs.OpsgenieApiUrl),
+		"opsgenie_api_key":   types.StringPointerValue(opsgenieApiKey),
+		"opsgenie_api_url":   types.StringPointerValue(opsgenieApiUrl),
 		"resolve_timeout":    types.StringPointerValue(respGlobalConfigs.ResolveTimeout),
 		"smtp_from":          types.StringPointerValue(respGlobalConfigs.SmtpFrom),
 		"smtp_auth_identity": types.StringPointerValue(smtpAuthIdentity),
