@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
 
 func TestReconcileStrLists(t *testing.T) {
@@ -120,6 +121,55 @@ func TestListValuetoStrSlice(t *testing.T) {
 			if !tt.isValid {
 				t.Fatalf("Should have failed")
 			}
+			diff := cmp.Diff(output, tt.expected)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
+func TestConvertPointerSliceToStringSlice(t *testing.T) {
+	tests := []struct {
+		description string
+		input       []*string
+		expected    []string
+	}{
+		{
+			description: "nil slice",
+			input:       nil,
+			expected:    []string{},
+		},
+		{
+			description: "empty slice",
+			input:       []*string{},
+			expected:    []string{},
+		},
+		{
+			description: "slice with valid pointers",
+			input:       []*string{utils.Ptr("apple"), utils.Ptr("banana"), utils.Ptr("cherry")},
+			expected:    []string{"apple", "banana", "cherry"},
+		},
+		{
+			description: "slice with some nil pointers",
+			input:       []*string{utils.Ptr("apple"), nil, utils.Ptr("cherry"), nil},
+			expected:    []string{"apple", "cherry"},
+		},
+		{
+			description: "slice with all nil pointers",
+			input:       []*string{nil, nil, nil},
+			expected:    []string{},
+		},
+		{
+			description: "slice with a pointer to an empty string",
+			input:       []*string{utils.Ptr("apple"), utils.Ptr(""), utils.Ptr("cherry")},
+			expected:    []string{"apple", "", "cherry"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output := ConvertPointerSliceToStringSlice(tt.input)
 			diff := cmp.Diff(output, tt.expected)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
