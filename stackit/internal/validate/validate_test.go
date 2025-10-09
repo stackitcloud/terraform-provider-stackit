@@ -220,8 +220,14 @@ func TestRecordSet(t *testing.T) {
 			false,
 		},
 		{
-			"CNAME record",
-			"some-record",
+			"CNAME record Not a Fully Qualified Domain Name",
+			"stackit.de",
+			"CNAME",
+			false,
+		},
+		{
+			"CNAME record ok Fully Qualified Domain Name",
+			"stackit.de.",
 			"CNAME",
 			true,
 		},
