@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -184,5 +186,13 @@ func CheckListRemoval(ctx context.Context, configModelList, planModelList types.
 		} else {
 			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, destination, types.ListNull(listType))...)
 		}
+	}
+}
+
+// SetAndLogStateFields writes the given map of key-value pairs to the state
+func SetAndLogStateFields(ctx context.Context, diags *diag.Diagnostics, state *tfsdk.State, values map[string]any) {
+	for key, val := range values {
+		ctx = tflog.SetField(ctx, key, val)
+		diags.Append(state.SetAttribute(ctx, path.Root(key), val)...)
 	}
 }

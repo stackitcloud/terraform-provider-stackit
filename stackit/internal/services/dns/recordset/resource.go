@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -218,7 +217,16 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	ctx = tflog.SetField(ctx, "record_set_id", *recordSetResp.Rrset.Id)
+
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":    projectId,
+		"zone_id":       zoneId,
+		"record_set_id": *recordSetResp.Rrset.Id,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	waitResp, err := wait.CreateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, *recordSetResp.Rrset.Id).WaitWithContext(ctx)
 	if err != nil {
@@ -372,9 +380,11 @@ func (r *recordSetResource) ImportState(ctx context.Context, req resource.Import
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("zone_id"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("record_set_id"), idParts[2])...)
+	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+		"project_id":    idParts[0],
+		"zone_id":       idParts[1],
+		"record_set_id": idParts[2],
+	})
 	tflog.Info(ctx, "DNS record set state imported")
 }
 
