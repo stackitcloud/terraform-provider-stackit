@@ -290,6 +290,43 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 	}
 }
 
+func (r *distributionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var model Model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !utils.IsUndefined(model.Config) {
+		var config distributionConfig
+		if !model.Config.IsNull() {
+			diags := model.Config.As(ctx, &config, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return
+			}
+			if geofencing := config.Backend.Geofencing; geofencing != nil {
+				for url, region := range *geofencing {
+					if region == nil {
+						core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid geofencing config", fmt.Sprintf("The list of countries for URL %q must not be null.", url))
+						continue
+					}
+					if len(region) == 0 {
+						core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid geofencing config", fmt.Sprintf("The list of countries for URL %q must not be empty.", url))
+						continue
+					}
+
+					for i, countryPtr := range region {
+						if countryPtr == nil {
+							core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid geofencing config", fmt.Sprintf("Found a null value in the country list for URL %q at index %d.", url, i))
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 func (r *distributionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -532,43 +569,6 @@ func (r *distributionResource) ImportState(ctx context.Context, req resource.Imp
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("distribution_id"), idParts[1])...)
 	tflog.Info(ctx, "CDN distribution state imported")
-}
-
-func (r *distributionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var model Model
-	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if !utils.IsUndefined(model.Config) {
-		var config distributionConfig
-		if !model.Config.IsNull() {
-			diags := model.Config.As(ctx, &config, basetypes.ObjectAsOptions{})
-			if diags.HasError() {
-				return
-			}
-			if geofencing := config.Backend.Geofencing; geofencing != nil {
-				for url, region := range *geofencing {
-					if region == nil {
-						core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid geofencing config", fmt.Sprintf("The list of countries for URL %q must not be null.", url))
-						continue
-					}
-					if len(region) == 0 {
-						core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid geofencing config", fmt.Sprintf("The list of countries for URL %q must not be empty.", url))
-						continue
-					}
-
-					for i, countryPtr := range region {
-						if countryPtr == nil {
-							core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid geofencing config", fmt.Sprintf("Found a null value in the country list for URL %q at index %d.", url, i))
-							continue
-						}
-					}
-				}
-			}
-		}
-	}
 }
 
 func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model) error {
