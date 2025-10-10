@@ -95,6 +95,19 @@ func SimplifyBackupSchedule(schedule string) string {
 	return simplifiedSchedule
 }
 
+// ConvertPointerSliceToStringSlice safely converts a slice of string pointers to a slice of strings.
+func ConvertPointerSliceToStringSlice(pointerSlice []*string) []string {
+	if pointerSlice == nil {
+		return []string{}
+	}
+	stringSlice := make([]string, 0, len(pointerSlice))
+	for _, strPtr := range pointerSlice {
+		if strPtr != nil { // Safely skip any nil pointers in the list
+			stringSlice = append(stringSlice, *strPtr)
+		}
+	}
+	return stringSlice
+}
 func SupportedValuesDocumentation(values []string) string {
 	if len(values) == 0 {
 		return ""

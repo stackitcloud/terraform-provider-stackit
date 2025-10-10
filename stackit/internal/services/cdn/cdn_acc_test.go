@@ -35,7 +35,13 @@ var instanceResource = map[string]string{
 	"dns_name":                  fmt.Sprintf("tf-acc-%s.stackit.gg", strings.Split(uuid.NewString(), "-")[0]),
 }
 
-func configResources(regions string) string {
+func configResources(regions string, geofencingCountries []string) string {
+	var quotedCountries []string
+	for _, country := range geofencingCountries {
+		quotedCountries = append(quotedCountries, fmt.Sprintf(`%q`, country))
+	}
+
+	geofencingList := strings.Join(quotedCountries, ",")
 	return fmt.Sprintf(`
 				%s
 
@@ -45,6 +51,9 @@ func configResources(regions string) string {
 						backend = {
 							type = "http"
 							origin_url = "%s"
+							geofencing = {
+								"%s" = [%s]  
+							}
 						}
 						regions           = [%s]
 						blocked_countries = [%s]
@@ -70,12 +79,12 @@ func configResources(regions string) string {
 					type       = "CNAME"
 					records    = ["${stackit_cdn_distribution.distribution.domains[0].name}."]
 				}
-		`, testutil.CdnProviderConfig(), testutil.ProjectId, instanceResource["config_backend_origin_url"],
+		`, testutil.CdnProviderConfig(), testutil.ProjectId, instanceResource["config_backend_origin_url"], instanceResource["config_backend_origin_url"], geofencingList,
 		regions, instanceResource["blocked_countries"], testutil.ProjectId, instanceResource["dns_name"],
 		testutil.ProjectId, instanceResource["custom_domain_prefix"])
 }
 
-func configCustomDomainResources(regions, cert, key string) string {
+func configCustomDomainResources(regions, cert, key string, geofencingCountries []string) string {
 	return fmt.Sprintf(`
 				%s
 
@@ -88,10 +97,10 @@ func configCustomDomainResources(regions, cert, key string) string {
 						private_key = %q
 					}
 				}
-`, configResources(regions), cert, key)
+`, configResources(regions, geofencingCountries), cert, key)
 }
 
-func configDatasources(regions, cert, key string) string {
+func configDatasources(regions, cert, key string, geofencingCountries []string) string {
 	return fmt.Sprintf(`
         %s 
 
@@ -106,7 +115,7 @@ func configDatasources(regions, cert, key string) string {
 					name = stackit_cdn_custom_domain.custom_domain.name
 
         }
-		`, configCustomDomainResources(regions, cert, key))
+		`, configCustomDomainResources(regions, cert, key, geofencingCountries))
 }
 func makeCertAndKey(t *testing.T, organization string) (cert, key []byte) {
 	privateKey, err := rsa.GenerateKey(cryptoRand.Reader, 2048)
@@ -149,6 +158,7 @@ func TestAccCDNDistributionResource(t *testing.T) {
 	fullDomainName := fmt.Sprintf("%s.%s", instanceResource["custom_domain_prefix"], instanceResource["dns_name"])
 	organization := fmt.Sprintf("organization-%s", uuid.NewString())
 	cert, key := makeCertAndKey(t, organization)
+	geofencing := []string{"DE", "ES"}
 
 	organization_updated := fmt.Sprintf("organization-updated-%s", uuid.NewString())
 	cert_updated, key_updated := makeCertAndKey(t, organization_updated)
@@ -158,7 +168,7 @@ func TestAccCDNDistributionResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Distribution Create
 			{
-				Config: configResources(instanceResource["config_regions"]),
+				Config: configResources(instanceResource["config_regions"], geofencing),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "created_at"),
@@ -173,6 +183,16 @@ func TestAccCDNDistributionResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "2"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.0", "CU"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.1", "AQ"),
+					resource.TestCheckResourceAttr(
+						"stackit_cdn_distribution.distribution",
+						fmt.Sprintf("config.backend.geofencing.%s.0", instanceResource["config_backend_origin_url"]),
+						"DE",
+					),
+					resource.TestCheckResourceAttr(
+						"stackit_cdn_distribution.distribution",
+						fmt.Sprintf("config.backend.geofencing.%s.1", instanceResource["config_backend_origin_url"]),
+						"ES",
+					),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", "true"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
@@ -180,7 +200,7 @@ func TestAccCDNDistributionResource(t *testing.T) {
 			},
 			// Wait step, that confirms the CNAME record has "propagated"
 			{
-				Config: configResources(instanceResource["config_regions"]),
+				Config: configResources(instanceResource["config_regions"], geofencing),
 				Check: func(_ *terraform.State) error {
 					_, err := blockUntilDomainResolves(fullDomainName)
 					return err
@@ -188,7 +208,7 @@ func TestAccCDNDistributionResource(t *testing.T) {
 			},
 			// Custom Domain Create
 			{
-				Config: configCustomDomainResources(instanceResource["config_regions"], string(cert), string(key)),
+				Config: configCustomDomainResources(instanceResource["config_regions"], string(cert), string(key), geofencing),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "name", fullDomainName),
@@ -242,7 +262,7 @@ func TestAccCDNDistributionResource(t *testing.T) {
 			},
 			// Data Source
 			{
-				Config: configDatasources(instanceResource["config_regions"], string(cert), string(key)),
+				Config: configDatasources(instanceResource["config_regions"], string(cert), string(key), geofencing),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.distribution", "distribution_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.distribution", "created_at"),
@@ -255,6 +275,16 @@ func TestAccCDNDistributionResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.0.type", "managed"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.1.type", "custom"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.regions.#", "2"),
+					resource.TestCheckResourceAttr(
+						"data.stackit_cdn_distribution.distribution",
+						fmt.Sprintf("config.backend.geofencing.%s.0", instanceResource["config_backend_origin_url"]),
+						"DE",
+					),
+					resource.TestCheckResourceAttr(
+						"data.stackit_cdn_distribution.distribution",
+						fmt.Sprintf("config.backend.geofencing.%s.1", instanceResource["config_backend_origin_url"]),
+						"ES",
+					),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.regions.0", "EU"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.regions.1", "US"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "2"),
@@ -271,7 +301,7 @@ func TestAccCDNDistributionResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: configCustomDomainResources(instanceResource["config_regions_updated"], string(cert_updated), string(key_updated)),
+				Config: configCustomDomainResources(instanceResource["config_regions_updated"], string(cert_updated), string(key_updated), geofencing),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "created_at"),

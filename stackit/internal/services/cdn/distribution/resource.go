@@ -8,10 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
-
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -28,8 +26,10 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -88,9 +88,10 @@ type optimizerConfig struct {
 }
 
 type backend struct {
-	Type                 string             `tfsdk:"type"`                   // The type of the backend. Currently, only "http" backend is supported
-	OriginURL            string             `tfsdk:"origin_url"`             // The origin URL of the backend
-	OriginRequestHeaders *map[string]string `tfsdk:"origin_request_headers"` // Request headers that should be added by the CDN distribution to incoming requests
+	Type                 string                `tfsdk:"type"`                   // The type of the backend. Currently, only "http" backend is supported
+	OriginURL            string                `tfsdk:"origin_url"`             // The origin URL of the backend
+	OriginRequestHeaders *map[string]string    `tfsdk:"origin_request_headers"` // Request headers that should be added by the CDN distribution to incoming requests
+	Geofencing           *map[string][]*string `tfsdk:"geofencing"`             // The geofencing is an object mapping multiple alternative origins to country codes.
 }
 
 var configTypes = map[string]attr.Type{
@@ -106,10 +107,15 @@ var optimizerTypes = map[string]attr.Type{
 	"enabled": types.BoolType,
 }
 
+var geofencingTypes = types.MapType{ElemType: types.ListType{
+	ElemType: types.StringType,
+}}
+
 var backendTypes = map[string]attr.Type{
 	"type":                   types.StringType,
 	"origin_url":             types.StringType,
 	"origin_request_headers": types.MapType{ElemType: types.StringType},
+	"geofencing":             geofencingTypes,
 }
 
 var domainTypes = map[string]attr.Type{
@@ -256,6 +262,16 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Description: schemaDescriptions["config_backend_origin_request_headers"],
 								ElementType: types.StringType,
 							},
+							"geofencing": schema.MapAttribute{
+								Description: "A map of URLs to a list of countries where content is allowed.",
+								Optional:    true,
+								ElementType: types.ListType{
+									ElemType: types.StringType,
+								},
+								Validators: []validator.Map{
+									mapvalidator.SizeAtLeast(1),
+								},
+							},
 						},
 					},
 					"regions": schema.ListAttribute{
@@ -271,6 +287,43 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 		},
+	}
+}
+
+func (r *distributionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var model Model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !utils.IsUndefined(model.Config) {
+		var config distributionConfig
+		if !model.Config.IsNull() {
+			diags := model.Config.As(ctx, &config, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return
+			}
+			if geofencing := config.Backend.Geofencing; geofencing != nil {
+				for url, region := range *geofencing {
+					if region == nil {
+						core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid geofencing config", fmt.Sprintf("The list of countries for URL %q must not be null.", url))
+						continue
+					}
+					if len(region) == 0 {
+						core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid geofencing config", fmt.Sprintf("The list of countries for URL %q must not be empty.", url))
+						continue
+					}
+
+					for i, countryPtr := range region {
+						if countryPtr == nil {
+							core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid geofencing config", fmt.Sprintf("Found a null value in the country list for URL %q at index %d.", url, i))
+							break
+						}
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -301,7 +354,7 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	err = mapFields(waitResp.Distribution, &model)
+	err = mapFields(ctx, waitResp.Distribution, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -341,7 +394,7 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN distribution", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	err = mapFields(cdnResp.Distribution, &model)
+	err = mapFields(ctx, cdnResp.Distribution, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN ditribution", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -408,12 +461,30 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		blockedCountries = &tempBlockedCountries
 	}
 
+	geofencingPatch := map[string][]string{}
+	if configModel.Backend.Geofencing != nil {
+		gf := make(map[string][]string)
+		for url, countries := range *configModel.Backend.Geofencing {
+			countryStrings := make([]string, len(countries))
+			for i, countryPtr := range countries {
+				if countryPtr == nil {
+					core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Geofencing url %q has a null value", url))
+					return
+				}
+				countryStrings[i] = *countryPtr
+			}
+			gf[url] = countryStrings
+		}
+		geofencingPatch = gf
+	}
+
 	configPatch := &cdn.ConfigPatch{
 		Backend: &cdn.ConfigPatchBackend{
 			HttpBackendPatch: &cdn.HttpBackendPatch{
 				OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
 				OriginUrl:            &configModel.Backend.OriginURL,
 				Type:                 &configModel.Backend.Type,
+				Geofencing:           &geofencingPatch, // Use the converted variable
 			},
 		},
 		Regions:          &regions,
@@ -451,7 +522,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	err = mapFields(waitResp.Distribution, &model)
+	err = mapFields(ctx, waitResp.Distribution, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -500,7 +571,7 @@ func (r *distributionResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, "CDN distribution state imported")
 }
 
-func mapFields(distribution *cdn.Distribution, model *Model) error {
+func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model) error {
 	if distribution == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -584,11 +655,58 @@ func mapFields(distribution *cdn.Distribution, model *Model) error {
 			return core.DiagsToError(diags)
 		}
 	}
+
+	// geofencing
+	var oldConfig distributionConfig
+	oldGeofencingMap := make(map[string][]*string)
+	if !model.Config.IsNull() {
+		diags = model.Config.As(ctx, &oldConfig, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+		if oldConfig.Backend.Geofencing != nil {
+			oldGeofencingMap = *oldConfig.Backend.Geofencing
+		}
+	}
+
+	reconciledGeofencingData := make(map[string][]string)
+	if geofencingAPI := distribution.Config.Backend.HttpBackend.Geofencing; geofencingAPI != nil && len(*geofencingAPI) > 0 {
+		newGeofencingMap := *geofencingAPI
+		for url, newCountries := range newGeofencingMap {
+			oldCountriesPtrs := oldGeofencingMap[url]
+
+			oldCountries := utils.ConvertPointerSliceToStringSlice(oldCountriesPtrs)
+
+			reconciledCountries := utils.ReconcileStringSlices(oldCountries, newCountries)
+			reconciledGeofencingData[url] = reconciledCountries
+		}
+	}
+
+	geofencingVal := types.MapNull(geofencingTypes.ElemType)
+	if len(reconciledGeofencingData) > 0 {
+		geofencingMapElems := make(map[string]attr.Value)
+		for url, countries := range reconciledGeofencingData {
+			listVal, diags := types.ListValueFrom(ctx, types.StringType, countries)
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
+			geofencingMapElems[url] = listVal
+		}
+
+		var mappedGeofencing basetypes.MapValue
+		mappedGeofencing, diags = types.MapValue(geofencingTypes.ElemType, geofencingMapElems)
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+		geofencingVal = mappedGeofencing
+	}
+
 	// note that httpbackend is hardcoded here as long as it is the only available backend
 	backend, diags := types.ObjectValue(backendTypes, map[string]attr.Value{
 		"type":                   types.StringValue(*distribution.Config.Backend.HttpBackend.Type),
 		"origin_url":             types.StringValue(*distribution.Config.Backend.HttpBackend.OriginUrl),
 		"origin_request_headers": originRequestHeaders,
+		"geofencing":             geofencingVal,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -678,6 +796,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 		Regions:              cfg.Regions,
 		BlockedCountries:     cfg.BlockedCountries,
 		OriginRequestHeaders: cfg.Backend.HttpBackend.OriginRequestHeaders,
+		Geofencing:           cfg.Backend.HttpBackend.Geofencing,
 		Optimizer:            optimizer,
 	}
 
@@ -722,6 +841,25 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 		}
 	}
 
+	// geofencing
+	geofencing := map[string][]string{}
+	if configModel.Backend.Geofencing != nil {
+		for endpoint, countryCodes := range *configModel.Backend.Geofencing {
+			geofencingCountry := make([]string, len(countryCodes))
+			for i, countryCodePtr := range countryCodes {
+				if countryCodePtr == nil {
+					return nil, fmt.Errorf("geofencing url %q has a null value", endpoint)
+				}
+				validatedCountry, err := validateCountryCode(*countryCodePtr)
+				if err != nil {
+					return nil, err
+				}
+				geofencingCountry[i] = validatedCountry
+			}
+			geofencing[endpoint] = geofencingCountry
+		}
+	}
+
 	// originRequestHeaders
 	originRequestHeaders := map[string]string{}
 	if configModel.Backend.OriginRequestHeaders != nil {
@@ -736,6 +874,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 				OriginRequestHeaders: &originRequestHeaders,
 				OriginUrl:            &configModel.Backend.OriginURL,
 				Type:                 &configModel.Backend.Type,
+				Geofencing:           &geofencing,
 			},
 		},
 		Regions:          &regions,
