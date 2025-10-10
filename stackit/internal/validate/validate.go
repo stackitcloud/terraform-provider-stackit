@@ -132,6 +132,14 @@ func RecordSet() *Validator {
 					))
 				}
 			case "CNAME":
+				name := req.ConfigValue.ValueString()
+				if name == "" || name[len(name)-1] != '.' {
+					resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+						req.Path,
+						"value must be a Fully Qualified Domain Name (FQDN) and end with dot '.'",
+						req.ConfigValue.ValueString(),
+					))
+				}
 			case "NS":
 			case "MX":
 			case "TXT":
