@@ -126,6 +126,7 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.metrics.credentials_ref"),
 					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "options.observability.metrics.push_url"),
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "security_group_id"),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "load_balancer_security_group_id"),
 
 					// Loadbalancer observability credentials resource
 					resource.TestCheckResourceAttr("stackit_loadbalancer_observability_credential.obs_credential", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -181,6 +182,11 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrPair(
 						"stackit_loadbalancer.loadbalancer", "security_group_id",
 						"data.stackit_loadbalancer.loadbalancer", "security_group_id",
+					),
+					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "load_balancer_security_group_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_loadbalancer.loadbalancer", "load_balancer_security_group_id",
+						"data.stackit_loadbalancer.loadbalancer", "load_balancer_security_group_id",
 					),
 				)},
 			// Import
@@ -249,6 +255,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "external_address"),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "disable_security_group_assignment", testutil.ConvertConfigVariable(testConfigVarsMax["disable_security_group_assignment"])),
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "security_group_id"),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "load_balancer_security_group_id"),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.healthy_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["healthy_threshold"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval", testutil.ConvertConfigVariable(testConfigVarsMax["health_interval"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval_jitter", testutil.ConvertConfigVariable(testConfigVarsMax["health_interval_jitter"])),
@@ -320,6 +327,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer.loadbalancer", "external_address"),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "disable_security_group_assignment", testutil.ConvertConfigVariable(testConfigVarsMax["disable_security_group_assignment"])),
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "security_group_id"),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "load_balancer_security_group_id"),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.healthy_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["healthy_threshold"])),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval", testutil.ConvertConfigVariable(testConfigVarsMax["health_interval"])),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval_jitter", testutil.ConvertConfigVariable(testConfigVarsMax["health_interval_jitter"])),
@@ -336,6 +344,10 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrPair(
 						"stackit_loadbalancer.loadbalancer", "security_group_id",
 						"data.stackit_loadbalancer.loadbalancer", "security_group_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_loadbalancer.loadbalancer", "load_balancer_security_group_id",
+						"data.stackit_loadbalancer.loadbalancer", "load_balancer_security_group_id",
 					),
 				)},
 			// Import
