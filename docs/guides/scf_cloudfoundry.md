@@ -1,7 +1,7 @@
 ---
-page_title: "How to Provisioning Cloud Foundry using Terraform"
+page_title: "How to provision Cloud Foundry using Terraform"
 ---
-# How to Provisioning Cloud Foundry using Terraform
+# How to provision Cloud Foundry using Terraform
 
 ## Objective
 
