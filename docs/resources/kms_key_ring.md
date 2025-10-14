@@ -36,5 +36,5 @@ resource "stackit_kms_key_ring" "example" {
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`key_ring_id`".
 - `key_ring_id` (String) An auto generated unique id which identifies the key ring.

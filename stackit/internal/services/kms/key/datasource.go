@@ -54,13 +54,14 @@ func (k *keyDataSource) Configure(ctx context.Context, request datasource.Config
 func (k *keyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":         "KMS Key resource schema. Must have a `region` specified in the provider configuration.",
-		"backend":      "The backend that is used for KMS. Right now, only software is accepted.",
+		"access_scope": "The access scope of the key. Default is PUBLIC.",
 		"algorithm":    "The encryption algorithm that the key will use to encrypt data",
 		"description":  "A user chosen description to distinguish multiple keys",
 		"display_name": "The display name to distinguish multiple keys",
 		"id":           "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
 		"import_only":  "Specifies if the the key should be import_only",
 		"key_ring_id":  "The ID of the associated key ring",
+		"protection":   "The underlying system that is responsible for protecting the key material. Currently only software is accepted.",
 		"purpose":      "The purpose for which the key will be used",
 		"project_id":   "STACKIT project ID to which the key ring is associated.",
 		"region":       "The STACKIT region name the key ring is located in.",
@@ -69,15 +70,16 @@ func (k *keyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 	response.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
-			"algorithm": schema.StringAttribute{
-				Description: descriptions["algorithm"],
-				Required:    true,
+			"access_scope": schema.StringAttribute{
+				Description: descriptions["access_scope"],
+				Optional:    true,
+				Required:    false,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
-			"backend": schema.StringAttribute{
-				Description: descriptions["backend"],
+			"algorithm": schema.StringAttribute{
+				Description: descriptions["algorithm"],
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -121,6 +123,13 @@ func (k *keyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"protection": schema.StringAttribute{
+				Description: descriptions["protection"],
+				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
 				},
 			},
 			"purpose": schema.StringAttribute{

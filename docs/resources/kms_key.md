@@ -31,19 +31,20 @@ resource "stackit_kms_key" "name" {
 ### Required
 
 - `algorithm` (String) The encryption algorithm that the key will use to encrypt data
-- `backend` (String) The backend that is used for KMS. Right now, only software is accepted.
 - `display_name` (String) The display name to distinguish multiple keys
-- `import_only` (Boolean) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
 - `key_ring_id` (String) The ID of the associated key ring
 - `project_id` (String) STACKIT project ID to which the key ring is associated.
+- `protection` (String) The underlying system that is responsible for protecting the key material. Currently only software is accepted.
 - `purpose` (String) The purpose for which the key will be used
 
 ### Optional
 
+- `access_scope` (String) The access scope of the key. Default is PUBLIC.
 - `description` (String) A user chosen description to distinguish multiple keys
 - `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
+- `import_only` (Boolean) Specifies if the the key should be import_only
 - `key_id` (String) The ID of the key

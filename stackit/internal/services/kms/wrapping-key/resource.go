@@ -31,12 +31,14 @@ var (
 )
 
 type Model struct {
+	AccessScope   types.String `tfsdk:"access_scope"`
 	Algorithm     types.String `tfsdk:"algorithm"`
-	Backend       types.String `tfsdk:"backend"`
 	Description   types.String `tfsdk:"description"`
 	DisplayName   types.String `tfsdk:"display_name"`
 	Id            types.String `tfsdk:"id"` // needed by TF
+	ImportOnly    types.Bool   `tfsdk:"import_only"`
 	KeyRingId     types.String `tfsdk:"key_ring_id"`
+	Protection    types.String `tfsdk:"protection"`
 	Purpose       types.String `tfsdk:"purpose"`
 	ProjectId     types.String `tfsdk:"project_id"`
 	Region        types.String `tfsdk:"region"`
@@ -72,14 +74,15 @@ func (w *wrappingKeyResource) Configure(ctx context.Context, request resource.Co
 func (w *wrappingKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":            "KMS Key resource schema. Must have a `region` specified in the provider configuration.",
+		"access_scope":    "The access scope of the key. Default is PUBLIC.",
 		"algorithm":       "The encryption algorithm that the key will use to encrypt data",
-		"backend":         "The backend that is used for KMS. Right now, only software is accepted.",
 		"description":     "A user chosen description to distinguish multiple keys",
 		"display_name":    "The display name to distinguish multiple keys",
 		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
 		"key_ring_id":     "The ID of the associated key ring",
 		"purpose":         "The purpose for which the key will be used",
 		"project_id":      "STACKIT project ID to which the key ring is associated.",
+		"protection":      "The underlying system that is responsible for protecting the key material. Currently only software is accepted.",
 		"region":          "The STACKIT region name the key ring is located in.",
 		"wrapping_key_id": "The ID of the wrapping key",
 	}
@@ -87,18 +90,16 @@ func (w *wrappingKeyResource) Schema(_ context.Context, _ resource.SchemaRequest
 	response.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
-			"algorithm": schema.StringAttribute{
-				Description: descriptions["algorithm"],
-				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
+			"access_scope": schema.StringAttribute{
+				Description: descriptions["access_scope"],
+				Optional:    true,
+				Required:    false,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
-			"backend": schema.StringAttribute{
-				Description: descriptions["backend"],
+			"algorithm": schema.StringAttribute{
+				Description: descriptions["algorithm"],
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -134,6 +135,11 @@ func (w *wrappingKeyResource) Schema(_ context.Context, _ resource.SchemaRequest
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"import_only": schema.BoolAttribute{
+				Description: descriptions["import_only"],
+				Computed:    true,
+				Required:    false,
+			},
 			"key_ring_id": schema.StringAttribute{
 				Description: descriptions["key_ring_id"],
 				Required:    true,
@@ -143,6 +149,16 @@ func (w *wrappingKeyResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"protection": schema.StringAttribute{
+				Description: descriptions["protection"],
+				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
 				},
 			},
 			"purpose": schema.StringAttribute{
@@ -351,10 +367,11 @@ func toCreatePayload(model *Model) (*kms.CreateWrappingKeyPayload, error) {
 		return nil, fmt.Errorf("nil model")
 	}
 	return &kms.CreateWrappingKeyPayload{
+		AccessScope: kms.CreateKeyPayloadGetAccessScopeAttributeType(conversion.StringValueToPointer(model.AccessScope)),
 		Algorithm:   kms.CreateWrappingKeyPayloadGetAlgorithmAttributeType(conversion.StringValueToPointer(model.Algorithm)),
-		Backend:     kms.CreateKeyPayloadGetBackendAttributeType(conversion.StringValueToPointer(model.Backend)),
 		Description: conversion.StringValueToPointer(model.Description),
 		DisplayName: conversion.StringValueToPointer(model.DisplayName),
+		Protection:  kms.CreateKeyPayloadGetProtectionAttributeType(conversion.StringValueToPointer(model.Protection)),
 		Purpose:     kms.CreateWrappingKeyPayloadGetPurposeAttributeType(conversion.StringValueToPointer(model.Purpose)),
 	}, nil
 }

@@ -25,6 +25,15 @@ import (
 var (
 	//go:embed testdata/resource-key-ring-min.tf
 	resourceKeyRingMinConfig string
+
+	//go:embed testdata/resource-key-ring-max.tf
+	resourceKeyRingMaxConfig string
+
+	//go:embed testdata/resource-key-min.tf
+	resourceKeyMinConfig string
+
+	//go:embed testdata/resource-wrapping-key-min.tf
+	resourceWrappingKeyMinConfig string
 )
 
 var testConfigKeyRingVarsMin = config.Variables{
@@ -56,6 +65,22 @@ var testConfigKeyRingVarsMaxUpdated = func() config.Variables {
 	return updatedConfig
 }
 
+var testConfigKeyVarsMin = config.Variables{
+	"project_id":   config.StringVariable(testutil.ProjectId),
+	"algorithm":    config.StringVariable("aes_256_gcm"),
+	"display_name": config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"protection":   config.StringVariable("software"),
+	"purpose":      config.StringVariable("symmetric_encrypt_decrypt"),
+}
+
+var testConfigWrappingKeyVarsMin = config.Variables{
+	"project_id":   config.StringVariable(testutil.ProjectId),
+	"algorithm":    config.StringVariable("rsa_2048_oaep_sha256"),
+	"display_name": config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"protection":   config.StringVariable("software"),
+	"purpose":      config.StringVariable("wrap_symmetric_key"),
+}
+
 func TestAccKeyRingMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -68,11 +93,12 @@ func TestAccKeyRingMin(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_kms_key_ring.key_ring", "project_id", testutil.ConvertConfigVariable(testConfigKeyRingVarsMin["project_id"])),
 					resource.TestCheckResourceAttr("stackit_kms_key_ring.key_ring", "display_name", testutil.ConvertConfigVariable(testConfigKeyRingVarsMin["display_name"])),
-					resource.TestCheckResourceAttrSet("stackit_kms_key_ring", "key_ring_id"),
+					resource.TestCheckResourceAttrSet("stackit_kms_key_ring.key_ring", "key_ring_id"),
+					resource.TestCheckResourceAttrSet("stackit_kms_key_ring.key_ring", "region"),
 				),
 			},
 			// Data source
-			/*{
+			{
 				ConfigVariables: testConfigKeyRingVarsMin,
 				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyRingMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -81,9 +107,101 @@ func TestAccKeyRingMin(t *testing.T) {
 						"stackit_kms_key_ring.key_ring", "key_ring_id",
 						"data.stackit_kms_key_ring.key_ring", "key_ring_id",
 					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_kms_key_ring.key_ring", "region",
+						"data.stackit_kms_key_ring.key_ring", "region",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_kms_key_ring.key_ring", "project_id",
+						"data.stackit_kms_key_ring.key_ring", "project_id",
+					),
 					resource.TestCheckResourceAttr("data.stackit_kms_key_ring.key_ring", "display_name", testutil.ConvertConfigVariable(testConfigKeyRingVarsMin["display_name"])),
 				),
-			},*/
+			},
+		},
+	})
+}
+
+func TestAccKeyRingMax(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		//CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			//Creation
+			{
+				ConfigVariables: testConfigKeyRingVarsMax,
+				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyRingMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_kms_key_ring.key_ring", "project_id", testutil.ConvertConfigVariable(testConfigKeyRingVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("stackit_kms_key_ring.key_ring", "description", testutil.ConvertConfigVariable(testConfigKeyRingVarsMax["description"])),
+					resource.TestCheckResourceAttrSet("stackit_kms_key_ring.key_ring", "key_ring_id"),
+					resource.TestCheckResourceAttr("stackit_kms_key_ring.key_ring", "display_name", testutil.ConvertConfigVariable(testConfigKeyRingVarsMax["display_name"])),
+					resource.TestCheckResourceAttrSet("stackit_kms_key_ring.key_ring", "region"),
+				),
+			},
+			// Data Source
+			{
+				ConfigVariables: testConfigKeyRingVarsMax,
+				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyRingMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.ComposeAggregateTestCheckFunc(
+						resource.TestCheckResourceAttr("data.stackit_kms_key_ring.key_ring", "project_id", testutil.ConvertConfigVariable(testConfigKeyRingVarsMax["project_id"])),
+						resource.TestCheckResourceAttrPair(
+							"stackit_kms_key_ring.key_ring", "key_ring_id",
+							"data.stackit_kms_key_ring.key_ring", "key_ring_id",
+						),
+						resource.TestCheckResourceAttrPair(
+							"stackit_kms_key_ring.key_ring", "region",
+							"data.stackit_kms_key_ring.key_ring", "region",
+						),
+						resource.TestCheckResourceAttrPair(
+							"stackit_kms_key_ring.key_ring", "project_id",
+							"data.stackit_kms_key_ring.key_ring", "project_id",
+						),
+						resource.TestCheckResourceAttr("data.stackit_kms_key_ring.key_ring", "description", testutil.ConvertConfigVariable(testConfigKeyRingVarsMax["description"])),
+						resource.TestCheckResourceAttr("data.stackit_kms_key_ring.key_ring", "display_name", testutil.ConvertConfigVariable(testConfigKeyRingVarsMax["display_name"])),
+					),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeyMin(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		//CheckDestroy: testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigKeyVarsMin,
+				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyMinConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_kms_key.key", "algorithm", testutil.ConvertConfigVariable(testConfigKeyVarsMin["algorithm"])),
+					resource.TestCheckResourceAttr("stackit_kms_key.key", "display_name", testutil.ConvertConfigVariable(testConfigKeyVarsMin["display_name"])),
+					resource.TestCheckResourceAttr("stackit_kms_key.key", "purpose", testutil.ConvertConfigVariable(testConfigKeyVarsMin["purpose"])),
+					resource.TestCheckResourceAttr("stackit_kms_key.key", "protection", testutil.ConvertConfigVariable(testConfigKeyVarsMin["protection"])),
+				),
+			},
+		},
+	})
+}
+
+func TestAccWrappingKeyMin(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		//CheckDestroy: testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				ConfigVariables: testConfigWrappingKeyVarsMin,
+				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceWrappingKeyMinConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_kms_wrapping_key.wrapping_key", "algorithm", testutil.ConvertConfigVariable(testConfigWrappingKeyVarsMin["algorithm"])),
+					resource.TestCheckResourceAttr("stackit_kms_wrapping_key.wrapping_key", "display_name", testutil.ConvertConfigVariable(testConfigWrappingKeyVarsMin["display_name"])),
+					resource.TestCheckResourceAttr("stackit_kms_wrapping_key.wrapping_key", "purpose", testutil.ConvertConfigVariable(testConfigWrappingKeyVarsMin["purpose"])),
+					resource.TestCheckResourceAttr("stackit_kms_wrapping_key.wrapping_key", "protection", testutil.ConvertConfigVariable(testConfigWrappingKeyVarsMin["protection"])),
+				),
+			},
 		},
 	})
 }

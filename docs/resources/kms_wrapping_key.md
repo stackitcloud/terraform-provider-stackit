@@ -30,7 +30,7 @@ resource "stackit_kms_wrapping_key" "name" {
 ### Required
 
 - `algorithm` (String) The encryption algorithm that the key will use to encrypt data
-- `backend` (String) The backend that is used for KMS. Right now, only software is accepted.
+- `backend` (String)
 - `display_name` (String) The display name to distinguish multiple keys
 - `key_ring_id` (String) The ID of the associated key ring
 - `project_id` (String) STACKIT project ID to which the key ring is associated.
@@ -38,6 +38,7 @@ resource "stackit_kms_wrapping_key" "name" {
 
 ### Optional
 
+- `access_scope` (String) The access scope of the key. Default is PUBLIC.
 - `description` (String) A user chosen description to distinguish multiple keys
 - `region` (String) The resource region. If not defined, the provider region is used.
 
