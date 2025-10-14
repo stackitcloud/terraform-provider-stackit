@@ -33,7 +33,4 @@ func AdaptRegion(ctx context.Context, configRegion types.String, planRegion *typ
 		*planRegion = intendedRegion
 	}
 	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p, *planRegion)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }
