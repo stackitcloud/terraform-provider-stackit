@@ -30,10 +30,10 @@ resource "stackit_kms_wrapping_key" "name" {
 ### Required
 
 - `algorithm` (String) The encryption algorithm that the key will use to encrypt data
-- `backend` (String)
 - `display_name` (String) The display name to distinguish multiple keys
 - `key_ring_id` (String) The ID of the associated key ring
 - `project_id` (String) STACKIT project ID to which the key ring is associated.
+- `protection` (String) The underlying system that is responsible for protecting the key material. Currently only software is accepted.
 - `purpose` (String) The purpose for which the key will be used
 
 ### Optional
@@ -45,4 +45,5 @@ resource "stackit_kms_wrapping_key" "name" {
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
+- `import_only` (Boolean)
 - `wrapping_key_id` (String) The ID of the wrapping key
