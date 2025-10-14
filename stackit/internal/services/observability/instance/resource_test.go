@@ -24,6 +24,7 @@ func fixtureEmailConfigsModel() basetypes.ListValue {
 			"auth_password": types.StringValue("password"),
 			"auth_username": types.StringValue("username"),
 			"from":          types.StringValue("notification@example.com"),
+			"send_resolved": types.BoolValue(true),
 			"smart_host":    types.StringValue("smtp.example.com"),
 			"to":            types.StringValue("me@example.com"),
 		}),
@@ -33,9 +34,11 @@ func fixtureEmailConfigsModel() basetypes.ListValue {
 func fixtureOpsGenieConfigsModel() basetypes.ListValue {
 	return types.ListValueMust(types.ObjectType{AttrTypes: opsgenieConfigsTypes}, []attr.Value{
 		types.ObjectValueMust(opsgenieConfigsTypes, map[string]attr.Value{
-			"api_key": types.StringValue("key"),
-			"tags":    types.StringValue("tag"),
-			"api_url": types.StringValue("ops.example.com"),
+			"api_key":       types.StringValue("key"),
+			"tags":          types.StringValue("tag"),
+			"api_url":       types.StringValue("ops.example.com"),
+			"priority":      types.StringValue("P3"),
+			"send_resolved": types.BoolValue(true),
 		}),
 	})
 }
@@ -43,8 +46,10 @@ func fixtureOpsGenieConfigsModel() basetypes.ListValue {
 func fixtureWebHooksConfigsModel() basetypes.ListValue {
 	return types.ListValueMust(types.ObjectType{AttrTypes: webHooksConfigsTypes}, []attr.Value{
 		types.ObjectValueMust(webHooksConfigsTypes, map[string]attr.Value{
-			"url":      types.StringValue("http://example.com"),
-			"ms_teams": types.BoolValue(true),
+			"url":           types.StringValue("http://example.com"),
+			"ms_teams":      types.BoolValue(true),
+			"google_chat":   types.BoolValue(true),
+			"send_resolved": types.BoolValue(true),
 		}),
 	})
 }
@@ -59,28 +64,31 @@ func fixtureReceiverModel(emailConfigs, opsGenieConfigs, webHooksConfigs basetyp
 }
 
 func fixtureRouteModel() basetypes.ObjectValue {
-	return types.ObjectValueMust(routeTypes, map[string]attr.Value{
+	return types.ObjectValueMust(mainRouteTypes, map[string]attr.Value{
 		"group_by": types.ListValueMust(types.StringType, []attr.Value{
 			types.StringValue("label1"),
 			types.StringValue("label2"),
 		}),
 		"group_interval":  types.StringValue("1m"),
 		"group_wait":      types.StringValue("1m"),
-		"match":           types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
-		"match_regex":     types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
 		"receiver":        types.StringValue("name"),
 		"repeat_interval": types.StringValue("1m"),
 		// "routes":          types.ListNull(getRouteListType()),
 		"routes": types.ListValueMust(getRouteListType(), []attr.Value{
 			types.ObjectValueMust(getRouteListType().AttrTypes, map[string]attr.Value{
+				"continue": types.BoolValue(false),
 				"group_by": types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("label1"),
 					types.StringValue("label2"),
 				}),
-				"group_interval":  types.StringValue("1m"),
-				"group_wait":      types.StringValue("1m"),
-				"match":           types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
-				"match_regex":     types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+				"group_interval": types.StringValue("1m"),
+				"group_wait":     types.StringValue("1m"),
+				"match":          types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+				"match_regex":    types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+				"matchers": types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("matcher1"),
+					types.StringValue("matcher2"),
+				}),
 				"receiver":        types.StringValue("name"),
 				"repeat_interval": types.StringValue("1m"),
 			}),
@@ -89,12 +97,10 @@ func fixtureRouteModel() basetypes.ObjectValue {
 }
 
 func fixtureNullRouteModel() basetypes.ObjectValue {
-	return types.ObjectValueMust(routeTypes, map[string]attr.Value{
+	return types.ObjectValueMust(mainRouteTypes, map[string]attr.Value{
 		"group_by":        types.ListNull(types.StringType),
 		"group_interval":  types.StringNull(),
 		"group_wait":      types.StringNull(),
-		"match":           types.MapNull(types.StringType),
-		"match_regex":     types.MapNull(types.StringType),
 		"receiver":        types.StringNull(),
 		"repeat_interval": types.StringNull(),
 		"routes":          types.ListNull(getRouteListType()),
@@ -133,6 +139,7 @@ func fixtureEmailConfigsPayload() observability.CreateAlertConfigReceiverPayload
 		AuthPassword: utils.Ptr("password"),
 		AuthUsername: utils.Ptr("username"),
 		From:         utils.Ptr("notification@example.com"),
+		SendResolved: utils.Ptr(true),
 		Smarthost:    utils.Ptr("smtp.example.com"),
 		To:           utils.Ptr("me@example.com"),
 	}
@@ -140,16 +147,20 @@ func fixtureEmailConfigsPayload() observability.CreateAlertConfigReceiverPayload
 
 func fixtureOpsGenieConfigsPayload() observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner {
 	return observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{
-		ApiKey: utils.Ptr("key"),
-		Tags:   utils.Ptr("tag"),
-		ApiUrl: utils.Ptr("ops.example.com"),
+		ApiKey:       utils.Ptr("key"),
+		Tags:         utils.Ptr("tag"),
+		ApiUrl:       utils.Ptr("ops.example.com"),
+		Priority:     utils.Ptr("P3"),
+		SendResolved: utils.Ptr(true),
 	}
 }
 
 func fixtureWebHooksConfigsPayload() observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner {
 	return observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
-		Url:     utils.Ptr("http://example.com"),
-		MsTeams: utils.Ptr(true),
+		Url:          utils.Ptr("http://example.com"),
+		MsTeams:      utils.Ptr(true),
+		GoogleChat:   utils.Ptr(true),
+		SendResolved: utils.Ptr(true),
 	}
 }
 
@@ -164,20 +175,21 @@ func fixtureReceiverPayload(emailConfigs *[]observability.CreateAlertConfigRecei
 
 func fixtureRoutePayload() *observability.UpdateAlertConfigsPayloadRoute {
 	return &observability.UpdateAlertConfigsPayloadRoute{
+		Continue:       nil,
 		GroupBy:        utils.Ptr([]string{"label1", "label2"}),
 		GroupInterval:  utils.Ptr("1m"),
 		GroupWait:      utils.Ptr("1m"),
-		Match:          &map[string]interface{}{"key": "value"},
-		MatchRe:        &map[string]interface{}{"key": "value"},
 		Receiver:       utils.Ptr("name"),
 		RepeatInterval: utils.Ptr("1m"),
-		Routes: &[]observability.CreateAlertConfigRoutePayloadRoutesInner{
+		Routes: &[]observability.UpdateAlertConfigsPayloadRouteRoutesInner{
 			{
+				Continue:       utils.Ptr(false),
 				GroupBy:        utils.Ptr([]string{"label1", "label2"}),
 				GroupInterval:  utils.Ptr("1m"),
 				GroupWait:      utils.Ptr("1m"),
 				Match:          &map[string]interface{}{"key": "value"},
 				MatchRe:        &map[string]interface{}{"key": "value"},
+				Matchers:       &[]string{"matcher1", "matcher2"},
 				Receiver:       utils.Ptr("name"),
 				RepeatInterval: utils.Ptr("1m"),
 			},
@@ -213,6 +225,7 @@ func fixtureEmailConfigsResponse() observability.EmailConfig {
 		AuthPassword: utils.Ptr("password"),
 		AuthUsername: utils.Ptr("username"),
 		From:         utils.Ptr("notification@example.com"),
+		SendResolved: utils.Ptr(true),
 		Smarthost:    utils.Ptr("smtp.example.com"),
 		To:           utils.Ptr("me@example.com"),
 	}
@@ -220,35 +233,43 @@ func fixtureEmailConfigsResponse() observability.EmailConfig {
 
 func fixtureOpsGenieConfigsResponse() observability.OpsgenieConfig {
 	return observability.OpsgenieConfig{
-		ApiKey: utils.Ptr("key"),
-		Tags:   utils.Ptr("tag"),
-		ApiUrl: utils.Ptr("ops.example.com"),
+		ApiKey:       utils.Ptr("key"),
+		Tags:         utils.Ptr("tag"),
+		ApiUrl:       utils.Ptr("ops.example.com"),
+		Priority:     utils.Ptr("P3"),
+		SendResolved: utils.Ptr(true),
 	}
 }
 
 func fixtureWebHooksConfigsResponse() observability.WebHook {
 	return observability.WebHook{
-		Url:     utils.Ptr("http://example.com"),
-		MsTeams: utils.Ptr(true),
+		Url:          utils.Ptr("http://example.com"),
+		MsTeams:      utils.Ptr(true),
+		GoogleChat:   utils.Ptr(true),
+		SendResolved: utils.Ptr(true),
 	}
 }
 
 func fixtureRouteResponse() *observability.Route {
 	return &observability.Route{
+		Continue:       nil,
 		GroupBy:        utils.Ptr([]string{"label1", "label2"}),
 		GroupInterval:  utils.Ptr("1m"),
 		GroupWait:      utils.Ptr("1m"),
 		Match:          &map[string]string{"key": "value"},
 		MatchRe:        &map[string]string{"key": "value"},
+		Matchers:       &[]string{"matcher1", "matcher2"},
 		Receiver:       utils.Ptr("name"),
 		RepeatInterval: utils.Ptr("1m"),
 		Routes: &[]observability.RouteSerializer{
 			{
+				Continue:       utils.Ptr(false),
 				GroupBy:        utils.Ptr([]string{"label1", "label2"}),
 				GroupInterval:  utils.Ptr("1m"),
 				GroupWait:      utils.Ptr("1m"),
 				Match:          &map[string]string{"key": "value"},
 				MatchRe:        &map[string]string{"key": "value"},
+				Matchers:       &[]string{"matcher1", "matcher2"},
 				Receiver:       utils.Ptr("name"),
 				RepeatInterval: utils.Ptr("1m"),
 			},
@@ -271,6 +292,11 @@ func fixtureGlobalConfigResponse() *observability.Global {
 
 func fixtureRouteAttributeSchema(route *schema.ListNestedAttribute, isDatasource bool) map[string]schema.Attribute {
 	attributeMap := map[string]schema.Attribute{
+		"continue": schema.BoolAttribute{
+			Description: routeDescriptions["continue"],
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
+		},
 		"group_by": schema.ListAttribute{
 			Description: routeDescriptions["group_by"],
 			Optional:    !isDatasource,
@@ -294,13 +320,21 @@ func fixtureRouteAttributeSchema(route *schema.ListNestedAttribute, isDatasource
 			},
 		},
 		"match": schema.MapAttribute{
-			Description: routeDescriptions["match"],
-			Optional:    !isDatasource,
-			Computed:    isDatasource,
-			ElementType: types.StringType,
+			Description:        routeDescriptions["match"],
+			DeprecationMessage: "Use `matchers` in the `routes` instead.",
+			Optional:           !isDatasource,
+			Computed:           isDatasource,
+			ElementType:        types.StringType,
 		},
 		"match_regex": schema.MapAttribute{
-			Description: routeDescriptions["match_regex"],
+			Description:        routeDescriptions["match_regex"],
+			DeprecationMessage: "Use `matchers` in the `routes` instead.",
+			Optional:           !isDatasource,
+			Computed:           isDatasource,
+			ElementType:        types.StringType,
+		},
+		"matchers": schema.ListAttribute{
+			Description: routeDescriptions["matchers"],
 			Optional:    !isDatasource,
 			Computed:    isDatasource,
 			ElementType: types.StringType,
@@ -853,7 +887,7 @@ func TestMapAlertConfigField(t *testing.T) {
 							fixtureWebHooksConfigsModel(),
 						),
 					}),
-					"route":  types.ObjectNull(routeTypes),
+					"route":  types.ObjectNull(mainRouteTypes),
 					"global": types.ObjectNull(globalConfigurationTypes),
 				}),
 			},
@@ -1473,11 +1507,13 @@ func TestGetRouteListTypeAux(t *testing.T) {
 			1,
 			types.ObjectType{
 				AttrTypes: map[string]attr.Type{
+					"continue":        types.BoolType,
 					"group_by":        types.ListType{ElemType: types.StringType},
 					"group_interval":  types.StringType,
 					"group_wait":      types.StringType,
 					"match":           types.MapType{ElemType: types.StringType},
 					"match_regex":     types.MapType{ElemType: types.StringType},
+					"matchers":        types.ListType{ElemType: types.StringType},
 					"receiver":        types.StringType,
 					"repeat_interval": types.StringType,
 				},
@@ -1489,19 +1525,23 @@ func TestGetRouteListTypeAux(t *testing.T) {
 			2,
 			types.ObjectType{
 				AttrTypes: map[string]attr.Type{
+					"continue":        types.BoolType,
 					"group_by":        types.ListType{ElemType: types.StringType},
 					"group_interval":  types.StringType,
 					"group_wait":      types.StringType,
 					"match":           types.MapType{ElemType: types.StringType},
 					"match_regex":     types.MapType{ElemType: types.StringType},
+					"matchers":        types.ListType{ElemType: types.StringType},
 					"receiver":        types.StringType,
 					"repeat_interval": types.StringType,
 					"routes": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{
+						"continue":        types.BoolType,
 						"group_by":        types.ListType{ElemType: types.StringType},
 						"group_interval":  types.StringType,
 						"group_wait":      types.StringType,
 						"match":           types.MapType{ElemType: types.StringType},
 						"match_regex":     types.MapType{ElemType: types.StringType},
+						"matchers":        types.ListType{ElemType: types.StringType},
 						"receiver":        types.StringType,
 						"repeat_interval": types.StringType,
 					}}},
@@ -1514,11 +1554,13 @@ func TestGetRouteListTypeAux(t *testing.T) {
 			2,
 			types.ObjectType{
 				AttrTypes: map[string]attr.Type{
+					"continue":        types.BoolType,
 					"group_by":        types.ListType{ElemType: types.StringType},
 					"group_interval":  types.StringType,
 					"group_wait":      types.StringType,
 					"match":           types.MapType{ElemType: types.StringType},
 					"match_regex":     types.MapType{ElemType: types.StringType},
+					"matchers":        types.ListType{ElemType: types.StringType},
 					"receiver":        types.StringType,
 					"repeat_interval": types.StringType,
 				},

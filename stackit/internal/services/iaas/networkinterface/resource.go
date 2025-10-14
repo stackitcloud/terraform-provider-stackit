@@ -33,6 +33,7 @@ var (
 	_ resource.Resource                = &networkInterfaceResource{}
 	_ resource.ResourceWithConfigure   = &networkInterfaceResource{}
 	_ resource.ResourceWithImportState = &networkInterfaceResource{}
+	_ resource.ResourceWithModifyPlan  = &networkInterfaceResource{}
 )
 
 type Model struct {
@@ -59,6 +60,38 @@ func NewNetworkInterfaceResource() resource.Resource {
 // networkResource is the resource implementation.
 type networkInterfaceResource struct {
 	client *iaas.APIClient
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+func (r *networkInterfaceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	var configModel Model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// If allowed_addresses were completly removed from the config this is not recognized by terraform
+	// since this field is optional and computed therefore this plan modifier is needed.
+	utils.CheckListRemoval(ctx, configModel.AllowedAddresses, planModel.AllowedAddresses, path.Root("allowed_addresses"), types.StringType, false, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// If security_group_ids were completly removed from the config this is not recognized by terraform
+	// since this field is optional and computed therefore this plan modifier is needed.
+	utils.CheckListRemoval(ctx, configModel.SecurityGroupIds, planModel.SecurityGroupIds, path.Root("security_group_ids"), types.StringType, true, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Metadata returns the resource type name.

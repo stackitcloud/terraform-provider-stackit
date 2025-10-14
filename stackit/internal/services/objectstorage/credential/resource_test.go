@@ -61,7 +61,7 @@ func TestMapFields(t *testing.T) {
 			&objectstorage.CreateAccessKeyResponse{
 				AccessKey:       utils.Ptr("key"),
 				DisplayName:     utils.Ptr("name"),
-				Expires:         utils.Ptr(now.Format(time.RFC3339)),
+				Expires:         objectstorage.NewNullableString(utils.Ptr(now.Format(time.RFC3339))),
 				SecretAccessKey: utils.Ptr("secret-key"),
 			},
 			Model{
@@ -100,7 +100,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"expiration_timestamp_with_fractional_seconds",
 			&objectstorage.CreateAccessKeyResponse{
-				Expires: utils.Ptr(now.Format(time.RFC3339Nano)),
+				Expires: objectstorage.NewNullableString(utils.Ptr(now.Format(time.RFC3339Nano))),
 			},
 			Model{
 				Id:                  types.StringValue(id),
@@ -123,7 +123,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"bad_time",
 			&objectstorage.CreateAccessKeyResponse{
-				Expires: utils.Ptr("foo-bar"),
+				Expires: objectstorage.NewNullableString(utils.Ptr("foo-bar")),
 			},
 			Model{},
 			false,

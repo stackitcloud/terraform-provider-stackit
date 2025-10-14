@@ -29,11 +29,12 @@ var (
 )
 
 type Model struct {
-	Id         types.String `tfsdk:"id"`
-	ProjectId  types.String `tfsdk:"project_id"`
-	InstanceId types.String `tfsdk:"instance_id"`
-	Username   types.String `tfsdk:"username"`
-	Password   types.String `tfsdk:"password"`
+	Id          types.String `tfsdk:"id"`
+	ProjectId   types.String `tfsdk:"project_id"`
+	InstanceId  types.String `tfsdk:"instance_id"`
+	Description types.String `tfsdk:"description"`
+	Username    types.String `tfsdk:"username"`
+	Password    types.String `tfsdk:"password"`
 }
 
 // NewCredentialResource is a helper function to simplify the provider implementation.
@@ -97,6 +98,13 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"description": schema.StringAttribute{
+				Description: "A description of the credential.",
+				Optional:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 			"username": schema.StringAttribute{
 				Description: "Credential username",
 				Computed:    true,
@@ -130,8 +138,13 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+	description := model.Description.ValueStringPointer()
 
-	got, err := r.client.CreateCredentials(ctx, instanceId, projectId).Execute()
+	got, err := r.client.CreateCredentials(ctx, instanceId, projectId).CreateCredentialsPayload(
+		observability.CreateCredentialsPayload{
+			Description: description,
+		},
+	).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
 		return

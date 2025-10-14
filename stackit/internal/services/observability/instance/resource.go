@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -39,7 +40,7 @@ import (
 )
 
 // Currently, due to incorrect types in the API, the maximum recursion level for child routes is set to 1.
-// Once this is fixed, the value should be set to 10.
+// Once this is fixed, the value should be set to 10 and toRoutePayload needs to be adjusted, to support it.
 const childRouteMaxRecursionLevel = 1
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -89,7 +90,7 @@ type alertConfigModel struct {
 
 var alertConfigTypes = map[string]attr.Type{
 	"receivers": types.ListType{ElemType: types.ObjectType{AttrTypes: receiversTypes}},
-	"route":     types.ObjectType{AttrTypes: routeTypes},
+	"route":     types.ObjectType{AttrTypes: mainRouteTypes},
 	"global":    types.ObjectType{AttrTypes: globalConfigurationTypes},
 }
 
@@ -117,12 +118,27 @@ var globalConfigurationTypes = map[string]attr.Type{
 }
 
 // Struct corresponding to Model.AlertConfig.route
-type routeModel struct {
+type mainRouteModel struct {
 	GroupBy        types.List   `tfsdk:"group_by"`
 	GroupInterval  types.String `tfsdk:"group_interval"`
 	GroupWait      types.String `tfsdk:"group_wait"`
-	Match          types.Map    `tfsdk:"match"`
+	Receiver       types.String `tfsdk:"receiver"`
+	RepeatInterval types.String `tfsdk:"repeat_interval"`
+	Routes         types.List   `tfsdk:"routes"`
+}
+
+// Struct corresponding to Model.AlertConfig.route
+// This is used to map the routes between the mainRouteModel and the last level of recursion of the routes field
+type routeModelMiddle struct {
+	Continue      types.Bool   `tfsdk:"continue"`
+	GroupBy       types.List   `tfsdk:"group_by"`
+	GroupInterval types.String `tfsdk:"group_interval"`
+	GroupWait     types.String `tfsdk:"group_wait"`
+	// Deprecated: Match is deprecated and will be removed after 10th March 2026. Use Matchers instead
+	Match types.Map `tfsdk:"match"`
+	// Deprecated: MatchRegex is deprecated and will be removed after 10th March 2026. Use Matchers instead
 	MatchRegex     types.Map    `tfsdk:"match_regex"`
+	Matchers       types.List   `tfsdk:"matchers"`
 	Receiver       types.String `tfsdk:"receiver"`
 	RepeatInterval types.String `tfsdk:"repeat_interval"`
 	Routes         types.List   `tfsdk:"routes"`
@@ -131,21 +147,23 @@ type routeModel struct {
 // Struct corresponding to Model.AlertConfig.route but without the recursive routes field
 // This is used to map the last level of recursion of the routes field
 type routeModelNoRoutes struct {
-	GroupBy        types.List   `tfsdk:"group_by"`
-	GroupInterval  types.String `tfsdk:"group_interval"`
-	GroupWait      types.String `tfsdk:"group_wait"`
-	Match          types.Map    `tfsdk:"match"`
+	Continue      types.Bool   `tfsdk:"continue"`
+	GroupBy       types.List   `tfsdk:"group_by"`
+	GroupInterval types.String `tfsdk:"group_interval"`
+	GroupWait     types.String `tfsdk:"group_wait"`
+	// Deprecated: Match is deprecated and will be removed after 10th March 2026. Use Matchers instead
+	Match types.Map `tfsdk:"match"`
+	// Deprecated: MatchRegex is deprecated and will be removed after 10th March 2026. Use Matchers instead
 	MatchRegex     types.Map    `tfsdk:"match_regex"`
+	Matchers       types.List   `tfsdk:"matchers"`
 	Receiver       types.String `tfsdk:"receiver"`
 	RepeatInterval types.String `tfsdk:"repeat_interval"`
 }
 
-var routeTypes = map[string]attr.Type{
+var mainRouteTypes = map[string]attr.Type{
 	"group_by":        types.ListType{ElemType: types.StringType},
 	"group_interval":  types.StringType,
 	"group_wait":      types.StringType,
-	"match":           types.MapType{ElemType: types.StringType},
-	"match_regex":     types.MapType{ElemType: types.StringType},
 	"receiver":        types.StringType,
 	"repeat_interval": types.StringType,
 	"routes":          types.ListType{ElemType: getRouteListType()},
@@ -172,6 +190,7 @@ type emailConfigsModel struct {
 	AuthPassword types.String `tfsdk:"auth_password"`
 	AuthUsername types.String `tfsdk:"auth_username"`
 	From         types.String `tfsdk:"from"`
+	SendResolved types.Bool   `tfsdk:"send_resolved"`
 	Smarthost    types.String `tfsdk:"smart_host"`
 	To           types.String `tfsdk:"to"`
 }
@@ -181,40 +200,51 @@ var emailConfigsTypes = map[string]attr.Type{
 	"auth_password": types.StringType,
 	"auth_username": types.StringType,
 	"from":          types.StringType,
+	"send_resolved": types.BoolType,
 	"smart_host":    types.StringType,
 	"to":            types.StringType,
 }
 
 // Struct corresponding to Model.AlertConfig.receivers.opsGenieConfigs
 type opsgenieConfigsModel struct {
-	ApiKey types.String `tfsdk:"api_key"`
-	ApiUrl types.String `tfsdk:"api_url"`
-	Tags   types.String `tfsdk:"tags"`
+	ApiKey       types.String `tfsdk:"api_key"`
+	ApiUrl       types.String `tfsdk:"api_url"`
+	Tags         types.String `tfsdk:"tags"`
+	Priority     types.String `tfsdk:"priority"`
+	SendResolved types.Bool   `tfsdk:"send_resolved"`
 }
 
 var opsgenieConfigsTypes = map[string]attr.Type{
-	"api_key": types.StringType,
-	"api_url": types.StringType,
-	"tags":    types.StringType,
+	"api_key":       types.StringType,
+	"api_url":       types.StringType,
+	"tags":          types.StringType,
+	"priority":      types.StringType,
+	"send_resolved": types.BoolType,
 }
 
 // Struct corresponding to Model.AlertConfig.receivers.webHooksConfigs
 type webHooksConfigsModel struct {
-	Url     types.String `tfsdk:"url"`
-	MsTeams types.Bool   `tfsdk:"ms_teams"`
+	Url          types.String `tfsdk:"url"`
+	MsTeams      types.Bool   `tfsdk:"ms_teams"`
+	GoogleChat   types.Bool   `tfsdk:"google_chat"`
+	SendResolved types.Bool   `tfsdk:"send_resolved"`
 }
 
 var webHooksConfigsTypes = map[string]attr.Type{
-	"url":      types.StringType,
-	"ms_teams": types.BoolType,
+	"url":           types.StringType,
+	"ms_teams":      types.BoolType,
+	"google_chat":   types.BoolType,
+	"send_resolved": types.BoolType,
 }
 
 var routeDescriptions = map[string]string{
+	"continue":        "Whether an alert should continue matching subsequent sibling nodes.",
 	"group_by":        "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
 	"group_interval":  "How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)",
 	"group_wait":      "How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.)",
-	"match":           "A set of equality matchers an alert has to fulfill to match the node.",
-	"match_regex":     "A set of regex-matchers an alert has to fulfill to match the node.",
+	"match":           "A set of equality matchers an alert has to fulfill to match the node. This field is deprecated and will be removed after 10th March 2026, use `matchers` in the `routes` instead",
+	"match_regex":     "A set of regex-matchers an alert has to fulfill to match the node. This field is deprecated and will be removed after 10th March 2026, use `matchers` in the `routes` instead",
+	"matchers":        "A list of matchers that an alert has to fulfill to match the node. A matcher is a string with a syntax inspired by PromQL and OpenMetrics.",
 	"receiver":        "The name of the receiver to route the alerts to.",
 	"repeat_interval": "How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).",
 	"routes":          "List of child routes.",
@@ -231,11 +261,13 @@ func getRouteListType() types.ObjectType {
 // The level should be lower or equal to the limit, if higher, the function will produce a stack overflow.
 func getRouteListTypeAux(level, limit int) types.ObjectType {
 	attributeTypes := map[string]attr.Type{
+		"continue":        types.BoolType,
 		"group_by":        types.ListType{ElemType: types.StringType},
 		"group_interval":  types.StringType,
 		"group_wait":      types.StringType,
 		"match":           types.MapType{ElemType: types.StringType},
 		"match_regex":     types.MapType{ElemType: types.StringType},
+		"matchers":        types.ListType{ElemType: types.StringType},
 		"receiver":        types.StringType,
 		"repeat_interval": types.StringType,
 	}
@@ -262,6 +294,11 @@ func getDatasourceRouteNestedObject() schema.ListNestedAttribute {
 // The level should be lower or equal to the limit, if higher, the function will produce a stack overflow.
 func getRouteNestedObjectAux(isDatasource bool, level, limit int) schema.ListNestedAttribute {
 	attributesMap := map[string]schema.Attribute{
+		"continue": schema.BoolAttribute{
+			Description: routeDescriptions["continue"],
+			Optional:    !isDatasource,
+			Computed:    isDatasource,
+		},
 		"group_by": schema.ListAttribute{
 			Description: routeDescriptions["group_by"],
 			Optional:    !isDatasource,
@@ -285,13 +322,21 @@ func getRouteNestedObjectAux(isDatasource bool, level, limit int) schema.ListNes
 			},
 		},
 		"match": schema.MapAttribute{
-			Description: routeDescriptions["match"],
-			Optional:    !isDatasource,
-			Computed:    isDatasource,
-			ElementType: types.StringType,
+			Description:        routeDescriptions["match"],
+			DeprecationMessage: "Use `matchers` in the `routes` instead.",
+			Optional:           !isDatasource,
+			Computed:           isDatasource,
+			ElementType:        types.StringType,
 		},
 		"match_regex": schema.MapAttribute{
-			Description: routeDescriptions["match_regex"],
+			Description:        routeDescriptions["match_regex"],
+			DeprecationMessage: "Use `matchers` in the `routes` instead.",
+			Optional:           !isDatasource,
+			Computed:           isDatasource,
+			ElementType:        types.StringType,
+		},
+		"matchers": schema.ListAttribute{
+			Description: routeDescriptions["matchers"],
 			Optional:    !isDatasource,
 			Computed:    isDatasource,
 			ElementType: types.StringType,
@@ -468,17 +513,17 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"metrics_retention_days": schema.Int64Attribute{
-				Description: "Specifies for how many days the raw metrics are kept.",
+				Description: "Specifies for how many days the raw metrics are kept. Default is set to `90`.",
 				Optional:    true,
 				Computed:    true,
 			},
 			"metrics_retention_days_5m_downsampling": schema.Int64Attribute{
-				Description: "Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `0` (disabled).",
+				Description: "Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `90`.",
 				Optional:    true,
 				Computed:    true,
 			},
 			"metrics_retention_days_1h_downsampling": schema.Int64Attribute{
-				Description: "Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `0` (disabled).",
+				Description: "Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `90`.",
 				Optional:    true,
 				Computed:    true,
 			},
@@ -589,6 +634,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 											"auth_password": schema.StringAttribute{
 												Description: "SMTP authentication password.",
 												Optional:    true,
+												Sensitive:   true,
 											},
 											"auth_username": schema.StringAttribute{
 												Description: "SMTP authentication username.",
@@ -596,6 +642,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 											},
 											"from": schema.StringAttribute{
 												Description: "The sender email address. Must be a valid email address",
+												Optional:    true,
+											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
 												Optional:    true,
 											},
 											"smart_host": schema.StringAttribute{
@@ -629,6 +679,14 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 												Description: "Comma separated list of tags attached to the notifications.",
 												Optional:    true,
 											},
+											"priority": schema.StringAttribute{
+												Description: "Priority of the alert. " + utils.FormatPossibleValues("P1", "P2", "P3", "P4", "P5"),
+												Optional:    true,
+											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
+												Optional:    true,
+											},
 										},
 									},
 								},
@@ -639,13 +697,29 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 										listvalidator.SizeAtLeast(1),
 									},
 									NestedObject: schema.NestedAttributeObject{
+										Validators: []validator.Object{
+											WebhookConfigMutuallyExclusive(),
+										},
 										Attributes: map[string]schema.Attribute{
 											"url": schema.StringAttribute{
 												Description: "The endpoint to send HTTP POST requests to. Must be a valid URL",
 												Optional:    true,
+												Sensitive:   true,
 											},
 											"ms_teams": schema.BoolAttribute{
 												Description: "Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.",
+												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(false),
+											},
+											"google_chat": schema.BoolAttribute{
+												Description: "Google Chat webhooks require special handling, set this to true if the webhook is for Google Chat.",
+												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(false),
+											},
+											"send_resolved": schema.BoolAttribute{
+												Description: "Whether to notify about resolved alerts.",
 												Optional:    true,
 											},
 										},
@@ -679,16 +753,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 									stringplanmodifier.UseStateForUnknown(),
 								},
 							},
-							"match": schema.MapAttribute{
-								Description: routeDescriptions["match"],
-								Optional:    true,
-								ElementType: types.StringType,
-							},
-							"match_regex": schema.MapAttribute{
-								Description: routeDescriptions["match_regex"],
-								Optional:    true,
-								ElementType: types.StringType,
-							},
 							"receiver": schema.StringAttribute{
 								Description: routeDescriptions["receiver"],
 								Required:    true,
@@ -705,7 +769,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						},
 					},
 					"global": schema.SingleNestedAttribute{
-						Description: "Global configuration for the alerts.",
+						Description: "Global configuration for the alerts. If nothing passed the default argus config will be used. It is only possible to update the entire global part, not individual attributes.",
 						Optional:    true,
 						Computed:    true,
 						Attributes: map[string]schema.Attribute{
@@ -756,6 +820,52 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 	}
 }
 
+// ModifyPlan will be called in the Plan phase.
+// It will check if the plan contains a change that requires replacement. If yes, it will show an error to the user.
+// Since there are observabiltiy plans which do not support specific configurations the request needs to be aborted with an error.
+func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	// If the plan is empty we are deleting the resource
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	plan, err := loadPlanId(ctx, *r.client, &configModel)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Loading service plan: %v", err))
+		return
+	}
+
+	// Plan does not support alert config
+	if plan.GetAlertMatchers() == 0 && plan.GetAlertReceivers() == 0 {
+		// If an alert config was set, return an error to the user
+		if !(utils.IsUndefined(configModel.AlertConfig)) {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring an alert config. Remove this from your config or use a different plan.", *plan.Name))
+		}
+	}
+
+	// Plan does not support log storage and trace storage
+	if plan.GetLogsStorage() == 0 && plan.GetTracesStorage() == 0 {
+		metricsRetentionDays := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays)
+		metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays5mDownsampling)
+		metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays1hDownsampling)
+
+		// If any of the metrics retention days are set, return an error to the user
+		if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring metrics retention days. Remove this from your config or use a different plan.", *plan.Name))
+		}
+	}
+}
+
 // Create creates the resource and sets the initial Terraform state.
 func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
@@ -775,10 +885,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
-	metricsRetentionDays := conversion.Int64ValueToPointer(model.MetricsRetentionDays)
-	metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays5mDownsampling)
-	metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays1hDownsampling)
-
 	alertConfig := alertConfigModel{}
 	if !(model.AlertConfig.IsNull() || model.AlertConfig.IsUnknown()) {
 		diags = model.AlertConfig.As(ctx, &alertConfig, basetypes.ObjectAsOptions{})
@@ -791,7 +897,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	err := r.loadPlanId(ctx, &model)
+	plan, err := loadPlanId(ctx, *r.client, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading service plan: %v", err))
 		return
@@ -855,90 +961,41 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	// If any of the metrics retention days are set, set the metrics retention policy
-	if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
-		// Need to get the metrics retention policy because update endpoint is a PUT and we need to send all fields
-		metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, *instanceId, projectId)
+	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
+		err := r.getMetricsRetention(ctx, &model)
 		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Getting metrics retention policy: %v", err))
-			return
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("%v", err))
 		}
 
-		metricsRetentionPayload, err := toUpdateMetricsStorageRetentionPayload(metricsRetentionDays, metricsRetentionDays5mDownsampling, metricsRetentionDays1hDownsampling, metricsResp)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building metrics retention policy payload: %v", err))
+		// Set state to fully populated data
+		diags = setMetricsRetentions(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
 			return
 		}
-
-		_, err = r.client.UpdateMetricsStorageRetention(ctx, *instanceId, projectId).UpdateMetricsStorageRetentionPayload(*metricsRetentionPayload).Execute()
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting metrics retention policy: %v", err))
-			return
-		}
-	}
-
-	// Get metrics retention policy after update
-	metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, *instanceId, projectId)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Getting metrics retention policy: %v", err))
-		return
-	}
-	// Map response body to schema
-	err = mapMetricsRetentionField(metricsResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
-		return
-	}
-
-	// Set state to fully populated data
-	diags = setMetricsRetentions(ctx, &resp.State, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Alert Config
-	if model.AlertConfig.IsUnknown() || model.AlertConfig.IsNull() {
-		alertConfig, err = getMockAlertConfig(ctx)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Getting mock alert config: %v", err))
+	} else {
+		// Set metric retention days to zero
+		diags = setMetricsRetentionsZero(ctx, &resp.State)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
-	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, &alertConfig)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building alert config payload: %v", err))
-		return
-	}
-
-	if alertConfigPayload != nil {
-		_, err = r.client.UpdateAlertConfigs(ctx, *instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
+	// There are plans where no alert matchers and receivers are present e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetAlertMatchers() != 0 && plan.GetAlertReceivers() != 0 {
+		err := r.getAlertConfigs(ctx, &alertConfig, &model)
 		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting alert config: %v", err))
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("%v", err))
+		}
+
+		// Set state to fully populated data
+		diags = setAlertConfig(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
 			return
 		}
-	}
-
-	// Get alert config after update
-	alertConfigResp, err := r.client.GetAlertConfigs(ctx, *instanceId, projectId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Getting alert config: %v", err))
-		return
-	}
-
-	// Map response body to schema
-	err = mapAlertConfigField(ctx, alertConfigResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
-		return
-	}
-
-	// Set state to fully populated data
-	diags = setAlertConfig(ctx, &resp.State, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
 	}
 
 	tflog.Info(ctx, "Observability instance created")
@@ -972,28 +1029,22 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	aclListResp, err := r.client.ListACL(ctx, instanceId, projectId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACL data: %v", err))
-		return
-	}
-
-	metricsRetentionResp, err := r.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get metrics retention: %v", err))
-		return
-	}
-
-	alertConfigResp, err := r.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get alert config: %v", err))
-		return
-	}
-
 	// Map response body to schema
 	err = mapFields(ctx, instanceResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	plan, err := loadPlanId(ctx, *r.client, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan: %v", err))
+		return
+	}
+
+	aclListResp, err := r.client.ListACL(ctx, instanceId, projectId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACL data: %v", err))
 		return
 	}
 
@@ -1018,32 +1069,47 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	// Map response body to schema
-	err = mapMetricsRetentionField(metricsRetentionResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
-		return
+	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
+		metricsRetentionResp, err := r.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get metrics retention: %v", err))
+			return
+		}
+		// Map response body to schema
+		err = mapMetricsRetentionField(metricsRetentionResp, &model)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
+			return
+		}
+		// Set state to fully populated data
+		diags = setMetricsRetentions(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
-	// Set state to fully populated data
-	diags = setMetricsRetentions(ctx, &resp.State, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	// There are plans where no alert matchers and receivers are present e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetAlertMatchers() != 0 && plan.GetAlertReceivers() != 0 {
+		alertConfigResp, err := r.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get alert config: %v", err))
+			return
+		}
+		// Map response body to schema
+		err = mapAlertConfigField(ctx, alertConfigResp, &model)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
+			return
+		}
 
-	// Map response body to schema
-	err = mapAlertConfigField(ctx, alertConfigResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
-		return
-	}
-
-	// Set state to fully populated data
-	diags = setAlertConfig(ctx, &resp.State, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+		// Set state to fully populated data
+		diags = setAlertConfig(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	tflog.Info(ctx, "Observability instance read")
@@ -1070,10 +1136,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
-	metricsRetentionDays := conversion.Int64ValueToPointer(model.MetricsRetentionDays)
-	metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays5mDownsampling)
-	metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays1hDownsampling)
-
 	alertConfig := alertConfigModel{}
 	if !(model.AlertConfig.IsNull() || model.AlertConfig.IsUnknown()) {
 		diags = model.AlertConfig.As(ctx, &alertConfig, basetypes.ObjectAsOptions{})
@@ -1083,7 +1145,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
-	err := r.loadPlanId(ctx, &model)
+	plan, err := loadPlanId(ctx, *r.client, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading service plan: %v", err))
 		return
@@ -1164,89 +1226,41 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	// If any of the metrics retention days are set, set the metrics retention policy
-	if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
-		// Need to get the metrics retention policy because update endpoint is a PUT and we need to send all fields
-		metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, instanceId, projectId)
+	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
+		err := r.getMetricsRetention(ctx, &model)
 		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Getting metrics retention policy: %v", err))
-			return
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("%v", err))
 		}
 
-		metricsRetentionPayload, err := toUpdateMetricsStorageRetentionPayload(metricsRetentionDays, metricsRetentionDays5mDownsampling, metricsRetentionDays1hDownsampling, metricsResp)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Building metrics retention policy payload: %v", err))
+		// Set state to fully populated data
+		diags = setMetricsRetentions(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
 			return
 		}
-		_, err = r.client.UpdateMetricsStorageRetention(ctx, instanceId, projectId).UpdateMetricsStorageRetentionPayload(*metricsRetentionPayload).Execute()
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Setting metrics retention policy: %v", err))
-			return
-		}
-	}
-
-	// Get metrics retention policy after update
-	metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, instanceId, projectId)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Getting metrics retention policy: %v", err))
-		return
-	}
-
-	// Map response body to schema
-	err = mapMetricsRetentionField(metricsResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API response for the metrics retention %v", err))
-		return
-	}
-	// Set state to fully populated data
-	diags = setMetricsRetentions(ctx, &resp.State, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Alert Config
-	if model.AlertConfig.IsUnknown() || model.AlertConfig.IsNull() {
-		alertConfig, err = getMockAlertConfig(ctx)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Getting mock alert config: %v", err))
+	} else {
+		// Set metric retention days to zero
+		diags = setMetricsRetentionsZero(ctx, &resp.State)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
-	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, &alertConfig)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Building alert config payload: %v", err))
-		return
-	}
-
-	if alertConfigPayload != nil {
-		_, err = r.client.UpdateAlertConfigs(ctx, instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
+	// There are plans where no alert matchers and receivers are present e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetAlertMatchers() != 0 && plan.GetAlertReceivers() != 0 {
+		err := r.getAlertConfigs(ctx, &alertConfig, &model)
 		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Setting alert config: %v", err))
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("%v", err))
+		}
+
+		// Set state to fully populated data
+		diags = setAlertConfig(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
 			return
 		}
-	}
-
-	// Get updated alert config
-	alertConfigResp, err := r.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API to get alert config: %v", err))
-		return
-	}
-
-	// Map response body to schema
-	err = mapAlertConfigField(ctx, alertConfigResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
-		return
-	}
-
-	// Set state to fully populated data
-	diags = setAlertConfig(ctx, &resp.State, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
 	}
 
 	tflog.Info(ctx, "Observability instance updated")
@@ -1503,6 +1517,7 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 	mockEmailConfig, diags := types.ObjectValue(emailConfigsTypes, map[string]attr.Value{
 		"to":            types.StringValue("123@gmail.com"),
 		"smart_host":    types.StringValue("smtp.gmail.com:587"),
+		"send_resolved": types.BoolValue(false),
 		"from":          types.StringValue("xxxx@gmail.com"),
 		"auth_username": types.StringValue("xxxx@gmail.com"),
 		"auth_password": types.StringValue("xxxxxxxxx"),
@@ -1543,14 +1558,12 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 		return alertConfigModel{}, fmt.Errorf("mapping group by list: %w", core.DiagsToError(diags))
 	}
 
-	mockRoute, diags := types.ObjectValue(routeTypes, map[string]attr.Value{
+	mockRoute, diags := types.ObjectValue(mainRouteTypes, map[string]attr.Value{
 		"receiver":        types.StringValue("email-me"),
 		"group_by":        mockGroupByList,
 		"group_wait":      types.StringValue("30s"),
 		"group_interval":  types.StringValue("5m"),
 		"repeat_interval": types.StringValue("4h"),
-		"match":           types.MapNull(types.StringType),
-		"match_regex":     types.MapNull(types.StringType),
 		"routes":          types.ListNull(getRouteListType()),
 	})
 	if diags.HasError() {
@@ -1650,6 +1663,7 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 					"auth_password": types.StringPointerValue(emailConfig.AuthPassword),
 					"auth_username": types.StringPointerValue(emailConfig.AuthUsername),
 					"from":          types.StringPointerValue(emailConfig.From),
+					"send_resolved": types.BoolPointerValue(emailConfig.SendResolved),
 					"smart_host":    types.StringPointerValue(emailConfig.Smarthost),
 					"to":            types.StringPointerValue(emailConfig.To),
 				}
@@ -1665,9 +1679,11 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		if receiver.OpsgenieConfigs != nil {
 			for _, opsgenieConfig := range *receiver.OpsgenieConfigs {
 				opsGenieConfigMap := map[string]attr.Value{
-					"api_key": types.StringPointerValue(opsgenieConfig.ApiKey),
-					"api_url": types.StringPointerValue(opsgenieConfig.ApiUrl),
-					"tags":    types.StringPointerValue(opsgenieConfig.Tags),
+					"api_key":       types.StringPointerValue(opsgenieConfig.ApiKey),
+					"api_url":       types.StringPointerValue(opsgenieConfig.ApiUrl),
+					"tags":          types.StringPointerValue(opsgenieConfig.Tags),
+					"priority":      types.StringPointerValue(opsgenieConfig.Priority),
+					"send_resolved": types.BoolPointerValue(opsgenieConfig.SendResolved),
 				}
 				opsGenieConfigModel, diags := types.ObjectValue(opsgenieConfigsTypes, opsGenieConfigMap)
 				if diags.HasError() {
@@ -1681,8 +1697,10 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		if receiver.WebHookConfigs != nil {
 			for _, webhookConfig := range *receiver.WebHookConfigs {
 				webHookConfigsMap := map[string]attr.Value{
-					"url":      types.StringPointerValue(webhookConfig.Url),
-					"ms_teams": types.BoolPointerValue(webhookConfig.MsTeams),
+					"url":           types.StringPointerValue(webhookConfig.Url),
+					"ms_teams":      types.BoolPointerValue(webhookConfig.MsTeams),
+					"google_chat":   types.BoolPointerValue(webhookConfig.GoogleChat),
+					"send_resolved": types.BoolPointerValue(webhookConfig.SendResolved),
 				}
 				webHookConfigsModel, diags := types.ObjectValue(webHooksConfigsTypes, webHookConfigsMap)
 				if diags.HasError() {
@@ -1750,43 +1768,31 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 
 func mapRouteToAttributes(ctx context.Context, route *observability.Route) (attr.Value, error) {
 	if route == nil {
-		return types.ObjectNull(routeTypes), nil
+		return types.ObjectNull(mainRouteTypes), nil
 	}
 
 	groupByModel, diags := types.ListValueFrom(ctx, types.StringType, route.GroupBy)
 	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
-	}
-
-	matchModel, diags := types.MapValueFrom(ctx, types.StringType, route.Match)
-	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping match: %w", core.DiagsToError(diags))
-	}
-
-	matchRegexModel, diags := types.MapValueFrom(ctx, types.StringType, route.MatchRe)
-	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping match regex: %w", core.DiagsToError(diags))
+		return types.ObjectNull(mainRouteTypes), fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
 	}
 
 	childRoutes, err := mapChildRoutesToAttributes(ctx, route.Routes)
 	if err != nil {
-		return types.ObjectNull(routeTypes), fmt.Errorf("mapping child routes: %w", err)
+		return types.ObjectNull(mainRouteTypes), fmt.Errorf("mapping child routes: %w", err)
 	}
 
 	routeMap := map[string]attr.Value{
 		"group_by":        groupByModel,
 		"group_interval":  types.StringPointerValue(route.GroupInterval),
 		"group_wait":      types.StringPointerValue(route.GroupWait),
-		"match":           matchModel,
-		"match_regex":     matchRegexModel,
 		"receiver":        types.StringPointerValue(route.Receiver),
 		"repeat_interval": types.StringPointerValue(route.RepeatInterval),
 		"routes":          childRoutes,
 	}
 
-	routeModel, diags := types.ObjectValue(routeTypes, routeMap)
+	routeModel, diags := types.ObjectValue(mainRouteTypes, routeMap)
 	if diags.HasError() {
-		return types.ObjectNull(routeTypes), fmt.Errorf("converting route to TF types: %w", core.DiagsToError(diags))
+		return types.ObjectNull(mainRouteTypes), fmt.Errorf("converting route to TF types: %w", core.DiagsToError(diags))
 	}
 
 	return routeModel, nil
@@ -1819,12 +1825,19 @@ func mapChildRoutesToAttributes(ctx context.Context, routes *[]observability.Rou
 			return nullList, fmt.Errorf("mapping match regex: %w", core.DiagsToError(diags))
 		}
 
+		matchersModel, diags := types.ListValueFrom(ctx, types.StringType, route.Matchers)
+		if diags.HasError() {
+			return nullList, fmt.Errorf("mapping matchers: %w", core.DiagsToError(diags))
+		}
+
 		routeMap := map[string]attr.Value{
+			"continue":        types.BoolPointerValue(route.Continue),
 			"group_by":        groupByModel,
 			"group_interval":  types.StringPointerValue(route.GroupInterval),
 			"group_wait":      types.StringPointerValue(route.GroupWait),
 			"match":           matchModel,
 			"match_regex":     matchRegexModel,
+			"matchers":        matchersModel,
 			"receiver":        types.StringPointerValue(route.Receiver),
 			"repeat_interval": types.StringPointerValue(route.RepeatInterval),
 		}
@@ -1944,7 +1957,7 @@ func toUpdateAlertConfigPayload(ctx context.Context, model *alertConfigModel) (*
 		return nil, fmt.Errorf("mapping receivers: %w", err)
 	}
 
-	routeTF := routeModel{}
+	routeTF := mainRouteModel{}
 	diags := model.Route.As(ctx, &routeTF, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
@@ -1997,6 +2010,7 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]observa
 					AuthPassword: conversion.StringValueToPointer(emailConfig.AuthPassword),
 					AuthUsername: conversion.StringValueToPointer(emailConfig.AuthUsername),
 					From:         conversion.StringValueToPointer(emailConfig.From),
+					SendResolved: conversion.BoolValueToPointer(emailConfig.SendResolved),
 					Smarthost:    conversion.StringValueToPointer(emailConfig.Smarthost),
 					To:           conversion.StringValueToPointer(emailConfig.To),
 				})
@@ -2014,9 +2028,11 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]observa
 			for i := range opsgenieConfigs {
 				opsgenieConfig := opsgenieConfigs[i]
 				payloadOpsGenieConfigs = append(payloadOpsGenieConfigs, observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{
-					ApiKey: conversion.StringValueToPointer(opsgenieConfig.ApiKey),
-					ApiUrl: conversion.StringValueToPointer(opsgenieConfig.ApiUrl),
-					Tags:   conversion.StringValueToPointer(opsgenieConfig.Tags),
+					ApiKey:       conversion.StringValueToPointer(opsgenieConfig.ApiKey),
+					ApiUrl:       conversion.StringValueToPointer(opsgenieConfig.ApiUrl),
+					Tags:         conversion.StringValueToPointer(opsgenieConfig.Tags),
+					Priority:     conversion.StringValueToPointer(opsgenieConfig.Priority),
+					SendResolved: conversion.BoolValueToPointer(opsgenieConfig.SendResolved),
 				})
 			}
 			receiverPayload.OpsgenieConfigs = &payloadOpsGenieConfigs
@@ -2032,8 +2048,10 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]observa
 			for i := range receiverWebHooksConfigs {
 				webHooksConfig := receiverWebHooksConfigs[i]
 				payloadWebHooksConfigs = append(payloadWebHooksConfigs, observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
-					Url:     conversion.StringValueToPointer(webHooksConfig.Url),
-					MsTeams: conversion.BoolValueToPointer(webHooksConfig.MsTeams),
+					Url:          conversion.StringValueToPointer(webHooksConfig.Url),
+					MsTeams:      conversion.BoolValueToPointer(webHooksConfig.MsTeams),
+					GoogleChat:   conversion.BoolValueToPointer(webHooksConfig.GoogleChat),
+					SendResolved: conversion.BoolValueToPointer(webHooksConfig.SendResolved),
 				})
 			}
 			receiverPayload.WebHookConfigs = &payloadWebHooksConfigs
@@ -2044,15 +2062,13 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) (*[]observa
 	return &receivers, nil
 }
 
-func toRoutePayload(ctx context.Context, routeTF *routeModel) (*observability.UpdateAlertConfigsPayloadRoute, error) {
+func toRoutePayload(ctx context.Context, routeTF *mainRouteModel) (*observability.UpdateAlertConfigsPayloadRoute, error) {
 	if routeTF == nil {
 		return nil, fmt.Errorf("nil route model")
 	}
 
 	var groupByPayload *[]string
-	var matchPayload *map[string]interface{}
-	var matchRegexPayload *map[string]interface{}
-	var childRoutesPayload *[]observability.CreateAlertConfigRoutePayloadRoutesInner
+	var childRoutesPayload *[]observability.UpdateAlertConfigsPayloadRouteRoutesInner
 
 	if !routeTF.GroupBy.IsNull() && !routeTF.GroupBy.IsUnknown() {
 		groupByPayload = &[]string{}
@@ -2062,24 +2078,8 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*observability.Up
 		}
 	}
 
-	if !routeTF.Match.IsNull() && !routeTF.Match.IsUnknown() {
-		matchMap, err := conversion.ToStringInterfaceMap(ctx, routeTF.Match)
-		if err != nil {
-			return nil, fmt.Errorf("mapping match: %w", err)
-		}
-		matchPayload = &matchMap
-	}
-
-	if !routeTF.MatchRegex.IsNull() && !routeTF.MatchRegex.IsUnknown() {
-		matchRegexMap, err := conversion.ToStringInterfaceMap(ctx, routeTF.MatchRegex)
-		if err != nil {
-			return nil, fmt.Errorf("mapping match regex: %w", err)
-		}
-		matchRegexPayload = &matchRegexMap
-	}
-
 	if !routeTF.Routes.IsNull() && !routeTF.Routes.IsUnknown() {
-		childRoutes := []routeModel{}
+		childRoutes := []routeModelMiddle{}
 		diags := routeTF.Routes.ElementsAs(ctx, &childRoutes, false)
 		if diags.HasError() {
 			// If there is an error, we will try to map the child routes as if they are the last child routes
@@ -2091,12 +2091,14 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*observability.Up
 				return nil, fmt.Errorf("mapping child routes: %w", core.DiagsToError(diags))
 			}
 			for i := range lastChildRoutes {
-				childRoute := routeModel{
+				childRoute := routeModelMiddle{
+					Continue:       lastChildRoutes[i].Continue,
 					GroupBy:        lastChildRoutes[i].GroupBy,
 					GroupInterval:  lastChildRoutes[i].GroupInterval,
 					GroupWait:      lastChildRoutes[i].GroupWait,
 					Match:          lastChildRoutes[i].Match,
 					MatchRegex:     lastChildRoutes[i].MatchRegex,
+					Matchers:       lastChildRoutes[i].Matchers,
 					Receiver:       lastChildRoutes[i].Receiver,
 					RepeatInterval: lastChildRoutes[i].RepeatInterval,
 					Routes:         types.ListNull(getRouteListType()),
@@ -2105,14 +2107,14 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*observability.Up
 			}
 		}
 
-		childRoutesList := []observability.CreateAlertConfigRoutePayloadRoutesInner{}
+		childRoutesList := []observability.UpdateAlertConfigsPayloadRouteRoutesInner{}
 		for i := range childRoutes {
 			childRoute := childRoutes[i]
-			childRoutePayload, err := toRoutePayload(ctx, &childRoute)
+			childRoutePayload, err := toChildRoutePayload(ctx, &childRoute)
 			if err != nil {
 				return nil, fmt.Errorf("mapping child route: %w", err)
 			}
-			childRoutesList = append(childRoutesList, *toChildRoutePayload(childRoutePayload))
+			childRoutesList = append(childRoutesList, *childRoutePayload)
 		}
 
 		childRoutesPayload = &childRoutesList
@@ -2122,28 +2124,64 @@ func toRoutePayload(ctx context.Context, routeTF *routeModel) (*observability.Up
 		GroupBy:        groupByPayload,
 		GroupInterval:  conversion.StringValueToPointer(routeTF.GroupInterval),
 		GroupWait:      conversion.StringValueToPointer(routeTF.GroupWait),
-		Match:          matchPayload,
-		MatchRe:        matchRegexPayload,
 		Receiver:       conversion.StringValueToPointer(routeTF.Receiver),
 		RepeatInterval: conversion.StringValueToPointer(routeTF.RepeatInterval),
 		Routes:         childRoutesPayload,
 	}, nil
 }
 
-func toChildRoutePayload(in *observability.UpdateAlertConfigsPayloadRoute) *observability.CreateAlertConfigRoutePayloadRoutesInner {
-	if in == nil {
-		return nil
+func toChildRoutePayload(ctx context.Context, routeTF *routeModelMiddle) (*observability.UpdateAlertConfigsPayloadRouteRoutesInner, error) {
+	if routeTF == nil {
+		return nil, fmt.Errorf("nil route model")
 	}
-	return &observability.CreateAlertConfigRoutePayloadRoutesInner{
-		GroupBy:        in.GroupBy,
-		GroupInterval:  in.GroupInterval,
-		GroupWait:      in.GroupWait,
-		Match:          in.Match,
-		MatchRe:        in.MatchRe,
-		Receiver:       in.Receiver,
-		RepeatInterval: in.RepeatInterval,
+
+	var groupByPayload, matchersPayload *[]string
+	var matchPayload, matchRegexPayload *map[string]interface{}
+
+	if !utils.IsUndefined(routeTF.GroupBy) {
+		groupByPayload = &[]string{}
+		diags := routeTF.GroupBy.ElementsAs(ctx, groupByPayload, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
+		}
+	}
+
+	if !utils.IsUndefined(routeTF.Match) {
+		matchMap, err := conversion.ToStringInterfaceMap(ctx, routeTF.Match)
+		if err != nil {
+			return nil, fmt.Errorf("mapping match: %w", err)
+		}
+		matchPayload = &matchMap
+	}
+
+	if !utils.IsUndefined(routeTF.MatchRegex) {
+		matchRegexMap, err := conversion.ToStringInterfaceMap(ctx, routeTF.MatchRegex)
+		if err != nil {
+			return nil, fmt.Errorf("mapping match regex: %w", err)
+		}
+		matchRegexPayload = &matchRegexMap
+	}
+
+	if !utils.IsUndefined(routeTF.Matchers) {
+		matchersList, err := conversion.StringListToPointer(routeTF.Matchers)
+		if err != nil {
+			return nil, fmt.Errorf("mapping match regex: %w", err)
+		}
+		matchersPayload = matchersList
+	}
+
+	return &observability.UpdateAlertConfigsPayloadRouteRoutesInner{
+		Continue:       conversion.BoolValueToPointer(routeTF.Continue),
+		GroupBy:        groupByPayload,
+		GroupInterval:  conversion.StringValueToPointer(routeTF.GroupInterval),
+		GroupWait:      conversion.StringValueToPointer(routeTF.GroupWait),
+		Match:          matchPayload,
+		MatchRe:        matchRegexPayload,
+		Matchers:       matchersPayload,
+		Receiver:       conversion.StringValueToPointer(routeTF.Receiver),
+		RepeatInterval: conversion.StringValueToPointer(routeTF.RepeatInterval),
 		// Routes not currently supported
-	}
+	}, nil
 }
 
 func toGlobalConfigPayload(ctx context.Context, model *alertConfigModel) (*observability.UpdateAlertConfigsPayloadGlobal, error) {
@@ -2165,11 +2203,11 @@ func toGlobalConfigPayload(ctx context.Context, model *alertConfigModel) (*obser
 	}, nil
 }
 
-func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
+func loadPlanId(ctx context.Context, client observability.APIClient, model *Model) (observability.Plan, error) {
 	projectId := model.ProjectId.ValueString()
-	res, err := r.client.ListPlans(ctx, projectId).Execute()
+	res, err := client.ListPlans(ctx, projectId).Execute()
 	if err != nil {
-		return err
+		return observability.Plan{}, err
 	}
 
 	planName := model.PlanName.ValueString()
@@ -2182,18 +2220,102 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 		}
 		if strings.EqualFold(*p.Name, planName) && p.PlanId != nil {
 			model.PlanId = types.StringPointerValue(p.PlanId)
-			break
+			return p, nil
 		}
 		avl = fmt.Sprintf("%s\n- %s", avl, *p.Name)
 	}
 	if model.PlanId.ValueString() == "" {
-		return fmt.Errorf("couldn't find plan_name '%s', available names are: %s", planName, avl)
+		return observability.Plan{}, fmt.Errorf("couldn't find plan_name '%s', available names are: %s", planName, avl)
+	}
+	return observability.Plan{}, nil
+}
+
+func (r *instanceResource) getAlertConfigs(ctx context.Context, alertConfig *alertConfigModel, model *Model) error {
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
+	var err error
+	// Alert Config
+	if utils.IsUndefined(model.AlertConfig) {
+		*alertConfig, err = getMockAlertConfig(ctx)
+		if err != nil {
+			return fmt.Errorf("Getting mock alert config: %w", err)
+		}
+	}
+
+	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, alertConfig)
+	if err != nil {
+		return fmt.Errorf("Building alert config payload: %w", err)
+	}
+
+	if alertConfigPayload != nil {
+		_, err = r.client.UpdateAlertConfigs(ctx, instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
+		if err != nil {
+			return fmt.Errorf("Setting alert config: %w", err)
+		}
+	}
+
+	alertConfigResp, err := r.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
+	if err != nil {
+		return fmt.Errorf("Calling API to get alert config: %w", err)
+	}
+	// Map response body to schema
+	err = mapAlertConfigField(ctx, alertConfigResp, model)
+	if err != nil {
+		return fmt.Errorf("Processing API response for the alert config: %w", err)
+	}
+	return nil
+}
+
+func (r *instanceResource) getMetricsRetention(ctx context.Context, model *Model) error {
+	metricsRetentionDays := conversion.Int64ValueToPointer(model.MetricsRetentionDays)
+	metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays5mDownsampling)
+	metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays1hDownsampling)
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
+
+	// If any of the metrics retention days are set, set the metrics retention policy
+	if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
+		// Need to get the metrics retention policy because update endpoint is a PUT and we need to send all fields
+		metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, instanceId, projectId)
+		if err != nil {
+			return fmt.Errorf("Getting metrics retention policy: %w", err)
+		}
+
+		metricsRetentionPayload, err := toUpdateMetricsStorageRetentionPayload(metricsRetentionDays, metricsRetentionDays5mDownsampling, metricsRetentionDays1hDownsampling, metricsResp)
+		if err != nil {
+			return fmt.Errorf("Building metrics retention policy payload: %w", err)
+		}
+		_, err = r.client.UpdateMetricsStorageRetention(ctx, instanceId, projectId).UpdateMetricsStorageRetentionPayload(*metricsRetentionPayload).Execute()
+		if err != nil {
+			return fmt.Errorf("Setting metrics retention policy: %w", err)
+		}
+	}
+
+	// Get metrics retention policy after update
+	metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, instanceId, projectId)
+	if err != nil {
+		return fmt.Errorf("Getting metrics retention policy: %w", err)
+	}
+
+	// Map response body to schema
+	err = mapMetricsRetentionField(metricsResp, model)
+	if err != nil {
+		return fmt.Errorf("Processing API response for the metrics retention %w", err)
 	}
 	return nil
 }
 
 func setACL(ctx context.Context, state *tfsdk.State, model *Model) diag.Diagnostics {
 	return state.SetAttribute(ctx, path.Root("acl"), model.ACL)
+}
+
+// Needed since some plans cannot call the metrics API.
+// Since the fields are optional but get a default value from the API this needs to be set for the other plans manually.
+func setMetricsRetentionsZero(ctx context.Context, state *tfsdk.State) (diags diag.Diagnostics) {
+	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days"), 0)...)
+	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days_5m_downsampling"), 0)...)
+	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days_1h_downsampling"), 0)...)
+	return diags
 }
 
 func setMetricsRetentions(ctx context.Context, state *tfsdk.State, model *Model) (diags diag.Diagnostics) {
@@ -2205,4 +2327,52 @@ func setMetricsRetentions(ctx context.Context, state *tfsdk.State, model *Model)
 
 func setAlertConfig(ctx context.Context, state *tfsdk.State, model *Model) diag.Diagnostics {
 	return state.SetAttribute(ctx, path.Root("alert_config"), model.AlertConfig)
+}
+
+type webhookConfigMutuallyExclusive struct{}
+
+func (v webhookConfigMutuallyExclusive) Description(_ context.Context) string {
+	return "ms_teams and google_chat cannot both be true"
+}
+
+func (v webhookConfigMutuallyExclusive) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v webhookConfigMutuallyExclusive) ValidateObject(_ context.Context, req validator.ObjectRequest, resp *validator.ObjectResponse) { //nolint:gocritic // req parameter signature required by validator.Object interface
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	attributes := req.ConfigValue.Attributes()
+
+	msTeamsAttr, msTeamsExists := attributes["ms_teams"]
+	googleChatAttr, googleChatExists := attributes["google_chat"]
+
+	if !msTeamsExists || !googleChatExists {
+		return
+	}
+
+	if msTeamsAttr.IsNull() || msTeamsAttr.IsUnknown() || googleChatAttr.IsNull() || googleChatAttr.IsUnknown() {
+		return
+	}
+
+	msTeamsValue, ok1 := msTeamsAttr.(types.Bool)
+	googleChatValue, ok2 := googleChatAttr.(types.Bool)
+
+	if !ok1 || !ok2 {
+		return
+	}
+
+	if msTeamsValue.ValueBool() && googleChatValue.ValueBool() {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid Webhook Configuration",
+			"Both ms_teams and google_chat cannot be set to true at the same time. Only one can be true.",
+		)
+	}
+}
+
+func WebhookConfigMutuallyExclusive() validator.Object {
+	return webhookConfigMutuallyExclusive{}
 }

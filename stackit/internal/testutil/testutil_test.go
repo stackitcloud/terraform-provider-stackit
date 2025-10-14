@@ -32,6 +32,11 @@ func TestConvertConfigVariable(t *testing.T) {
 			variable: config.IntegerVariable(10),
 			want:     "10",
 		},
+		{
+			name:     "quoted string",
+			variable: config.StringVariable(`instance =~ ".*"`),
+			want:     `instance =~ ".*"`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

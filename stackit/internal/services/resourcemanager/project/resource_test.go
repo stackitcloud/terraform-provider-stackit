@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
@@ -15,6 +16,10 @@ import (
 
 func TestMapProjectFields(t *testing.T) {
 	testUUID := uuid.New().String()
+	baseTime := time.Now()
+	createTime := baseTime
+	updateTime := baseTime.Add(1 * time.Hour)
+
 	tests := []struct {
 		description           string
 		uuidContainerParentId bool
@@ -24,26 +29,30 @@ func TestMapProjectFields(t *testing.T) {
 		isValid               bool
 	}{
 		{
-			"default_ok",
-			false,
-			&resourcemanager.GetProjectResponse{
-				ContainerId: utils.Ptr("cid"),
-				ProjectId:   utils.Ptr("pid"),
+			description:           "default_ok",
+			uuidContainerParentId: false,
+			projectResp: &resourcemanager.GetProjectResponse{
+				ContainerId:  utils.Ptr("cid"),
+				ProjectId:    utils.Ptr("pid"),
+				CreationTime: &createTime,
+				UpdateTime:   &updateTime,
 			},
-			Model{
+			expected: Model{
 				Id:                types.StringValue("cid"),
 				ContainerId:       types.StringValue("cid"),
 				ProjectId:         types.StringValue("pid"),
 				ContainerParentId: types.StringNull(),
 				Name:              types.StringNull(),
+				CreationTime:      types.StringValue(createTime.Format(time.RFC3339)),
+				UpdateTime:        types.StringValue(updateTime.Format(time.RFC3339)),
 			},
-			nil,
-			true,
+			expectedLabels: nil,
+			isValid:        true,
 		},
 		{
-			"container_parent_id_ok",
-			false,
-			&resourcemanager.GetProjectResponse{
+			description:           "container_parent_id_ok",
+			uuidContainerParentId: false,
+			projectResp: &resourcemanager.GetProjectResponse{
 				ContainerId: utils.Ptr("cid"),
 				ProjectId:   utils.Ptr("pid"),
 				Labels: &map[string]string{
@@ -54,25 +63,29 @@ func TestMapProjectFields(t *testing.T) {
 					ContainerId: utils.Ptr("parent_cid"),
 					Id:          utils.Ptr("parent_pid"),
 				},
-				Name: utils.Ptr("name"),
+				Name:         utils.Ptr("name"),
+				CreationTime: &createTime,
+				UpdateTime:   &updateTime,
 			},
-			Model{
+			expected: Model{
 				Id:                types.StringValue("cid"),
 				ContainerId:       types.StringValue("cid"),
 				ProjectId:         types.StringValue("pid"),
 				ContainerParentId: types.StringValue("parent_cid"),
 				Name:              types.StringValue("name"),
+				CreationTime:      types.StringValue(createTime.Format(time.RFC3339)),
+				UpdateTime:        types.StringValue(updateTime.Format(time.RFC3339)),
 			},
-			&map[string]string{
+			expectedLabels: &map[string]string{
 				"label1": "ref1",
 				"label2": "ref2",
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"uuid_parent_id_ok",
-			true,
-			&resourcemanager.GetProjectResponse{
+			description:           "uuid_parent_id_ok",
+			uuidContainerParentId: true,
+			projectResp: &resourcemanager.GetProjectResponse{
 				ContainerId: utils.Ptr("cid"),
 				ProjectId:   utils.Ptr("pid"),
 				Labels: &map[string]string{
@@ -81,40 +94,45 @@ func TestMapProjectFields(t *testing.T) {
 				},
 				Parent: &resourcemanager.Parent{
 					ContainerId: utils.Ptr("parent_cid"),
-					Id:          utils.Ptr(testUUID),
+					Id:          utils.Ptr(testUUID), // simulate UUID logic
 				},
-				Name: utils.Ptr("name"),
+				Name:         utils.Ptr("name"),
+				CreationTime: &createTime,
+				UpdateTime:   &updateTime,
 			},
-			Model{
+			expected: Model{
 				Id:                types.StringValue("cid"),
 				ContainerId:       types.StringValue("cid"),
 				ProjectId:         types.StringValue("pid"),
 				ContainerParentId: types.StringValue(testUUID),
 				Name:              types.StringValue("name"),
+				CreationTime:      types.StringValue(createTime.Format(time.RFC3339)),
+				UpdateTime:        types.StringValue(updateTime.Format(time.RFC3339)),
 			},
-			&map[string]string{
+			expectedLabels: &map[string]string{
 				"label1": "ref1",
 				"label2": "ref2",
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"response_nil_fail",
-			false,
-			nil,
-			Model{},
-			nil,
-			false,
+			description:           "response_nil_fail",
+			uuidContainerParentId: false,
+			projectResp:           nil,
+			expected:              Model{},
+			expectedLabels:        nil,
+			isValid:               false,
 		},
 		{
-			"no_resource_id",
-			false,
-			&resourcemanager.GetProjectResponse{},
-			Model{},
-			nil,
-			false,
+			description:           "no_resource_id",
+			uuidContainerParentId: false,
+			projectResp:           &resourcemanager.GetProjectResponse{},
+			expected:              Model{},
+			expectedLabels:        nil,
+			isValid:               false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			if tt.expectedLabels == nil {
@@ -129,13 +147,17 @@ func TestMapProjectFields(t *testing.T) {
 			var containerParentId = types.StringNull()
 			if tt.uuidContainerParentId {
 				containerParentId = types.StringValue(testUUID)
+			} else if tt.projectResp != nil && tt.projectResp.Parent != nil && tt.projectResp.Parent.ContainerId != nil {
+				containerParentId = types.StringValue(*tt.projectResp.Parent.ContainerId)
 			}
+
 			model := &Model{
 				ContainerId:       tt.expected.ContainerId,
 				ContainerParentId: containerParentId,
 			}
 
 			err := mapProjectFields(context.Background(), tt.projectResp, model, nil)
+
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

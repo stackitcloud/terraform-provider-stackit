@@ -34,12 +34,12 @@ import {
 
 - `instance_id` (String) ID of the SQLServer Flex instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
+- `roles` (Set of String) Database access levels for the user. The values for the default roles are: `##STACKIT_DatabaseManager##`, `##STACKIT_LoginManager##`, `##STACKIT_ProcessManager##`, `##STACKIT_ServerManager##`, `##STACKIT_SQLAgentManager##`, `##STACKIT_SQLAgentUser##`
 - `username` (String) Username of the SQLServer Flex instance.
 
 ### Optional
 
 - `region` (String)
-- `roles` (Set of String) Database access levels for the user. The values for the default roles are: `##STACKIT_DatabaseManager##`, `##STACKIT_LoginManager##`, `##STACKIT_ProcessManager##`, `##STACKIT_ServerManager##`, `##STACKIT_SQLAgentManager##`, `##STACKIT_SQLAgentUser##`
 
 ### Read-Only
 

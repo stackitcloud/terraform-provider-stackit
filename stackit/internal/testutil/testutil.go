@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/config"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit"
 )
 
@@ -38,9 +39,6 @@ var (
 	Region    = os.Getenv("TF_ACC_REGION")
 	// ServerId is the id of a server used for some tests
 	ServerId = getenv("TF_ACC_SERVER_ID", "")
-	// IaaSImageId is the id of an image used for IaaS acceptance tests.
-	// Default image is ubuntu 24.04
-	IaaSImageId = getenv("TF_ACC_IMAGE_ID", "59838a89-51b1-4892-b57f-b3caf598ee2f")
 	// TestProjectParentContainerID is the container id of the parent resource under which projects are created as part of the resource-manager acceptance tests
 	TestProjectParentContainerID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID")
 	// TestProjectParentUUID is the uuid of the parent resource under which projects are created as part of the resource-manager acceptance tests
@@ -71,6 +69,7 @@ var (
 	RabbitMQCustomEndpoint        = os.Getenv("TF_ACC_RABBITMQ_CUSTOM_ENDPOINT")
 	RedisCustomEndpoint           = os.Getenv("TF_ACC_REDIS_CUSTOM_ENDPOINT")
 	ResourceManagerCustomEndpoint = os.Getenv("TF_ACC_RESOURCEMANAGER_CUSTOM_ENDPOINT")
+	ScfCustomEndpoint             = os.Getenv("TF_ACC_SCF_CUSTOM_ENDPOINT")
 	SecretsManagerCustomEndpoint  = os.Getenv("TF_ACC_SECRETSMANAGER_CUSTOM_ENDPOINT")
 	SQLServerFlexCustomEndpoint   = os.Getenv("TF_ACC_SQLSERVERFLEX_CUSTOM_ENDPOINT")
 	ServerBackupCustomEndpoint    = os.Getenv("TF_ACC_SERVER_BACKUP_CUSTOM_ENDPOINT")
@@ -131,6 +130,23 @@ func IaaSProviderConfig() string {
 	}
 	return fmt.Sprintf(`
 		provider "stackit" {
+			iaas_custom_endpoint = "%s"
+		}`,
+		IaaSCustomEndpoint,
+	)
+}
+
+func IaaSProviderConfigWithBetaResourcesEnabled() string {
+	if IaaSCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			enable_beta_resources = true
+			default_region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			enable_beta_resources = true
 			iaas_custom_endpoint = "%s"
 		}`,
 		IaaSCustomEndpoint,
@@ -325,10 +341,8 @@ func ResourceManagerProviderConfig() string {
 	if ResourceManagerCustomEndpoint == "" || AuthorizationCustomEndpoint == "" {
 		return fmt.Sprintf(`
 		provider "stackit" {
-			service_account_email = "%s"
 			service_account_token = "%s"
 		}`,
-			TestProjectServiceAccountEmail,
 			token,
 		)
 	}
@@ -336,12 +350,35 @@ func ResourceManagerProviderConfig() string {
 	provider "stackit" {
 		resourcemanager_custom_endpoint = "%s"
 		authorization_custom_endpoint = "%s"
-		service_account_email = "%s"
 		service_account_token = "%s"
 	}`,
 		ResourceManagerCustomEndpoint,
 		AuthorizationCustomEndpoint,
-		TestProjectServiceAccountEmail,
+		token,
+	)
+}
+
+func ResourceManagerProviderConfigBetaEnabled() string {
+	token := GetTestProjectServiceAccountToken("")
+	if ResourceManagerCustomEndpoint == "" || AuthorizationCustomEndpoint == "" {
+		return fmt.Sprintf(`
+		provider "stackit" {
+			service_account_token = "%s"
+			enable_beta_resources = true
+		}`,
+
+			token,
+		)
+	}
+	return fmt.Sprintf(`
+	provider "stackit" {
+		resourcemanager_custom_endpoint = "%s"
+		authorization_custom_endpoint = "%s"
+		service_account_token = "%s"
+		enable_beta_resources = true
+	}`,
+		ResourceManagerCustomEndpoint,
+		AuthorizationCustomEndpoint,
 		token,
 	)
 }
@@ -381,11 +418,13 @@ func ServerBackupProviderConfig() string {
 		return `
 		provider "stackit" {
 			default_region = "eu01"
+			enable_beta_resources = true
 		}`
 	}
 	return fmt.Sprintf(`
 		provider "stackit" {
 			server_backup_custom_endpoint = "%s"
+			enable_beta_resources = true
 		}`,
 		ServerBackupCustomEndpoint,
 	)
@@ -474,6 +513,22 @@ func GitProviderConfig() string {
 	)
 }
 
+func ScfProviderConfig() string {
+	if ScfCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			default_region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			default_region = "eu01"
+			scf_custom_endpoint = "%s"
+		}`,
+		ScfCustomEndpoint,
+	)
+}
+
 func ResourceNameWithDateTime(name string) string {
 	dateTime := time.Now().Format(time.RFC3339)
 	// Remove timezone to have a smaller datetime
@@ -531,8 +586,7 @@ func getenv(key, defaultValue string) string {
 	return val
 }
 
-// helper for local_file_path
-// no real data is created
+// CreateDefaultLocalFile is a helper for local_file_path. No real data is created
 func CreateDefaultLocalFile() os.File {
 	// Define the file name and size
 	fileName := "test-512k.img"
@@ -557,7 +611,10 @@ func ConvertConfigVariable(variable config.Variable) string {
 	tmpByteArray, _ := variable.MarshalJSON()
 	// In case the variable is a string, the quotes should be removed
 	if tmpByteArray[0] == '"' && tmpByteArray[len(tmpByteArray)-1] == '"' {
-		return string(tmpByteArray[1 : len(tmpByteArray)-1])
+		result := string(tmpByteArray[1 : len(tmpByteArray)-1])
+		// Replace escaped quotes which where added MarshalJSON
+		rawString := strings.ReplaceAll(result, `\"`, `"`)
+		return rawString
 	}
 	return string(tmpByteArray)
 }

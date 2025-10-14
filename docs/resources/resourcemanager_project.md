@@ -3,13 +3,13 @@
 page_title: "stackit_resourcemanager_project Resource - stackit"
 subcategory: ""
 description: |-
-  Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.
+  Resource Manager project resource schema.
   -> In case you're getting started with an empty STACKIT organization and want to use this resource to create projects in it, check out this guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/stackit_org_service_account for how to create a service account which you can use for authentication in the STACKIT Terraform provider.
 ---
 
 # stackit_resourcemanager_project (Resource)
 
-Resource Manager project resource schema. To use this resource, it is required that you set the service account email in the provider configuration.
+Resource Manager project resource schema.
 
 -> In case you're getting started with an empty STACKIT organization and want to use this resource to create projects in it, check out [this guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/stackit_org_service_account) for how to create a service account which you can use for authentication in the STACKIT Terraform provider.
 
@@ -46,10 +46,13 @@ import {
 
 ### Optional
 
-- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}. To add a project to a STACKIT Network Area, setting the label `networkArea=<networkAreaID>` is required.
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}.  
+To create a project within a STACKIT Network Area, setting the label `networkArea=<networkAreaID>` is required. This can not be changed after project creation.
 
 ### Read-Only
 
 - `container_id` (String) Project container ID. Globally unique, user-friendly identifier.
+- `creation_time` (String) Date-time at which the project was created.
 - `id` (String) Terraform's internal resource ID. It is structured as "`container_id`".
 - `project_id` (String) Project UUID identifier. This is the ID that can be used in most of the other resources to identify the project.
+- `update_time` (String) Date-time at which the project was last modified.
