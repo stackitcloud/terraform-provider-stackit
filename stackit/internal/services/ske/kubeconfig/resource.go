@@ -10,6 +10,7 @@ import (
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -38,16 +39,17 @@ var (
 )
 
 type Model struct {
-	Id           types.String `tfsdk:"id"` // needed by TF
-	ClusterName  types.String `tfsdk:"cluster_name"`
-	ProjectId    types.String `tfsdk:"project_id"`
-	KubeconfigId types.String `tfsdk:"kube_config_id"` // uuid generated internally because kubeconfig has no identifier
-	Kubeconfig   types.String `tfsdk:"kube_config"`
-	Expiration   types.Int64  `tfsdk:"expiration"`
-	Refresh      types.Bool   `tfsdk:"refresh"`
-	ExpiresAt    types.String `tfsdk:"expires_at"`
-	CreationTime types.String `tfsdk:"creation_time"`
-	Region       types.String `tfsdk:"region"`
+	Id            types.String `tfsdk:"id"` // needed by TF
+	ClusterName   types.String `tfsdk:"cluster_name"`
+	ProjectId     types.String `tfsdk:"project_id"`
+	KubeconfigId  types.String `tfsdk:"kube_config_id"` // uuid generated internally because kubeconfig has no identifier
+	Kubeconfig    types.String `tfsdk:"kube_config"`
+	Expiration    types.Int64  `tfsdk:"expiration"`
+	Refresh       types.Bool   `tfsdk:"refresh"`
+	RefreshBefore types.Int64  `tfsdk:"refresh_before"`
+	ExpiresAt     types.String `tfsdk:"expires_at"`
+	CreationTime  types.String `tfsdk:"creation_time"`
+	Region        types.String `tfsdk:"region"`
 }
 
 // NewKubeconfigResource is a helper function to simplify the provider implementation.
@@ -94,6 +96,7 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		"expiration":     "Expiration time of the kubeconfig, in seconds. Defaults to `3600`",
 		"expires_at":     "Timestamp when the kubeconfig expires",
 		"refresh":        "If set to true, the provider will check if the kubeconfig has expired and will generated a new valid one in-place",
+		"refresh_before": "Number of seconds before expiration to trigger refresh of the kubeconfig at. Only used if refresh is set to true.",
 		"creation_time":  "Date-time when the kubeconfig was created",
 		"region":         "The resource region. If not defined, the provider region is used.",
 	}
@@ -153,6 +156,16 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Optional:    true,
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
+				},
+			},
+			"refresh_before": schema.Int64Attribute{
+				Description: descriptions["refresh_before"],
+				Optional:    true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.Int64{
+					int64validator.AtLeast(1),
 				},
 			},
 			"kube_config": schema.StringAttribute{
@@ -441,6 +454,9 @@ func checkHasExpired(model *Model, currentTime time.Time) (bool, error) {
 		expiresAt, err := time.Parse(time.RFC3339, expiresAt.ValueString())
 		if err != nil {
 			return false, fmt.Errorf("converting expiresAt field to timestamp: %w", err)
+		}
+		if !model.RefreshBefore.IsNull() {
+			expiresAt = expiresAt.Add(-time.Duration(model.RefreshBefore.ValueInt64()) * time.Second)
 		}
 		if expiresAt.Before(currentTime) {
 			return true, nil

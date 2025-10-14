@@ -185,6 +185,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: descriptions["credentials_group_id"],
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 					stringplanmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.String{
@@ -496,7 +497,7 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 	} else {
 		// Harmonize the timestamp format
 		// Eg. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
-		expirationTimestamp, err := time.Parse(time.RFC3339, *credentialResp.Expires)
+		expirationTimestamp, err := time.Parse(time.RFC3339, *credentialResp.Expires.Get())
 		if err != nil {
 			return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credentialResp.Expires, err)
 		}

@@ -25,7 +25,8 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ datasource.DataSource = &projectDataSource{}
+	_ datasource.DataSource              = &projectDataSource{}
+	_ datasource.DataSourceWithConfigure = &projectDataSource{}
 )
 
 // NewProjectDataSource is a helper function to simplify the provider implementation.
@@ -67,6 +68,8 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 		"parent_container_id": "Parent resource identifier. Both container ID (user-friendly) and UUID are supported",
 		"name":                "Project name.",
 		"labels":              `Labels are key-value string pairs which can be attached to a resource container. A label key must match the regex [A-ZÄÜÖa-zäüöß0-9_-]{1,64}. A label value must match the regex ^$|[A-ZÄÜÖa-zäüöß0-9_-]{1,64}`,
+		"creation_time":       "Date-time at which the project was created.",
+		"update_time":         "Date-time at which the project was last modified.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -121,6 +124,14 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							"must match expression"),
 					),
 				},
+			},
+			"creation_time": schema.StringAttribute{
+				Description: descriptions["creation_time"],
+				Computed:    true,
+			},
+			"update_time": schema.StringAttribute{
+				Description: descriptions["update_time"],
+				Computed:    true,
 			},
 		},
 	}

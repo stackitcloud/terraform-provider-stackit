@@ -178,6 +178,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `redis_custom_endpoint` (String) Custom endpoint for the Redis service
 - `region` (String, Deprecated) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `resourcemanager_custom_endpoint` (String) Custom endpoint for the Resource Manager service
+- `scf_custom_endpoint` (String) Custom endpoint for the Cloud Foundry (SCF) service
 - `secretsmanager_custom_endpoint` (String) Custom endpoint for the Secrets Manager service
 - `server_backup_custom_endpoint` (String) Custom endpoint for the Server Backup service
 - `server_update_custom_endpoint` (String) Custom endpoint for the Server Update service

@@ -18,9 +18,9 @@ resource "stackit_observability_instance" "example" {
   name                                   = "example-instance"
   plan_name                              = "Observability-Monitoring-Medium-EU01"
   acl                                    = ["1.1.1.1/32", "2.2.2.2/32"]
-  metrics_retention_days                 = 30
-  metrics_retention_days_5m_downsampling = 10
-  metrics_retention_days_1h_downsampling = 5
+  metrics_retention_days                 = 90
+  metrics_retention_days_5m_downsampling = 90
+  metrics_retention_days_1h_downsampling = 90
 }
 
 # Only use the import statement, if you want to import an existing observability instance
@@ -43,9 +43,9 @@ import {
 
 - `acl` (Set of String) The access control list for this instance. Each entry is an IP address range that is permitted to access, in CIDR notation.
 - `alert_config` (Attributes) Alert configuration for the instance. (see [below for nested schema](#nestedatt--alert_config))
-- `metrics_retention_days` (Number) Specifies for how many days the raw metrics are kept.
-- `metrics_retention_days_1h_downsampling` (Number) Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `0` (disabled).
-- `metrics_retention_days_5m_downsampling` (Number) Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `0` (disabled).
+- `metrics_retention_days` (Number) Specifies for how many days the raw metrics are kept. Default is set to `90`.
+- `metrics_retention_days_1h_downsampling` (Number) Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `90`.
+- `metrics_retention_days_5m_downsampling` (Number) Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `90`.
 - `parameters` (Map of String) Additional parameters.
 
 ### Read-Only
@@ -80,7 +80,7 @@ Required:
 
 Optional:
 
-- `global` (Attributes) Global configuration for the alerts. (see [below for nested schema](#nestedatt--alert_config--global))
+- `global` (Attributes) Global configuration for the alerts. If nothing passed the default argus config will be used. It is only possible to update the entire global part, not individual attributes. (see [below for nested schema](#nestedatt--alert_config--global))
 
 <a id="nestedatt--alert_config--receivers"></a>
 ### Nested Schema for `alert_config.receivers`
@@ -101,9 +101,10 @@ Optional:
 Optional:
 
 - `auth_identity` (String) SMTP authentication information. Must be a valid email address
-- `auth_password` (String) SMTP authentication password.
+- `auth_password` (String, Sensitive) SMTP authentication password.
 - `auth_username` (String) SMTP authentication username.
 - `from` (String) The sender email address. Must be a valid email address
+- `send_resolved` (Boolean) Whether to notify about resolved alerts.
 - `smart_host` (String) The SMTP host through which emails are sent.
 - `to` (String) The email address to send notifications to. Must be a valid email address
 
@@ -115,6 +116,8 @@ Optional:
 
 - `api_key` (String) The API key for OpsGenie.
 - `api_url` (String) The host to send OpsGenie API requests to. Must be a valid URL
+- `priority` (String) Priority of the alert. Possible values are: `P1`, `P2`, `P3`, `P4`, `P5`.
+- `send_resolved` (Boolean) Whether to notify about resolved alerts.
 - `tags` (String) Comma separated list of tags attached to the notifications.
 
 
@@ -123,8 +126,10 @@ Optional:
 
 Optional:
 
+- `google_chat` (Boolean) Google Chat webhooks require special handling, set this to true if the webhook is for Google Chat.
 - `ms_teams` (Boolean) Microsoft Teams webhooks require special handling, set this to true if the webhook is for Microsoft Teams.
-- `url` (String) The endpoint to send HTTP POST requests to. Must be a valid URL
+- `send_resolved` (Boolean) Whether to notify about resolved alerts.
+- `url` (String, Sensitive) The endpoint to send HTTP POST requests to. Must be a valid URL
 
 
 
@@ -140,8 +145,6 @@ Optional:
 - `group_by` (List of String) The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.
 - `group_interval` (String) How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)
 - `group_wait` (String) How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.)
-- `match` (Map of String) A set of equality matchers an alert has to fulfill to match the node.
-- `match_regex` (Map of String) A set of regex-matchers an alert has to fulfill to match the node.
 - `repeat_interval` (String) How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).
 - `routes` (Attributes List) List of child routes. (see [below for nested schema](#nestedatt--alert_config--route--routes))
 
@@ -154,11 +157,13 @@ Required:
 
 Optional:
 
+- `continue` (Boolean) Whether an alert should continue matching subsequent sibling nodes.
 - `group_by` (List of String) The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.
 - `group_interval` (String) How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)
 - `group_wait` (String) How long to initially wait to send a notification for a group of alerts. Allows to wait for an inhibiting alert to arrive or collect more initial alerts for the same group. (Usually ~0s to few minutes.)
-- `match` (Map of String) A set of equality matchers an alert has to fulfill to match the node.
-- `match_regex` (Map of String) A set of regex-matchers an alert has to fulfill to match the node.
+- `match` (Map of String, Deprecated) A set of equality matchers an alert has to fulfill to match the node. This field is deprecated and will be removed after 10th March 2026, use `matchers` in the `routes` instead
+- `match_regex` (Map of String, Deprecated) A set of regex-matchers an alert has to fulfill to match the node. This field is deprecated and will be removed after 10th March 2026, use `matchers` in the `routes` instead
+- `matchers` (List of String) A list of matchers that an alert has to fulfill to match the node. A matcher is a string with a syntax inspired by PromQL and OpenMetrics.
 - `repeat_interval` (String) How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).
 
 

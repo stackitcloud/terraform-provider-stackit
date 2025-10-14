@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Add replace directives to local files to go.work
 set -eo pipefail
 

@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -73,7 +75,8 @@ func NewNetworkAreaResource() resource.Resource {
 
 // networkResource is the resource implementation.
 type networkAreaResource struct {
-	client *iaas.APIClient
+	client                *iaas.APIClient
+	resourceManagerClient *resourcemanager.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -93,6 +96,11 @@ func (r *networkAreaResource) Configure(ctx context.Context, req resource.Config
 		return
 	}
 	r.client = apiClient
+	resourceManagerClient := resourcemanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	r.resourceManagerClient = resourceManagerClient
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -411,14 +419,9 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	projects, err := r.client.ListNetworkAreaProjects(ctx, organizationId, networkAreaId).Execute()
+	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client, r.resourceManagerClient, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintf("Calling API to get the list of projects: %v", err))
-		return
-	}
-
-	if projects != nil && len(*projects.Items) > 0 {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintln("You still have projects attached to the network area. Please delete or remove them from the network area before deleting the network area."))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintf("Network area ready for deletion waiting: %v", err))
 		return
 	}
 

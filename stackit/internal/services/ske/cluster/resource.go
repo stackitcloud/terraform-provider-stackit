@@ -12,6 +12,7 @@ import (
 	serviceenablementUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/utils"
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -372,11 +373,17 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.",
 				Computed:    true,
 				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"pod_address_ranges": schema.ListAttribute{
 				Description: "The network ranges (in CIDR notation) used by pods of the cluster.",
 				Computed:    true,
 				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"node_pools": schema.ListNestedAttribute{
 				Description: "One or more `node_pool` block as defined below.",
@@ -653,6 +660,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								ElementType: types.StringType,
 								PlanModifiers: []planmodifier.List{
 									listplanmodifier.UseStateForUnknown(),
+								},
+								Validators: []validator.List{
+									listvalidator.ValueStringsAre(validate.NoUUID()),
 								},
 							},
 						},
