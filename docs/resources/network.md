@@ -4,11 +4,13 @@ page_title: "stackit_network Resource - stackit"
 subcategory: ""
 description: |-
   Network resource schema. Must have a region specified in the provider configuration.
+  ~> The behavior of not configured ipv4_nameservers will change from January 2026. If ipv4_nameservers is not set, the network will get the default_nameservers of the Network Area. To avoid that the ipv4_nameservers will be configured, set explicit to an empty list [].
 ---
 
 # stackit_network (Resource)
 
 Network resource schema. Must have a `region` specified in the provider configuration.
+~> The behavior of not configured `ipv4_nameservers` will change from January 2026. If `ipv4_nameservers` is not set, the network will get the `default_nameservers` of the Network Area. To avoid that the `ipv4_nameservers` will be configured, set explicit to an empty list `[]`.
 
 ## Example Usage
 
@@ -68,7 +70,7 @@ import {
 - `ipv6_prefix` (String) The IPv6 prefix of the network (CIDR).
 - `ipv6_prefix_length` (Number) The IPv6 prefix length of the network.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
-- `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed soon, use `ipv4_nameservers` to configure the nameservers for IPv4.
+- `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed in January 2026, use `ipv4_nameservers` to configure the nameservers for IPv4.
 - `no_ipv4_gateway` (Boolean) If set to `true`, the network doesn't have a gateway.
 - `no_ipv6_gateway` (Boolean) If set to `true`, the network doesn't have a gateway.
 - `region` (String) Can only be used when experimental "network" is set.
