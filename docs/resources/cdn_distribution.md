@@ -22,6 +22,9 @@ resource "stackit_cdn_distribution" "example_distribution" {
     backend = {
       type       = "http"
       origin_url = "https://mybackend.onstackit.cloud"
+      geofencing = {
+        "https://mybackend.onstackit.cloud" = ["DE"]
+      }
     }
     regions           = ["EU", "US", "ASIA", "AF", "SA"]
     blocked_countries = ["DE", "AT", "CH"]
@@ -80,6 +83,7 @@ Required:
 
 Optional:
 
+- `geofencing` (Map of List of String) A map of URLs to a list of countries where content is allowed.
 - `origin_request_headers` (Map of String) The configured origin request headers for the backend
 
 
