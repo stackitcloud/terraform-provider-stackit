@@ -1,4 +1,7 @@
-# How to Provisioning Cloud Foundry using Terrform
+---
+page_title: "How to provision Cloud Foundry using Terraform"
+---
+# How to provision Cloud Foundry using Terraform
 
 ## Objective
 
@@ -65,7 +68,7 @@ variable "admin_email" {
 }
 
 provider "stackit" {
-  default_region           = "eu01"
+  default_region = "eu01"
 }
 
 resource "stackit_scf_organization" "scf_org" {
@@ -90,7 +93,7 @@ provider "cloudfoundry" {
 }
 
 locals {
-  spaces    = ["dev", "qa", "prod"]
+  spaces = ["dev", "qa", "prod"]
 }
 
 resource "cloudfoundry_org_role" "org_user" {
@@ -112,11 +115,11 @@ resource "cloudfoundry_space" "spaces" {
 }
 
 resource "cloudfoundry_space_role" "space_developer" {
-  for_each = toset(local.spaces)
-  username = var.admin_email
-  type     = "space_developer"
-  depends_on = [ cloudfoundry_org_role.org_user ]
-  space     = cloudfoundry_space.spaces[each.key].id
+  for_each   = toset(local.spaces)
+  username   = var.admin_email
+  type       = "space_developer"
+  depends_on = [cloudfoundry_org_role.org_user]
+  space      = cloudfoundry_space.spaces[each.key].id
 }
 ```
 
@@ -126,7 +129,7 @@ resource "cloudfoundry_space_role" "space_developer" {
 
 ```
 provider "stackit" {
-  default_region           = "eu01"
+  default_region = "eu01"
 }
 ```
 
