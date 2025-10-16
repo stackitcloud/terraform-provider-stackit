@@ -39,6 +39,13 @@ var (
 	_ resource.ResourceWithImportState = &networkResource{}
 )
 
+const (
+	ipv4BehaviorChangeTitle       = "Behavior of not configured `ipv4_nameservers` will change from January 2026"
+	ipv4BehaviorChangeDescription = "When `ipv4_nameservers` is not set, it will be set to the network area's `default_nameservers`.\n" +
+		"To prevent any nameserver configuration, the `ipv4_nameservers` attribute should be explicitly set to an empty list `[]`.\n" +
+		"In cases where `ipv4_nameservers` are defined within the resource, the existing behavior will remain unchanged."
+)
+
 // NewNetworkResource is a helper function to simplify the provider implementation.
 func NewNetworkResource() resource.Resource {
 	return &networkResource{}
@@ -179,9 +186,9 @@ func (r *networkResource) ConfigValidators(_ context.Context) []resource.ConfigV
 // Schema defines the schema for the resource.
 func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Network resource schema. Must have a `region` specified in the provider configuration."
-	ipv4BehaviorChange := "~> The behavior of not configured `ipv4_nameservers` will change from January 2026. If `ipv4_nameservers` is not set, the network will get the `default_nameservers` of the Network Area. To avoid that the `ipv4_nameservers` will be configured, set explicit to an empty list `[]`."
+	descriptionNote := fmt.Sprintf("~> %s. %s", ipv4BehaviorChangeTitle, ipv4BehaviorChangeDescription)
 	resp.Schema = schema.Schema{
-		MarkdownDescription: fmt.Sprintf("%s\n%s", description, ipv4BehaviorChange),
+		MarkdownDescription: fmt.Sprintf("%s\n%s", description, descriptionNote),
 		Description:         "Network resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -434,8 +441,6 @@ func (r *networkResource) ImportState(ctx context.Context, req resource.ImportSt
 
 func addIPv4Warning(diags *diag.Diagnostics) {
 	diags.AddAttributeWarning(path.Root("ipv4_nameservers"),
-		"Behavior of not configured `ipv4_nameservers` will change from January 2026",
-		"When `ipv4_nameservers` is not set, it will be set to the network area's `default_nameservers`.\n"+
-			"To prevent any nameserver configuration, the `ipv4_nameservers` attribute should be explicitly set to an empty list `[]`.\n"+
-			"In cases where `ipv4_nameservers` are defined within the resource, the existing behavior will remain unchanged.")
+		ipv4BehaviorChangeTitle,
+		ipv4BehaviorChangeDescription)
 }
