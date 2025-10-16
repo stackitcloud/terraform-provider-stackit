@@ -4,13 +4,17 @@ page_title: "stackit_network Resource - stackit"
 subcategory: ""
 description: |-
   Network resource schema. Must have a region specified in the provider configuration.
-  ~> The behavior of not configured ipv4_nameservers will change from January 2026. If ipv4_nameservers is not set, the network will get the default_nameservers of the Network Area. To avoid that the ipv4_nameservers will be configured, set explicit to an empty list [].
+  ~> Behavior of not configured ipv4_nameservers will change from January 2026. When ipv4_nameservers is not set, it will be set to the network area's default_nameservers.
+  To prevent any nameserver configuration, the ipv4_nameservers attribute should be explicitly set to an empty list [].
+  In cases where ipv4_nameservers are defined within the resource, the existing behavior will remain unchanged.
 ---
 
 # stackit_network (Resource)
 
 Network resource schema. Must have a `region` specified in the provider configuration.
-~> The behavior of not configured `ipv4_nameservers` will change from January 2026. If `ipv4_nameservers` is not set, the network will get the `default_nameservers` of the Network Area. To avoid that the `ipv4_nameservers` will be configured, set explicit to an empty list `[]`.
+~> Behavior of not configured `ipv4_nameservers` will change from January 2026. When `ipv4_nameservers` is not set, it will be set to the network area's `default_nameservers`.
+To prevent any nameserver configuration, the `ipv4_nameservers` attribute should be explicitly set to an empty list `[]`.
+In cases where `ipv4_nameservers` are defined within the resource, the existing behavior will remain unchanged.
 
 ## Example Usage
 
