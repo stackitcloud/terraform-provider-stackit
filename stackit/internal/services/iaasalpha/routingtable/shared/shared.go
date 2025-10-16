@@ -156,7 +156,7 @@ func RouteResponseAttributes() map[string]schema.Attribute {
 			Computed:    true,
 			Attributes: map[string]schema.Attribute{
 				"type": schema.StringAttribute{
-					Description: fmt.Sprintf("%s %s.", utils.FormatPossibleValues("blackhole", "internet", "ipv4", "ipv6"), "Only `cidrv4` is supported during experimental stage."),
+					Description: "Type of the next hop. " + utils.FormatPossibleValues("blackhole", "internet", "ipv4", "ipv6"),
 					Computed:    true,
 				},
 				"value": schema.StringAttribute{
