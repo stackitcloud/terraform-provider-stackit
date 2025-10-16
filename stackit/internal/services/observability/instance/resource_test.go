@@ -365,6 +365,8 @@ func TestMapFields(t *testing.T) {
 		instanceResp            *observability.GetInstanceResponse
 		listACLResp             *observability.ListACLResponse
 		getMetricsRetentionResp *observability.GetMetricsStorageRetentionResponse
+		getLogsRetentionResp    *observability.LogsConfigResponse
+		getTracesRetentionResp  *observability.TracesConfigResponse
 		expected                Model
 		isValid                 bool
 	}{
@@ -379,6 +381,8 @@ func TestMapFields(t *testing.T) {
 				MetricsRetentionTime1h:  utils.Ptr("30d"),
 				MetricsRetentionTime5m:  utils.Ptr("7d"),
 			},
+			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: utils.Ptr("168h")}},
+			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: utils.Ptr("168h")}},
 			Model{
 				Id:                                 types.StringValue("pid,iid"),
 				ProjectId:                          types.StringValue("pid"),
@@ -388,6 +392,8 @@ func TestMapFields(t *testing.T) {
 				Name:                               types.StringNull(),
 				Parameters:                         types.MapNull(types.StringType),
 				ACL:                                types.SetNull(types.StringType),
+				TracesRetentionDays:                types.Int64Value(7),
+				LogsRetentionDays:                  types.Int64Value(7),
 				MetricsRetentionDays:               types.Int64Value(60),
 				MetricsRetentionDays1hDownsampling: types.Int64Value(30),
 				MetricsRetentionDays5mDownsampling: types.Int64Value(7),
@@ -419,6 +425,8 @@ func TestMapFields(t *testing.T) {
 				MetricsRetentionTime1h:  utils.Ptr("30d"),
 				MetricsRetentionTime5m:  utils.Ptr("7d"),
 			},
+			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: utils.Ptr("168h")}},
+			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: utils.Ptr("168h")}},
 			Model{
 				Id:         types.StringValue("pid,iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -430,6 +438,8 @@ func TestMapFields(t *testing.T) {
 				ACL: types.SetValueMust(types.StringType, []attr.Value{
 					types.StringValue("1.1.1.1/32"),
 				}),
+				TracesRetentionDays:                types.Int64Value(7),
+				LogsRetentionDays:                  types.Int64Value(7),
 				MetricsRetentionDays:               types.Int64Value(60),
 				MetricsRetentionDays1hDownsampling: types.Int64Value(30),
 				MetricsRetentionDays5mDownsampling: types.Int64Value(7),
@@ -457,6 +467,8 @@ func TestMapFields(t *testing.T) {
 				MetricsRetentionTime1h:  utils.Ptr("30d"),
 				MetricsRetentionTime5m:  utils.Ptr("7d"),
 			},
+			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: utils.Ptr("168h")}},
+			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: utils.Ptr("168h")}},
 			Model{
 				Id:         types.StringValue("pid,iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -469,6 +481,8 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("1.1.1.1/32"),
 					types.StringValue("8.8.8.8/32"),
 				}),
+				TracesRetentionDays:                types.Int64Value(7),
+				LogsRetentionDays:                  types.Int64Value(7),
 				MetricsRetentionDays:               types.Int64Value(60),
 				MetricsRetentionDays1hDownsampling: types.Int64Value(30),
 				MetricsRetentionDays5mDownsampling: types.Int64Value(7),
@@ -490,6 +504,8 @@ func TestMapFields(t *testing.T) {
 				MetricsRetentionTime1h:  utils.Ptr("30d"),
 				MetricsRetentionTime5m:  utils.Ptr("7d"),
 			},
+			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: utils.Ptr("168h")}},
+			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: utils.Ptr("168h")}},
 			Model{
 				Id:                                 types.StringValue("pid,iid"),
 				ProjectId:                          types.StringValue("pid"),
@@ -499,6 +515,8 @@ func TestMapFields(t *testing.T) {
 				Name:                               types.StringNull(),
 				Parameters:                         types.MapNull(types.StringType),
 				ACL:                                types.SetNull(types.StringType),
+				TracesRetentionDays:                types.Int64Value(7),
+				LogsRetentionDays:                  types.Int64Value(7),
 				MetricsRetentionDays:               types.Int64Value(60),
 				MetricsRetentionDays1hDownsampling: types.Int64Value(30),
 				MetricsRetentionDays5mDownsampling: types.Int64Value(7),
@@ -510,12 +528,16 @@ func TestMapFields(t *testing.T) {
 			nil,
 			nil,
 			nil,
+			nil,
+			nil,
 			Model{},
 			false,
 		},
 		{
 			"no_resource_id",
 			&observability.GetInstanceResponse{},
+			nil,
+			nil,
 			nil,
 			nil,
 			Model{},
@@ -532,6 +554,8 @@ func TestMapFields(t *testing.T) {
 				Message: nil,
 			},
 			&observability.GetMetricsStorageRetentionResponse{},
+			&observability.LogsConfigResponse{},
+			&observability.TracesConfigResponse{},
 			Model{},
 			false,
 		},
@@ -545,6 +569,8 @@ func TestMapFields(t *testing.T) {
 				Acl:     &[]string{},
 				Message: nil,
 			},
+			nil,
+			nil,
 			nil,
 			Model{},
 			false,
@@ -574,6 +600,8 @@ func TestMapFields(t *testing.T) {
 				MetricsRetentionTime1h:  utils.Ptr("30d"),
 				MetricsRetentionTime5m:  utils.Ptr("7d"),
 			},
+			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: utils.Ptr("480h")}},
+			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: utils.Ptr("720h")}},
 			Model{
 				Id:         types.StringValue("pid,iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -585,6 +613,8 @@ func TestMapFields(t *testing.T) {
 				ACL: types.SetValueMust(types.StringType, []attr.Value{
 					types.StringValue("1.1.1.1/32"),
 				}),
+				LogsRetentionDays:                  types.Int64Value(20),
+				TracesRetentionDays:                types.Int64Value(30),
 				MetricsRetentionDays:               types.Int64Value(60),
 				MetricsRetentionDays1hDownsampling: types.Int64Value(30),
 				MetricsRetentionDays5mDownsampling: types.Int64Value(7),
@@ -601,10 +631,12 @@ func TestMapFields(t *testing.T) {
 			err := mapFields(context.Background(), tt.instanceResp, state)
 			aclErr := mapACLField(tt.listACLResp, state)
 			metricsErr := mapMetricsRetentionField(tt.getMetricsRetentionResp, state)
-			if !tt.isValid && err == nil && aclErr == nil && metricsErr == nil {
+			logsErr := mapLogsRetentionField(tt.getLogsRetentionResp, state)
+			tracesErr := mapTracesRetentionField(tt.getTracesRetentionResp, state)
+			if !tt.isValid && err == nil && aclErr == nil && metricsErr == nil && logsErr == nil && tracesErr == nil {
 				t.Fatalf("Should have failed")
 			}
-			if tt.isValid && (err != nil || aclErr != nil || metricsErr != nil) {
+			if tt.isValid && (err != nil || aclErr != nil || metricsErr != nil || logsErr != nil || tracesErr != nil) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 

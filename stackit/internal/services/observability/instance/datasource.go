@@ -132,6 +132,14 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:    true,
 				Sensitive:   true,
 			},
+			"traces_retention_days": schema.Int64Attribute{
+				Description: "Specifies for how many days the traces are kept. Default is set to `7`.",
+				Computed:    true,
+			},
+			"logs_retention_days": schema.Int64Attribute{
+				Description: "Specifies for how many days the logs are kept. Default is set to `7`.",
+				Computed:    true,
+			},
 			"metrics_retention_days": schema.Int64Attribute{
 				Description: "Specifies for how many days the raw metrics are kept. Default is set to `90`.",
 				Computed:    true,
@@ -450,6 +458,44 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 		// Set state to fully populated data
 		diags := setMetricsRetentions(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		// Handle Logs Retentions
+		logsRetentionResp, err := d.client.GetLogsConfigs(ctx, instanceId, projectId).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get logs retention: %v", err))
+			return
+		}
+
+		err = mapLogsRetentionField(logsRetentionResp, &model)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the logs retention: %v", err))
+			return
+		}
+
+		diags = setLogsRetentions(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		// Handle Traces Retentions
+		tracesRetentionResp, err := d.client.GetTracesConfigs(ctx, instanceId, projectId).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get traces retention: %v", err))
+			return
+		}
+
+		err = mapTracesRetentionField(tracesRetentionResp, &model)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the traces retention: %v", err))
+			return
+		}
+
+		diags = setTracesRetentions(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
