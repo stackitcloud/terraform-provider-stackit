@@ -42,6 +42,7 @@ data "stackit_observability_instance" "example" {
 - `jaeger_traces_url` (String)
 - `jaeger_ui_url` (String)
 - `logs_push_url` (String) Specifies URL for pushing logs.
+- `logs_retention_days` (Number) Specifies for how many days the logs are kept. Default is set to `7`.
 - `logs_url` (String) Specifies Logs URL.
 - `metrics_push_url` (String) Specifies URL for pushing metrics.
 - `metrics_retention_days` (Number) Specifies for how many days the raw metrics are kept. Default is set to `90`.
@@ -54,6 +55,7 @@ data "stackit_observability_instance" "example" {
 - `plan_id` (String) The Observability plan ID.
 - `plan_name` (String) Specifies the Observability plan. E.g. `Observability-Monitoring-Medium-EU01`.
 - `targets_url` (String) Specifies Targets URL.
+- `traces_retention_days` (Number) Specifies for how many days the traces are kept. Default is set to `7`.
 - `zipkin_spans_url` (String)
 
 <a id="nestedatt--alert_config"></a>
