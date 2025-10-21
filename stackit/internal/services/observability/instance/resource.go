@@ -867,12 +867,14 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 
 	// Plan does not support log storage and trace storage
 	if plan.GetLogsStorage() == 0 && plan.GetTracesStorage() == 0 {
+		logsRetentionDays := conversion.Int64ValueToPointer(configModel.LogsRetentionDays)
+		tracesRetentionDays := conversion.Int64ValueToPointer(configModel.TracesRetentionDays)
 		metricsRetentionDays := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays)
 		metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays5mDownsampling)
 		metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays1hDownsampling)
 
 		// If any of the metrics retention days are set, return an error to the user
-		if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
+		if logsRetentionDays != nil || tracesRetentionDays != nil || metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring metrics retention days. Remove this from your config or use a different plan.", *plan.Name))
 		}
 	}
