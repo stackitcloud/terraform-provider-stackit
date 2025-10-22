@@ -1010,7 +1010,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-
 	} else {
 		// Set metric retention days to zero
 		diags = setMetricsRetentionsZero(ctx, &resp.State)
@@ -1173,7 +1172,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		if resp.Diagnostics.HasError() {
 			return
 		}
-
 	}
 
 	// There are plans where no alert matchers and receivers are present e.g. like Observability-Metrics-Endpoint-100k-EU01
@@ -1347,7 +1345,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-
 	} else {
 		// Set metric retention days to zero
 		diags = setMetricsRetentionsZero(ctx, &resp.State)
