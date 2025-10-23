@@ -12,24 +12,31 @@ import (
 )
 
 func TestMapDataSourceFields(t *testing.T) {
+	type args struct {
+		state  DataSourceModel
+		input  *iaas.Server
+		region string
+	}
 	tests := []struct {
 		description string
-		state       DataSourceModel
-		input       *iaas.Server
+		args        args
 		expected    DataSourceModel
 		isValid     bool
 	}{
 		{
-			"default_values",
-			DataSourceModel{
-				ProjectId: types.StringValue("pid"),
-				ServerId:  types.StringValue("sid"),
+			description: "default_values",
+			args: args{
+				state: DataSourceModel{
+					ProjectId: types.StringValue("pid"),
+					ServerId:  types.StringValue("sid"),
+				},
+				input: &iaas.Server{
+					Id: utils.Ptr("sid"),
+				},
+				region: "eu01",
 			},
-			&iaas.Server{
-				Id: utils.Ptr("sid"),
-			},
-			DataSourceModel{
-				Id:                types.StringValue("pid,sid"),
+			expected: DataSourceModel{
+				Id:                types.StringValue("pid,eu01,sid"),
 				ProjectId:         types.StringValue("pid"),
 				ServerId:          types.StringValue("sid"),
 				Name:              types.StringNull(),
@@ -43,40 +50,45 @@ func TestMapDataSourceFields(t *testing.T) {
 				CreatedAt:         types.StringNull(),
 				UpdatedAt:         types.StringNull(),
 				LaunchedAt:        types.StringNull(),
+				Region:            types.StringValue("eu01"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"simple_values",
-			DataSourceModel{
-				ProjectId: types.StringValue("pid"),
-				ServerId:  types.StringValue("sid"),
-			},
-			&iaas.Server{
-				Id:               utils.Ptr("sid"),
-				Name:             utils.Ptr("name"),
-				AvailabilityZone: utils.Ptr("zone"),
-				Labels: &map[string]interface{}{
-					"key": "value",
+			description: "simple_values",
+			args: args{
+				state: DataSourceModel{
+					ProjectId: types.StringValue("pid"),
+					ServerId:  types.StringValue("sid"),
+					Region:    types.StringValue("eu01"),
 				},
-				ImageId: utils.Ptr("image_id"),
-				Nics: &[]iaas.ServerNetwork{
-					{
-						NicId: utils.Ptr("nic1"),
+				input: &iaas.Server{
+					Id:               utils.Ptr("sid"),
+					Name:             utils.Ptr("name"),
+					AvailabilityZone: utils.Ptr("zone"),
+					Labels: &map[string]interface{}{
+						"key": "value",
 					},
-					{
-						NicId: utils.Ptr("nic2"),
+					ImageId: utils.Ptr("image_id"),
+					Nics: &[]iaas.ServerNetwork{
+						{
+							NicId: utils.Ptr("nic1"),
+						},
+						{
+							NicId: utils.Ptr("nic2"),
+						},
 					},
+					KeypairName:   utils.Ptr("keypair_name"),
+					AffinityGroup: utils.Ptr("group_id"),
+					CreatedAt:     utils.Ptr(testTimestamp()),
+					UpdatedAt:     utils.Ptr(testTimestamp()),
+					LaunchedAt:    utils.Ptr(testTimestamp()),
+					Status:        utils.Ptr("active"),
 				},
-				KeypairName:   utils.Ptr("keypair_name"),
-				AffinityGroup: utils.Ptr("group_id"),
-				CreatedAt:     utils.Ptr(testTimestamp()),
-				UpdatedAt:     utils.Ptr(testTimestamp()),
-				LaunchedAt:    utils.Ptr(testTimestamp()),
-				Status:        utils.Ptr("active"),
+				region: "eu02",
 			},
-			DataSourceModel{
-				Id:               types.StringValue("pid,sid"),
+			expected: DataSourceModel{
+				Id:               types.StringValue("pid,eu02,sid"),
 				ProjectId:        types.StringValue("pid"),
 				ServerId:         types.StringValue("sid"),
 				Name:             types.StringValue("name"),
@@ -94,21 +106,25 @@ func TestMapDataSourceFields(t *testing.T) {
 				CreatedAt:     types.StringValue(testTimestampValue),
 				UpdatedAt:     types.StringValue(testTimestampValue),
 				LaunchedAt:    types.StringValue(testTimestampValue),
+				Region:        types.StringValue("eu02"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"empty_labels",
-			DataSourceModel{
-				ProjectId: types.StringValue("pid"),
-				ServerId:  types.StringValue("sid"),
-				Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
+			description: "empty_labels",
+			args: args{
+				state: DataSourceModel{
+					ProjectId: types.StringValue("pid"),
+					ServerId:  types.StringValue("sid"),
+					Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
+				},
+				input: &iaas.Server{
+					Id: utils.Ptr("sid"),
+				},
+				region: "eu01",
 			},
-			&iaas.Server{
-				Id: utils.Ptr("sid"),
-			},
-			DataSourceModel{
-				Id:                types.StringValue("pid,sid"),
+			expected: DataSourceModel{
+				Id:                types.StringValue("pid,eu01,sid"),
 				ProjectId:         types.StringValue("pid"),
 				ServerId:          types.StringValue("sid"),
 				Name:              types.StringNull(),
@@ -122,29 +138,26 @@ func TestMapDataSourceFields(t *testing.T) {
 				CreatedAt:         types.StringNull(),
 				UpdatedAt:         types.StringNull(),
 				LaunchedAt:        types.StringNull(),
+				Region:            types.StringValue("eu01"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"response_nil_fail",
-			DataSourceModel{},
-			nil,
-			DataSourceModel{},
-			false,
+			description: "response_nil_fail",
 		},
 		{
-			"no_resource_id",
-			DataSourceModel{
-				ProjectId: types.StringValue("pid"),
+			description: "no_resource_id",
+			args: args{
+				state: DataSourceModel{
+					ProjectId: types.StringValue("pid"),
+				},
+				input: &iaas.Server{},
 			},
-			&iaas.Server{},
-			DataSourceModel{},
-			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapDataSourceFields(context.Background(), tt.input, &tt.state)
+			err := mapDataSourceFields(context.Background(), tt.args.input, &tt.args.state, tt.args.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -152,7 +165,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(tt.state, tt.expected)
+				diff := cmp.Diff(tt.args.state, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

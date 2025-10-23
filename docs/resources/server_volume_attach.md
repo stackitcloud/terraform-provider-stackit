@@ -35,6 +35,10 @@ import {
 - `server_id` (String) The server ID.
 - `volume_id` (String) The volume ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`server_id`,`volume_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`server_id`,`volume_id`".

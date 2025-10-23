@@ -77,11 +77,9 @@ import {
 - `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed in January 2026, use `ipv4_nameservers` to configure the nameservers for IPv4.
 - `no_ipv4_gateway` (Boolean) If set to `true`, the network doesn't have a gateway.
 - `no_ipv6_gateway` (Boolean) If set to `true`, the network doesn't have a gateway.
-- `region` (String) Can only be used when experimental "network" is set.
-The resource region. If not defined, the provider region is used.
+- `region` (String) The resource region. If not defined, the provider region is used.
 - `routed` (Boolean) If set to `true`, the network is routed and therefore accessible from other networks.
-- `routing_table_id` (String) Can only be used when experimental "network" is set.
-The ID of the routing table associated with the network.
+- `routing_table_id` (String) The ID of the routing table associated with the network.
 
 ### Read-Only
 

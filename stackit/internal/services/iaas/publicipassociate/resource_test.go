@@ -10,74 +10,82 @@ import (
 )
 
 func TestMapFields(t *testing.T) {
+	type args struct {
+		state  Model
+		input  *iaas.PublicIp
+		region string
+	}
 	tests := []struct {
 		description string
-		state       Model
-		input       *iaas.PublicIp
+		args        args
 		expected    Model
 		isValid     bool
 	}{
 		{
-			"default_values",
-			Model{
-				ProjectId:          types.StringValue("pid"),
-				PublicIpId:         types.StringValue("pipid"),
-				NetworkInterfaceId: types.StringValue("nicid"),
+			description: "default_values",
+			args: args{
+				state: Model{
+					ProjectId:          types.StringValue("pid"),
+					PublicIpId:         types.StringValue("pipid"),
+					NetworkInterfaceId: types.StringValue("nicid"),
+				},
+				input: &iaas.PublicIp{
+					Id:               utils.Ptr("pipid"),
+					NetworkInterface: iaas.NewNullableString(utils.Ptr("nicid")),
+				},
+				region: "eu01",
 			},
-			&iaas.PublicIp{
-				Id:               utils.Ptr("pipid"),
-				NetworkInterface: iaas.NewNullableString(utils.Ptr("nicid")),
-			},
-			Model{
-				Id:                 types.StringValue("pid,pipid,nicid"),
+			expected: Model{
+				Id:                 types.StringValue("pid,eu01,pipid,nicid"),
 				ProjectId:          types.StringValue("pid"),
 				PublicIpId:         types.StringValue("pipid"),
 				Ip:                 types.StringNull(),
 				NetworkInterfaceId: types.StringValue("nicid"),
+				Region:             types.StringValue("eu01"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"simple_values",
-			Model{
-				ProjectId:          types.StringValue("pid"),
-				PublicIpId:         types.StringValue("pipid"),
-				NetworkInterfaceId: types.StringValue("nicid"),
+			description: "simple_values",
+			args: args{
+				state: Model{
+					ProjectId:          types.StringValue("pid"),
+					PublicIpId:         types.StringValue("pipid"),
+					NetworkInterfaceId: types.StringValue("nicid"),
+				},
+				input: &iaas.PublicIp{
+					Id:               utils.Ptr("pipid"),
+					Ip:               utils.Ptr("ip"),
+					NetworkInterface: iaas.NewNullableString(utils.Ptr("nicid")),
+				},
+				region: "eu02",
 			},
-			&iaas.PublicIp{
-				Id:               utils.Ptr("pipid"),
-				Ip:               utils.Ptr("ip"),
-				NetworkInterface: iaas.NewNullableString(utils.Ptr("nicid")),
-			},
-			Model{
-				Id:                 types.StringValue("pid,pipid,nicid"),
+			expected: Model{
+				Id:                 types.StringValue("pid,eu02,pipid,nicid"),
 				ProjectId:          types.StringValue("pid"),
 				PublicIpId:         types.StringValue("pipid"),
 				Ip:                 types.StringValue("ip"),
 				NetworkInterfaceId: types.StringValue("nicid"),
+				Region:             types.StringValue("eu02"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"response_nil_fail",
-			Model{},
-			nil,
-			Model{},
-			false,
+			description: "response_nil_fail",
 		},
 		{
-			"no_resource_id",
-			Model{
-				ProjectId: types.StringValue("pid"),
+			description: "no_resource_id",
+			args: args{
+				state: Model{
+					ProjectId: types.StringValue("pid"),
+				},
+				input: &iaas.PublicIp{},
 			},
-			&iaas.PublicIp{},
-			Model{},
-			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(tt.input, &tt.state)
+			err := mapFields(tt.args.input, &tt.args.state, tt.args.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -85,7 +93,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(tt.state, tt.expected)
+				diff := cmp.Diff(tt.args.state, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

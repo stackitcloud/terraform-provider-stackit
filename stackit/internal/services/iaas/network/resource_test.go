@@ -1,4 +1,4 @@
-package v2network
+package network
 
 import (
 	"context"
@@ -8,34 +8,34 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network/utils/model"
 )
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "region"
 	tests := []struct {
 		description string
-		state       model.Model
-		input       *iaasalpha.Network
+		state       Model
+		input       *iaas.Network
 		region      string
-		expected    model.Model
+		expected    Model
 		isValid     bool
 	}{
 		{
 			"id_ok",
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 			},
-			&iaasalpha.Network{
+			&iaas.Network{
 				Id: utils.Ptr("nid"),
-				Ipv4: &iaasalpha.NetworkIPv4{
-					Gateway: iaasalpha.NewNullableString(nil),
+				Ipv4: &iaas.NetworkIPv4{
+					Gateway: iaas.NewNullableString(nil),
 				},
 			},
 			testRegion,
-			model.Model{
+			Model{
 				Id:               types.StringValue("pid,region,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
@@ -61,14 +61,14 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"values_ok",
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 			},
-			&iaasalpha.Network{
+			&iaas.Network{
 				Id:   utils.Ptr("nid"),
 				Name: utils.Ptr("name"),
-				Ipv4: &iaasalpha.NetworkIPv4{
+				Ipv4: &iaas.NetworkIPv4{
 					Nameservers: utils.Ptr([]string{"ns1", "ns2"}),
 					Prefixes: utils.Ptr(
 						[]string{
@@ -77,15 +77,15 @@ func TestMapFields(t *testing.T) {
 						},
 					),
 					PublicIp: utils.Ptr("publicIp"),
-					Gateway:  iaasalpha.NewNullableString(utils.Ptr("gateway")),
+					Gateway:  iaas.NewNullableString(utils.Ptr("gateway")),
 				},
-				Ipv6: &iaasalpha.NetworkIPv6{
+				Ipv6: &iaas.NetworkIPv6{
 					Nameservers: utils.Ptr([]string{"ns1", "ns2"}),
 					Prefixes: utils.Ptr([]string{
 						"fd12:3456:789a:1::/64",
 						"fd12:3456:789b:1::/64",
 					}),
-					Gateway: iaasalpha.NewNullableString(utils.Ptr("gateway")),
+					Gateway: iaas.NewNullableString(utils.Ptr("gateway")),
 				},
 				Labels: &map[string]interface{}{
 					"key": "value",
@@ -93,7 +93,7 @@ func TestMapFields(t *testing.T) {
 				Routed: utils.Ptr(true),
 			},
 			testRegion,
-			model.Model{
+			Model{
 				Id:        types.StringValue("pid,region,nid"),
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
@@ -139,7 +139,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"ipv4_nameservers_changed_outside_tf",
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Nameservers: types.ListValueMust(types.StringType, []attr.Value{
@@ -151,9 +151,9 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("ns2"),
 				}),
 			},
-			&iaasalpha.Network{
+			&iaas.Network{
 				Id: utils.Ptr("nid"),
-				Ipv4: &iaasalpha.NetworkIPv4{
+				Ipv4: &iaas.NetworkIPv4{
 					Nameservers: utils.Ptr([]string{
 						"ns2",
 						"ns3",
@@ -161,7 +161,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			testRegion,
-			model.Model{
+			Model{
 				Id:              types.StringValue("pid,region,nid"),
 				ProjectId:       types.StringValue("pid"),
 				NetworkId:       types.StringValue("nid"),
@@ -185,7 +185,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"ipv6_nameservers_changed_outside_tf",
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{
@@ -193,9 +193,9 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("ns2"),
 				}),
 			},
-			&iaasalpha.Network{
+			&iaas.Network{
 				Id: utils.Ptr("nid"),
-				Ipv6: &iaasalpha.NetworkIPv6{
+				Ipv6: &iaas.NetworkIPv6{
 					Nameservers: utils.Ptr([]string{
 						"ns2",
 						"ns3",
@@ -203,7 +203,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			testRegion,
-			model.Model{
+			Model{
 				Id:              types.StringValue("pid,region,nid"),
 				ProjectId:       types.StringValue("pid"),
 				NetworkId:       types.StringValue("nid"),
@@ -224,7 +224,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"ipv4_prefixes_changed_outside_tf",
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Prefixes: types.ListValueMust(types.StringType, []attr.Value{
@@ -232,9 +232,9 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("10.100.10.0/24"),
 				}),
 			},
-			&iaasalpha.Network{
+			&iaas.Network{
 				Id: utils.Ptr("nid"),
-				Ipv4: &iaasalpha.NetworkIPv4{
+				Ipv4: &iaas.NetworkIPv4{
 					Prefixes: utils.Ptr(
 						[]string{
 							"192.168.54.0/24",
@@ -244,7 +244,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			testRegion,
-			model.Model{
+			Model{
 				Id:               types.StringValue("pid,region,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
@@ -271,7 +271,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"ipv6_prefixes_changed_outside_tf",
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				IPv6Prefixes: types.ListValueMust(types.StringType, []attr.Value{
@@ -279,9 +279,9 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("fd12:3456:789a:2::/64"),
 				}),
 			},
-			&iaasalpha.Network{
+			&iaas.Network{
 				Id: utils.Ptr("nid"),
-				Ipv6: &iaasalpha.NetworkIPv6{
+				Ipv6: &iaas.NetworkIPv6{
 					Prefixes: utils.Ptr(
 						[]string{
 							"fd12:3456:789a:1::/64",
@@ -291,7 +291,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			testRegion,
-			model.Model{
+			Model{
 				Id:               types.StringValue("pid,region,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
@@ -315,15 +315,15 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"ipv4_ipv6_gateway_nil",
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 			},
-			&iaasalpha.Network{
+			&iaas.Network{
 				Id: utils.Ptr("nid"),
 			},
 			testRegion,
-			model.Model{
+			Model{
 				Id:               types.StringValue("pid,region,nid"),
 				ProjectId:        types.StringValue("pid"),
 				NetworkId:        types.StringValue("nid"),
@@ -347,20 +347,20 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"response_nil_fail",
-			model.Model{},
+			Model{},
 			nil,
 			testRegion,
-			model.Model{},
+			Model{},
 			false,
 		},
 		{
 			"no_resource_id",
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 			},
-			&iaasalpha.Network{},
+			&iaas.Network{},
 			testRegion,
-			model.Model{},
+			Model{},
 			false,
 		},
 	}
@@ -386,13 +386,13 @@ func TestMapFields(t *testing.T) {
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *model.Model
-		expected    *iaasalpha.CreateNetworkPayload
+		input       *Model
+		expected    *iaas.CreateNetworkPayload
 		isValid     bool
 	}{
 		{
 			"default_ok",
-			&model.Model{
+			&Model{
 				Name: types.StringValue("name"),
 				IPv4Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -405,11 +405,11 @@ func TestToCreatePayload(t *testing.T) {
 				IPv4Gateway: types.StringValue("gateway"),
 				IPv4Prefix:  types.StringValue("prefix"),
 			},
-			&iaasalpha.CreateNetworkPayload{
+			&iaas.CreateNetworkPayload{
 				Name: utils.Ptr("name"),
-				Ipv4: &iaasalpha.CreateNetworkIPv4{
-					CreateNetworkIPv4WithPrefix: &iaasalpha.CreateNetworkIPv4WithPrefix{
-						Gateway: iaasalpha.NewNullableString(utils.Ptr("gateway")),
+				Ipv4: &iaas.CreateNetworkIPv4{
+					CreateNetworkIPv4WithPrefix: &iaas.CreateNetworkIPv4WithPrefix{
+						Gateway: iaas.NewNullableString(utils.Ptr("gateway")),
 						Nameservers: utils.Ptr([]string{
 							"ns1",
 							"ns2",
@@ -426,7 +426,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			"ipv4_nameservers_okay",
-			&model.Model{
+			&Model{
 				Name: types.StringValue("name"),
 				Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -439,11 +439,11 @@ func TestToCreatePayload(t *testing.T) {
 				IPv4Gateway: types.StringValue("gateway"),
 				IPv4Prefix:  types.StringValue("prefix"),
 			},
-			&iaasalpha.CreateNetworkPayload{
+			&iaas.CreateNetworkPayload{
 				Name: utils.Ptr("name"),
-				Ipv4: &iaasalpha.CreateNetworkIPv4{
-					CreateNetworkIPv4WithPrefix: &iaasalpha.CreateNetworkIPv4WithPrefix{
-						Gateway: iaasalpha.NewNullableString(utils.Ptr("gateway")),
+				Ipv4: &iaas.CreateNetworkIPv4{
+					CreateNetworkIPv4WithPrefix: &iaas.CreateNetworkIPv4WithPrefix{
+						Gateway: iaas.NewNullableString(utils.Ptr("gateway")),
 						Nameservers: utils.Ptr([]string{
 							"ns1",
 							"ns2",
@@ -460,7 +460,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			"ipv6_default_ok",
-			&model.Model{
+			&Model{
 				Name: types.StringValue("name"),
 				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -473,11 +473,11 @@ func TestToCreatePayload(t *testing.T) {
 				IPv6Gateway: types.StringValue("gateway"),
 				IPv6Prefix:  types.StringValue("prefix"),
 			},
-			&iaasalpha.CreateNetworkPayload{
+			&iaas.CreateNetworkPayload{
 				Name: utils.Ptr("name"),
-				Ipv6: &iaasalpha.CreateNetworkIPv6{
-					CreateNetworkIPv6WithPrefix: &iaasalpha.CreateNetworkIPv6WithPrefix{
-						Gateway: iaasalpha.NewNullableString(utils.Ptr("gateway")),
+				Ipv6: &iaas.CreateNetworkIPv6{
+					CreateNetworkIPv6WithPrefix: &iaas.CreateNetworkIPv6WithPrefix{
+						Gateway: iaas.NewNullableString(utils.Ptr("gateway")),
 						Nameservers: utils.Ptr([]string{
 							"ns1",
 							"ns2",
@@ -559,7 +559,7 @@ func TestToCreatePayload(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaasalpha.NullableString{}))
+				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaas.NullableString{}))
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
@@ -571,14 +571,14 @@ func TestToCreatePayload(t *testing.T) {
 func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *model.Model
-		state       model.Model
-		expected    *iaasalpha.PartialUpdateNetworkPayload
+		input       *Model
+		state       Model
+		expected    *iaas.PartialUpdateNetworkPayload
 		isValid     bool
 	}{
 		{
 			"default_ok",
-			&model.Model{
+			&Model{
 				Name: types.StringValue("name"),
 				IPv4Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -590,15 +590,15 @@ func TestToUpdatePayload(t *testing.T) {
 				Routed:      types.BoolValue(true),
 				IPv4Gateway: types.StringValue("gateway"),
 			},
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Labels:    types.MapNull(types.StringType),
 			},
-			&iaasalpha.PartialUpdateNetworkPayload{
+			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
-				Ipv4: &iaasalpha.UpdateNetworkIPv4Body{
-					Gateway: iaasalpha.NewNullableString(utils.Ptr("gateway")),
+				Ipv4: &iaas.UpdateNetworkIPv4Body{
+					Gateway: iaas.NewNullableString(utils.Ptr("gateway")),
 					Nameservers: utils.Ptr([]string{
 						"ns1",
 						"ns2",
@@ -612,7 +612,7 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"ipv4_nameservers_okay",
-			&model.Model{
+			&Model{
 				Name: types.StringValue("name"),
 				Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -624,15 +624,15 @@ func TestToUpdatePayload(t *testing.T) {
 				Routed:      types.BoolValue(true),
 				IPv4Gateway: types.StringValue("gateway"),
 			},
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Labels:    types.MapNull(types.StringType),
 			},
-			&iaasalpha.PartialUpdateNetworkPayload{
+			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
-				Ipv4: &iaasalpha.UpdateNetworkIPv4Body{
-					Gateway: iaasalpha.NewNullableString(utils.Ptr("gateway")),
+				Ipv4: &iaas.UpdateNetworkIPv4Body{
+					Gateway: iaas.NewNullableString(utils.Ptr("gateway")),
 					Nameservers: utils.Ptr([]string{
 						"ns1",
 						"ns2",
@@ -646,7 +646,7 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"ipv4_gateway_nil",
-			&model.Model{
+			&Model{
 				Name: types.StringValue("name"),
 				IPv4Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -657,14 +657,14 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				Routed: types.BoolValue(true),
 			},
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Labels:    types.MapNull(types.StringType),
 			},
-			&iaasalpha.PartialUpdateNetworkPayload{
+			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
-				Ipv4: &iaasalpha.UpdateNetworkIPv4Body{
+				Ipv4: &iaas.UpdateNetworkIPv4Body{
 					Nameservers: utils.Ptr([]string{
 						"ns1",
 						"ns2",
@@ -678,7 +678,7 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"ipv6_default_ok",
-			&model.Model{
+			&Model{
 				Name: types.StringValue("name"),
 				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -690,15 +690,15 @@ func TestToUpdatePayload(t *testing.T) {
 				Routed:      types.BoolValue(true),
 				IPv6Gateway: types.StringValue("gateway"),
 			},
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Labels:    types.MapNull(types.StringType),
 			},
-			&iaasalpha.PartialUpdateNetworkPayload{
+			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
-				Ipv6: &iaasalpha.UpdateNetworkIPv6Body{
-					Gateway: iaasalpha.NewNullableString(utils.Ptr("gateway")),
+				Ipv6: &iaas.UpdateNetworkIPv6Body{
+					Gateway: iaas.NewNullableString(utils.Ptr("gateway")),
 					Nameservers: utils.Ptr([]string{
 						"ns1",
 						"ns2",
@@ -712,7 +712,7 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"ipv6_gateway_nil",
-			&model.Model{
+			&Model{
 				Name: types.StringValue("name"),
 				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("ns1"),
@@ -723,14 +723,14 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				Routed: types.BoolValue(true),
 			},
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Labels:    types.MapNull(types.StringType),
 			},
-			&iaasalpha.PartialUpdateNetworkPayload{
+			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
-				Ipv6: &iaasalpha.UpdateNetworkIPv6Body{
+				Ipv6: &iaas.UpdateNetworkIPv6Body{
 					Nameservers: utils.Ptr([]string{
 						"ns1",
 						"ns2",
@@ -809,7 +809,7 @@ func TestToUpdatePayload(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaasalpha.NullableString{}))
+				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaas.NullableString{}))
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
