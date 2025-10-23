@@ -12,51 +12,62 @@ import (
 )
 
 func TestMapFields(t *testing.T) {
+	type args struct {
+		state  Model
+		input  *iaas.SecurityGroup
+		region string
+	}
 	tests := []struct {
 		description string
-		state       Model
-		input       *iaas.SecurityGroup
+		args        args
 		expected    Model
 		isValid     bool
 	}{
 		{
-			"default_values",
-			Model{
-				ProjectId:       types.StringValue("pid"),
-				SecurityGroupId: types.StringValue("sgid"),
+			description: "default_values",
+			args: args{
+				state: Model{
+					ProjectId:       types.StringValue("pid"),
+					SecurityGroupId: types.StringValue("sgid"),
+				},
+				input: &iaas.SecurityGroup{
+					Id: utils.Ptr("sgid"),
+				},
+				region: "eu01",
 			},
-			&iaas.SecurityGroup{
-				Id: utils.Ptr("sgid"),
-			},
-			Model{
-				Id:              types.StringValue("pid,sgid"),
+			expected: Model{
+				Id:              types.StringValue("pid,eu01,sgid"),
 				ProjectId:       types.StringValue("pid"),
 				SecurityGroupId: types.StringValue("sgid"),
 				Name:            types.StringNull(),
 				Labels:          types.MapNull(types.StringType),
 				Description:     types.StringNull(),
 				Stateful:        types.BoolNull(),
+				Region:          types.StringValue("eu01"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"simple_values",
-			Model{
-				ProjectId:       types.StringValue("pid"),
-				SecurityGroupId: types.StringValue("sgid"),
-			},
-			// &sourceModel{},
-			&iaas.SecurityGroup{
-				Id:       utils.Ptr("sgid"),
-				Name:     utils.Ptr("name"),
-				Stateful: utils.Ptr(true),
-				Labels: &map[string]interface{}{
-					"key": "value",
+			description: "simple_values",
+			args: args{
+				state: Model{
+					ProjectId:       types.StringValue("pid"),
+					SecurityGroupId: types.StringValue("sgid"),
+					Region:          types.StringValue("eu01"),
 				},
-				Description: utils.Ptr("desc"),
+				input: &iaas.SecurityGroup{
+					Id:       utils.Ptr("sgid"),
+					Name:     utils.Ptr("name"),
+					Stateful: utils.Ptr(true),
+					Labels: &map[string]interface{}{
+						"key": "value",
+					},
+					Description: utils.Ptr("desc"),
+				},
+				region: "eu02",
 			},
-			Model{
-				Id:              types.StringValue("pid,sgid"),
+			expected: Model{
+				Id:              types.StringValue("pid,eu02,sgid"),
 				ProjectId:       types.StringValue("pid"),
 				SecurityGroupId: types.StringValue("sgid"),
 				Name:            types.StringValue("name"),
@@ -65,50 +76,51 @@ func TestMapFields(t *testing.T) {
 				}),
 				Description: types.StringValue("desc"),
 				Stateful:    types.BoolValue(true),
+				Region:      types.StringValue("eu02"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"empty_labels",
-			Model{
-				ProjectId:       types.StringValue("pid"),
-				SecurityGroupId: types.StringValue("sgid"),
+			description: "empty_labels",
+			args: args{
+				state: Model{
+					ProjectId:       types.StringValue("pid"),
+					SecurityGroupId: types.StringValue("sgid"),
+				},
+				input: &iaas.SecurityGroup{
+					Id:     utils.Ptr("sgid"),
+					Labels: &map[string]interface{}{},
+				},
+				region: "eu01",
 			},
-			&iaas.SecurityGroup{
-				Id:     utils.Ptr("sgid"),
-				Labels: &map[string]interface{}{},
-			},
-			Model{
-				Id:              types.StringValue("pid,sgid"),
+			expected: Model{
+				Id:              types.StringValue("pid,eu01,sgid"),
 				ProjectId:       types.StringValue("pid"),
 				SecurityGroupId: types.StringValue("sgid"),
 				Name:            types.StringNull(),
 				Labels:          types.MapNull(types.StringType),
 				Description:     types.StringNull(),
 				Stateful:        types.BoolNull(),
+				Region:          types.StringValue("eu01"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"response_nil_fail",
-			Model{},
-			nil,
-			Model{},
-			false,
+			description: "response_nil_fail",
 		},
 		{
-			"no_resource_id",
-			Model{
-				ProjectId: types.StringValue("pid"),
+			description: "no_resource_id",
+			args: args{
+				state: Model{
+					ProjectId: types.StringValue("pid"),
+				},
+				input: &iaas.SecurityGroup{},
 			},
-			&iaas.SecurityGroup{},
-			Model{},
-			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, &tt.state)
+			err := mapFields(context.Background(), tt.args.input, &tt.args.state, tt.args.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -116,7 +128,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(tt.state, tt.expected)
+				diff := cmp.Diff(tt.args.state, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

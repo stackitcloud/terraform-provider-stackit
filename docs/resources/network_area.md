@@ -3,12 +3,12 @@
 page_title: "stackit_network_area Resource - stackit"
 subcategory: ""
 description: |-
-  Network area resource schema. Must have a region specified in the provider configuration.
+  Network area resource schema.
 ---
 
 # stackit_network_area (Resource)
 
-Network area resource schema. Must have a `region` specified in the provider configuration.
+Network area resource schema.
 
 ## Example Usage
 
@@ -16,12 +16,6 @@ Network area resource schema. Must have a `region` specified in the provider con
 resource "stackit_network_area" "example" {
   organization_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name            = "example-network-area"
-  network_ranges = [
-    {
-      prefix = "192.168.0.0/24"
-    }
-  ]
-  transfer_network = "192.168.1.0/24"
   labels = {
     "key" = "value"
   }
@@ -40,17 +34,17 @@ import {
 ### Required
 
 - `name` (String) The name of the network area.
-- `network_ranges` (Attributes List) List of Network ranges. (see [below for nested schema](#nestedatt--network_ranges))
 - `organization_id` (String) STACKIT organization ID to which the network area is associated.
-- `transfer_network` (String) Classless Inter-Domain Routing (CIDR).
 
 ### Optional
 
-- `default_nameservers` (List of String) List of DNS Servers/Nameservers.
-- `default_prefix_length` (Number) The default prefix length for networks in the network area.
+- `default_nameservers` (List of String, Deprecated) List of DNS Servers/Nameservers for configuration of network area for region `eu01`.
+- `default_prefix_length` (Number, Deprecated) The default prefix length for networks in the network area for region `eu01`.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
-- `max_prefix_length` (Number) The maximal prefix length for networks in the network area.
-- `min_prefix_length` (Number) The minimal prefix length for networks in the network area.
+- `max_prefix_length` (Number, Deprecated) The maximal prefix length for networks in the network area for region `eu01`.
+- `min_prefix_length` (Number, Deprecated) The minimal prefix length for networks in the network area for region `eu01`.
+- `network_ranges` (Attributes List, Deprecated) List of Network ranges for configuration of network area for region `eu01`. (see [below for nested schema](#nestedatt--network_ranges))
+- `transfer_network` (String, Deprecated) Classless Inter-Domain Routing (CIDR) for configuration of network area for region `eu01`.
 
 ### Read-Only
 
@@ -63,8 +57,8 @@ import {
 
 Required:
 
-- `prefix` (String) Classless Inter-Domain Routing (CIDR).
+- `prefix` (String, Deprecated) Classless Inter-Domain Routing (CIDR).
 
 Read-Only:
 
-- `network_range_id` (String)
+- `network_range_id` (String, Deprecated)

@@ -28,16 +28,15 @@ var testRangeId2Repeated = uuid.NewString()
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
-		description       string
-		state             Model
-		input             *iaas.NetworkArea
-		ListNetworkRanges *[]iaas.NetworkRange
-		expected          Model
-		isValid           bool
+		description string
+		state       Model
+		input       *iaas.NetworkArea
+		expected    Model
+		isValid     bool
 	}{
 		{
-			"id_ok",
-			Model{
+			description: "id_ok",
+			state: Model{
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("naid"),
 				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
@@ -50,32 +49,16 @@ func TestMapFields(t *testing.T) {
 						"prefix":           types.StringValue("prefix-2"),
 					}),
 				}),
+				DefaultNameservers: types.ListNull(types.StringType),
 			},
-			&iaas.NetworkArea{
-				AreaId: utils.Ptr("naid"),
-				Ipv4:   &iaas.NetworkAreaIPv4{},
+			input: &iaas.NetworkArea{
+				Id: utils.Ptr("naid"),
 			},
-			&[]iaas.NetworkRange{
-				{
-					NetworkRangeId: utils.Ptr(testRangeId1),
-					Prefix:         utils.Ptr("prefix-1"),
-				},
-				{
-					NetworkRangeId: utils.Ptr(testRangeId2),
-					Prefix:         utils.Ptr("prefix-2"),
-				},
-			},
-
-			Model{
-				Id:                  types.StringValue("oid,naid"),
-				OrganizationId:      types.StringValue("oid"),
-				NetworkAreaId:       types.StringValue("naid"),
-				Name:                types.StringNull(),
-				DefaultNameservers:  types.ListNull(types.StringType),
-				TransferNetwork:     types.StringNull(),
-				DefaultPrefixLength: types.Int64Null(),
-				MaxPrefixLength:     types.Int64Null(),
-				MinPrefixLength:     types.Int64Null(),
+			expected: Model{
+				Id:             types.StringValue("oid,naid"),
+				OrganizationId: types.StringValue("oid"),
+				NetworkAreaId:  types.StringValue("naid"),
+				Name:           types.StringNull(),
 				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
 						"network_range_id": types.StringValue(testRangeId1),
@@ -86,13 +69,14 @@ func TestMapFields(t *testing.T) {
 						"prefix":           types.StringValue("prefix-2"),
 					}),
 				}),
-				Labels: types.MapNull(types.StringType),
+				DefaultNameservers: types.ListNull(types.StringType),
+				Labels:             types.MapNull(types.StringType),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"values_ok",
-			Model{
+			description: "values_ok",
+			state: Model{
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("naid"),
 				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
@@ -105,47 +89,20 @@ func TestMapFields(t *testing.T) {
 						"prefix":           types.StringValue("prefix-2"),
 					}),
 				}),
+				DefaultNameservers: types.ListNull(types.StringType),
 			},
-			&iaas.NetworkArea{
-				AreaId: utils.Ptr("naid"),
-				Ipv4: &iaas.NetworkAreaIPv4{
-					DefaultNameservers: &[]string{
-						"nameserver1",
-						"nameserver2",
-					},
-					TransferNetwork:  utils.Ptr("network"),
-					DefaultPrefixLen: utils.Ptr(int64(20)),
-					MaxPrefixLen:     utils.Ptr(int64(22)),
-					MinPrefixLen:     utils.Ptr(int64(18)),
-				},
+			input: &iaas.NetworkArea{
+				Id:   utils.Ptr("naid"),
 				Name: utils.Ptr("name"),
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
 			},
-			&[]iaas.NetworkRange{
-				{
-					NetworkRangeId: utils.Ptr(testRangeId1),
-					Prefix:         utils.Ptr("prefix-1"),
-				},
-				{
-					NetworkRangeId: utils.Ptr(testRangeId2),
-					Prefix:         utils.Ptr("prefix-2"),
-				},
-			},
-			Model{
+			expected: Model{
 				Id:             types.StringValue("oid,naid"),
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("naid"),
 				Name:           types.StringValue("name"),
-				DefaultNameservers: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("nameserver1"),
-					types.StringValue("nameserver2"),
-				}),
-				TransferNetwork:     types.StringValue("network"),
-				DefaultPrefixLength: types.Int64Value(20),
-				MaxPrefixLength:     types.Int64Value(22),
-				MinPrefixLength:     types.Int64Value(18),
 				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
 						"network_range_id": types.StringValue(testRangeId1),
@@ -159,206 +116,52 @@ func TestMapFields(t *testing.T) {
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 					"key": types.StringValue("value"),
 				}),
-			},
-			true,
-		},
-		{
-			"model and response have ranges in different order",
-			Model{
-				OrganizationId: types.StringValue("oid"),
-				NetworkAreaId:  types.StringValue("naid"),
-				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"network_range_id": types.StringValue(testRangeId1),
-						"prefix":           types.StringValue("prefix-1"),
-					}),
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"network_range_id": types.StringValue(testRangeId2),
-						"prefix":           types.StringValue("prefix-2"),
-					}),
-				}),
-			},
-			&iaas.NetworkArea{
-				AreaId: utils.Ptr("naid"),
-				Ipv4: &iaas.NetworkAreaIPv4{
-					DefaultNameservers: &[]string{
-						"nameserver1",
-						"nameserver2",
-					},
-					TransferNetwork:  utils.Ptr("network"),
-					DefaultPrefixLen: utils.Ptr(int64(20)),
-					MaxPrefixLen:     utils.Ptr(int64(22)),
-					MinPrefixLen:     utils.Ptr(int64(18)),
-				},
-				Name: utils.Ptr("name"),
-			},
-			&[]iaas.NetworkRange{
-				{
-					NetworkRangeId: utils.Ptr(testRangeId2),
-					Prefix:         utils.Ptr("prefix-2"),
-				},
-				{
-					NetworkRangeId: utils.Ptr(testRangeId3),
-					Prefix:         utils.Ptr("prefix-3"),
-				},
-				{
-					NetworkRangeId: utils.Ptr(testRangeId1),
-					Prefix:         utils.Ptr("prefix-1"),
-				},
-			},
-			Model{
-				Id:             types.StringValue("oid,naid"),
-				OrganizationId: types.StringValue("oid"),
-				NetworkAreaId:  types.StringValue("naid"),
-				Name:           types.StringValue("name"),
-				DefaultNameservers: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("nameserver1"),
-					types.StringValue("nameserver2"),
-				}),
-				TransferNetwork:     types.StringValue("network"),
-				DefaultPrefixLength: types.Int64Value(20),
-				MaxPrefixLength:     types.Int64Value(22),
-				MinPrefixLength:     types.Int64Value(18),
-				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"network_range_id": types.StringValue(testRangeId1),
-						"prefix":           types.StringValue("prefix-1"),
-					}),
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"network_range_id": types.StringValue(testRangeId2),
-						"prefix":           types.StringValue("prefix-2"),
-					}),
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"network_range_id": types.StringValue(testRangeId3),
-						"prefix":           types.StringValue("prefix-3"),
-					}),
-				}),
-				Labels: types.MapNull(types.StringType),
-			},
-			true,
-		},
-		{
-			"default_nameservers_changed_outside_tf",
-			Model{
-				OrganizationId: types.StringValue("oid"),
-				NetworkAreaId:  types.StringValue("naid"),
-				DefaultNameservers: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("ns1"),
-					types.StringValue("ns2"),
-				}),
-				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"network_range_id": types.StringValue(testRangeId1),
-						"prefix":           types.StringValue("prefix-1"),
-					}),
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"network_range_id": types.StringValue(testRangeId2),
-						"prefix":           types.StringValue("prefix-2"),
-					}),
-				}),
-			},
-			&iaas.NetworkArea{
-				AreaId: utils.Ptr("naid"),
-				Ipv4: &iaas.NetworkAreaIPv4{
-					DefaultNameservers: &[]string{
-						"ns2",
-						"ns3",
-					},
-				},
-			},
-			&[]iaas.NetworkRange{
-				{
-					NetworkRangeId: utils.Ptr(testRangeId1),
-					Prefix:         utils.Ptr("prefix-1"),
-				},
-				{
-					NetworkRangeId: utils.Ptr(testRangeId2),
-					Prefix:         utils.Ptr("prefix-2"),
-				},
-			},
-			Model{
-				Id:             types.StringValue("oid,naid"),
-				OrganizationId: types.StringValue("oid"),
-				NetworkAreaId:  types.StringValue("naid"),
-				DefaultNameservers: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("ns2"),
-					types.StringValue("ns3"),
-				}),
-				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"network_range_id": types.StringValue(testRangeId1),
-						"prefix":           types.StringValue("prefix-1"),
-					}),
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"network_range_id": types.StringValue(testRangeId2),
-						"prefix":           types.StringValue("prefix-2"),
-					}),
-				}),
-				Labels: types.MapNull(types.StringType),
-			},
-			true,
-		},
-		{
-			"network_ranges_changed_outside_tf",
-			Model{
-				OrganizationId: types.StringValue("oid"),
-				NetworkAreaId:  types.StringValue("naid"),
-				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"network_range_id": types.StringValue(testRangeId1),
-						"prefix":           types.StringValue("prefix-1"),
-					}),
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"network_range_id": types.StringValue(testRangeId2),
-						"prefix":           types.StringValue("prefix-2"),
-					}),
-				}),
-			},
-			&iaas.NetworkArea{
-				AreaId: utils.Ptr("naid"),
-				Ipv4:   &iaas.NetworkAreaIPv4{},
-			},
-			&[]iaas.NetworkRange{
-				{
-					NetworkRangeId: utils.Ptr(testRangeId2),
-					Prefix:         utils.Ptr("prefix-2"),
-				},
-				{
-					NetworkRangeId: utils.Ptr(testRangeId3),
-					Prefix:         utils.Ptr("prefix-3"),
-				},
-			},
-			Model{
-				Id:                 types.StringValue("oid,naid"),
-				OrganizationId:     types.StringValue("oid"),
-				NetworkAreaId:      types.StringValue("naid"),
 				DefaultNameservers: types.ListNull(types.StringType),
+			},
+			isValid: true,
+		},
+		{
+			description: "default_nameservers_changed_outside_tf",
+			state: Model{
+				OrganizationId: types.StringValue("oid"),
+				NetworkAreaId:  types.StringValue("naid"),
 				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId1),
+						"prefix":           types.StringValue("prefix-1"),
+					}),
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
 						"network_range_id": types.StringValue(testRangeId2),
 						"prefix":           types.StringValue("prefix-2"),
 					}),
+				}),
+				DefaultNameservers: types.ListNull(types.StringType),
+			},
+			input: &iaas.NetworkArea{
+				Id: utils.Ptr("naid"),
+			},
+			expected: Model{
+				Id:             types.StringValue("oid,naid"),
+				OrganizationId: types.StringValue("oid"),
+				NetworkAreaId:  types.StringValue("naid"),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
 					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"network_range_id": types.StringValue(testRangeId3),
-						"prefix":           types.StringValue("prefix-3"),
+						"network_range_id": types.StringValue(testRangeId1),
+						"prefix":           types.StringValue("prefix-1"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId2),
+						"prefix":           types.StringValue("prefix-2"),
 					}),
 				}),
-				Labels: types.MapNull(types.StringType),
+				Labels:             types.MapNull(types.StringType),
+				DefaultNameservers: types.ListNull(types.StringType),
 			},
-			true,
-		},
-		{
-			"nil_network_ranges_list",
-			Model{},
-			&iaas.NetworkArea{},
-			nil,
-			Model{},
-			false,
+			isValid: true,
 		},
 		{
 			"response_nil_fail",
 			Model{},
-			nil,
 			nil,
 			Model{},
 			false,
@@ -369,14 +172,13 @@ func TestMapFields(t *testing.T) {
 				OrganizationId: types.StringValue("oid"),
 			},
 			&iaas.NetworkArea{},
-			&[]iaas.NetworkRange{},
 			Model{},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, tt.ListNetworkRanges, &tt.state)
+			err := mapFields(context.Background(), tt.input, &tt.state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -393,6 +195,243 @@ func TestMapFields(t *testing.T) {
 	}
 }
 
+// Deprecated: Will be removed in May 2026.
+func Test_MapNetworkRanges(t *testing.T) {
+	type args struct {
+		networkAreaRangesList *[]iaas.NetworkRange
+		model                 *Model
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *Model
+		wantErr bool
+	}{
+		{
+			name: "model and response have ranges in different order",
+			args: args{
+				model: &Model{
+					OrganizationId:     types.StringValue("oid"),
+					NetworkAreaId:      types.StringValue("naid"),
+					DefaultNameservers: types.ListNull(types.StringType),
+					NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+						types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+							"network_range_id": types.StringValue(testRangeId1),
+							"prefix":           types.StringValue("prefix-1"),
+						}),
+						types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+							"network_range_id": types.StringValue(testRangeId2),
+							"prefix":           types.StringValue("prefix-2"),
+						}),
+					}),
+					Labels: types.MapNull(types.StringType),
+				},
+				networkAreaRangesList: &[]iaas.NetworkRange{
+					{
+						Id:     utils.Ptr(testRangeId2),
+						Prefix: utils.Ptr("prefix-2"),
+					},
+					{
+						Id:     utils.Ptr(testRangeId3),
+						Prefix: utils.Ptr("prefix-3"),
+					},
+					{
+						Id:     utils.Ptr(testRangeId1),
+						Prefix: utils.Ptr("prefix-1"),
+					},
+				},
+			},
+			want: &Model{
+				OrganizationId: types.StringValue("oid"),
+				NetworkAreaId:  types.StringValue("naid"),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId1),
+						"prefix":           types.StringValue("prefix-1"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId2),
+						"prefix":           types.StringValue("prefix-2"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId3),
+						"prefix":           types.StringValue("prefix-3"),
+					}),
+				}),
+				Labels:             types.MapNull(types.StringType),
+				DefaultNameservers: types.ListNull(types.StringType),
+			},
+			wantErr: false,
+		},
+		{
+			name: "network_ranges_changed_outside_tf",
+			args: args{
+				model: &Model{
+					OrganizationId: types.StringValue("oid"),
+					NetworkAreaId:  types.StringValue("naid"),
+					NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+						types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+							"network_range_id": types.StringValue(testRangeId1),
+							"prefix":           types.StringValue("prefix-1"),
+						}),
+						types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+							"network_range_id": types.StringValue(testRangeId2),
+							"prefix":           types.StringValue("prefix-2"),
+						}),
+					}),
+					Labels:             types.MapNull(types.StringType),
+					DefaultNameservers: types.ListNull(types.StringType),
+				},
+				networkAreaRangesList: &[]iaas.NetworkRange{
+					{
+						Id:     utils.Ptr(testRangeId2),
+						Prefix: utils.Ptr("prefix-2"),
+					},
+					{
+						Id:     utils.Ptr(testRangeId3),
+						Prefix: utils.Ptr("prefix-3"),
+					},
+				},
+			},
+			want: &Model{
+				OrganizationId: types.StringValue("oid"),
+				NetworkAreaId:  types.StringValue("naid"),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId2),
+						"prefix":           types.StringValue("prefix-2"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId3),
+						"prefix":           types.StringValue("prefix-3"),
+					}),
+				}),
+				Labels:             types.MapNull(types.StringType),
+				DefaultNameservers: types.ListNull(types.StringType),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := mapNetworkRanges(context.Background(), tt.args.networkAreaRangesList, tt.args.model); (err != nil) != tt.wantErr {
+				t.Errorf("mapNetworkRanges() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			diff := cmp.Diff(tt.args.model, tt.want)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
+// Deprecated: Will be removed in May 2026.
+func TestMapNetworkAreaRegionFields(t *testing.T) {
+	type args struct {
+		networkAreaRegionResp *iaas.RegionalArea
+		model                 *Model
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *Model
+		wantErr bool
+	}{
+		{
+			name: "default",
+			args: args{
+				model: &Model{
+					Labels: types.MapNull(types.StringType),
+				},
+				networkAreaRegionResp: &iaas.RegionalArea{
+					Ipv4: &iaas.RegionalAreaIPv4{
+						DefaultNameservers: &[]string{
+							"nameserver1",
+							"nameserver2",
+						},
+						TransferNetwork:  utils.Ptr("network"),
+						DefaultPrefixLen: utils.Ptr(int64(20)),
+						MaxPrefixLen:     utils.Ptr(int64(22)),
+						MinPrefixLen:     utils.Ptr(int64(18)),
+						NetworkRanges: &[]iaas.NetworkRange{
+							{
+								Id:     utils.Ptr(testRangeId1),
+								Prefix: utils.Ptr("prefix-1"),
+							},
+							{
+								Id:     utils.Ptr(testRangeId2),
+								Prefix: utils.Ptr("prefix-2"),
+							},
+						},
+					},
+				},
+			},
+			want: &Model{
+				DefaultNameservers: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("nameserver1"),
+					types.StringValue("nameserver2"),
+				}),
+				TransferNetwork:     types.StringValue("network"),
+				DefaultPrefixLength: types.Int64Value(20),
+				MaxPrefixLength:     types.Int64Value(22),
+				MinPrefixLength:     types.Int64Value(18),
+				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId1),
+						"prefix":           types.StringValue("prefix-1"),
+					}),
+					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+						"network_range_id": types.StringValue(testRangeId2),
+						"prefix":           types.StringValue("prefix-2"),
+					}),
+				}),
+
+				Labels: types.MapNull(types.StringType),
+			},
+			wantErr: false,
+		},
+		{
+			name: "model is nil",
+			args: args{
+				model:                 nil,
+				networkAreaRegionResp: &iaas.RegionalArea{},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "network area region response is nil",
+			args: args{
+				model: &Model{
+					DefaultNameservers: types.ListNull(types.StringType),
+					NetworkRanges:      types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes}),
+					Labels:             types.MapNull(types.StringType),
+				},
+				networkAreaRegionResp: nil,
+			},
+			want: &Model{
+				DefaultNameservers: types.ListNull(types.StringType),
+				NetworkRanges:      types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes}),
+				Labels:             types.MapNull(types.StringType),
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := mapNetworkAreaRegionFields(context.Background(), tt.args.networkAreaRegionResp, tt.args.model); (err != nil) != tt.wantErr {
+				t.Errorf("mapNetworkAreaRegionFields() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			diff := cmp.Diff(tt.args.model, tt.want)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
@@ -404,50 +443,12 @@ func TestToCreatePayload(t *testing.T) {
 			"default_ok",
 			&Model{
 				Name: types.StringValue("name"),
-				DefaultNameservers: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("ns1"),
-					types.StringValue("ns2"),
-				}),
-				NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"network_range_id": types.StringUnknown(),
-						"prefix":           types.StringValue("pr-1"),
-					}),
-					types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
-						"network_range_id": types.StringUnknown(),
-						"prefix":           types.StringValue("pr-2"),
-					}),
-				}),
-				TransferNetwork:     types.StringValue("network"),
-				DefaultPrefixLength: types.Int64Value(20),
-				MaxPrefixLength:     types.Int64Value(22),
-				MinPrefixLength:     types.Int64Value(18),
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 					"key": types.StringValue("value"),
 				}),
 			},
 			&iaas.CreateNetworkAreaPayload{
 				Name: utils.Ptr("name"),
-				AddressFamily: &iaas.CreateAreaAddressFamily{
-					Ipv4: &iaas.CreateAreaIPv4{
-						DefaultNameservers: &[]string{
-							"ns1",
-							"ns2",
-						},
-						NetworkRanges: &[]iaas.NetworkRange{
-							{
-								Prefix: utils.Ptr("pr-1"),
-							},
-							{
-								Prefix: utils.Ptr("pr-2"),
-							},
-						},
-						TransferNetwork:  utils.Ptr("network"),
-						DefaultPrefixLen: utils.Ptr(int64(20)),
-						MaxPrefixLen:     utils.Ptr(int64(22)),
-						MinPrefixLen:     utils.Ptr(int64(18)),
-					},
-				},
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
@@ -474,6 +475,86 @@ func TestToCreatePayload(t *testing.T) {
 	}
 }
 
+// Deprecated: Will be removed in May 2026.
+func TestToRegionCreatePayload(t *testing.T) {
+	type args struct {
+		model *Model
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *iaas.CreateNetworkAreaRegionPayload
+		wantErr bool
+	}{
+		{
+			name: "default_ok",
+			args: args{
+				model: &Model{
+					DefaultNameservers: types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("ns1"),
+						types.StringValue("ns2"),
+					}),
+					NetworkRanges: types.ListValueMust(types.ObjectType{AttrTypes: networkRangeTypes}, []attr.Value{
+						types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+							"network_range_id": types.StringUnknown(),
+							"prefix":           types.StringValue("pr-1"),
+						}),
+						types.ObjectValueMust(networkRangeTypes, map[string]attr.Value{
+							"network_range_id": types.StringUnknown(),
+							"prefix":           types.StringValue("pr-2"),
+						}),
+					}),
+					TransferNetwork:     types.StringValue("network"),
+					DefaultPrefixLength: types.Int64Value(20),
+					MaxPrefixLength:     types.Int64Value(22),
+					MinPrefixLength:     types.Int64Value(18),
+				},
+			},
+			want: &iaas.CreateNetworkAreaRegionPayload{
+				Ipv4: &iaas.RegionalAreaIPv4{
+					DefaultNameservers: &[]string{
+						"ns1",
+						"ns2",
+					},
+					NetworkRanges: &[]iaas.NetworkRange{
+						{
+							Prefix: utils.Ptr("pr-1"),
+						},
+						{
+							Prefix: utils.Ptr("pr-2"),
+						},
+					},
+					TransferNetwork:  utils.Ptr("network"),
+					DefaultPrefixLen: utils.Ptr(int64(20)),
+					MaxPrefixLen:     utils.Ptr(int64(22)),
+					MinPrefixLen:     utils.Ptr(int64(18)),
+				},
+			},
+		},
+		{
+			name: "model is nil",
+			args: args{
+				model: nil,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := toRegionCreatePayload(context.Background(), tt.args.model)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("toRegionCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			diff := cmp.Diff(got, tt.want)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
 func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
@@ -485,30 +566,12 @@ func TestToUpdatePayload(t *testing.T) {
 			"default_ok",
 			&Model{
 				Name: types.StringValue("name"),
-				DefaultNameservers: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("ns1"),
-					types.StringValue("ns2"),
-				}),
-				DefaultPrefixLength: types.Int64Value(22),
-				MaxPrefixLength:     types.Int64Value(24),
-				MinPrefixLength:     types.Int64Value(20),
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 					"key": types.StringValue("value"),
 				}),
 			},
 			&iaas.PartialUpdateNetworkAreaPayload{
 				Name: utils.Ptr("name"),
-				AddressFamily: &iaas.UpdateAreaAddressFamily{
-					Ipv4: &iaas.UpdateAreaIPv4{
-						DefaultNameservers: &[]string{
-							"ns1",
-							"ns2",
-						},
-						DefaultPrefixLen: utils.Ptr(int64(22)),
-						MaxPrefixLen:     utils.Ptr(int64(24)),
-						MinPrefixLen:     utils.Ptr(int64(20)),
-					},
-				},
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
@@ -535,24 +598,84 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 }
 
+// Deprecated: Will be removed in May 2026.
+func TestToRegionUpdatePayload(t *testing.T) {
+	type args struct {
+		model *Model
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *iaas.UpdateNetworkAreaRegionPayload
+		wantErr bool
+	}{
+		{
+			name: "default_ok",
+			args: args{
+				model: &Model{
+					DefaultNameservers: types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("ns1"),
+						types.StringValue("ns2"),
+					}),
+					DefaultPrefixLength: types.Int64Value(22),
+					MaxPrefixLength:     types.Int64Value(24),
+					MinPrefixLength:     types.Int64Value(20),
+				},
+			},
+			want: &iaas.UpdateNetworkAreaRegionPayload{
+				Ipv4: &iaas.UpdateRegionalAreaIPv4{
+					DefaultNameservers: &[]string{
+						"ns1",
+						"ns2",
+					},
+					DefaultPrefixLen: utils.Ptr(int64(22)),
+					MaxPrefixLen:     utils.Ptr(int64(24)),
+					MinPrefixLen:     utils.Ptr(int64(20)),
+				},
+			},
+		},
+		{
+			name: "model is nil",
+			args: args{
+				model: nil,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := toRegionUpdatePayload(context.Background(), tt.args.model)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("toRegionUpdatePayload() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			diff := cmp.Diff(got, tt.want)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
 func TestUpdateNetworkRanges(t *testing.T) {
 	getAllNetworkRangesResp := iaas.NetworkRangeListResponse{
 		Items: &[]iaas.NetworkRange{
 			{
-				Prefix:         utils.Ptr("pr-1"),
-				NetworkRangeId: utils.Ptr(testRangeId1),
+				Prefix: utils.Ptr("pr-1"),
+				Id:     utils.Ptr(testRangeId1),
 			},
 			{
-				Prefix:         utils.Ptr("pr-2"),
-				NetworkRangeId: utils.Ptr(testRangeId2),
+				Prefix: utils.Ptr("pr-2"),
+				Id:     utils.Ptr(testRangeId2),
 			},
 			{
-				Prefix:         utils.Ptr("pr-3"),
-				NetworkRangeId: utils.Ptr(testRangeId3),
+				Prefix: utils.Ptr("pr-3"),
+				Id:     utils.Ptr(testRangeId3),
 			},
 			{
-				Prefix:         utils.Ptr("pr-2"),
-				NetworkRangeId: utils.Ptr(testRangeId2Repeated),
+				Prefix: utils.Ptr("pr-2"),
+				Id:     utils.Ptr(testRangeId2Repeated),
 			},
 		},
 	}
@@ -903,8 +1026,8 @@ func TestUpdateNetworkRanges(t *testing.T) {
 					}
 
 					resp := iaas.NetworkRange{
-						Prefix:         utils.Ptr("prefix"),
-						NetworkRangeId: utils.Ptr("id-range"),
+						Prefix: utils.Ptr("prefix"),
+						Id:     utils.Ptr("id-range"),
 					}
 					respBytes, err := json.Marshal(resp)
 					if err != nil {
@@ -930,7 +1053,7 @@ func TestUpdateNetworkRanges(t *testing.T) {
 
 				var prefix string
 				for _, rangeItem := range *getAllNetworkRangesResp.Items {
-					if *rangeItem.NetworkRangeId == networkRangeId {
+					if *rangeItem.Id == networkRangeId {
 						prefix = *rangeItem.Prefix
 					}
 				}
@@ -963,14 +1086,14 @@ func TestUpdateNetworkRanges(t *testing.T) {
 
 			// Setup server and client
 			router := mux.NewRouter()
-			router.HandleFunc("/v1/organizations/{organizationId}/network-areas/{areaId}/network-ranges", func(w http.ResponseWriter, r *http.Request) {
+			router.HandleFunc("/v2/organizations/{organizationId}/network-areas/{areaId}/regions/{region}/network-ranges", func(w http.ResponseWriter, r *http.Request) {
 				if r.Method == "GET" {
 					getAllNetworkRangesHandler(w, r)
 				} else if r.Method == "POST" {
 					createNetworkRangeHandler(w, r)
 				}
 			})
-			router.HandleFunc("/v1/organizations/{organizationId}/network-areas/{areaId}/network-ranges/{networkRangeId}", deleteNetworkRangeHandler)
+			router.HandleFunc("/v2/organizations/{organizationId}/network-areas/{areaId}/regions/{region}/network-ranges/{networkRangeId}", deleteNetworkRangeHandler)
 			mockedServer := httptest.NewServer(router)
 			defer mockedServer.Close()
 			client, err := iaas.NewAPIClient(
