@@ -4,56 +4,80 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
 func TestMapFields(t *testing.T) {
+	type args struct {
+		state  Model
+		input  *iaas.Route
+		region string
+	}
 	tests := []struct {
 		description string
-		state       Model
-		input       *iaas.Route
+		args        args
 		expected    Model
 		isValid     bool
 	}{
 		{
-			"id_ok",
-			Model{
-				OrganizationId:     types.StringValue("oid"),
-				NetworkAreaId:      types.StringValue("naid"),
-				NetworkAreaRouteId: types.StringValue("narid"),
+			description: "id_ok",
+			args: args{
+				state: Model{
+					OrganizationId:     types.StringValue("oid"),
+					NetworkAreaId:      types.StringValue("naid"),
+					NetworkAreaRouteId: types.StringValue("narid"),
+				},
+				input:  &iaas.Route{},
+				region: "eu01",
 			},
-			&iaas.Route{},
-			Model{
-				Id:                 types.StringValue("oid,naid,narid"),
+			expected: Model{
+				Id:                 types.StringValue("oid,naid,eu01,narid"),
 				OrganizationId:     types.StringValue("oid"),
 				NetworkAreaId:      types.StringValue("naid"),
 				NetworkAreaRouteId: types.StringValue("narid"),
 				Prefix:             types.StringNull(),
 				NextHop:            types.StringNull(),
 				Labels:             types.MapNull(types.StringType),
+				Region:             types.StringValue("eu01"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"values_ok",
-			Model{
-				OrganizationId:     types.StringValue("oid"),
-				NetworkAreaId:      types.StringValue("naid"),
-				NetworkAreaRouteId: types.StringValue("narid"),
-			},
-			&iaas.Route{
-				Prefix:  utils.Ptr("prefix"),
-				Nexthop: utils.Ptr("hop"),
-				Labels: &map[string]interface{}{
-					"key": "value",
+			description: "values_ok",
+			args: args{
+				state: Model{
+					OrganizationId:     types.StringValue("oid"),
+					NetworkAreaId:      types.StringValue("naid"),
+					NetworkAreaRouteId: types.StringValue("narid"),
+					Region:             types.StringValue("eu01"),
 				},
+				input: &iaas.Route{
+					Destination: &iaas.RouteDestination{
+						DestinationCIDRv4: &iaas.DestinationCIDRv4{
+							Type:  utils.Ptr("cidrv4"),
+							Value: utils.Ptr("prefix"),
+						},
+						DestinationCIDRv6: nil,
+					},
+					Nexthop: &iaas.RouteNexthop{
+						NexthopIPv4: &iaas.NexthopIPv4{
+							Type:  utils.Ptr("ipv4"),
+							Value: utils.Ptr("hop"),
+						},
+					},
+					Labels: &map[string]interface{}{
+						"key": "value",
+					},
+				},
+				region: "eu02",
 			},
-			Model{
-				Id:                 types.StringValue("oid,naid,narid"),
+			expected: Model{
+				Id:                 types.StringValue("oid,naid,eu02,narid"),
 				OrganizationId:     types.StringValue("oid"),
 				NetworkAreaId:      types.StringValue("naid"),
 				NetworkAreaRouteId: types.StringValue("narid"),
@@ -62,40 +86,36 @@ func TestMapFields(t *testing.T) {
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 					"key": types.StringValue("value"),
 				}),
+				Region: types.StringValue("eu02"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"response_fields_nil_fail",
-			Model{},
-			&iaas.Route{
-				Prefix:  nil,
-				Nexthop: nil,
+			description: "response_fields_nil_fail",
+			args: args{
+				input: &iaas.Route{
+					Destination: nil,
+					Nexthop:     nil,
+				},
 			},
-			Model{},
-			false,
 		},
 		{
-			"response_nil_fail",
-			Model{},
-			nil,
-			Model{},
-			false,
+			description: "response_nil_fail",
 		},
 		{
-			"no_resource_id",
-			Model{
-				OrganizationId: types.StringValue("oid"),
-				NetworkAreaId:  types.StringValue("naid"),
+			description: "no_resource_id",
+			args: args{
+				state: Model{
+					OrganizationId: types.StringValue("oid"),
+					NetworkAreaId:  types.StringValue("naid"),
+				},
+				input: &iaas.Route{},
 			},
-			&iaas.Route{},
-			Model{},
-			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, &tt.state)
+			err := mapFields(context.Background(), tt.args.input, &tt.args.state, tt.args.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -103,7 +123,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(tt.state, tt.expected)
+				diff := cmp.Diff(tt.args.state, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
@@ -129,10 +149,21 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			expected: &iaas.CreateNetworkAreaRoutePayload{
-				Ipv4: &[]iaas.Route{
+				Items: &[]iaas.Route{
 					{
-						Prefix:  utils.Ptr("prefix"),
-						Nexthop: utils.Ptr("hop"),
+						Destination: &iaas.RouteDestination{
+							DestinationCIDRv4: &iaas.DestinationCIDRv4{
+								Type:  utils.Ptr("cidrv4"),
+								Value: utils.Ptr("prefix"),
+							},
+							DestinationCIDRv6: nil,
+						},
+						Nexthop: &iaas.RouteNexthop{
+							NexthopIPv4: &iaas.NexthopIPv4{
+								Type:  utils.Ptr("ipv4"),
+								Value: utils.Ptr("hop"),
+							},
+						},
 						Labels: &map[string]interface{}{
 							"key": "value",
 						},

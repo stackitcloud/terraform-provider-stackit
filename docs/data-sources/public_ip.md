@@ -27,9 +27,13 @@ data "stackit_public_ip" "example" {
 - `project_id` (String) STACKIT project ID to which the public IP is associated.
 - `public_ip_id` (String) The public IP ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
-- `id` (String) Terraform's internal datasource ID. It is structured as "`project_id`,`public_ip_id`".
+- `id` (String) Terraform's internal datasource ID. It is structured as "`project_id`,`region`,`public_ip_id`".
 - `ip` (String) The IP address.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `network_interface_id` (String) Associates the public IP with a network interface or a virtual IP (ID).

@@ -40,7 +40,11 @@ import {
 - `project_id` (String) STACKIT project ID to which the public IP is associated.
 - `public_ip_id` (String) The public IP ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`public_ip_id`,`network_interface_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`public_ip_id`,`network_interface_id`".
 - `ip` (String) The IP address.

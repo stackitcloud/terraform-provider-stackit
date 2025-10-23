@@ -27,6 +27,10 @@ data "stackit_security_group" "example" {
 - `project_id` (String) STACKIT project ID to which the security group is associated.
 - `security_group_id` (String) The security group ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `description` (String) The description of the security group.

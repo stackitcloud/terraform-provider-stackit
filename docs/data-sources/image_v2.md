@@ -105,6 +105,7 @@ data "stackit_image_v2" "filter_distro_version" {
 - `image_id` (String) Image ID to fetch directly
 - `name` (String) Exact image name to match. Optionally applies a `filter` block to further refine results in case multiple images share the same name. The first match is returned, optionally sorted by name in ascending order. Cannot be used together with `name_regex`.
 - `name_regex` (String) Regular expression to match against image names. Optionally applies a `filter` block to narrow down results when multiple image names match the regex. The first match is returned, optionally sorted by name in ascending order. Cannot be used together with `name`.
+- `region` (String) The resource region. If not defined, the provider region is used.
 - `sort_ascending` (Boolean) If set to `true`, images are sorted in ascending lexicographical order by image name (such as `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`) before selecting the first match. Defaults to `false` (descending such as `Ubuntu 22.04`, `Ubuntu 20.04`, `Ubuntu 18.04`).
 
 ### Read-Only
@@ -112,7 +113,7 @@ data "stackit_image_v2" "filter_distro_version" {
 - `checksum` (Attributes) Representation of an image checksum. (see [below for nested schema](#nestedatt--checksum))
 - `config` (Attributes) Properties to set hardware and scheduling settings for an image. (see [below for nested schema](#nestedatt--config))
 - `disk_format` (String) The disk format of the image.
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`image_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`image_id`".
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `min_disk_size` (Number) The minimum disk size of the image in GB.
 - `min_ram` (Number) The minimum RAM of the image in MB.

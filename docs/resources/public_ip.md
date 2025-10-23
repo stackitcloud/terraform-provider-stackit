@@ -39,9 +39,10 @@ import {
 
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `network_interface_id` (String) Associates the public IP with a network interface or a virtual IP (ID). If you are using this resource with a Kubernetes Load Balancer or any other resource which associates a network interface implicitly, use the lifecycle `ignore_changes` property in this field to prevent unintentional removal of the network interface due to drift in the Terraform state
+- `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`public_ip_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`public_ip_id`".
 - `ip` (String) The IP address.
 - `public_ip_id` (String) The public IP ID.

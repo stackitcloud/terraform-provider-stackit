@@ -27,6 +27,10 @@ data "stackit_server" "example" {
 - `project_id` (String) STACKIT project ID to which the server is associated.
 - `server_id` (String) The server ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `affinity_group` (String) The affinity group the server is assigned to.

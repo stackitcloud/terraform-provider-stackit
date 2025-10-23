@@ -35,6 +35,10 @@ import {
 - `server_id` (String) The server ID.
 - `service_account_email` (String) The service account email.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`server_id`,`service_account_email`".

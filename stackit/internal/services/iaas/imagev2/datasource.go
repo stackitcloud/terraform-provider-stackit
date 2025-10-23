@@ -36,6 +36,7 @@ var (
 type DataSourceModel struct {
 	Id            types.String `tfsdk:"id"` // needed by TF
 	ProjectId     types.String `tfsdk:"project_id"`
+	Region        types.String `tfsdk:"region"`
 	ImageId       types.String `tfsdk:"image_id"`
 	Name          types.String `tfsdk:"name"`
 	NameRegex     types.String `tfsdk:"name_regex"`
@@ -113,7 +114,8 @@ func NewImageV2DataSource() datasource.DataSource {
 
 // imageDataV2Source is the data source implementation.
 type imageDataV2Source struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -122,17 +124,18 @@ func (d *imageDataV2Source) Metadata(_ context.Context, req datasource.MetadataR
 }
 
 func (d *imageDataV2Source) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_image_v2", "datasource")
+	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_image_v2", "datasource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -189,7 +192,7 @@ func (d *imageDataV2Source) Schema(_ context.Context, _ datasource.SchemaRequest
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`image_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`image_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
@@ -199,6 +202,11 @@ func (d *imageDataV2Source) Schema(_ context.Context, _ datasource.SchemaRequest
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				// the region cannot be found, so it has to be passed
+				Optional: true,
 			},
 			"image_id": schema.StringAttribute{
 				Description: "Image ID to fetch directly",
@@ -357,6 +365,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	projectID := model.ProjectId.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	imageID := model.ImageId.ValueString()
 	name := model.Name.ValueString()
 	nameRegex := model.NameRegex.ValueString()
@@ -373,6 +382,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectID)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "image_id", imageID)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "name_regex", nameRegex)
@@ -383,7 +393,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 
 	// Case 1: Direct lookup by image ID
 	if imageID != "" {
-		imageResp, err = d.client.GetImage(ctx, projectID, imageID).Execute()
+		imageResp, err = d.client.GetImage(ctx, projectID, region, imageID).Execute()
 		if err != nil {
 			utils.LogError(ctx, &resp.Diagnostics, err, "Reading image",
 				fmt.Sprintf("Image with ID %q does not exist in project %q.", imageID, projectID),
@@ -409,7 +419,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 		}
 
 		// Fetch all available images
-		imageList, err := d.client.ListImages(ctx, projectID).Execute()
+		imageList, err := d.client.ListImages(ctx, projectID, region).Execute()
 		if err != nil {
 			utils.LogError(ctx, &resp.Diagnostics, err, "List images", "Unable to fetch images", nil)
 			return
@@ -457,7 +467,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 		imageResp = filteredImages[0]
 	}
 
-	err = mapDataSourceFields(ctx, imageResp, &model)
+	err = mapDataSourceFields(ctx, imageResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading image", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -473,7 +483,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 	tflog.Info(ctx, "image read")
 }
 
-func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *DataSourceModel) error {
+func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *DataSourceModel, region string) error {
 	if imageResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -490,7 +500,8 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 		return fmt.Errorf("image id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), imageId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, imageId)
+	model.Region = types.StringValue(region)
 
 	// Map config
 	var configModel = &configModel{}

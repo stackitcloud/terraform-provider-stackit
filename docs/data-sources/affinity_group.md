@@ -27,9 +27,13 @@ data "stackit_affinity_group" "example" {
 - `affinity_group_id` (String) The affinity group ID.
 - `project_id` (String) STACKIT Project ID to which the affinity group is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`affinity_group_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`affinity_group_id`".
 - `members` (List of String) Affinity Group schema. Must have a `region` specified in the provider configuration.
 - `name` (String) The name of the affinity group.
 - `policy` (String) The policy of the affinity group.

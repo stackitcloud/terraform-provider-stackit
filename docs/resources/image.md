@@ -51,11 +51,12 @@ import {
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `min_disk_size` (Number) The minimum disk size of the image in GB.
 - `min_ram` (Number) The minimum RAM of the image in MB.
+- `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
 
 - `checksum` (Attributes) Representation of an image checksum. (see [below for nested schema](#nestedatt--checksum))
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`image_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`image_id`".
 - `image_id` (String) The image ID.
 - `protected` (Boolean) Whether the image is protected.
 - `scope` (String) The scope of the image.

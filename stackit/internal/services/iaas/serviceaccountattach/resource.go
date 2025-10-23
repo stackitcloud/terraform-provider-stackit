@@ -11,7 +11,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -27,41 +26,75 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &networkInterfaceAttachResource{}
-	_ resource.ResourceWithConfigure   = &networkInterfaceAttachResource{}
-	_ resource.ResourceWithImportState = &networkInterfaceAttachResource{}
+	_ resource.Resource                = &serviceAccountAttachResource{}
+	_ resource.ResourceWithConfigure   = &serviceAccountAttachResource{}
+	_ resource.ResourceWithImportState = &serviceAccountAttachResource{}
+	_ resource.ResourceWithModifyPlan  = &serviceAccountAttachResource{}
 )
 
 type Model struct {
 	Id                  types.String `tfsdk:"id"` // needed by TF
 	ProjectId           types.String `tfsdk:"project_id"`
+	Region              types.String `tfsdk:"region"`
 	ServerId            types.String `tfsdk:"server_id"`
 	ServiceAccountEmail types.String `tfsdk:"service_account_email"`
 }
 
 // NewServiceAccountAttachResource is a helper function to simplify the provider implementation.
 func NewServiceAccountAttachResource() resource.Resource {
-	return &networkInterfaceAttachResource{}
+	return &serviceAccountAttachResource{}
 }
 
-// networkInterfaceAttachResource is the resource implementation.
-type networkInterfaceAttachResource struct {
-	client *iaas.APIClient
+// serviceAccountAttachResource is the resource implementation.
+type serviceAccountAttachResource struct {
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
-func (r *networkInterfaceAttachResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *serviceAccountAttachResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_server_service_account_attach"
 }
 
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *serviceAccountAttachResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
 // Configure adds the provider configured client to the resource.
-func (r *networkInterfaceAttachResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+func (r *serviceAccountAttachResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -70,7 +103,7 @@ func (r *networkInterfaceAttachResource) Configure(ctx context.Context, req reso
 }
 
 // Schema defines the schema for the resource.
-func (r *networkInterfaceAttachResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *serviceAccountAttachResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Service account attachment resource schema. Attaches a service account to a server. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
@@ -92,6 +125,15 @@ func (r *networkInterfaceAttachResource) Schema(_ context.Context, _ resource.Sc
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"server_id": schema.StringAttribute{
@@ -117,7 +159,7 @@ func (r *networkInterfaceAttachResource) Schema(_ context.Context, _ resource.Sc
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountAttachResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -129,14 +171,16 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	ctx = tflog.SetField(ctx, "project_id", projectId)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
-	ctx = tflog.SetField(ctx, "server_id", serverId)
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "service_account_email", serviceAccountEmail)
 
 	// Create new service account attachment
-	_, err := r.client.AddServiceAccountToServer(ctx, projectId, serverId, serviceAccountEmail).Execute()
+	_, err := r.client.AddServiceAccountToServer(ctx, projectId, region, serverId, serviceAccountEmail).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching service account to server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -156,7 +200,7 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountAttachResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -167,13 +211,15 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	ctx = tflog.SetField(ctx, "project_id", projectId)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
-	ctx = tflog.SetField(ctx, "server_id", serverId)
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "service_account_email", serviceAccountEmail)
 
-	serviceAccounts, err := r.client.ListServerServiceAccounts(ctx, projectId, serverId).Execute()
+	serviceAccounts, err := r.client.ListServerServiceAccounts(ctx, projectId, region, serverId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -212,12 +258,12 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *networkInterfaceAttachResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountAttachResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update is not supported, all fields require replace
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountAttachResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
@@ -229,14 +275,15 @@ func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resourc
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	ctx = tflog.SetField(ctx, "project_id", projectId)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
-	ctx = tflog.SetField(ctx, "server_id", serverId)
 	service_accountId := model.ServiceAccountEmail.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "service_account_email", service_accountId)
 
 	// Remove service_account from server
-	_, err := r.client.RemoveServiceAccountFromServer(ctx, projectId, serverId, service_accountId).Execute()
+	_, err := r.client.RemoveServiceAccountFromServer(ctx, projectId, region, serverId, service_accountId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing service account from server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -249,26 +296,23 @@ func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resourc
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: project_id,server_id
-func (r *networkInterfaceAttachResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *serviceAccountAttachResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing service_account attachment",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[server_id],[service_account_email]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[server_id],[service_account_email]  Got: %q", req.ID),
 		)
 		return
 	}
 
-	projectId := idParts[0]
-	serverId := idParts[1]
-	service_accountId := idParts[2]
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "server_id", serverId)
-	ctx = tflog.SetField(ctx, "service_account_email", service_accountId)
+	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":            idParts[0],
+		"region":                idParts[1],
+		"server_id":             idParts[2],
+		"service_account_email": idParts[3],
+	})
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("server_id"), serverId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("service_account_email"), service_accountId)...)
 	tflog.Info(ctx, "Service account attachment state imported")
 }

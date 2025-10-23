@@ -31,7 +31,8 @@ func NewVolumeDataSource() datasource.DataSource {
 
 // volumeDataSource is the data source implementation.
 type volumeDataSource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -40,12 +41,13 @@ func (d *volumeDataSource) Metadata(_ context.Context, req datasource.MetadataRe
 }
 
 func (d *volumeDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -54,14 +56,14 @@ func (d *volumeDataSource) Configure(ctx context.Context, req datasource.Configu
 }
 
 // Schema defines the schema for the resource.
-func (r *volumeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *volumeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Volume resource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`volume_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`volume_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
@@ -71,6 +73,11 @@ func (r *volumeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				// the region cannot be found, so it has to be passed
+				Optional: true,
 			},
 			"volume_id": schema.StringAttribute{
 				Description: "The volume ID.",
@@ -140,14 +147,16 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	volumeId := model.VolumeId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
-	volumeResp, err := d.client.GetVolume(ctx, projectId, volumeId).Execute()
+	volumeResp, err := d.client.GetVolume(ctx, projectId, region, volumeId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -165,7 +174,7 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, volumeResp, &model)
+	err = mapFields(ctx, volumeResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume", fmt.Sprintf("Processing API payload: %v", err))
 		return

@@ -43,8 +43,9 @@ import {
 ### Optional
 
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
+- `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`organization_id`,`network_area_id`,`network_area_route_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`organization_id`,`network_area_id`,`region`,`network_area_route_id`".
 - `network_area_route_id` (String) The network area route ID.
