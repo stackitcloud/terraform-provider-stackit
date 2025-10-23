@@ -7,10 +7,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
@@ -19,7 +21,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -28,6 +29,7 @@ var _ datasource.DataSource = &machineTypeDataSource{}
 type DataSourceModel struct {
 	Id            types.String `tfsdk:"id"` // required by Terraform to identify state
 	ProjectId     types.String `tfsdk:"project_id"`
+	Region        types.String `tfsdk:"region"`
 	SortAscending types.Bool   `tfsdk:"sort_ascending"`
 	Filter        types.String `tfsdk:"filter"`
 	Description   types.String `tfsdk:"description"`
@@ -44,7 +46,8 @@ func NewMachineTypeDataSource() datasource.DataSource {
 }
 
 type machineTypeDataSource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 func (d *machineTypeDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -52,17 +55,18 @@ func (d *machineTypeDataSource) Metadata(_ context.Context, req datasource.Metad
 }
 
 func (d *machineTypeDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_machine_type", "datasource")
+	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_machine_type", "datasource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	client := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	client := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -76,7 +80,7 @@ func (d *machineTypeDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 		MarkdownDescription: features.AddBetaDescription("Machine type data source.", core.Datasource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`image_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`image_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
@@ -86,6 +90,11 @@ func (d *machineTypeDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				// the region cannot be found, so it has to be passed
+				Optional: true,
 			},
 			"sort_ascending": schema.BoolAttribute{
 				Description: "Sort machine types by name ascending (`true`) or descending (`false`). Defaults to `false`",
@@ -142,15 +151,17 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 
 	projectId := model.ProjectId.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	sortAscending := model.SortAscending.ValueBool()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "filter_is_null", model.Filter.IsNull())
 	ctx = tflog.SetField(ctx, "filter_is_unknown", model.Filter.IsUnknown())
 
-	listMachineTypeReq := d.client.ListMachineTypes(ctx, projectId)
+	listMachineTypeReq := d.client.ListMachineTypes(ctx, projectId, region)
 
 	if !model.Filter.IsNull() && !model.Filter.IsUnknown() && strings.TrimSpace(model.Filter.ValueString()) != "" {
 		listMachineTypeReq = listMachineTypeReq.Filter(strings.TrimSpace(model.Filter.ValueString()))
@@ -187,7 +198,7 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	if err := mapDataSourceFields(ctx, sorted[0], &model); err != nil {
+	if err := mapDataSourceFields(ctx, sorted[0], &model, region); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading machine type", fmt.Sprintf("Failed to translate API response: %v", err))
 		return
 	}
@@ -199,7 +210,7 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 	tflog.Info(ctx, "Successfully read machine type")
 }
 
-func mapDataSourceFields(ctx context.Context, machineType *iaas.MachineType, model *DataSourceModel) error {
+func mapDataSourceFields(ctx context.Context, machineType *iaas.MachineType, model *DataSourceModel, region string) error {
 	if machineType == nil || model == nil {
 		return fmt.Errorf("nil input provided")
 	}
@@ -208,7 +219,8 @@ func mapDataSourceFields(ctx context.Context, machineType *iaas.MachineType, mod
 		return fmt.Errorf("machine type name is missing")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), *machineType.Name)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, *machineType.Name)
+	model.Region = types.StringValue(region)
 	model.Name = types.StringPointerValue(machineType.Name)
 	model.Description = types.StringPointerValue(machineType.Description)
 	model.Disk = types.Int64PointerValue(machineType.Disk)

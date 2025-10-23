@@ -33,16 +33,18 @@ func NewAffinityGroupDatasource() datasource.DataSource {
 }
 
 type affinityGroupDatasource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 func (d *affinityGroupDatasource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -61,7 +63,7 @@ func (d *affinityGroupDatasource) Schema(_ context.Context, _ datasource.SchemaR
 		MarkdownDescription: descriptionMain,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`affinity_group_id`\".",
+				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`affinity_group_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
@@ -71,6 +73,11 @@ func (d *affinityGroupDatasource) Schema(_ context.Context, _ datasource.SchemaR
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				// the region cannot be found, so it has to be passed
+				Optional: true,
 			},
 			"affinity_group_id": schema.StringAttribute{
 				Description: "The affinity group ID.",
@@ -117,14 +124,16 @@ func (d *affinityGroupDatasource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	affinityGroupId := model.AffinityGroupId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
 
-	affinityGroupResp, err := d.client.GetAffinityGroupExecute(ctx, projectId, affinityGroupId)
+	affinityGroupResp, err := d.client.GetAffinityGroupExecute(ctx, projectId, region, affinityGroupId)
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -142,7 +151,7 @@ func (d *affinityGroupDatasource) Read(ctx context.Context, req datasource.ReadR
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, affinityGroupResp, &model)
+	err = mapFields(ctx, affinityGroupResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading affinity group", fmt.Sprintf("Processing API payload: %v", err))
 	}

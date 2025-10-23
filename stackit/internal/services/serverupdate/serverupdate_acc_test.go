@@ -121,7 +121,7 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_server_update_schedules.schedules_data_test", "id"),
 				),
 			},
-			// // Import
+			// Import
 			{
 				ConfigVariables: testConfigVarsMin,
 				ResourceName:    "stackit_server_update_schedule.test_schedule",
@@ -139,7 +139,7 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
-			// // Update
+			// Update
 			{
 				ConfigVariables: configVarsMinUpdated(),
 				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMinConfig,
@@ -209,7 +209,7 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_server_update_schedules.schedules_data_test", "id"),
 				),
 			},
-			// // Import
+			// Import
 			{
 				ConfigVariables: testConfigVarsMax,
 				ResourceName:    "stackit_server_update_schedule.test_schedule",
@@ -227,7 +227,7 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
-			// // Update
+			// Update
 			{
 				ConfigVariables: configVarsMaxUpdated(),
 				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMaxConfig,

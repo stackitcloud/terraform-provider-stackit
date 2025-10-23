@@ -27,11 +27,15 @@ data "stackit_volume" "example" {
 - `project_id` (String) STACKIT project ID to which the volume is associated.
 - `volume_id` (String) The volume ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `availability_zone` (String) The availability zone of the volume.
 - `description` (String) The description of the volume.
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`volume_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`volume_id`".
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `name` (String) The name of the volume.
 - `performance_class` (String) The performance class of the volume. Possible values are documented in [Service plans BlockStorage](https://docs.stackit.cloud/products/storage/block-storage/basics/service-plans/#currently-available-service-plans-performance-classes)
