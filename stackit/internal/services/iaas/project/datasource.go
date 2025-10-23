@@ -98,6 +98,7 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Description: descriptions["internet_access"],
 				Computed:    true,
 			},
+			// TODO: state was renamed on API side to "status", should we also reflect this change here?
 			"state": schema.StringAttribute{
 				Description: descriptions["state"],
 				Computed:    true,
@@ -165,8 +166,8 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	var projectId string
 	if model.ProjectId.ValueString() != "" {
 		projectId = model.ProjectId.ValueString()
-	} else if projectResp.ProjectId != nil {
-		projectId = *projectResp.ProjectId
+	} else if projectResp.Id != nil {
+		projectId = *projectResp.Id
 	} else {
 		return fmt.Errorf("project id is not present")
 	}
@@ -197,7 +198,7 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 
 	model.AreaId = areaId
 	model.InternetAccess = types.BoolPointerValue(projectResp.InternetAccess)
-	model.State = types.StringPointerValue(projectResp.State)
+	model.State = types.StringPointerValue(projectResp.Status)
 	model.CreatedAt = createdAt
 	model.UpdatedAt = updatedAt
 	return nil

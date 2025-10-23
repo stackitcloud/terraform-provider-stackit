@@ -12,25 +12,32 @@ import (
 )
 
 func TestMapFields(t *testing.T) {
+	type args struct {
+		state  Model
+		input  *iaas.NIC
+		region string
+	}
 	tests := []struct {
 		description string
-		state       Model
-		input       *iaas.NIC
+		args        args
 		expected    Model
 		isValid     bool
 	}{
 		{
-			"id_ok",
-			Model{
-				ProjectId:          types.StringValue("pid"),
-				NetworkId:          types.StringValue("nid"),
-				NetworkInterfaceId: types.StringValue("nicid"),
+			description: "id_ok",
+			args: args{
+				state: Model{
+					ProjectId:          types.StringValue("pid"),
+					NetworkId:          types.StringValue("nid"),
+					NetworkInterfaceId: types.StringValue("nicid"),
+				},
+				input: &iaas.NIC{
+					Id: utils.Ptr("nicid"),
+				},
+				region: "eu01",
 			},
-			&iaas.NIC{
-				Id: utils.Ptr("nicid"),
-			},
-			Model{
-				Id:                 types.StringValue("pid,nid,nicid"),
+			expected: Model{
+				Id:                 types.StringValue("pid,eu01,nid,nicid"),
 				ProjectId:          types.StringValue("pid"),
 				NetworkId:          types.StringValue("nid"),
 				NetworkInterfaceId: types.StringValue("nicid"),
@@ -43,41 +50,46 @@ func TestMapFields(t *testing.T) {
 				Mac:                types.StringNull(),
 				Type:               types.StringNull(),
 				Labels:             types.MapNull(types.StringType),
+				Region:             types.StringValue("eu01"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"values_ok",
-			Model{
-				ProjectId:          types.StringValue("pid"),
-				NetworkId:          types.StringValue("nid"),
-				NetworkInterfaceId: types.StringValue("nicid"),
-			},
-			&iaas.NIC{
-				Id:   utils.Ptr("nicid"),
-				Name: utils.Ptr("name"),
-				AllowedAddresses: &[]iaas.AllowedAddressesInner{
-					{
-						String: utils.Ptr("aa1"),
+			description: "values_ok",
+			args: args{
+				state: Model{
+					ProjectId:          types.StringValue("pid"),
+					NetworkId:          types.StringValue("nid"),
+					NetworkInterfaceId: types.StringValue("nicid"),
+					Region:             types.StringValue("eu01"),
+				},
+				input: &iaas.NIC{
+					Id:   utils.Ptr("nicid"),
+					Name: utils.Ptr("name"),
+					AllowedAddresses: &[]iaas.AllowedAddressesInner{
+						{
+							String: utils.Ptr("aa1"),
+						},
+					},
+					SecurityGroups: &[]string{
+						"prefix1",
+						"prefix2",
+					},
+					Ipv4:        utils.Ptr("ipv4"),
+					Ipv6:        utils.Ptr("ipv6"),
+					NicSecurity: utils.Ptr(true),
+					Device:      utils.Ptr("device"),
+					Mac:         utils.Ptr("mac"),
+					Status:      utils.Ptr("status"),
+					Type:        utils.Ptr("type"),
+					Labels: &map[string]interface{}{
+						"label1": "ref1",
 					},
 				},
-				SecurityGroups: &[]string{
-					"prefix1",
-					"prefix2",
-				},
-				Ipv4:        utils.Ptr("ipv4"),
-				Ipv6:        utils.Ptr("ipv6"),
-				NicSecurity: utils.Ptr(true),
-				Device:      utils.Ptr("device"),
-				Mac:         utils.Ptr("mac"),
-				Status:      utils.Ptr("status"),
-				Type:        utils.Ptr("type"),
-				Labels: &map[string]interface{}{
-					"label1": "ref1",
-				},
+				region: "eu02",
 			},
-			Model{
-				Id:                 types.StringValue("pid,nid,nicid"),
+			expected: Model{
+				Id:                 types.StringValue("pid,eu02,nid,nicid"),
 				ProjectId:          types.StringValue("pid"),
 				NetworkId:          types.StringValue("nid"),
 				NetworkInterfaceId: types.StringValue("nicid"),
@@ -95,29 +107,33 @@ func TestMapFields(t *testing.T) {
 				Mac:      types.StringValue("mac"),
 				Type:     types.StringValue("type"),
 				Labels:   types.MapValueMust(types.StringType, map[string]attr.Value{"label1": types.StringValue("ref1")}),
+				Region:   types.StringValue("eu02"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"allowed_addresses_changed_outside_tf",
-			Model{
-				ProjectId:          types.StringValue("pid"),
-				NetworkId:          types.StringValue("nid"),
-				NetworkInterfaceId: types.StringValue("nicid"),
-				AllowedAddresses: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("aa1"),
-				}),
-			},
-			&iaas.NIC{
-				Id: utils.Ptr("nicid"),
-				AllowedAddresses: &[]iaas.AllowedAddressesInner{
-					{
-						String: utils.Ptr("aa2"),
+			description: "allowed_addresses_changed_outside_tf",
+			args: args{
+				state: Model{
+					ProjectId:          types.StringValue("pid"),
+					NetworkId:          types.StringValue("nid"),
+					NetworkInterfaceId: types.StringValue("nicid"),
+					AllowedAddresses: types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("aa1"),
+					}),
+				},
+				input: &iaas.NIC{
+					Id: utils.Ptr("nicid"),
+					AllowedAddresses: &[]iaas.AllowedAddressesInner{
+						{
+							String: utils.Ptr("aa2"),
+						},
 					},
 				},
+				region: "eu01",
 			},
-			Model{
-				Id:                 types.StringValue("pid,nid,nicid"),
+			expected: Model{
+				Id:                 types.StringValue("pid,eu01,nid,nicid"),
 				ProjectId:          types.StringValue("pid"),
 				NetworkId:          types.StringValue("nid"),
 				NetworkInterfaceId: types.StringValue("nicid"),
@@ -127,23 +143,27 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("aa2"),
 				}),
 				Labels: types.MapNull(types.StringType),
+				Region: types.StringValue("eu01"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"empty_list_allowed_addresses",
-			Model{
-				ProjectId:          types.StringValue("pid"),
-				NetworkId:          types.StringValue("nid"),
-				NetworkInterfaceId: types.StringValue("nicid"),
-				AllowedAddresses:   types.ListValueMust(types.StringType, []attr.Value{}),
+			description: "empty_list_allowed_addresses",
+			args: args{
+				state: Model{
+					ProjectId:          types.StringValue("pid"),
+					NetworkId:          types.StringValue("nid"),
+					NetworkInterfaceId: types.StringValue("nicid"),
+					AllowedAddresses:   types.ListValueMust(types.StringType, []attr.Value{}),
+				},
+				input: &iaas.NIC{
+					Id:               utils.Ptr("nicid"),
+					AllowedAddresses: nil,
+				},
+				region: "eu01",
 			},
-			&iaas.NIC{
-				Id:               utils.Ptr("nicid"),
-				AllowedAddresses: nil,
-			},
-			Model{
-				Id:                 types.StringValue("pid,nid,nicid"),
+			expected: Model{
+				Id:                 types.StringValue("pid,eu01,nid,nicid"),
 				ProjectId:          types.StringValue("pid"),
 				NetworkId:          types.StringValue("nid"),
 				NetworkInterfaceId: types.StringValue("nicid"),
@@ -151,29 +171,34 @@ func TestMapFields(t *testing.T) {
 				SecurityGroupIds:   types.ListNull(types.StringType),
 				AllowedAddresses:   types.ListValueMust(types.StringType, []attr.Value{}),
 				Labels:             types.MapNull(types.StringType),
+				Region:             types.StringValue("eu01"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"response_nil_fail",
-			Model{},
-			nil,
-			Model{},
-			false,
+			description: "response_nil_fail",
+			args: args{
+				state: Model{},
+				input: nil,
+			},
+			expected: Model{},
+			isValid:  false,
 		},
 		{
-			"no_resource_id",
-			Model{
-				ProjectId: types.StringValue("pid"),
+			description: "no_resource_id",
+			args: args{
+				state: Model{
+					ProjectId: types.StringValue("pid"),
+				},
+				input: &iaas.NIC{},
 			},
-			&iaas.NIC{},
-			Model{},
-			false,
+			expected: Model{},
+			isValid:  false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, &tt.state)
+			err := mapFields(context.Background(), tt.args.input, &tt.args.state, tt.args.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -181,7 +206,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(tt.state, tt.expected)
+				diff := cmp.Diff(tt.args.state, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
