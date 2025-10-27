@@ -483,10 +483,10 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 						"tcp": schema.SingleNestedAttribute{
 							Description: descriptions["tcp_options"],
 							Optional:    true,
-							Computed:    false,
 							Attributes: map[string]schema.Attribute{
 								"idle_timeout": schema.StringAttribute{
 									Description: descriptions["tcp_options_idle_timeout"],
+									Optional:    true,
 								},
 							},
 						},
@@ -497,6 +497,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 							Attributes: map[string]schema.Attribute{
 								"idle_timeout": schema.StringAttribute{
 									Description: descriptions["udp_options_idle_timeout"],
+									Optional:    true,
 								},
 							},
 						},

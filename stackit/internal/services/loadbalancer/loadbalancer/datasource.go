@@ -178,10 +178,10 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						"tcp": schema.SingleNestedAttribute{
 							Description: descriptions["tcp_options"],
 							Optional:    true,
-							Computed:    false,
 							Attributes: map[string]schema.Attribute{
 								"idle_timeout": schema.StringAttribute{
 									Description: descriptions["tcp_options_idle_timeout"],
+									Optional:    true,
 								},
 							},
 						},
@@ -192,6 +192,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							Attributes: map[string]schema.Attribute{
 								"idle_timeout": schema.StringAttribute{
 									Description: descriptions["udp_options_idle_timeout"],
+									Optional:    true,
 								},
 							},
 						},
