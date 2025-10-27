@@ -62,6 +62,12 @@ func TestToCreatePayload(t *testing.T) {
 						},
 						),
 						"target_pool": types.StringValue("target_pool"),
+						"tcp": types.ObjectValueMust(tcpTypes, map[string]attr.Value{
+							"idle_timeout": types.StringValue("50s"),
+						}),
+						"udp": types.ObjectValueMust(udpTypes, map[string]attr.Value{
+							"idle_timeout": types.StringValue("50s"),
+						}),
 					}),
 				}),
 				Name: types.StringValue("name"),
@@ -130,6 +136,12 @@ func TestToCreatePayload(t *testing.T) {
 							},
 						},
 						TargetPool: utils.Ptr("target_pool"),
+						Tcp: &loadbalancer.OptionsTCP{
+							IdleTimeout: utils.Ptr("50s"),
+						},
+						Udp: &loadbalancer.OptionsUDP{
+							IdleTimeout: utils.Ptr("50s"),
+						},
 					},
 				},
 				Name: utils.Ptr("name"),
@@ -204,6 +216,8 @@ func TestToCreatePayload(t *testing.T) {
 						},
 						),
 						"target_pool": types.StringValue("target_pool"),
+						"tcp":         types.ObjectNull(tcpTypes),
+						"udp":         types.ObjectNull(udpTypes),
 					}),
 				}),
 				Name: types.StringValue("name"),
@@ -511,6 +525,12 @@ func TestMapFields(t *testing.T) {
 							},
 						},
 						TargetPool: utils.Ptr("target_pool"),
+						Tcp: &loadbalancer.OptionsTCP{
+							IdleTimeout: utils.Ptr("50s"),
+						},
+						Udp: &loadbalancer.OptionsUDP{
+							IdleTimeout: utils.Ptr("50s"),
+						},
 					},
 				}),
 				Name: utils.Ptr("name"),
@@ -586,6 +606,12 @@ func TestMapFields(t *testing.T) {
 						},
 						),
 						"target_pool": types.StringValue("target_pool"),
+						"tcp": types.ObjectValueMust(tcpTypes, map[string]attr.Value{
+							"idle_timeout": types.StringValue("50s"),
+						}),
+						"udp": types.ObjectValueMust(udpTypes, map[string]attr.Value{
+							"idle_timeout": types.StringValue("50s"),
+						}),
 					}),
 				}),
 				Name: types.StringValue("name"),
@@ -730,6 +756,8 @@ func TestMapFields(t *testing.T) {
 						},
 						),
 						"target_pool": types.StringValue("target_pool"),
+						"tcp":         types.ObjectNull(tcpTypes),
+						"udp":         types.ObjectNull(udpTypes),
 					}),
 				}),
 				Name: types.StringValue("name"),
