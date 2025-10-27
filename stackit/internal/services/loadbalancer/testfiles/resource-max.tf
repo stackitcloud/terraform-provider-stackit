@@ -12,6 +12,7 @@ variable "listener_port" {}
 variable "listener_protocol" {}
 variable "network_role" {}
 variable "disable_security_group_assignment" {}
+variable "idle_timeout" {}
 
 variable "listener_display_name" {}
 variable "listener_server_name_indicators" {}
@@ -115,6 +116,9 @@ resource "stackit_loadbalancer" "loadbalancer" {
           name = var.listener_server_name_indicators
         }
       ]
+      tcp = {
+        idle_timeout = var.idle_timeout
+      }
     }
   ]
   networks = [
