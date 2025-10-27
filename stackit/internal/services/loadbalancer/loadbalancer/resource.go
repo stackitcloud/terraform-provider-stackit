@@ -366,9 +366,9 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 		"region":                                "The resource region. If not defined, the provider region is used.",
 		"security_group_id":                     "The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT network areas (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.",
 		"tcp_options":                           "Options that are specific to the TCP protocol.",
-		"tcp_options_idle_timeout":              "Time after which an idle connection is closed. The default value is set to 5 minutes, and the maximum value is one hour.",
+		"tcp_options_idle_timeout":              "Time after which an idle connection is closed. The default value is set to 300 seconds, and the maximum value is 3600 seconds. The format is a duration and the unit must be seconds. Example: 30s",
 		"udp_options":                           "Options that are specific to the UDP protocol.",
-		"udp_options_idle_timeout":              "Time after which an idle session is closed. The default value is set to 1 minute, and the maximum value is 2 minutes.",
+		"udp_options_idle_timeout":              "Time after which an idle session is closed. The default value is set to 1 minute, and the maximum value is 2 minutes. The format is a duration and the unit must be seconds. Example: 30s",
 	}
 
 	resp.Schema = schema.Schema{
