@@ -96,6 +96,9 @@ resource "stackit_loadbalancer" "example" {
       port         = 80
       protocol     = "PROTOCOL_TCP"
       target_pool  = "example-target-pool"
+      tcp = {
+        idle_timeout = "90s"
+      }
     }
   ]
   networks = [
@@ -274,7 +277,7 @@ Optional:
 
 Optional:
 
-- `idle_timeout` (String) Time after which an idle connection is closed. The default value is set to 5 minutes, and the maximum value is one hour.
+- `idle_timeout` (String) Time after which an idle connection is closed. The default value is set to 300 seconds, and the maximum value is 3600 seconds. The format is a duration and the unit must be seconds. Example: 30s
 
 
 <a id="nestedatt--listeners--udp"></a>
@@ -282,7 +285,7 @@ Optional:
 
 Optional:
 
-- `idle_timeout` (String) Time after which an idle session is closed. The default value is set to 1 minute, and the maximum value is 2 minutes.
+- `idle_timeout` (String) Time after which an idle session is closed. The default value is set to 1 minute, and the maximum value is 2 minutes. The format is a duration and the unit must be seconds. Example: 30s
 
 
 
