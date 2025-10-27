@@ -77,6 +77,9 @@ resource "stackit_loadbalancer" "example" {
       port         = 80
       protocol     = "PROTOCOL_TCP"
       target_pool  = "example-target-pool"
+      tcp = {
+        idle_timeout = "90s"
+      }
     }
   ]
   networks = [

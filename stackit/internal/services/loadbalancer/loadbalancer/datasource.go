@@ -107,6 +107,10 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		"targets.display_name":                  "Target display name",
 		"ip":                                    "Target IP",
 		"region":                                "The resource region. If not defined, the provider region is used.",
+		"tcp_options":                           "Options that are specific to the TCP protocol.",
+		"tcp_options_idle_timeout":              "Time after which an idle connection is closed. The default value is set to 5 minutes, and the maximum value is one hour.",
+		"udp_options":                           "Options that are specific to the UDP protocol.",
+		"udp_options_idle_timeout":              "Time after which an idle session is closed. The default value is set to 1 minute, and the maximum value is 2 minutes.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -170,6 +174,26 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						"target_pool": schema.StringAttribute{
 							Description: descriptions["target_pool"],
 							Computed:    true,
+						},
+						"tcp": schema.SingleNestedAttribute{
+							Description: descriptions["tcp_options"],
+							Computed:    true,
+							Attributes: map[string]schema.Attribute{
+								"idle_timeout": schema.StringAttribute{
+									Description: descriptions["tcp_options_idle_timeout"],
+									Computed:    true,
+								},
+							},
+						},
+						"udp": schema.SingleNestedAttribute{
+							Description: descriptions["udp_options"],
+							Computed:    true,
+							Attributes: map[string]schema.Attribute{
+								"idle_timeout": schema.StringAttribute{
+									Description: descriptions["udp_options_idle_timeout"],
+									Computed:    true,
+								},
+							},
 						},
 					},
 				},

@@ -72,6 +72,8 @@ type listener struct {
 	Protocol             types.String `tfsdk:"protocol"`
 	ServerNameIndicators types.List   `tfsdk:"server_name_indicators"`
 	TargetPool           types.String `tfsdk:"target_pool"`
+	TCP                  types.Object `tfsdk:"tcp"`
+	UDP                  types.Object `tfsdk:"udp"`
 }
 
 // Types corresponding to listener
@@ -81,6 +83,8 @@ var listenerTypes = map[string]attr.Type{
 	"protocol":               types.StringType,
 	"server_name_indicators": types.ListType{ElemType: types.ObjectType{AttrTypes: serverNameIndicatorTypes}},
 	"target_pool":            types.StringType,
+	"tcp":                    types.ObjectType{AttrTypes: tcpTypes},
+	"udp":                    types.ObjectType{AttrTypes: udpTypes},
 }
 
 // Struct corresponding to listener.ServerNameIndicators[i]
@@ -91,6 +95,22 @@ type serverNameIndicator struct {
 // Types corresponding to serverNameIndicator
 var serverNameIndicatorTypes = map[string]attr.Type{
 	"name": types.StringType,
+}
+
+type tcp struct {
+	IdleTimeout types.String `tfsdk:"idle_timeout"`
+}
+
+var tcpTypes = map[string]attr.Type{
+	"idle_timeout": types.StringType,
+}
+
+type udp struct {
+	IdleTimeout types.String `tfsdk:"idle_timeout"`
+}
+
+var udpTypes = map[string]attr.Type{
+	"idle_timeout": types.StringType,
 }
 
 // Struct corresponding to Model.Networks[i]
@@ -345,6 +365,10 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 		"ip":                                    "Target IP",
 		"region":                                "The resource region. If not defined, the provider region is used.",
 		"security_group_id":                     "The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT network areas (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.",
+		"tcp_options":                           "Options that are specific to the TCP protocol.",
+		"tcp_options_idle_timeout":              "Time after which an idle connection is closed. The default value is set to 300 seconds, and the maximum value is 3600 seconds. The format is a duration and the unit must be seconds. Example: 30s",
+		"udp_options":                           "Options that are specific to the UDP protocol.",
+		"udp_options_idle_timeout":              "Time after which an idle session is closed. The default value is set to 1 minute, and the maximum value is 2 minutes. The format is a duration and the unit must be seconds. Example: 30s",
 	}
 
 	resp.Schema = schema.Schema{
@@ -454,6 +478,27 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 							PlanModifiers: []planmodifier.String{
 								stringplanmodifier.RequiresReplace(),
 								stringplanmodifier.UseStateForUnknown(),
+							},
+						},
+						"tcp": schema.SingleNestedAttribute{
+							Description: descriptions["tcp_options"],
+							Optional:    true,
+							Attributes: map[string]schema.Attribute{
+								"idle_timeout": schema.StringAttribute{
+									Description: descriptions["tcp_options_idle_timeout"],
+									Optional:    true,
+								},
+							},
+						},
+						"udp": schema.SingleNestedAttribute{
+							Description: descriptions["udp_options"],
+							Optional:    true,
+							Computed:    false,
+							Attributes: map[string]schema.Attribute{
+								"idle_timeout": schema.StringAttribute{
+									Description: descriptions["udp_options_idle_timeout"],
+									Optional:    true,
+								},
 							},
 						},
 					},
@@ -907,6 +952,7 @@ func (r *loadBalancerResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, "Load balancer state imported")
 }
 
+// toCreatePayload and all other toX functions in this file turn a Terraform load balancer model into a createLoadBalancerPayload to be used with the load balancer API.
 func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoadBalancerPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
@@ -963,12 +1009,22 @@ func toListenersPayload(ctx context.Context, model *Model) (*[]loadbalancer.List
 		if err != nil {
 			return nil, fmt.Errorf("converting index %d: converting server_name_indicator: %w", i, err)
 		}
+		tcp, err := toTCP(ctx, &listenerModel)
+		if err != nil {
+			return nil, fmt.Errorf("converting index %d: converting tcp: %w", i, err)
+		}
+		udp, err := toUDP(ctx, &listenerModel)
+		if err != nil {
+			return nil, fmt.Errorf("converting index %d: converting udp: %w", i, err)
+		}
 		payload = append(payload, loadbalancer.Listener{
 			DisplayName:          conversion.StringValueToPointer(listenerModel.DisplayName),
 			Port:                 conversion.Int64ValueToPointer(listenerModel.Port),
 			Protocol:             loadbalancer.ListenerGetProtocolAttributeType(conversion.StringValueToPointer(listenerModel.Protocol)),
 			ServerNameIndicators: serverNameIndicatorsPayload,
 			TargetPool:           conversion.StringValueToPointer(listenerModel.TargetPool),
+			Tcp:                  tcp,
+			Udp:                  udp,
 		})
 	}
 
@@ -995,6 +1051,44 @@ func toServerNameIndicatorsPayload(ctx context.Context, l *listener) (*[]loadbal
 	}
 
 	return &payload, nil
+}
+
+func toTCP(ctx context.Context, listener *listener) (*loadbalancer.OptionsTCP, error) {
+	if listener.TCP.IsNull() || listener.TCP.IsUnknown() {
+		return nil, nil
+	}
+
+	tcp := tcp{}
+	diags := listener.TCP.As(ctx, &tcp, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+	if tcp.IdleTimeout.IsNull() || tcp.IdleTimeout.IsUnknown() {
+		return nil, nil
+	}
+
+	return &loadbalancer.OptionsTCP{
+		IdleTimeout: tcp.IdleTimeout.ValueStringPointer(),
+	}, nil
+}
+
+func toUDP(ctx context.Context, listener *listener) (*loadbalancer.OptionsUDP, error) {
+	if listener.UDP.IsNull() || listener.UDP.IsUnknown() {
+		return nil, nil
+	}
+
+	udp := udp{}
+	diags := listener.UDP.As(ctx, &udp, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+	if udp.IdleTimeout.IsNull() || udp.IdleTimeout.IsUnknown() {
+		return nil, nil
+	}
+
+	return &loadbalancer.OptionsUDP{
+		IdleTimeout: udp.IdleTimeout.ValueStringPointer(),
+	}, nil
 }
 
 func toNetworksPayload(ctx context.Context, model *Model) (*[]loadbalancer.Network, error) {
@@ -1222,6 +1316,7 @@ func toTargetsPayload(ctx context.Context, tp *targetPool) (*[]loadbalancer.Targ
 	return &payload, nil
 }
 
+// mapFields and all other map functions in this file translate an API resource into a Terraform model.
 func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, region string) error {
 	if lb == nil {
 		return fmt.Errorf("response input is nil")
@@ -1292,6 +1387,16 @@ func mapListeners(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 			return fmt.Errorf("mapping index %d, field serverNameIndicators: %w", i, err)
 		}
 
+		err = mapTCP(listenerResp.Tcp, listenerMap)
+		if err != nil {
+			return fmt.Errorf("mapping index %d, field tcp: %w", i, err)
+		}
+
+		err = mapUDP(listenerResp.Udp, listenerMap)
+		if err != nil {
+			return fmt.Errorf("mapping index %d, field udp: %w", i, err)
+		}
+
 		listenerTF, diags := types.ObjectValue(listenerTypes, listenerMap)
 		if diags.HasError() {
 			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
@@ -1341,6 +1446,40 @@ func mapServerNameIndicators(serverNameIndicatorsResp *[]loadbalancer.ServerName
 	}
 
 	l["server_name_indicators"] = serverNameIndicatorsTF
+	return nil
+}
+
+func mapTCP(tcp *loadbalancer.OptionsTCP, listener map[string]attr.Value) error {
+	if tcp == nil || tcp.IdleTimeout == nil || *tcp.IdleTimeout == "" {
+		listener["tcp"] = types.ObjectNull(tcpTypes)
+		return nil
+	}
+
+	tcpAttr, diags := types.ObjectValue(tcpTypes, map[string]attr.Value{
+		"idle_timeout": types.StringValue(*tcp.IdleTimeout),
+	})
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	listener["tcp"] = tcpAttr
+	return nil
+}
+
+func mapUDP(udp *loadbalancer.OptionsUDP, listener map[string]attr.Value) error {
+	if udp == nil || udp.IdleTimeout == nil || *udp.IdleTimeout == "" {
+		listener["udp"] = types.ObjectNull(udpTypes)
+		return nil
+	}
+
+	udpAttr, diags := types.ObjectValue(udpTypes, map[string]attr.Value{
+		"idle_timeout": types.StringValue(*udp.IdleTimeout),
+	})
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	listener["udp"] = udpAttr
 	return nil
 }
 

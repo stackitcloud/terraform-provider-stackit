@@ -1,26 +1,36 @@
 
 variable "project_id" {}
 variable "network_name" {}
+variable "network_role" {}
 variable "server_name" {}
 
 variable "loadbalancer_name" {}
 variable "plan_id" {}
-variable "target_pool_name" {}
-variable "target_port" {}
-variable "target_display_name" {}
-variable "listener_port" {}
-variable "listener_protocol" {}
-variable "network_role" {}
 variable "disable_security_group_assignment" {}
 
-variable "listener_display_name" {}
-variable "listener_server_name_indicators" {}
-variable "healthy_threshold" {}
-variable "health_interval" {}
-variable "health_interval_jitter" {}
-variable "health_timeout" {}
-variable "unhealthy_threshold" {}
-variable "use_source_ip_address" {}
+variable "target_display_name" {}
+
+variable "sni_target_pool_name" {}
+variable "sni_target_port" {}
+variable "sni_listener_port" {}
+variable "sni_listener_protocol" {}
+variable "sni_idle_timeout" {}
+variable "sni_listener_display_name" {}
+variable "sni_listener_server_name_indicators" {}
+variable "sni_healthy_threshold" {}
+variable "sni_health_interval" {}
+variable "sni_health_interval_jitter" {}
+variable "sni_health_timeout" {}
+variable "sni_unhealthy_threshold" {}
+variable "sni_use_source_ip_address" {}
+
+variable "udp_target_pool_name" {}
+variable "udp_target_port" {}
+variable "udp_listener_port" {}
+variable "udp_listener_protocol" {}
+variable "udp_idle_timeout" {}
+variable "udp_listener_display_name" {}
+
 variable "private_network_only" {}
 variable "acl" {}
 
@@ -84,8 +94,8 @@ resource "stackit_loadbalancer" "loadbalancer" {
   disable_security_group_assignment = var.disable_security_group_assignment
   target_pools = [
     {
-      name        = var.target_pool_name
-      target_port = var.target_port
+      name        = var.sni_target_pool_name
+      target_port = var.sni_target_port
       targets = [
         {
           display_name = var.target_display_name
@@ -93,28 +103,50 @@ resource "stackit_loadbalancer" "loadbalancer" {
         }
       ]
       active_health_check = {
-        healthy_threshold   = var.healthy_threshold
-        interval            = var.health_interval
-        interval_jitter     = var.health_interval_jitter
-        timeout             = var.health_timeout
-        unhealthy_threshold = var.unhealthy_threshold
+        healthy_threshold   = var.sni_healthy_threshold
+        interval            = var.sni_health_interval
+        interval_jitter     = var.sni_health_interval_jitter
+        timeout             = var.sni_health_timeout
+        unhealthy_threshold = var.sni_unhealthy_threshold
       }
       session_persistence = {
-        use_source_ip_address = var.use_source_ip_address
+        use_source_ip_address = var.sni_use_source_ip_address
       }
+    },
+    {
+      name        = var.udp_target_pool_name
+      target_port = var.udp_target_port
+      targets = [
+        {
+          display_name = var.target_display_name
+          ip           = stackit_network_interface.network_interface.ipv4
+        }
+      ]
     }
   ]
   listeners = [
     {
-      display_name = var.listener_display_name
-      port         = var.listener_port
-      protocol     = var.listener_protocol
-      target_pool  = var.target_pool_name
+      display_name = var.sni_listener_display_name
+      port         = var.sni_listener_port
+      protocol     = var.sni_listener_protocol
+      target_pool  = var.sni_target_pool_name
       server_name_indicators = [
         {
-          name = var.listener_server_name_indicators
+          name = var.sni_listener_server_name_indicators
         }
       ]
+      tcp = {
+        idle_timeout = var.sni_idle_timeout
+      }
+    },
+    {
+      display_name = var.udp_listener_display_name
+      port         = var.udp_listener_port
+      protocol     = var.udp_listener_protocol
+      target_pool  = var.udp_target_pool_name
+      udp = {
+        idle_timeout = var.udp_idle_timeout
+      }
     }
   ]
   networks = [
