@@ -1053,13 +1053,13 @@ func toServerNameIndicatorsPayload(ctx context.Context, l *listener) (*[]loadbal
 	return &payload, nil
 }
 
-func toTCP(ctx context.Context, l *listener) (*loadbalancer.OptionsTCP, error) {
-	if l.TCP.IsNull() || l.TCP.IsUnknown() {
+func toTCP(ctx context.Context, listener *listener) (*loadbalancer.OptionsTCP, error) {
+	if listener.TCP.IsNull() || listener.TCP.IsUnknown() {
 		return nil, nil
 	}
 
 	tcp := tcp{}
-	diags := l.TCP.As(ctx, &tcp, basetypes.ObjectAsOptions{})
+	diags := listener.TCP.As(ctx, &tcp, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
@@ -1072,13 +1072,13 @@ func toTCP(ctx context.Context, l *listener) (*loadbalancer.OptionsTCP, error) {
 	}, nil
 }
 
-func toUDP(ctx context.Context, l *listener) (*loadbalancer.OptionsUDP, error) {
-	if l.UDP.IsNull() || l.UDP.IsUnknown() {
+func toUDP(ctx context.Context, listener *listener) (*loadbalancer.OptionsUDP, error) {
+	if listener.UDP.IsNull() || listener.UDP.IsUnknown() {
 		return nil, nil
 	}
 
 	udp := udp{}
-	diags := l.UDP.As(ctx, &udp, basetypes.ObjectAsOptions{})
+	diags := listener.UDP.As(ctx, &udp, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
@@ -1449,14 +1449,9 @@ func mapServerNameIndicators(serverNameIndicatorsResp *[]loadbalancer.ServerName
 	return nil
 }
 
-func mapTCP(tcp *loadbalancer.OptionsTCP, l map[string]attr.Value) error {
-	if tcp == nil {
-		l["tcp"] = types.ObjectNull(tcpTypes)
-		return nil
-	}
-
-	if tcp.IdleTimeout == nil || *tcp.IdleTimeout == "" {
-		l["tcp"] = types.ObjectNull(tcpTypes)
+func mapTCP(tcp *loadbalancer.OptionsTCP, listener map[string]attr.Value) error {
+	if tcp == nil || tcp.IdleTimeout == nil || *tcp.IdleTimeout == "" {
+		listener["tcp"] = types.ObjectNull(tcpTypes)
 		return nil
 	}
 
@@ -1467,18 +1462,13 @@ func mapTCP(tcp *loadbalancer.OptionsTCP, l map[string]attr.Value) error {
 		return core.DiagsToError(diags)
 	}
 
-	l["tcp"] = tcpAttr
+	listener["tcp"] = tcpAttr
 	return nil
 }
 
-func mapUDP(udp *loadbalancer.OptionsUDP, l map[string]attr.Value) error {
-	if udp == nil {
-		l["udp"] = types.ObjectNull(udpTypes)
-		return nil
-	}
-
-	if udp.IdleTimeout == nil || *udp.IdleTimeout == "" {
-		l["udp"] = types.ObjectNull(udpTypes)
+func mapUDP(udp *loadbalancer.OptionsUDP, listener map[string]attr.Value) error {
+	if udp == nil || udp.IdleTimeout == nil || *udp.IdleTimeout == "" {
+		listener["udp"] = types.ObjectNull(udpTypes)
 		return nil
 	}
 
@@ -1489,7 +1479,7 @@ func mapUDP(udp *loadbalancer.OptionsUDP, l map[string]attr.Value) error {
 		return core.DiagsToError(diags)
 	}
 
-	l["udp"] = udpAttr
+	listener["udp"] = udpAttr
 	return nil
 }
 
