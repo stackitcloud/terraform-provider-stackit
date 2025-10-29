@@ -69,6 +69,8 @@ var testConfigVarsMax = config.Variables{
 	"alert_annotation": config.StringVariable("annotation1"),
 	"alert_interval":   config.StringVariable("5h"),
 	// max instance
+	"logs_retention_days":                    config.StringVariable("30"),
+	"traces_retention_days":                  config.StringVariable("30"),
 	"metrics_retention_days":                 config.StringVariable("90"),
 	"metrics_retention_days_5m_downsampling": config.StringVariable("90"),
 	"metrics_retention_days_1h_downsampling": config.StringVariable("90"),
@@ -501,6 +503,8 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "zipkin_spans_url"),
 
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "logs_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["logs_retention_days"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "traces_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["traces_retention_days"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "metrics_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["metrics_retention_days"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "metrics_retention_days_5m_downsampling", testutil.ConvertConfigVariable(testConfigVarsMax["metrics_retention_days_5m_downsampling"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "metrics_retention_days_1h_downsampling", testutil.ConvertConfigVariable(testConfigVarsMax["metrics_retention_days_1h_downsampling"])),
@@ -669,6 +673,8 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "otlp_traces_url"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "zipkin_spans_url"),
 
+					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "logs_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["logs_retention_days"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "traces_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["traces_retention_days"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "metrics_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["metrics_retention_days"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "metrics_retention_days_5m_downsampling", testutil.ConvertConfigVariable(testConfigVarsMax["metrics_retention_days_5m_downsampling"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_instance.instance", "metrics_retention_days_1h_downsampling", testutil.ConvertConfigVariable(testConfigVarsMax["metrics_retention_days_1h_downsampling"])),
@@ -895,6 +901,8 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "zipkin_spans_url"),
 
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "logs_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["logs_retention_days"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "traces_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["traces_retention_days"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "metrics_retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["metrics_retention_days"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "metrics_retention_days_5m_downsampling", testutil.ConvertConfigVariable(testConfigVarsMax["metrics_retention_days_5m_downsampling"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "metrics_retention_days_1h_downsampling", testutil.ConvertConfigVariable(testConfigVarsMax["metrics_retention_days_1h_downsampling"])),
