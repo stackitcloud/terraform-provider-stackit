@@ -31,6 +31,7 @@ fmt:
 	@gofmt -s -w .
 	@go tool goimports -w .
 	@cd $(ROOT_DIR)/examples && terraform fmt -recursive && cd $(ROOT_DIR)
+	@find $(ROOT_DIR)/stackit/internal/services -type d -name testdata -exec sh -c 'cd "{}" && terraform fmt -recursive' \;
 
 # TEST
 test:

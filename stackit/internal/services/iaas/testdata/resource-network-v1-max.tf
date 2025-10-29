@@ -9,13 +9,13 @@ variable "routed" {}
 variable "label" {}
 
 resource "stackit_network" "network_prefix" {
-  project_id         = var.project_id
-  name               = var.name
-  ipv4_gateway       = var.ipv4_gateway != "" ? var.ipv4_gateway : null
-  no_ipv4_gateway    = var.ipv4_gateway != "" ? null : true
-  ipv4_nameservers   = [var.ipv4_nameserver_0, var.ipv4_nameserver_1]
-  ipv4_prefix        = var.ipv4_prefix
-  routed             = var.routed
+  project_id       = var.project_id
+  name             = var.name
+  ipv4_gateway     = var.ipv4_gateway != "" ? var.ipv4_gateway : null
+  no_ipv4_gateway  = var.ipv4_gateway != "" ? null : true
+  ipv4_nameservers = [var.ipv4_nameserver_0, var.ipv4_nameserver_1]
+  ipv4_prefix      = var.ipv4_prefix
+  routed           = var.routed
   labels = {
     "acc-test" : var.label
   }
