@@ -273,7 +273,7 @@ func TestAccResourceManagerFolderContainerId(t *testing.T) {
 			// Create
 			{
 				ConfigVariables: testConfigResourceFolderParentContainerId,
-				Config:          testutil.ResourceManagerProviderConfigBetaEnabled() + resourceFolder,
+				Config:          testutil.ResourceManagerProviderConfig() + resourceFolder,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigResourceFolderParentContainerId["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceFolderParentContainerId["parent_container_id"])),
@@ -297,7 +297,7 @@ func TestAccResourceManagerFolderContainerId(t *testing.T) {
 					data "stackit_resourcemanager_folder" "example" {
 						container_id = stackit_resourcemanager_folder.example.container_id
 					}
-				`, testutil.ResourceManagerProviderConfigBetaEnabled(), resourceFolder),
+				`, testutil.ResourceManagerProviderConfig(), resourceFolder),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigResourceFolderParentContainerId["name"])),
 					resource.TestCheckResourceAttr("data.stackit_resourcemanager_folder.example", "labels.%", "1"),
@@ -324,7 +324,7 @@ func TestAccResourceManagerFolderContainerId(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigFolderNameParentContainerIdUpdated(),
-				Config:          testutil.ResourceManagerProviderConfigBetaEnabled() + resourceFolder,
+				Config:          testutil.ResourceManagerProviderConfig() + resourceFolder,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigFolderNameParentContainerIdUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigFolderNameParentContainerIdUpdated()["parent_container_id"])),
@@ -352,7 +352,7 @@ func TestAccResourceManagerFolderParentUUID(t *testing.T) {
 			// Create
 			{
 				ConfigVariables: testConfigResourceFolderParentUUID,
-				Config:          testutil.ResourceManagerProviderConfigBetaEnabled() + resourceFolder,
+				Config:          testutil.ResourceManagerProviderConfig() + resourceFolder,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigResourceFolderParentUUID["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceFolderParentUUID["parent_container_id"])),
@@ -376,7 +376,7 @@ func TestAccResourceManagerFolderParentUUID(t *testing.T) {
 					data "stackit_resourcemanager_folder" "example" {
 						container_id = stackit_resourcemanager_folder.example.container_id
 					}
-				`, testutil.ResourceManagerProviderConfigBetaEnabled(), resourceFolder),
+				`, testutil.ResourceManagerProviderConfig(), resourceFolder),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigResourceFolderParentUUID["name"])),
 					resource.TestCheckResourceAttr("data.stackit_resourcemanager_folder.example", "labels.%", "1"),
@@ -403,7 +403,7 @@ func TestAccResourceManagerFolderParentUUID(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigFolderNameParentUUIDUpdated(),
-				Config:          testutil.ResourceManagerProviderConfigBetaEnabled() + resourceFolder,
+				Config:          testutil.ResourceManagerProviderConfig() + resourceFolder,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigFolderNameParentUUIDUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigFolderNameParentUUIDUpdated()["parent_container_id"])),
