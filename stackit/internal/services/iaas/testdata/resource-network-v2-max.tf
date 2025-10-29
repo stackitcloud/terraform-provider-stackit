@@ -24,8 +24,8 @@ variable "network_area_id" {}
 # }
 
 resource "stackit_network" "network_prefix_length" {
-  project_id         = var.project_id
-  name               = var.name
+  project_id = var.project_id
+  name       = var.name
   # no_ipv4_gateway    = true
   ipv4_nameservers   = [var.ipv4_nameserver_0, var.ipv4_nameserver_1]
   ipv4_prefix_length = var.ipv4_prefix_length
