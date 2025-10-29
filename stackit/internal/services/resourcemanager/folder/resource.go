@@ -27,7 +27,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -81,11 +80,6 @@ func (r *folderResource) Configure(ctx context.Context, req resource.ConfigureRe
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_resourcemanager_folder", "resource")
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	apiClient := resourcemanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -110,7 +104,7 @@ func (r *folderResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 	}
 
 	resp.Schema = schema.Schema{
-		Description: features.AddBetaDescription(descriptions["main"], core.Resource),
+		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
