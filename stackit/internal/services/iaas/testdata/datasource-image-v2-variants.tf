@@ -27,7 +27,7 @@ data "stackit_image_v2" "filter_uefi_ubuntu" {
   project_id = var.project_id
   filter = {
     distro = "ubuntu"
-    uefi = true
+    uefi   = true
   }
 }
 
@@ -35,9 +35,9 @@ data "stackit_image_v2" "name_regex_and_filter_rhel_9_1" {
   project_id = var.project_id
   name_regex = "^Red Hat Enterprise Linux 9.1$"
   filter = {
-    distro = "rhel"
+    distro  = "rhel"
     version = "9.1"
-    uefi = true
+    uefi    = true
   }
 }
 
