@@ -1856,7 +1856,7 @@ func mapGlobalConfigToAttributes(respGlobalConfigs *observability.Global, global
 			smtpAuthUsername = sdkUtils.Ptr(globalConfigsTF.SmtpAuthUsername.ValueString())
 		}
 	}
-	//handle nil value from api
+	// handle nil value from api
 	opsgenieApiKey := respGlobalConfigs.OpsgenieApiKey
 	opsgenieApiUrl := respGlobalConfigs.OpsgenieApiUrl
 	if globalConfigsTF != nil {
