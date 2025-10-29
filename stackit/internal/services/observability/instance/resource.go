@@ -872,9 +872,16 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 		metricsRetentionDays := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays)
 		metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays5mDownsampling)
 		metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays1hDownsampling)
-
+		// If logs retention days are set, return an error to the user
+		if logsRetentionDays != nil {
+			resp.Diagnostics.AddAttributeError(path.Root("logs_retention_days"), "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring logs retention days. Remove this from your config or use a different plan.", *plan.Name))
+		}
+		// If traces retention days are set, return an error to the user
+		if tracesRetentionDays != nil {
+			resp.Diagnostics.AddAttributeError(path.Root("traces_retention_days"), "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring trace retention days. Remove this from your config or use a different plan.", *plan.Name))
+		}
 		// If any of the metrics retention days are set, return an error to the user
-		if logsRetentionDays != nil || tracesRetentionDays != nil || metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
+		if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring metrics retention days. Remove this from your config or use a different plan.", *plan.Name))
 		}
 	}
