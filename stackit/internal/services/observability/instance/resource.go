@@ -71,6 +71,8 @@ type Model struct {
 	MetricsPushURL                     types.String `tfsdk:"metrics_push_url"`
 	TargetsURL                         types.String `tfsdk:"targets_url"`
 	AlertingURL                        types.String `tfsdk:"alerting_url"`
+	LogsRetentionDays                  types.Int64  `tfsdk:"logs_retention_days"`
+	TracesRetentionDays                types.Int64  `tfsdk:"traces_retention_days"`
 	LogsURL                            types.String `tfsdk:"logs_url"`
 	LogsPushURL                        types.String `tfsdk:"logs_push_url"`
 	JaegerTracesURL                    types.String `tfsdk:"jaeger_traces_url"`
@@ -512,6 +514,16 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"traces_retention_days": schema.Int64Attribute{
+				Description: "Specifies for how many days the traces are kept. Default is set to `7`.",
+				Optional:    true,
+				Computed:    true,
+			},
+			"logs_retention_days": schema.Int64Attribute{
+				Description: "Specifies for how many days the logs are kept. Default is set to `7`.",
+				Optional:    true,
+				Computed:    true,
+			},
 			"metrics_retention_days": schema.Int64Attribute{
 				Description: "Specifies for how many days the raw metrics are kept. Default is set to `90`.",
 				Optional:    true,
@@ -855,10 +867,19 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 
 	// Plan does not support log storage and trace storage
 	if plan.GetLogsStorage() == 0 && plan.GetTracesStorage() == 0 {
+		logsRetentionDays := conversion.Int64ValueToPointer(configModel.LogsRetentionDays)
+		tracesRetentionDays := conversion.Int64ValueToPointer(configModel.TracesRetentionDays)
 		metricsRetentionDays := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays)
 		metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays5mDownsampling)
 		metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays1hDownsampling)
-
+		// If logs retention days are set, return an error to the user
+		if logsRetentionDays != nil {
+			resp.Diagnostics.AddAttributeError(path.Root("logs_retention_days"), "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring logs retention days. Remove this from your config or use a different plan.", *plan.Name))
+		}
+		// If traces retention days are set, return an error to the user
+		if tracesRetentionDays != nil {
+			resp.Diagnostics.AddAttributeError(path.Root("traces_retention_days"), "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring trace retention days. Remove this from your config or use a different plan.", *plan.Name))
+		}
 		// If any of the metrics retention days are set, return an error to the user
 		if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring metrics retention days. Remove this from your config or use a different plan.", *plan.Name))
@@ -974,9 +995,43 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
+		err = r.getLogsRetention(ctx, &model)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("%v", err))
+		}
+
+		diags = setLogsRetentions(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		err = r.getTracesRetention(ctx, &model)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("%v", err))
+		}
+
+		diags = setTracesRetentions(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	} else {
 		// Set metric retention days to zero
 		diags = setMetricsRetentionsZero(ctx, &resp.State)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		// Set logs retention days to zero
+		diags = setLogsRetentionsZero(ctx, &resp.State)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		// Set traces retention days to zero
+		diags = setTracesRetentionsZero(ctx, &resp.State)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -1084,6 +1139,42 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		}
 		// Set state to fully populated data
 		diags = setMetricsRetentions(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		logsRetentionResp, err := r.client.GetLogsConfigs(ctx, instanceId, projectId).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get logs retention: %v", err))
+			return
+		}
+		// Map response body to schema
+		err = mapLogsRetentionField(logsRetentionResp, &model)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the logs retention: %v", err))
+			return
+		}
+		// Set state to fully populated data
+		diags = setLogsRetentions(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		tracesRetentionResp, err := r.client.GetTracesConfigs(ctx, instanceId, projectId).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get logs retention: %v", err))
+			return
+		}
+		// Map response body to schema
+		err = mapTracesRetentionField(tracesRetentionResp, &model)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the logs retention: %v", err))
+			return
+		}
+		// Set state to fully populated data
+		diags = setTracesRetentions(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -1239,9 +1330,43 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
+		err = r.getLogsRetention(ctx, &model)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("%v", err))
+		}
+
+		diags = setLogsRetentions(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		err = r.getTracesRetention(ctx, &model)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("%v", err))
+		}
+
+		diags = setTracesRetentions(ctx, &resp.State, &model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	} else {
 		// Set metric retention days to zero
 		diags = setMetricsRetentionsZero(ctx, &resp.State)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		diags = setLogsRetentionsZero(ctx, &resp.State)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		diags = setTracesRetentionsZero(ctx, &resp.State)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -1393,6 +1518,56 @@ func mapACLField(aclList *observability.ListACLResponse, model *Model) error {
 		return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
 	}
 	model.ACL = aclTF
+	return nil
+}
+
+func mapLogsRetentionField(r *observability.LogsConfigResponse, model *Model) error {
+	if r == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	if r.Config == nil {
+		return fmt.Errorf("logs retention config is nil")
+	}
+
+	if r.Config.Retention == nil {
+		return fmt.Errorf("logs retention days is nil")
+	}
+
+	stripedLogsRetentionHours := strings.TrimSuffix(*r.Config.Retention, "h")
+	logsRetentionHours, err := strconv.ParseInt(stripedLogsRetentionHours, 10, 64)
+	if err != nil {
+		return fmt.Errorf("parsing logs retention hours: %w", err)
+	}
+	model.LogsRetentionDays = types.Int64Value(logsRetentionHours / 24)
+	return nil
+}
+
+func mapTracesRetentionField(r *observability.TracesConfigResponse, model *Model) error {
+	if r == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	if r.Config == nil {
+		return fmt.Errorf("traces retention config is nil")
+	}
+
+	if r.Config.Retention == nil {
+		return fmt.Errorf("traces retention days is nil")
+	}
+
+	stripedTracesRetentionHours := strings.TrimSuffix(*r.Config.Retention, "h")
+	tracesRetentionHours, err := strconv.ParseInt(stripedTracesRetentionHours, 10, 64)
+	if err != nil {
+		return fmt.Errorf("parsing traces retention hours: %w", err)
+	}
+	model.TracesRetentionDays = types.Int64Value(tracesRetentionHours / 24)
 	return nil
 }
 
@@ -2266,6 +2441,74 @@ func (r *instanceResource) getAlertConfigs(ctx context.Context, alertConfig *ale
 	return nil
 }
 
+func (r *instanceResource) getTracesRetention(ctx context.Context, model *Model) error {
+	tracesRetentionDays := conversion.Int64ValueToPointer(model.TracesRetentionDays)
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
+
+	if tracesRetentionDays != nil {
+		tracesResp, err := r.client.GetTracesConfigs(ctx, instanceId, projectId).Execute()
+		if err != nil {
+			return fmt.Errorf("Getting traces retention policy: %w", err)
+		}
+		if tracesResp == nil {
+			return fmt.Errorf("nil response")
+		}
+
+		retentionDays := fmt.Sprintf("%dh", *tracesRetentionDays*24)
+		_, err = r.client.UpdateTracesConfigs(ctx, instanceId, projectId).UpdateTracesConfigsPayload(observability.UpdateTracesConfigsPayload{Retention: &retentionDays}).Execute()
+		if err != nil {
+			return fmt.Errorf("Setting traces retention policy: %w", err)
+		}
+	}
+
+	tracesResp, err := r.client.GetTracesConfigsExecute(ctx, instanceId, projectId)
+	if err != nil {
+		return fmt.Errorf("Getting traces retention policy: %w", err)
+	}
+
+	err = mapTracesRetentionField(tracesResp, model)
+	if err != nil {
+		return fmt.Errorf("Processing API response for the traces retention %w", err)
+	}
+
+	return nil
+}
+
+func (r *instanceResource) getLogsRetention(ctx context.Context, model *Model) error {
+	logsRetentionDays := conversion.Int64ValueToPointer(model.LogsRetentionDays)
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
+
+	if logsRetentionDays != nil {
+		logsResp, err := r.client.GetLogsConfigs(ctx, instanceId, projectId).Execute()
+		if err != nil {
+			return fmt.Errorf("Getting logs retention policy: %w", err)
+		}
+		if logsResp == nil {
+			return fmt.Errorf("nil response")
+		}
+
+		retentionDays := fmt.Sprintf("%dh", *logsRetentionDays*24)
+		_, err = r.client.UpdateLogsConfigs(ctx, instanceId, projectId).UpdateLogsConfigsPayload(observability.UpdateLogsConfigsPayload{Retention: &retentionDays}).Execute()
+		if err != nil {
+			return fmt.Errorf("Setting logs retention policy: %w", err)
+		}
+	}
+
+	logsResp, err := r.client.GetLogsConfigsExecute(ctx, instanceId, projectId)
+	if err != nil {
+		return fmt.Errorf("Getting logs retention policy: %w", err)
+	}
+
+	err = mapLogsRetentionField(logsResp, model)
+	if err != nil {
+		return fmt.Errorf("Processing API response for the logs retention %w", err)
+	}
+
+	return nil
+}
+
 func (r *instanceResource) getMetricsRetention(ctx context.Context, model *Model) error {
 	metricsRetentionDays := conversion.Int64ValueToPointer(model.MetricsRetentionDays)
 	metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(model.MetricsRetentionDays5mDownsampling)
@@ -2322,6 +2565,26 @@ func setMetricsRetentions(ctx context.Context, state *tfsdk.State, model *Model)
 	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days"), model.MetricsRetentionDays)...)
 	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days_5m_downsampling"), model.MetricsRetentionDays5mDownsampling)...)
 	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days_1h_downsampling"), model.MetricsRetentionDays1hDownsampling)...)
+	return diags
+}
+
+func setTracesRetentionsZero(ctx context.Context, state *tfsdk.State) (diags diag.Diagnostics) {
+	diags = append(diags, state.SetAttribute(ctx, path.Root("traces_retention_days"), 0)...)
+	return diags
+}
+
+func setTracesRetentions(ctx context.Context, state *tfsdk.State, model *Model) (diags diag.Diagnostics) {
+	diags = append(diags, state.SetAttribute(ctx, path.Root("traces_retention_days"), model.TracesRetentionDays)...)
+	return diags
+}
+
+func setLogsRetentionsZero(ctx context.Context, state *tfsdk.State) (diags diag.Diagnostics) {
+	diags = append(diags, state.SetAttribute(ctx, path.Root("logs_retention_days"), 0)...)
+	return diags
+}
+
+func setLogsRetentions(ctx context.Context, state *tfsdk.State, model *Model) (diags diag.Diagnostics) {
+	diags = append(diags, state.SetAttribute(ctx, path.Root("logs_retention_days"), model.LogsRetentionDays)...)
 	return diags
 }
 

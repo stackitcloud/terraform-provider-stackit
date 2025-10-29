@@ -6,29 +6,30 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/hashicorp/terraform-plugin-framework v1.15.1
-	github.com/hashicorp/terraform-plugin-framework-validators v0.18.0
+	github.com/hashicorp/terraform-plugin-framework v1.16.1
+	github.com/hashicorp/terraform-plugin-framework-validators v0.19.0
 	github.com/hashicorp/terraform-plugin-go v0.29.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.13.3
 	github.com/stackitcloud/stackit-sdk-go/core v0.17.3
-	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.5.0
+	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.1
-	github.com/stackitcloud/stackit-sdk-go/services/git v0.7.1
-	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.30.0
+	github.com/stackitcloud/stackit-sdk-go/services/git v0.8.0
+	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.31.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.21-alpha
-	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.5.1
+	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.1
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.25.1
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.5.2
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.4.0
-	github.com/stackitcloud/stackit-sdk-go/services/observability v0.14.0
+	github.com/stackitcloud/stackit-sdk-go/services/observability v0.15.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.24.1
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.2.1
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.25.1
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.25.1
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.17.1
+	github.com/stackitcloud/stackit-sdk-go/services/scf v0.2.1
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.13.1
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.2
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.2.1
@@ -37,12 +38,12 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.3.1
 	github.com/teambition/rrule-go v1.8.2
-	golang.org/x/mod v0.28.0
+	golang.org/x/mod v0.29.0
 )
 
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
-	golang.org/x/telemetry v0.0.0-20250908211612-aef8a434d053 // indirect
+	golang.org/x/telemetry v0.0.0-20251008203120-078029d740a8 // indirect
 )
 
 require (
@@ -81,17 +82,17 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
-	github.com/stackitcloud/stackit-sdk-go/services/authorization v0.8.1
+	github.com/stackitcloud/stackit-sdk-go/services/authorization v0.9.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/zclconf/go-cty v1.16.3 // indirect
-	golang.org/x/crypto v0.42.0 // indirect
-	golang.org/x/net v0.44.0 // indirect
+	golang.org/x/crypto v0.43.0 // indirect
+	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
-	golang.org/x/tools v0.37.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/text v0.30.0 // indirect
+	golang.org/x/tools v0.38.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250707201910-8d1bb00bc6a7 // indirect
 	google.golang.org/grpc v1.75.1 // indirect

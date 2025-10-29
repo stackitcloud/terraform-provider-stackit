@@ -53,7 +53,7 @@ Let's suppose you want to want to implement a new resource `bar` of service `foo
     }
    ```
 
-Please remeber to always add unit tests for the helper functions (in this case `mapFields` and `toCreatePayload`), as well implementing/extending the acceptance (end-to-end) tests. Our acceptance tests are implemented using Hashicorp's [terraform-plugin-testing](https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests) package.
+Please remember to always add unit tests for the helper functions (in this case `mapFields` and `toCreatePayload`), as well implementing/extending the acceptance (end-to-end) tests. Our acceptance tests are implemented using Hashicorp's [terraform-plugin-testing](https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests) package.
 
 Additionally, remember to run `make generate-docs` after your changes to keep the commands' documentation in `docs/` updated, which is used as a source for the [Terraform Registry documentation page](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs).
 
@@ -61,7 +61,7 @@ Additionally, remember to run `make generate-docs` after your changes to keep th
 
 Below is a typical structure of a STACKIT Terraform provider resource:
 
-https://github.com/stackitcloud/terraform-provider-stackit/blob/1b9225598a007cda8d8bcadf0db1836e96451353/.github/docs/contribution-guide/resource.go#L26-L295
+https://github.com/stackitcloud/terraform-provider-stackit/blob/main/.github/docs/contribution-guide/resource.go
 
 If the new resource `bar` is the first resource in the TFP using a STACKIT service `foo`, please refer to [Onboarding a new STACKIT service](./CONTRIBUTION.md/#onboarding-a-new-stackit-service).
 
@@ -86,19 +86,20 @@ If you want to onboard resources of a STACKIT service `foo` that was not yet in 
    ```
 4. Create a utils package, for service `foo` it would be `stackit/internal/foo/utils`. Add a `ConfigureClient()` func and use it in your resource and datasource implementations.
 
-https://github.com/stackitcloud/terraform-provider-stackit/blob/1b9225598a007cda8d8bcadf0db1836e96451353/.github/docs/contribution-guide/utils/util.go#L14-L31
+https://github.com/stackitcloud/terraform-provider-stackit/blob/main/.github/docs/contribution-guide/utils/util.go
 
 ### Local development
 
 To test your changes locally, you have to compile the provider (requires Go 1.24) and configure the Terraform CLI to use the local version.
 
 1. Clone the repository.
+1. Run `$ make build` to build the Terraform provider binary in `<PATH_TO_REPO>/bin/`
 1. Create a `.terraformrc` config file in your home directory (`~`) for the terraform CLI with the following content:
 
 	```hcl
 	provider_installation {
    	   dev_overrides {
-	      "registry.terraform.io/stackitcloud/stackit" = "<PATH_TO_BINARY>"
+	      "registry.terraform.io/stackitcloud/stackit" = "<PATH_TO_REPO>/bin/"
 	   }
 
 	   # For all other providers, install them directly from their origin provider
@@ -162,6 +163,16 @@ To make your contribution, follow these steps:
 4. Commit your changes including a descriptive message
 5. Create a pull request with your changes.
 6. The pull request will be reviewed by the repo maintainers. If you need to make further changes, make additional commits to keep commit history. When the PR is merged, commits will be squashed.
+
+> [!TIP]
+> 
+> To ensure smooth review and integration of your code contributions, follow these guidelines:
+>
+> **Break down large changes into smaller PRs**: Separate new features or bigger changes into multiple smaller Pull Requests.
+> This allows us to provide earlier feedback and makes it easier to review your PR.
+> 
+> **Create a draft PR for early feedback**: If you want feedback during the implementation process, create a draft PR so we can have a look. 
+
 
 ## Bug Reports
 

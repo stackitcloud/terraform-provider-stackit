@@ -76,6 +76,9 @@ import (
 	redisInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/instance"
 	resourceManagerFolder "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/folder"
 	resourceManagerProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/project"
+	scfOrganization "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/organization"
+	scfOrganizationmanager "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/organizationmanager"
+	scfPlatform "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/platform"
 	secretsManagerInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/instance"
 	secretsManagerUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/user"
 	serverBackupSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/schedule"
@@ -147,6 +150,7 @@ type providerModel struct {
 	ServerUpdateCustomEndpoint      types.String `tfsdk:"server_update_custom_endpoint"`
 	ServiceAccountCustomEndpoint    types.String `tfsdk:"service_account_custom_endpoint"`
 	ResourceManagerCustomEndpoint   types.String `tfsdk:"resourcemanager_custom_endpoint"`
+	ScfCustomEndpoint               types.String `tfsdk:"scf_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
 	EnableBetaResources             types.Bool   `tfsdk:"enable_beta_resources"`
 	ServiceEnablementCustomEndpoint types.String `tfsdk:"service_enablement_custom_endpoint"`
@@ -185,6 +189,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"server_update_custom_endpoint":      "Custom endpoint for the Server Update service",
 		"service_account_custom_endpoint":    "Custom endpoint for the Service Account service",
 		"resourcemanager_custom_endpoint":    "Custom endpoint for the Resource Manager service",
+		"scf_custom_endpoint":                "Custom endpoint for the Cloud Foundry (SCF) service",
 		"secretsmanager_custom_endpoint":     "Custom endpoint for the Secrets Manager service",
 		"sqlserverflex_custom_endpoint":      "Custom endpoint for the SQL Server Flex service",
 		"ske_custom_endpoint":                "Custom endpoint for the Kubernetes Engine (SKE) service",
@@ -307,6 +312,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["redis_custom_endpoint"],
 			},
+			"scf_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["scf_custom_endpoint"],
+			},
 			"resourcemanager_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["resourcemanager_custom_endpoint"],
@@ -417,6 +426,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.OpenSearchCustomEndpoint, func(v string) { providerData.OpenSearchCustomEndpoint = v })
 	setStringField(providerConfig.RedisCustomEndpoint, func(v string) { providerData.RedisCustomEndpoint = v })
 	setStringField(providerConfig.ResourceManagerCustomEndpoint, func(v string) { providerData.ResourceManagerCustomEndpoint = v })
+	setStringField(providerConfig.ScfCustomEndpoint, func(v string) { providerData.ScfCustomEndpoint = v })
 	setStringField(providerConfig.SecretsManagerCustomEndpoint, func(v string) { providerData.SecretsManagerCustomEndpoint = v })
 	setStringField(providerConfig.SQLServerFlexCustomEndpoint, func(v string) { providerData.SQLServerFlexCustomEndpoint = v })
 	setStringField(providerConfig.ServiceAccountCustomEndpoint, func(v string) { providerData.ServiceAccountCustomEndpoint = v })
@@ -500,6 +510,9 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		redisInstance.NewInstanceDataSource,
 		redisCredential.NewCredentialDataSource,
 		resourceManagerProject.NewProjectDataSource,
+		scfOrganization.NewScfOrganizationDataSource,
+		scfOrganizationmanager.NewScfOrganizationManagerDataSource,
+		scfPlatform.NewScfPlatformDataSource,
 		resourceManagerFolder.NewFolderDataSource,
 		secretsManagerInstance.NewInstanceDataSource,
 		secretsManagerUser.NewUserDataSource,
@@ -567,6 +580,8 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		redisInstance.NewInstanceResource,
 		redisCredential.NewCredentialResource,
 		resourceManagerProject.NewProjectResource,
+		scfOrganization.NewScfOrganizationResource,
+		scfOrganizationmanager.NewScfOrganizationManagerResource,
 		resourceManagerFolder.NewFolderResource,
 		secretsManagerInstance.NewInstanceResource,
 		secretsManagerUser.NewUserResource,

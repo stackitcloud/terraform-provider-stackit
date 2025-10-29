@@ -77,7 +77,7 @@ Required:
 
 Required:
 
-- `type` (String) Possible values are: `blackhole`, `internet`, `ipv4`, `ipv6`. Only `cidrv4` is supported during experimental stage..
+- `type` (String) Type of the next hop. Possible values are: `blackhole`, `internet`, `ipv4`, `ipv6`.
 
 Optional:
 

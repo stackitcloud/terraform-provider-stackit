@@ -12,6 +12,7 @@ import (
 	serviceenablementUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/utils"
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -659,6 +660,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								ElementType: types.StringType,
 								PlanModifiers: []planmodifier.List{
 									listplanmodifier.UseStateForUnknown(),
+								},
+								Validators: []validator.List{
+									listvalidator.ValueStringsAre(validate.NoUUID()),
 								},
 							},
 						},

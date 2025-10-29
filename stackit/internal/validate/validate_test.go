@@ -55,6 +55,50 @@ func TestUUID(t *testing.T) {
 	}
 }
 
+func TestNoUUID(t *testing.T) {
+	tests := []struct {
+		description string
+		input       string
+		isValid     bool
+	}{
+		{
+			"UUID",
+			"cae27bba-c43d-498a-861e-d11d241c4ff8",
+			false,
+		},
+		{
+			"no UUID",
+			"a-b-c-d",
+			true,
+		},
+		{
+			"Empty",
+			"",
+			true,
+		},
+		{
+			"domain name",
+			"www.test.de",
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			r := validator.StringResponse{}
+			NoUUID().ValidateString(context.Background(), validator.StringRequest{
+				ConfigValue: types.StringValue(tt.input),
+			}, &r)
+
+			if !tt.isValid && !r.Diagnostics.HasError() {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && r.Diagnostics.HasError() {
+				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
+			}
+		})
+	}
+}
+
 func TestIP(t *testing.T) {
 	tests := []struct {
 		description string
@@ -220,8 +264,14 @@ func TestRecordSet(t *testing.T) {
 			false,
 		},
 		{
-			"CNAME record",
-			"some-record",
+			"CNAME record Not a Fully Qualified Domain Name",
+			"stackit.de",
+			"CNAME",
+			false,
+		},
+		{
+			"CNAME record ok Fully Qualified Domain Name",
+			"stackit.de.",
 			"CNAME",
 			true,
 		},

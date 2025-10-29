@@ -6,6 +6,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -14,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
 
 func TestReconcileStrLists(t *testing.T) {
@@ -120,6 +124,55 @@ func TestListValuetoStrSlice(t *testing.T) {
 			if !tt.isValid {
 				t.Fatalf("Should have failed")
 			}
+			diff := cmp.Diff(output, tt.expected)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
+func TestConvertPointerSliceToStringSlice(t *testing.T) {
+	tests := []struct {
+		description string
+		input       []*string
+		expected    []string
+	}{
+		{
+			description: "nil slice",
+			input:       nil,
+			expected:    []string{},
+		},
+		{
+			description: "empty slice",
+			input:       []*string{},
+			expected:    []string{},
+		},
+		{
+			description: "slice with valid pointers",
+			input:       []*string{utils.Ptr("apple"), utils.Ptr("banana"), utils.Ptr("cherry")},
+			expected:    []string{"apple", "banana", "cherry"},
+		},
+		{
+			description: "slice with some nil pointers",
+			input:       []*string{utils.Ptr("apple"), nil, utils.Ptr("cherry"), nil},
+			expected:    []string{"apple", "cherry"},
+		},
+		{
+			description: "slice with all nil pointers",
+			input:       []*string{nil, nil, nil},
+			expected:    []string{},
+		},
+		{
+			description: "slice with a pointer to an empty string",
+			input:       []*string{utils.Ptr("apple"), utils.Ptr(""), utils.Ptr("cherry")},
+			expected:    []string{"apple", "", "cherry"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output := ConvertPointerSliceToStringSlice(tt.input)
 			diff := cmp.Diff(output, tt.expected)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
@@ -497,6 +550,95 @@ func TestCheckListRemoval(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("plan should not be adjusted but diff is: %s", diff)
 				}
+			}
+		})
+	}
+}
+
+func TestSetAndLogStateFields(t *testing.T) {
+	testSchema := schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"project_id":  schema.StringAttribute{},
+			"instance_id": schema.StringAttribute{},
+		},
+	}
+
+	type args struct {
+		diags  *diag.Diagnostics
+		state  *tfsdk.State
+		values map[string]interface{}
+	}
+	type want struct {
+		hasError bool
+		state    *tfsdk.State
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "empty map",
+			args: args{
+				diags:  &diag.Diagnostics{},
+				state:  &tfsdk.State{},
+				values: map[string]interface{}{},
+			},
+			want: want{
+				hasError: false,
+				state:    &tfsdk.State{},
+			},
+		},
+		{
+			name: "base",
+			args: args{
+				diags: &diag.Diagnostics{},
+				state: func() *tfsdk.State {
+					ctx := context.Background()
+					state := tfsdk.State{
+						Raw: tftypes.NewValue(testSchema.Type().TerraformType(ctx), map[string]tftypes.Value{
+							"project_id":  tftypes.NewValue(tftypes.String, "9b15d120-86f8-45f5-81d8-a554f09c7582"),
+							"instance_id": tftypes.NewValue(tftypes.String, nil),
+						}),
+						Schema: testSchema,
+					}
+					return &state
+				}(),
+				values: map[string]interface{}{
+					"project_id":  "a414f971-3f7a-4e9a-8671-51a8acb7bcc8",
+					"instance_id": "97073250-8cad-46c3-8424-6258ac0b3731",
+				},
+			},
+			want: want{
+				hasError: false,
+				state: func() *tfsdk.State {
+					ctx := context.Background()
+					state := tfsdk.State{
+						Raw: tftypes.NewValue(testSchema.Type().TerraformType(ctx), map[string]tftypes.Value{
+							"project_id":  tftypes.NewValue(tftypes.String, nil),
+							"instance_id": tftypes.NewValue(tftypes.String, nil),
+						}),
+						Schema: testSchema,
+					}
+					state.SetAttribute(ctx, path.Root("project_id"), "a414f971-3f7a-4e9a-8671-51a8acb7bcc8")
+					state.SetAttribute(ctx, path.Root("instance_id"), "97073250-8cad-46c3-8424-6258ac0b3731")
+					return &state
+				}(),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			SetAndLogStateFields(ctx, tt.args.diags, tt.args.state, tt.args.values)
+
+			if tt.args.diags.HasError() != tt.want.hasError {
+				t.Errorf("TestSetAndLogStateFields() error count = %v, hasErr %v", tt.args.diags.ErrorsCount(), tt.want.hasError)
+			}
+
+			diff := cmp.Diff(tt.args.state, tt.want.state)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
 			}
 		})
 	}

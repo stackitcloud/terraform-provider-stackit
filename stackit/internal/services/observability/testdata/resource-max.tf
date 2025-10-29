@@ -11,6 +11,8 @@ variable "alert_interval" {}
 
 variable "instance_name" {}
 variable "plan_name" {}
+variable "logs_retention_days" {}
+variable "traces_retention_days" {}
 variable "metrics_retention_days" {}
 variable "metrics_retention_days_5m_downsampling" {}
 variable "metrics_retention_days_1h_downsampling" {}
@@ -102,6 +104,8 @@ resource "stackit_observability_instance" "instance" {
   name       = var.instance_name
   plan_name  = var.plan_name
 
+  logs_retention_days                    = var.logs_retention_days
+  traces_retention_days                  = var.traces_retention_days
   metrics_retention_days                 = var.metrics_retention_days
   metrics_retention_days_5m_downsampling = var.metrics_retention_days_5m_downsampling
   metrics_retention_days_1h_downsampling = var.metrics_retention_days_1h_downsampling

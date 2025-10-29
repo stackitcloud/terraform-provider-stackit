@@ -207,22 +207,68 @@ If you don't need these fields, don't set the experiment flag `network`, to use 
 
 ## Acceptance Tests
 
+> [!WARNING]
+> Acceptance tests will create real resources, which may incur in costs.
+> Some resource may leftover after a test run. This could happen if the tests are modified, tests are stopped during the run or losing the network connection.
+> These resource must be removed manually with the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli) or the STACKIT Portal.
+
 Terraform acceptance tests are run using the command `make test-acceptance-tf`. For all services,
 
 - The env var `TF_ACC_PROJECT_ID` must be set with the ID of the STACKIT test project to test it.
+- The env var `TF_ACC_REGION` must be set with the region in which the tests should be run.
 - Authentication is set as usual.
 - Optionally, the env var `TF_ACC_XXXXXX_CUSTOM_ENDPOINT` (where `XXXXXX` is the uppercase name of the service) can be set to use endpoints other than the default value.
 - There are some acceptance test where it is needed to provide additional parameters, some of them have default values in order to run normally without manual interaction. Those default values can be overwritten (see testutils.go for a full list.)
 
 Additionally:
 
-- For the Resource Manager service:
-  - A service account with permissions to create and delete projects is required
-  - The env var `TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL` must be set as the email of the service account
-  - The env var `TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN` must be set as a valid token of the service account. Can also be set in the credentials file used by authentication (see [Authentication](#authentication) for more details)
-  - The env var `TF_ACC_PROJECT_ID` is ignored
+| Env var                                     | Value                                                                                                   | Example value                          | needed for Acc tests of the following services |
+|---------------------------------------------|---------------------------------------------------------------------------------------------------------|----------------------------------------|------------------------------------------------|
+| `TF_ACC_ORGANIZATION_ID`                    | ID of the STACKIT test organization                                                                     | `5353ccfa-a984-4b96-a71d-b863dd2b7087` | `authorization`, `iaas`                        |
+| `TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL` | Email of the STACKIT service account                                                                    | `abc-serviceaccount@sa.stackit.cloud`  | `authorization`, `resourcemanager`             |
+| `TF_ACC_SERVER_ID`                          | ID of a STACKIT Server with STACKIT Server Agent enabled                                                | `5353ccfa-a984-4b96-a71d-b863dd2b7087` | `serverbackup`, `serverupdate`                 |
+| `TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID`   | Container ID of the project parent container (folder within an organization or the organization itself) | `organization-d2b7087`                 | `resourcemanager`                              |
+| `TF_ACC_TEST_PROJECT_PARENT_UUID`           | UUID ID of the project parent container (folder within an organization or the organization itself)      | `5353ccfa-a984-4b96-a71d-b863dd2b7087` | `resourcemanager`                              |
 
-**WARNING:** Acceptance tests will create real resources, which may incur in costs.
+### Run Acceptance Tests of a single service
+
+> [!WARNING]
+> Acceptance tests will create real resources, which may incur in costs.
+> Some resource may leftover after a test run. This could happen if the tests are modified, tests are stopped during the run or losing the network connection.
+> These resource must be removed manually with the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli) or the STACKIT Portal.
+
+For running the acceptance tests of a single service, set the required env vars from above.
+Set the env var `TF_ACC=1`, to enable the acceptance tests. 
+
+Start the acceptance tests:
+
+1. Configure your env vars in a file, e.g.
+   ```sh
+   # acc-tests.env
+   export TF_ACC="1"
+   export TF_ACC_REGION="eu01"
+   ...
+   ```
+2. Read the env vars from the file
+   ```sh
+   source acc-tests.env
+   ```
+3. Start the acceptance tests
+    ```sh
+    $ go test -timeout=60m -v stackit/internal/services/<service>/<service>_acc_test.go
+    ```
+
+Alternative, set your env vars inline and start the acceptance test:
+```sh
+$ TF_ACC=1 \
+  TF_ACC_PROJECT_ID=<PROJECT_ID> \
+  TF_ACC_REGION=<REGION> \
+  STACKIT_SERVICE_ACCOUNT_KEY_PATH=<PATH/TO/SA_KEY.json> \
+  go test -timeout=60m -v stackit/internal/services/<service>/<service>_acc_test.go
+```
+
+
+For some services the acceptance tests take more time. By setting the timeout via the flag `-timeout=` to a higher time, you ensure that the tests will not be stopped.
 
 ## Migration
 

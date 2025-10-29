@@ -61,5 +61,5 @@ Read-Only:
 
 Read-Only:
 
-- `type` (String) Possible values are: `blackhole`, `internet`, `ipv4`, `ipv6`. Only `cidrv4` is supported during experimental stage..
+- `type` (String) Type of the next hop. Possible values are: `blackhole`, `internet`, `ipv4`, `ipv6`.
 - `value` (String) Either IPv4 or IPv6 (not set for blackhole and internet). Only IPv4 supported during experimental stage.

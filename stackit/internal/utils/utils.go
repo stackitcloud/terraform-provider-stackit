@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -95,6 +97,19 @@ func SimplifyBackupSchedule(schedule string) string {
 	return simplifiedSchedule
 }
 
+// ConvertPointerSliceToStringSlice safely converts a slice of string pointers to a slice of strings.
+func ConvertPointerSliceToStringSlice(pointerSlice []*string) []string {
+	if pointerSlice == nil {
+		return []string{}
+	}
+	stringSlice := make([]string, 0, len(pointerSlice))
+	for _, strPtr := range pointerSlice {
+		if strPtr != nil { // Safely skip any nil pointers in the list
+			stringSlice = append(stringSlice, *strPtr)
+		}
+	}
+	return stringSlice
+}
 func SupportedValuesDocumentation(values []string) string {
 	if len(values) == 0 {
 		return ""
@@ -171,5 +186,13 @@ func CheckListRemoval(ctx context.Context, configModelList, planModelList types.
 		} else {
 			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, destination, types.ListNull(listType))...)
 		}
+	}
+}
+
+// SetAndLogStateFields writes the given map of key-value pairs to the state
+func SetAndLogStateFields(ctx context.Context, diags *diag.Diagnostics, state *tfsdk.State, values map[string]any) {
+	for key, val := range values {
+		ctx = tflog.SetField(ctx, key, val)
+		diags.Append(state.SetAttribute(ctx, path.Root(key), val)...)
 	}
 }

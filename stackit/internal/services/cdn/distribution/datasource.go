@@ -142,6 +142,13 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 								Description: schemaDescriptions["config_backend_origin_request_headers"],
 								ElementType: types.StringType,
 							},
+							"geofencing": schema.MapAttribute{
+								Description: "A map of URLs to a list of countries where content is allowed.",
+								Computed:    true,
+								ElementType: types.ListType{
+									ElemType: types.StringType,
+								},
+							},
 						},
 					},
 					"regions": schema.ListAttribute{
@@ -192,7 +199,7 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	err = mapFields(distributionResp.Distribution, &model)
+	err = mapFields(ctx, distributionResp.Distribution, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN distribution", fmt.Sprintf("Error processing API response: %v", err))
 		return

@@ -53,7 +53,6 @@ var testConfigVarsMin = config.Variables{
 
 var testConfigVarsMax = config.Variables{
 	"project_id":                                       config.StringVariable(testutil.ProjectId),
-	"organization_id":                                  config.StringVariable(testutil.OrganizationId),
 	"name":                                             config.StringVariable(maxTestName),
 	"nodepool_availability_zone1":                      config.StringVariable(fmt.Sprintf("%s-1", testutil.Region)),
 	"nodepool_machine_type":                            config.StringVariable("g2i.2"),
@@ -87,6 +86,7 @@ var testConfigVarsMax = config.Variables{
 	"region":                                           config.StringVariable(testutil.Region),
 	"expiration":                                       config.StringVariable("3600"),
 	"refresh":                                          config.StringVariable("true"),
+	"refresh_before":                                   config.StringVariable("600"),
 	"dns_zone_name":                                    config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha)),
 	"dns_name":                                         config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha) + ".runs.onstackit.cloud"),
 }
@@ -302,6 +302,8 @@ func TestAccSKEMax(t *testing.T) {
 						"stackit_ske_cluster.cluster", "name",
 					),
 					resource.TestCheckResourceAttr("stackit_ske_kubeconfig.kubeconfig", "expiration", testutil.ConvertConfigVariable(testConfigVarsMax["expiration"])),
+					resource.TestCheckResourceAttr("stackit_ske_kubeconfig.kubeconfig", "refresh", testutil.ConvertConfigVariable(testConfigVarsMax["refresh"])),
+					resource.TestCheckResourceAttr("stackit_ske_kubeconfig.kubeconfig", "refresh_before", testutil.ConvertConfigVariable(testConfigVarsMax["refresh_before"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_kubeconfig.kubeconfig", "expires_at"),
 				),
 			},

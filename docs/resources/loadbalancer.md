@@ -96,6 +96,9 @@ resource "stackit_loadbalancer" "example" {
       port         = 80
       protocol     = "PROTOCOL_TCP"
       target_pool  = "example-target-pool"
+      tcp = {
+        idle_timeout = "90s"
+      }
     }
   ]
   networks = [
@@ -258,6 +261,8 @@ Optional:
 
 - `display_name` (String)
 - `server_name_indicators` (Attributes List) A list of domain names to match in order to pass TLS traffic to the target pool in the current listener (see [below for nested schema](#nestedatt--listeners--server_name_indicators))
+- `tcp` (Attributes) Options that are specific to the TCP protocol. (see [below for nested schema](#nestedatt--listeners--tcp))
+- `udp` (Attributes) Options that are specific to the UDP protocol. (see [below for nested schema](#nestedatt--listeners--udp))
 
 <a id="nestedatt--listeners--server_name_indicators"></a>
 ### Nested Schema for `listeners.server_name_indicators`
@@ -265,6 +270,22 @@ Optional:
 Optional:
 
 - `name` (String) A domain name to match in order to pass TLS traffic to the target pool in the current listener
+
+
+<a id="nestedatt--listeners--tcp"></a>
+### Nested Schema for `listeners.tcp`
+
+Optional:
+
+- `idle_timeout` (String) Time after which an idle connection is closed. The default value is set to 300 seconds, and the maximum value is 3600 seconds. The format is a duration and the unit must be seconds. Example: 30s
+
+
+<a id="nestedatt--listeners--udp"></a>
+### Nested Schema for `listeners.udp`
+
+Optional:
+
+- `idle_timeout` (String) Time after which an idle session is closed. The default value is set to 1 minute, and the maximum value is 2 minutes. The format is a duration and the unit must be seconds. Example: 30s
 
 
 

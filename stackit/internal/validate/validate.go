@@ -67,6 +67,23 @@ func UUID() *Validator {
 	}
 }
 
+func NoUUID() *Validator {
+	description := "value must not be an UUID"
+
+	return &Validator{
+		description: description,
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			if _, err := uuid.Parse(req.ConfigValue.ValueString()); err == nil {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
+
 // IP returns a validator that checks, if the given string is a valid IP address.
 // The allowZeroAddress parameter defines, if 0.0.0.0, resp. [::] should be considered valid.
 func IP(allowZeroAddress bool) *Validator {
@@ -115,6 +132,14 @@ func RecordSet() *Validator {
 					))
 				}
 			case "CNAME":
+				name := req.ConfigValue.ValueString()
+				if name == "" || name[len(name)-1] != '.' {
+					resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+						req.Path,
+						"value must be a Fully Qualified Domain Name (FQDN) and end with dot '.'",
+						req.ConfigValue.ValueString(),
+					))
+				}
 			case "NS":
 			case "MX":
 			case "TXT":

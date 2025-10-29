@@ -45,6 +45,7 @@ type ProviderData struct {
 	RabbitMQCustomEndpoint          string
 	RedisCustomEndpoint             string
 	ResourceManagerCustomEndpoint   string
+	ScfCustomEndpoint               string
 	SecretsManagerCustomEndpoint    string
 	SQLServerFlexCustomEndpoint     string
 	ServerBackupCustomEndpoint      string
