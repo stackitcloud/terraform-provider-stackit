@@ -389,20 +389,26 @@ func toCreatePayload(ctx context.Context, model *networkModel.Model) (*iaasalpha
 		return nil, fmt.Errorf("nil model")
 	}
 
-	modelIPv6Nameservers := []string{}
-	for _, ipv6ns := range model.IPv6Nameservers.Elements() {
-		ipv6NameserverString, ok := ipv6ns.(types.String)
-		if !ok {
-			return nil, fmt.Errorf("type assertion failed")
+	var modelIPv6Nameservers *[]string
+	// Is true when IPv6Nameservers is not null or unset
+	if !utils.IsUndefined(model.IPv6Nameservers) {
+		// If ipv6Nameservers is empty, modelIPv6Nameservers will be set to an empty slice.
+		// empty slice != nil slice. Empty slice will result in an empty list in the payload []. Nil slice will result in a payload without the property set
+		modelIPv6Nameservers = &[]string{}
+		for _, ipv6ns := range model.IPv6Nameservers.Elements() {
+			ipv6NameserverString, ok := ipv6ns.(types.String)
+			if !ok {
+				return nil, fmt.Errorf("type assertion failed")
+			}
+			*modelIPv6Nameservers = append(*modelIPv6Nameservers, ipv6NameserverString.ValueString())
 		}
-		modelIPv6Nameservers = append(modelIPv6Nameservers, ipv6NameserverString.ValueString())
 	}
 
 	var ipv6Body *iaasalpha.CreateNetworkIPv6
 	if !utils.IsUndefined(model.IPv6PrefixLength) {
 		ipv6Body = &iaasalpha.CreateNetworkIPv6{
 			CreateNetworkIPv6WithPrefixLength: &iaasalpha.CreateNetworkIPv6WithPrefixLength{
-				Nameservers:  &modelIPv6Nameservers,
+				Nameservers:  modelIPv6Nameservers,
 				PrefixLength: conversion.Int64ValueToPointer(model.IPv6PrefixLength),
 			},
 		}
@@ -417,7 +423,7 @@ func toCreatePayload(ctx context.Context, model *networkModel.Model) (*iaasalpha
 		ipv6Body = &iaasalpha.CreateNetworkIPv6{
 			CreateNetworkIPv6WithPrefix: &iaasalpha.CreateNetworkIPv6WithPrefix{
 				Gateway:     gateway,
-				Nameservers: &modelIPv6Nameservers,
+				Nameservers: modelIPv6Nameservers,
 				Prefix:      conversion.StringValueToPointer(model.IPv6Prefix),
 			},
 		}
@@ -487,19 +493,25 @@ func toUpdatePayload(ctx context.Context, model, stateModel *networkModel.Model)
 		return nil, fmt.Errorf("nil model")
 	}
 
-	modelIPv6Nameservers := []string{}
-	for _, ipv6ns := range model.IPv6Nameservers.Elements() {
-		ipv6NameserverString, ok := ipv6ns.(types.String)
-		if !ok {
-			return nil, fmt.Errorf("type assertion failed")
+	var modelIPv6Nameservers *[]string
+	// Is true when IPv6Nameservers is not null or unset
+	if !utils.IsUndefined(model.IPv6Nameservers) {
+		// If ipv6Nameservers is empty, modelIPv6Nameservers will be set to an empty slice.
+		// empty slice != nil slice. Empty slice will result in an empty list in the payload []. Nil slice will result in a payload without the property set
+		modelIPv6Nameservers = &[]string{}
+		for _, ipv6ns := range model.IPv6Nameservers.Elements() {
+			ipv6NameserverString, ok := ipv6ns.(types.String)
+			if !ok {
+				return nil, fmt.Errorf("type assertion failed")
+			}
+			*modelIPv6Nameservers = append(*modelIPv6Nameservers, ipv6NameserverString.ValueString())
 		}
-		modelIPv6Nameservers = append(modelIPv6Nameservers, ipv6NameserverString.ValueString())
 	}
 
 	var ipv6Body *iaasalpha.UpdateNetworkIPv6Body
-	if !(model.IPv6Nameservers.IsNull() || model.IPv6Nameservers.IsUnknown()) {
+	if modelIPv6Nameservers != nil || !utils.IsUndefined(model.NoIPv6Gateway) || !utils.IsUndefined(model.IPv6Gateway) {
 		ipv6Body = &iaasalpha.UpdateNetworkIPv6Body{
-			Nameservers: &modelIPv6Nameservers,
+			Nameservers: modelIPv6Nameservers,
 		}
 
 		if model.NoIPv6Gateway.ValueBool() {

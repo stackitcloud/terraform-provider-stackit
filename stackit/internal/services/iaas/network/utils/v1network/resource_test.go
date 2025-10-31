@@ -466,6 +466,66 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			true,
 		},
+		{
+			"ipv6_nameserver_null",
+			&model.Model{
+				Name:             types.StringValue("name"),
+				IPv6Nameservers:  types.ListNull(types.StringType),
+				IPv6PrefixLength: types.Int64Value(24),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
+				Routed:      types.BoolValue(false),
+				IPv6Gateway: types.StringValue("gateway"),
+				IPv6Prefix:  types.StringValue("prefix"),
+			},
+			&iaas.CreateNetworkPayload{
+				Name: utils.Ptr("name"),
+				AddressFamily: &iaas.CreateNetworkAddressFamily{
+					Ipv6: &iaas.CreateNetworkIPv6Body{
+						Nameservers:  nil,
+						PrefixLength: utils.Ptr(int64(24)),
+						Gateway:      iaas.NewNullableString(utils.Ptr("gateway")),
+						Prefix:       utils.Ptr("prefix"),
+					},
+				},
+				Labels: &map[string]interface{}{
+					"key": "value",
+				},
+				Routed: utils.Ptr(false),
+			},
+			true,
+		},
+		{
+			"ipv6_nameserver_empty_list",
+			&model.Model{
+				Name:             types.StringValue("name"),
+				IPv6Nameservers:  types.ListValueMust(types.StringType, []attr.Value{}),
+				IPv6PrefixLength: types.Int64Value(24),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
+				Routed:      types.BoolValue(false),
+				IPv6Gateway: types.StringValue("gateway"),
+				IPv6Prefix:  types.StringValue("prefix"),
+			},
+			&iaas.CreateNetworkPayload{
+				Name: utils.Ptr("name"),
+				AddressFamily: &iaas.CreateNetworkAddressFamily{
+					Ipv6: &iaas.CreateNetworkIPv6Body{
+						Nameservers:  utils.Ptr([]string{}),
+						PrefixLength: utils.Ptr(int64(24)),
+						Gateway:      iaas.NewNullableString(utils.Ptr("gateway")),
+						Prefix:       utils.Ptr("prefix"),
+					},
+				},
+				Labels: &map[string]interface{}{
+					"key": "value",
+				},
+				Routed: utils.Ptr(false),
+			},
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -662,6 +722,66 @@ func TestToUpdatePayload(t *testing.T) {
 							"ns1",
 							"ns2",
 						},
+					},
+				},
+				Labels: &map[string]interface{}{
+					"key": "value",
+				},
+			},
+			true,
+		},
+		{
+			"ipv6_nameserver_null",
+			&model.Model{
+				Name:            types.StringValue("name"),
+				IPv6Nameservers: types.ListNull(types.StringType),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
+				Routed:      types.BoolValue(true),
+				IPv6Gateway: types.StringValue("gateway"),
+			},
+			model.Model{
+				ProjectId: types.StringValue("pid"),
+				NetworkId: types.StringValue("nid"),
+				Labels:    types.MapNull(types.StringType),
+			},
+			&iaas.PartialUpdateNetworkPayload{
+				Name: utils.Ptr("name"),
+				AddressFamily: &iaas.UpdateNetworkAddressFamily{
+					Ipv6: &iaas.UpdateNetworkIPv6Body{
+						Nameservers: nil,
+						Gateway:     iaas.NewNullableString(utils.Ptr("gateway")),
+					},
+				},
+				Labels: &map[string]interface{}{
+					"key": "value",
+				},
+			},
+			true,
+		},
+		{
+			"ipv6_nameserver_empty_list",
+			&model.Model{
+				Name:            types.StringValue("name"),
+				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{}),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
+				Routed:      types.BoolValue(true),
+				IPv6Gateway: types.StringValue("gateway"),
+			},
+			model.Model{
+				ProjectId: types.StringValue("pid"),
+				NetworkId: types.StringValue("nid"),
+				Labels:    types.MapNull(types.StringType),
+			},
+			&iaas.PartialUpdateNetworkPayload{
+				Name: utils.Ptr("name"),
+				AddressFamily: &iaas.UpdateNetworkAddressFamily{
+					Ipv6: &iaas.UpdateNetworkIPv6Body{
+						Nameservers: &[]string{},
+						Gateway:     iaas.NewNullableString(utils.Ptr("gateway")),
 					},
 				},
 				Labels: &map[string]interface{}{

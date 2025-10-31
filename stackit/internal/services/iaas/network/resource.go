@@ -276,7 +276,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"prefixes": schema.ListAttribute{
-				Description:        "The prefixes of the network. This field is deprecated and will be removed soon, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
+				Description:        "The prefixes of the network. This field is deprecated and will be removed in January 2026, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
 				DeprecationMessage: "Use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
 				Computed:           true,
 				ElementType:        types.StringType,
@@ -316,6 +316,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"ipv6_prefix": schema.StringAttribute{
 				Description: "The IPv6 prefix of the network (CIDR).",
 				Optional:    true,
+				Computed:    true,
 				Validators: []validator.String{
 					validate.CIDR(),
 				},
@@ -326,6 +327,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"ipv6_prefix_length": schema.Int64Attribute{
 				Description: "The IPv6 prefix length of the network.",
 				Optional:    true,
+				Computed:    true,
 			},
 			"ipv6_prefixes": schema.ListAttribute{
 				Description: "The IPv6 prefixes of the network.",
