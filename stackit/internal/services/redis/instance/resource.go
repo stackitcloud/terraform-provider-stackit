@@ -7,28 +7,25 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	redisUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/redis"
 	"github.com/stackitcloud/stackit-sdk-go/services/redis/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	redisUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -54,7 +51,7 @@ type Model struct {
 	PlanId             types.String `tfsdk:"plan_id"`
 }
 
-// Struct corresponding to DataSourceModel.Parameters
+// Struct corresponding to DataSourceModel.Parameters.
 type parametersModel struct {
 	SgwAcl                types.String `tfsdk:"sgw_acl"`
 	DownAfterMilliseconds types.Int64  `tfsdk:"down_after_milliseconds"`
@@ -80,7 +77,7 @@ type parametersModel struct {
 	TlsProtocols          types.String `tfsdk:"tls_protocols"`
 }
 
-// Types corresponding to parametersModel
+// Types corresponding to parametersModel.
 var parametersTypes = map[string]attr.Type{
 	"sgw_acl":                 basetypes.StringType{},
 	"down_after_milliseconds": basetypes.Int64Type{},
@@ -129,10 +126,13 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	apiClient := redisUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "Redis instance client configured")
 }
 
@@ -389,21 +389,24 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	var parameters *parametersModel
-	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
+	if !model.Parameters.IsNull() && !model.Parameters.IsUnknown() {
 		parameters = &parametersModel{}
 		diags = model.Parameters.As(ctx, parameters, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -427,6 +430,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	instanceId := *createResp.InstanceId
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
@@ -445,20 +449,24 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Redis instance created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -471,7 +479,9 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -492,30 +502,35 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Redis instance read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	var parameters *parametersModel
-	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
+	if !model.Parameters.IsNull() && !model.Parameters.IsUnknown() {
 		parameters = &parametersModel{}
 		diags = model.Parameters.As(ctx, parameters, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -539,6 +554,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
@@ -554,21 +570,25 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Redis instance updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -580,16 +600,18 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
+
 	tflog.Info(ctx, "Redis instance deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,instance_id
+// The expected format of the resource import identifier is: project_id,instance_id.
 func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -598,6 +620,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing instance",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[instance_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -610,6 +633,7 @@ func mapFields(instance *redis.Instance, model *Model) error {
 	if instance == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -640,15 +664,19 @@ func mapFields(instance *redis.Instance, model *Model) error {
 		if err != nil {
 			return fmt.Errorf("mapping parameters: %w", err)
 		}
+
 		model.Parameters = parameters
 	}
+
 	return nil
 }
 
 func mapParameters(params map[string]interface{}) (types.Object, error) {
 	attributes := map[string]attr.Value{}
+
 	for attribute := range parametersTypes {
 		var valueInterface interface{}
+
 		var ok bool
 
 		// This replacement is necessary because Terraform does not allow hyphens in attribute names
@@ -673,6 +701,7 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 		} else {
 			valueInterface, ok = params[attribute]
 		}
+
 		if !ok {
 			// All fields are optional, so this is ok
 			// Set the value as nil, will be handled accordingly
@@ -680,6 +709,7 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 		}
 
 		var value attr.Value
+
 		switch parametersTypes[attribute].(type) {
 		default:
 			return types.ObjectNull(parametersTypes), fmt.Errorf("found unexpected attribute type '%T'", parametersTypes[attribute])
@@ -691,6 +721,7 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 				if !ok {
 					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as string", attribute, valueInterface)
 				}
+
 				value = types.StringValue(valueString)
 			}
 		case basetypes.BoolType:
@@ -701,6 +732,7 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 				if !ok {
 					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as bool", attribute, valueInterface)
 				}
+
 				value = types.BoolValue(valueBool)
 			}
 		case basetypes.Int64Type:
@@ -710,6 +742,7 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 				// This may be int64, int32, int or float64
 				// We try to assert all 4
 				var valueInt64 int64
+
 				switch temp := valueInterface.(type) {
 				default:
 					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as int", attribute, valueInterface)
@@ -722,6 +755,7 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 				case float64:
 					valueInt64 = int64(temp)
 				}
+
 				value = types.Int64Value(valueInt64)
 			}
 		case basetypes.ListType: // Assumed to be a list of strings
@@ -731,6 +765,7 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 				// This may be []string{} or []interface{}
 				// We try to assert all 2
 				var valueList []attr.Value
+
 				switch temp := valueInterface.(type) {
 				default:
 					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as array of interface", attribute, valueInterface)
@@ -744,16 +779,20 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 						if !ok {
 							return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' with element '%s' of type %T, failed to assert as string", attribute, x, x)
 						}
+
 						valueList = append(valueList, types.StringValue(xString))
 					}
 				}
+
 				temp2, diags := types.ListValue(types.StringType, valueList)
 				if diags.HasError() {
 					return types.ObjectNull(parametersTypes), fmt.Errorf("failed to map %s: %w", attribute, core.DiagsToError(diags))
 				}
+
 				value = temp2
 			}
 		}
+
 		attributes[attribute] = value
 	}
 
@@ -761,6 +800,7 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 	if diags.HasError() {
 		return types.ObjectNull(parametersTypes), fmt.Errorf("failed to create object: %w", core.DiagsToError(diags))
 	}
+
 	return output, nil
 }
 
@@ -801,6 +841,7 @@ func toInstanceParams(parameters *parametersModel) (*redis.InstanceParameters, e
 	if parameters == nil {
 		return nil, nil
 	}
+
 	payloadParams := &redis.InstanceParameters{}
 
 	payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
@@ -825,6 +866,7 @@ func toInstanceParams(parameters *parametersModel) (*redis.InstanceParameters, e
 	payloadParams.TlsProtocols = redis.InstanceParametersGetTlsProtocolsAttributeType(conversion.StringValueToPointer(parameters.TlsProtocols))
 
 	var err error
+
 	payloadParams.Syslog, err = conversion.StringListToPointer(parameters.Syslog)
 	if err != nil {
 		return nil, fmt.Errorf("converting syslog: %w", err)
@@ -840,6 +882,7 @@ func toInstanceParams(parameters *parametersModel) (*redis.InstanceParameters, e
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
+
 	res, err := r.client.ListOfferings(ctx, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting Redis offerings: %w", err)
@@ -850,21 +893,25 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	availableVersions := ""
 	availablePlanNames := ""
 	isValidVersion := false
+
 	for _, offer := range *res.Offerings {
 		if !strings.EqualFold(*offer.Version, version) {
 			availableVersions = fmt.Sprintf("%s\n- %s", availableVersions, *offer.Version)
 			continue
 		}
+
 		isValidVersion = true
 
 		for _, plan := range *offer.Plans {
 			if plan.Name == nil {
 				continue
 			}
+
 			if strings.EqualFold(*plan.Name, planName) && plan.Id != nil {
 				model.PlanId = types.StringPointerValue(plan.Id)
 				return nil
 			}
+
 			availablePlanNames = fmt.Sprintf("%s\n- %s", availablePlanNames, *plan.Name)
 		}
 	}
@@ -872,12 +919,14 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	if !isValidVersion {
 		return fmt.Errorf("couldn't find version '%s', available versions are: %s", version, availableVersions)
 	}
+
 	return fmt.Errorf("couldn't find plan_name '%s' for version %s, available names are: %s", planName, version, availablePlanNames)
 }
 
 func loadPlanNameAndVersion(ctx context.Context, client *redis.APIClient, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	planId := model.PlanId.ValueString()
+
 	res, err := client.ListOfferings(ctx, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting Redis offerings: %w", err)
@@ -888,6 +937,7 @@ func loadPlanNameAndVersion(ctx context.Context, client *redis.APIClient, model 
 			if strings.EqualFold(*plan.Id, planId) && plan.Id != nil {
 				model.PlanName = types.StringPointerValue(plan.Name)
 				model.Version = types.StringPointerValue(offer.Version)
+
 				return nil
 			}
 		}

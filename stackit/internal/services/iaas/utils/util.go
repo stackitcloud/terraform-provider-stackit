@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -24,6 +23,7 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	} else {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion(providerData.GetRegion()))
 	}
+
 	apiClient, err := iaas.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
@@ -41,6 +41,7 @@ func MapLabels(ctx context.Context, responseLabels *map[string]interface{}, curr
 
 	if responseLabels != nil && len(*responseLabels) != 0 {
 		var diags diag.Diagnostics
+
 		labelsTF, diags = types.MapValueFrom(ctx, types.StringType, *responseLabels)
 		if diags.HasError() {
 			return labelsTF, fmt.Errorf("convert labels to StringValue map: %w", core.DiagsToError(diags))

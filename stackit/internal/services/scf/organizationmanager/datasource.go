@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/services/scf"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	scfUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/utils"
@@ -51,16 +50,20 @@ type scfOrganizationManagerDataSource struct {
 
 func (s *scfOrganizationManagerDataSource) Configure(ctx context.Context, request datasource.ConfigureRequest, response *datasource.ConfigureResponse) {
 	var ok bool
+
 	s.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
 
 	apiClient := scfUtils.ConfigureClient(ctx, &s.providerData, &response.Diagnostics)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	s.client = apiClient
+
 	tflog.Info(ctx, "scf client configured for scfOrganizationManagerDataSource")
 }
 
@@ -137,6 +140,7 @@ func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request dat
 	var model DataSourceModel
 	diags := request.Config.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -163,6 +167,7 @@ func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request dat
 			},
 		)
 		response.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -182,6 +187,7 @@ func mapFieldsDataSource(response *scf.OrgManager, model *DataSourceModel) error
 	if response == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -234,5 +240,6 @@ func mapFieldsDataSource(response *scf.OrgManager, model *DataSourceModel) error
 	model.UserName = types.StringPointerValue(response.Username)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
+
 	return nil
 }

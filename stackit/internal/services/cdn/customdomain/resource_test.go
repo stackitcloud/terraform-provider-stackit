@@ -30,6 +30,7 @@ func TestMapFields(t *testing.T) {
 	}
 
 	const dummyCert = "dummy-cert-pem"
+
 	const dummyKey = "dummy-key-pem"
 
 	emtpyErrorsList := types.ListValueMust(types.StringType, []attr.Value{})
@@ -54,6 +55,7 @@ func TestMapFields(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
 
@@ -87,6 +89,7 @@ func TestMapFields(t *testing.T) {
 		for _, mod := range mods {
 			mod(customDomainResponse)
 		}
+
 		return customDomainResponse
 	}
 
@@ -159,13 +162,16 @@ func TestMapFields(t *testing.T) {
 			model := tc.InitialModel
 			model.DistributionId = tc.Expected.DistributionId
 			model.ProjectId = tc.Expected.ProjectId
+
 			err := mapCustomDomainResourceFields(tc.Input, model)
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error mapping fields: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				diff := cmp.Diff(tc.Expected, model)
 				if diff != "" {
@@ -181,6 +187,7 @@ func makeCertAndKey(t *testing.T, organization string) (cert, key []byte) {
 	if err != nil {
 		t.Fatalf("failed to generate key: %s", err.Error())
 	}
+
 	template := x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Issuer:       pkix.Name{CommonName: organization},
@@ -194,6 +201,7 @@ func makeCertAndKey(t *testing.T, organization string) (cert, key []byte) {
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 	}
+
 	cert, err = x509.CreateCertificate(
 		cryptoRand.Reader,
 		&template,
@@ -213,6 +221,7 @@ func makeCertAndKey(t *testing.T, organization string) (cert, key []byte) {
 			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 		})
 }
+
 func TestToCertificatePayload(t *testing.T) {
 	organization := fmt.Sprintf("organization-%s", uuid.NewString())
 	cert, key := makeCertAndKey(t, organization)
@@ -290,9 +299,11 @@ func TestToCertificatePayload(t *testing.T) {
 				if err == nil {
 					t.Fatalf("expected err, but got none")
 				}
+
 				if err.Error() != tt.expectedErrMsg {
 					t.Fatalf("expected err '%s', got '%s'", tt.expectedErrMsg, err.Error())
 				}
+
 				return // Test ends here for failing cases
 			}
 

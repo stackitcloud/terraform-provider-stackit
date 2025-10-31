@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"maps"
 	"strings"
 	"testing"
 
@@ -11,14 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/wait"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-
-	"maps"
-
 	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
+	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -96,6 +94,7 @@ func configVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(tempConfig, testConfigVarsMin)
 	tempConfig["target_port"] = config.StringVariable("5431")
+
 	return tempConfig
 }
 
@@ -103,6 +102,7 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMax))
 	maps.Copy(tempConfig, testConfigVarsMax)
 	tempConfig["sni_target_port"] = config.StringVariable("5431")
+
 	return tempConfig
 }
 
@@ -192,7 +192,8 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 						"stackit_loadbalancer.loadbalancer", "security_group_id",
 						"data.stackit_loadbalancer.loadbalancer", "security_group_id",
 					),
-				)},
+				),
+			},
 			// Import
 			{
 				ConfigVariables: testConfigVarsMin,
@@ -210,6 +211,7 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, name), nil
 				},
 				ImportState:             true,
@@ -368,7 +370,8 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 						"stackit_loadbalancer.loadbalancer", "security_group_id",
 						"data.stackit_loadbalancer.loadbalancer", "security_group_id",
 					),
-				)},
+				),
+			},
 			// Import
 			{
 				ConfigVariables: testConfigVarsMax,
@@ -386,6 +389,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, name), nil
 				},
 				ImportState:             true,
@@ -409,7 +413,9 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 
 func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *loadbalancer.APIClient
+
 	var err error
 	if testutil.LoadBalancerCustomEndpoint == "" {
 		client, err = loadbalancer.NewAPIClient()
@@ -418,6 +424,7 @@ func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 			stackitSdkConfig.WithEndpoint(testutil.LoadBalancerCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -426,7 +433,9 @@ func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 	if testutil.Region != "" {
 		region = testutil.Region
 	}
+
 	loadbalancersToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_loadbalancer" {
 			continue
@@ -451,16 +460,19 @@ func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 		if items[i].Name == nil {
 			continue
 		}
+
 		if utils.Contains(loadbalancersToDestroy, *items[i].Name) {
 			_, err := client.DeleteLoadBalancerExecute(ctx, testutil.ProjectId, region, *items[i].Name)
 			if err != nil {
 				return fmt.Errorf("destroying load balancer %s during CheckDestroy: %w", *items[i].Name, err)
 			}
+
 			_, err = wait.DeleteLoadBalancerWaitHandler(ctx, client, testutil.ProjectId, region, *items[i].Name).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying load balancer %s during CheckDestroy: waiting for deletion %w", *items[i].Name, err)
 			}
 		}
 	}
+
 	return nil
 }

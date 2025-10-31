@@ -17,7 +17,7 @@ import (
 // and Computed attributes to an unknown value "(known after apply)" on update.
 // To prevent always showing "(known after apply)" on update for an attribute, e.g. port_range, which never changes in case the protocol is a specific one,
 // we set the value to null.
-// Examples: port_range is only computed if protocol is not icmp and icmp_parameters is only computed if protocol is icmp
+// Examples: port_range is only computed if protocol is not icmp and icmp_parameters is only computed if protocol is icmp.
 func UseNullForUnknownBasedOnProtocolModifier() planmodifier.Object {
 	return useNullForUnknownBasedOnProtocolModifier{}
 }
@@ -35,7 +35,7 @@ func (m useNullForUnknownBasedOnProtocolModifier) MarkdownDescription(_ context.
 }
 
 // PlanModifyBool implements the plan modification logic.
-func (m useNullForUnknownBasedOnProtocolModifier) PlanModifyObject(ctx context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) { // nolint:gocritic // function signature required by Terraform
+func (m useNullForUnknownBasedOnProtocolModifier) PlanModifyObject(ctx context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) { //nolint:gocritic // function signature required by Terraform
 	// Check if the resource is being created.
 	if req.State.Raw.IsNull() {
 		return
@@ -53,7 +53,9 @@ func (m useNullForUnknownBasedOnProtocolModifier) PlanModifyObject(ctx context.C
 
 	// If there is an unknown configuration value, check if the value of protocol.name attribute corresponds to an icmp protocol. If it does, set the attribute value to null
 	var model Model
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -66,6 +68,7 @@ func (m useNullForUnknownBasedOnProtocolModifier) PlanModifyObject(ctx context.C
 	protocol := &protocolModel{}
 	diags := model.Protocol.As(ctx, protocol, basetypes.ObjectAsOptions{})
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}

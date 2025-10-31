@@ -130,14 +130,17 @@ func TestMapFields(t *testing.T) {
 			if tt.expected != nil {
 				state.ProjectId = tt.expected.ProjectId
 			}
+
 			err := mapFields(context.Background(), tt.input, state)
 
 			if tt.isValid && err != nil {
 				t.Fatalf("expected success, got error: %v", err)
 			}
+
 			if !tt.isValid && err == nil {
 				t.Fatalf("expected error, got nil")
 			}
+
 			if tt.isValid {
 				if diff := cmp.Diff(tt.expected, state); diff != "" {
 					t.Errorf("unexpected diff (-want +got):\n%s", diff)

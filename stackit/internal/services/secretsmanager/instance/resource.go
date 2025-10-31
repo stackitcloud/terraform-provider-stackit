@@ -6,28 +6,25 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -68,10 +65,13 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	apiClient := secretsmanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "Secrets Manager instance client configured")
 }
 
@@ -143,20 +143,23 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	var acls []string
-	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
+	if !model.ACLs.IsNull() && !model.ACLs.IsUnknown() {
 		diags = model.ACLs.ElementsAs(ctx, &acls, false)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -174,6 +177,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	instanceId := *createResp.Id
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
@@ -183,6 +187,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACLs: %v", err))
 		return
 	}
+
 	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
@@ -199,20 +204,24 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Secrets Manager instance created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -225,9 +234,12 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
+
 	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
@@ -244,29 +256,34 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Secrets Manager instance read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	var acls []string
-	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
+	if !model.ACLs.IsNull() && !model.ACLs.IsUnknown() {
 		diags = model.ACLs.ElementsAs(ctx, &acls, false)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -284,6 +301,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
@@ -299,21 +317,25 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Secrets Manager instance updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -325,11 +347,12 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	tflog.Info(ctx, "Secrets Manager instance deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,instance_id
+// The expected format of the resource import identifier is: project_id,instance_id.
 func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -338,6 +361,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing instance",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[instance_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -350,6 +374,7 @@ func mapFields(instance *secretsmanager.Instance, aclList *secretsmanager.ListAC
 	if instance == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -379,6 +404,7 @@ func mapACLs(aclList *secretsmanager.ListACLsResponse, model *Model) error {
 	if aclList == nil {
 		return fmt.Errorf("nil ACL list")
 	}
+
 	if aclList.Acls == nil || len(*aclList.Acls) == 0 {
 		model.ACLs = types.SetNull(types.StringType)
 		return nil
@@ -388,11 +414,14 @@ func mapACLs(aclList *secretsmanager.ListACLsResponse, model *Model) error {
 	for _, acl := range *aclList.Acls {
 		acls = append(acls, types.StringValue(*acl.Cidr))
 	}
+
 	aclsList, diags := types.SetValue(types.StringType, acls)
 	if diags.HasError() {
 		return fmt.Errorf("mapping ACLs: %w", core.DiagsToError(diags))
 	}
+
 	model.ACLs = aclsList
+
 	return nil
 }
 
@@ -400,12 +429,13 @@ func toCreatePayload(model *Model) (*secretsmanager.CreateInstancePayload, error
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	return &secretsmanager.CreateInstancePayload{
 		Name: conversion.StringValueToPointer(model.Name),
 	}, nil
 }
 
-// updateACLs creates and deletes ACLs so that the instance's ACLs are the ones in the model
+// updateACLs creates and deletes ACLs so that the instance's ACLs are the ones in the model.
 func updateACLs(ctx context.Context, projectId, instanceId string, acls []string, client *secretsmanager.APIClient) error {
 	// Get ACLs current state
 	currentACLsResp, err := client.ListACLs(ctx, projectId, instanceId).Execute()
@@ -418,17 +448,20 @@ func updateACLs(ctx context.Context, projectId, instanceId string, acls []string
 		isCreated bool
 		id        string
 	}
+
 	aclsState := make(map[string]*aclState)
 	for _, cidr := range acls {
 		aclsState[cidr] = &aclState{
 			isInModel: true,
 		}
 	}
+
 	for _, acl := range *currentACLsResp.Acls {
 		cidr := *acl.Cidr
 		if _, ok := aclsState[cidr]; !ok {
 			aclsState[cidr] = &aclState{}
 		}
+
 		aclsState[cidr].isCreated = true
 		aclsState[cidr].id = *acl.Id
 	}
@@ -439,6 +472,7 @@ func updateACLs(ctx context.Context, projectId, instanceId string, acls []string
 			payload := secretsmanager.CreateACLPayload{
 				Cidr: sdkUtils.Ptr(cidr),
 			}
+
 			_, err := client.CreateACL(ctx, projectId, instanceId).CreateACLPayload(payload).Execute()
 			if err != nil {
 				return fmt.Errorf("creating ACL '%v': %w", cidr, err)

@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/scf"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	scfUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/utils"
@@ -58,7 +57,7 @@ type scfOrganizationManagerResource struct {
 	providerData core.ProviderData
 }
 
-// descriptions for the attributes in the Schema
+// descriptions for the attributes in the Schema.
 var descriptions = map[string]string{
 	"id":          "Terraform's internal resource ID, structured as \"`project_id`,`region`,`org_id`,`user_id`\".",
 	"region":      "The region where the organization of the organization manager is located. If not defined, the provider region is used",
@@ -74,16 +73,20 @@ var descriptions = map[string]string{
 
 func (s *scfOrganizationManagerResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) { // nolint:gocritic // function signature required by Terraform
 	var ok bool
+
 	s.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
 
 	apiClient := scfUtils.ConfigureClient(ctx, &s.providerData, &response.Diagnostics)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	s.client = apiClient
+
 	tflog.Info(ctx, "scf client configured")
 }
 
@@ -99,23 +102,29 @@ func (r *scfOrganizationManagerResource) ModifyPlan(ctx context.Context, req res
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -210,6 +219,7 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	var model Model
 	diags := request.Plan.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -224,6 +234,7 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	ctx = tflog.SetField(ctx, "region", region)
 
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -244,9 +255,11 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	// Set the state with fully populated data.
 	diags = response.State.Set(ctx, model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Scf organization manager created")
 }
 
@@ -255,6 +268,7 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 	var model Model
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -271,13 +285,17 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 	scfOrgManager, err := s.client.GetOrgManagerExecute(ctx, projectId, region, orgId)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			core.LogAndAddWarning(ctx, &response.Diagnostics, "SCF Organization manager not found", "SCF Organization manager not found, remove from state")
 			response.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading scf organization manager", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -303,6 +321,7 @@ func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request res
 	var model Model
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -318,14 +337,18 @@ func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request res
 	_, err := s.client.DeleteOrgManagerExecute(ctx, projectId, region, orgId)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusGone {
 			tflog.Info(ctx, "Scf organization manager was already deleted")
 			return
 		}
+
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting scf organization manager", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
+
 	tflog.Info(ctx, "Scf organization manager deleted")
 }
 
@@ -339,6 +362,7 @@ func (s *scfOrganizationManagerResource) ImportState(ctx context.Context, reques
 			"Error importing scf organization manager",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[org_id],[user_id]  Got: %q", request.ID),
 		)
+
 		return
 	}
 
@@ -358,6 +382,7 @@ func mapFieldsCreate(response *scf.OrgManagerResponse, model *Model) error {
 	if response == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -408,6 +433,7 @@ func mapFieldsCreate(response *scf.OrgManagerResponse, model *Model) error {
 	model.Password = types.StringPointerValue(response.Password)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
+
 	return nil
 }
 
@@ -415,6 +441,7 @@ func mapFieldsRead(response *scf.OrgManager, model *Model) error {
 	if response == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -467,5 +494,6 @@ func mapFieldsRead(response *scf.OrgManager, model *Model) error {
 	model.UserName = types.StringPointerValue(response.Username)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
+
 	return nil
 }

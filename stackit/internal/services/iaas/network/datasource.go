@@ -3,14 +3,6 @@ package network
 import (
 	"context"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network/utils/v1network"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network/utils/v2network"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-	iaasAlphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -18,7 +10,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network/utils/v1network"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network/utils/v2network"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	iaasAlphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -48,29 +47,36 @@ func (d *networkDataSource) Metadata(_ context.Context, req datasource.MetadataR
 
 func (d *networkDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
+
 	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
 	d.isExperimental = features.CheckExperimentEnabledWithoutError(ctx, &d.providerData, features.NetworkExperiment, "stackit_network", core.Datasource, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	if d.isExperimental {
 		alphaApiClient := iaasAlphaUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
 		d.alphaClient = alphaApiClient
 	} else {
 		apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
 		d.client = apiClient
 	}
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -196,7 +202,7 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	if !d.isExperimental {
 		v1network.DatasourceRead(ctx, req, resp, d.client)
 	} else {

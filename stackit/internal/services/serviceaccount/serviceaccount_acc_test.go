@@ -15,7 +15,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-// Service Account resource data
+// Service Account resource data.
 var serviceAccountResource = map[string]string{
 	"project_id": testutil.ProjectId,
 	"name01":     "sa-test-01",
@@ -134,6 +134,7 @@ func TestServiceAccount(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute email")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, email), nil
 				},
 				ImportState:       true,
@@ -146,7 +147,9 @@ func TestServiceAccount(t *testing.T) {
 
 func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *serviceaccount.APIClient
+
 	var err error
 
 	if testutil.ServiceAccountCustomEndpoint == "" {
@@ -162,10 +165,12 @@ func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 	}
 
 	var instancesToDestroy []string
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_service_account" {
 			continue
 		}
+
 		serviceAccountEmail := strings.Split(rs.Primary.ID, core.Separator)[1]
 		instancesToDestroy = append(instancesToDestroy, serviceAccountEmail)
 	}
@@ -180,6 +185,7 @@ func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 		if serviceAccounts[i].Email == nil {
 			continue
 		}
+
 		if utils.Contains(instancesToDestroy, *serviceAccounts[i].Email) {
 			err := client.DeleteServiceAccount(ctx, testutil.ProjectId, *serviceAccounts[i].Email).Execute()
 			if err != nil {
@@ -187,5 +193,6 @@ func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

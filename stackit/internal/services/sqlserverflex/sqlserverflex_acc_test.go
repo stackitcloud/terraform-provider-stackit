@@ -26,6 +26,7 @@ var (
 	//go:embed testdata/resource-min.tf
 	resourceMinConfig string
 )
+
 var testConfigVarsMin = config.Variables{
 	"project_id":         config.StringVariable(testutil.ProjectId),
 	"name":               config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
@@ -60,12 +61,14 @@ var testConfigVarsMax = config.Variables{
 func configVarsMinUpdated() config.Variables {
 	temp := maps.Clone(testConfigVarsMax)
 	temp["name"] = config.StringVariable(testutil.ConvertConfigVariable(temp["name"]) + "changed")
+
 	return temp
 }
 
 func configVarsMaxUpdated() config.Variables {
 	temp := maps.Clone(testConfigVarsMax)
 	temp["backup_schedule"] = config.StringVariable("00 12 * * *")
+
 	return temp
 }
 
@@ -376,6 +379,7 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 					if s[0].Attributes["backup_schedule"] != testutil.ConvertConfigVariable(testConfigVarsMax["backup_schedule"]) {
 						return fmt.Errorf("expected backup_schedule %s, got %s", testConfigVarsMax["backup_schedule"], s[0].Attributes["backup_schedule"])
 					}
+
 					return nil
 				},
 			},
@@ -432,7 +436,9 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 
 func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *sqlserverflex.APIClient
+
 	var err error
 	if testutil.SQLServerFlexCustomEndpoint == "" {
 		client, err = sqlserverflex.NewAPIClient()
@@ -441,11 +447,13 @@ func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 			core_config.WithEndpoint(testutil.SQLServerFlexCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_sqlserverflex_instance" {
 			continue
@@ -465,16 +473,19 @@ func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 		if items[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(instancesToDestroy, *items[i].Id) {
 			err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *items[i].Id, testutil.Region)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *items[i].Id, err)
 			}
+
 			_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *items[i].Id, testutil.Region).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
 			}
 		}
 	}
+
 	return nil
 }

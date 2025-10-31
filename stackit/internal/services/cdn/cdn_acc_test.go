@@ -42,6 +42,7 @@ func configResources(regions string, geofencingCountries []string) string {
 	}
 
 	geofencingList := strings.Join(quotedCountries, ",")
+
 	return fmt.Sprintf(`
 				%s
 
@@ -117,11 +118,13 @@ func configDatasources(regions, cert, key string, geofencingCountries []string) 
         }
 		`, configCustomDomainResources(regions, cert, key, geofencingCountries))
 }
+
 func makeCertAndKey(t *testing.T, organization string) (cert, key []byte) {
 	privateKey, err := rsa.GenerateKey(cryptoRand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("failed to generate key: %s", err.Error())
 	}
+
 	template := x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Issuer:       pkix.Name{CommonName: organization},
@@ -135,6 +138,7 @@ func makeCertAndKey(t *testing.T, organization string) (cert, key []byte) {
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 	}
+
 	cert, err = x509.CreateCertificate(
 		cryptoRand.Reader,
 		&template,
@@ -154,6 +158,7 @@ func makeCertAndKey(t *testing.T, organization string) (cert, key []byte) {
 			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 		})
 }
+
 func TestAccCDNDistributionResource(t *testing.T) {
 	fullDomainName := fmt.Sprintf("%s.%s", instanceResource["custom_domain_prefix"], instanceResource["dns_name"])
 	organization := fmt.Sprintf("organization-%s", uuid.NewString())
@@ -333,9 +338,12 @@ func TestAccCDNDistributionResource(t *testing.T) {
 		},
 	})
 }
+
 func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *cdn.APIClient
+
 	var err error
 	if testutil.MongoDBFlexCustomEndpoint == "" {
 		client, err = cdn.NewAPIClient()
@@ -344,15 +352,18 @@ func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 			config.WithEndpoint(testutil.MongoDBFlexCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	distributionsToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_mongodbflex_instance" {
 			continue
 		}
+
 		distributionId := strings.Split(rs.Primary.ID, core.Separator)[1]
 		distributionsToDestroy = append(distributionsToDestroy, distributionId)
 	}
@@ -362,11 +373,13 @@ func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 		if err != nil {
 			return fmt.Errorf("destroying CDN distribution %s during CheckDestroy: %w", dist, err)
 		}
+
 		_, err = wait.DeleteDistributionWaitHandler(ctx, client, testutil.ProjectId, dist).WaitWithContext(ctx)
 		if err != nil {
 			return fmt.Errorf("destroying CDN distribution %s during CheckDestroy: waiting for deletion %w", dist, err)
 		}
 	}
+
 	return nil
 }
 
@@ -382,26 +395,34 @@ func blockUntilDomainResolves(domain string) (net.IP, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error looking up IP for domain %s: %w", domain, err)
 		}
+
 		for _, ip := range ips {
 			if ip.String() != "<nil>" {
 				return ip, nil
 			}
 		}
+
 		return nil, fmt.Errorf("no IP for domain: %v", domain)
 	}
+
 	return retry(recordCheckAttempts, recordCheckInterval, isReady)
 }
 
 func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (T, error) {
 	var zero T
+
 	var errOuter error
+
 	for i := 0; i < attempts; i++ {
 		dist, err := f()
 		if err == nil {
 			return dist, nil
 		}
+
 		errOuter = err
+
 		time.Sleep(sleep)
 	}
+
 	return zero, fmt.Errorf("retry timed out, last error: %w", errOuter)
 }

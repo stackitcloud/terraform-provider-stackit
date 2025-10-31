@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -17,8 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -57,15 +56,19 @@ func (d *customDomainDataSource) Configure(ctx context.Context, req datasource.C
 	}
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_cdn_custom_domain", core.Datasource)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	apiClient := cdnUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	d.client = apiClient
+
 	tflog.Info(ctx, "CDN client configured")
 }
 
@@ -118,10 +121,11 @@ func (r *customDomainDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 	}
 }
 
-func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model customDomainDataSourceModel // Use the new data source model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -142,7 +146,9 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -156,9 +162,11 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "CDN custom domain read")
 }
 
@@ -166,6 +174,7 @@ func mapCustomDomainDataSourceFields(customDomainResponse *cdn.GetCustomDomainRe
 	if customDomainResponse == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -177,6 +186,7 @@ func mapCustomDomainDataSourceFields(customDomainResponse *cdn.GetCustomDomainRe
 	if customDomainResponse.CustomDomain.Name == nil {
 		return fmt.Errorf("name is missing in response")
 	}
+
 	if customDomainResponse.CustomDomain.Status == nil {
 		return fmt.Errorf("status missing in response")
 	}
@@ -202,6 +212,7 @@ func mapCustomDomainDataSourceFields(customDomainResponse *cdn.GetCustomDomainRe
 		if diags.HasError() {
 			return fmt.Errorf("failed to map certificate: %w", core.DiagsToError(diags))
 		}
+
 		model.Certificate = certificateObj
 	}
 
@@ -209,18 +220,22 @@ func mapCustomDomainDataSourceFields(customDomainResponse *cdn.GetCustomDomainRe
 	model.Status = types.StringValue(string(*customDomainResponse.CustomDomain.Status))
 
 	customDomainErrors := []attr.Value{}
+
 	if customDomainResponse.CustomDomain.Errors != nil {
 		for _, e := range *customDomainResponse.CustomDomain.Errors {
 			if e.En == nil {
 				return fmt.Errorf("error description missing")
 			}
+
 			customDomainErrors = append(customDomainErrors, types.StringValue(*e.En))
 		}
 	}
+
 	modelErrors, diags := types.ListValue(types.StringType, customDomainErrors)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.Errors = modelErrors
 
 	// Also map the fields back to the model from the config

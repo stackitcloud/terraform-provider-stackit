@@ -82,15 +82,19 @@ func (r *folderResource) Configure(ctx context.Context, req resource.ConfigureRe
 	}
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_resourcemanager_folder", "resource")
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	apiClient := resourcemanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "Resource Manager client configured")
 }
 
@@ -188,11 +192,13 @@ func (r *folderResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	tflog.Info(ctx, "creating folder")
+
 	var model ResourceModel
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -240,10 +246,11 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model ResourceModel
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -260,7 +267,9 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading folder", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -273,21 +282,25 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 	// Set refreshed model
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Resource Manager folder read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model ResourceModel
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	containerId := model.ContainerId.ValueString()
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
@@ -319,18 +332,21 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Resource Manager folder updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model ResourceModel
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -347,6 +363,7 @@ func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest,
 			"Error deleting folder. Deletion may fail because associated projects remain hidden for up to 7 days after user deletion due to technical requirements.",
 			fmt.Sprintf("Calling API: %v", err),
 		)
+
 		return
 	}
 
@@ -354,7 +371,7 @@ func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest,
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: container_id
+// The expected format of the resource import identifier is: container_id.
 func (r *folderResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 1 || idParts[0] == "" {
@@ -362,6 +379,7 @@ func (r *folderResource) ImportState(ctx context.Context, req resource.ImportSta
 			"Error importing folder",
 			fmt.Sprintf("Expected import identifier with format: [container_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -401,6 +419,7 @@ func mapFolderFields(
 	}
 
 	var err error
+
 	var tfLabels basetypes.MapValue
 	if folderGetResponse.Labels != nil && len(*folderGetResponse.Labels) > 0 {
 		tfLabels, err = conversion.ToTerraformStringMap(ctx, *folderGetResponse.Labels)
@@ -412,6 +431,7 @@ func mapFolderFields(
 	}
 
 	var containerParentIdTF basetypes.StringValue
+
 	if folderGetResponse.Parent != nil {
 		if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
 			// the provided containerParent is the UUID identifier
@@ -443,6 +463,7 @@ func mapFolderFields(
 		diags.Append(state.SetAttribute(ctx, path.Root("labels"), model.Labels)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("creation_time"), model.CreationTime)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("update_time"), model.UpdateTime)...)
+
 		if diags.HasError() {
 			return fmt.Errorf("update terraform state: %w", core.DiagsToError(diags))
 		}
@@ -455,6 +476,7 @@ func toMembersPayload(model *ResourceModel) (*[]resourcemanager.Member, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if model.OwnerEmail.IsNull() {
 		return nil, fmt.Errorf("owner_email is null")
 	}
@@ -478,6 +500,7 @@ func toCreatePayload(model *ResourceModel) (*resourcemanager.CreateFolderPayload
 	}
 
 	modelLabels := model.Labels.Elements()
+
 	labels, err := conversion.ToOptStringMap(modelLabels)
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)
@@ -497,6 +520,7 @@ func toUpdatePayload(model *ResourceModel) (*resourcemanager.PartialUpdateFolder
 	}
 
 	modelLabels := model.Labels.Elements()
+
 	labels, err := conversion.ToOptStringMap(modelLabels)
 	if err != nil {
 		return nil, fmt.Errorf("converting to GO map: %w", err)

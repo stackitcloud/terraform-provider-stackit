@@ -54,6 +54,7 @@ var testConfigVarsMax = config.Variables{
 func configVarsInvalid(vars config.Variables) config.Variables {
 	tempConfig := maps.Clone(vars)
 	tempConfig["maintenance_window"] = config.IntegerVariable(0)
+
 	return tempConfig
 }
 
@@ -69,6 +70,7 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMax)
 	tempConfig["maintenance_window"] = config.IntegerVariable(12)
 	tempConfig["rrule"] = config.StringVariable("DTSTART;TZID=Europe/Berlin:20250430T010000 RRULE:FREQ=DAILY;INTERVAL=3")
+
 	return tempConfig
 }
 
@@ -77,6 +79,7 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 		fmt.Println("TF_ACC_SERVER_ID not set, skipping test")
 		return
 	}
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckServerUpdateScheduleDestroy,
@@ -134,6 +137,7 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute update_schedule_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, testutil.ServerId, scheduleId), nil
 				},
 				ImportState:       true,
@@ -164,6 +168,7 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 		fmt.Println("TF_ACC_SERVER_ID not set, skipping test")
 		return
 	}
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckServerUpdateScheduleDestroy,
@@ -222,6 +227,7 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute update_schedule_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, testutil.ServerId, scheduleId), nil
 				},
 				ImportState:       true,
@@ -258,6 +264,7 @@ func testAccCheckServerUpdateScheduleDestroy(s *terraform.State) error {
 
 func deleteSchedule(ctx context.Context, s *terraform.State) error {
 	var client *serverupdate.APIClient
+
 	var err error
 	if testutil.ServerUpdateCustomEndpoint == "" {
 		client, err = serverupdate.NewAPIClient()
@@ -266,11 +273,13 @@ func deleteSchedule(ctx context.Context, s *terraform.State) error {
 			core_config.WithEndpoint(testutil.ServerUpdateCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	schedulesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_server_update_schedule" {
 			continue
@@ -290,6 +299,7 @@ func deleteSchedule(ctx context.Context, s *terraform.State) error {
 		if schedules[i].Id == nil {
 			continue
 		}
+
 		scheduleId := strconv.FormatInt(*schedules[i].Id, 10)
 		if utils.Contains(schedulesToDestroy, scheduleId) {
 			err := client.DeleteUpdateScheduleExecute(ctx, testutil.ProjectId, testutil.ServerId, scheduleId, testutil.Region)
@@ -298,5 +308,6 @@ func deleteSchedule(ctx context.Context, s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

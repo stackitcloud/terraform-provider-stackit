@@ -22,6 +22,7 @@ func mustLocation(name string) *time.Location {
 	if err != nil {
 		log.Panicf("cannot load location %s: %v", name, err)
 	}
+
 	return loc
 }
 
@@ -31,6 +32,7 @@ func TestGetTimeFromString(t *testing.T) {
 		source     attributeGetterFunc
 		dateFormat string
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -47,6 +49,7 @@ func TestGetTimeFromString(t *testing.T) {
 						log.Panicf("wrong type %T", target)
 					}
 					*t = types.StringValue("2025-02-06T09:41:00+01:00")
+
 					return nil
 				},
 				dateFormat: time.RFC3339,
@@ -69,6 +72,7 @@ func TestGetTimeFromString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var target time.Time
+
 			gotDiags := GetTimeFromStringAttribute(context.Background(), tt.args.path, tt.args.source, tt.args.dateFormat, &target)
 			if tt.wantErr {
 				if !gotDiags.HasError() {

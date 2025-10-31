@@ -6,14 +6,6 @@ import (
 	"net/http"
 	"sort"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -21,6 +13,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -60,10 +58,13 @@ func (d *publicIpRangesDataSource) Configure(ctx context.Context, req datasource
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	d.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -108,13 +109,15 @@ func (d *publicIpRangesDataSource) Schema(_ context.Context, _ datasource.Schema
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	publicIpRangeResp, err := d.client.ListPublicIPRangesExecute(ctx)
 	if err != nil {
 		utils.LogError(
@@ -128,6 +131,7 @@ func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.Read
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -137,11 +141,14 @@ func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.Read
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP ranges", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "read public IP ranges")
 }
 
@@ -149,6 +156,7 @@ func mapFields(ctx context.Context, publicIpRangeResp *iaas.PublicNetworkListRes
 	if publicIpRangeResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -157,21 +165,25 @@ func mapFields(ctx context.Context, publicIpRangeResp *iaas.PublicNetworkListRes
 	if err != nil {
 		return fmt.Errorf("error mapping public IP ranges: %w", err)
 	}
+
 	return nil
 }
 
-// mapPublicIpRanges map the response publicIpRanges to the model
+// mapPublicIpRanges map the response publicIpRanges to the model.
 func mapPublicIpRanges(ctx context.Context, publicIpRanges *[]iaas.PublicNetwork, model *Model) error {
 	if publicIpRanges == nil {
 		return fmt.Errorf("publicIpRanges input is nil")
 	}
+
 	if len(*publicIpRanges) == 0 {
 		model.PublicIpRanges = types.ListNull(types.ObjectType{AttrTypes: publicIpRangesTypes})
 		model.CidrList = types.ListNull(types.StringType)
+
 		return nil
 	}
 
 	var apiIpRanges []string
+
 	for _, ipRange := range *publicIpRanges {
 		if ipRange.Cidr != nil && *ipRange.Cidr != "" {
 			apiIpRanges = append(apiIpRanges, *ipRange.Cidr)
@@ -184,14 +196,17 @@ func mapPublicIpRanges(ctx context.Context, publicIpRanges *[]iaas.PublicNetwork
 	model.Id = utils.BuildInternalTerraformId(apiIpRanges...)
 
 	var ipRangesList []attr.Value
+
 	for _, cidr := range apiIpRanges {
 		ipRangeValues := map[string]attr.Value{
 			"cidr": types.StringValue(cidr),
 		}
+
 		ipRangeObject, diag := types.ObjectValue(publicIpRangesTypes, ipRangeValues)
 		if diag.HasError() {
 			return core.DiagsToError(diag)
 		}
+
 		ipRangesList = append(ipRangesList, ipRangeObject)
 	}
 
@@ -209,6 +224,7 @@ func mapPublicIpRanges(ctx context.Context, publicIpRanges *[]iaas.PublicNetwork
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.CidrList = cidrListTF
 
 	return nil

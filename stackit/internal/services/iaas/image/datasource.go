@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -17,7 +14,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -64,10 +63,13 @@ func (d *imageDataSource) Configure(ctx context.Context, req datasource.Configur
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	d.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -204,13 +206,15 @@ func (r *imageDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 }
 
 // // Read refreshes the Terraform state with the latest data.
-func (r *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	imageId := model.ImageId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -229,6 +233,7 @@ func (r *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -241,9 +246,11 @@ func (r *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "image read")
 }
 
@@ -251,6 +258,7 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	if imageResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -267,9 +275,12 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), imageId)
 
 	// Map config
-	var configModel = &configModel{}
+	configModel := &configModel{}
+
 	var configObject basetypes.ObjectValue
+
 	diags := diag.Diagnostics{}
+
 	if imageResp.Config != nil {
 		configModel.BootMenu = types.BoolPointerValue(imageResp.Config.BootMenu)
 		configModel.CDROMBus = types.StringPointerValue(imageResp.Config.GetCdromBus())
@@ -303,13 +314,16 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	} else {
 		configObject = types.ObjectNull(configTypes)
 	}
+
 	if diags.HasError() {
 		return fmt.Errorf("creating config: %w", core.DiagsToError(diags))
 	}
 
 	// Map checksum
-	var checksumModel = &checksumModel{}
+	checksumModel := &checksumModel{}
+
 	var checksumObject basetypes.ObjectValue
+
 	if imageResp.Checksum != nil {
 		checksumModel.Algorithm = types.StringPointerValue(imageResp.Checksum.Algorithm)
 		checksumModel.Digest = types.StringPointerValue(imageResp.Checksum.Digest)
@@ -320,6 +334,7 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	} else {
 		checksumObject = types.ObjectNull(checksumTypes)
 	}
+
 	if diags.HasError() {
 		return fmt.Errorf("creating checksum: %w", core.DiagsToError(diags))
 	}
@@ -340,5 +355,6 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	model.Labels = labels
 	model.Config = configObject
 	model.Checksum = checksumObject
+
 	return nil
 }

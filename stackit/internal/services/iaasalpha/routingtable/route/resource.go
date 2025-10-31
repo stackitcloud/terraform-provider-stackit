@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -21,6 +19,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
 	iaasalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -53,49 +52,61 @@ func (r *routeResource) Metadata(_ context.Context, req resource.MetadataRequest
 // Configure adds the provider configured client to the resource.
 func (r *routeResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
 	features.CheckExperimentEnabled(ctx, &r.providerData, features.RoutingTablesExperiment, "stackit_routing_table_route", core.Resource, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	apiClient := iaasalphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "IaaS alpha client configured")
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
-func (r *routeResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *routeResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // function signature required by Terraform
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	var configModel shared.RouteModel
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	var planModel shared.RouteModel
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -229,10 +240,11 @@ func (r *routeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *routeResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *routeResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model shared.RouteModel
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -266,24 +278,29 @@ func (r *routeResource) Create(ctx context.Context, req resource.CreateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating routing table route", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "route_id", model.RouteId.ValueString())
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Routing table route created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *routeResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *routeResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model shared.RouteModel
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	organizationId := model.OrganizationId.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
@@ -312,18 +329,21 @@ func (r *routeResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Routing table route read.")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *routeResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *routeResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model shared.RouteModel
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -344,6 +364,7 @@ func (r *routeResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	var stateModel shared.RouteModel
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -370,17 +391,20 @@ func (r *routeResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Routing table route updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *routeResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *routeResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	var model shared.RouteModel
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -407,7 +431,7 @@ func (r *routeResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the routing table route resource import identifier is: organization_id,region,network_area_id,routing_table_id,route_id
+// The expected format of the routing table route resource import identifier is: organization_id,region,network_area_id,routing_table_id,route_id.
 func (r *routeResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -416,6 +440,7 @@ func (r *routeResource) ImportState(ctx context.Context, req resource.ImportStat
 			"Error importing routing table",
 			fmt.Sprintf("Expected import identifier with format: [organization_id],[region],[network_area_id],[routing_table_id],[route_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -448,6 +473,7 @@ func mapFieldsFromList(ctx context.Context, routeResp *iaasalpha.RouteListRespon
 	}
 
 	route := (*routeResp.Items)[0]
+
 	return shared.MapRouteModel(ctx, &route, model, region)
 }
 
@@ -465,6 +491,7 @@ func toCreatePayload(ctx context.Context, model *shared.RouteReadModel) (*iaasal
 	if err != nil {
 		return nil, err
 	}
+
 	destinationPayload, err := toDestinationPayload(ctx, model)
 	if err != nil {
 		return nil, err
@@ -500,11 +527,13 @@ func toNextHopPayload(ctx context.Context, model *shared.RouteReadModel) (*iaasa
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if utils.IsUndefined(model.NextHop) {
 		return nil, nil
 	}
 
 	nexthopModel := shared.RouteNextHop{}
+
 	diags := model.NextHop.As(ctx, &nexthopModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
@@ -520,6 +549,7 @@ func toNextHopPayload(ctx context.Context, model *shared.RouteReadModel) (*iaasa
 	case "ipv6":
 		return sdkUtils.Ptr(iaasalpha.NexthopIPv6AsRouteNexthop(iaasalpha.NewNexthopIPv6("ipv6", nexthopModel.Value.ValueString()))), nil
 	}
+
 	return nil, fmt.Errorf("unknown nexthop type: %s", nexthopModel.Type.ValueString())
 }
 
@@ -527,11 +557,13 @@ func toDestinationPayload(ctx context.Context, model *shared.RouteReadModel) (*i
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if utils.IsUndefined(model.Destination) {
 		return nil, nil
 	}
 
 	destinationModel := shared.RouteDestination{}
+
 	diags := model.Destination.As(ctx, &destinationModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
@@ -543,5 +575,6 @@ func toDestinationPayload(ctx context.Context, model *shared.RouteReadModel) (*i
 	case "cidrv6":
 		return sdkUtils.Ptr(iaasalpha.DestinationCIDRv6AsRouteDestination(iaasalpha.NewDestinationCIDRv6("cidrv6", destinationModel.Value.ValueString()))), nil
 	}
+
 	return nil, fmt.Errorf("unknown destination type: %s", destinationModel.Type.ValueString())
 }

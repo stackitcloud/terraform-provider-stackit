@@ -6,9 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -17,7 +14,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -73,10 +72,13 @@ func (d *serverDataSource) Configure(ctx context.Context, req datasource.Configu
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	d.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -176,13 +178,15 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 }
 
 // // Read refreshes the Terraform state with the latest data.
-func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -190,6 +194,7 @@ func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	serverReq := r.client.GetServer(ctx, projectId, serverId)
 	serverReq = serverReq.Details(true)
+
 	serverResp, err := serverReq.Execute()
 	if err != nil {
 		utils.LogError(
@@ -203,6 +208,7 @@ func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -215,9 +221,11 @@ func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "server read")
 }
 
@@ -225,6 +233,7 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 	if serverResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -246,25 +255,32 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 	}
 
 	var createdAt basetypes.StringValue
+
 	if serverResp.CreatedAt != nil {
 		createdAtValue := *serverResp.CreatedAt
 		createdAt = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
+
 	var updatedAt basetypes.StringValue
+
 	if serverResp.UpdatedAt != nil {
 		updatedAtValue := *serverResp.UpdatedAt
 		updatedAt = types.StringValue(updatedAtValue.Format(time.RFC3339))
 	}
+
 	var launchedAt basetypes.StringValue
+
 	if serverResp.LaunchedAt != nil {
 		launchedAtValue := *serverResp.LaunchedAt
 		launchedAt = types.StringValue(launchedAtValue.Format(time.RFC3339))
 	}
+
 	if serverResp.Nics != nil {
 		var respNics []string
 		for _, nic := range *serverResp.Nics {
 			respNics = append(respNics, *nic.NicId)
 		}
+
 		nicTF, diags := types.ListValueFrom(ctx, types.StringType, respNics)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map networkInterfaces: %w", core.DiagsToError(diags))
@@ -283,6 +299,7 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 		if diags.HasError() {
 			return fmt.Errorf("failed to map bootVolume: %w", core.DiagsToError(diags))
 		}
+
 		model.BootVolume = bootVolume
 	} else {
 		model.BootVolume = types.ObjectNull(bootVolumeDataTypes)

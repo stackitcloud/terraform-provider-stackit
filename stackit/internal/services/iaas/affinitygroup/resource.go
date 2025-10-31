@@ -7,14 +7,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -27,6 +19,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
 var (
@@ -35,7 +32,7 @@ var (
 	_ resource.ResourceWithImportState = &affinityGroupResource{}
 )
 
-// Model is the provider's internal model
+// Model is the provider's internal model.
 type Model struct {
 	Id              types.String `tfsdk:"id"`
 	ProjectId       types.String `tfsdk:"project_id"`
@@ -67,10 +64,13 @@ func (r *affinityGroupResource) Configure(ctx context.Context, req resource.Conf
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -146,13 +146,15 @@ func (r *affinityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *affinityGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *affinityGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
@@ -162,11 +164,13 @@ func (r *affinityGroupResource) Create(ctx context.Context, req resource.CreateR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
+
 	affinityGroupResp, err := r.client.CreateAffinityGroup(ctx, projectId).CreateAffinityGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupResp.Id)
 
 	// Map response body to schema
@@ -178,20 +182,24 @@ func (r *affinityGroupResource) Create(ctx context.Context, req resource.CreateR
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Affinity group created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	affinityGroupId := model.AffinityGroupId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -204,7 +212,9 @@ func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadReque
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading affinity group", fmt.Sprintf("Call API: %v", err))
+
 		return
 	}
 
@@ -215,22 +225,25 @@ func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Affinity group read")
 }
 
-func (r *affinityGroupResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *affinityGroupResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Update is not supported, all fields require replace
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *affinityGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *affinityGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -258,6 +271,7 @@ func (r *affinityGroupResource) ImportState(ctx context.Context, req resource.Im
 			"Error importing affinity group",
 			fmt.Sprintf("Expected import indentifier with format: [project_id],[affinity_group_id], got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -310,6 +324,7 @@ func mapFields(ctx context.Context, affinityGroupResp *iaas.AffinityGroup, model
 		if diags.HasError() {
 			return fmt.Errorf("convert members to StringValue list: %w", core.DiagsToError(diags))
 		}
+
 		model.Members = members
 	} else if model.Members.IsNull() {
 		model.Members = types.ListNull(types.StringType)

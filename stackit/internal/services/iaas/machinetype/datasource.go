@@ -38,7 +38,7 @@ type DataSourceModel struct {
 	Vcpus         types.Int64  `tfsdk:"vcpus"`
 }
 
-// NewMachineTypeDataSource instantiates the data source
+// NewMachineTypeDataSource instantiates the data source.
 func NewMachineTypeDataSource() datasource.DataSource {
 	return &machineTypeDataSource{}
 }
@@ -58,14 +58,17 @@ func (d *machineTypeDataSource) Configure(ctx context.Context, req datasource.Co
 	}
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_machine_type", "datasource")
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	client := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	d.client = client
 
 	tflog.Info(ctx, "IAAS client configured")
@@ -134,9 +137,11 @@ func (d *machineTypeDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 	}
 }
 
-func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -163,6 +168,7 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -189,9 +195,11 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Successfully read machine type")
 }
 
@@ -212,14 +220,18 @@ func mapDataSourceFields(ctx context.Context, machineType *iaas.MachineType, mod
 	model.Vcpus = types.Int64PointerValue(machineType.Vcpus)
 
 	extra := types.MapNull(types.StringType)
+
 	if machineType.ExtraSpecs != nil && len(*machineType.ExtraSpecs) > 0 {
 		var diags diag.Diagnostics
+
 		extra, diags = types.MapValueFrom(ctx, types.StringType, *machineType.ExtraSpecs)
 		if diags.HasError() {
 			return fmt.Errorf("converting extraspecs: %w", core.DiagsToError(diags))
 		}
 	}
+
 	model.ExtraSpecs = extra
+
 	return nil
 }
 
@@ -230,6 +242,7 @@ func sortMachineTypeByName(input []*iaas.MachineType, ascending bool) ([]*iaas.M
 
 	// Filter out nil or missing name
 	var filtered []*iaas.MachineType
+
 	for _, m := range input {
 		if m != nil && m.Name != nil {
 			filtered = append(filtered, m)
@@ -240,6 +253,7 @@ func sortMachineTypeByName(input []*iaas.MachineType, ascending bool) ([]*iaas.M
 		if ascending {
 			return *filtered[i].Name < *filtered[j].Name
 		}
+
 		return *filtered[i].Name > *filtered[j].Name
 	})
 

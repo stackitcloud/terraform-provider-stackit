@@ -11,12 +11,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/config"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit"
 )
 
 const (
-	// Default location of credentials JSON
+	// Default location of credentials JSON.
 	credentialsFilePath = ".stackit/credentials.json" //nolint:gosec // linter false positive
 )
 
@@ -32,23 +31,23 @@ var (
 	// E2ETestsEnabled checks if end-to-end tests should be run.
 	// It is enabled when the TF_ACC environment variable is set to "1".
 	E2ETestsEnabled = os.Getenv("TF_ACC") == "1"
-	// OrganizationId is the id of organization used for tests
+	// OrganizationId is the id of organization used for tests.
 	OrganizationId = os.Getenv("TF_ACC_ORGANIZATION_ID")
-	// ProjectId is the id of project used for tests
+	// ProjectId is the id of project used for tests.
 	ProjectId = os.Getenv("TF_ACC_PROJECT_ID")
 	Region    = os.Getenv("TF_ACC_REGION")
-	// ServerId is the id of a server used for some tests
+	// ServerId is the id of a server used for some tests.
 	ServerId = getenv("TF_ACC_SERVER_ID", "")
-	// TestProjectParentContainerID is the container id of the parent resource under which projects are created as part of the resource-manager acceptance tests
+	// TestProjectParentContainerID is the container id of the parent resource under which projects are created as part of the resource-manager acceptance tests.
 	TestProjectParentContainerID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID")
-	// TestProjectParentUUID is the uuid of the parent resource under which projects are created as part of the resource-manager acceptance tests
+	// TestProjectParentUUID is the uuid of the parent resource under which projects are created as part of the resource-manager acceptance tests.
 	TestProjectParentUUID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_UUID")
-	// TestProjectServiceAccountEmail is the e-mail of a service account with admin permissions on the organization under which projects are created as part of the resource-manager acceptance tests
+	// TestProjectServiceAccountEmail is the e-mail of a service account with admin permissions on the organization under which projects are created as part of the resource-manager acceptance tests.
 	TestProjectServiceAccountEmail = os.Getenv("TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL")
 	// TestProjectUserEmail is the e-mail of a user for the project created as part of the resource-manager acceptance tests
-	// Default email: acc-test@sa.stackit.cloud
+	// Default email: acc-test@sa.stackit.cloud.
 	TestProjectUserEmail = getenv("TF_ACC_TEST_PROJECT_USER_EMAIL", "acc-test@sa.stackit.cloud")
-	// TestImageLocalFilePath is the local path to an image file used for image acceptance tests
+	// TestImageLocalFilePath is the local path to an image file used for image acceptance tests.
 	TestImageLocalFilePath = getenv("TF_ACC_TEST_IMAGE_LOCAL_FILE_PATH", "default")
 
 	CdnCustomEndpoint             = os.Getenv("TF_ACC_CDN_CUSTOM_ENDPOINT")
@@ -85,6 +84,7 @@ func ObservabilityProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			observability_custom_endpoint = "%s"
@@ -92,6 +92,7 @@ func ObservabilityProviderConfig() string {
 		ObservabilityCustomEndpoint,
 	)
 }
+
 func CdnProviderConfig() string {
 	if CdnCustomEndpoint == "" {
 		return `
@@ -99,6 +100,7 @@ func CdnProviderConfig() string {
 			enable_beta_resources = true
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			cdn_custom_endpoint = "%s"
@@ -112,6 +114,7 @@ func DnsProviderConfig() string {
 	if DnsCustomEndpoint == "" {
 		return `provider "stackit" {}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			dns_custom_endpoint = "%s"
@@ -127,6 +130,7 @@ func IaaSProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			iaas_custom_endpoint = "%s"
@@ -143,6 +147,7 @@ func IaaSProviderConfigWithBetaResourcesEnabled() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			enable_beta_resources = true
@@ -160,6 +165,7 @@ func IaaSProviderConfigWithExperiments() string {
   			experiments = [ "routing-tables", "network" ]
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			iaas_custom_endpoint = "%s"
@@ -176,6 +182,7 @@ func LoadBalancerProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			loadbalancer_custom_endpoint = "%s"
@@ -191,6 +198,7 @@ func LogMeProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			logme_custom_endpoint = "%s"
@@ -206,6 +214,7 @@ func MariaDBProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			mariadb_custom_endpoint = "%s"
@@ -222,6 +231,7 @@ func ModelServingProviderConfig() string {
 		}
 		`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			modelserving_custom_endpoint = "%s"
@@ -237,6 +247,7 @@ func MongoDBFlexProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			mongodbflex_custom_endpoint = "%s"
@@ -252,6 +263,7 @@ func ObjectStorageProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			objectstorage_custom_endpoint = "%s"
@@ -267,6 +279,7 @@ func OpenSearchProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			opensearch_custom_endpoint = "%s"
@@ -282,6 +295,7 @@ func PostgresFlexProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			postgresflex_custom_endpoint = "%s"
@@ -297,6 +311,7 @@ func RabbitMQProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			rabbitmq_custom_endpoint = "%s"
@@ -312,6 +327,7 @@ func RedisProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			redis_custom_endpoint = "%s"
@@ -330,6 +346,7 @@ func ResourceManagerProviderConfig() string {
 			token,
 		)
 	}
+
 	return fmt.Sprintf(`
 	provider "stackit" {
 		resourcemanager_custom_endpoint = "%s"
@@ -354,6 +371,7 @@ func ResourceManagerProviderConfigBetaEnabled() string {
 			token,
 		)
 	}
+
 	return fmt.Sprintf(`
 	provider "stackit" {
 		resourcemanager_custom_endpoint = "%s"
@@ -374,6 +392,7 @@ func SecretsManagerProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			secretsmanager_custom_endpoint = "%s"
@@ -389,6 +408,7 @@ func SQLServerFlexProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			sqlserverflex_custom_endpoint = "%s"
@@ -405,6 +425,7 @@ func ServerBackupProviderConfig() string {
 			enable_beta_resources = true
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			server_backup_custom_endpoint = "%s"
@@ -422,6 +443,7 @@ func ServerUpdateProviderConfig() string {
 			enable_beta_resources = true
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			server_update_custom_endpoint = "%s"
@@ -438,6 +460,7 @@ func SKEProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			ske_custom_endpoint = "%s"
@@ -454,6 +477,7 @@ func AuthorizationProviderConfig() string {
 			experiments = ["iam"]
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			authorization_custom_endpoint = "%s"
@@ -471,6 +495,7 @@ func ServiceAccountProviderConfig() string {
 			enable_beta_resources = true
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			service_account_custom_endpoint = "%s"
@@ -488,6 +513,7 @@ func GitProviderConfig() string {
 			enable_beta_resources = true
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			git_custom_endpoint = "%s"
@@ -504,6 +530,7 @@ func ScfProviderConfig() string {
 			default_region = "eu01"
 		}`
 	}
+
 	return fmt.Sprintf(`
 		provider "stackit" {
 			default_region = "eu01"
@@ -517,11 +544,13 @@ func ResourceNameWithDateTime(name string) string {
 	dateTime := time.Now().Format(time.RFC3339)
 	// Remove timezone to have a smaller datetime
 	dateTimeTrimmed, _, _ := strings.Cut(dateTime, "+")
+
 	return fmt.Sprintf("tf-acc-%s-%s", name, dateTimeTrimmed)
 }
 
 func GetTestProjectServiceAccountToken(path string) string {
 	var err error
+
 	token, tokenSet := os.LookupEnv("TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN")
 	if !tokenSet || token == "" {
 		token, err = readTestTokenFromCredentialsFile(path)
@@ -529,6 +558,7 @@ func GetTestProjectServiceAccountToken(path string) string {
 			return ""
 		}
 	}
+
 	return token
 }
 
@@ -537,10 +567,12 @@ func readTestTokenFromCredentialsFile(path string) (string, error) {
 		customPath, customPathSet := os.LookupEnv("STACKIT_CREDENTIALS_PATH")
 		if !customPathSet || customPath == "" {
 			path = credentialsFilePath
+
 			home, err := os.UserHomeDir()
 			if err != nil {
 				return "", fmt.Errorf("getting home directory: %w", err)
 			}
+
 			path = filepath.Join(home, path)
 		} else {
 			path = customPath
@@ -555,10 +587,12 @@ func readTestTokenFromCredentialsFile(path string) (string, error) {
 	var credentials struct {
 		TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN string `json:"TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN"`
 	}
+
 	err = json.Unmarshal(credentialsRaw, &credentials)
 	if err != nil {
 		return "", fmt.Errorf("unmarshalling credentials: %w", err)
 	}
+
 	return credentials.TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN, nil
 }
 
@@ -567,10 +601,11 @@ func getenv(key, defaultValue string) string {
 	if val == "" {
 		return defaultValue
 	}
+
 	return val
 }
 
-// CreateDefaultLocalFile is a helper for local_file_path. No real data is created
+// CreateDefaultLocalFile is a helper for local_file_path. No real data is created.
 func CreateDefaultLocalFile() os.File {
 	// Define the file name and size
 	fileName := "test-512k.img"
@@ -598,7 +633,9 @@ func ConvertConfigVariable(variable config.Variable) string {
 		result := string(tmpByteArray[1 : len(tmpByteArray)-1])
 		// Replace escaped quotes which where added MarshalJSON
 		rawString := strings.ReplaceAll(result, `\"`, `"`)
+
 		return rawString
 	}
+
 	return string(tmpByteArray)
 }

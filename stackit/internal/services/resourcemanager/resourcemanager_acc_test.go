@@ -32,17 +32,25 @@ var defaultLabels = config.ObjectVariable(
 	},
 )
 
-var projectNameParentContainerId = fmt.Sprintf("tfe2e-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
-var projectNameParentContainerIdUpdated = fmt.Sprintf("%s-updated", projectNameParentContainerId)
+var (
+	projectNameParentContainerId        = fmt.Sprintf("tfe2e-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	projectNameParentContainerIdUpdated = fmt.Sprintf("%s-updated", projectNameParentContainerId)
+)
 
-var projectNameParentUUID = fmt.Sprintf("tfe2e-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
-var projectNameParentUUIDUpdated = fmt.Sprintf("%s-updated", projectNameParentUUID)
+var (
+	projectNameParentUUID        = fmt.Sprintf("tfe2e-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	projectNameParentUUIDUpdated = fmt.Sprintf("%s-updated", projectNameParentUUID)
+)
 
-var folderNameParentContainerId = fmt.Sprintf("tfe2e-folder-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
-var folderNameParentContainerIdUpdated = fmt.Sprintf("%s-updated", folderNameParentContainerId)
+var (
+	folderNameParentContainerId        = fmt.Sprintf("tfe2e-folder-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	folderNameParentContainerIdUpdated = fmt.Sprintf("%s-updated", folderNameParentContainerId)
+)
 
-var folderNameParentUUID = fmt.Sprintf("tfe2e-folder-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
-var folderNameParentUUIDUpdated = fmt.Sprintf("%s-updated", folderNameParentUUID)
+var (
+	folderNameParentUUID        = fmt.Sprintf("tfe2e-folder-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	folderNameParentUUIDUpdated = fmt.Sprintf("%s-updated", folderNameParentUUID)
+)
 
 var testConfigResourceProjectParentContainerId = config.Variables{
 	"name":                config.StringVariable(projectNameParentContainerId),
@@ -80,6 +88,7 @@ func testConfigProjectNameParentContainerIdUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigResourceProjectParentContainerId))
 	maps.Copy(tempConfig, testConfigResourceProjectParentContainerId)
 	tempConfig["name"] = config.StringVariable(projectNameParentContainerIdUpdated)
+
 	return tempConfig
 }
 
@@ -87,6 +96,7 @@ func testConfigProjectNameParentUUIDUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigResourceProjectParentUUID))
 	maps.Copy(tempConfig, testConfigResourceProjectParentUUID)
 	tempConfig["name"] = config.StringVariable(projectNameParentUUIDUpdated)
+
 	return tempConfig
 }
 
@@ -94,6 +104,7 @@ func testConfigFolderNameParentContainerIdUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigResourceFolderParentContainerId))
 	maps.Copy(tempConfig, testConfigResourceFolderParentContainerId)
 	tempConfig["name"] = config.StringVariable(folderNameParentContainerIdUpdated)
+
 	return tempConfig
 }
 
@@ -101,6 +112,7 @@ func testConfigFolderNameParentUUIDUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigResourceFolderParentUUID))
 	maps.Copy(tempConfig, testConfigResourceFolderParentUUID)
 	tempConfig["name"] = config.StringVariable(folderNameParentUUIDUpdated)
+
 	return tempConfig
 }
 
@@ -427,6 +439,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 		testAccCheckResourceManagerProjectsDestroy,
 		testAccCheckResourceManagerFoldersDestroy,
 	}
+
 	var errs []error
 
 	wg := sync.WaitGroup{}
@@ -438,16 +451,21 @@ func testAccCheckDestroy(s *terraform.State) error {
 			if err != nil {
 				errs = append(errs, err)
 			}
+
 			wg.Done()
 		}()
 	}
+
 	wg.Wait()
+
 	return errors.Join(errs...)
 }
 
 func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *resourcemanager.APIClient
+
 	var err error
 	if testutil.ResourceManagerCustomEndpoint == "" {
 		client, err = resourcemanager.NewAPIClient()
@@ -456,11 +474,13 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 			sdkConfig.WithEndpoint(testutil.ResourceManagerCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	projectsToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_resourcemanager_project" {
 			continue
@@ -471,6 +491,7 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	}
 
 	var containerParentId string
+
 	switch {
 	case testutil.TestProjectParentContainerID != "":
 		containerParentId = testutil.TestProjectParentContainerID
@@ -490,6 +511,7 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 		if *items[i].LifecycleState == resourcemanager.LIFECYCLESTATE_DELETING {
 			continue
 		}
+
 		if !utils.Contains(projectsToDestroy, *items[i].ContainerId) {
 			continue
 		}
@@ -498,17 +520,21 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 		if err != nil {
 			return fmt.Errorf("destroying project %s during CheckDestroy: %w", *items[i].ContainerId, err)
 		}
+
 		_, err = wait.DeleteProjectWaitHandler(ctx, client, *items[i].ContainerId).WaitWithContext(ctx)
 		if err != nil {
 			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", *items[i].ContainerId, err)
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *resourcemanager.APIClient
+
 	var err error
 	if testutil.ResourceManagerCustomEndpoint == "" {
 		client, err = resourcemanager.NewAPIClient()
@@ -517,11 +543,13 @@ func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 			sdkConfig.WithEndpoint(testutil.ResourceManagerCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	foldersToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_resourcemanager_folder" {
 			continue
@@ -532,6 +560,7 @@ func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 	}
 
 	var containerParentId string
+
 	switch {
 	case testutil.TestProjectParentContainerID != "":
 		containerParentId = testutil.TestProjectParentContainerID
@@ -557,6 +586,7 @@ func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 			return fmt.Errorf("destroying folder %s during CheckDestroy: %w", *items[i].ContainerId, err)
 		}
 	}
+
 	return nil
 }
 
@@ -565,9 +595,11 @@ func getImportIdFromID(s *terraform.State, resourceName, keyName string) (string
 	if !ok {
 		return "", fmt.Errorf("couldn't find resource %s", resourceName)
 	}
+
 	id, ok := r.Primary.Attributes[keyName]
 	if !ok {
 		return "", fmt.Errorf("couldn't find attribute %s", keyName)
 	}
+
 	return id, nil
 }

@@ -9,17 +9,15 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
-
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 )
 
 //go:embed testdata/resource-min.tf
@@ -28,11 +26,13 @@ var resourceMinConfig string
 //go:embed testdata/resource-max.tf
 var resourceMaxConfig string
 
-// To prevent conversion issues
-var alert_rule_expression = "sum(kube_pod_status_phase{phase=\"Running\"}) > 0"
-var logalertgroup_expression = "sum(rate({namespace=\"example\"} |= \"Simulated error message\" [1m])) > 0"
-var alert_rule_expression_updated = "sum(kube_pod_status_phase{phase=\"Error\"}) > 0"
-var logalertgroup_expression_updated = "sum(rate({namespace=\"example\"} |= \"Another error message\" [1m])) > 0"
+// To prevent conversion issues.
+var (
+	alert_rule_expression            = "sum(kube_pod_status_phase{phase=\"Running\"}) > 0"
+	logalertgroup_expression         = "sum(rate({namespace=\"example\"} |= \"Simulated error message\" [1m])) > 0"
+	alert_rule_expression_updated    = "sum(kube_pod_status_phase{phase=\"Error\"}) > 0"
+	logalertgroup_expression_updated = "sum(rate({namespace=\"example\"} |= \"Another error message\" [1m])) > 0"
+)
 
 var testConfigVarsMin = config.Variables{
 	"project_id":                config.StringVariable(testutil.ProjectId),
@@ -129,6 +129,7 @@ func configVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(tempConfig, testConfigVarsMin)
 	tempConfig["alert_rule_name"] = config.StringVariable("alert1-updated")
+
 	return tempConfig
 }
 
@@ -144,6 +145,7 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig["ms_teams"] = config.StringVariable("false")
 	tempConfig["google_chat"] = config.StringVariable("true")
 	tempConfig["matchers"] = config.StringVariable("instance =~ \"my.*\"")
+
 	return tempConfig
 }
 
@@ -346,6 +348,7 @@ func TestAccResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, name), nil
 				},
 				ImportState:       true,
@@ -368,6 +371,7 @@ func TestAccResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, name), nil
 				},
 				ImportState:       true,
@@ -390,6 +394,7 @@ func TestAccResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, name), nil
 				},
 				ImportState:       true,
@@ -822,6 +827,7 @@ func TestAccResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, name), nil
 				},
 				ImportState:             true,
@@ -845,6 +851,7 @@ func TestAccResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, name), nil
 				},
 				ImportState:             true,
@@ -868,6 +875,7 @@ func TestAccResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, name), nil
 				},
 				ImportState:             true,
@@ -1024,7 +1032,9 @@ func TestAccResourceMax(t *testing.T) {
 
 func testAccCheckObservabilityDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *observability.APIClient
+
 	var err error
 	if testutil.ObservabilityCustomEndpoint == "" {
 		client, err = observability.NewAPIClient(
@@ -1035,11 +1045,13 @@ func testAccCheckObservabilityDestroy(s *terraform.State) error {
 			stackitSdkConfig.WithEndpoint(testutil.ObservabilityCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_observability_instance" {
 			continue
@@ -1062,6 +1074,7 @@ func testAccCheckObservabilityDestroy(s *terraform.State) error {
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].Id, err)
 				}
+
 				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].Id).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].Id, err)
@@ -1069,5 +1082,6 @@ func testAccCheckObservabilityDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

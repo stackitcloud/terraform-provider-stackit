@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
-
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -17,6 +15,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
 	iaasalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -53,21 +52,26 @@ func (d *routingTablesDataSource) Metadata(_ context.Context, req datasource.Met
 
 func (d *routingTablesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
+
 	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
 	features.CheckExperimentEnabled(ctx, &d.providerData, features.RoutingTablesExperiment, "stackit_routing_tables", core.Datasource, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	apiClient := iaasalphaUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	d.client = apiClient
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -115,10 +119,11 @@ func (d *routingTablesDataSource) Schema(_ context.Context, _ datasource.SchemaR
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model DataSourceModelTables
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -143,6 +148,7 @@ func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadR
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -151,11 +157,14 @@ func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Routing table read")
 }
 
@@ -163,9 +172,11 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaasalpha.Ro
 	if routingTables == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	if routingTables.Items == nil {
 		return fmt.Errorf("items input is nil")
 	}
@@ -176,8 +187,10 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaasalpha.Ro
 	model.Id = utils.BuildInternalTerraformId(organizationId, region, networkAreaId)
 
 	itemsList := []attr.Value{}
+
 	for i, routingTable := range *routingTables.Items {
 		var routingTableModel shared.RoutingTableReadModel
+
 		err := shared.MapRoutingTableReadModel(ctx, &routingTable, &routingTableModel)
 		if err != nil {
 			return fmt.Errorf("mapping routes: %w", err)
@@ -198,6 +211,7 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaasalpha.Ro
 		if diags.HasError() {
 			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
 		}
+
 		itemsList = append(itemsList, routingTableTF)
 	}
 
@@ -205,6 +219,7 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaasalpha.Ro
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.Items = itemsListTF
 	model.Region = types.StringValue(region)
 

@@ -44,9 +44,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -138,13 +140,16 @@ func TestMapCreateResponse(t *testing.T) {
 				ServiceAccountEmail: tt.expected.ServiceAccountEmail,
 				RotateWhenChanged:   types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			}
+
 			err := mapCreateResponse(tt.input, model)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(*model, tt.expected)
 				if diff != "" {
@@ -212,13 +217,16 @@ func TestMapListResponse(t *testing.T) {
 				ServiceAccountEmail: tt.expected.ServiceAccountEmail,
 				RotateWhenChanged:   types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			}
+
 			err := mapListResponse(tt.input, model)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Expected an error but did not get one")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Did not expect an error but got one: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(*model, tt.expected)
 				if diff != "" {

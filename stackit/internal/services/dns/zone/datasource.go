@@ -6,17 +6,16 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -41,7 +40,7 @@ func (d *zoneDataSource) Metadata(_ context.Context, req datasource.MetadataRequ
 	resp.TypeName = req.ProviderTypeName + "_dns_zone"
 }
 
-// ConfigValidators validates the resource configuration
+// ConfigValidators validates the resource configuration.
 func (d *zoneDataSource) ConfigValidators(_ context.Context) []datasource.ConfigValidator {
 	return []datasource.ConfigValidator{
 		datasourcevalidator.ExactlyOneOf(
@@ -58,10 +57,13 @@ func (d *zoneDataSource) Configure(ctx context.Context, req datasource.Configure
 	}
 
 	apiClient := dnsUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	d.client = apiClient
+
 	tflog.Info(ctx, "DNS zone client configured")
 }
 
@@ -172,13 +174,15 @@ func (d *zoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	dnsName := model.DnsName.ValueString()
@@ -187,6 +191,7 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "dns_name", dnsName)
 
 	var zoneResp *dns.ZoneResponse
+
 	var err error
 
 	if zoneId != "" {
@@ -203,6 +208,7 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 				},
 			)
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
 	} else {
@@ -222,8 +228,10 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 				},
 			)
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		if *listZoneResp.TotalItems != 1 {
 			utils.LogError(
 				ctx,
@@ -234,8 +242,10 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 				nil,
 			)
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		zones := *listZoneResp.Zones
 		zoneResp = dns.NewZoneResponse(zones[0])
 	}
@@ -243,6 +253,7 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	if zoneResp != nil && zoneResp.Zone.State != nil && *zoneResp.Zone.State == dns.ZONESTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", "Zone was deleted successfully")
+
 		return
 	}
 
@@ -251,10 +262,13 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "DNS zone read")
 }

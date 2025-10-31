@@ -25,11 +25,13 @@ var resourceMin string
 //go:embed testdata/resource-max.tf
 var resourceMax string
 
-var nameMin = fmt.Sprintf("git-min-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
-var nameMinUpdated = fmt.Sprintf("git-min-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
-var nameMax = fmt.Sprintf("git-max-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
-var nameMaxUpdated = fmt.Sprintf("git-max-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
-var aclUpdated = "192.168.1.0/32"
+var (
+	nameMin        = fmt.Sprintf("git-min-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	nameMinUpdated = fmt.Sprintf("git-min-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	nameMax        = fmt.Sprintf("git-max-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	nameMaxUpdated = fmt.Sprintf("git-max-%s-instance", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	aclUpdated     = "192.168.1.0/32"
+)
 
 var testConfigVarsMin = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
@@ -49,6 +51,7 @@ func testConfigVarsMinUpdated() config.Variables {
 	// update git instance to a new name
 	// should trigger creating a new instance
 	tempConfig["name"] = config.StringVariable(nameMinUpdated)
+
 	return tempConfig
 }
 
@@ -150,6 +153,7 @@ func TestAccGitMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
 				ImportState:       true,
@@ -268,6 +272,7 @@ func TestAccGitMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
 				ImportState:       true,
@@ -297,7 +302,9 @@ func TestAccGitMax(t *testing.T) {
 
 func testAccCheckGitInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *git.APIClient
+
 	var err error
 
 	if testutil.GitCustomEndpoint == "" {
@@ -313,10 +320,12 @@ func testAccCheckGitInstanceDestroy(s *terraform.State) error {
 	}
 
 	var instancesToDestroy []string
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_git" {
 			continue
 		}
+
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
@@ -331,6 +340,7 @@ func testAccCheckGitInstanceDestroy(s *terraform.State) error {
 		if gitInstances[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(instancesToDestroy, *gitInstances[i].Id) {
 			err := client.DeleteInstance(ctx, testutil.ProjectId, *gitInstances[i].Id).Execute()
 			if err != nil {
@@ -338,5 +348,6 @@ func testAccCheckGitInstanceDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

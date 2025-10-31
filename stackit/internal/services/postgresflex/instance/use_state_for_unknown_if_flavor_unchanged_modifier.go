@@ -28,7 +28,7 @@ func (m useStateForUnknownIfFlavorUnchangedModifier) MarkdownDescription(ctx con
 	return m.Description(ctx)
 }
 
-func (m useStateForUnknownIfFlavorUnchangedModifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) { // nolint:gocritic // function signature required by Terraform
+func (m useStateForUnknownIfFlavorUnchangedModifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) { //nolint:gocritic // function signature required by Terraform
 	// Do nothing if there is no state value.
 	if req.StateValue.IsNull() {
 		return
@@ -50,14 +50,16 @@ func (m useStateForUnknownIfFlavorUnchangedModifier) PlanModifyString(ctx contex
 	var stateModel Model
 	diags := req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var stateFlavor = &flavorModel{}
-	if !(stateModel.Flavor.IsNull() || stateModel.Flavor.IsUnknown()) {
+	stateFlavor := &flavorModel{}
+	if !stateModel.Flavor.IsNull() && !stateModel.Flavor.IsUnknown() {
 		diags = stateModel.Flavor.As(ctx, stateFlavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -66,14 +68,16 @@ func (m useStateForUnknownIfFlavorUnchangedModifier) PlanModifyString(ctx contex
 	var planModel Model
 	diags = req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var planFlavor = &flavorModel{}
-	if !(planModel.Flavor.IsNull() || planModel.Flavor.IsUnknown()) {
+	planFlavor := &flavorModel{}
+	if !planModel.Flavor.IsNull() && !planModel.Flavor.IsUnknown() {
 		diags = planModel.Flavor.As(ctx, planFlavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}

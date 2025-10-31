@@ -29,6 +29,7 @@ func Test_MapRouteNextHop(t *testing.T) {
 	type args struct {
 		routeResp *iaasalpha.Route
 	}
+
 	tests := []struct {
 		name     string
 		args     args
@@ -134,13 +135,13 @@ func Test_MapRouteDestination(t *testing.T) {
 	type args struct {
 		routeResp *iaasalpha.Route
 	}
+
 	tests := []struct {
 		name     string
 		args     args
 		wantErr  bool
 		expected types.Object
 	}{
-
 		{
 			name: "destination is nil",
 			args: args{
@@ -215,6 +216,7 @@ func TestMapRouteModel(t *testing.T) {
 		model  *RouteModel
 		region string
 	}
+
 	tests := []struct {
 		name          string
 		args          args

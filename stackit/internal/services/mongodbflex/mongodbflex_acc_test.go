@@ -9,16 +9,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-// Instance resource data
+// Instance resource data.
 var instanceResource = map[string]string{
 	"project_id":                      testutil.ProjectId,
 	"name":                            fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
@@ -42,7 +41,7 @@ var instanceResource = map[string]string{
 	"point_in_time_window_hours":      "30",
 }
 
-// User resource data
+// User resource data.
 var userResource = map[string]string{
 	"username":   fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha)),
 	"role":       "read",
@@ -238,6 +237,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					if s[0].Attributes["backup_schedule"] != instanceResource["backup_schedule_read"] {
 						return fmt.Errorf("expected backup_schedule %s, got %s", instanceResource["backup_schedule_read"], s[0].Attributes["backup_schedule"])
 					}
+
 					return nil
 				},
 			},
@@ -298,7 +298,9 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 
 func testAccCheckMongoDBFlexDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *mongodbflex.APIClient
+
 	var err error
 	if testutil.MongoDBFlexCustomEndpoint == "" {
 		client, err = mongodbflex.NewAPIClient()
@@ -307,11 +309,13 @@ func testAccCheckMongoDBFlexDestroy(s *terraform.State) error {
 			config.WithEndpoint(testutil.MongoDBFlexCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_mongodbflex_instance" {
 			continue
@@ -331,16 +335,19 @@ func testAccCheckMongoDBFlexDestroy(s *terraform.State) error {
 		if items[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(instancesToDestroy, *items[i].Id) {
 			err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *items[i].Id, testutil.Region)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *items[i].Id, err)
 			}
+
 			_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *items[i].Id, testutil.Region).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
 			}
 		}
 	}
+
 	return nil
 }

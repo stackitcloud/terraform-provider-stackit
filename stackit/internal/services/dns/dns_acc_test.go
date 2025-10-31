@@ -66,6 +66,7 @@ var testConfigVarsMax = config.Variables{
 func configVarsInvalid(vars config.Variables) config.Variables {
 	tempConfig := maps.Clone(vars)
 	tempConfig["dns_name"] = config.StringVariable("foo")
+
 	return tempConfig
 }
 
@@ -79,6 +80,7 @@ func configVarsMinUpdated() config.Variables {
 func configVarsMaxUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMax)
 	tempConfig["record_record1"] = config.StringVariable("1.2.3.5")
+
 	return tempConfig
 }
 
@@ -495,7 +497,9 @@ func TestAccDnsMaxResource(t *testing.T) {
 
 func testAccCheckDnsDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *dns.APIClient
+
 	var err error
 	if testutil.DnsCustomEndpoint == "" {
 		client, err = dns.NewAPIClient()
@@ -504,11 +508,13 @@ func testAccCheckDnsDestroy(s *terraform.State) error {
 			core_config.WithEndpoint(testutil.DnsCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	zonesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_dns_zone" {
 			continue
@@ -531,11 +537,13 @@ func testAccCheckDnsDestroy(s *terraform.State) error {
 			if err != nil {
 				return fmt.Errorf("destroying zone %s during CheckDestroy: %w", *zones[i].Id, err)
 			}
+
 			_, err = wait.DeleteZoneWaitHandler(ctx, client, testutil.ProjectId, id).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying zone %s during CheckDestroy: waiting for deletion %w", *zones[i].Id, err)
 			}
 		}
 	}
+
 	return nil
 }

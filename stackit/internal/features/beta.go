@@ -21,9 +21,11 @@ func BetaResourcesEnabled(ctx context.Context, data *core.ProviderData, diags *d
 		if strings.EqualFold(value, "true") {
 			return true
 		}
+
 		if strings.EqualFold(value, "false") {
 			return false
 		}
+
 		warnDetails := fmt.Sprintf(`The value of the environment variable that enables beta functionality must be either "true" or "false", got %q.
 Defaulting to the provider feature flag.`, value)
 		core.LogAndAddWarning(ctx, diags, "Invalid value for STACKIT_TF_ENABLE_BETA_RESOURCES environment variable.", warnDetails)
@@ -32,6 +34,7 @@ Defaulting to the provider feature flag.`, value)
 	if data == nil {
 		return false
 	}
+
 	return data.EnableBetaResources
 }
 
@@ -44,6 +47,7 @@ func CheckBetaResourcesEnabled(ctx context.Context, data *core.ProviderData, dia
 		core.LogAndAddErrorBeta(ctx, diags, resourceName, resourceType)
 		return
 	}
+
 	core.LogAndAddWarningBeta(ctx, diags, resourceName, resourceType)
 }
 

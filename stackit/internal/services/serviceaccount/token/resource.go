@@ -7,10 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -27,6 +23,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -68,10 +66,13 @@ func (r *serviceAccountTokenResource) Configure(ctx context.Context, req resourc
 	}
 
 	apiClient := serviceaccountUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "Service Account client configured")
 }
 
@@ -169,12 +170,13 @@ func (r *serviceAccountTokenResource) Schema(_ context.Context, _ resource.Schem
 }
 
 // Create creates the resource and sets the initial Terraform state for service accounts.
-func (r *serviceAccountTokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountTokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	core.LogAndAddWarning(ctx, &resp.Diagnostics, "stackit_service_account_access_token resource deprecated", "use stackit_service_account_key resource instead")
 	// Retrieve the planned values for the resource.
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -194,7 +196,6 @@ func (r *serviceAccountTokenResource) Create(ctx context.Context, req resource.C
 
 	// Initialize the API request with the required parameters.
 	serviceAccountAccessTokenResp, err := r.client.CreateAccessToken(ctx, projectId, serviceAccountEmail).CreateAccessTokenPayload(*payload).Execute()
-
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Failed to create service account access token", fmt.Sprintf("API call error: %v", err))
 		return
@@ -210,19 +211,22 @@ func (r *serviceAccountTokenResource) Create(ctx context.Context, req resource.C
 	// Set the state with fully populated data.
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Service account access token created")
 }
 
 // Read refreshes the Terraform state with the latest service account data.
-func (r *serviceAccountTokenResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountTokenResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	core.LogAndAddWarning(ctx, &resp.Diagnostics, "stackit_service_account_access_token resource deprecated", "use stackit_service_account_key resource instead")
 	// Retrieve the current state of the resource.
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -235,13 +239,15 @@ func (r *serviceAccountTokenResource) Read(ctx context.Context, req resource.Rea
 	listSaTokensResp, err := r.client.ListAccessTokens(ctx, projectId, serviceAccountEmail).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		ok := errors.As(err, &oapiErr) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		ok := errors.As(err, &oapiErr)
 		// due to security purposes, attempting to list access tokens for a non-existent Service Account will return 403.
 		if ok && oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account tokens", fmt.Sprintf("Error calling API: %v", err))
+
 		return
 	}
 
@@ -255,6 +261,7 @@ func (r *serviceAccountTokenResource) Read(ctx context.Context, req resource.Rea
 		if !*saTokens[i].Active {
 			tflog.Info(ctx, fmt.Sprintf("Service account access token with id %s is not active", model.AccessTokenId.ValueString()))
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
 
@@ -267,6 +274,7 @@ func (r *serviceAccountTokenResource) Read(ctx context.Context, req resource.Rea
 		// Set the updated state.
 		diags = resp.State.Set(ctx, &model)
 		resp.Diagnostics.Append(diags...)
+
 		return
 	}
 	// If no matching service account access token is found, remove the resource from the state.
@@ -280,18 +288,19 @@ func (r *serviceAccountTokenResource) Read(ctx context.Context, req resource.Rea
 // As a result, the Update function is redundant since any modifications will
 // automatically trigger a resource recreation through Terraform's built-in
 // lifecycle management.
-func (r *serviceAccountTokenResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountTokenResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Service accounts cannot be updated, so we log an error.
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating service account access token", "Service accounts can't be updated")
 }
 
 // Delete deletes the service account and removes it from the Terraform state on success.
-func (r *serviceAccountTokenResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountTokenResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	core.LogAndAddWarning(ctx, &resp.Diagnostics, "stackit_service_account_access_token resource deprecated", "use stackit_service_account_key resource instead")
 	// Retrieve current state of the resource.
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -309,6 +318,7 @@ func (r *serviceAccountTokenResource) Delete(ctx context.Context, req resource.D
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting service account token", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	tflog.Info(ctx, "Service account token deleted")
 }
 
@@ -326,6 +336,7 @@ func mapCreateResponse(resp *serviceaccount.AccessToken, model *Model) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -339,12 +350,14 @@ func mapCreateResponse(resp *serviceaccount.AccessToken, model *Model) error {
 	}
 
 	var createdAt basetypes.StringValue
+
 	if resp.CreatedAt != nil {
 		createdAtValue := *resp.CreatedAt
 		createdAt = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
 
 	var validUntil basetypes.StringValue
+
 	if resp.ValidUntil != nil {
 		validUntilValue := *resp.ValidUntil
 		validUntil = types.StringValue(validUntilValue.Format(time.RFC3339))
@@ -364,6 +377,7 @@ func mapListResponse(resp *serviceaccount.AccessTokenMetadata, model *Model) err
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -373,12 +387,14 @@ func mapListResponse(resp *serviceaccount.AccessTokenMetadata, model *Model) err
 	}
 
 	var createdAt basetypes.StringValue
+
 	if resp.CreatedAt != nil {
 		createdAtValue := *resp.CreatedAt
 		createdAt = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
 
 	var validUntil basetypes.StringValue
+
 	if resp.ValidUntil != nil {
 		validUntilValue := *resp.ValidUntil
 		validUntil = types.StringValue(validUntilValue.Format(time.RFC3339))

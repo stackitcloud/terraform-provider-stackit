@@ -354,9 +354,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -437,9 +439,11 @@ func TestToTargetPoolUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -453,6 +457,7 @@ func TestToTargetPoolUpdatePayload(t *testing.T) {
 func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
 	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "name")
+
 	tests := []struct {
 		description             string
 		input                   *loadbalancer.LoadBalancer
@@ -854,13 +859,16 @@ func TestMapFields(t *testing.T) {
 					}),
 				})
 			}
+
 			err := mapFields(context.Background(), tt.input, model, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(model, tt.expected)
 				if diff != "" {
@@ -876,6 +884,7 @@ func Test_validateConfig(t *testing.T) {
 		ExternalAddress    *string
 		PrivateNetworkOnly *bool
 	}
+
 	tests := []struct {
 		name    string
 		args    args

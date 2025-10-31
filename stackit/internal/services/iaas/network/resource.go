@@ -59,61 +59,75 @@ func (r *networkResource) Metadata(_ context.Context, req resource.MetadataReque
 // Configure adds the provider configured client to the resource.
 func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
 	r.isExperimental = features.CheckExperimentEnabledWithoutError(ctx, &r.providerData, features.NetworkExperiment, "stackit_network", core.Resource, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	if r.isExperimental {
 		alphaApiClient := iaasAlphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
 		r.alphaClient = alphaApiClient
 	} else {
 		apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
 		r.client = apiClient
 	}
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
-func (r *networkResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // function signature required by Terraform
 	// If the v1 api is used, it's not required to get the fallback region because it isn't used
 	if !r.isExperimental {
 		return
 	}
+
 	var configModel model.Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel model.Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -121,7 +135,9 @@ func (r *networkResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 
 func (r *networkResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var resourceModel model.Model
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &resourceModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -129,17 +145,19 @@ func (r *networkResource) ValidateConfig(ctx context.Context, req resource.Valid
 	if !resourceModel.Nameservers.IsUnknown() && !resourceModel.IPv4Nameservers.IsUnknown() && !resourceModel.Nameservers.IsNull() && !resourceModel.IPv4Nameservers.IsNull() {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring network", "You cannot provide both the `nameservers` and `ipv4_nameservers` fields simultaneously. Please remove the deprecated `nameservers` field, and use `ipv4_nameservers` to configure nameservers for IPv4.")
 	}
+
 	if !r.isExperimental {
 		if !utils.IsUndefined(resourceModel.Region) {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring network", "Setting the `region` is not supported yet. This can only be configured when the experiments `network` is set.")
 		}
+
 		if !utils.IsUndefined(resourceModel.RoutingTableID) {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring network", "Setting the field `routing_table_id` is not supported yet. This can only be configured when the experiments `network` is set.")
 		}
 	}
 }
 
-// ConfigValidators validates the resource configuration
+// ConfigValidators validates the resource configuration.
 func (r *networkResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		resourcevalidator.Conflicting(
@@ -365,7 +383,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	if !r.isExperimental {
 		v1network.Create(ctx, req, resp, r.client)
 	} else {
@@ -374,7 +392,7 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	if !r.isExperimental {
 		v1network.Read(ctx, req, resp, r.client)
 	} else {
@@ -383,7 +401,7 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	if !r.isExperimental {
 		v1network.Update(ctx, req, resp, r.client)
 	} else {
@@ -392,7 +410,7 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	if !r.isExperimental {
 		v1network.Delete(ctx, req, resp, r.client)
 	} else {
@@ -401,7 +419,7 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,network_id
+// The expected format of the resource import identifier is: project_id,network_id.
 func (r *networkResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	if !r.isExperimental {
 		v1network.ImportState(ctx, req, resp)

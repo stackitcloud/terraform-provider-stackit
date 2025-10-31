@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/services/scf"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	scfUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/utils"
@@ -38,16 +37,20 @@ type scfOrganizationDataSource struct {
 
 func (s *scfOrganizationDataSource) Configure(ctx context.Context, request datasource.ConfigureRequest, response *datasource.ConfigureResponse) {
 	var ok bool
+
 	s.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
 
 	apiClient := scfUtils.ConfigureClient(ctx, &s.providerData, &response.Diagnostics)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	s.client = apiClient
+
 	tflog.Info(ctx, "scf client configured")
 }
 
@@ -132,6 +135,7 @@ func (s *scfOrganizationDataSource) Read(ctx context.Context, request datasource
 	var model Model
 	diags := request.Config.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -160,6 +164,7 @@ func (s *scfOrganizationDataSource) Read(ctx context.Context, request datasource
 			},
 		)
 		response.State.RemoveResource(ctx)
+
 		return
 	}
 

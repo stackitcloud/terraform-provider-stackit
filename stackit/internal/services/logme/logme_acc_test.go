@@ -33,7 +33,7 @@ var (
 	maxTestName = testutil.ResourceNameWithDateTime("logme-max")
 )
 
-// Instance resource data
+// Instance resource data.
 var testConfigVarsMin = config.Variables{
 	"project_id":    config.StringVariable(testutil.ProjectId),
 	"name":          config.StringVariable(minTestName),
@@ -80,6 +80,7 @@ var testConfigVarsMax = config.Variables{
 func configVarsMinUpdated() config.Variables {
 	updatedConfig := maps.Clone(testConfigVarsMax)
 	updatedConfig["name"] = config.StringVariable(minTestName + "-updated")
+
 	return updatedConfig
 }
 
@@ -90,6 +91,7 @@ func configVarsMaxUpdated() config.Variables {
 	updatedConfig["parameters_graphite"] = config.StringVariable("graphite.stackit.cloud:2003")
 	updatedConfig["parameters_sgw_acl"] = config.StringVariable("192.168.1.0/24")
 	updatedConfig["parameters_syslog"] = config.StringVariable("test.log:514")
+
 	return updatedConfig
 }
 
@@ -98,7 +100,6 @@ func TestAccLogMeMinResource(t *testing.T) {
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckLogMeDestroy,
 		Steps: []resource.TestStep{
-
 			// Creation
 			{
 				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMinConfig,
@@ -171,6 +172,7 @@ func TestAccLogMeMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
 				ImportState:       true,
@@ -193,6 +195,7 @@ func TestAccLogMeMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
 				},
 				ImportState:       true,
@@ -221,7 +224,6 @@ func TestAccLogMeMaxResource(t *testing.T) {
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckLogMeDestroy,
 		Steps: []resource.TestStep{
-
 			// Creation
 			{
 				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMaxConfig,
@@ -348,6 +350,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
 				ImportState:       true,
@@ -370,6 +373,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
 				},
 				ImportState:       true,
@@ -422,7 +426,9 @@ func TestAccLogMeMaxResource(t *testing.T) {
 
 func testAccCheckLogMeDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *logme.APIClient
+
 	var err error
 	if testutil.LogMeCustomEndpoint == "" {
 		client, err = logme.NewAPIClient(
@@ -433,11 +439,13 @@ func testAccCheckLogMeDestroy(s *terraform.State) error {
 			core_config.WithEndpoint(testutil.LogMeCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_logme_instance" {
 			continue
@@ -457,12 +465,14 @@ func testAccCheckLogMeDestroy(s *terraform.State) error {
 		if instances[i].InstanceId == nil {
 			continue
 		}
+
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
 				err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *instances[i].InstanceId)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
+
 				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
@@ -470,6 +480,7 @@ func testAccCheckLogMeDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -485,5 +496,6 @@ func checkInstanceDeleteSuccess(i *logme.Instance) bool {
 			return false
 		}
 	}
+
 	return true
 }

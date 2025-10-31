@@ -52,15 +52,17 @@ func configVarsMaxUpdated() config.Variables {
 	for k, v := range testConfigVarsMax {
 		updatedConfig[k] = v
 	}
+
 	updatedConfig["parameters_max_disk_threshold"] = config.IntegerVariable(85)
 	updatedConfig["parameters_metrics_frequency"] = config.IntegerVariable(10)
 	updatedConfig["parameters_graphite"] = config.StringVariable("graphite.stackit.cloud:2003")
 	updatedConfig["parameters_sgw_acl"] = config.StringVariable("192.168.1.0/24")
 	updatedConfig["parameters_syslog"] = config.StringVariable("test.log:514")
+
 	return updatedConfig
 }
 
-// minimum configuration
+// minimum configuration.
 func TestAccMariaDbResourceMin(t *testing.T) {
 	t.Logf("Maria test instance name: %s", testutil.ConvertConfigVariable(testConfigVarsMin["name"]))
 	resource.ParallelTest(t, resource.TestCase{
@@ -164,6 +166,7 @@ func TestAccMariaDbResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
 				ImportState:       true,
@@ -185,6 +188,7 @@ func TestAccMariaDbResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
 				},
 				ImportState:       true,
@@ -196,7 +200,7 @@ func TestAccMariaDbResourceMin(t *testing.T) {
 	})
 }
 
-// maximum configuration
+// maximum configuration.
 func TestAccMariaDbResourceMax(t *testing.T) {
 	t.Logf("Maria test instance name: %s", testutil.ConvertConfigVariable(testConfigVarsMax["name"]))
 	resource.ParallelTest(t, resource.TestCase{
@@ -325,6 +329,7 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
 				ImportState:       true,
@@ -346,6 +351,7 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
 				},
 				ImportState:       true,
@@ -409,7 +415,9 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 
 func testAccCheckMariaDBDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *mariadb.APIClient
+
 	var err error
 	if testutil.MariaDBCustomEndpoint == "" {
 		client, err = mariadb.NewAPIClient(
@@ -420,11 +428,13 @@ func testAccCheckMariaDBDestroy(s *terraform.State) error {
 			stackitSdkConfig.WithEndpoint(testutil.MariaDBCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_mariadb_instance" {
 			continue
@@ -444,12 +454,14 @@ func testAccCheckMariaDBDestroy(s *terraform.State) error {
 		if instances[i].InstanceId == nil {
 			continue
 		}
+
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
 				err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *instances[i].InstanceId)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
+
 				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
@@ -457,6 +469,7 @@ func testAccCheckMariaDBDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -472,5 +485,6 @@ func checkInstanceDeleteSuccess(i *mariadb.Instance) bool {
 			return false
 		}
 	}
+
 	return true
 }

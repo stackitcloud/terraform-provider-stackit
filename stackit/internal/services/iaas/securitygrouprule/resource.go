@@ -8,8 +8,6 @@ import (
 	"slices"
 	"strings"
 
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -28,6 +26,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -64,7 +63,7 @@ type icmpParametersModel struct {
 	Type types.Int64 `tfsdk:"type"`
 }
 
-// Types corresponding to icmpParameters
+// Types corresponding to icmpParameters.
 var icmpParametersTypes = map[string]attr.Type{
 	"code": basetypes.Int64Type{},
 	"type": basetypes.Int64Type{},
@@ -75,7 +74,7 @@ type portRangeModel struct {
 	Min types.Int64 `tfsdk:"min"`
 }
 
-// Types corresponding to portRange
+// Types corresponding to portRange.
 var portRangeTypes = map[string]attr.Type{
 	"max": basetypes.Int64Type{},
 	"min": basetypes.Int64Type{},
@@ -86,7 +85,7 @@ type protocolModel struct {
 	Number types.Int64  `tfsdk:"number"`
 }
 
-// Types corresponding to protocol
+// Types corresponding to protocol.
 var protocolTypes = map[string]attr.Type{
 	"name":   basetypes.StringType{},
 	"number": basetypes.Int64Type{},
@@ -115,10 +114,13 @@ func (r *securityGroupRuleResource) Configure(ctx context.Context, req resource.
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -139,6 +141,7 @@ func (r securityGroupRuleResource) ValidateConfig(ctx context.Context, req resou
 	protocol := &protocolModel{}
 	diags := model.Protocol.As(ctx, protocol, basetypes.ObjectAsOptions{})
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -150,7 +153,7 @@ func (r securityGroupRuleResource) ValidateConfig(ctx context.Context, req resou
 	}
 
 	if slices.Contains(icmpProtocols, *protocolName) {
-		if !(model.PortRange.IsNull() || model.PortRange.IsUnknown()) {
+		if !model.PortRange.IsNull() && !model.PortRange.IsUnknown() {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("port_range"),
 				"Conflicting attribute configuration",
@@ -158,7 +161,7 @@ func (r securityGroupRuleResource) ValidateConfig(ctx context.Context, req resou
 			)
 		}
 	} else {
-		if !(model.IcmpParameters.IsNull() || model.IcmpParameters.IsUnknown()) {
+		if !model.IcmpParameters.IsNull() && !model.IcmpParameters.IsUnknown() {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("icmp_parameters"),
 				"Conflicting attribute configuration",
@@ -380,11 +383,12 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -395,30 +399,33 @@ func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 
 	var icmpParameters *icmpParametersModel
-	if !(model.IcmpParameters.IsNull() || model.IcmpParameters.IsUnknown()) {
+	if !model.IcmpParameters.IsNull() && !model.IcmpParameters.IsUnknown() {
 		icmpParameters = &icmpParametersModel{}
 		diags = model.IcmpParameters.As(ctx, icmpParameters, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var portRange *portRangeModel
-	if !(model.PortRange.IsNull() || model.PortRange.IsUnknown()) {
+	if !model.PortRange.IsNull() && !model.PortRange.IsUnknown() {
 		portRange = &portRangeModel{}
 		diags = model.PortRange.As(ctx, portRange, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var protocol *protocolModel
-	if !(model.Protocol.IsNull() || model.Protocol.IsUnknown()) {
+	if !model.Protocol.IsNull() && !model.Protocol.IsUnknown() {
 		protocol = &protocolModel{}
 		diags = model.Protocol.As(ctx, protocol, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -449,20 +456,24 @@ func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Security group rule created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	securityGroupId := model.SecurityGroupId.ValueString()
 	securityGroupRuleId := model.SecurityGroupRuleId.ValueString()
@@ -477,7 +488,9 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group rule", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -490,24 +503,27 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "security group rule read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *securityGroupRuleResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *securityGroupRuleResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating security group rule", "Security group rule can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -530,7 +546,7 @@ func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.Del
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,security_group_id, security_group_rule_id
+// The expected format of the resource import identifier is: project_id,security_group_id, security_group_rule_id.
 func (r *securityGroupRuleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -539,6 +555,7 @@ func (r *securityGroupRuleResource) ImportState(ctx context.Context, req resourc
 			"Error importing security group rule",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[security_group_id],[security_group_rule_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -559,6 +576,7 @@ func mapFields(securityGroupRuleResp *iaas.SecurityGroupRule, model *Model) erro
 	if securityGroupRuleResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -584,10 +602,12 @@ func mapFields(securityGroupRuleResp *iaas.SecurityGroupRule, model *Model) erro
 	if err != nil {
 		return fmt.Errorf("map icmp_parameters: %w", err)
 	}
+
 	err = mapPortRange(securityGroupRuleResp, model)
 	if err != nil {
 		return fmt.Errorf("map port_range: %w", err)
 	}
+
 	err = mapProtocol(securityGroupRuleResp, model)
 	if err != nil {
 		return fmt.Errorf("map protocol: %w", err)
@@ -611,7 +631,9 @@ func mapIcmpParameters(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) 
 	if diags.HasError() {
 		return fmt.Errorf("create icmpParameters object: %w", core.DiagsToError(diags))
 	}
+
 	m.IcmpParameters = icmpParametersObject
+
 	return nil
 }
 
@@ -641,7 +663,9 @@ func mapPortRange(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) error
 	if diags.HasError() {
 		return fmt.Errorf("create portRange object: %w", core.DiagsToError(diags))
 	}
+
 	m.PortRange = portRangeObject
+
 	return nil
 }
 
@@ -665,11 +689,14 @@ func mapProtocol(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) error 
 		"name":   protocolNameValue,
 		"number": protocolNumberValue,
 	}
+
 	protocolObject, diags := types.ObjectValue(protocolTypes, protocolValues)
 	if diags.HasError() {
 		return fmt.Errorf("create protocol object: %w", core.DiagsToError(diags))
 	}
+
 	m.Protocol = protocolObject
+
 	return nil
 }
 
@@ -709,6 +736,7 @@ func toIcmpParametersPayload(icmpParameters *icmpParametersModel) (*iaas.ICMPPar
 	if icmpParameters == nil {
 		return nil, nil
 	}
+
 	payloadParams := &iaas.ICMPParameters{}
 
 	payloadParams.Code = conversion.Int64ValueToPointer(icmpParameters.Code)
@@ -721,6 +749,7 @@ func toPortRangePayload(portRange *portRangeModel) (*iaas.PortRange, error) {
 	if portRange == nil {
 		return nil, nil
 	}
+
 	payloadPortRange := &iaas.PortRange{}
 
 	payloadPortRange.Max = conversion.Int64ValueToPointer(portRange.Max)
@@ -733,6 +762,7 @@ func toProtocolPayload(protocol *protocolModel) (*iaas.CreateProtocol, error) {
 	if protocol == nil {
 		return nil, nil
 	}
+
 	payloadProtocol := &iaas.CreateProtocol{}
 
 	payloadProtocol.String = conversion.StringValueToPointer(protocol.Name)

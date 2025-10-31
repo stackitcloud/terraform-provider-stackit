@@ -49,28 +49,29 @@ func RouteModelTypes() map[string]attr.Type {
 	modelTypes["routing_table_id"] = types.StringType
 	modelTypes["network_area_id"] = types.StringType
 	modelTypes["region"] = types.StringType
+
 	return modelTypes
 }
 
-// RouteDestination is the struct corresponding to RouteReadModel.Destination
+// RouteDestination is the struct corresponding to RouteReadModel.Destination.
 type RouteDestination struct {
 	Type  types.String `tfsdk:"type"`
 	Value types.String `tfsdk:"value"`
 }
 
-// RouteDestinationTypes Types corresponding to routeDestination
+// RouteDestinationTypes Types corresponding to routeDestination.
 var RouteDestinationTypes = map[string]attr.Type{
 	"type":  types.StringType,
 	"value": types.StringType,
 }
 
-// RouteNextHop is the struct corresponding to RouteReadModel.NextHop
+// RouteNextHop is the struct corresponding to RouteReadModel.NextHop.
 type RouteNextHop struct {
 	Type  types.String `tfsdk:"type"`
 	Value types.String `tfsdk:"value"`
 }
 
-// RouteNextHopTypes Types corresponding to routeNextHop
+// RouteNextHopTypes Types corresponding to routeNextHop.
 var RouteNextHopTypes = map[string]attr.Type{
 	"type":  types.StringType,
 	"value": types.StringType,
@@ -80,6 +81,7 @@ func MapRouteModel(ctx context.Context, route *iaasalpha.Route, model *RouteMode
 	if route == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -108,6 +110,7 @@ func MapRouteReadModel(ctx context.Context, route *iaasalpha.Route, model *Route
 	if route == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -128,10 +131,12 @@ func MapRouteReadModel(ctx context.Context, route *iaasalpha.Route, model *Route
 
 	// created at and updated at
 	createdAtTF, updatedAtTF := types.StringNull(), types.StringNull()
+
 	if route.CreatedAt != nil {
 		createdAtValue := *route.CreatedAt
 		createdAtTF = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
+
 	if route.UpdatedAt != nil {
 		updatedAtValue := *route.UpdatedAt
 		updatedAtTF = types.StringValue(updatedAtValue.Format(time.RFC3339))
@@ -153,6 +158,7 @@ func MapRouteReadModel(ctx context.Context, route *iaasalpha.Route, model *Route
 	model.CreatedAt = createdAtTF
 	model.UpdatedAt = updatedAtTF
 	model.Labels = labels
+
 	return nil
 }
 

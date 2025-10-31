@@ -6,10 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -22,6 +18,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -63,6 +61,7 @@ func (r *publicIpAssociateResource) Configure(ctx context.Context, req resource.
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -71,6 +70,7 @@ func (r *publicIpAssociateResource) Configure(ctx context.Context, req resource.
 		"Using both resources together for the same public IP or network interface WILL lead to conflicts, as they both have control of the public IP and network interface association.")
 
 	r.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -142,14 +142,16 @@ func (r *publicIpAssociateResource) Schema(_ context.Context, _ resource.SchemaR
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	publicIpId := model.PublicIpId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
@@ -175,22 +177,27 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error associating public IP to network interface", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "public IP associated to network interface")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *publicIpAssociateResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *publicIpAssociateResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	publicIpId := model.PublicIpId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
@@ -205,7 +212,9 @@ func (r *publicIpAssociateResource) Read(ctx context.Context, req resource.ReadR
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP association", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -218,23 +227,26 @@ func (r *publicIpAssociateResource) Read(ctx context.Context, req resource.ReadR
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "public IP associate read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *publicIpAssociateResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *publicIpAssociateResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Update is not supported, all fields require replace
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *publicIpAssociateResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *publicIpAssociateResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -260,7 +272,7 @@ func (r *publicIpAssociateResource) Delete(ctx context.Context, req resource.Del
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,public_ip_id
+// The expected format of the resource import identifier is: project_id,public_ip_id.
 func (r *publicIpAssociateResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -269,6 +281,7 @@ func (r *publicIpAssociateResource) ImportState(ctx context.Context, req resourc
 			"Error importing public IP associate",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[public_ip_id],[network_interface_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -289,6 +302,7 @@ func mapFields(publicIpResp *iaas.PublicIp, model *Model) error {
 	if publicIpResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

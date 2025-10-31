@@ -1,95 +1,289 @@
-# This file contains all available configuration options
-# with their default values.
-
-# options for analysis running
+version: "2"
 run:
-  # default concurrency is a available CPU number
-  concurrency: 4
-
-  # timeout for analysis, e.g. 30s, 5m, default is 1m
-  timeout: 5m
-linters-settings:
-  goimports:
-    # put imports beginning with prefix after 3rd-party packages;
-    # it's a comma-separated list of prefixes
-    local-prefixes: github.com/freiheit-com/nmww
-  depguard:
-    rules:
-      main:
-        list-mode: lax # Everything is allowed unless it is denied
-        deny:
-          - pkg: "github.com/stretchr/testify"
-            desc: Do not use a testing framework
-  misspell:
-    # Correct spellings using locale preferences for US or UK.
-    # Default is to use a neutral variety of English.
-    # Setting locale to US will correct the British spelling of 'colour' to 'color'.
-    locale: US
-  golint:
-    min-confidence: 0.8
-  gosec:
-    excludes:
-    # Suppressions: (see https://github.com/securego/gosec#available-rules for details)
-      - G104 # "Audit errors not checked" -> which we don't need and is a badly implemented version of errcheck
-      - G102 # "Bind to all interfaces" -> since this is normal in k8s
-      - G304 # "File path provided as taint input" -> too many false positives
-      - G307 # "Deferring unsafe method "Close" on type "io.ReadCloser" -> false positive when calling defer resp.Body.Close()
-  nakedret:
-    max-func-lines: 0
-  revive:
-    ignore-generated-header: true
-    severity: error
-    # https://github.com/mgechev/revive
-    rules:
-      - name: errorf
-      - name: context-as-argument
-      - name: error-return
-      - name: increment-decrement
-      - name: indent-error-flow
-      - name: superfluous-else
-      - name: unused-parameter
-      - name: unreachable-code
-      - name: atomic
-      - name: empty-lines
-      - name: early-return
-  gocritic:
-    enabled-tags:
-      - performance
-      - style
-      - experimental
-    disabled-checks:
-      - wrapperFunc
-      - typeDefFirst
-      - ifElseChain
-      - dupImport # https://github.com/go-critic/go-critic/issues/845
+  build-tags:
+    - integration
+  issues-exit-code: 1
+  tests: true
 linters:
+  default: none
   enable:
-    # https://golangci-lint.run/usage/linters/
-    # default linters
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - typecheck
-    - unused
-    # additional linters
-    - errorlint
-    - gochecknoinits
-    - gocritic
-    - gofmt
-    - goimports
-    - gosec
-    - misspell
-    - nakedret
-    - revive
-    - depguard
+    - asciicheck
     - bodyclose
-    - sqlclosecheck
-    - wastedassign
-    - forcetypeassert
+    - cyclop
+    - depguard
+    - dogsled
+    - dupl
+    - durationcheck
+    - err113
     - errcheck
-  disable:
-    - noctx # false positive: finds errors with http.NewRequest that dont make sense
-    - unparam # false positives
+    - errorlint
+    - exhaustive
+    - forbidigo
+    - forcetypeassert
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - govet
+    - importas
+    - ineffassign
+    - lll
+    - makezero
+    - misspell
+    - mnd
+    - nakedret
+    - nestif
+    - nilerr
+    - nlreturn
+    - noctx
+    - nolintlint
+    - prealloc
+    - predeclared
+    - promlinter
+    - revive
+    - rowserrcheck
+    - sloglint
+    - sqlclosecheck
+    - staticcheck
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - wastedassign
+    - whitespace
+    - wsl
+  settings:
+    cyclop:
+      max-complexity: 20
+      package-average: 0
+    depguard:
+      rules:
+        all:
+          deny:
+            - pkg: github.com/sirupsen/logrus
+              desc: logging is done using the log/slog package
+            - pkg: log$
+              desc: logging is done using the log/slog package
+            - pkg: go.uber.org/zap
+              desc: logging is done using the log/slog package
+    dogsled:
+      max-blank-identifiers: 2
+    dupl:
+      threshold: 150
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    exhaustive:
+      default-signifies-exhaustive: true
+    funlen:
+      lines: 100
+      statements: 50
+    gocognit:
+      min-complexity: 30
+    goconst:
+      min-len: 3
+      min-occurrences: 2
+    gocritic:
+      disabled-checks:
+        - dupImport
+        - octalLiteral
+        - unnamedResult
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      settings:
+        hugeParam:
+          sizeThreshold: 80
+    gocyclo:
+      min-complexity: 30
+    govet:
+      disable:
+        - fieldalignment
+      enable-all: true
+    lll:
+      line-length: 140
+      tab-width: 1
+    misspell:
+      locale: US
+    mnd:
+      checks:
+        - argument
+        - case
+        - condition
+        - return
+    nakedret:
+      max-func-lines: 5
+    nlreturn:
+      block-size: 5
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: true
+    revive:
+      rules:
+        - name: context-keys-type
+          disabled: false
+        - name: time-naming
+          disabled: false
+        - name: var-declaration
+          disabled: false
+        - name: unexported-return
+          disabled: false
+        - name: errorf
+          disabled: false
+        - name: blank-imports
+          disabled: false
+        - name: context-as-argument
+          disabled: false
+        - name: dot-imports
+          disabled: false
+        - name: error-return
+          disabled: false
+        - name: error-strings
+          disabled: false
+        - name: error-naming
+          disabled: false
+        - name: exported
+          disabled: false
+        - name: increment-decrement
+          disabled: false
+        - name: var-naming
+          disabled: false
+        - name: package-comments
+          disabled: false
+        - name: range
+          disabled: false
+        - name: receiver-naming
+          disabled: false
+        - name: indent-error-flow
+          disabled: false
+    sloglint:
+      no-mixed-args: true
+      no-global: all
+      context: scope
+      static-msg: true
+      forbidden-keys:
+        - time
+        - level
+        - msg
+        - source
+    staticcheck:
+      initialisms:
+        - ACL
+        - API
+        - ASCII
+        - CPU
+        - CSS
+        - DNS
+        - EOF
+        - GUID
+        - HTML
+        - HTTP
+        - HTTPS
+        - ID
+        - IP
+        - JSON
+        - QPS
+        - RAM
+        - RPC
+        - SLA
+        - SMTP
+        - SQL
+        - SSH
+        - TCP
+        - TLS
+        - TTL
+        - UDP
+        - UI
+        - GID
+        - UID
+        - UUID
+        - URI
+        - URL
+        - UTF8
+        - VM
+        - XML
+        - XMPP
+        - XSRF
+        - XSS
+        - SIP
+        - RTP
+        - AMQP
+        - DB
+        - TS
+    unparam:
+      check-exported: false
+    unused:
+      exported-fields-are-used: true
+    whitespace:
+      multi-if: false
+      multi-func: false
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dogsled
+          - dupl
+          - err113
+          - forcetypeassert
+          - funlen
+          - gochecknoglobals
+          - goconst
+          - mnd
+          - noctx
+          - unparam
+        path: _test\.go
+      - linters:
+          - govet
+        text: declaration of "err" shadows declaration
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(dev.azure.com/schwarzit)
+      custom-order: true
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - dev.azure.com/schwarzit
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
