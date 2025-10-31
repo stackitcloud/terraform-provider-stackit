@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
@@ -18,7 +15,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -50,9 +49,11 @@ func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.C
 	}
 
 	apiClient := observabilityUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	d.client = apiClient
 }
 
@@ -183,13 +184,15 @@ func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	scName := model.Name.ValueString()
@@ -207,6 +210,7 @@ func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -215,10 +219,13 @@ func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping fields", err.Error())
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Observability scrape config read")
 }

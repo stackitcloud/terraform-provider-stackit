@@ -16,7 +16,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-// Token resource data
+// Token resource data.
 var tokenResource = map[string]string{
 	"project_id":          testutil.ProjectId,
 	"name":                "token01",
@@ -93,7 +93,9 @@ func TestAccModelServingTokenResource(t *testing.T) {
 
 func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *modelserving.APIClient
+
 	var err error
 
 	if testutil.ModelServingCustomEndpoint == "" {
@@ -109,6 +111,7 @@ func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 	}
 
 	tokensToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_modelserving_token" {
 			continue
@@ -119,6 +122,7 @@ func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 		if len(idParts) != 3 {
 			return fmt.Errorf("invalid ID: %s", rs.Primary.ID)
 		}
+
 		if idParts[2] != "" {
 			tokensToDestroy = append(tokensToDestroy, idParts[2])
 		}
@@ -143,16 +147,19 @@ func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 		if items[i].Name == nil {
 			continue
 		}
+
 		if utils.Contains(tokensToDestroy, *items[i].Name) {
 			_, err := client.DeleteToken(ctx, testutil.Region, testutil.ProjectId, *items[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying token %s during CheckDestroy: %w", *items[i].Name, err)
 			}
+
 			_, err = wait.DeleteModelServingWaitHandler(ctx, client, testutil.Region, testutil.ProjectId, *items[i].Id).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying token %s during CheckDestroy: waiting for deletion %w", *items[i].Name, err)
 			}
 		}
 	}
+
 	return nil
 }

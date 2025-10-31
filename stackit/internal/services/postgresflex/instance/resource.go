@@ -8,28 +8,26 @@ import (
 	"strings"
 	"time"
 
-	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -54,7 +52,7 @@ type Model struct {
 	Region         types.String `tfsdk:"region"`
 }
 
-// Struct corresponding to Model.Flavor
+// Struct corresponding to Model.Flavor.
 type flavorModel struct {
 	Id          types.String `tfsdk:"id"`
 	Description types.String `tfsdk:"description"`
@@ -62,7 +60,7 @@ type flavorModel struct {
 	RAM         types.Int64  `tfsdk:"ram"`
 }
 
-// Types corresponding to flavorModel
+// Types corresponding to flavorModel.
 var flavorTypes = map[string]attr.Type{
 	"id":          basetypes.StringType{},
 	"description": basetypes.StringType{},
@@ -70,13 +68,13 @@ var flavorTypes = map[string]attr.Type{
 	"ram":         basetypes.Int64Type{},
 }
 
-// Struct corresponding to Model.Storage
+// Struct corresponding to Model.Storage.
 type storageModel struct {
 	Class types.String `tfsdk:"class"`
 	Size  types.Int64  `tfsdk:"size"`
 }
 
-// Types corresponding to storageModel
+// Types corresponding to storageModel.
 var storageTypes = map[string]attr.Type{
 	"class": basetypes.StringType{},
 	"size":  basetypes.Int64Type{},
@@ -95,29 +93,35 @@ type instanceResource struct {
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
-func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // function signature required by Terraform
 	var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -131,16 +135,20 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 // Configure adds the provider configured client to the resource.
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
 	apiClient := postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "Postgres Flex instance client configured")
 }
 
@@ -265,44 +273,52 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var acl []string
-	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
+	if !model.ACL.IsNull() && !model.ACL.IsUnknown() {
 		diags = model.ACL.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
-	var flavor = &flavorModel{}
-	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
+
+	flavor := &flavorModel{}
+	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
 		err := loadFlavorId(ctx, r.client, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
 		}
 	}
-	var storage = &storageModel{}
-	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
+
+	storage := &storageModel{}
+	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -320,6 +336,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	instanceId := *createResp.Id
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
@@ -337,20 +354,24 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex instance created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -358,18 +379,21 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	var flavor = &flavorModel{}
-	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
+	flavor := &flavorModel{}
+	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
-	var storage = &storageModel{}
-	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
+
+	storage := &storageModel{}
+	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -382,9 +406,12 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", err.Error())
+
 		return
 	}
+
 	if instanceResp != nil && instanceResp.Item != nil && instanceResp.Item.Status != nil && *instanceResp.Item.Status == wait.InstanceStateDeleted {
 		resp.State.RemoveResource(ctx)
 		return
@@ -399,21 +426,25 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex instance read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := model.Region.ValueString()
@@ -422,30 +453,36 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var acl []string
-	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
+	if !model.ACL.IsNull() && !model.ACL.IsUnknown() {
 		diags = model.ACL.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
-	var flavor = &flavorModel{}
-	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
+
+	flavor := &flavorModel{}
+	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
 		err := loadFlavorId(ctx, r.client, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
 		}
 	}
-	var storage = &storageModel{}
-	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
+
+	storage := &storageModel{}
+	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -463,6 +500,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
 	}
+
 	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
@@ -475,23 +513,28 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgresflex instance updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := model.Region.ValueString()
@@ -505,16 +548,18 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).SetTimeout(45 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex instance deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,instance_id
+// The expected format of the resource import identifier is: project_id,instance_id.
 func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -523,6 +568,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing instance",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[instance_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -536,12 +582,15 @@ func mapFields(ctx context.Context, resp *postgresflex.InstanceResponse, model *
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if resp.Item == nil {
 		return fmt.Errorf("no instance provided")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	instance := resp.Item
 
 	var instanceId string
@@ -554,11 +603,14 @@ func mapFields(ctx context.Context, resp *postgresflex.InstanceResponse, model *
 	}
 
 	var aclList basetypes.ListValue
+
 	var diags diag.Diagnostics
+
 	if instance.Acl == nil || instance.Acl.Items == nil {
 		aclList = types.ListNull(types.StringType)
 	} else {
 		respACL := *instance.Acl.Items
+
 		modelACL, err := utils.ListValuetoStringSlice(model.ACL)
 		if err != nil {
 			return err
@@ -588,6 +640,7 @@ func mapFields(ctx context.Context, resp *postgresflex.InstanceResponse, model *
 			"ram":         types.Int64PointerValue(instance.Flavor.Memory),
 		}
 	}
+
 	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating flavor: %w", core.DiagsToError(diags))
@@ -605,6 +658,7 @@ func mapFields(ctx context.Context, resp *postgresflex.InstanceResponse, model *
 			"size":  types.Int64PointerValue(instance.Storage.Size),
 		}
 	}
+
 	storageObject, diags := types.ObjectValue(storageTypes, storageValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating storage: %w", core.DiagsToError(diags))
@@ -620,6 +674,7 @@ func mapFields(ctx context.Context, resp *postgresflex.InstanceResponse, model *
 	model.Storage = storageObject
 	model.Version = types.StringPointerValue(instance.Version)
 	model.Region = types.StringValue(region)
+
 	return nil
 }
 
@@ -627,12 +682,15 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if acl == nil {
 		return nil, fmt.Errorf("nil acl")
 	}
+
 	if flavor == nil {
 		return nil, fmt.Errorf("nil flavor")
 	}
+
 	if storage == nil {
 		return nil, fmt.Errorf("nil storage")
 	}
@@ -657,12 +715,15 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if acl == nil {
 		return nil, fmt.Errorf("nil acl")
 	}
+
 	if flavor == nil {
 		return nil, fmt.Errorf("nil flavor")
 	}
+
 	if storage == nil {
 		return nil, fmt.Errorf("nil storage")
 	}
@@ -691,13 +752,16 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 	if model == nil {
 		return fmt.Errorf("nil model")
 	}
+
 	if flavor == nil {
 		return fmt.Errorf("nil flavor")
 	}
+
 	cpu := conversion.Int64ValueToPointer(flavor.CPU)
 	if cpu == nil {
 		return fmt.Errorf("nil CPU")
 	}
+
 	ram := conversion.Int64ValueToPointer(flavor.RAM)
 	if ram == nil {
 		return fmt.Errorf("nil RAM")
@@ -705,26 +769,33 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
+
 	res, err := client.ListFlavorsExecute(ctx, projectId, region)
 	if err != nil {
 		return fmt.Errorf("listing postgresflex flavors: %w", err)
 	}
 
 	avl := ""
+
 	if res.Flavors == nil {
 		return fmt.Errorf("finding flavors for project %s", projectId)
 	}
+
 	for _, f := range *res.Flavors {
 		if f.Id == nil || f.Cpu == nil || f.Memory == nil {
 			continue
 		}
+
 		if *f.Cpu == *cpu && *f.Memory == *ram {
 			flavor.Id = types.StringValue(*f.Id)
 			flavor.Description = types.StringValue(*f.Description)
+
 			break
 		}
+
 		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, *f.Cpu, *f.Memory)
 	}
+
 	if flavor.Id.ValueString() == "" {
 		return fmt.Errorf("couldn't find flavor, available specs are:%s", avl)
 	}

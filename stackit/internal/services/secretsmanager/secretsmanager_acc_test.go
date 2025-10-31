@@ -47,12 +47,14 @@ var testConfigVarsMax = config.Variables{
 func configVarsInvalid(vars config.Variables) config.Variables {
 	tempConfig := maps.Clone(vars)
 	delete(tempConfig, "instance_name")
+
 	return tempConfig
 }
 
 func configVarsMinUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMin)
 	tempConfig["write_enabled"] = config.BoolVariable(false)
+
 	return tempConfig
 }
 
@@ -60,6 +62,7 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMax)
 	tempConfig["write_enabled"] = config.BoolVariable(false)
 	tempConfig["acl2"] = config.StringVariable("10.100.2.0/24")
+
 	return tempConfig
 }
 
@@ -149,6 +152,7 @@ func TestAccSecretsManagerMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
 				ImportState:       true,
@@ -302,6 +306,7 @@ func TestAccSecretsManagerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
 				ImportState:       true,
@@ -368,7 +373,9 @@ func TestAccSecretsManagerMax(t *testing.T) {
 
 func testAccCheckSecretsManagerDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *secretsmanager.APIClient
+
 	var err error
 	if testutil.SecretsManagerCustomEndpoint == "" {
 		client, err = secretsmanager.NewAPIClient(
@@ -379,11 +386,13 @@ func testAccCheckSecretsManagerDestroy(s *terraform.State) error {
 			core_config.WithEndpoint(testutil.SecretsManagerCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_secretsmanager_instance" {
 			continue
@@ -403,6 +412,7 @@ func testAccCheckSecretsManagerDestroy(s *terraform.State) error {
 		if instances[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(instancesToDestroy, *instances[i].Id) {
 			err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *instances[i].Id)
 			if err != nil {
@@ -410,5 +420,6 @@ func testAccCheckSecretsManagerDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

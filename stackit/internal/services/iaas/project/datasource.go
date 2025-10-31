@@ -19,9 +19,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
-var (
-	_ datasource.DataSourceWithConfigure = &projectDataSource{}
-)
+var _ datasource.DataSourceWithConfigure = &projectDataSource{}
 
 type DatasourceModel struct {
 	Id             types.String `tfsdk:"id"` // needed by TF
@@ -50,10 +48,13 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	d.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -115,13 +116,15 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model DatasourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
@@ -136,6 +139,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			nil,
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -148,9 +152,11 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	// Set refreshed state
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "project read")
 }
 
@@ -158,6 +164,7 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	if projectResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -175,6 +182,7 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	model.ProjectId = types.StringValue(projectId)
 
 	var areaId basetypes.StringValue
+
 	if projectResp.AreaId != nil {
 		if projectResp.AreaId.String != nil {
 			areaId = types.StringPointerValue(projectResp.AreaId.String)
@@ -184,12 +192,14 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	}
 
 	var createdAt basetypes.StringValue
+
 	if projectResp.CreatedAt != nil {
 		createdAtValue := *projectResp.CreatedAt
 		createdAt = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
 
 	var updatedAt basetypes.StringValue
+
 	if projectResp.UpdatedAt != nil {
 		updatedAtValue := *projectResp.UpdatedAt
 		updatedAt = types.StringValue(updatedAtValue.Format(time.RFC3339))
@@ -200,5 +210,6 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	model.State = types.StringPointerValue(projectResp.State)
 	model.CreatedAt = createdAt
 	model.UpdatedAt = updatedAt
+
 	return nil
 }

@@ -112,7 +112,6 @@ func TestAccSKEMin(t *testing.T) {
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckSKEDestroy,
 		Steps: []resource.TestStep{
-
 			// 1) Creation
 			{
 				Config:          testutil.SKEProviderConfig() + "\n" + resourceMin,
@@ -194,6 +193,7 @@ func TestAccSKEMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
 				},
 				ImportState:       true,
@@ -234,7 +234,6 @@ func TestAccSKEMax(t *testing.T) {
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckSKEDestroy,
 		Steps: []resource.TestStep{
-
 			// 1) Creation
 			{
 				Config:          testutil.SKEProviderConfig() + "\n" + resourceMax,
@@ -385,6 +384,7 @@ func TestAccSKEMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
 				},
 				ImportState:       true,
@@ -457,7 +457,9 @@ func TestAccSKEMax(t *testing.T) {
 
 func testAccCheckSKEDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *ske.APIClient
+
 	var err error
 	if testutil.SKECustomEndpoint == "" {
 		client, err = ske.NewAPIClient()
@@ -466,11 +468,13 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 			coreConfig.WithEndpoint(testutil.SKECustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	clustersToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_ske_cluster" {
 			continue
@@ -490,17 +494,20 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 		if items[i].Name == nil {
 			continue
 		}
+
 		if utils.Contains(clustersToDestroy, *items[i].Name) {
 			_, err := client.DeleteClusterExecute(ctx, testutil.ProjectId, testutil.Region, *items[i].Name)
 			if err != nil {
 				return fmt.Errorf("destroying cluster %s during CheckDestroy: %w", *items[i].Name, err)
 			}
+
 			_, err = wait.DeleteClusterWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, *items[i].Name).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying cluster %s during CheckDestroy: waiting for deletion %w", *items[i].Name, err)
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -522,6 +529,7 @@ func NewSkeProviderOptions(nodePoolOs string) *SkeProviderOptions {
 	ctx := context.Background()
 
 	var client *ske.APIClient
+
 	var err error
 
 	if testutil.SKECustomEndpoint == "" {
@@ -559,11 +567,13 @@ func (s *SkeProviderOptions) getMachineVersionAt(position int) string {
 	for _, mi := range *s.options.MachineImages {
 		if mi.Name != nil && *mi.Name == s.nodePoolOsName && mi.Versions != nil {
 			count := 0
+
 			for _, v := range *mi.Versions {
 				if v.State != nil && v.Version != nil {
 					if count == position {
 						return *v.Version
 					}
+
 					count++
 				}
 			}
@@ -585,11 +595,13 @@ func (s *SkeProviderOptions) getK8sVersionAt(position int) string {
 	}
 
 	count := 0
+
 	for _, v := range *s.options.KubernetesVersions {
 		if v.State != nil && *v.State == "supported" && v.Version != nil {
 			if count == position {
 				return *v.Version
 			}
+
 			count++
 		}
 	}

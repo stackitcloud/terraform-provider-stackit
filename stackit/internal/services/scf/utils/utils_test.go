@@ -10,7 +10,6 @@ import (
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/scf"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -23,6 +22,7 @@ const (
 func TestConfigureClient(t *testing.T) {
 	/* mock authentication by setting service account token env variable */
 	os.Clearenv()
+
 	err := os.Setenv(sdkClients.ServiceAccountToken, "mock-val")
 	if err != nil {
 		t.Errorf("error setting env variable: %v", err)
@@ -31,6 +31,7 @@ func TestConfigureClient(t *testing.T) {
 	type args struct {
 		providerData *core.ProviderData
 	}
+
 	tests := []struct {
 		name     string
 		args     args
@@ -51,6 +52,7 @@ func TestConfigureClient(t *testing.T) {
 				if err != nil {
 					t.Errorf("error configuring client: %v", err)
 				}
+
 				return apiClient
 			}(),
 			wantErr: false,
@@ -71,6 +73,7 @@ func TestConfigureClient(t *testing.T) {
 				if err != nil {
 					t.Errorf("error configuring client: %v", err)
 				}
+
 				return apiClient
 			}(),
 			wantErr: false,
@@ -82,6 +85,7 @@ func TestConfigureClient(t *testing.T) {
 			diags := diag.Diagnostics{}
 
 			actual := ConfigureClient(ctx, tt.args.providerData, &diags)
+
 			if diags.HasError() != tt.wantErr {
 				t.Errorf("ConfigureClient() error = %v, want %v", diags.HasError(), tt.wantErr)
 			}

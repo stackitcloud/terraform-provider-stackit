@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	loadbalancerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/utils"
-
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -21,6 +19,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	loadbalancerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -61,29 +60,35 @@ func (r *observabilityCredentialResource) Metadata(_ context.Context, req resour
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
-func (r *observabilityCredentialResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *observabilityCredentialResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // function signature required by Terraform
 	var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -92,16 +97,20 @@ func (r *observabilityCredentialResource) ModifyPlan(ctx context.Context, req re
 // Configure adds the provider configured client to the resource.
 func (r *observabilityCredentialResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
 	apiClient := loadbalancerUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "Load Balancer client configured")
 }
 
@@ -180,14 +189,16 @@ func (r *observabilityCredentialResource) Schema(_ context.Context, _ resource.S
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *observabilityCredentialResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *observabilityCredentialResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -206,6 +217,7 @@ func (r *observabilityCredentialResource) Create(ctx context.Context, req resour
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating observability credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "credentials_ref", createResp.Credential.CredentialsRef)
 
 	// Map response body to schema
@@ -218,6 +230,7 @@ func (r *observabilityCredentialResource) Create(ctx context.Context, req resour
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -226,13 +239,15 @@ func (r *observabilityCredentialResource) Create(ctx context.Context, req resour
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *observabilityCredentialResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *observabilityCredentialResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	credentialsRef := model.CredentialsRef.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -248,7 +263,9 @@ func (r *observabilityCredentialResource) Read(ctx context.Context, req resource
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading observability credential", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -262,25 +279,29 @@ func (r *observabilityCredentialResource) Read(ctx context.Context, req resource
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Load balancer observability credential read")
 }
 
-func (r *observabilityCredentialResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *observabilityCredentialResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating observability credential", "Observability credential can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *observabilityCredentialResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *observabilityCredentialResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	credentialsRef := model.CredentialsRef.ValueString()
 	region := model.Region.ValueString()
@@ -299,7 +320,7 @@ func (r *observabilityCredentialResource) Delete(ctx context.Context, req resour
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,name
+// The expected format of the resource import identifier is: project_id,name.
 func (r *observabilityCredentialResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -308,6 +329,7 @@ func (r *observabilityCredentialResource) ImportState(ctx context.Context, req r
 			"Error importing observability credential",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[credentials_ref]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -333,6 +355,7 @@ func mapFields(cred *loadbalancer.CredentialsResponse, m *Model, region string) 
 	if cred == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if m == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -345,9 +368,12 @@ func mapFields(cred *loadbalancer.CredentialsResponse, m *Model, region string) 
 	} else {
 		return fmt.Errorf("credentials ref not present")
 	}
+
 	m.CredentialsRef = types.StringValue(credentialsRef)
 	m.DisplayName = types.StringPointerValue(cred.DisplayName)
+
 	var username string
+
 	if m.Username.ValueString() != "" {
 		username = m.Username.ValueString()
 	} else if cred.Username != nil {
@@ -355,6 +381,7 @@ func mapFields(cred *loadbalancer.CredentialsResponse, m *Model, region string) 
 	} else {
 		return fmt.Errorf("username not present")
 	}
+
 	m.Username = types.StringValue(username)
 	m.Region = types.StringValue(region)
 	m.Id = utils.BuildInternalTerraformId(

@@ -32,8 +32,10 @@ func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, proj
 
 func TestMapFields(t *testing.T) {
 	now := time.Now()
+
 	const testRegion = "eu01"
 	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "cgid,cid")
+
 	tests := []struct {
 		description string
 		input       *objectstorage.CreateAccessKeyResponse
@@ -136,13 +138,16 @@ func TestMapFields(t *testing.T) {
 				CredentialsGroupId: tt.expected.CredentialsGroupId,
 				CredentialId:       tt.expected.CredentialId,
 			}
+
 			err := mapFields(tt.input, model, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(model, &tt.expected)
 				if diff != "" {
@@ -156,6 +161,7 @@ func TestMapFields(t *testing.T) {
 func TestEnableProject(t *testing.T) {
 	const testRegion = "eu01"
 	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "cgid,cid")
+
 	tests := []struct {
 		description string
 		expected    Model
@@ -203,10 +209,12 @@ func TestEnableProject(t *testing.T) {
 				CredentialsGroupId: tt.expected.CredentialsGroupId,
 				CredentialId:       tt.expected.CredentialId,
 			}
+
 			err := enableProject(context.Background(), model, "eu01", client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
@@ -216,6 +224,7 @@ func TestEnableProject(t *testing.T) {
 
 func TestReadCredentials(t *testing.T) {
 	now := time.Now()
+
 	const testRegion = "eu01"
 	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "cgid,cid")
 	tests := []struct {
@@ -398,13 +407,16 @@ func TestReadCredentials(t *testing.T) {
 
 			handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
+
 				if tt.getCredentialsFails {
 					w.WriteHeader(http.StatusBadGateway)
 					w.Header().Set("Content-Type", "application/json")
+
 					_, err := w.Write([]byte("{\"message\": \"Something bad happened\""))
 					if err != nil {
 						t.Errorf("Failed to write bad response: %v", err)
 					}
+
 					return
 				}
 
@@ -413,8 +425,10 @@ func TestReadCredentials(t *testing.T) {
 					t.Errorf("Failed to write response: %v", err)
 				}
 			})
+
 			mockedServer := httptest.NewServer(handler)
 			defer mockedServer.Close()
+
 			client, err := objectstorage.NewAPIClient(
 				config.WithEndpoint(mockedServer.URL),
 				config.WithoutAuthentication(),
@@ -428,13 +442,16 @@ func TestReadCredentials(t *testing.T) {
 				CredentialsGroupId: tt.expectedModel.CredentialsGroupId,
 				CredentialId:       tt.expectedModel.CredentialId,
 			}
+
 			found, err := readCredentials(context.Background(), model, "eu01", client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(model, &tt.expectedModel)
 				if diff != "" {

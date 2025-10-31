@@ -11,6 +11,7 @@ func TestUserAgentConfigOption(t *testing.T) {
 	type args struct {
 		providerVersion string
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -27,12 +28,14 @@ func TestUserAgentConfigOption(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			clientConfigActual := config.Configuration{}
+
 			err := tt.want(&clientConfigActual)
 			if err != nil {
 				t.Errorf("error applying configuration: %v", err)
 			}
 
 			clientConfigExpected := config.Configuration{}
+
 			err = UserAgentConfigOption(tt.args.providerVersion)(&clientConfigExpected)
 			if err != nil {
 				t.Errorf("error applying configuration: %v", err)

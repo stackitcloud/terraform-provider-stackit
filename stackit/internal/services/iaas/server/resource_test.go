@@ -159,9 +159,11 @@ func TestMapFields(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.state, tt.expected)
 				if diff != "" {
@@ -271,9 +273,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -314,9 +318,11 @@ func TestToUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -330,7 +336,7 @@ func TestToUpdatePayload(t *testing.T) {
 var _ serverControlClient = (*mockServerControlClient)(nil)
 
 // mockServerControlClient mocks the [serverControlClient] interface with
-// pluggable functions
+// pluggable functions.
 type mockServerControlClient struct {
 	wait.APIClientInterface
 	startServerCalled  int
@@ -373,13 +379,16 @@ func (t *mockServerControlClient) StopServerExecute(ctx context.Context, project
 func Test_serverResource_updateServerStatus(t *testing.T) {
 	projectId := basetypes.NewStringValue("projectId")
 	serverId := basetypes.NewStringValue("serverId")
+
 	type fields struct {
 		client *mockServerControlClient
 	}
+
 	type args struct {
 		currentState *string
 		model        Model
 	}
+
 	type want struct {
 		err              bool
 		status           types.String
@@ -388,6 +397,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 		startCount       int
 		deallocatedCount int
 	}
+
 	tests := []struct {
 		name   string
 		fields fields
@@ -429,6 +439,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 						} else {
 							state = wait.ServerInactiveStatus
 						}
+
 						return &iaas.Server{
 							Id:     utils.Ptr(serverId.ValueString()),
 							Status: &state,
@@ -465,6 +476,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 						default:
 							state = wait.ServerDeallocatedStatus
 						}
+
 						return &iaas.Server{
 							Id:     utils.Ptr(serverId.ValueString()),
 							Status: &state,
@@ -566,10 +578,12 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			err := updateServerStatus(context.Background(), tt.fields.client, tt.args.currentState, &tt.args.model)
 			if (err != nil) != tt.want.err {
 				t.Errorf("inconsistent error, want %v and got %v", tt.want.err, err)
 			}
+
 			if expected, actual := tt.want.status, tt.args.model.DesiredStatus; expected != actual {
 				t.Errorf("wanted status %s but got %s", expected, actual)
 			}
@@ -577,12 +591,15 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			if expected, actual := tt.want.getServerCount, tt.fields.client.getServerCalled; expected != actual {
 				t.Errorf("wrong number of get server calls: Expected %d but got %d", expected, actual)
 			}
+
 			if expected, actual := tt.want.startCount, tt.fields.client.startServerCalled; expected != actual {
 				t.Errorf("wrong number of start server calls: Expected %d but got %d", expected, actual)
 			}
+
 			if expected, actual := tt.want.stopCount, tt.fields.client.stopServerCalled; expected != actual {
 				t.Errorf("wrong number of stop server calls: Expected %d but got %d", expected, actual)
 			}
+
 			if expected, actual := tt.want.deallocatedCount, tt.fields.client.deallocateServerCalled; expected != actual {
 				t.Errorf("wrong number of deallocate server calls: Expected %d but got %d", expected, actual)
 			}

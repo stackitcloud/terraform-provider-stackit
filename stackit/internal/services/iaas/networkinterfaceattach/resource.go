@@ -6,11 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -21,7 +16,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -62,10 +60,13 @@ func (r *networkInterfaceAttachResource) Configure(ctx context.Context, req reso
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -121,11 +122,12 @@ func (r *networkInterfaceAttachResource) Schema(_ context.Context, _ resource.Sc
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -149,20 +151,24 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network interface attachment created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	serverId := model.ServerId.ValueString()
@@ -177,7 +183,9 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface attachment", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -194,10 +202,13 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 			// Set refreshed state
 			diags = resp.State.Set(ctx, model)
 			resp.Diagnostics.Append(diags...)
+
 			if resp.Diagnostics.HasError() {
 				return
 			}
+
 			tflog.Info(ctx, "Network interface attachment read")
+
 			return
 		}
 	}
@@ -207,16 +218,17 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *networkInterfaceAttachResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkInterfaceAttachResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Update is not supported, all fields require replace
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -239,7 +251,7 @@ func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resourc
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,server_id
+// The expected format of the resource import identifier is: project_id,server_id.
 func (r *networkInterfaceAttachResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -248,6 +260,7 @@ func (r *networkInterfaceAttachResource) ImportState(ctx context.Context, req re
 			"Error importing network_interface attachment",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[server_id],[network_interface_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 

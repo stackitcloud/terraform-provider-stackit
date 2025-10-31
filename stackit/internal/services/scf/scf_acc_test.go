@@ -8,15 +8,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/scf"
-
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-
+	"github.com/stackitcloud/stackit-sdk-go/services/scf"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -27,11 +25,13 @@ var resourceMin string
 //go:embed testdata/resource-max.tf
 var resourceMax string
 
-var randName = acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
-var nameMin = fmt.Sprintf("scf-min-%s-org", randName)
-var nameMinUpdated = fmt.Sprintf("scf-min-%s-upd-org", randName)
-var nameMax = fmt.Sprintf("scf-max-%s-org", randName)
-var nameMaxUpdated = fmt.Sprintf("scf-max-%s-upd-org", randName)
+var (
+	randName       = acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
+	nameMin        = fmt.Sprintf("scf-min-%s-org", randName)
+	nameMinUpdated = fmt.Sprintf("scf-min-%s-upd-org", randName)
+	nameMax        = fmt.Sprintf("scf-max-%s-org", randName)
+	nameMaxUpdated = fmt.Sprintf("scf-max-%s-upd-org", randName)
+)
 
 const (
 	platformName       = "Shared Cloud Foundry (public)"
@@ -64,6 +64,7 @@ func testScfOrgConfigVarsMinUpdated() config.Variables {
 	maps.Copy(tempConfig, testConfigVarsMin)
 	// update scf organization to a new name
 	tempConfig["name"] = config.StringVariable(nameMinUpdated)
+
 	return tempConfig
 }
 
@@ -74,6 +75,7 @@ func testScfOrgConfigVarsMaxUpdated() config.Variables {
 	tempConfig["name"] = config.StringVariable(nameMaxUpdated)
 	tempConfig["quota_id"] = config.StringVariable(quotaIdMaxUpdated)
 	tempConfig["suspended"] = config.BoolVariable(!suspendedMax)
+
 	return tempConfig
 }
 
@@ -205,6 +207,7 @@ func TestAccScfOrganizationMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, regionInAttributes, orgId), nil
 				},
 				ImportState:       true,
@@ -383,6 +386,7 @@ func TestAccScfOrgMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, regionInAttributes, orgId), nil
 				},
 				ImportState:       true,
@@ -411,7 +415,9 @@ func TestAccScfOrgMax(t *testing.T) {
 
 func testAccCheckScfOrganizationDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *scf.APIClient
+
 	var err error
 
 	if testutil.ScfCustomEndpoint == "" {
@@ -427,10 +433,12 @@ func testAccCheckScfOrganizationDestroy(s *terraform.State) error {
 	}
 
 	var orgsToDestroy []string
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_scf_organization" {
 			continue
 		}
+
 		orgId := strings.Split(rs.Primary.ID, core.Separator)[1]
 		orgsToDestroy = append(orgsToDestroy, orgId)
 	}
@@ -445,6 +453,7 @@ func testAccCheckScfOrganizationDestroy(s *terraform.State) error {
 		if scfOrgs[i].Guid == nil {
 			continue
 		}
+
 		if utils.Contains(orgsToDestroy, *scfOrgs[i].Guid) {
 			_, err := client.DeleteOrganizationExecute(ctx, testutil.ProjectId, testutil.Region, *scfOrgs[i].Guid)
 			if err != nil {
@@ -452,5 +461,6 @@ func testAccCheckScfOrganizationDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

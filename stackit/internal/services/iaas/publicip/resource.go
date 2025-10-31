@@ -6,10 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -22,6 +18,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -64,10 +62,13 @@ func (r *publicIpResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -136,11 +137,12 @@ func (r *publicIpResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *publicIpResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *publicIpResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -174,20 +176,24 @@ func (r *publicIpResource) Create(ctx context.Context, req resource.CreateReques
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Public IP created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *publicIpResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *publicIpResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	publicIpId := model.PublicIpId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -200,7 +206,9 @@ func (r *publicIpResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -213,21 +221,25 @@ func (r *publicIpResource) Read(ctx context.Context, req resource.ReadRequest, r
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "public IP read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	publicIpId := model.PublicIpId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -237,6 +249,7 @@ func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateReques
 	var stateModel Model
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -259,20 +272,24 @@ func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating public IP", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "public IP updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *publicIpResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *publicIpResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -293,7 +310,7 @@ func (r *publicIpResource) Delete(ctx context.Context, req resource.DeleteReques
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,public_ip_id
+// The expected format of the resource import identifier is: project_id,public_ip_id.
 func (r *publicIpResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -302,6 +319,7 @@ func (r *publicIpResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing public IP",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[public_ip_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -319,6 +337,7 @@ func mapFields(ctx context.Context, publicIpResp *iaas.PublicIp, model *Model) e
 	if publicIpResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -341,12 +360,15 @@ func mapFields(ctx context.Context, publicIpResp *iaas.PublicIp, model *Model) e
 
 	model.PublicIpId = types.StringValue(publicIpId)
 	model.Ip = types.StringPointerValue(publicIpResp.Ip)
+
 	if publicIpResp.NetworkInterface != nil {
 		model.NetworkInterfaceId = types.StringPointerValue(publicIpResp.GetNetworkInterface())
 	} else {
 		model.NetworkInterfaceId = types.StringNull()
 	}
+
 	model.Labels = labels
+
 	return nil
 }
 

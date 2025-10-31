@@ -6,10 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -22,6 +18,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -65,10 +63,13 @@ func (r *networkAreaRouteResource) Configure(ctx context.Context, req resource.C
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -151,11 +152,12 @@ func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRe
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -178,6 +180,7 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	if routes.Items == nil || len(*routes.Items) == 0 {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", "Empty response from API")
 		return
@@ -204,20 +207,24 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area route created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	networkAreaRouteId := model.NetworkAreaRouteId.ValueString()
@@ -232,7 +239,9 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area route.", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -245,18 +254,21 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area route read")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -279,11 +291,12 @@ func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.Dele
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -299,6 +312,7 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 	var stateModel Model
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -321,16 +335,19 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area route", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area route updated")
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: organization_id,network_aread_id,network_area_route_id
+// The expected format of the resource import identifier is: organization_id,network_aread_id,network_area_route_id.
 func (r *networkAreaRouteResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -339,6 +356,7 @@ func (r *networkAreaRouteResource) ImportState(ctx context.Context, req resource
 			"Error importing network area route",
 			fmt.Sprintf("Expected import identifier with format: [organization_id],[network_area_id],[network_area_route_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -359,6 +377,7 @@ func mapFields(ctx context.Context, networkAreaRoute *iaas.Route, model *Model) 
 	if networkAreaRoute == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -383,6 +402,7 @@ func mapFields(ctx context.Context, networkAreaRoute *iaas.Route, model *Model) 
 	model.NextHop = types.StringPointerValue(networkAreaRoute.Nexthop)
 	model.Prefix = types.StringPointerValue(networkAreaRoute.Prefix)
 	model.Labels = labels
+
 	return nil
 }
 

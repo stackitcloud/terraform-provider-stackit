@@ -52,8 +52,10 @@ func TestToCreatePayload(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
+
 	tests := map[string]struct {
 		Input    *Model
 		Expected *cdn.CreateDistributionPayload
@@ -118,9 +120,11 @@ func TestToCreatePayload(t *testing.T) {
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error converting model to create payload: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				// set generated ID before diffing
 				tc.Expected.IntentId = res.IntentId
@@ -173,8 +177,10 @@ func TestConvertConfig(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
+
 	tests := map[string]struct {
 		Input    *Model
 		Expected *cdn.Config
@@ -249,9 +255,11 @@ func TestConvertConfig(t *testing.T) {
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error converting model to create payload: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				diff := cmp.Diff(res, tc.Expected)
 				if diff != "" {
@@ -318,6 +326,7 @@ func TestMapFields(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
 	distributionFixture := func(mods ...func(*cdn.Distribution)) *cdn.Distribution {
@@ -353,8 +362,10 @@ func TestMapFields(t *testing.T) {
 		for _, mod := range mods {
 			mod(distribution)
 		}
+
 		return distribution
 	}
+
 	tests := map[string]struct {
 		Input    *cdn.Distribution
 		Expected *Model
@@ -466,13 +477,16 @@ func TestMapFields(t *testing.T) {
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			model := &Model{}
+
 			err := mapFields(context.Background(), tc.Input, model)
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error mapping fields: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				diff := cmp.Diff(model, tc.Expected)
 				if diff != "" {
@@ -573,6 +587,7 @@ func TestValidateCountryCode(t *testing.T) {
 				} else if err.Error() != tc.expectedError {
 					t.Errorf("for input '%s', expected error '%s', but got '%s'", tc.inputCountry, tc.expectedError, err.Error())
 				}
+
 				if gotOutput != "" {
 					t.Errorf("expected empty string on error, but got '%s'", gotOutput)
 				}
@@ -580,6 +595,7 @@ func TestValidateCountryCode(t *testing.T) {
 				if err != nil {
 					t.Errorf("did not expect an error for input '%s', but got: %v", tc.inputCountry, err)
 				}
+
 				if gotOutput != tc.wantOutput {
 					t.Errorf("for input '%s', expected output '%s', but got '%s'", tc.inputCountry, tc.wantOutput, gotOutput)
 				}

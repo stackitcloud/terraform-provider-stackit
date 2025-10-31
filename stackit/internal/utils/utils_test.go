@@ -6,17 +6,16 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
 
@@ -73,6 +72,7 @@ func TestReconcileStrLists(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			output := ReconcileStringSlices(tt.list1, tt.list2)
+
 			diff := cmp.Diff(output, tt.expected)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
@@ -119,11 +119,14 @@ func TestListValuetoStrSlice(t *testing.T) {
 				if !tt.isValid {
 					return
 				}
+
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if !tt.isValid {
 				t.Fatalf("Should have failed")
 			}
+
 			diff := cmp.Diff(output, tt.expected)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
@@ -173,6 +176,7 @@ func TestConvertPointerSliceToStringSlice(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			output := ConvertPointerSliceToStringSlice(tt.input)
+
 			diff := cmp.Diff(output, tt.expected)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
@@ -335,6 +339,7 @@ func TestFormatPossibleValues(t *testing.T) {
 	type args struct {
 		values []string
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -368,6 +373,7 @@ func TestIsUndefined(t *testing.T) {
 	type args struct {
 		val value
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -408,6 +414,7 @@ func TestBuildInternalTerraformId(t *testing.T) {
 	type args struct {
 		idParts []string
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -441,6 +448,7 @@ func TestCheckListRemoval(t *testing.T) {
 	type model struct {
 		AllowedAddresses types.List `tfsdk:"allowed_addresses"`
 	}
+
 	tests := []struct {
 		description          string
 		configModelList      types.List
@@ -523,6 +531,7 @@ func TestCheckListRemoval(t *testing.T) {
 			if diags := plan.Set(context.Background(), model{tt.planModelList}); diags.HasError() {
 				t.Fatalf("cannot create test model: %v", diags)
 			}
+
 			resp := resource.ModifyPlanResponse{
 				Plan: plan,
 			}
@@ -530,10 +539,12 @@ func TestCheckListRemoval(t *testing.T) {
 			CheckListRemoval(context.Background(), tt.configModelList, tt.planModelList, tt.path, tt.listType, tt.createEmptyList, &resp)
 			// check targetList
 			var respList types.List
+
 			resp.Plan.GetAttribute(context.Background(), tt.path, &respList)
 
 			if tt.createEmptyList {
 				emptyList, _ := types.ListValueFrom(context.Background(), tt.listType, []string{})
+
 				diffEmptyList := cmp.Diff(emptyList, respList)
 				if diffEmptyList != "" {
 					t.Fatalf("an empty list should have been created but was not: %s", diffEmptyList)
@@ -568,10 +579,12 @@ func TestSetAndLogStateFields(t *testing.T) {
 		state  *tfsdk.State
 		values map[string]interface{}
 	}
+
 	type want struct {
 		hasError bool
 		state    *tfsdk.State
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -602,6 +615,7 @@ func TestSetAndLogStateFields(t *testing.T) {
 						}),
 						Schema: testSchema,
 					}
+
 					return &state
 				}(),
 				values: map[string]interface{}{
@@ -622,6 +636,7 @@ func TestSetAndLogStateFields(t *testing.T) {
 					}
 					state.SetAttribute(ctx, path.Root("project_id"), "a414f971-3f7a-4e9a-8671-51a8acb7bcc8")
 					state.SetAttribute(ctx, path.Root("instance_id"), "97073250-8cad-46c3-8424-6258ac0b3731")
+
 					return &state
 				}(),
 			},

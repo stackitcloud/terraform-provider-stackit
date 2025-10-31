@@ -7,10 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -23,6 +19,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -59,10 +57,13 @@ func (r *serviceAccountResource) Configure(ctx context.Context, req resource.Con
 	}
 
 	apiClient := serviceaccountUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "Service Account client configured")
 }
 
@@ -119,11 +120,12 @@ func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 }
 
 // Create creates the resource and sets the initial Terraform state for service accounts.
-func (r *serviceAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve the planned values for the resource.
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -150,6 +152,7 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 
 	// Set the service account name and map the response to the resource schema.
 	model.Name = types.StringValue(serviceAccountName)
+
 	err = mapFields(serviceAccountResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account", fmt.Sprintf("Processing API response: %v", err))
@@ -162,18 +165,21 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	// Set the state with fully populated data.
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Service account created")
 }
 
 // Read refreshes the Terraform state with the latest service account data.
-func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -205,6 +211,7 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 		// Set the updated state.
 		diags = resp.State.Set(ctx, &model)
 		resp.Diagnostics.Append(diags...)
+
 		return
 	}
 
@@ -218,17 +225,18 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 // As a result, the Update function is redundant since any modifications will
 // automatically trigger a resource recreation through Terraform's built-in
 // lifecycle management.
-func (r *serviceAccountResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Service accounts cannot be updated, so we log an error.
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating service account", "Service accounts can't be updated")
 }
 
 // Delete deletes the service account and removes it from the Terraform state on success.
-func (r *serviceAccountResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve current state of the resource.
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -245,11 +253,12 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting service account", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	tflog.Info(ctx, "Service account deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,email
+// The expected format of the resource import identifier is: project_id,email.
 func (r *serviceAccountResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Split the import identifier to extract project ID and email.
 	idParts := strings.Split(req.ID, core.Separator)
@@ -260,6 +269,7 @@ func (r *serviceAccountResource) ImportState(ctx context.Context, req resource.I
 			"Error importing service account",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[email]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -294,6 +304,7 @@ func mapFields(resp *serviceaccount.ServiceAccount, model *Model) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

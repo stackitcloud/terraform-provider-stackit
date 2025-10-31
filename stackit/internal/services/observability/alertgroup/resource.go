@@ -8,8 +8,6 @@ import (
 	"regexp"
 	"strings"
 
-	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -27,6 +25,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -100,10 +99,13 @@ func (a *alertGroupResource) Configure(ctx context.Context, req resource.Configu
 	}
 
 	apiClient := observabilityUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	a.client = apiClient
+
 	tflog.Info(ctx, "Observability alert group client configured")
 }
 
@@ -230,11 +232,12 @@ func (a *alertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest,
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (a *alertGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (a *alertGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -274,17 +277,20 @@ func (a *alertGroupResource) Create(ctx context.Context, req resource.CreateRequ
 	// Set the state with fully populated data.
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "alert group created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (a *alertGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (a *alertGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -299,12 +305,15 @@ func (a *alertGroupResource) Read(ctx context.Context, req resource.ReadRequest,
 	readAlertGroupResp, err := a.client.GetAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading alert group", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -323,16 +332,17 @@ func (a *alertGroupResource) Read(ctx context.Context, req resource.ReadRequest,
 // The Update function is redundant since any modifications will
 // automatically trigger a resource recreation through Terraform's built-in
 // lifecycle management.
-func (a *alertGroupResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (a *alertGroupResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating alert group", "Observability alert groups can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (a *alertGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (a *alertGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -354,7 +364,7 @@ func (a *alertGroupResource) Delete(ctx context.Context, req resource.DeleteRequ
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,instance_id,name
+// The expected format of the resource import identifier is: project_id,instance_id,name.
 func (a *alertGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -363,6 +373,7 @@ func (a *alertGroupResource) ImportState(ctx context.Context, req resource.Impor
 			"Error importing scrape config",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[instance_id],[name]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -393,6 +404,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*observability.CreateAl
 		if err != nil {
 			return nil, err
 		}
+
 		payload.Rules = &rules
 	}
 
@@ -406,12 +418,14 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.UpdateAl
 	}
 
 	var rules []rule
+
 	diags := model.Rules.ElementsAs(ctx, &rules, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
 
 	var oarrs []observability.UpdateAlertgroupsRequestInnerRulesInner
+
 	for i := range rules {
 		rule := &rules[i]
 		oarr := observability.UpdateAlertgroupsRequestInnerRulesInner{}
@@ -421,6 +435,7 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.UpdateAl
 			if alert == nil {
 				return nil, fmt.Errorf("found nil alert for rule[%d]", i)
 			}
+
 			oarr.Alert = alert
 		}
 
@@ -429,6 +444,7 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.UpdateAl
 			if expression == nil {
 				return nil, fmt.Errorf("found nil expression for rule[%d]", i)
 			}
+
 			oarr.Expr = expression
 		}
 
@@ -437,6 +453,7 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.UpdateAl
 			if for_ == nil {
 				return nil, fmt.Errorf("found nil expression for for_[%d]", i)
 			}
+
 			oarr.For = for_
 		}
 
@@ -445,6 +462,7 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.UpdateAl
 			if err != nil {
 				return nil, fmt.Errorf("converting to Go map: %w", err)
 			}
+
 			oarr.Labels = &labels
 		}
 
@@ -453,6 +471,7 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.UpdateAl
 			if err != nil {
 				return nil, fmt.Errorf("converting to Go map: %w", err)
 			}
+
 			oarr.Annotations = &annotations
 		}
 
@@ -504,6 +523,7 @@ func mapFields(ctx context.Context, alertGroup *observability.AlertGroup, model 
 	} else {
 		return fmt.Errorf("found empty interval")
 	}
+
 	model.Interval = types.StringValue(interval)
 
 	if alertGroup.Rules != nil {
@@ -534,6 +554,7 @@ func mapRules(_ context.Context, alertGroup *observability.AlertGroup, model *Mo
 			for k, v := range *r.Labels {
 				labelElems[k] = types.StringValue(v)
 			}
+
 			ruleMap["labels"] = types.MapValueMust(types.StringType, labelElems)
 		}
 
@@ -542,6 +563,7 @@ func mapRules(_ context.Context, alertGroup *observability.AlertGroup, model *Mo
 			for k, v := range *r.Annotations {
 				annoElems[k] = types.StringValue(v)
 			}
+
 			ruleMap["annotations"] = types.MapValueMust(types.StringType, annoElems)
 		}
 
@@ -549,6 +571,7 @@ func mapRules(_ context.Context, alertGroup *observability.AlertGroup, model *Mo
 		if diags.HasError() {
 			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
 		}
+
 		newRules = append(newRules, ruleTf)
 	}
 
@@ -558,5 +581,6 @@ func mapRules(_ context.Context, alertGroup *observability.AlertGroup, model *Mo
 	}
 
 	model.Rules = rulesTf
+
 	return nil
 }

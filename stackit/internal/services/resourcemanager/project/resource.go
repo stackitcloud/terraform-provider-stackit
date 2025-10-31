@@ -8,30 +8,28 @@ import (
 	"strings"
 	"time"
 
-	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
-
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -84,10 +82,13 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 	}
 
 	apiClient := resourcemanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "Resource Manager project client configured")
 }
 
@@ -188,10 +189,11 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model ResourceModel
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -211,6 +213,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	respContainerId := *createResp.ContainerId
 
 	// If the request has not been processed yet and the containerId doesn't exist,
@@ -230,20 +233,24 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Resource Manager project created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model ResourceModel
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	containerId := model.ContainerId.ValueString()
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
@@ -254,7 +261,9 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -267,21 +276,25 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	// Set refreshed model
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Resource Manager project read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model ResourceModel
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	containerId := model.ContainerId.ValueString()
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
@@ -313,18 +326,21 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Resource Manager project updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model ResourceModel
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -349,7 +365,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: container_id
+// The expected format of the resource import identifier is: container_id.
 func (r *projectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 1 || idParts[0] == "" {
@@ -357,6 +373,7 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 			"Error importing project",
 			fmt.Sprintf("Expected import identifier with format: [container_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -366,11 +383,12 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 	tflog.Info(ctx, "Resource Manager Project state imported")
 }
 
-// mapProjectFields maps the API response to the Terraform model and update the Terraform state
+// mapProjectFields maps the API response to the Terraform model and update the Terraform state.
 func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProjectResponse, model *Model, state *tfsdk.State) (err error) {
 	if projectResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -404,6 +422,7 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 	}
 
 	var containerParentIdTF basetypes.StringValue
+
 	if projectResp.Parent != nil {
 		if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
 			// the provided containerParentId is the UUID identifier
@@ -435,6 +454,7 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 		diags.Append(state.SetAttribute(ctx, path.Root("labels"), model.Labels)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("creation_time"), model.CreationTime)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("update_time"), model.UpdateTime)...)
+
 		if diags.HasError() {
 			return fmt.Errorf("update terraform state: %w", core.DiagsToError(diags))
 		}
@@ -447,6 +467,7 @@ func toMembersPayload(model *ResourceModel) (*[]resourcemanager.Member, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if model.OwnerEmail.IsNull() {
 		return nil, fmt.Errorf("owner_email is null")
 	}
@@ -470,6 +491,7 @@ func toCreatePayload(model *ResourceModel) (*resourcemanager.CreateProjectPayloa
 	}
 
 	modelLabels := model.Labels.Elements()
+
 	labels, err := conversion.ToOptStringMap(modelLabels)
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)
@@ -489,6 +511,7 @@ func toUpdatePayload(model *ResourceModel) (*resourcemanager.PartialUpdateProjec
 	}
 
 	modelLabels := model.Labels.Elements()
+
 	labels, err := conversion.ToOptStringMap(modelLabels)
 	if err != nil {
 		return nil, fmt.Errorf("converting to GO map: %w", err)

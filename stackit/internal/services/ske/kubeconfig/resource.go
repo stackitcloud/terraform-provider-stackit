@@ -7,18 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
-
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -26,9 +17,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -71,16 +69,20 @@ func (r *kubeconfigResource) Metadata(_ context.Context, req resource.MetadataRe
 // Configure adds the provider configured client to the resource.
 func (r *kubeconfigResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
 	apiClient := skeUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "SKE kubeconfig client configured")
 }
 
@@ -204,47 +206,56 @@ func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest,
 }
 
 // ModifyPlan will be called in the Plan phase and will check if the plan is a creation of the resource
-// If so, show warning related to deprecated credentials endpoints
-func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+// If so, show warning related to deprecated credentials endpoints.
+func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // function signature required by Terraform
 	if req.State.Raw.IsNull() {
 		// Planned to create a kubeconfig
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Planned to create kubeconfig", "Once this resource is created, you will no longer be able to use the deprecated credentials endpoints and the kube_config field on the cluster resource will be empty for this cluster. For more info check How to Rotate SKE Credentials (https://docs.stackit.cloud/stackit/en/how-to-rotate-ske-credentials-200016334.html)")
 	}
+
 	var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	clusterName := model.ClusterName.ValueString()
 	kubeconfigUUID := uuid.New().String()
@@ -265,9 +276,11 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SKE kubeconfig created")
 }
 
@@ -276,11 +289,12 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 // If the refresh field is set, Read will check the expiration date and will get a new valid kubeconfig if it has expired
 // If kubeconfig creation time is before lastCompletionTime of the credentials rotation or
 // before cluster creation time a new kubeconfig is created.
-func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -294,9 +308,11 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	// Prevent recreation of kubeconfig when updating to v2 api version
 	diags = resp.State.SetAttribute(ctx, path.Root("region"), region)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
 	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
@@ -315,6 +331,7 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -346,6 +363,7 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 		// Set state to fully populated data
 		diags = resp.State.Set(ctx, model)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -371,22 +389,24 @@ func (r *kubeconfigResource) createKubeconfig(ctx context.Context, model *Model)
 	if err != nil {
 		return fmt.Errorf("processing API payload: %w", err)
 	}
+
 	return nil
 }
 
-func (r *kubeconfigResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *kubeconfigResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating kubeconfig", "Kubeconfig can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *kubeconfigResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *kubeconfigResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	core.LogAndAddWarning(ctx, &resp.Diagnostics, "Deleting kubeconfig", "Deleted this resource will only remove the values from the terraform state, it will not trigger a deletion or revoke of the actual kubeconfig as this is not supported by the SKE API. The kubeconfig will still be valid until it expires.")
 
 	// Retrieve values from plan
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -408,6 +428,7 @@ func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model, creationTime time.T
 	if kubeconfigResp == nil {
 		return fmt.Errorf("response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -425,6 +446,7 @@ func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model, creationTime time.T
 	// set creation time
 	model.CreationTime = types.StringValue(creationTime.Format(time.RFC3339))
 	model.Region = types.StringValue(region)
+
 	return nil
 }
 
@@ -434,7 +456,9 @@ func toCreatePayload(model *Model) (*ske.CreateKubeconfigPayload, error) {
 	}
 
 	expiration := conversion.Int64ValueToPointer(model.Expiration)
+
 	var expirationStringPtr *string
+
 	if expiration != nil {
 		expirationStringPtr = sdkUtils.Ptr(strconv.FormatInt(*expiration, 10))
 	}
@@ -444,59 +468,69 @@ func toCreatePayload(model *Model) (*ske.CreateKubeconfigPayload, error) {
 	}, nil
 }
 
-// helper function to check if kubecondig has expired
+// helper function to check if kubecondig has expired.
 func checkHasExpired(model *Model, currentTime time.Time) (bool, error) {
 	expiresAt := model.ExpiresAt
 	if model.Refresh.ValueBool() && !expiresAt.IsNull() {
 		if expiresAt.IsUnknown() {
 			return true, nil
 		}
+
 		expiresAt, err := time.Parse(time.RFC3339, expiresAt.ValueString())
 		if err != nil {
 			return false, fmt.Errorf("converting expiresAt field to timestamp: %w", err)
 		}
+
 		if !model.RefreshBefore.IsNull() {
 			expiresAt = expiresAt.Add(-time.Duration(model.RefreshBefore.ValueInt64()) * time.Second)
 		}
+
 		if expiresAt.Before(currentTime) {
 			return true, nil
 		}
 	}
+
 	return false, nil
 }
 
-// helper function to check if a credentials rotation was done
+// helper function to check if a credentials rotation was done.
 func checkCredentialsRotation(cluster *ske.Cluster, model *Model) (bool, error) {
 	creationTimeValue := model.CreationTime
 	if creationTimeValue.IsNull() || creationTimeValue.IsUnknown() {
 		return false, nil
 	}
+
 	creationTime, err := time.Parse(time.RFC3339, creationTimeValue.ValueString())
 	if err != nil {
 		return false, fmt.Errorf("converting creationTime field to timestamp: %w", err)
 	}
+
 	if cluster.Status.CredentialsRotation.LastCompletionTime != nil {
 		if creationTime.Before(*cluster.Status.CredentialsRotation.LastCompletionTime) {
 			return true, nil
 		}
 	}
+
 	return false, nil
 }
 
-// helper function to check if a cluster recreation was done
+// helper function to check if a cluster recreation was done.
 func checkClusterRecreation(cluster *ske.Cluster, model *Model) (bool, error) {
 	creationTimeValue := model.CreationTime
 	if creationTimeValue.IsNull() || creationTimeValue.IsUnknown() {
 		return false, nil
 	}
+
 	creationTime, err := time.Parse(time.RFC3339, creationTimeValue.ValueString())
 	if err != nil {
 		return false, fmt.Errorf("converting creationTime field to timestamp: %w", err)
 	}
+
 	if cluster.Status.CreationTime != nil {
 		if creationTime.Before(*cluster.Status.CreationTime) {
 			return true, nil
 		}
 	}
+
 	return false, nil
 }

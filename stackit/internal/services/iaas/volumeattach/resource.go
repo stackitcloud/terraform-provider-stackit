@@ -6,11 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -23,7 +18,10 @@ import (
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -64,10 +62,13 @@ func (r *volumeAttachResource) Configure(ctx context.Context, req resource.Confi
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -123,11 +124,12 @@ func (r *volumeAttachResource) Schema(_ context.Context, _ resource.SchemaReques
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -144,6 +146,7 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 	payload := iaas.AddVolumeToServerPayload{
 		DeleteOnTermination: sdkUtils.Ptr(false),
 	}
+
 	_, err := r.client.AddVolumeToServer(ctx, projectId, serverId, volumeId).AddVolumeToServerPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Calling API: %v", err))
@@ -161,20 +164,24 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Volume attachment created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	serverId := model.ServerId.ValueString()
@@ -189,30 +196,35 @@ func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadReques
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume attachment", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Volume attachment read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *volumeAttachResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *volumeAttachResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Update is not supported, all fields require replace
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -241,7 +253,7 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,server_id
+// The expected format of the resource import identifier is: project_id,server_id.
 func (r *volumeAttachResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -250,6 +262,7 @@ func (r *volumeAttachResource) ImportState(ctx context.Context, req resource.Imp
 			"Error importing volume attachment",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[server_id],[volume_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 

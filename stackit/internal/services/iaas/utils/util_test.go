@@ -7,10 +7,9 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
@@ -26,6 +25,7 @@ const (
 func TestConfigureClient(t *testing.T) {
 	/* mock authentication by setting service account token env variable */
 	os.Clearenv()
+
 	err := os.Setenv(sdkClients.ServiceAccountToken, "mock-val")
 	if err != nil {
 		t.Errorf("error setting env variable: %v", err)
@@ -34,6 +34,7 @@ func TestConfigureClient(t *testing.T) {
 	type args struct {
 		providerData *core.ProviderData
 	}
+
 	tests := []struct {
 		name     string
 		args     args
@@ -55,6 +56,7 @@ func TestConfigureClient(t *testing.T) {
 				if err != nil {
 					t.Errorf("error configuring client: %v", err)
 				}
+
 				return apiClient
 			}(),
 			wantErr: false,
@@ -75,6 +77,7 @@ func TestConfigureClient(t *testing.T) {
 				if err != nil {
 					t.Errorf("error configuring client: %v", err)
 				}
+
 				return apiClient
 			}(),
 			wantErr: false,
@@ -86,6 +89,7 @@ func TestConfigureClient(t *testing.T) {
 			diags := diag.Diagnostics{}
 
 			actual := ConfigureClient(ctx, tt.args.providerData, &diags)
+
 			if diags.HasError() != tt.wantErr {
 				t.Errorf("ConfigureClient() error = %v, want %v", diags.HasError(), tt.wantErr)
 			}
@@ -102,6 +106,7 @@ func TestMapLabels(t *testing.T) {
 		responseLabels *map[string]interface{}
 		currentLabels  types.Map
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -166,11 +171,13 @@ func TestMapLabels(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+
 			got, err := MapLabels(ctx, tt.args.responseLabels, tt.args.currentLabels)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MapLabels() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MapLabels() got = %v, want %v", got, tt.want)
 			}

@@ -128,13 +128,16 @@ func TestMapDataSourceFields(t *testing.T) {
 				InstanceId: tt.expected.InstanceId,
 				UserId:     tt.expected.UserId,
 			}
+
 			err := mapDataSourceFields(tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {

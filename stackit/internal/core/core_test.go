@@ -10,6 +10,7 @@ func TestProviderData_GetRegionWithOverride(t *testing.T) {
 	type args struct {
 		overrideRegion types.String
 	}
+
 	tests := []struct {
 		name         string
 		providerData *ProviderData

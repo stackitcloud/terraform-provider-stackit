@@ -12,6 +12,7 @@ import (
 
 func TestMapFieldsCreate(t *testing.T) {
 	const testRegion = "region"
+
 	tests := []struct {
 		description string
 		input       *sqlserverflex.CreateUserResponse
@@ -145,13 +146,16 @@ func TestMapFieldsCreate(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
+
 			err := mapFieldsCreate(tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
@@ -164,6 +168,7 @@ func TestMapFieldsCreate(t *testing.T) {
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "region"
+
 	tests := []struct {
 		description string
 		input       *sqlserverflex.GetUserResponse
@@ -278,13 +283,16 @@ func TestMapFields(t *testing.T) {
 				InstanceId: tt.expected.InstanceId,
 				UserId:     tt.expected.UserId,
 			}
+
 			err := mapFields(tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
@@ -373,9 +381,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {

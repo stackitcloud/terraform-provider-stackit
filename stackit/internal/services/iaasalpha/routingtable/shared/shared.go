@@ -6,13 +6,12 @@ import (
 	"maps"
 	"time"
 
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -57,6 +56,7 @@ func GetDatasourceGetAttributes() map[string]schema.Attribute {
 		Description: "Terraform's internal datasource ID. It is structured as \"`organization_id`,`region`,`network_area_id`,`routing_table_id`\".",
 		Computed:    true,
 	}
+
 	return getAttributes
 }
 
@@ -75,6 +75,7 @@ func GetRouteDataSourceAttributes() map[string]schema.Attribute {
 		Description: "Terraform's internal datasource ID. It is structured as \"`organization_id`,`region`,`network_area_id`,`routing_table_id`,`route_id`\".",
 		Computed:    true,
 	}
+
 	return getAttributes
 }
 
@@ -95,6 +96,7 @@ func GetRoutesDataSourceAttributes() map[string]schema.Attribute {
 		Description: "The datasource region. If not defined, the provider region is used.",
 		Optional:    true,
 	}
+
 	return getAttributes
 }
 
@@ -223,6 +225,7 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaasalpha.Routi
 	if routingTable == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -243,10 +246,12 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaasalpha.Routi
 
 	// created at and updated at
 	createdAtTF, updatedAtTF := types.StringNull(), types.StringNull()
+
 	if routingTable.CreatedAt != nil {
 		createdAtValue := *routingTable.CreatedAt
 		createdAtTF = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
+
 	if routingTable.UpdatedAt != nil {
 		updatedAtValue := *routingTable.UpdatedAt
 		updatedAtTF = types.StringValue(updatedAtValue.Format(time.RFC3339))
@@ -260,5 +265,6 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaasalpha.Routi
 	model.Labels = labels
 	model.CreatedAt = createdAtTF
 	model.UpdatedAt = updatedAtTF
+
 	return nil
 }

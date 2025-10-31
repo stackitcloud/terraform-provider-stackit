@@ -5,20 +5,18 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
-	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -57,16 +55,20 @@ func (r *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequ
 // Configure adds the provider configured client to the data source.
 func (r *userDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
+
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
 	apiClient := sqlserverflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "SQLServer Flex user client configured")
 }
 
@@ -139,13 +141,15 @@ func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
@@ -168,6 +172,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -181,9 +186,11 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SQLServer Flex user read")
 }
 
@@ -191,9 +198,11 @@ func mapDataSourceFields(userResp *sqlserverflex.GetUserResponse, model *DataSou
 	if userResp == nil || userResp.Item == nil {
 		return fmt.Errorf("response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	user := userResp.Item
 
 	var userId string
@@ -204,6 +213,7 @@ func mapDataSourceFields(userResp *sqlserverflex.GetUserResponse, model *DataSou
 	} else {
 		return fmt.Errorf("user id not present")
 	}
+
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId,
 	)
@@ -217,14 +227,18 @@ func mapDataSourceFields(userResp *sqlserverflex.GetUserResponse, model *DataSou
 		for _, role := range *user.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
+
 		rolesSet, diags := types.SetValue(types.StringType, roles)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map roles: %w", core.DiagsToError(diags))
 		}
+
 		model.Roles = rolesSet
 	}
+
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
 	model.Region = types.StringValue(region)
+
 	return nil
 }

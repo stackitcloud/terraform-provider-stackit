@@ -16,7 +16,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-// Instance resource data
+// Instance resource data.
 var instanceResource = map[string]string{
 	"project_id":         testutil.ProjectId,
 	"name":               testutil.ResourceNameWithDateTime("opensearch"),
@@ -42,6 +42,7 @@ func parametersConfig(params map[string]string) string {
 		"tls_ciphers",
 	}
 	parameters := "parameters = {"
+
 	for k, v := range params {
 		if utils.Contains(nonStringParams, k) {
 			parameters += fmt.Sprintf("%s = %s\n", k, v)
@@ -49,7 +50,9 @@ func parametersConfig(params map[string]string) string {
 			parameters += fmt.Sprintf("%s = %q\n", k, v)
 		}
 	}
+
 	parameters += "\n}"
+
 	return parameters
 }
 
@@ -84,7 +87,6 @@ func TestAccOpenSearchResource(t *testing.T) {
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckOpenSearchDestroy,
 		Steps: []resource.TestStep{
-
 			// Creation
 			{
 				Config: resourceConfig(
@@ -201,6 +203,7 @@ func TestAccOpenSearchResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
 				},
 				ImportState:       true,
@@ -237,7 +240,9 @@ func TestAccOpenSearchResource(t *testing.T) {
 
 func testAccCheckOpenSearchDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *opensearch.APIClient
+
 	var err error
 	if testutil.OpenSearchCustomEndpoint == "" {
 		client, err = opensearch.NewAPIClient(
@@ -248,11 +253,13 @@ func testAccCheckOpenSearchDestroy(s *terraform.State) error {
 			config.WithEndpoint(testutil.OpenSearchCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_opensearch_instance" {
 			continue
@@ -272,12 +279,14 @@ func testAccCheckOpenSearchDestroy(s *terraform.State) error {
 		if instances[i].InstanceId == nil {
 			continue
 		}
+
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
 				err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *instances[i].InstanceId)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
+
 				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
@@ -285,6 +294,7 @@ func testAccCheckOpenSearchDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -300,5 +310,6 @@ func checkInstanceDeleteSuccess(i *opensearch.Instance) bool {
 			return false
 		}
 	}
+
 	return true
 }

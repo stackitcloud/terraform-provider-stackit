@@ -7,10 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
@@ -35,6 +31,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -68,35 +66,35 @@ type Model struct {
 	Targets        types.List   `tfsdk:"targets"`
 }
 
-// Struct corresponding to Model.SAML2
+// Struct corresponding to Model.SAML2.
 type saml2Model struct {
 	EnableURLParameters types.Bool `tfsdk:"enable_url_parameters"`
 }
 
-// Types corresponding to saml2Model
+// Types corresponding to saml2Model.
 var saml2Types = map[string]attr.Type{
 	"enable_url_parameters": types.BoolType,
 }
 
-// Struct corresponding to Model.BasicAuth
+// Struct corresponding to Model.BasicAuth.
 type basicAuthModel struct {
 	Username types.String `tfsdk:"username"`
 	Password types.String `tfsdk:"password"`
 }
 
-// Types corresponding to basicAuthModel
+// Types corresponding to basicAuthModel.
 var basicAuthTypes = map[string]attr.Type{
 	"username": types.StringType,
 	"password": types.StringType,
 }
 
-// Struct corresponding to Model.Targets[i]
+// Struct corresponding to Model.Targets[i].
 type targetModel struct {
 	URLs   types.List `tfsdk:"urls"`
 	Labels types.Map  `tfsdk:"labels"`
 }
 
-// Types corresponding to targetModel
+// Types corresponding to targetModel.
 var targetTypes = map[string]attr.Type{
 	"urls":   types.ListType{ElemType: types.StringType},
 	"labels": types.MapType{ElemType: types.StringType},
@@ -125,10 +123,13 @@ func (r *scrapeConfigResource) Configure(ctx context.Context, req resource.Confi
 	}
 
 	apiClient := observabilityUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "Observability scrape config client configured")
 }
 
@@ -296,11 +297,12 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -313,6 +315,7 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	if !model.SAML2.IsNull() && !model.SAML2.IsUnknown() {
 		diags = model.SAML2.As(ctx, &saml2Model, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -322,6 +325,7 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	if !model.BasicAuth.IsNull() && !model.BasicAuth.IsUnknown() {
 		diags = model.BasicAuth.As(ctx, &basicAuthModel, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -331,6 +335,7 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	if !model.Targets.IsNull() && !model.Targets.IsUnknown() {
 		diags = model.Targets.ElementsAs(ctx, &targetsModel, false)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -342,21 +347,25 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
+
 	_, err = r.client.CreateScrapeConfig(ctx, instanceId, projectId).CreateScrapeConfigPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	_, err = wait.CreateScrapeConfigWaitHandler(ctx, r.client, instanceId, scName, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Scrape config creation waiting: %v", err))
 		return
 	}
+
 	got, err := r.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Calling API for updated data: %v", err))
 		return
 	}
+
 	err = mapFields(ctx, got.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Processing API payload: %v", err))
@@ -365,20 +374,24 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Observability scrape config created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *scrapeConfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *scrapeConfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	scName := model.Name.ValueString()
@@ -390,7 +403,9 @@ func (r *scrapeConfigResource) Read(ctx context.Context, req resource.ReadReques
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading scrape config", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -403,21 +418,25 @@ func (r *scrapeConfigResource) Read(ctx context.Context, req resource.ReadReques
 	// Set refreshed model
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Observability scrape config read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	scName := model.Name.ValueString()
@@ -426,6 +445,7 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 	if !model.SAML2.IsNull() && !model.SAML2.IsUnknown() {
 		diags = model.SAML2.As(ctx, &saml2Model, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -435,6 +455,7 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 	if !model.BasicAuth.IsNull() && !model.BasicAuth.IsUnknown() {
 		diags = model.BasicAuth.As(ctx, &basicAuthModel, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -444,6 +465,7 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 	if !model.Targets.IsNull() && !model.Targets.IsUnknown() {
 		diags = model.Targets.ElementsAs(ctx, &targetsModel, false)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -455,6 +477,7 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
+
 	_, err = r.client.UpdateScrapeConfig(ctx, instanceId, scName, projectId).UpdateScrapeConfigPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Calling API: %v", err))
@@ -469,25 +492,30 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Calling API for updated data: %v", err))
 		return
 	}
+
 	err = mapFields(ctx, scResp.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Observability scrape config updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *scrapeConfigResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *scrapeConfigResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -502,6 +530,7 @@ func (r *scrapeConfigResource) Delete(ctx context.Context, req resource.DeleteRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting scrape config", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	_, err = wait.DeleteScrapeConfigWaitHandler(ctx, r.client, instanceId, scName, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting scrape config", fmt.Sprintf("Scrape config deletion waiting: %v", err))
@@ -512,7 +541,7 @@ func (r *scrapeConfigResource) Delete(ctx context.Context, req resource.DeleteRe
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,instance_id,name
+// The expected format of the resource import identifier is: project_id,instance_id,name.
 func (r *scrapeConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -521,6 +550,7 @@ func (r *scrapeConfigResource) ImportState(ctx context.Context, req resource.Imp
 			"Error importing scrape config",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[instance_id],[name]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -534,6 +564,7 @@ func mapFields(ctx context.Context, sc *observability.Job, model *Model) error {
 	if sc == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -554,18 +585,22 @@ func mapFields(ctx context.Context, sc *observability.Job, model *Model) error {
 	model.ScrapeInterval = types.StringPointerValue(sc.ScrapeInterval)
 	model.ScrapeTimeout = types.StringPointerValue(sc.ScrapeTimeout)
 	model.SampleLimit = types.Int64PointerValue(sc.SampleLimit)
+
 	err := mapSAML2(sc, model)
 	if err != nil {
 		return fmt.Errorf("map saml2: %w", err)
 	}
+
 	err = mapBasicAuth(sc, model)
 	if err != nil {
 		return fmt.Errorf("map basic auth: %w", err)
 	}
+
 	err = mapTargets(ctx, sc, model)
 	if err != nil {
 		return fmt.Errorf("map targets: %w", err)
 	}
+
 	return nil
 }
 
@@ -574,15 +609,19 @@ func mapBasicAuth(sc *observability.Job, model *Model) error {
 		model.BasicAuth = types.ObjectNull(basicAuthTypes)
 		return nil
 	}
+
 	basicAuthMap := map[string]attr.Value{
 		"username": types.StringValue(*sc.BasicAuth.Username),
 		"password": types.StringValue(*sc.BasicAuth.Password),
 	}
+
 	basicAuthTF, diags := types.ObjectValue(basicAuthTypes, basicAuthMap)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.BasicAuth = basicAuthTF
+
 	return nil
 }
 
@@ -596,9 +635,11 @@ func mapSAML2(sc *observability.Job, model *Model) error {
 	}
 
 	flag := true
+
 	if sc.Params == nil || *sc.Params == nil {
 		return nil
 	}
+
 	p := *sc.Params
 	if v, ok := p["saml2"]; ok {
 		if len(v) == 1 && v[0] == "disabled" {
@@ -609,11 +650,14 @@ func mapSAML2(sc *observability.Job, model *Model) error {
 	saml2Map := map[string]attr.Value{
 		"enable_url_parameters": types.BoolValue(flag),
 	}
+
 	saml2TF, diags := types.ObjectValue(saml2Types, saml2Map)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.SAML2 = saml2TF
+
 	return nil
 }
 
@@ -632,16 +676,19 @@ func mapTargets(ctx context.Context, sc *observability.Job, model *Model) error 
 	}
 
 	newTargets := []attr.Value{}
+
 	for i, sc := range *sc.StaticConfigs {
 		nt := targetModel{}
 
 		// Map URLs
 		urls := []attr.Value{}
+
 		if sc.Targets != nil {
 			for _, v := range *sc.Targets {
 				urls = append(urls, types.StringValue(v))
 			}
 		}
+
 		nt.URLs = types.ListValueMust(types.StringType, urls)
 
 		// Map Labels
@@ -652,6 +699,7 @@ func mapTargets(ctx context.Context, sc *observability.Job, model *Model) error 
 			for k, v := range *sc.Labels {
 				newl[k] = types.StringValue(v)
 			}
+
 			nt.Labels = types.MapValueMust(types.StringType, newl)
 		}
 
@@ -660,6 +708,7 @@ func mapTargets(ctx context.Context, sc *observability.Job, model *Model) error 
 			"urls":   nt.URLs,
 			"labels": nt.Labels,
 		}
+
 		targetTF, diags := types.ObjectValue(targetTypes, targetMap)
 		if diags.HasError() {
 			return core.DiagsToError(diags)
@@ -674,6 +723,7 @@ func mapTargets(ctx context.Context, sc *observability.Job, model *Model) error 
 	}
 
 	model.Targets = targetsTF
+
 	return nil
 }
 
@@ -698,11 +748,13 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		if sc.Params != nil {
 			m = *sc.Params
 		}
+
 		if saml2Model.EnableURLParameters.ValueBool() {
 			m["saml2"] = []string{"enabled"}
 		} else {
 			m["saml2"] = []string{"disabled"}
 		}
+
 		sc.Params = &m
 	}
 
@@ -714,23 +766,28 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	}
 
 	t := make([]observability.CreateScrapeConfigPayloadStaticConfigsInner, len(targetsModel))
+
 	for i, target := range targetsModel {
 		ti := observability.CreateScrapeConfigPayloadStaticConfigsInner{}
 
 		urls := []string{}
+
 		diags := target.URLs.ElementsAs(ctx, &urls, false)
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
+
 		ti.Targets = &urls
 
 		labels := map[string]interface{}{}
 		for k, v := range target.Labels.Elements() {
 			labels[k], _ = conversion.ToString(ctx, v)
 		}
+
 		ti.Labels = &labels
 		t[i] = ti
 	}
+
 	sc.StaticConfigs = &t
 
 	return &sc, nil
@@ -740,15 +797,19 @@ func setDefaultsCreateScrapeConfig(sc *observability.CreateScrapeConfigPayload, 
 	if sc == nil {
 		return
 	}
+
 	if model.Scheme.IsNull() || model.Scheme.IsUnknown() {
 		sc.Scheme = DefaultScheme.Ptr()
 	}
+
 	if model.ScrapeInterval.IsNull() || model.ScrapeInterval.IsUnknown() {
 		sc.ScrapeInterval = sdkUtils.Ptr(DefaultScrapeInterval)
 	}
+
 	if model.ScrapeTimeout.IsNull() || model.ScrapeTimeout.IsUnknown() {
 		sc.ScrapeTimeout = sdkUtils.Ptr(DefaultScrapeTimeout)
 	}
+
 	if model.SampleLimit.IsNull() || model.SampleLimit.IsUnknown() {
 		sc.SampleLimit = sdkUtils.Ptr(float64(DefaultSampleLimit))
 	}
@@ -758,11 +819,13 @@ func setDefaultsCreateScrapeConfig(sc *observability.CreateScrapeConfigPayload, 
 		if sc.Params != nil {
 			m = *sc.Params
 		}
+
 		if DefaultSAML2EnableURLParameters {
 			m["saml2"] = []string{"enabled"}
 		} else {
 			m["saml2"] = []string{"disabled"}
 		}
+
 		sc.Params = &m
 	}
 }
@@ -787,11 +850,13 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		if sc.Params != nil {
 			m = *sc.Params
 		}
+
 		if saml2Model.EnableURLParameters.ValueBool() {
 			m["saml2"] = []string{"enabled"}
 		} else {
 			m["saml2"] = []string{"disabled"}
 		}
+
 		sc.Params = &m
 	}
 
@@ -803,23 +868,28 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	}
 
 	t := make([]observability.UpdateScrapeConfigPayloadStaticConfigsInner, len(targetsModel))
+
 	for i, target := range targetsModel {
 		ti := observability.UpdateScrapeConfigPayloadStaticConfigsInner{}
 
 		urls := []string{}
+
 		diags := target.URLs.ElementsAs(ctx, &urls, false)
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
+
 		ti.Targets = &urls
 
 		ls := map[string]interface{}{}
 		for k, v := range target.Labels.Elements() {
 			ls[k], _ = conversion.ToString(ctx, v)
 		}
+
 		ti.Labels = &ls
 		t[i] = ti
 	}
+
 	sc.StaticConfigs = &t
 
 	return &sc, nil
@@ -829,15 +899,19 @@ func setDefaultsUpdateScrapeConfig(sc *observability.UpdateScrapeConfigPayload, 
 	if sc == nil {
 		return
 	}
+
 	if model.Scheme.IsNull() || model.Scheme.IsUnknown() {
 		sc.Scheme = observability.UpdateScrapeConfigPayloadGetSchemeAttributeType(DefaultScheme.Ptr())
 	}
+
 	if model.ScrapeInterval.IsNull() || model.ScrapeInterval.IsUnknown() {
 		sc.ScrapeInterval = sdkUtils.Ptr(DefaultScrapeInterval)
 	}
+
 	if model.ScrapeTimeout.IsNull() || model.ScrapeTimeout.IsUnknown() {
 		sc.ScrapeTimeout = sdkUtils.Ptr(DefaultScrapeTimeout)
 	}
+
 	if model.SampleLimit.IsNull() || model.SampleLimit.IsUnknown() {
 		sc.SampleLimit = sdkUtils.Ptr(float64(DefaultSampleLimit))
 	}

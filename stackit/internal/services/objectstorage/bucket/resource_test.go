@@ -29,6 +29,7 @@ func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, proj
 func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
 	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "bname")
+
 	tests := []struct {
 		description string
 		input       *objectstorage.GetBucketResponse
@@ -105,13 +106,16 @@ func TestMapFields(t *testing.T) {
 				ProjectId: tt.expected.ProjectId,
 				Name:      tt.expected.Name,
 			}
+
 			err := mapFields(tt.input, model, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(model, &tt.expected)
 				if diff != "" {
@@ -144,10 +148,12 @@ func TestEnableProject(t *testing.T) {
 			client := &objectStorageClientMocked{
 				returnError: tt.enableFails,
 			}
+
 			err := enableProject(context.Background(), &Model{}, "eu01", client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}

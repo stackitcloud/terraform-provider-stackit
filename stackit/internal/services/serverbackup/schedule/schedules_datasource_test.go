@@ -89,13 +89,16 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 				ServerId:  tt.expected.ServerId,
 			}
 			ctx := context.TODO()
+
 			err := mapSchedulesDatasourceFields(ctx, tt.input, state, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {

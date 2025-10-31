@@ -11,6 +11,7 @@ import (
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "region"
+
 	tests := []struct {
 		description string
 		input       *sdk.UpdateSchedule
@@ -77,13 +78,16 @@ func TestMapFields(t *testing.T) {
 				ProjectId: tt.expected.ProjectId,
 				ServerId:  tt.expected.ServerId,
 			}
+
 			err := mapFields(tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
@@ -148,9 +152,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -215,9 +221,11 @@ func TestToUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {

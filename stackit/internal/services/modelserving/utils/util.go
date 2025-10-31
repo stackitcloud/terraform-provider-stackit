@@ -19,6 +19,7 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	if providerData.ModelServingCustomEndpoint != "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(providerData.ModelServingCustomEndpoint))
 	}
+
 	apiClient, err := modelserving.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))

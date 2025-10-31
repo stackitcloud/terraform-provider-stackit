@@ -6,24 +6,21 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
-
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -67,10 +64,13 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	}
 
 	apiClient := secretsmanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "Secrets Manager user client configured")
 }
 
@@ -156,13 +156,15 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -180,10 +182,12 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	if userResp.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", "Got empty user id")
 		return
 	}
+
 	userId := *userResp.Id
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
@@ -193,22 +197,27 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Secrets Manager user created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
@@ -223,7 +232,9 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -237,21 +248,25 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Secrets Manager user read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
@@ -271,6 +286,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", err.Error())
 		return
 	}
+
 	user, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Calling API to get user's current state: %v", err))
@@ -280,6 +296,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	// Get existing state
 	diags = req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -289,19 +306,23 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Secrets Manager user updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -323,7 +344,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,instance_id,user_id
+// The expected format of the resource import identifier is: project_id,instance_id,user_id.
 func (r *userResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
@@ -331,6 +352,7 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 			"Error importing credential",
 			fmt.Sprintf("Expected import identifier with format [project_id],[instance_id],[user_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -348,6 +370,7 @@ func toCreatePayload(model *Model) (*secretsmanager.CreateUserPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	return &secretsmanager.CreateUserPayload{
 		Description: conversion.StringValueToPointer(model.Description),
 		Write:       conversion.BoolValueToPointer(model.WriteEnabled),
@@ -358,6 +381,7 @@ func toUpdatePayload(model *Model) (*secretsmanager.UpdateUserPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	return &secretsmanager.UpdateUserPayload{
 		Write: conversion.BoolValueToPointer(model.WriteEnabled),
 	}, nil
@@ -367,6 +391,7 @@ func mapFields(user *secretsmanager.User, model *Model) error {
 	if user == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -389,5 +414,6 @@ func mapFields(user *secretsmanager.User, model *Model) error {
 	if user.Password != nil && *user.Password != "" {
 		model.Password = types.StringPointerValue(user.Password)
 	}
+
 	return nil
 }

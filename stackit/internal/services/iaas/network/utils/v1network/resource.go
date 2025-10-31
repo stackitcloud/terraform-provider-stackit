@@ -22,11 +22,12 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
-func Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse, client *iaas.APIClient) { // nolint:gocritic // function signature required by Terraform
+func Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse, client *iaas.APIClient) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model networkModel.Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -50,6 +51,7 @@ func Create(ctx context.Context, req resource.CreateRequest, resp *resource.Crea
 	}
 
 	networkId := *network.NetworkId
+
 	network, err = wait.CreateNetworkWaitHandler(ctx, client, projectId, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Network creation waiting: %v", err))
@@ -67,19 +69,23 @@ func Create(ctx context.Context, req resource.CreateRequest, resp *resource.Crea
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network created")
 }
 
-func Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse, client *iaas.APIClient) { // nolint:gocritic // function signature required by Terraform
+func Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse, client *iaas.APIClient) { //nolint:gocritic // function signature required by Terraform
 	var model networkModel.Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -92,7 +98,9 @@ func Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResp
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -105,20 +113,24 @@ func Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResp
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network read")
 }
 
-func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse, client *iaas.APIClient) { // nolint:gocritic // function signature required by Terraform
+func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse, client *iaas.APIClient) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model networkModel.Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -128,6 +140,7 @@ func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.Upda
 	var stateModel networkModel.Model
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -144,6 +157,7 @@ func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.Upda
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	waitResp, err := wait.UpdateNetworkWaitHandler(ctx, client, projectId, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Network update waiting: %v", err))
@@ -155,19 +169,23 @@ func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.Upda
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network updated")
 }
 
-func Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse, client *iaas.APIClient) { // nolint:gocritic // function signature required by Terraform
+func Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse, client *iaas.APIClient) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model networkModel.Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -183,6 +201,7 @@ func Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.Dele
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	_, err = wait.DeleteNetworkWaitHandler(ctx, client, projectId, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network", fmt.Sprintf("Network deletion waiting: %v", err))
@@ -193,7 +212,7 @@ func Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.Dele
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,network_id
+// The expected format of the resource import identifier is: project_id,network_id.
 func ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -202,6 +221,7 @@ func ImportState(ctx context.Context, req resource.ImportStateRequest, resp *res
 			"Error importing network",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[network_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -219,6 +239,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *networkMod
 	if networkResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -247,9 +268,11 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *networkMod
 		respNameservers := *networkResp.Nameservers
 		modelNameservers, err := utils.ListValuetoStringSlice(model.Nameservers)
 		modelIPv4Nameservers, errIpv4 := utils.ListValuetoStringSlice(model.IPv4Nameservers)
+
 		if err != nil {
 			return fmt.Errorf("get current network nameservers from model: %w", err)
 		}
+
 		if errIpv4 != nil {
 			return fmt.Errorf("get current IPv4 network nameservers from model: %w", errIpv4)
 		}
@@ -259,9 +282,11 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *networkMod
 
 		nameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledNameservers)
 		ipv4NameserversTF, ipv4Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv4Nameservers)
+
 		if diags.HasError() {
 			return fmt.Errorf("map network nameservers: %w", core.DiagsToError(diags))
 		}
+
 		if ipv4Diags.HasError() {
 			return fmt.Errorf("map IPv4 network nameservers: %w", core.DiagsToError(ipv4Diags))
 		}
@@ -275,13 +300,16 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *networkMod
 		model.IPv4Prefixes = types.ListNull(types.StringType)
 	} else {
 		respPrefixes := *networkResp.Prefixes
+
 		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
 		if diags.HasError() {
 			return fmt.Errorf("map network prefixes: %w", core.DiagsToError(diags))
 		}
+
 		if len(respPrefixes) > 0 {
 			model.IPv4Prefix = types.StringValue(respPrefixes[0])
 			_, netmask, err := net.ParseCIDR(respPrefixes[0])
+
 			if err != nil {
 				// silently ignore parsing error for the netmask
 				model.IPv4PrefixLength = types.Int64Null()
@@ -307,6 +335,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *networkMod
 		model.IPv6Nameservers = types.ListNull(types.StringType)
 	} else {
 		respIPv6Nameservers := *networkResp.NameserversV6
+
 		modelIPv6Nameservers, errIpv6 := utils.ListValuetoStringSlice(model.IPv6Nameservers)
 		if errIpv6 != nil {
 			return fmt.Errorf("get current IPv6 network nameservers from model: %w", errIpv6)
@@ -326,13 +355,16 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *networkMod
 		model.IPv6Prefixes = types.ListNull(types.StringType)
 	} else {
 		respPrefixesV6 := *networkResp.PrefixesV6
+
 		prefixesV6TF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixesV6)
 		if diags.HasError() {
 			return fmt.Errorf("map network IPv6 prefixes: %w", core.DiagsToError(diags))
 		}
+
 		if len(respPrefixesV6) > 0 {
 			model.IPv6Prefix = types.StringValue(respPrefixesV6[0])
 			_, netmask, err := net.ParseCIDR(respPrefixesV6[0])
+
 			if err != nil {
 				// silently ignore parsing error for the netmask
 				model.IPv6PrefixLength = types.Int64Null()
@@ -341,6 +373,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *networkMod
 				model.IPv6PrefixLength = types.Int64Value(int64(ones))
 			}
 		}
+
 		model.IPv6Prefixes = prefixesV6TF
 	}
 
@@ -365,18 +398,21 @@ func toCreatePayload(ctx context.Context, model *networkModel.Model) (*iaas.Crea
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	addressFamily := &iaas.CreateNetworkAddressFamily{}
 
 	modelIPv6Nameservers := []string{}
+
 	for _, ipv6ns := range model.IPv6Nameservers.Elements() {
 		ipv6NameserverString, ok := ipv6ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
+
 		modelIPv6Nameservers = append(modelIPv6Nameservers, ipv6NameserverString.ValueString())
 	}
 
-	if !(model.IPv6Prefix.IsNull() || model.IPv6PrefixLength.IsNull() || model.IPv6Nameservers.IsNull()) {
+	if !model.IPv6Prefix.IsNull() && !model.IPv6PrefixLength.IsNull() && !model.IPv6Nameservers.IsNull() {
 		addressFamily.Ipv6 = &iaas.CreateNetworkIPv6Body{
 			Nameservers:  &modelIPv6Nameservers,
 			Prefix:       conversion.StringValueToPointer(model.IPv6Prefix),
@@ -385,15 +421,16 @@ func toCreatePayload(ctx context.Context, model *networkModel.Model) (*iaas.Crea
 
 		if model.NoIPv6Gateway.ValueBool() {
 			addressFamily.Ipv6.Gateway = iaas.NewNullableString(nil)
-		} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
+		} else if !model.IPv6Gateway.IsUnknown() && !model.IPv6Gateway.IsNull() {
 			addressFamily.Ipv6.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
 		}
 	}
 
 	modelIPv4Nameservers := []string{}
+
 	var modelIPv4List []attr.Value
 
-	if !(model.IPv4Nameservers.IsNull() || model.IPv4Nameservers.IsUnknown()) {
+	if !model.IPv4Nameservers.IsNull() && !model.IPv4Nameservers.IsUnknown() {
 		modelIPv4List = model.IPv4Nameservers.Elements()
 	} else {
 		modelIPv4List = model.Nameservers.Elements()
@@ -404,6 +441,7 @@ func toCreatePayload(ctx context.Context, model *networkModel.Model) (*iaas.Crea
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
+
 		modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
 	}
 
@@ -416,7 +454,7 @@ func toCreatePayload(ctx context.Context, model *networkModel.Model) (*iaas.Crea
 
 		if model.NoIPv4Gateway.ValueBool() {
 			addressFamily.Ipv4.Gateway = iaas.NewNullableString(nil)
-		} else if !(model.IPv4Gateway.IsUnknown() || model.IPv4Gateway.IsNull()) {
+		} else if !model.IPv4Gateway.IsUnknown() && !model.IPv4Gateway.IsNull() {
 			addressFamily.Ipv4.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway))
 		}
 	}
@@ -443,42 +481,48 @@ func toUpdatePayload(ctx context.Context, model, stateModel *networkModel.Model)
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	addressFamily := &iaas.UpdateNetworkAddressFamily{}
 
 	modelIPv6Nameservers := []string{}
+
 	for _, ipv6ns := range model.IPv6Nameservers.Elements() {
 		ipv6NameserverString, ok := ipv6ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
+
 		modelIPv6Nameservers = append(modelIPv6Nameservers, ipv6NameserverString.ValueString())
 	}
 
-	if !(model.IPv6Nameservers.IsNull() || model.IPv6Nameservers.IsUnknown()) {
+	if !model.IPv6Nameservers.IsNull() && !model.IPv6Nameservers.IsUnknown() {
 		addressFamily.Ipv6 = &iaas.UpdateNetworkIPv6Body{
 			Nameservers: &modelIPv6Nameservers,
 		}
 
 		if model.NoIPv6Gateway.ValueBool() {
 			addressFamily.Ipv6.Gateway = iaas.NewNullableString(nil)
-		} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
+		} else if !model.IPv6Gateway.IsUnknown() && !model.IPv6Gateway.IsNull() {
 			addressFamily.Ipv6.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
 		}
 	}
 
 	modelIPv4Nameservers := []string{}
+
 	var modelIPv4List []attr.Value
 
-	if !(model.IPv4Nameservers.IsNull() || model.IPv4Nameservers.IsUnknown()) {
+	if !model.IPv4Nameservers.IsNull() && !model.IPv4Nameservers.IsUnknown() {
 		modelIPv4List = model.IPv4Nameservers.Elements()
 	} else {
 		modelIPv4List = model.Nameservers.Elements()
 	}
+
 	for _, ipv4ns := range modelIPv4List {
 		ipv4NameserverString, ok := ipv4ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
+
 		modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
 	}
 
@@ -489,11 +533,13 @@ func toUpdatePayload(ctx context.Context, model, stateModel *networkModel.Model)
 
 		if model.NoIPv4Gateway.ValueBool() {
 			addressFamily.Ipv4.Gateway = iaas.NewNullableString(nil)
-		} else if !(model.IPv4Gateway.IsUnknown() || model.IPv4Gateway.IsNull()) {
+		} else if !model.IPv4Gateway.IsUnknown() && !model.IPv4Gateway.IsNull() {
 			addressFamily.Ipv4.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway))
 		}
 	}
+
 	currentLabels := stateModel.Labels
+
 	labels, err := conversion.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)

@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -46,10 +45,13 @@ func (d *securityGroupDataSource) Configure(ctx context.Context, req datasource.
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	d.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -102,13 +104,15 @@ func (r *securityGroupDataSource) Schema(_ context.Context, _ datasource.SchemaR
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *securityGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *securityGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	securityGroupId := model.SecurityGroupId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -127,6 +131,7 @@ func (d *securityGroupDataSource) Read(ctx context.Context, req datasource.ReadR
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -135,10 +140,13 @@ func (d *securityGroupDataSource) Read(ctx context.Context, req datasource.ReadR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "security group read")
 }

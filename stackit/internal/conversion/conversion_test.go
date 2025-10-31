@@ -5,13 +5,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
 func TestFromTerraformStringMapToInterfaceMap(t *testing.T) {
@@ -19,6 +18,7 @@ func TestFromTerraformStringMapToInterfaceMap(t *testing.T) {
 		ctx context.Context
 		m   basetypes.MapValue
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -78,6 +78,7 @@ func TestFromTerraformStringMapToInterfaceMap(t *testing.T) {
 				t.Errorf("FromTerraformStringMapToInterfaceMap() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("FromTerraformStringMapToInterfaceMap() = %v, want %v", got, tt.want)
 			}
@@ -208,9 +209,11 @@ func TestToJSONMapUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -225,10 +228,12 @@ func TestParseProviderData(t *testing.T) {
 	type args struct {
 		providerData any
 	}
+
 	type want struct {
 		ok           bool
 		providerData core.ProviderData
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -292,12 +297,15 @@ func TestParseProviderData(t *testing.T) {
 			diags := diag.Diagnostics{}
 
 			actual, ok := ParseProviderData(ctx, tt.args.providerData, &diags)
+
 			if diags.HasError() != tt.wantErr {
 				t.Errorf("ConfigureClient() error = %v, want %v", diags.HasError(), tt.wantErr)
 			}
+
 			if ok != tt.want.ok {
 				t.Errorf("ParseProviderData() got = %v, want %v", ok, tt.want.ok)
 			}
+
 			if !reflect.DeepEqual(actual, tt.want.providerData) {
 				t.Errorf("ParseProviderData() got = %v, want %v", actual, tt.want)
 			}

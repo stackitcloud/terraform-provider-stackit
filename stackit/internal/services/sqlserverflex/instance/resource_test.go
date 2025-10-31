@@ -27,6 +27,7 @@ func (c *sqlserverflexClientMocked) ListFlavorsExecute(_ context.Context, _, _ s
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "region"
+
 	tests := []struct {
 		description string
 		state       Model
@@ -333,9 +334,11 @@ func TestMapFields(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.state, tt.expected)
 				if diff != "" {
@@ -531,9 +534,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -654,9 +659,11 @@ func TestToUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -803,13 +810,16 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: tt.inputFlavor.CPU,
 				RAM: tt.inputFlavor.RAM,
 			}
+
 			err := loadFlavorId(context.Background(), client, model, flavorModel)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(flavorModel, tt.expected)
 				if diff != "" {

@@ -8,24 +8,22 @@ import (
 	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -60,7 +58,7 @@ type Filter struct {
 	SecureBoot types.Bool   `tfsdk:"secure_boot"`
 }
 
-// Struct corresponding to Model.Config
+// Struct corresponding to Model.Config.
 type configModel struct {
 	BootMenu               types.Bool   `tfsdk:"boot_menu"`
 	CDROMBus               types.String `tfsdk:"cdrom_bus"`
@@ -77,7 +75,7 @@ type configModel struct {
 	VirtioScsi             types.Bool   `tfsdk:"virtio_scsi"`
 }
 
-// Types corresponding to configModel
+// Types corresponding to configModel.
 var configTypes = map[string]attr.Type{
 	"boot_menu":                basetypes.BoolType{},
 	"cdrom_bus":                basetypes.StringType{},
@@ -94,13 +92,13 @@ var configTypes = map[string]attr.Type{
 	"virtio_scsi":              basetypes.BoolType{},
 }
 
-// Struct corresponding to Model.Checksum
+// Struct corresponding to Model.Checksum.
 type checksumModel struct {
 	Algorithm types.String `tfsdk:"algorithm"`
 	Digest    types.String `tfsdk:"digest"`
 }
 
-// Types corresponding to checksumModel
+// Types corresponding to checksumModel.
 var checksumTypes = map[string]attr.Type{
 	"algorithm": basetypes.StringType{},
 	"digest":    basetypes.StringType{},
@@ -128,16 +126,19 @@ func (d *imageDataV2Source) Configure(ctx context.Context, req datasource.Config
 	}
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_image_v2", "datasource")
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	d.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -348,10 +349,11 @@ func (d *imageDataV2Source) Schema(_ context.Context, _ datasource.SchemaRequest
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -377,6 +379,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 	ctx = tflog.SetField(ctx, "sort_ascending", sortAscending)
 
 	var imageResp *iaas.Image
+
 	var err error
 
 	// Case 1: Direct lookup by image ID
@@ -389,11 +392,11 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 					http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectID),
 				})
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
 	} else {
 		// Case 2: Lookup by name or name_regex
-
 		// Compile regex
 		var compiledRegex *regexp.Regexp
 		if nameRegex != "" {
@@ -413,11 +416,13 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 
 		// Step 1: Match images by name or regular expression (name or name_regex, if provided)
 		var matchedImages []*iaas.Image
+
 		for i := range *imageList.Items {
 			img := &(*imageList.Items)[i]
 			if name != "" && img.Name != nil && *img.Name == name {
 				matchedImages = append(matchedImages, img)
 			}
+
 			if compiledRegex != nil && img.Name != nil && compiledRegex.MatchString(*img.Name) {
 				matchedImages = append(matchedImages, img)
 			}
@@ -434,6 +439,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 
 		// Step 3: Apply additional filtering based on OS, distro, version, UEFI, secure boot, etc.
 		var filteredImages []*iaas.Image
+
 		for _, img := range matchedImages {
 			if imageMatchesFilter(img, &filter) {
 				filteredImages = append(filteredImages, img)
@@ -460,6 +466,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -471,6 +478,7 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	if imageResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -487,9 +495,12 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), imageId)
 
 	// Map config
-	var configModel = &configModel{}
+	configModel := &configModel{}
+
 	var configObject basetypes.ObjectValue
+
 	diags := diag.Diagnostics{}
+
 	if imageResp.Config != nil {
 		configModel.BootMenu = types.BoolPointerValue(imageResp.Config.BootMenu)
 		configModel.CDROMBus = types.StringPointerValue(imageResp.Config.GetCdromBus())
@@ -523,13 +534,16 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	} else {
 		configObject = types.ObjectNull(configTypes)
 	}
+
 	if diags.HasError() {
 		return fmt.Errorf("creating config: %w", core.DiagsToError(diags))
 	}
 
 	// Map checksum
-	var checksumModel = &checksumModel{}
+	checksumModel := &checksumModel{}
+
 	var checksumObject basetypes.ObjectValue
+
 	if imageResp.Checksum != nil {
 		checksumModel.Algorithm = types.StringPointerValue(imageResp.Checksum.Algorithm)
 		checksumModel.Digest = types.StringPointerValue(imageResp.Checksum.Digest)
@@ -540,6 +554,7 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	} else {
 		checksumObject = types.ObjectNull(checksumTypes)
 	}
+
 	if diags.HasError() {
 		return fmt.Errorf("creating checksum: %w", core.DiagsToError(diags))
 	}
@@ -560,6 +575,7 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	model.Labels = labels
 	model.Config = configObject
 	model.Checksum = checksumObject
+
 	return nil
 }
 

@@ -47,9 +47,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -107,13 +109,16 @@ func TestMapFields(t *testing.T) {
 			state := &Model{
 				ProjectId: tt.expected.ProjectId,
 			}
+
 			err := mapFields(tt.input, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
@@ -152,6 +157,7 @@ func TestParseNameFromEmail(t *testing.T) {
 				if err != nil {
 					t.Errorf("did not expect an error for email: %s, but got: %v", tc.email, err)
 				}
+
 				if name != tc.expected {
 					t.Errorf("expected name: %s, got: %s for email: %s", tc.expected, name, tc.email)
 				}

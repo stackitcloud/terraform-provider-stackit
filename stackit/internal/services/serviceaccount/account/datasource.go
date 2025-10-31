@@ -4,16 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -41,10 +40,13 @@ func (r *serviceAccountDataSource) Configure(ctx context.Context, req datasource
 	}
 
 	apiClient := serviceaccountUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "Service Account client configured")
 }
 
@@ -94,10 +96,11 @@ func (r *serviceAccountDataSource) Schema(_ context.Context, _ datasource.Schema
 }
 
 // Read reads all service accounts from the API and updates the state with the latest information.
-func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -117,6 +120,7 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 			map[int]string{},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -144,6 +148,7 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 		// Update the state with the service account model
 		diags = resp.State.Set(ctx, &model)
 		resp.Diagnostics.Append(diags...)
+
 		return
 	}
 

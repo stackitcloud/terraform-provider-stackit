@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -33,6 +31,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -73,7 +72,7 @@ type Model struct {
 	DesiredStatus     types.String `tfsdk:"desired_status"`
 }
 
-// Struct corresponding to Model.BootVolume
+// Struct corresponding to Model.BootVolume.
 type bootVolumeModel struct {
 	Id                  types.String `tfsdk:"id"`
 	PerformanceClass    types.String `tfsdk:"performance_class"`
@@ -83,7 +82,7 @@ type bootVolumeModel struct {
 	DeleteOnTermination types.Bool   `tfsdk:"delete_on_termination"`
 }
 
-// Types corresponding to bootVolumeModel
+// Types corresponding to bootVolumeModel.
 var bootVolumeTypes = map[string]attr.Type{
 	"performance_class":     basetypes.StringType{},
 	"size":                  basetypes.Int64Type{},
@@ -110,14 +109,16 @@ func (r *serverResource) Metadata(_ context.Context, req resource.MetadataReques
 
 func (r serverResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var model Model
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// convert boot volume model
-	var bootVolume = &bootVolumeModel{}
-	if !(model.BootVolume.IsNull() || model.BootVolume.IsUnknown()) {
+	bootVolume := &bootVolumeModel{}
+	if !model.BootVolume.IsNull() && !model.BootVolume.IsUnknown() {
 		diags := model.BootVolume.As(ctx, bootVolume, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return
@@ -131,7 +132,7 @@ func (r serverResource) ValidateConfig(ctx context.Context, req resource.Validat
 	}
 }
 
-// ConfigValidators validates the resource configuration
+// ConfigValidators validates the resource configuration.
 func (r *serverResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		resourcevalidator.AtLeastOneOf(
@@ -153,10 +154,13 @@ func (r *serverResource) Configure(ctx context.Context, req resource.ConfigureRe
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -382,8 +386,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 
 var _ planmodifier.String = desiredStateModifier{}
 
-type desiredStateModifier struct {
-}
+type desiredStateModifier struct{}
 
 // Description implements planmodifier.String.
 func (d desiredStateModifier) Description(context.Context) string {
@@ -402,12 +405,15 @@ func (d desiredStateModifier) PlanModifyString(ctx context.Context, req planmodi
 		planState    types.String
 		currentState types.String
 	)
+
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("desired_status"), &planState)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("desired_status"), &currentState)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -418,11 +424,12 @@ func (d desiredStateModifier) PlanModifyString(ctx context.Context, req planmodi
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -446,16 +453,19 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	serverId := *server.Id
+
 	_, err = wait.CreateServerWaitHandler(ctx, r.client, projectId, serverId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("server creation waiting: %v", err))
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
 	// Get Server with details
 	serverReq := r.client.GetServer(ctx, projectId, serverId)
 	serverReq = serverReq.Details(true)
+
 	server, err = serverReq.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("get server details: %v", err))
@@ -476,14 +486,16 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Server created")
 }
 
 // serverControlClient provides a mockable interface for the necessary
-// client operations in [updateServerStatus]
+// client operations in [updateServerStatus].
 type serverControlClient interface {
 	wait.APIClientInterface
 	StartServerExecute(ctx context.Context, projectId string, serverId string) error
@@ -493,46 +505,56 @@ type serverControlClient interface {
 
 func startServer(ctx context.Context, client serverControlClient, projectId, serverId string) error {
 	tflog.Debug(ctx, "starting server to enter active state")
+
 	if err := client.StartServerExecute(ctx, projectId, serverId); err != nil {
 		return fmt.Errorf("cannot start server: %w", err)
 	}
+
 	_, err := wait.StartServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("cannot check started server: %w", err)
 	}
+
 	return nil
 }
 
 func stopServer(ctx context.Context, client serverControlClient, projectId, serverId string) error {
 	tflog.Debug(ctx, "stopping server to enter inactive state")
+
 	if err := client.StopServerExecute(ctx, projectId, serverId); err != nil {
 		return fmt.Errorf("cannot stop server: %w", err)
 	}
+
 	_, err := wait.StopServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("cannot check stopped server: %w", err)
 	}
+
 	return nil
 }
 
 func deallocatServer(ctx context.Context, client serverControlClient, projectId, serverId string) error {
 	tflog.Debug(ctx, "deallocating server to enter shelved state")
+
 	if err := client.DeallocateServerExecute(ctx, projectId, serverId); err != nil {
 		return fmt.Errorf("cannot deallocate server: %w", err)
 	}
+
 	_, err := wait.DeallocateServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("cannot check deallocated server: %w", err)
 	}
+
 	return nil
 }
 
-// updateServerStatus applies the appropriate server state changes for the actual current and the intended state
+// updateServerStatus applies the appropriate server state changes for the actual current and the intended state.
 func updateServerStatus(ctx context.Context, client serverControlClient, currentState *string, model *Model) error {
 	if currentState == nil {
 		tflog.Warn(ctx, "no current state available, not updating server state")
 		return nil
 	}
+
 	switch *currentState {
 	case wait.ServerActiveStatus:
 		switch strings.ToUpper(model.DesiredStatus.ValueString()) {
@@ -542,12 +564,12 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 			}
 
 		case wait.ServerDeallocatedStatus:
-
 			if err := deallocatServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
 				return err
 			}
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
+
 			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
 				return err
 			}
@@ -565,6 +587,7 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
+
 			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
 				return err
 			}
@@ -582,6 +605,7 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 			}
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
+
 			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
 				return err
 			}
@@ -594,13 +618,15 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 }
 
 // // Read refreshes the Terraform state with the latest data.
-func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -608,6 +634,7 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	serverReq := r.client.GetServer(ctx, projectId, serverId)
 	serverReq = serverReq.Details(true)
+
 	serverResp, err := serverReq.Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
@@ -615,7 +642,9 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -628,9 +657,11 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "server read")
 }
 
@@ -638,8 +669,9 @@ func (r *serverResource) updateServerAttributes(ctx context.Context, model, stat
 	// Generate API request body from model
 	payload, err := toUpdatePayload(ctx, model, stateModel.Labels)
 	if err != nil {
-		return nil, fmt.Errorf("Creating API payload: %w", err)
+		return nil, fmt.Errorf("creating API payload: %w", err)
 	}
+
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 
@@ -647,7 +679,7 @@ func (r *serverResource) updateServerAttributes(ctx context.Context, model, stat
 	// Update existing server
 	updatedServer, err = r.client.UpdateServer(ctx, projectId, serverId).UpdateServerPayload(*payload).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("Calling API: %w", err)
+		return nil, fmt.Errorf("calling API: %w", err)
 	}
 
 	// Update machine type
@@ -656,9 +688,10 @@ func (r *serverResource) updateServerAttributes(ctx context.Context, model, stat
 		payload := iaas.ResizeServerPayload{
 			MachineType: modelMachineType,
 		}
+
 		err := r.client.ResizeServer(ctx, projectId, serverId).ResizeServerPayload(payload).Execute()
 		if err != nil {
-			return nil, fmt.Errorf("Resizing the server, calling API: %w", err)
+			return nil, fmt.Errorf("resizing the server, calling API: %w", err)
 		}
 
 		_, err = wait.ResizeServerWaitHandler(ctx, r.client, projectId, serverId).WaitWithContext(ctx)
@@ -668,18 +701,21 @@ func (r *serverResource) updateServerAttributes(ctx context.Context, model, stat
 		// Update server model because the API doesn't return a server object as response
 		updatedServer.MachineType = modelMachineType
 	}
+
 	return updatedServer, nil
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -689,6 +725,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 	var stateModel Model
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -697,6 +734,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 		server *iaas.Server
 		err    error
 	)
+
 	if server, err = r.client.GetServer(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()).Execute(); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error retrieving server state", fmt.Sprintf("Getting server state: %v", err))
 	}
@@ -731,6 +769,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 	// Re-fetch the server data, to get the details values.
 	serverReq := r.client.GetServer(ctx, projectId, serverId)
 	serverReq = serverReq.Details(true)
+
 	updatedServer, err := serverReq.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", fmt.Sprintf("Calling API: %v", err))
@@ -745,18 +784,21 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "server updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -772,6 +814,7 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	_, err = wait.DeleteServerWaitHandler(ctx, r.client, projectId, serverId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server", fmt.Sprintf("server deletion waiting: %v", err))
@@ -782,7 +825,7 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,server_id
+// The expected format of the resource import identifier is: project_id,server_id.
 func (r *serverResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -791,6 +834,7 @@ func (r *serverResource) ImportState(ctx context.Context, req resource.ImportSta
 			"Error importing server",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[server_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -808,6 +852,7 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 	if serverResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -829,20 +874,26 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 	}
 
 	var createdAt basetypes.StringValue
+
 	if serverResp.CreatedAt != nil {
 		createdAtValue := *serverResp.CreatedAt
 		createdAt = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
+
 	var updatedAt basetypes.StringValue
+
 	if serverResp.UpdatedAt != nil {
 		updatedAtValue := *serverResp.UpdatedAt
 		updatedAt = types.StringValue(updatedAtValue.Format(time.RFC3339))
 	}
+
 	var launchedAt basetypes.StringValue
+
 	if serverResp.LaunchedAt != nil {
 		launchedAtValue := *serverResp.LaunchedAt
 		launchedAt = types.StringValue(launchedAtValue.Format(time.RFC3339))
 	}
+
 	if serverResp.Nics != nil {
 		var respNics []string
 		for _, nic := range *serverResp.Nics {
@@ -850,15 +901,18 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 		}
 
 		var modelNics []string
+
 		for _, modelNic := range model.NetworkInterfaces.Elements() {
 			modelNicString, ok := modelNic.(types.String)
 			if !ok {
 				return fmt.Errorf("type assertion for network interfaces failed")
 			}
+
 			modelNics = append(modelNics, modelNicString.ValueString())
 		}
 
 		var filteredNics []string
+
 		for _, modelNic := range modelNics {
 			for _, nic := range respNics {
 				if nic == modelNic {
@@ -887,8 +941,8 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 
 	if serverResp.BootVolume != nil {
 		// convert boot volume model
-		var bootVolumeModel = &bootVolumeModel{}
-		if !(model.BootVolume.IsNull() || model.BootVolume.IsUnknown()) {
+		bootVolumeModel := &bootVolumeModel{}
+		if !model.BootVolume.IsNull() && !model.BootVolume.IsUnknown() {
 			diags := model.BootVolume.As(ctx, bootVolumeModel, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
 				return fmt.Errorf("failed to map bootVolume: %w", core.DiagsToError(diags))
@@ -908,6 +962,7 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 		if diags.HasError() {
 			return fmt.Errorf("failed to map bootVolume: %w", core.DiagsToError(diags))
 		}
+
 		model.BootVolume = bootVolume
 	} else {
 		model.BootVolume = types.ObjectNull(bootVolumeTypes)
@@ -928,6 +983,7 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 	if serverResp.UserData != nil && len(*serverResp.UserData) > 0 {
 		model.UserData = types.StringValue(string(*serverResp.UserData))
 	}
+
 	model.Name = types.StringPointerValue(serverResp.Name)
 	model.Labels = labels
 	model.ImageId = types.StringPointerValue(serverResp.ImageId)
@@ -945,8 +1001,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		return nil, fmt.Errorf("nil model")
 	}
 
-	var bootVolume = &bootVolumeModel{}
-	if !(model.BootVolume.IsNull() || model.BootVolume.IsUnknown()) {
+	bootVolume := &bootVolumeModel{}
+	if !model.BootVolume.IsNull() && !model.BootVolume.IsUnknown() {
 		diags := model.BootVolume.As(ctx, bootVolume, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, fmt.Errorf("convert boot volume object to struct: %w", core.DiagsToError(diags))
@@ -975,6 +1031,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 	}
 
 	var userData *[]byte
+
 	if !model.UserData.IsNull() && !model.UserData.IsUnknown() {
 		src := []byte(model.UserData.ValueString())
 		encodedUserData := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
@@ -983,13 +1040,16 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 	}
 
 	var network *iaas.CreateServerPayloadNetworking
+
 	if !model.NetworkInterfaces.IsNull() && !model.NetworkInterfaces.IsUnknown() {
 		var nicIds []string
+
 		for _, nic := range model.NetworkInterfaces.Elements() {
 			nicString, ok := nic.(types.String)
 			if !ok {
 				return nil, fmt.Errorf("type assertion failed")
 			}
+
 			nicIds = append(nicIds, nicString.ValueString())
 		}
 

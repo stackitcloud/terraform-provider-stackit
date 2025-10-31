@@ -7,8 +7,6 @@ import (
 	"regexp"
 	"strings"
 
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -24,6 +22,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -63,25 +62,31 @@ type networkInterfaceResource struct {
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
-func (r *networkInterfaceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkInterfaceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // function signature required by Terraform
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	var configModel Model
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	// If allowed_addresses were completly removed from the config this is not recognized by terraform
 	// since this field is optional and computed therefore this plan modifier is needed.
 	utils.CheckListRemoval(ctx, configModel.AllowedAddresses, planModel.AllowedAddresses, path.Root("allowed_addresses"), types.StringType, false, resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -89,6 +94,7 @@ func (r *networkInterfaceResource) ModifyPlan(ctx context.Context, req resource.
 	// If security_group_ids were completly removed from the config this is not recognized by terraform
 	// since this field is optional and computed therefore this plan modifier is needed.
 	utils.CheckListRemoval(ctx, configModel.SecurityGroupIds, planModel.SecurityGroupIds, path.Root("security_group_ids"), types.StringType, true, resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -107,10 +113,13 @@ func (r *networkInterfaceResource) Configure(ctx context.Context, req resource.C
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -248,11 +257,12 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *networkInterfaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkInterfaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -289,20 +299,24 @@ func (r *networkInterfaceResource) Create(ctx context.Context, req resource.Crea
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network interface created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
@@ -317,7 +331,9 @@ func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRe
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -330,21 +346,25 @@ func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRe
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network interface read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *networkInterfaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkInterfaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
@@ -356,6 +376,7 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 	var stateModel Model
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -378,20 +399,24 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network interface", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network interface updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *networkInterfaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkInterfaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -414,7 +439,7 @@ func (r *networkInterfaceResource) Delete(ctx context.Context, req resource.Dele
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,network_id,network_interface_id
+// The expected format of the resource import identifier is: project_id,network_id,network_interface_id.
 func (r *networkInterfaceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -423,6 +448,7 @@ func (r *networkInterfaceResource) ImportState(ctx context.Context, req resource
 			"Error importing network interface",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[network_id],[network_interface_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -443,6 +469,7 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 	if networkInterfaceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -459,7 +486,9 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.NetworkId.ValueString(), networkInterfaceId)
 
 	respAllowedAddresses := []string{}
+
 	var diags diag.Diagnostics
+
 	if networkInterfaceResp.AllowedAddresses == nil {
 		// If we send an empty list, the API will send null in the response
 		// We should handle this case and set the value to an empty list
@@ -495,6 +524,7 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 		model.SecurityGroupIds = types.ListNull(types.StringType)
 	} else {
 		respSecurityGroups := *networkInterfaceResp.SecurityGroups
+
 		modelSecurityGroups, err := utils.ListValuetoStringSlice(model.SecurityGroupIds)
 		if err != nil {
 			return fmt.Errorf("get current network interface security groups from model: %w", err)
@@ -540,18 +570,21 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNicPayload,
 	var labelPayload *map[string]interface{}
 
 	modelSecurityGroups := []string{}
-	if !(model.SecurityGroupIds.IsNull() || model.SecurityGroupIds.IsUnknown()) {
+
+	if !model.SecurityGroupIds.IsNull() && !model.SecurityGroupIds.IsUnknown() {
 		for _, ns := range model.SecurityGroupIds.Elements() {
 			securityGroupString, ok := ns.(types.String)
 			if !ok {
 				return nil, fmt.Errorf("type assertion failed")
 			}
+
 			modelSecurityGroups = append(modelSecurityGroups, securityGroupString.ValueString())
 		}
 	}
 
 	allowedAddressesPayload := &[]iaas.AllowedAddressesInner{}
-	if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
+
+	if !model.AllowedAddresses.IsNull() && !model.AllowedAddresses.IsUnknown() {
 		for _, allowedAddressModel := range model.AllowedAddresses.Elements() {
 			allowedAddressString, ok := allowedAddressModel.(types.String)
 			if !ok {
@@ -571,6 +604,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNicPayload,
 		if err != nil {
 			return nil, fmt.Errorf("mapping labels: %w", err)
 		}
+
 		labelPayload = &labelMap
 	}
 
@@ -595,16 +629,19 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	var labelPayload *map[string]interface{}
 
 	modelSecurityGroups := []string{}
+
 	for _, ns := range model.SecurityGroupIds.Elements() {
 		securityGroupString, ok := ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
+
 		modelSecurityGroups = append(modelSecurityGroups, securityGroupString.ValueString())
 	}
 
 	allowedAddressesPayload := []iaas.AllowedAddressesInner{} // Even if null in the model, we need to send an empty list to the API since it's a PATCH endpoint
-	if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
+
+	if !model.AllowedAddresses.IsNull() && !model.AllowedAddresses.IsUnknown() {
 		for _, allowedAddressModel := range model.AllowedAddresses.Elements() {
 			allowedAddressString, ok := allowedAddressModel.(types.String)
 			if !ok {
@@ -622,6 +659,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		if err != nil {
 			return nil, fmt.Errorf("mapping labels: %w", err)
 		}
+
 		labelPayload = &labelMap
 	}
 

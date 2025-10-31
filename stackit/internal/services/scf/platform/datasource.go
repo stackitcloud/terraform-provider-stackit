@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/services/scf"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	scfUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/utils"
@@ -38,16 +37,20 @@ type scfPlatformDataSource struct {
 
 func (s *scfPlatformDataSource) Configure(ctx context.Context, request datasource.ConfigureRequest, response *datasource.ConfigureResponse) {
 	var ok bool
+
 	s.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
 
 	apiClient := scfUtils.ConfigureClient(ctx, &s.providerData, &response.Diagnostics)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	s.client = apiClient
+
 	tflog.Info(ctx, "scf client configured for platform")
 }
 
@@ -66,7 +69,7 @@ type Model struct {
 	ConsoleUrl  types.String `tfsdk:"console_url"`
 }
 
-// descriptions for the attributes in the Schema
+// descriptions for the attributes in the Schema.
 var descriptions = map[string]string{
 	"id":           "Terraform's internal resource ID, structured as \"`project_id`,`region`,`platform_id`\".",
 	"platform_id":  "The unique id of the platform",
@@ -132,6 +135,7 @@ func (s *scfPlatformDataSource) Read(ctx context.Context, request datasource.Rea
 	var model Model
 	diags := request.Config.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -158,6 +162,7 @@ func (s *scfPlatformDataSource) Read(ctx context.Context, request datasource.Rea
 			},
 		)
 		response.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -178,14 +183,17 @@ func mapFields(response *scf.Platforms, model *Model) error {
 	if response == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	var projectId string
+
 	if model.ProjectId.ValueString() == "" {
 		return fmt.Errorf("project id is not present")
 	}
+
 	projectId = model.ProjectId.ValueString()
 
 	var region string
@@ -215,5 +223,6 @@ func mapFields(response *scf.Platforms, model *Model) error {
 	model.Region = types.StringValue(region)
 	model.ApiUrl = types.StringPointerValue(response.ApiUrl)
 	model.ConsoleUrl = types.StringPointerValue(response.ConsoleUrl)
+
 	return nil
 }

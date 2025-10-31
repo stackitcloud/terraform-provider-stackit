@@ -92,7 +92,7 @@ import (
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
 )
 
-// Ensure the implementation satisfies the expected interfaces
+// Ensure the implementation satisfies the expected interfaces.
 var (
 	_ provider.Provider = &Provider{}
 )
@@ -371,12 +371,14 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	var providerConfig providerModel
 	diags := req.Config.Get(ctx, &providerConfig)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Configure SDK client
 	sdkConfig := &config.Configuration{}
+
 	var providerData core.ProviderData
 
 	// Helper function to set a string field if it's known and not null
@@ -393,6 +395,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up bool value: %v", diags.Errors()))
 			}
+
 			setter(val.ValueBool())
 		}
 	}
@@ -408,7 +411,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	// Provider Data Configuration
 	setStringField(providerConfig.DefaultRegion, func(v string) { providerData.DefaultRegion = v })
-	setStringField(providerConfig.Region, func(v string) { providerData.Region = v }) // nolint:staticcheck // preliminary handling of deprecated attribute
+	setStringField(providerConfig.Region, func(v string) { providerData.Region = v }) //nolint:staticcheck // preliminary handling of deprecated attribute
 	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { providerData.CdnCustomEndpoint = v })
 	setStringField(providerConfig.DNSCustomEndpoint, func(v string) { providerData.DnsCustomEndpoint = v })
 	setStringField(providerConfig.GitCustomEndpoint, func(v string) { providerData.GitCustomEndpoint = v })
@@ -434,12 +437,14 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.ServiceEnablementCustomEndpoint, func(v string) { providerData.ServiceEnablementCustomEndpoint = v })
 	setBoolField(providerConfig.EnableBetaResources, func(v bool) { providerData.EnableBetaResources = v })
 
-	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
+	if !providerConfig.Experiments.IsUnknown() && !providerConfig.Experiments.IsNull() {
 		var experimentValues []string
+
 		diags := providerConfig.Experiments.ElementsAs(ctx, &experimentValues, false)
 		if diags.HasError() {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up experiments: %v", diags.Errors()))
 		}
+
 		providerData.Experiments = experimentValues
 	}
 

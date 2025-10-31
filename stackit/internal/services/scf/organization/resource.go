@@ -20,7 +20,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/scf"
 	"github.com/stackitcloud/stackit-sdk-go/services/scf/wait"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	scfUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/utils"
@@ -61,7 +60,7 @@ type scfOrganizationResource struct {
 	providerData core.ProviderData
 }
 
-// descriptions for the attributes in the Schema
+// descriptions for the attributes in the Schema.
 var descriptions = map[string]string{
 	"id":          "Terraform's internal resource ID, structured as \"`project_id`,`region`,`org_id`\".",
 	"created_at":  "The time when the organization was created",
@@ -78,16 +77,20 @@ var descriptions = map[string]string{
 
 func (s *scfOrganizationResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
 	var ok bool
+
 	s.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
 
 	apiClient := scfUtils.ConfigureClient(ctx, &s.providerData, &response.Diagnostics)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	s.client = apiClient
+
 	tflog.Info(ctx, "scf client configured")
 }
 
@@ -97,29 +100,35 @@ func (s *scfOrganizationResource) Metadata(_ context.Context, request resource.M
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
-func (r *scfOrganizationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *scfOrganizationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // function signature required by Terraform
 	var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -223,11 +232,12 @@ func (s *scfOrganizationResource) Schema(_ context.Context, _ resource.SchemaReq
 	}
 }
 
-func (s *scfOrganizationResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (s *scfOrganizationResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve the planned values for the resource.
 	var model Model
 	diags := request.Plan.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -255,6 +265,7 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Calling API to create org: %v", err))
 		return
 	}
+
 	orgId := *scfOrgCreateResponse.Guid
 
 	// Apply the org quota if provided
@@ -267,6 +278,7 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 			core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Calling API to apply quota: %v", err))
 			return
 		}
+
 		model.QuotaId = types.StringPointerValue(applyOrgQuota.QuotaId)
 	}
 
@@ -298,18 +310,21 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 	// Set the state with fully populated data.
 	diags = response.State.Set(ctx, model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Scf organization created")
 }
 
 // Read refreshes the Terraform state with the latest scf organization data.
-func (s *scfOrganizationResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (s *scfOrganizationResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model Model
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -326,12 +341,15 @@ func (s *scfOrganizationResource) Read(ctx context.Context, request resource.Rea
 	scfOrgResponse, err := s.client.GetOrganization(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			response.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading scf organization", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -348,14 +366,16 @@ func (s *scfOrganizationResource) Read(ctx context.Context, request resource.Rea
 }
 
 // Update attempts to update the resource.
-func (s *scfOrganizationResource) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (s *scfOrganizationResource) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := request.Plan.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	region := model.Region.ValueString()
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
@@ -384,6 +404,7 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 			core.LogAndAddError(ctx, &response.Diagnostics, "Error updating organization", fmt.Sprintf("Processing API payload: %v", err))
 			return
 		}
+
 		org = updatedOrg
 	}
 
@@ -397,6 +418,7 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 			core.LogAndAddError(ctx, &response.Diagnostics, "Error applying organization quota", fmt.Sprintf("Processing API payload: %v", err))
 			return
 		}
+
 		org.QuotaId = applyOrgQuota.QuotaId
 	}
 
@@ -408,18 +430,21 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 
 	diags = response.State.Set(ctx, model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "organization updated")
 }
 
 // Delete deletes the git instance and removes it from the Terraform state on success.
-func (s *scfOrganizationResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (s *scfOrganizationResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve current state of the resource.
 	var model Model
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -460,6 +485,7 @@ func (s *scfOrganizationResource) ImportState(ctx context.Context, request resou
 			"Error importing scf organization",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[org_id]  Got: %q", request.ID),
 		)
+
 		return
 	}
 
@@ -478,6 +504,7 @@ func mapFields(response *scf.Organization, model *Model) error {
 	if response == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -521,10 +548,11 @@ func mapFields(response *scf.Organization, model *Model) error {
 	model.QuotaId = types.StringPointerValue(response.QuotaId)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
+
 	return nil
 }
 
-// toCreatePayload creates the payload to create a scf organization instance
+// toCreatePayload creates the payload to create a scf organization instance.
 func toCreatePayload(model *Model) (scf.CreateOrganizationPayload, error) {
 	if model == nil {
 		return scf.CreateOrganizationPayload{}, fmt.Errorf("nil model")
@@ -536,5 +564,6 @@ func toCreatePayload(model *Model) (scf.CreateOrganizationPayload, error) {
 	if !model.PlatformId.IsNull() && !model.PlatformId.IsUnknown() {
 		payload.PlatformId = model.PlatformId.ValueStringPointer()
 	}
+
 	return payload, nil
 }

@@ -6,24 +6,22 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"
-
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -56,29 +54,35 @@ type credentialsGroupResource struct {
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
-func (r *credentialsGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialsGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // function signature required by Terraform
 	var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -92,16 +96,20 @@ func (r *credentialsGroupResource) Metadata(_ context.Context, req resource.Meta
 // Configure adds the provider configured client to the resource.
 func (r *credentialsGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
 	apiClient := objectstorageUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "ObjectStorage credentials group client configured")
 }
 
@@ -169,13 +177,15 @@ func (r *credentialsGroupResource) Schema(_ context.Context, _ resource.SchemaRe
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *credentialsGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialsGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupName := model.Name.ValueString()
 	region := model.Region.ValueString()
@@ -208,22 +218,27 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentialsGroup", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ObjectStorage credentials group created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -237,6 +252,7 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentialsGroup", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
 		return
 	}
+
 	if !found {
 		resp.State.RemoveResource(ctx)
 		return
@@ -247,26 +263,30 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ObjectStorage credentials group read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *credentialsGroupResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialsGroupResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating credentials group", "CredentialsGroup can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	region := model.Region.ValueString()
@@ -285,7 +305,7 @@ func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.Dele
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id, credentials_group_id
+// The expected format of the resource import identifier is: project_id, credentials_group_id.
 func (r *credentialsGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
@@ -293,6 +313,7 @@ func (r *credentialsGroupResource) ImportState(ctx context.Context, req resource
 			"Error importing credentialsGroup",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[credentials_group_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -306,19 +327,24 @@ func mapFields(credentialsGroupResp *objectstorage.CreateCredentialsGroupRespons
 	if credentialsGroupResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if credentialsGroupResp.CredentialsGroup == nil {
 		return fmt.Errorf("response credentialsGroup is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	credentialsGroup := credentialsGroupResp.CredentialsGroup
 
 	err := mapCredentialsGroup(*credentialsGroup, model, region)
 	if err != nil {
 		return err
 	}
+
 	model.Region = types.StringValue(region)
+
 	return nil
 }
 
@@ -336,6 +362,7 @@ func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model 
 	model.CredentialsGroupId = types.StringValue(credentialsGroupId)
 	model.URN = types.StringPointerValue(credentialsGroup.Urn)
 	model.Name = types.StringPointerValue(credentialsGroup.DisplayName)
+
 	return nil
 }
 
@@ -344,7 +371,7 @@ type objectStorageClient interface {
 	ListCredentialsGroupsExecute(ctx context.Context, projectId, region string) (*objectstorage.ListCredentialsGroupsResponse, error)
 }
 
-// enableProject enables object storage for the specified project. If the project is already enabled, nothing happens
+// enableProject enables object storage for the specified project. If the project is already enabled, nothing happens.
 func enableProject(ctx context.Context, model *Model, region string, client objectStorageClient) error {
 	projectId := model.ProjectId.ValueString()
 
@@ -353,6 +380,7 @@ func enableProject(ctx context.Context, model *Model, region string, client obje
 	if err != nil {
 		return fmt.Errorf("failed to create object storage project: %w", err)
 	}
+
 	return nil
 }
 
@@ -372,6 +400,7 @@ func readCredentialsGroups(ctx context.Context, model *Model, region string, cli
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			return found, nil
 		}
+
 		return found, fmt.Errorf("getting credentials groups: %w", err)
 	}
 
@@ -383,11 +412,13 @@ func readCredentialsGroups(ctx context.Context, model *Model, region string, cli
 		if *credentialsGroup.CredentialsGroupId != model.CredentialsGroupId.ValueString() && *credentialsGroup.DisplayName != model.Name.ValueString() {
 			continue
 		}
+
 		found = true
 		err = mapCredentialsGroup(credentialsGroup, model, region)
 		if err != nil {
 			return found, err
 		}
+
 		break
 	}
 

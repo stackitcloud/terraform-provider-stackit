@@ -6,10 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -28,8 +24,11 @@ import (
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -56,13 +55,13 @@ type Model struct {
 	Labels              types.Map    `tfsdk:"labels"`
 }
 
-// Struct corresponding to Model.NetworkRanges[i]
+// Struct corresponding to Model.NetworkRanges[i].
 type networkRange struct {
 	Prefix         types.String `tfsdk:"prefix"`
 	NetworkRangeId types.String `tfsdk:"network_range_id"`
 }
 
-// Types corresponding to networkRanges
+// Types corresponding to networkRanges.
 var networkRangeTypes = map[string]attr.Type{
 	"prefix":           types.StringType,
 	"network_range_id": types.StringType,
@@ -92,15 +91,20 @@ func (r *networkAreaResource) Configure(ctx context.Context, req resource.Config
 	}
 
 	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
 	resourceManagerClient := resourcemanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.resourceManagerClient = resourceManagerClient
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -230,11 +234,12 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -261,6 +266,7 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area", fmt.Sprintf("Network area creation waiting: %v", err))
 		return
 	}
+
 	networkAreaId := *networkArea.AreaId
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
@@ -275,20 +281,24 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area created")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
@@ -301,7 +311,9 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -316,30 +328,35 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
 	ranges := []networkRange{}
-	if !(model.NetworkRanges.IsNull() || model.NetworkRanges.IsUnknown()) {
+	if !model.NetworkRanges.IsNull() && !model.NetworkRanges.IsUnknown() {
 		diags = model.NetworkRanges.ElementsAs(ctx, &ranges, false)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -349,6 +366,7 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 	var stateModel Model
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -365,6 +383,7 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	waitResp, err := wait.UpdateNetworkAreaWaitHandler(ctx, r.client, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area", fmt.Sprintf("Network area update waiting: %v", err))
@@ -385,7 +404,9 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -396,20 +417,24 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -431,6 +456,7 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	_, err = wait.DeleteNetworkAreaWaitHandler(ctx, r.client, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintf("Network area deletion waiting: %v", err))
@@ -441,7 +467,7 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,network_id
+// The expected format of the resource import identifier is: project_id,network_id.
 func (r *networkAreaResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -450,6 +476,7 @@ func (r *networkAreaResource) ImportState(ctx context.Context, req resource.Impo
 			"Error importing network area",
 			fmt.Sprintf("Expected import identifier with format: [organization_id],[network_area_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -467,6 +494,7 @@ func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, networkAr
 	if networkAreaResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -486,6 +514,7 @@ func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, networkAr
 		model.DefaultNameservers = types.ListNull(types.StringType)
 	} else {
 		respDefaultNameservers := *networkAreaResp.Ipv4.DefaultNameservers
+
 		modelDefaultNameservers, err := utils.ListValuetoStringSlice(model.DefaultNameservers)
 		if err != nil {
 			return fmt.Errorf("get current network area default nameservers from model: %w", err)
@@ -532,13 +561,14 @@ func mapNetworkRanges(ctx context.Context, networkAreaRangesList *[]iaas.Network
 	if networkAreaRangesList == nil {
 		return fmt.Errorf("nil network area ranges list")
 	}
+
 	if len(*networkAreaRangesList) == 0 {
 		model.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
 		return nil
 	}
 
 	ranges := []networkRange{}
-	if !(model.NetworkRanges.IsNull() || model.NetworkRanges.IsUnknown()) {
+	if !model.NetworkRanges.IsNull() && !model.NetworkRanges.IsUnknown() {
 		diags = model.NetworkRanges.ElementsAs(ctx, &ranges, false)
 		if diags.HasError() {
 			return fmt.Errorf("map network ranges: %w", core.DiagsToError(diags))
@@ -558,14 +588,17 @@ func mapNetworkRanges(ctx context.Context, networkAreaRangesList *[]iaas.Network
 	reconciledRangePrefixes := utils.ReconcileStringSlices(modelNetworkRangePrefixes, apiNetworkRangePrefixes)
 
 	networkRangesList := []attr.Value{}
+
 	for i, prefix := range reconciledRangePrefixes {
 		var networkRangeId string
+
 		for _, networkRangeElement := range *networkAreaRangesList {
 			if *networkRangeElement.Prefix == prefix {
 				networkRangeId = *networkRangeElement.NetworkRangeId
 				break
 			}
 		}
+
 		networkRangeMap := map[string]attr.Value{
 			"prefix":           types.StringValue(prefix),
 			"network_range_id": types.StringValue(networkRangeId),
@@ -588,6 +621,7 @@ func mapNetworkRanges(ctx context.Context, networkAreaRangesList *[]iaas.Network
 	}
 
 	model.NetworkRanges = networkRangesTF
+
 	return nil
 }
 
@@ -597,11 +631,13 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkArea
 	}
 
 	modelDefaultNameservers := []string{}
+
 	for _, ns := range model.DefaultNameservers.Elements() {
 		nameserverString, ok := ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
+
 		modelDefaultNameservers = append(modelDefaultNameservers, nameserverString.ValueString())
 	}
 
@@ -637,11 +673,13 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	}
 
 	modelDefaultNameservers := []string{}
+
 	for _, ns := range model.DefaultNameservers.Elements() {
 		nameserverString, ok := ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
+
 		modelDefaultNameservers = append(modelDefaultNameservers, nameserverString.ValueString())
 	}
 
@@ -670,6 +708,7 @@ func toNetworkRangesPayload(ctx context.Context, model *Model) (*[]iaas.NetworkR
 	}
 
 	networkRangesModel := []networkRange{}
+
 	diags := model.NetworkRanges.ElementsAs(ctx, &networkRangesModel, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
@@ -680,6 +719,7 @@ func toNetworkRangesPayload(ctx context.Context, model *Model) (*[]iaas.NetworkR
 	}
 
 	payload := []iaas.NetworkRange{}
+
 	for i := range networkRangesModel {
 		networkRangeModel := networkRangesModel[i]
 		payload = append(payload, iaas.NetworkRange{
@@ -690,7 +730,7 @@ func toNetworkRangesPayload(ctx context.Context, model *Model) (*[]iaas.NetworkR
 	return &payload, nil
 }
 
-// updateNetworkRanges creates and deletes network ranges so that network area ranges are the ones in the model
+// updateNetworkRanges creates and deletes network ranges so that network area ranges are the ones in the model.
 func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId string, ranges []networkRange, client *iaas.APIClient) error {
 	// Get network ranges current state
 	currentNetworkRangesResp, err := client.ListNetworkAreaRanges(ctx, organizationId, networkAreaId).Execute()
@@ -716,6 +756,7 @@ func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId stri
 		if _, ok := networkRangesState[prefix]; !ok {
 			networkRangesState[prefix] = &networkRangeState{}
 		}
+
 		networkRangesState[prefix].isCreated = true
 		networkRangesState[prefix].id = *networkRange.NetworkRangeId
 	}

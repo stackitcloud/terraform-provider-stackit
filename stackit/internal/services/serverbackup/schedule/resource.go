@@ -7,12 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	serverbackupUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -22,15 +20,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	serverbackupUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -53,7 +50,7 @@ type Model struct {
 	Region           types.String                   `tfsdk:"region"`
 }
 
-// scheduleBackupPropertiesModel maps schedule backup_properties data
+// scheduleBackupPropertiesModel maps schedule backup_properties data.
 type scheduleBackupPropertiesModel struct {
 	BackupName      types.String `tfsdk:"name"`
 	RetentionPeriod types.Int64  `tfsdk:"retention_period"`
@@ -73,29 +70,35 @@ type scheduleResource struct {
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
-func (r *scheduleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *scheduleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // function signature required by Terraform
 	var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -109,21 +112,26 @@ func (r *scheduleResource) Metadata(_ context.Context, req resource.MetadataRequ
 // Configure adds the provider configured client to the resource.
 func (r *scheduleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_server_backup_schedule", "resource")
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	apiClient := serverbackupUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "Server backup client configured.")
 }
 
@@ -237,13 +245,15 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *scheduleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *scheduleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -265,11 +275,13 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
+
 	scheduleResp, err := r.client.CreateBackupSchedule(ctx, projectId, serverId, region).CreateBackupSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "backup_schedule_id", *scheduleResp.Id)
 
 	// Map response body to schema
@@ -278,22 +290,27 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Server backup schedule created.")
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
@@ -311,7 +328,9 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading backup schedule", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -325,20 +344,24 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Server backup schedule read.")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
@@ -368,22 +391,27 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server backup schedule", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Server backup schedule updated.")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
@@ -399,6 +427,7 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	tflog.Info(ctx, "Server backup schedule deleted.")
 
 	// Disable backups service in case there are no backups and no backup schedules.
@@ -410,7 +439,7 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: // project_id,server_id,schedule_id
+// The expected format of the resource import identifier is: // project_id,server_id,schedule_id.
 func (r *scheduleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
@@ -418,6 +447,7 @@ func (r *scheduleResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing server backup schedule",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[server_id],[backup_schedule_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -427,6 +457,7 @@ func (r *scheduleResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing server backup schedule",
 			fmt.Sprintf("Expected backup_schedule_id to be int64, got %q", idParts[2]),
 		)
+
 		return
 	}
 
@@ -441,9 +472,11 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 	if schedule == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	if schedule.Id == nil {
 		return fmt.Errorf("response id is nil")
 	}
@@ -456,16 +489,20 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 	model.Name = types.StringPointerValue(schedule.Name)
 	model.Rrule = types.StringPointerValue(schedule.Rrule)
 	model.Enabled = types.BoolPointerValue(schedule.Enabled)
+
 	if schedule.BackupProperties == nil {
 		model.BackupProperties = nil
 		return nil
 	}
 
 	volIds := types.ListNull(types.StringType)
+
 	if schedule.BackupProperties.VolumeIds != nil {
 		var modelVolIds []string
+
 		if model.BackupProperties != nil {
 			var err error
+
 			modelVolIds, err = utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
 			if err != nil {
 				return err
@@ -476,21 +513,24 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 		reconciledVolIds := utils.ReconcileStringSlices(modelVolIds, respVolIds)
 
 		var diags diag.Diagnostics
+
 		volIds, diags = types.ListValueFrom(ctx, types.StringType, reconciledVolIds)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map volumeIds: %w", core.DiagsToError(diags))
 		}
 	}
+
 	model.BackupProperties = &scheduleBackupPropertiesModel{
 		BackupName:      types.StringValue(*schedule.BackupProperties.Name),
 		RetentionPeriod: types.Int64Value(*schedule.BackupProperties.RetentionPeriod),
 		VolumeIds:       volIds,
 	}
 	model.Region = types.StringValue(region)
+
 	return nil
 }
 
-// If already enabled, just continues
+// If already enabled, just continues.
 func (r *scheduleResource) enableBackupsService(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
@@ -505,13 +545,16 @@ func (r *scheduleResource) enableBackupsService(ctx context.Context, model *Mode
 			tflog.Debug(ctx, "Service for server backup already enabled")
 			return nil
 		}
+
 		return fmt.Errorf("enable server backup service: %w", err)
 	}
+
 	tflog.Info(ctx, "Enabled server backup service")
+
 	return nil
 }
 
-// Disables only if no backup schedules are present and no backups are present
+// Disables only if no backup schedules are present and no backups are present.
 func (r *scheduleResource) disableBackupsService(ctx context.Context, model *Model) error {
 	tflog.Debug(ctx, "Disabling server backup service (in case there are no backups and no backup schedules)")
 
@@ -520,10 +563,12 @@ func (r *scheduleResource) disableBackupsService(ctx context.Context, model *Mod
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	tflog.Debug(ctx, "Checking for existing backups")
+
 	backups, err := r.client.ListBackups(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("list backups: %w", err)
 	}
+
 	if *backups.Items != nil && len(*backups.Items) > 0 {
 		tflog.Debug(ctx, "Backups found - will not disable server backup service")
 		return nil
@@ -533,7 +578,9 @@ func (r *scheduleResource) disableBackupsService(ctx context.Context, model *Mod
 	if err != nil {
 		return fmt.Errorf("disable server backup service: %w", err)
 	}
+
 	tflog.Info(ctx, "Disabled server backup service")
+
 	return nil
 }
 
@@ -543,10 +590,13 @@ func toCreatePayload(model *Model) (*serverbackup.CreateBackupSchedulePayload, e
 	}
 
 	backupProperties := serverbackup.BackupProperties{}
+
 	if model.BackupProperties != nil {
 		ids := []string{}
+
 		var err error
-		if !(model.BackupProperties.VolumeIds.IsNull() || model.BackupProperties.VolumeIds.IsUnknown()) {
+
+		if !model.BackupProperties.VolumeIds.IsNull() && !model.BackupProperties.VolumeIds.IsUnknown() {
 			ids, err = utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
 			if err != nil {
 				return nil, fmt.Errorf("convert volume id: %w", err)
@@ -556,12 +606,14 @@ func toCreatePayload(model *Model) (*serverbackup.CreateBackupSchedulePayload, e
 		if len(ids) == 0 {
 			ids = nil
 		}
+
 		backupProperties = serverbackup.BackupProperties{
 			Name:            conversion.StringValueToPointer(model.BackupProperties.BackupName),
 			RetentionPeriod: conversion.Int64ValueToPointer(model.BackupProperties.RetentionPeriod),
 			VolumeIds:       &ids,
 		}
 	}
+
 	return &serverbackup.CreateBackupSchedulePayload{
 		Enabled:          conversion.BoolValueToPointer(model.Enabled),
 		Name:             conversion.StringValueToPointer(model.Name),
@@ -576,10 +628,13 @@ func toUpdatePayload(model *Model) (*serverbackup.UpdateBackupSchedulePayload, e
 	}
 
 	backupProperties := serverbackup.BackupProperties{}
+
 	if model.BackupProperties != nil {
 		ids := []string{}
+
 		var err error
-		if !(model.BackupProperties.VolumeIds.IsNull() || model.BackupProperties.VolumeIds.IsUnknown()) {
+
+		if !model.BackupProperties.VolumeIds.IsNull() && !model.BackupProperties.VolumeIds.IsUnknown() {
 			ids, err = utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
 			if err != nil {
 				return nil, fmt.Errorf("convert volume id: %w", err)
@@ -589,6 +644,7 @@ func toUpdatePayload(model *Model) (*serverbackup.UpdateBackupSchedulePayload, e
 		if len(ids) == 0 {
 			ids = nil
 		}
+
 		backupProperties = serverbackup.BackupProperties{
 			Name:            conversion.StringValueToPointer(model.BackupProperties.BackupName),
 			RetentionPeriod: conversion.Int64ValueToPointer(model.BackupProperties.RetentionPeriod),

@@ -19,11 +19,10 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-// TODO: create network area using terraform resource instead once it's out of experimental stage and GA
+// TODO: create network area using terraform resource instead once it's out of experimental stage and GA.
 const (
 	testNetworkAreaId = "25bbf23a-8134-4439-9f5e-1641caf8354e"
 )
@@ -73,6 +72,7 @@ var testConfigRoutingTableMaxUpdated = func() config.Variables {
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)))
 	updatedConfig["description"] = config.StringVariable("This is the updated description of the routing table.")
 	updatedConfig["label"] = config.StringVariable("routing-table-updated-label-01")
+
 	return updatedConfig
 }()
 
@@ -111,7 +111,7 @@ var testConfigRoutingTableRouteMaxUpdated = func() config.Variables {
 	return updatedConfig
 }()
 
-// execute routingtable and routingtable route min and max tests with t.Run() to prevent parallel runs (needed for tests of stackit_routing_tables datasource)
+// execute routingtable and routingtable route min and max tests with t.Run() to prevent parallel runs (needed for tests of stackit_routing_tables datasource).
 func TestAccRoutingTable(t *testing.T) {
 	t.Run("TestAccRoutingTableMin", func(t *testing.T) {
 		t.Logf("TestAccRoutingTableMin name: %s", testutil.ConvertConfigVariable(testConfigRoutingTableMin["name"]))
@@ -223,6 +223,7 @@ func TestAccRoutingTable(t *testing.T) {
 						if !ok {
 							return "", fmt.Errorf("couldn't find attribute routing_table_id")
 						}
+
 						return fmt.Sprintf("%s,%s,%s,%s", testutil.OrganizationId, region, networkAreaId, routingTableId), nil
 					},
 					ImportState:       true,
@@ -364,6 +365,7 @@ func TestAccRoutingTable(t *testing.T) {
 						if !ok {
 							return "", fmt.Errorf("couldn't find attribute routing_table_id")
 						}
+
 						return fmt.Sprintf("%s,%s,%s,%s", testutil.OrganizationId, region, networkAreaId, routingTableId), nil
 					},
 					ImportState:       true,
@@ -520,6 +522,7 @@ func TestAccRoutingTable(t *testing.T) {
 						if !ok {
 							return "", fmt.Errorf("couldn't find attribute route_id")
 						}
+
 						return fmt.Sprintf("%s,%s,%s,%s,%s", testutil.OrganizationId, region, networkAreaId, routingTableId, routeId), nil
 					},
 					ImportState:       true,
@@ -689,6 +692,7 @@ func TestAccRoutingTable(t *testing.T) {
 						if !ok {
 							return "", fmt.Errorf("couldn't find attribute route_id")
 						}
+
 						return fmt.Sprintf("%s,%s,%s,%s,%s", testutil.OrganizationId, region, networkAreaId, routingTableId, routeId), nil
 					},
 					ImportState:       true,
@@ -735,6 +739,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 		testAccCheckRoutingTableDestroy,
 		testAccCheckRoutingTableRouteDestroy,
 	}
+
 	var errs []error
 
 	wg := sync.WaitGroup{}
@@ -746,16 +751,21 @@ func testAccCheckDestroy(s *terraform.State) error {
 			if err != nil {
 				errs = append(errs, err)
 			}
+
 			wg.Done()
 		}()
 	}
+
 	wg.Wait()
+
 	return errors.Join(errs...)
 }
 
 func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *iaasalpha.APIClient
+
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
 		client, err = iaasalpha.NewAPIClient()
@@ -764,6 +774,7 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -774,8 +785,10 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_routing_table" {
 			continue
 		}
+
 		routingTableId := strings.Split(rs.Primary.ID, core.Separator)[3]
 		region := strings.Split(rs.Primary.ID, core.Separator)[1]
+
 		err := client.DeleteRoutingTableFromAreaExecute(ctx, testutil.OrganizationId, testNetworkAreaId, region, routingTableId)
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
@@ -784,6 +797,7 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 					continue
 				}
 			}
+
 			errs = append(errs, fmt.Errorf("cannot trigger routing table deletion %q: %w", routingTableId, err))
 		}
 	}
@@ -793,7 +807,9 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 
 func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *iaasalpha.APIClient
+
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
 		client, err = iaasalpha.NewAPIClient()
@@ -802,6 +818,7 @@ func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -812,9 +829,11 @@ func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_routing_table_route" {
 			continue
 		}
+
 		routingTableRouteId := strings.Split(rs.Primary.ID, core.Separator)[4]
 		routingTableId := strings.Split(rs.Primary.ID, core.Separator)[3]
 		region := strings.Split(rs.Primary.ID, core.Separator)[1]
+
 		err := client.DeleteRouteFromRoutingTableExecute(ctx, testutil.OrganizationId, testNetworkAreaId, region, routingTableId, routingTableRouteId)
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
@@ -823,6 +842,7 @@ func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 					continue
 				}
 			}
+
 			errs = append(errs, fmt.Errorf("cannot trigger routing table route deletion %q: %w", routingTableId, err))
 		}
 	}

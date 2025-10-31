@@ -8,9 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	modelservingUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelserving/utils"
-	serviceenablementUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -27,6 +24,8 @@ import (
 	serviceEnablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	modelservingUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelserving/utils"
+	serviceenablementUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -83,40 +82,50 @@ func (r *tokenResource) Metadata(_ context.Context, req resource.MetadataRequest
 // Configure adds the provider configured client to the resource.
 func (r *tokenResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
 	apiClient := modelservingUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	serviceEnablementClient := serviceenablementUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
 	r.serviceEnablementClient = serviceEnablementClient
+
 	tflog.Info(ctx, "Model-Serving auth token client configured")
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
-func (r *tokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *tokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // function signature required by Terraform
 	var configModel Model
 
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -128,11 +137,13 @@ func (r *tokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 		r.providerData.GetRegion(),
 		resp,
 	)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -228,11 +239,12 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -254,15 +266,18 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling AI model serving",
 					fmt.Sprintf("Service not available in region %s \n%v", region, err),
 				)
+
 				return
 			}
 		}
+
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,
 			"Error enabling AI model serving",
 			fmt.Sprintf("Error enabling AI model serving: %v", err),
 		)
+
 		return
 	}
 
@@ -275,6 +290,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 			"Error enabling AI model serving",
 			fmt.Sprintf("Error enabling AI model serving: %v", err),
 		)
+
 		return
 	}
 
@@ -296,6 +312,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 			"Error creating AI model serving auth token",
 			fmt.Sprintf("Calling API: %v", err),
 		)
+
 		return
 	}
 
@@ -315,6 +332,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -323,10 +341,11 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -352,6 +371,7 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		}
 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI model serving auth token", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -359,6 +379,7 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		*getTokenResp.Token.State == inactiveState {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Error reading AI model serving auth token", "AI model serving auth token has expired")
+
 		return
 	}
 
@@ -372,6 +393,7 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -380,11 +402,12 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -393,6 +416,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	var state Model
 	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -437,6 +461,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 				projectId,
 			),
 		)
+
 		return
 	}
 
@@ -444,6 +469,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		*updateTokenResp.Token.State == inactiveState {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Error updating AI model serving auth token", "AI model serving auth token has expired")
+
 		return
 	}
 
@@ -455,6 +481,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	// Since STACKIT is not saving the content of the token. We have to use it from the state.
 	model.Token = state.Token
+
 	err = mapGetResponse(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
@@ -463,6 +490,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -471,11 +499,12 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -501,6 +530,7 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		}
 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model serving auth token", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -518,6 +548,7 @@ func mapCreateResponse(tokenCreateResp *modelserving.CreateTokenResponse, waitRe
 	if tokenCreateResp == nil || tokenCreateResp.Token == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -556,6 +587,7 @@ func mapGetResponse(tokenGetResp *modelserving.GetTokenResponse, model *Model) e
 	if tokenGetResp.Token == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

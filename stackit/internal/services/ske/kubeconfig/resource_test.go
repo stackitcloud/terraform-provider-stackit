@@ -13,6 +13,7 @@ import (
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
+
 	tests := []struct {
 		description string
 		input       *ske.Kubeconfig
@@ -66,13 +67,16 @@ func TestMapFields(t *testing.T) {
 				ClusterName: tt.expected.ClusterName,
 			}
 			creationTime, _ := time.Parse(time.RFC3339, tt.expected.CreationTime.ValueString())
+
 			err := mapFields(tt.input, state, creationTime, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected, cmpopts.IgnoreFields(Model{}, "Id")) // Id includes a random uuid
 				if diff != "" {
@@ -119,9 +123,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -199,6 +205,7 @@ func TestCheckHasExpired(t *testing.T) {
 				t.Errorf("checkHasExpired() error = %v, expectedError %v", err, tt.expectedError)
 				return
 			}
+
 			if got != tt.expected {
 				t.Errorf("checkHasExpired() = %v, expected %v", got, tt.expected)
 			}
@@ -267,6 +274,7 @@ func TestCheckCredentialsRotation(t *testing.T) {
 				t.Errorf("checkCredentialsRotation() error = %v, expectedError %v", err, tt.expectedError)
 				return
 			}
+
 			if got != tt.expected {
 				t.Errorf("checkCredentialsRotation() = %v, expected %v", got, tt.expected)
 			}
@@ -329,6 +337,7 @@ func TestCheckClusterRecreation(t *testing.T) {
 				t.Errorf("checkClusterRecreation() error = %v, expectedError %v", err, tt.expectedError)
 				return
 			}
+
 			if got != tt.expected {
 				t.Errorf("checkClusterRecreation() = %v, expected %v", got, tt.expected)
 			}

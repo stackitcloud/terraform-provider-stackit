@@ -311,6 +311,7 @@ func TestMapFields(t *testing.T) {
 				if diff := cmp.Diff(tt.model.Name.ValueString(), tt.expectedName); diff != "" {
 					t.Errorf("unexpected name (-got +want):\n%s", diff)
 				}
+
 				if diff := cmp.Diff(tt.model.Id.ValueString(), tt.expectedID); diff != "" {
 					t.Errorf("unexpected ID (-got +want):\n%s", diff)
 				}

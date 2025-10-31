@@ -2,13 +2,12 @@ package authorization_test
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"regexp"
 	"slices"
 	"testing"
-
-	_ "embed"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -54,7 +53,6 @@ func TestAccProjectRoleAssignmentResource(t *testing.T) {
 					}
 
 					members, err := client.ListMembers(context.TODO(), "project", testutil.ProjectId).Execute()
-
 					if err != nil {
 						return err
 					}
@@ -65,6 +63,7 @@ func TestAccProjectRoleAssignmentResource(t *testing.T) {
 						t.Log(members.Members)
 						return errors.New("Membership not found")
 					}
+
 					return nil
 				},
 			},
@@ -97,6 +96,7 @@ func TestAccProjectRoleAssignmentResource(t *testing.T) {
 
 func authApiClient() (*authorization.APIClient, error) {
 	var client *authorization.APIClient
+
 	var err error
 	if testutil.AuthorizationCustomEndpoint == "" {
 		client, err = authorization.NewAPIClient(
@@ -107,8 +107,10 @@ func authApiClient() (*authorization.APIClient, error) {
 			stackitSdkConfig.WithEndpoint(testutil.AuthorizationCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return nil, fmt.Errorf("creating client: %w", err)
 	}
+
 	return client, nil
 }

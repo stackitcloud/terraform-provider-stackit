@@ -7,10 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-
-	loadbalancerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/utils"
-
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -20,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -37,6 +34,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	loadbalancerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -65,7 +63,7 @@ type Model struct {
 	SecurityGroupId                types.String `tfsdk:"security_group_id"`
 }
 
-// Struct corresponding to Model.Listeners[i]
+// Struct corresponding to Model.Listeners[i].
 type listener struct {
 	DisplayName          types.String `tfsdk:"display_name"`
 	Port                 types.Int64  `tfsdk:"port"`
@@ -76,7 +74,7 @@ type listener struct {
 	UDP                  types.Object `tfsdk:"udp"`
 }
 
-// Types corresponding to listener
+// Types corresponding to listener.
 var listenerTypes = map[string]attr.Type{
 	"display_name":           types.StringType,
 	"port":                   types.Int64Type,
@@ -87,12 +85,12 @@ var listenerTypes = map[string]attr.Type{
 	"udp":                    types.ObjectType{AttrTypes: udpTypes},
 }
 
-// Struct corresponding to listener.ServerNameIndicators[i]
+// Struct corresponding to listener.ServerNameIndicators[i].
 type serverNameIndicator struct {
 	Name types.String `tfsdk:"name"`
 }
 
-// Types corresponding to serverNameIndicator
+// Types corresponding to serverNameIndicator.
 var serverNameIndicatorTypes = map[string]attr.Type{
 	"name": types.StringType,
 }
@@ -113,26 +111,26 @@ var udpTypes = map[string]attr.Type{
 	"idle_timeout": types.StringType,
 }
 
-// Struct corresponding to Model.Networks[i]
+// Struct corresponding to Model.Networks[i].
 type network struct {
 	NetworkId types.String `tfsdk:"network_id"`
 	Role      types.String `tfsdk:"role"`
 }
 
-// Types corresponding to network
+// Types corresponding to network.
 var networkTypes = map[string]attr.Type{
 	"network_id": types.StringType,
 	"role":       types.StringType,
 }
 
-// Struct corresponding to Model.Options
+// Struct corresponding to Model.Options.
 type options struct {
 	ACL                types.Set    `tfsdk:"acl"`
 	PrivateNetworkOnly types.Bool   `tfsdk:"private_network_only"`
 	Observability      types.Object `tfsdk:"observability"`
 }
 
-// Types corresponding to options
+// Types corresponding to options.
 var optionsTypes = map[string]attr.Type{
 	"acl":                  types.SetType{ElemType: types.StringType},
 	"private_network_only": types.BoolType,
@@ -159,7 +157,7 @@ var observabilityOptionTypes = map[string]attr.Type{
 	"push_url":        types.StringType,
 }
 
-// Struct corresponding to Model.TargetPools[i]
+// Struct corresponding to Model.TargetPools[i].
 type targetPool struct {
 	ActiveHealthCheck  types.Object `tfsdk:"active_health_check"`
 	Name               types.String `tfsdk:"name"`
@@ -168,7 +166,7 @@ type targetPool struct {
 	SessionPersistence types.Object `tfsdk:"session_persistence"`
 }
 
-// Types corresponding to targetPool
+// Types corresponding to targetPool.
 var targetPoolTypes = map[string]attr.Type{
 	"active_health_check": types.ObjectType{AttrTypes: activeHealthCheckTypes},
 	"name":                types.StringType,
@@ -177,7 +175,7 @@ var targetPoolTypes = map[string]attr.Type{
 	"session_persistence": types.ObjectType{AttrTypes: sessionPersistenceTypes},
 }
 
-// Struct corresponding to targetPool.ActiveHealthCheck
+// Struct corresponding to targetPool.ActiveHealthCheck.
 type activeHealthCheck struct {
 	HealthyThreshold   types.Int64  `tfsdk:"healthy_threshold"`
 	Interval           types.String `tfsdk:"interval"`
@@ -186,7 +184,7 @@ type activeHealthCheck struct {
 	UnhealthyThreshold types.Int64  `tfsdk:"unhealthy_threshold"`
 }
 
-// Types corresponding to activeHealthCheck
+// Types corresponding to activeHealthCheck.
 var activeHealthCheckTypes = map[string]attr.Type{
 	"healthy_threshold":   types.Int64Type,
 	"interval":            types.StringType,
@@ -195,24 +193,24 @@ var activeHealthCheckTypes = map[string]attr.Type{
 	"unhealthy_threshold": types.Int64Type,
 }
 
-// Struct corresponding to targetPool.Targets[i]
+// Struct corresponding to targetPool.Targets[i].
 type target struct {
 	DisplayName types.String `tfsdk:"display_name"`
 	Ip          types.String `tfsdk:"ip"`
 }
 
-// Types corresponding to target
+// Types corresponding to target.
 var targetTypes = map[string]attr.Type{
 	"display_name": types.StringType,
 	"ip":           types.StringType,
 }
 
-// Struct corresponding to targetPool.SessionPersistence
+// Struct corresponding to targetPool.SessionPersistence.
 type sessionPersistence struct {
 	UseSourceIPAddress types.Bool `tfsdk:"use_source_ip_address"`
 }
 
-// Types corresponding to SessionPersistence
+// Types corresponding to SessionPersistence.
 var sessionPersistenceTypes = map[string]attr.Type{
 	"use_source_ip_address": types.BoolType,
 }
@@ -235,38 +233,46 @@ func (r *loadBalancerResource) Metadata(_ context.Context, req resource.Metadata
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
-func (r *loadBalancerResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *loadBalancerResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // function signature required by Terraform
 	var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 }
 
-// ConfigValidators validates the resource configuration
+// ConfigValidators validates the resource configuration.
 func (r *loadBalancerResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var model Model
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -284,13 +290,16 @@ func validateConfig(ctx context.Context, diags *diag.Diagnostics, model *Model) 
 		if !externalAddressIsSet {
 			core.LogAndAddError(ctx, diags, "Error configuring load balancer", fmt.Sprintf("You need to provide either the `options.private_network_only = true` or `external_address` field. %v", err))
 		}
+
 		return
 	}
+
 	if lbOptions.PrivateNetworkOnly == nil || !*lbOptions.PrivateNetworkOnly {
 		// private_network_only is not set or false and external_address is not set
 		if !externalAddressIsSet {
 			core.LogAndAddError(ctx, diags, "Error configuring load balancer", "You need to provide either the `options.private_network_only = true` or `external_address` field.")
 		}
+
 		return
 	}
 
@@ -303,16 +312,20 @@ func validateConfig(ctx context.Context, diags *diag.Diagnostics, model *Model) 
 // Configure adds the provider configured client to the resource.
 func (r *loadBalancerResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
 	apiClient := loadbalancerUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "Load Balancer client configured")
 }
 
@@ -742,14 +755,16 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -785,6 +800,7 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -793,13 +809,15 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -815,7 +833,9 @@ func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -829,21 +849,25 @@ func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Load balancer read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := model.Region.ValueString()
@@ -854,9 +878,11 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 	targetPoolsModel := []targetPool{}
 	diags = model.TargetPools.ElementsAs(ctx, &targetPoolsModel, false)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	for i := range targetPoolsModel {
 		targetPoolModel := targetPoolsModel[i]
 		targetPoolName := targetPoolModel.Name.ValueString()
@@ -876,6 +902,7 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 			return
 		}
 	}
+
 	ctx = tflog.SetField(ctx, "target_pool_name", nil)
 
 	// Get updated load balancer
@@ -895,6 +922,7 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -903,13 +931,15 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *loadBalancerResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *loadBalancerResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := model.Region.ValueString()
@@ -934,7 +964,7 @@ func (r *loadBalancerResource) Delete(ctx context.Context, req resource.DeleteRe
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,name
+// The expected format of the resource import identifier is: project_id,name.
 func (r *loadBalancerResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
@@ -943,6 +973,7 @@ func (r *loadBalancerResource) ImportState(ctx context.Context, req resource.Imp
 			"Error importing load balancer",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[name]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -962,14 +993,17 @@ func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoa
 	if err != nil {
 		return nil, fmt.Errorf("converting listeners: %w", err)
 	}
+
 	networksPayload, err := toNetworksPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("converting networks: %w", err)
 	}
+
 	optionsPayload, err := toOptionsPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("converting options: %w", err)
 	}
+
 	targetPoolsPayload, err := toTargetPoolsPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("converting target_pools: %w", err)
@@ -993,6 +1027,7 @@ func toListenersPayload(ctx context.Context, model *Model) (*[]loadbalancer.List
 	}
 
 	listenersModel := []listener{}
+
 	diags := model.Listeners.ElementsAs(ctx, &listenersModel, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
@@ -1003,20 +1038,25 @@ func toListenersPayload(ctx context.Context, model *Model) (*[]loadbalancer.List
 	}
 
 	payload := []loadbalancer.Listener{}
+
 	for i := range listenersModel {
 		listenerModel := listenersModel[i]
+
 		serverNameIndicatorsPayload, err := toServerNameIndicatorsPayload(ctx, &listenerModel)
 		if err != nil {
 			return nil, fmt.Errorf("converting index %d: converting server_name_indicator: %w", i, err)
 		}
+
 		tcp, err := toTCP(ctx, &listenerModel)
 		if err != nil {
 			return nil, fmt.Errorf("converting index %d: converting tcp: %w", i, err)
 		}
+
 		udp, err := toUDP(ctx, &listenerModel)
 		if err != nil {
 			return nil, fmt.Errorf("converting index %d: converting udp: %w", i, err)
 		}
+
 		payload = append(payload, loadbalancer.Listener{
 			DisplayName:          conversion.StringValueToPointer(listenerModel.DisplayName),
 			Port:                 conversion.Int64ValueToPointer(listenerModel.Port),
@@ -1037,12 +1077,14 @@ func toServerNameIndicatorsPayload(ctx context.Context, l *listener) (*[]loadbal
 	}
 
 	serverNameIndicatorsModel := []serverNameIndicator{}
+
 	diags := l.ServerNameIndicators.ElementsAs(ctx, &serverNameIndicatorsModel, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
 
 	payload := []loadbalancer.ServerNameIndicator{}
+
 	for i := range serverNameIndicatorsModel {
 		indicatorModel := serverNameIndicatorsModel[i]
 		payload = append(payload, loadbalancer.ServerNameIndicator{
@@ -1059,10 +1101,12 @@ func toTCP(ctx context.Context, listener *listener) (*loadbalancer.OptionsTCP, e
 	}
 
 	tcp := tcp{}
+
 	diags := listener.TCP.As(ctx, &tcp, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
+
 	if tcp.IdleTimeout.IsNull() || tcp.IdleTimeout.IsUnknown() {
 		return nil, nil
 	}
@@ -1078,10 +1122,12 @@ func toUDP(ctx context.Context, listener *listener) (*loadbalancer.OptionsUDP, e
 	}
 
 	udp := udp{}
+
 	diags := listener.UDP.As(ctx, &udp, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
+
 	if udp.IdleTimeout.IsNull() || udp.IdleTimeout.IsUnknown() {
 		return nil, nil
 	}
@@ -1097,6 +1143,7 @@ func toNetworksPayload(ctx context.Context, model *Model) (*[]loadbalancer.Netwo
 	}
 
 	networksModel := []network{}
+
 	diags := model.Networks.ElementsAs(ctx, &networksModel, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
@@ -1107,6 +1154,7 @@ func toNetworksPayload(ctx context.Context, model *Model) (*[]loadbalancer.Netwo
 	}
 
 	payload := []loadbalancer.Network{}
+
 	for i := range networksModel {
 		networkModel := networksModel[i]
 		payload = append(payload, loadbalancer.Network{
@@ -1127,24 +1175,30 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 	}
 
 	optionsModel := options{}
+
 	diags := model.Options.As(ctx, &optionsModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
 
 	accessControlPayload := &loadbalancer.LoadbalancerOptionAccessControl{}
-	if !(optionsModel.ACL.IsNull() || optionsModel.ACL.IsUnknown()) {
+
+	if !optionsModel.ACL.IsNull() && !optionsModel.ACL.IsUnknown() {
 		var aclModel []string
+
 		diags := optionsModel.ACL.ElementsAs(ctx, &aclModel, false)
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting acl: %w", core.DiagsToError(diags))
 		}
+
 		accessControlPayload.AllowedSourceRanges = &aclModel
 	}
 
 	observabilityPayload := &loadbalancer.LoadbalancerOptionObservability{}
-	if !(optionsModel.Observability.IsNull() || optionsModel.Observability.IsUnknown()) {
+
+	if !optionsModel.Observability.IsNull() && !optionsModel.Observability.IsUnknown() {
 		observabilityModel := observability{}
+
 		diags := optionsModel.Observability.As(ctx, &observabilityModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting observability: %w", core.DiagsToError(diags))
@@ -1152,10 +1206,12 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 
 		// observability logs
 		observabilityLogsModel := observabilityOption{}
+
 		diags = observabilityModel.Logs.As(ctx, &observabilityLogsModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting observability logs: %w", core.DiagsToError(diags))
 		}
+
 		observabilityPayload.Logs = &loadbalancer.LoadbalancerOptionLogs{
 			CredentialsRef: observabilityLogsModel.CredentialsRef.ValueStringPointer(),
 			PushUrl:        observabilityLogsModel.PushUrl.ValueStringPointer(),
@@ -1163,10 +1219,12 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 
 		// observability metrics
 		observabilityMetricsModel := observabilityOption{}
+
 		diags = observabilityModel.Metrics.As(ctx, &observabilityMetricsModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting observability metrics: %w", core.DiagsToError(diags))
 		}
+
 		observabilityPayload.Metrics = &loadbalancer.LoadbalancerOptionMetrics{
 			CredentialsRef: observabilityMetricsModel.CredentialsRef.ValueStringPointer(),
 			PushUrl:        observabilityMetricsModel.PushUrl.ValueStringPointer(),
@@ -1188,6 +1246,7 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.Ta
 	}
 
 	targetPoolsModel := []targetPool{}
+
 	diags := model.TargetPools.ElementsAs(ctx, &targetPoolsModel, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
@@ -1198,6 +1257,7 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.Ta
 	}
 
 	payload := []loadbalancer.TargetPool{}
+
 	for i := range targetPoolsModel {
 		targetPoolModel := targetPoolsModel[i]
 
@@ -1205,10 +1265,12 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.Ta
 		if err != nil {
 			return nil, fmt.Errorf("converting index %d: converting active_health_check: %w", i, err)
 		}
+
 		sessionPersistencePayload, err := toSessionPersistencePayload(ctx, &targetPoolModel)
 		if err != nil {
 			return nil, fmt.Errorf("converting index %d: converting session_persistence: %w", i, err)
 		}
+
 		targetsPayload, err := toTargetsPayload(ctx, &targetPoolModel)
 		if err != nil {
 			return nil, fmt.Errorf("converting index %d: converting targets: %w", i, err)
@@ -1235,10 +1297,12 @@ func toTargetPoolUpdatePayload(ctx context.Context, tp *targetPool) (*loadbalanc
 	if err != nil {
 		return nil, fmt.Errorf("converting active_health_check: %w", err)
 	}
+
 	sessionPersistencePayload, err := toSessionPersistencePayload(ctx, tp)
 	if err != nil {
 		return nil, fmt.Errorf("converting session_persistence: %w", err)
 	}
+
 	targetsPayload, err := toTargetsPayload(ctx, tp)
 	if err != nil {
 		return nil, fmt.Errorf("converting targets: %w", err)
@@ -1259,6 +1323,7 @@ func toSessionPersistencePayload(ctx context.Context, tp *targetPool) (*loadbala
 	}
 
 	sessionPersistenceModel := sessionPersistence{}
+
 	diags := tp.SessionPersistence.As(ctx, &sessionPersistenceModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
@@ -1275,6 +1340,7 @@ func toActiveHealthCheckPayload(ctx context.Context, tp *targetPool) (*loadbalan
 	}
 
 	activeHealthCheckModel := activeHealthCheck{}
+
 	diags := tp.ActiveHealthCheck.As(ctx, &activeHealthCheckModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
@@ -1295,6 +1361,7 @@ func toTargetsPayload(ctx context.Context, tp *targetPool) (*[]loadbalancer.Targ
 	}
 
 	targetsModel := []target{}
+
 	diags := tp.Targets.ElementsAs(ctx, &targetsModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting Targets list: %w", core.DiagsToError(diags))
@@ -1305,6 +1372,7 @@ func toTargetsPayload(ctx context.Context, tp *targetPool) (*[]loadbalancer.Targ
 	}
 
 	payload := []loadbalancer.Target{}
+
 	for i := range targetsModel {
 		targetModel := targetsModel[i]
 		payload = append(payload, loadbalancer.Target{
@@ -1321,6 +1389,7 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, reg
 	if lb == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if m == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -1333,6 +1402,7 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, reg
 	} else {
 		return fmt.Errorf("name not present")
 	}
+
 	m.Region = types.StringValue(region)
 	m.Name = types.StringValue(name)
 	m.Id = utils.BuildInternalTerraformId(m.ProjectId.ValueString(), m.Region.ValueString(), name)
@@ -1347,18 +1417,22 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, reg
 	} else {
 		m.SecurityGroupId = types.StringNull()
 	}
+
 	err := mapListeners(lb, m)
 	if err != nil {
 		return fmt.Errorf("mapping listeners: %w", err)
 	}
+
 	err = mapNetworks(lb, m)
 	if err != nil {
 		return fmt.Errorf("mapping network: %w", err)
 	}
+
 	err = mapOptions(ctx, lb, m)
 	if err != nil {
 		return fmt.Errorf("mapping options: %w", err)
 	}
+
 	err = mapTargetPools(lb, m)
 	if err != nil {
 		return fmt.Errorf("mapping target pools: %w", err)
@@ -1374,6 +1448,7 @@ func mapListeners(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 	}
 
 	listenersList := []attr.Value{}
+
 	for i, listenerResp := range *loadBalancerResp.Listeners {
 		listenerMap := map[string]attr.Value{
 			"display_name": types.StringPointerValue(listenerResp.DisplayName),
@@ -1414,6 +1489,7 @@ func mapListeners(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 	}
 
 	m.Listeners = listenersTF
+
 	return nil
 }
 
@@ -1424,6 +1500,7 @@ func mapServerNameIndicators(serverNameIndicatorsResp *[]loadbalancer.ServerName
 	}
 
 	serverNameIndicatorsList := []attr.Value{}
+
 	for i, serverNameIndicatorResp := range *serverNameIndicatorsResp {
 		serverNameIndicatorMap := map[string]attr.Value{
 			"name": types.StringPointerValue(serverNameIndicatorResp.Name),
@@ -1446,6 +1523,7 @@ func mapServerNameIndicators(serverNameIndicatorsResp *[]loadbalancer.ServerName
 	}
 
 	l["server_name_indicators"] = serverNameIndicatorsTF
+
 	return nil
 }
 
@@ -1463,6 +1541,7 @@ func mapTCP(tcp *loadbalancer.OptionsTCP, listener map[string]attr.Value) error 
 	}
 
 	listener["tcp"] = tcpAttr
+
 	return nil
 }
 
@@ -1480,6 +1559,7 @@ func mapUDP(udp *loadbalancer.OptionsUDP, listener map[string]attr.Value) error 
 	}
 
 	listener["udp"] = udpAttr
+
 	return nil
 }
 
@@ -1490,6 +1570,7 @@ func mapNetworks(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 	}
 
 	networksList := []attr.Value{}
+
 	for i, networkResp := range *loadBalancerResp.Networks {
 		networkMap := map[string]attr.Value{
 			"network_id": types.StringPointerValue(networkResp.NetworkId),
@@ -1513,6 +1594,7 @@ func mapNetworks(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 	}
 
 	m.Networks = networksTF
+
 	return nil
 }
 
@@ -1528,10 +1610,12 @@ func mapOptions(ctx context.Context, loadBalancerResp *loadbalancer.LoadBalancer
 	// we set it to false in the TF state to prevent an inconsistent result after apply error
 	if !m.Options.IsNull() && !m.Options.IsUnknown() {
 		optionsModel := options{}
+
 		diags := m.Options.As(ctx, &optionsModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return fmt.Errorf("convert options: %w", core.DiagsToError(diags))
 		}
+
 		if loadBalancerResp.Options.PrivateNetworkOnly == nil && !optionsModel.PrivateNetworkOnly.IsNull() && !optionsModel.PrivateNetworkOnly.IsUnknown() && !optionsModel.PrivateNetworkOnly.ValueBool() {
 			privateNetworkOnlyTF = types.BoolValue(false)
 		}
@@ -1554,6 +1638,7 @@ func mapOptions(ctx context.Context, loadBalancerResp *loadbalancer.LoadBalancer
 		observabilityLogsMap["credentials_ref"] = types.StringPointerValue(loadBalancerResp.Options.Observability.Logs.CredentialsRef)
 		observabilityLogsMap["push_url"] = types.StringPointerValue(loadBalancerResp.Options.Observability.Logs.PushUrl)
 	}
+
 	observabilityLogsTF, diags := types.ObjectValue(observabilityOptionTypes, observabilityLogsMap)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -1567,6 +1652,7 @@ func mapOptions(ctx context.Context, loadBalancerResp *loadbalancer.LoadBalancer
 		observabilityMetricsMap["credentials_ref"] = types.StringPointerValue(loadBalancerResp.Options.Observability.Metrics.CredentialsRef)
 		observabilityMetricsMap["push_url"] = types.StringPointerValue(loadBalancerResp.Options.Observability.Metrics.PushUrl)
 	}
+
 	observabilityMetricsTF, diags := types.ObjectValue(observabilityOptionTypes, observabilityMetricsMap)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -1576,10 +1662,12 @@ func mapOptions(ctx context.Context, loadBalancerResp *loadbalancer.LoadBalancer
 		"logs":    observabilityLogsTF,
 		"metrics": observabilityMetricsTF,
 	}
+
 	observabilityTF, diags := types.ObjectValue(observabilityTypes, observabilityMap)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	optionsMap["observability"] = observabilityTF
 
 	optionsTF, diags := types.ObjectValue(optionsTypes, optionsMap)
@@ -1588,6 +1676,7 @@ func mapOptions(ctx context.Context, loadBalancerResp *loadbalancer.LoadBalancer
 	}
 
 	m.Options = optionsTF
+
 	return nil
 }
 
@@ -1598,6 +1687,7 @@ func mapACL(accessControlResp *loadbalancer.LoadbalancerOptionAccessControl, o m
 	}
 
 	aclList := []attr.Value{}
+
 	for _, rangeResp := range *accessControlResp.AllowedSourceRanges {
 		rangeTF := types.StringValue(rangeResp)
 		aclList = append(aclList, rangeTF)
@@ -1609,6 +1699,7 @@ func mapACL(accessControlResp *loadbalancer.LoadbalancerOptionAccessControl, o m
 	}
 
 	o["acl"] = aclTF
+
 	return nil
 }
 
@@ -1619,6 +1710,7 @@ func mapTargetPools(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error
 	}
 
 	targetPoolsList := []attr.Value{}
+
 	for i, targetPoolResp := range *loadBalancerResp.TargetPools {
 		targetPoolMap := map[string]attr.Value{
 			"name":        types.StringPointerValue(targetPoolResp.Name),
@@ -1657,6 +1749,7 @@ func mapTargetPools(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error
 	}
 
 	m.TargetPools = targetPoolsTF
+
 	return nil
 }
 
@@ -1680,6 +1773,7 @@ func mapActiveHealthCheck(activeHealthCheckResp *loadbalancer.ActiveHealthCheck,
 	}
 
 	tp["active_health_check"] = activeHealthCheckTF
+
 	return nil
 }
 
@@ -1690,6 +1784,7 @@ func mapTargets(targetsResp *[]loadbalancer.Target, tp map[string]attr.Value) er
 	}
 
 	targetsList := []attr.Value{}
+
 	for i, targetResp := range *targetsResp {
 		targetMap := map[string]attr.Value{
 			"display_name": types.StringPointerValue(targetResp.DisplayName),
@@ -1713,6 +1808,7 @@ func mapTargets(targetsResp *[]loadbalancer.Target, tp map[string]attr.Value) er
 	}
 
 	tp["targets"] = targetsTF
+
 	return nil
 }
 
@@ -1732,5 +1828,6 @@ func mapSessionPersistence(sessionPersistenceResp *loadbalancer.SessionPersisten
 	}
 
 	tp["session_persistence"] = sessionPersistenceTF
+
 	return nil
 }

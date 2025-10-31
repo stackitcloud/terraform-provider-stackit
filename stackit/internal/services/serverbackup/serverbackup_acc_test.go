@@ -53,6 +53,7 @@ var testConfigVarsMax = config.Variables{
 func configVarsInvalid(vars config.Variables) config.Variables {
 	tempConfig := maps.Clone(vars)
 	tempConfig["retention_period"] = config.IntegerVariable(0)
+
 	return tempConfig
 }
 
@@ -68,6 +69,7 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMax)
 	tempConfig["retention_period"] = config.IntegerVariable(12)
 	tempConfig["rrule"] = config.StringVariable("DTSTART;TZID=Europe/Berlin:20250430T010000 RRULE:FREQ=DAILY;INTERVAL=3")
+
 	return tempConfig
 }
 
@@ -76,6 +78,7 @@ func TestAccServerBackupScheduleMinResource(t *testing.T) {
 		fmt.Println("TF_ACC_SERVER_ID not set, skipping test")
 		return
 	}
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckServerBackupScheduleDestroy,
@@ -136,6 +139,7 @@ func TestAccServerBackupScheduleMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute backup_schedule_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, testutil.ServerId, scheduleId), nil
 				},
 				ImportState:       true,
@@ -168,6 +172,7 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 		fmt.Println("TF_ACC_SERVER_ID not set, skipping test")
 		return
 	}
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckServerBackupScheduleDestroy,
@@ -228,6 +233,7 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute backup_schedule_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, testutil.ServerId, scheduleId), nil
 				},
 				ImportState:       true,
@@ -257,7 +263,9 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 
 func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *serverbackup.APIClient
+
 	var err error
 	if testutil.ServerBackupCustomEndpoint == "" {
 		client, err = serverbackup.NewAPIClient()
@@ -266,11 +274,13 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 			core_config.WithEndpoint(testutil.ServerBackupCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	schedulesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_server_backup_schedule" {
 			continue
@@ -290,6 +300,7 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 		if schedules[i].Id == nil {
 			continue
 		}
+
 		scheduleId := strconv.FormatInt(*schedules[i].Id, 10)
 		if utils.Contains(schedulesToDestroy, scheduleId) {
 			err := client.DeleteBackupScheduleExecute(ctx, testutil.ProjectId, testutil.ServerId, scheduleId, testutil.Region)
@@ -298,5 +309,6 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

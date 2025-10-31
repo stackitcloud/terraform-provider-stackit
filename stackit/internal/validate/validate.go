@@ -43,10 +43,11 @@ func (v *Validator) MarkdownDescription(_ context.Context) string {
 	return v.markdownDescription
 }
 
-func (v *Validator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) { // nolint:gocritic // function signature required by Terraform
+func (v *Validator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) { //nolint:gocritic // function signature required by Terraform
 	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
+
 	v.validate(ctx, req, resp)
 }
 
@@ -107,6 +108,7 @@ func IP(allowZeroAddress bool) *Validator {
 
 func RecordSet() *Validator {
 	const typePath = "type"
+
 	return &Validator{
 		description: "value must be a valid record set",
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
@@ -243,6 +245,7 @@ func RFC3339SecondsOnly() *Validator {
 					description,
 					req.ConfigValue.ValueString(),
 				))
+
 				return
 			}
 
@@ -357,6 +360,7 @@ func ValidNoTrailingNewline() *Validator {
 					description,
 					val,
 				))
+
 				return
 			}
 			if val[len(val)-1] == '\n' {

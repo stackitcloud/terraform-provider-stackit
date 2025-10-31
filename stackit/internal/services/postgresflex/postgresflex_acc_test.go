@@ -9,16 +9,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-// Instance resource data
+// Instance resource data.
 var instanceResource = map[string]string{
 	"project_id":              testutil.ProjectId,
 	"name":                    fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
@@ -35,14 +34,14 @@ var instanceResource = map[string]string{
 	"flavor_id":               "2.4",
 }
 
-// User resource data
+// User resource data.
 var userResource = map[string]string{
 	"username":   fmt.Sprintf("tfaccuser%s", acctest.RandStringFromCharSet(4, acctest.CharSetAlpha)),
 	"role":       "createdb",
 	"project_id": instanceResource["project_id"],
 }
 
-// Database resource data
+// Database resource data.
 var databaseResource = map[string]string{
 	"name": fmt.Sprintf("tfaccdb%s", acctest.RandStringFromCharSet(4, acctest.CharSetAlphaNum)),
 }
@@ -52,6 +51,7 @@ func configResources(backupSchedule string, region *string) string {
 	if region != nil {
 		regionConfig = fmt.Sprintf(`region = %q`, *region)
 	}
+
 	return fmt.Sprintf(`
 				%s
 
@@ -321,7 +321,9 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 
 func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *postgresflex.APIClient
+
 	var err error
 	if testutil.PostgresFlexCustomEndpoint == "" {
 		client, err = postgresflex.NewAPIClient()
@@ -330,11 +332,13 @@ func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 			config.WithEndpoint(testutil.PostgresFlexCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_postgresflex_instance" {
 			continue
@@ -354,16 +358,19 @@ func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 		if items[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(instancesToDestroy, *items[i].Id) {
 			err := client.ForceDeleteInstanceExecute(ctx, testutil.ProjectId, testutil.Region, *items[i].Id)
 			if err != nil {
 				return fmt.Errorf("deleting instance %s during CheckDestroy: %w", *items[i].Id, err)
 			}
+
 			_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, *items[i].Id).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("deleting instance %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
 			}
 		}
 	}
+
 	return nil
 }

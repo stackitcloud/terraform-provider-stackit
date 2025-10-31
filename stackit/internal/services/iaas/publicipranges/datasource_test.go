@@ -75,6 +75,7 @@ func TestMapPublicIpRanges(t *testing.T) {
 				})
 				ipRangesVal, _ := types.ListValue(types.ObjectType{AttrTypes: publicIpRangesTypes}, []attr.Value{ipRange})
 				cidrListVal, _ := types.ListValueFrom(ctx, types.StringType, cidrs)
+
 				return Model{
 					PublicIpRanges: ipRangesVal,
 					CidrList:       cidrListVal,
@@ -94,6 +95,7 @@ func TestMapPublicIpRanges(t *testing.T) {
 				if err == nil {
 					t.Fatalf("Expected error but got nil")
 				}
+
 				return
 			} else if err != nil {
 				t.Fatalf("Unexpected error: %v", err)

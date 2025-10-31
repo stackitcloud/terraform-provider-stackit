@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-
 	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
@@ -223,6 +222,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, credentialsGroupId, credentialId), nil
 				},
 				ImportState:             true,
@@ -236,7 +236,9 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 
 func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	var client *objectstorage.APIClient
+
 	var err error
 	if testutil.ObjectStorageCustomEndpoint == "" {
 		client, err = objectstorage.NewAPIClient(
@@ -247,11 +249,13 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 			stackitSdkConfig.WithEndpoint(testutil.ObjectStorageCustomEndpoint),
 		)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	bucketsToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_objectstorage_bucket" {
 			continue
@@ -271,12 +275,14 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		if bucket.Name == nil {
 			continue
 		}
+
 		bucketName := *bucket.Name
 		if utils.Contains(bucketsToDestroy, bucketName) {
 			_, err := client.DeleteBucketExecute(ctx, testutil.ProjectId, testutil.Region, bucketName)
 			if err != nil {
 				return fmt.Errorf("destroying bucket %s during CheckDestroy: %w", bucketName, err)
 			}
+
 			_, err = wait.DeleteBucketWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, bucketName).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", bucketName, err)
@@ -285,6 +291,7 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 	}
 
 	credentialsGroupsToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_objectstorage_credentials_group" {
 			continue
@@ -304,6 +311,7 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		if group.CredentialsGroupId == nil {
 			continue
 		}
+
 		groupId := *group.CredentialsGroupId
 		if utils.Contains(credentialsGroupsToDestroy, groupId) {
 			_, err := client.DeleteCredentialsGroupExecute(ctx, testutil.ProjectId, testutil.Region, groupId)
@@ -312,5 +320,6 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

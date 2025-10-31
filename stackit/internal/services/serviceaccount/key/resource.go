@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -24,6 +22,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -64,10 +63,13 @@ func (r *serviceAccountKeyResource) Configure(ctx context.Context, req resource.
 	}
 
 	apiClient := serviceaccountUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "Service Account client configured")
 }
 
@@ -153,11 +155,12 @@ func (r *serviceAccountKeyResource) Schema(_ context.Context, _ resource.SchemaR
 }
 
 // Create creates the resource and sets the initial Terraform state for service accounts.
-func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve the planned values for the resource.
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -181,7 +184,6 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 
 	// Initialize the API request with the required parameters.
 	saAccountKeyResp, err := r.client.CreateServiceAccountKey(ctx, projectId, serviceAccountEmail).CreateServiceAccountKeyPayload(*payload).Execute()
-
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Failed to create service account key", fmt.Sprintf("API call error: %v", err))
 		return
@@ -197,18 +199,21 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 	// Set the state with fully populated data.
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Service account key created")
 }
 
 // Read refreshes the Terraform state with the latest service account data.
-func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -226,16 +231,20 @@ func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadR
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account key", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
 	// No mapping needed for read response, as private_key is excluded and ID remains unchanged.
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "key read")
 }
 
@@ -245,17 +254,18 @@ func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadR
 // As a result, the Update function is redundant since any modifications will
 // automatically trigger a resource recreation through Terraform's built-in
 // lifecycle management.
-func (r *serviceAccountKeyResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountKeyResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Service accounts cannot be updated, so we log an error.
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating service account key", "Service account key can't be updated")
 }
 
 // Delete deletes the service account key and removes it from the Terraform state on success.
-func (r *serviceAccountKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve current state of the resource.
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -291,6 +301,7 @@ func toCreatePayload(model *Model) (*serviceaccount.CreateServiceAccountKeyPaylo
 		if err != nil {
 			return nil, err
 		}
+
 		payload.ValidUntil = &validUntil
 	}
 
@@ -307,6 +318,7 @@ func computeValidUntil(ttlDays *int64) (time.Time, error) {
 	if ttlDays == nil {
 		return time.Time{}, fmt.Errorf("ttlDays is nil")
 	}
+
 	return time.Now().UTC().Add(time.Duration(*ttlDays) * 24 * time.Hour), nil
 }
 

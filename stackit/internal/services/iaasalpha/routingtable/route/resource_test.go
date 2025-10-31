@@ -6,14 +6,13 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
 )
 
 const (
@@ -33,6 +32,7 @@ func Test_mapFieldsFromList(t *testing.T) {
 		model     *shared.RouteModel
 		region    string
 	}
+
 	tests := []struct {
 		name          string
 		args          args
@@ -172,6 +172,7 @@ func Test_toUpdatePayload(t *testing.T) {
 		model         *shared.RouteModel
 		currentLabels types.Map
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -213,11 +214,13 @@ func Test_toUpdatePayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+
 			got, err := toUpdatePayload(ctx, tt.args.model, tt.args.currentLabels)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			diff := cmp.Diff(got, tt.want)
 			if diff != "" {
 				t.Fatalf("toUpdatePayload(): %s", diff)
@@ -230,6 +233,7 @@ func Test_toNextHopPayload(t *testing.T) {
 	type args struct {
 		model *shared.RouteReadModel
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -307,11 +311,13 @@ func Test_toNextHopPayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+
 			got, err := toNextHopPayload(ctx, tt.args.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toNextHopPayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("toNextHopPayload() got = %v, want %v", got, tt.want)
 			}
@@ -323,6 +329,7 @@ func Test_toDestinationPayload(t *testing.T) {
 	type args struct {
 		model *shared.RouteReadModel
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -370,11 +377,13 @@ func Test_toDestinationPayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+
 			got, err := toDestinationPayload(ctx, tt.args.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toDestinationPayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("toDestinationPayload() got = %v, want %v", got, tt.want)
 			}
@@ -386,6 +395,7 @@ func Test_toCreatePayload(t *testing.T) {
 	type args struct {
 		model *shared.RouteReadModel
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -438,11 +448,13 @@ func Test_toCreatePayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+
 			got, err := toCreatePayload(ctx, tt.args.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			diff := cmp.Diff(got, tt.want)
 			if diff != "" {
 				t.Fatalf("toCreatePayload(): %s", diff)

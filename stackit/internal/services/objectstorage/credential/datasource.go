@@ -6,17 +6,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -53,16 +51,20 @@ func (r *credentialDataSource) Metadata(_ context.Context, req datasource.Metada
 // Configure adds the provider configured client to the datasource.
 func (r *credentialDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
+
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
 	apiClient := objectstorageUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
+
 	tflog.Info(ctx, "ObjectStorage credential client configured")
 }
 
@@ -112,10 +114,11 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -143,8 +146,10 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	if credentialsGroupResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading credentials", fmt.Sprintf("Response is nil: %v", err))
 		return
@@ -165,9 +170,11 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ObjectStorage credential read")
 }
 
@@ -175,6 +182,7 @@ func mapDataSourceFields(credentialResp *objectstorage.AccessKey, model *DataSou
 	if credentialResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -197,6 +205,7 @@ func mapDataSourceFields(credentialResp *objectstorage.AccessKey, model *DataSou
 		if err != nil {
 			return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credentialResp.Expires, err)
 		}
+
 		model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
 	}
 
@@ -206,16 +215,19 @@ func mapDataSourceFields(credentialResp *objectstorage.AccessKey, model *DataSou
 	model.CredentialId = types.StringValue(credentialId)
 	model.Name = types.StringPointerValue(credentialResp.DisplayName)
 	model.Region = types.StringValue(region)
+
 	return nil
 }
 
-// Returns the access key if found otherwise nil
+// Returns the access key if found otherwise nil.
 func findCredential(credentialsGroupResp objectstorage.ListAccessKeysResponse, credentialId string) *objectstorage.AccessKey {
 	for _, credential := range *credentialsGroupResp.AccessKeys {
 		if credential.KeyId == nil || *credential.KeyId != credentialId {
 			continue
 		}
+
 		return &credential
 	}
+
 	return nil
 }
