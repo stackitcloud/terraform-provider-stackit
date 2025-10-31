@@ -4,11 +4,17 @@ page_title: "stackit_network Resource - stackit"
 subcategory: ""
 description: |-
   Network resource schema. Must have a region specified in the provider configuration.
+  ~> Behavior of not configured ipv4_nameservers will change from January 2026. When ipv4_nameservers is not set, it will be set to the network area's default_nameservers.
+  To prevent any nameserver configuration, the ipv4_nameservers attribute should be explicitly set to an empty list [].
+  In cases where ipv4_nameservers are defined within the resource, the existing behavior will remain unchanged.
 ---
 
 # stackit_network (Resource)
 
 Network resource schema. Must have a `region` specified in the provider configuration.
+~> Behavior of not configured `ipv4_nameservers` will change from January 2026. When `ipv4_nameservers` is not set, it will be set to the network area's `default_nameservers`.
+To prevent any nameserver configuration, the `ipv4_nameservers` attribute should be explicitly set to an empty list `[]`.
+In cases where `ipv4_nameservers` are defined within the resource, the existing behavior will remain unchanged.
 
 ## Example Usage
 
@@ -68,7 +74,7 @@ import {
 - `ipv6_prefix` (String) The IPv6 prefix of the network (CIDR).
 - `ipv6_prefix_length` (Number) The IPv6 prefix length of the network.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
-- `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed soon, use `ipv4_nameservers` to configure the nameservers for IPv4.
+- `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed in January 2026, use `ipv4_nameservers` to configure the nameservers for IPv4.
 - `no_ipv4_gateway` (Boolean) If set to `true`, the network doesn't have a gateway.
 - `no_ipv6_gateway` (Boolean) If set to `true`, the network doesn't have a gateway.
 - `region` (String) Can only be used when experimental "network" is set.
@@ -83,5 +89,5 @@ The ID of the routing table associated with the network.
 - `ipv4_prefixes` (List of String) The IPv4 prefixes of the network.
 - `ipv6_prefixes` (List of String) The IPv6 prefixes of the network.
 - `network_id` (String) The network ID.
-- `prefixes` (List of String, Deprecated) The prefixes of the network. This field is deprecated and will be removed soon, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.
+- `prefixes` (List of String, Deprecated) The prefixes of the network. This field is deprecated and will be removed in January 2026, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.
 - `public_ip` (String) The public IP of the network.
