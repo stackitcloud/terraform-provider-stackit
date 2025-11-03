@@ -514,7 +514,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	if err := updateServerStatus(ctx, r.client, server.Status, &model, region); err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creting server", fmt.Sprintf("update server state: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("update server state: %v", err))
 		return
 	}
 
@@ -538,7 +538,7 @@ type serverControlClient interface {
 
 func startServer(ctx context.Context, client serverControlClient, projectId, region, serverId string) error {
 	tflog.Debug(ctx, "starting server to enter active state")
-	if err := client.StartServerExecute(ctx, projectId, serverId, region); err != nil {
+	if err := client.StartServerExecute(ctx, projectId, region, serverId); err != nil {
 		return fmt.Errorf("cannot start server: %w", err)
 	}
 	_, err := wait.StartServerWaitHandler(ctx, client, projectId, region, serverId).WaitWithContext(ctx)
@@ -550,7 +550,7 @@ func startServer(ctx context.Context, client serverControlClient, projectId, reg
 
 func stopServer(ctx context.Context, client serverControlClient, projectId, region, serverId string) error {
 	tflog.Debug(ctx, "stopping server to enter inactive state")
-	if err := client.StopServerExecute(ctx, projectId, serverId, region); err != nil {
+	if err := client.StopServerExecute(ctx, projectId, region, serverId); err != nil {
 		return fmt.Errorf("cannot stop server: %w", err)
 	}
 	_, err := wait.StopServerWaitHandler(ctx, client, projectId, region, serverId).WaitWithContext(ctx)
@@ -562,7 +562,7 @@ func stopServer(ctx context.Context, client serverControlClient, projectId, regi
 
 func deallocateServer(ctx context.Context, client serverControlClient, projectId, region, serverId string) error {
 	tflog.Debug(ctx, "deallocating server to enter shelved state")
-	if err := client.DeallocateServerExecute(ctx, projectId, serverId, region); err != nil {
+	if err := client.DeallocateServerExecute(ctx, projectId, region, serverId); err != nil {
 		return fmt.Errorf("cannot deallocate server: %w", err)
 	}
 	_, err := wait.DeallocateServerWaitHandler(ctx, client, projectId, region, serverId).WaitWithContext(ctx)
