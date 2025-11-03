@@ -189,7 +189,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 	descriptionNote := fmt.Sprintf("~> %s. %s", ipv4BehaviorChangeTitle, ipv4BehaviorChangeDescription)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: fmt.Sprintf("%s\n%s", description, descriptionNote),
-		Description:         "Network resource schema. Must have a `region` specified in the provider configuration.",
+		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`network_id`\".",

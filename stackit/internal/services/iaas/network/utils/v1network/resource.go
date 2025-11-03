@@ -369,26 +369,31 @@ func toCreatePayload(ctx context.Context, model *networkModel.Model) (*iaas.Crea
 	}
 	addressFamily := &iaas.CreateNetworkAddressFamily{}
 
-	var modelIPv6Nameservers *[]string
+	var modelIPv6Nameservers []string
 	// Is true when IPv6Nameservers is not null or unset
 	if !utils.IsUndefined(model.IPv6Nameservers) {
 		// If ipv6Nameservers is empty, modelIPv6Nameservers will be set to an empty slice.
 		// empty slice != nil slice. Empty slice will result in an empty list in the payload []. Nil slice will result in a payload without the property set
-		modelIPv6Nameservers = &[]string{}
+		modelIPv6Nameservers = []string{}
 		for _, ipv6ns := range model.IPv6Nameservers.Elements() {
 			ipv6NameserverString, ok := ipv6ns.(types.String)
 			if !ok {
 				return nil, fmt.Errorf("type assertion failed")
 			}
-			*modelIPv6Nameservers = append(*modelIPv6Nameservers, ipv6NameserverString.ValueString())
+			modelIPv6Nameservers = append(modelIPv6Nameservers, ipv6NameserverString.ValueString())
 		}
 	}
 
 	if !utils.IsUndefined(model.IPv6Prefix) || !utils.IsUndefined(model.IPv6PrefixLength) || (modelIPv6Nameservers != nil) {
 		addressFamily.Ipv6 = &iaas.CreateNetworkIPv6Body{
-			Nameservers:  modelIPv6Nameservers,
 			Prefix:       conversion.StringValueToPointer(model.IPv6Prefix),
 			PrefixLength: conversion.Int64ValueToPointer(model.IPv6PrefixLength),
+		}
+		// IPv6 nameservers should only be set, if it contains any value. If the slice is nil, it should NOT be set.
+		// Setting it to a nil slice would result in a payload, where nameservers is set to null in the json payload,
+		// but it should actually be unset. Setting it to "null" will result in an error, because it's NOT nullable.
+		if modelIPv6Nameservers != nil {
+			addressFamily.Ipv6.Nameservers = &modelIPv6Nameservers
 		}
 
 		if model.NoIPv6Gateway.ValueBool() {
@@ -453,24 +458,29 @@ func toUpdatePayload(ctx context.Context, model, stateModel *networkModel.Model)
 	}
 	addressFamily := &iaas.UpdateNetworkAddressFamily{}
 
-	var modelIPv6Nameservers *[]string
+	var modelIPv6Nameservers []string
 	// Is true when IPv6Nameservers is not null or unset
 	if !utils.IsUndefined(model.IPv6Nameservers) {
 		// If ipv6Nameservers is empty, modelIPv6Nameservers will be set to an empty slice.
 		// empty slice != nil slice. Empty slice will result in an empty list in the payload []. Nil slice will result in a payload without the property set
-		modelIPv6Nameservers = &[]string{}
+		modelIPv6Nameservers = []string{}
 		for _, ipv6ns := range model.IPv6Nameservers.Elements() {
 			ipv6NameserverString, ok := ipv6ns.(types.String)
 			if !ok {
 				return nil, fmt.Errorf("type assertion failed")
 			}
-			*modelIPv6Nameservers = append(*modelIPv6Nameservers, ipv6NameserverString.ValueString())
+			modelIPv6Nameservers = append(modelIPv6Nameservers, ipv6NameserverString.ValueString())
 		}
 	}
 
 	if !utils.IsUndefined(model.NoIPv6Gateway) || !utils.IsUndefined(model.IPv6Gateway) || modelIPv6Nameservers != nil {
-		addressFamily.Ipv6 = &iaas.UpdateNetworkIPv6Body{
-			Nameservers: modelIPv6Nameservers,
+		addressFamily.Ipv6 = &iaas.UpdateNetworkIPv6Body{}
+
+		// IPv6 nameservers should only be set, if it contains any value. If the slice is nil, it should NOT be set.
+		// Setting it to a nil slice would result in a payload, where nameservers is set to null in the json payload,
+		// but it should actually be unset. Setting it to "null" will result in an error, because it's NOT nullable.
+		if modelIPv6Nameservers != nil {
+			addressFamily.Ipv6.Nameservers = &modelIPv6Nameservers
 		}
 
 		if model.NoIPv6Gateway.ValueBool() {
