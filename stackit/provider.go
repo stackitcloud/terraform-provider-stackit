@@ -105,6 +105,8 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/snapshots"
 	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
+	skeKubernetesVersion "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/kubernetesversions"
+	skeMachineImages "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/machineimages"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
 )
@@ -594,6 +596,8 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		serverUpdateSchedule.NewSchedulesDataSource,
 		serviceAccount.NewServiceAccountDataSource,
 		skeCluster.NewClusterDataSource,
+		skeKubernetesVersion.NewKubernetesVersionsDataSource,
+		skeMachineImages.NewKubernetesMachineImageVersionDataSource,
 		resourcepool.NewResourcePoolDataSource,
 		share.NewShareDataSource,
 		exportpolicy.NewExportPolicyDataSource,
