@@ -193,8 +193,8 @@ func TestToCreatePayload(t *testing.T) {
 		isValid     bool
 	}{
 		{
-			"ok",
-			&Model{
+			description: "ok",
+			input: &Model{
 				Name:             types.StringValue("name"),
 				AvailabilityZone: types.StringValue("zone"),
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
@@ -212,8 +212,12 @@ func TestToCreatePayload(t *testing.T) {
 				KeypairName: types.StringValue("keypair"),
 				MachineType: types.StringValue("machine_type"),
 				UserData:    types.StringValue(userData),
+				NetworkInterfaces: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("nic1"),
+					types.StringValue("nic2"),
+				}),
 			},
-			&iaas.CreateServerPayload{
+			expected: &iaas.CreateServerPayload{
 				Name:             utils.Ptr("name"),
 				AvailabilityZone: utils.Ptr("zone"),
 				Labels: &map[string]interface{}{
@@ -231,12 +235,17 @@ func TestToCreatePayload(t *testing.T) {
 				KeypairName: utils.Ptr("keypair"),
 				MachineType: utils.Ptr("machine_type"),
 				UserData:    utils.Ptr([]byte(base64EncodedUserData)),
+				Networking: &iaas.CreateServerPayloadAllOfNetworking{
+					CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
+						NicIds: &[]string{"nic1", "nic2"},
+					},
+				},
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"delete on termination is set to true",
-			&Model{
+			description: "delete on termination is set to true",
+			input: &Model{
 				Name:             types.StringValue("name"),
 				AvailabilityZone: types.StringValue("zone"),
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
@@ -254,8 +263,12 @@ func TestToCreatePayload(t *testing.T) {
 				KeypairName: types.StringValue("keypair"),
 				MachineType: types.StringValue("machine_type"),
 				UserData:    types.StringValue(userData),
+				NetworkInterfaces: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("nic1"),
+					types.StringValue("nic2"),
+				}),
 			},
-			&iaas.CreateServerPayload{
+			expected: &iaas.CreateServerPayload{
 				Name:             utils.Ptr("name"),
 				AvailabilityZone: utils.Ptr("zone"),
 				Labels: &map[string]interface{}{
@@ -274,8 +287,13 @@ func TestToCreatePayload(t *testing.T) {
 				KeypairName: utils.Ptr("keypair"),
 				MachineType: utils.Ptr("machine_type"),
 				UserData:    utils.Ptr([]byte(base64EncodedUserData)),
+				Networking: &iaas.CreateServerPayloadAllOfNetworking{
+					CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
+						NicIds: &[]string{"nic1", "nic2"},
+					},
+				},
 			},
-			true,
+			isValid: true,
 		},
 	}
 	for _, tt := range tests {
