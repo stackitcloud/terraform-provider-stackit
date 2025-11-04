@@ -80,9 +80,7 @@ If you want to onboard resources of a STACKIT service `foo` that was not yet in 
 2. Add a `foo_custom_endpoint` attribute to the provider's `Schema`, in `stackit/provider.go`
 3. Check if the custom endpoint is defined and, if yes, use it. In the `Configure` method, add:
    ```go
-   if !(providerConfig.FooCustomEndpoint.IsUnknown() || providerConfig.FooCustomEndpoint.IsNull()) {
-     providerData.FooCustomEndpoint = providerConfig.FooCustomEndpoint.ValueString()
-   }
+   setStringField(providerConfig.FooCustomEndpoint, func(v string) { providerData.FooCustomEndpoint = v })
    ```
 4. Create a utils package, for service `foo` it would be `stackit/internal/foo/utils`. Add a `ConfigureClient()` func and use it in your resource and datasource implementations.
 

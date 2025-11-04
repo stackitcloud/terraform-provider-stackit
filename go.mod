@@ -17,6 +17,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.31.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.21-alpha
+	github.com/stackitcloud/stackit-sdk-go/services/kms v1.0.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.1
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.25.1
@@ -80,7 +81,7 @@ require (
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/oklog/run v1.1.0 // indirect
+	github.com/oklog/run v1.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/stackitcloud/stackit-sdk-go/services/authorization v0.9.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect

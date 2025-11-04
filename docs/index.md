@@ -162,6 +162,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: iam, routing-tables, network
 - `git_custom_endpoint` (String) Custom endpoint for the Git service
 - `iaas_custom_endpoint` (String) Custom endpoint for the IaaS service
+- `kms_custom_endpoint` (String) Custom endpoint for the KMS service
 - `loadbalancer_custom_endpoint` (String) Custom endpoint for the Load Balancer service
 - `logme_custom_endpoint` (String) Custom endpoint for the LogMe service
 - `mariadb_custom_endpoint` (String) Custom endpoint for the MariaDB service
