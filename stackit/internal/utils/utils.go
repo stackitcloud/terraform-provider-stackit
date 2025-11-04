@@ -172,6 +172,24 @@ func FormatPossibleValues(values ...string) string {
 	return fmt.Sprintf("Possible values are: %s.", strings.Join(formattedValues, ", "))
 }
 
+// TODO: move to SDK
+// Generic function to convert a slice of any type T
+// that has the underlying type 'string' to a slice of string.
+// The constraint ~string allows T to be any type whose
+// underlying type is string (like the enum types from the STACKIT SDK).
+func SliceToStringSlice[T ~string](inputSlice []T) []string {
+	// Create the destination slice of strings
+	result := make([]string, len(inputSlice))
+
+	// Iterate through the input slice and perform the conversion
+	for i, element := range inputSlice {
+		// The conversion T(element) to string is safe because of the ~string constraint
+		result[i] = string(element)
+	}
+
+	return result
+}
+
 func BuildInternalTerraformId(idParts ...string) types.String {
 	return types.StringValue(strings.Join(idParts, core.Separator))
 }
