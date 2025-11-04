@@ -48,6 +48,7 @@ import (
 	iaasalphaRoutingTableRoutes "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/routes"
 	iaasalphaRoutingTable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/table"
 	iaasalphaRoutingTables "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/tables"
+	kmsKeyRing "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/keyring"
 	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
 	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
@@ -131,6 +132,7 @@ type providerModel struct {
 	DNSCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
 	GitCustomEndpoint               types.String `tfsdk:"git_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
+	KMSCustomEndpoint               types.String `tfsdk:"kms_custom_endpoint"`
 	PostgresFlexCustomEndpoint      types.String `tfsdk:"postgresflex_custom_endpoint"`
 	MongoDBFlexCustomEndpoint       types.String `tfsdk:"mongodbflex_custom_endpoint"`
 	ModelServingCustomEndpoint      types.String `tfsdk:"modelserving_custom_endpoint"`
@@ -173,6 +175,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"dns_custom_endpoint":                "Custom endpoint for the DNS service",
 		"git_custom_endpoint":                "Custom endpoint for the Git service",
 		"iaas_custom_endpoint":               "Custom endpoint for the IaaS service",
+		"kms_custom_endpoint":                "Custom endpoint for the KMS service",
 		"mongodbflex_custom_endpoint":        "Custom endpoint for the MongoDB Flex service",
 		"modelserving_custom_endpoint":       "Custom endpoint for the AI Model Serving service",
 		"loadbalancer_custom_endpoint":       "Custom endpoint for the Load Balancer service",
@@ -263,6 +266,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"iaas_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["iaas_custom_endpoint"],
+			},
+			"kms_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["kms_custom_endpoint"],
 			},
 			"postgresflex_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -414,6 +421,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.GitCustomEndpoint, func(v string) { providerData.GitCustomEndpoint = v })
 	setStringField(providerConfig.IaaSCustomEndpoint, func(v string) { providerData.IaaSCustomEndpoint = v })
 	setStringField(providerConfig.PostgresFlexCustomEndpoint, func(v string) { providerData.PostgresFlexCustomEndpoint = v })
+	setStringField(providerConfig.KMSCustomEndpoint, func(v string) { providerData.KMSCustomEndpoint = v })
 	setStringField(providerConfig.ModelServingCustomEndpoint, func(v string) { providerData.ModelServingCustomEndpoint = v })
 	setStringField(providerConfig.MongoDBFlexCustomEndpoint, func(v string) { providerData.MongoDBFlexCustomEndpoint = v })
 	setStringField(providerConfig.LoadBalancerCustomEndpoint, func(v string) { providerData.LoadBalancerCustomEndpoint = v })
@@ -486,6 +494,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasalphaRoutingTables.NewRoutingTablesDataSource,
 		iaasalphaRoutingTableRoutes.NewRoutingTableRoutesDataSource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
+		kmsKeyRing.NewKeyRingDataSource,
 		loadBalancer.NewLoadBalancerDataSource,
 		logMeInstance.NewInstanceDataSource,
 		logMeCredential.NewCredentialDataSource,
@@ -554,6 +563,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
 		iaasalphaRoutingTable.NewRoutingTableResource,
 		iaasalphaRoutingTableRoute.NewRoutingTableRouteResource,
+		kmsKeyRing.NewKeyRingResource,
 		loadBalancer.NewLoadBalancerResource,
 		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
 		logMeInstance.NewInstanceResource,
