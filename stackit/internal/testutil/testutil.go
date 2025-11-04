@@ -55,6 +55,7 @@ var (
 	DnsCustomEndpoint             = os.Getenv("TF_ACC_DNS_CUSTOM_ENDPOINT")
 	GitCustomEndpoint             = os.Getenv("TF_ACC_GIT_CUSTOM_ENDPOINT")
 	IaaSCustomEndpoint            = os.Getenv("TF_ACC_IAAS_CUSTOM_ENDPOINT")
+	KMSCustomEndpoint             = os.Getenv("TF_ACC_KMS_CUSTOM_ENDPOINT")
 	LoadBalancerCustomEndpoint    = os.Getenv("TF_ACC_LOADBALANCER_CUSTOM_ENDPOINT")
 	LogMeCustomEndpoint           = os.Getenv("TF_ACC_LOGME_CUSTOM_ENDPOINT")
 	MariaDBCustomEndpoint         = os.Getenv("TF_ACC_MARIADB_CUSTOM_ENDPOINT")
@@ -166,6 +167,21 @@ func IaaSProviderConfigWithExperiments() string {
 			experiments = [ "routing-tables", "network" ]
 		}`,
 		IaaSCustomEndpoint,
+	)
+}
+
+func KMSProviderConfig() string {
+	if KMSCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			default_region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			kms_custom_endpoint = "%s"
+		}`,
+		KMSCustomEndpoint,
 	)
 }
 
