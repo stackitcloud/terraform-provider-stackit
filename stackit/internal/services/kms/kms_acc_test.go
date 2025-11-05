@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	core_config "github.com/stackitcloud/stackit-sdk-go/core/config"
+	coreConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/kms"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -84,7 +84,7 @@ var testConfigWrappingKeyVarsMin = config.Variables{
 func TestAccKeyRingMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		//CheckDestroy:             testAccCheckDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -125,7 +125,7 @@ func TestAccKeyRingMin(t *testing.T) {
 func TestAccKeyRingMax(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		//CheckDestroy:             testAccCheckDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			//Creation
 			{
@@ -170,7 +170,7 @@ func TestAccKeyRingMax(t *testing.T) {
 func TestAccKeyMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		//CheckDestroy: testAccCheckDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -190,7 +190,7 @@ func TestAccKeyMin(t *testing.T) {
 func TestAccWrappingKeyMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		//CheckDestroy: testAccCheckDestroy,
+		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				ConfigVariables: testConfigWrappingKeyVarsMin,
@@ -208,7 +208,9 @@ func TestAccWrappingKeyMin(t *testing.T) {
 
 func testAccCheckDestroy(s *terraform.State) error {
 	checkFunctions := []func(s *terraform.State) error{
-		testAccCheckKeyRingDestroy,
+		testAccCheckKeyDestroy,
+		testAccCheckWrappingKeyDestroy,
+		// no automatic destroy of key rings possible since they can't be deleted or scheduled for deletion as long as they have keys inside them
 	}
 
 	var errs []error
@@ -229,17 +231,15 @@ func testAccCheckDestroy(s *terraform.State) error {
 	return errors.Join(errs...)
 }
 
-func testAccCheckKeyRingDestroy(s *terraform.State) error {
+func testAccCheckKeyDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *kms.APIClient
 	var err error
 	if testutil.KMSCustomEndpoint == "" {
-		client, err = kms.NewAPIClient(
-			core_config.WithRegion("eu01"),
-		)
+		client, err = kms.NewAPIClient()
 	} else {
 		client, err = kms.NewAPIClient(
-			core_config.WithEndpoint(testutil.KMSCustomEndpoint),
+			coreConfig.WithEndpoint(testutil.KMSCustomEndpoint),
 		)
 	}
 	if err != nil {
@@ -249,11 +249,12 @@ func testAccCheckKeyRingDestroy(s *terraform.State) error {
 	var errs []error
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "stackit_kms_key_ring" {
+		if rs.Type != "stackit_kms_key" {
 			continue
 		}
-		keyRingId := strings.Split(rs.Primary.ID, core.Separator)[1]
-		err := client.DeleteKeyRingExecute(ctx, testutil.ProjectId, testutil.Region, keyRingId)
+		keyRingId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		keyId := strings.Split(rs.Primary.ID, core.Separator)[3]
+		err := client.DeleteKeyExecute(ctx, testutil.ProjectId, testutil.Region, keyRingId, keyId)
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) {
@@ -261,7 +262,45 @@ func testAccCheckKeyRingDestroy(s *terraform.State) error {
 					continue
 				}
 			}
-			errs = append(errs, fmt.Errorf("cannot trigger key ring deletion %q: %w", keyRingId, err))
+			errs = append(errs, fmt.Errorf("cannot trigger key deletion %q: %w", keyRingId, err))
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+func testAccCheckWrappingKeyDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var client *kms.APIClient
+	var err error
+	if testutil.KMSCustomEndpoint == "" {
+		client, err = kms.NewAPIClient()
+	} else {
+		client, err = kms.NewAPIClient(
+			coreConfig.WithEndpoint(testutil.KMSCustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	var errs []error
+
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_kms_wrapping_key" {
+			continue
+		}
+		keyRingId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		wrappingKeyId := strings.Split(rs.Primary.ID, core.Separator)[3]
+		err := client.DeleteWrappingKeyExecute(ctx, testutil.ProjectId, testutil.Region, keyRingId, wrappingKeyId)
+		if err != nil {
+			var oapiErr *oapierror.GenericOpenAPIError
+			if errors.As(err, &oapiErr) {
+				if oapiErr.StatusCode == http.StatusNotFound {
+					continue
+				}
+			}
+			errs = append(errs, fmt.Errorf("cannot trigger wrapping key deletion %q: %w", keyRingId, err))
 		}
 	}
 

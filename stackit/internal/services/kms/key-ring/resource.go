@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -30,6 +29,7 @@ var (
 	_ resource.Resource                = &keyRingResource{}
 	_ resource.ResourceWithConfigure   = &keyRingResource{}
 	_ resource.ResourceWithImportState = &keyRingResource{}
+	_ resource.ResourceWithModifyPlan  = &keyRingResource{}
 )
 
 type Model struct {
@@ -50,31 +50,61 @@ type keyRingResource struct {
 	providerData core.ProviderData
 }
 
-func (k *keyRingResource) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
+func (r *keyRingResource) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_kms_key_ring"
 }
 
-func (k *keyRingResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
+func (r *keyRingResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
 	var ok bool
-	k.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
+	r.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := kmsUtils.ConfigureClient(ctx, &k.providerData, &response.Diagnostics)
+	apiClient := kmsUtils.ConfigureClient(ctx, &r.providerData, &response.Diagnostics)
 	if response.Diagnostics.HasError() {
 		return
 	}
-	k.client = apiClient
+	r.client = apiClient
 }
 
-func (k *keyRingResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *keyRingResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+func (r *keyRingResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":         "KMS Key Ring resource schema. Must have a `region` specified in the provider configuration.",
 		"description":  "A user chosen description to distinguish multiple key rings.",
 		"display_name": "The display name to distinguish multiple key rings.",
 		"key_ring_id":  "An auto generated unique id which identifies the key ring.",
-		"id":           "Terraform's internal resource ID. It is structured as \"`project_id`,`key_ring_id`\".",
+		"id":           "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`key_ring_id`\".",
 		"project_id":   "STACKIT project ID to which the key ring is associated.",
 		"region":       "The STACKIT region name the key ring is located in.",
 	}
@@ -127,7 +157,8 @@ func (k *keyRingResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"region": schema.StringAttribute{
-				Optional:    true,
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
 				Computed:    true,
 				Description: "The resource region. If not defined, the provider region is used.",
 				PlanModifiers: []planmodifier.String{
@@ -138,100 +169,105 @@ func (k *keyRingResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 	}
 }
 
-func (k *keyRingResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
-	diags := request.Plan.Get(ctx, &model)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	projectId := model.ProjectId.ValueString()
-	region := k.providerData.GetRegionWithOverride(model.Region)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	payload, err := toCreatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating key ring", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key ring", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	createResponse, err := k.client.CreateKeyRing(ctx, projectId, region).CreateKeyRingPayload(*payload).Execute()
+	createResponse, err := r.client.CreateKeyRing(ctx, projectId, region).CreateKeyRingPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating key ring", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key ring", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	keyRingId := *createResponse.Id
-	ctx = tflog.SetField(ctx, "key_ring_id", keyRingId)
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectId,
+		"region":      region,
+		"key_ring_id": keyRingId,
+	})
 
-	waitResp, err := wait.CreateKeyRingWaitHandler(ctx, k.client, projectId, region, keyRingId).SetSleepBeforeWait(5 * time.Second).WaitWithContext(ctx)
+	waitResp, err := wait.CreateKeyRingWaitHandler(ctx, r.client, projectId, region, keyRingId).SetSleepBeforeWait(5 * time.Second).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating key ring", fmt.Sprintf("Key Ring creation waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key ring", fmt.Sprintf("Key Ring creation waiting: %v", err))
 		return
 	}
 
 	err = mapFields(waitResp, &model, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating key ring", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key ring", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
-	diags = response.State.Set(ctx, model)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 	tflog.Info(ctx, "Key Ring created")
 }
 
-func (k *keyRingResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *keyRingResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
-	diags := request.State.Get(ctx, &model)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
+	diags := req.State.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
-	region := k.providerData.GetRegionWithOverride(model.Region)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "key_ring_id", keyRingId)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	keyRingResponse, err := k.client.GetKeyRing(ctx, projectId, region, keyRingId).Execute()
+	keyRingResponse, err := r.client.GetKeyRing(ctx, projectId, region, keyRingId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
-			response.State.RemoveResource(ctx)
+			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading key ring", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading key ring", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	err = mapFields(keyRingResponse, &model, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading key ring", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading key ring", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-	diags = response.State.Set(ctx, model)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 	tflog.Info(ctx, "Key ring read")
 }
 
-func (k *keyRingResource) Update(ctx context.Context, _ resource.UpdateRequest, response *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *keyRingResource) Update(ctx context.Context, _ resource.UpdateRequest, response *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// key rings cannot be updated, so we log an error.
 	core.LogAndAddError(ctx, &response.Diagnostics, "Error updating key ring", "Key rings can't be updated")
 }
 
-func (k *keyRingResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *keyRingResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
@@ -241,13 +277,13 @@ func (k *keyRingResource) Delete(ctx context.Context, request resource.DeleteReq
 
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
-	region := k.providerData.GetRegionWithOverride(model.Region)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "key_ring_id", keyRingId)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := k.client.DeleteKeyRing(ctx, projectId, region, keyRingId).Execute()
+	err := r.client.DeleteKeyRing(ctx, projectId, region, keyRingId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting key ring", fmt.Sprintf("Calling API: %v", err))
 	}
@@ -255,19 +291,23 @@ func (k *keyRingResource) Delete(ctx context.Context, request resource.DeleteReq
 	tflog.Info(ctx, "key ring deleted")
 }
 
-func (k *keyRingResource) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	idParts := strings.Split(request.ID, core.Separator)
+func (r *keyRingResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
-		core.LogAndAddError(ctx, &response.Diagnostics,
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing key ring",
-			fmt.Sprintf("Exptected import identifier with format: [proejct_id],[instance_id], got :%q", request.ID),
+			fmt.Sprintf("Exptected import identifier with format: [project_id],[region],[key_ring_id], got :%q", req.ID),
 		)
 		return
 	}
 
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("key_ring_id"), idParts[1])...)
+	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+		"project_id":  idParts[0],
+		"region":      idParts[1],
+		"key_ring_id": idParts[2],
+	})
+
 	tflog.Info(ctx, "key ring state imported")
 }
 

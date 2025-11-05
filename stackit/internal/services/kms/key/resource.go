@@ -28,6 +28,7 @@ var (
 	_ resource.Resource                = &keyResource{}
 	_ resource.ResourceWithConfigure   = &keyResource{}
 	_ resource.ResourceWithImportState = &keyResource{}
+	_ resource.ResourceWithModifyPlan  = &keyResource{}
 )
 
 type Model struct {
@@ -54,27 +55,57 @@ type keyResource struct {
 	providerData core.ProviderData
 }
 
-func (k *keyResource) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
+func (r *keyResource) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_kms_key"
 }
 
-func (k *keyResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
+func (r *keyResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
 	var ok bool
-	k.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
+	r.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
-	apiClient := kmsUtils.ConfigureClient(ctx, &k.providerData, &response.Diagnostics)
+
+	r.client = kmsUtils.ConfigureClient(ctx, &r.providerData, &response.Diagnostics)
 	if response.Diagnostics.HasError() {
 		return
 	}
-	k.client = apiClient
 }
 
-func (k *keyResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *keyResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+func (r *keyResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":         "KMS Key resource schema. Must have a `region` specified in the provider configuration.",
-		"access_scope": "The access scope of the key. Default is PUBLIC.",
+		"access_scope": "The access scope of the key. Default is `PUBLIC.`",
 		"algorithm":    "The encryption algorithm that the key will use to encrypt data",
 		"description":  "A user chosen description to distinguish multiple keys",
 		"display_name": "The display name to distinguish multiple keys",
@@ -195,7 +226,8 @@ func (k *keyResource) Schema(_ context.Context, _ resource.SchemaRequest, respon
 				},
 			},
 			"region": schema.StringAttribute{
-				Optional:    true,
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
 				Computed:    true,
 				Description: "The resource region. If not defined, the provider region is used.",
 				PlanModifiers: []planmodifier.String{
@@ -206,7 +238,7 @@ func (k *keyResource) Schema(_ context.Context, _ resource.SchemaRequest, respon
 	}
 }
 
-func (k *keyResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *keyResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := request.Plan.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
@@ -215,7 +247,7 @@ func (k *keyResource) Create(ctx context.Context, request resource.CreateRequest
 	}
 
 	projectId := model.ProjectId.ValueString()
-	region := k.providerData.GetRegionWithOverride(model.Region)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	keyRingId := model.KeyRingId.ValueString()
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -227,7 +259,7 @@ func (k *keyResource) Create(ctx context.Context, request resource.CreateRequest
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating key", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	createResponse, err := k.client.CreateKey(ctx, projectId, region, keyRingId).CreateKeyPayload(*payload).Execute()
+	createResponse, err := r.client.CreateKey(ctx, projectId, region, keyRingId).CreateKeyPayload(*payload).Execute()
 
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating key", fmt.Sprintf("Calling API: %v", err))
@@ -251,7 +283,7 @@ func (k *keyResource) Create(ctx context.Context, request resource.CreateRequest
 	tflog.Info(ctx, "Key created")
 }
 
-func (k *keyResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *keyResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
@@ -261,7 +293,7 @@ func (k *keyResource) Read(ctx context.Context, request resource.ReadRequest, re
 
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
-	region := k.providerData.GetRegionWithOverride(model.Region)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	keyId := model.KeyId.ValueString()
 
 	ctx = tflog.SetField(ctx, "key_ring_id", keyRingId)
@@ -269,7 +301,7 @@ func (k *keyResource) Read(ctx context.Context, request resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "key_id", keyId)
 
-	keyResponse, err := k.client.GetKey(ctx, projectId, region, keyRingId, keyId).Execute()
+	keyResponse, err := r.client.GetKey(ctx, projectId, region, keyRingId, keyId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -293,12 +325,12 @@ func (k *keyResource) Read(ctx context.Context, request resource.ReadRequest, re
 	tflog.Info(ctx, "Key read")
 }
 
-func (k *keyResource) Update(ctx context.Context, _ resource.UpdateRequest, response *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *keyResource) Update(ctx context.Context, _ resource.UpdateRequest, response *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// keys cannot be updated, so we log an error.
 	core.LogAndAddError(ctx, &response.Diagnostics, "Error updating key", "Keys can't be updated")
 }
 
-func (k *keyResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *keyResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
@@ -308,10 +340,10 @@ func (k *keyResource) Delete(ctx context.Context, request resource.DeleteRequest
 
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
-	region := k.providerData.GetRegionWithOverride(model.Region)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	keyId := model.KeyId.ValueString()
 
-	err := k.client.DeleteKey(ctx, projectId, region, keyRingId, keyId).Execute()
+	err := r.client.DeleteKey(ctx, projectId, region, keyRingId, keyId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting key", fmt.Sprintf("Calling API: %v", err))
 	}
@@ -319,7 +351,7 @@ func (k *keyResource) Delete(ctx context.Context, request resource.DeleteRequest
 	tflog.Info(ctx, "key deleted")
 }
 
-func (k *keyResource) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+func (r *keyResource) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	idParts := strings.Split(request.ID, core.Separator)
 
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {

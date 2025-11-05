@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -28,6 +27,7 @@ var (
 	_ resource.Resource                = &wrappingKeyResource{}
 	_ resource.ResourceWithConfigure   = &wrappingKeyResource{}
 	_ resource.ResourceWithImportState = &wrappingKeyResource{}
+	_ resource.ResourceWithModifyPlan  = &wrappingKeyResource{}
 )
 
 type Model struct {
@@ -54,31 +54,61 @@ type wrappingKeyResource struct {
 	providerData core.ProviderData
 }
 
-func (w *wrappingKeyResource) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
+func (r *wrappingKeyResource) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_kms_wrapping_key"
 }
 
-func (w *wrappingKeyResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
+func (r *wrappingKeyResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
 	var ok bool
-	w.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
+	r.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
-	apiClient := kmsUtils.ConfigureClient(ctx, &w.providerData, &response.Diagnostics)
+	apiClient := kmsUtils.ConfigureClient(ctx, &r.providerData, &response.Diagnostics)
 	if response.Diagnostics.HasError() {
 		return
 	}
-	w.client = apiClient
+	r.client = apiClient
 }
 
-func (w *wrappingKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *wrappingKeyResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+func (r *wrappingKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":            "KMS Key resource schema. Must have a `region` specified in the provider configuration.",
 		"access_scope":    "The access scope of the key. Default is PUBLIC.",
 		"algorithm":       "The encryption algorithm that the key will use to encrypt data",
 		"description":     "A user chosen description to distinguish multiple keys",
 		"display_name":    "The display name to distinguish multiple keys",
-		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
+		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`key_ring_id`,`wrapping_key_id`\".",
 		"key_ring_id":     "The ID of the associated key ring",
 		"purpose":         "The purpose for which the key will be used",
 		"project_id":      "STACKIT project ID to which the key ring is associated.",
@@ -183,7 +213,8 @@ func (w *wrappingKeyResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"region": schema.StringAttribute{
-				Optional:    true,
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
 				Computed:    true,
 				Description: "The resource region. If not defined, the provider region is used.",
 				PlanModifiers: []planmodifier.String{
@@ -205,7 +236,7 @@ func (w *wrappingKeyResource) Schema(_ context.Context, _ resource.SchemaRequest
 	}
 }
 
-func (w *wrappingKeyResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *wrappingKeyResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 
 	diags := request.Plan.Get(ctx, &model)
@@ -215,7 +246,7 @@ func (w *wrappingKeyResource) Create(ctx context.Context, request resource.Creat
 	}
 
 	projectId := model.ProjectId.ValueString()
-	region := w.providerData.GetRegionWithOverride(model.Region)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	keyRingId := model.KeyRingId.ValueString()
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -228,8 +259,7 @@ func (w *wrappingKeyResource) Create(ctx context.Context, request resource.Creat
 		return
 	}
 
-	createResponse, err := w.client.CreateWrappingKey(ctx, projectId, region, keyRingId).CreateWrappingKeyPayload(*payload).Execute()
-
+	createResponse, err := r.client.CreateWrappingKey(ctx, projectId, region, keyRingId).CreateWrappingKeyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating wrapping key", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -252,7 +282,7 @@ func (w *wrappingKeyResource) Create(ctx context.Context, request resource.Creat
 	tflog.Info(ctx, "Key created")
 }
 
-func (w *wrappingKeyResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *wrappingKeyResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
@@ -262,7 +292,7 @@ func (w *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
-	region := w.providerData.GetRegionWithOverride(model.Region)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	wrappingKeyId := model.WrappingKeyId.ValueString()
 
 	ctx = tflog.SetField(ctx, "key_ring_id", keyRingId)
@@ -270,7 +300,7 @@ func (w *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "wrapping_key_id", wrappingKeyId)
 
-	wrappingKeyResponse, err := w.client.GetWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
+	wrappingKeyResponse, err := r.client.GetWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -294,12 +324,12 @@ func (w *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 	tflog.Info(ctx, "Wrapping key read")
 }
 
-func (w *wrappingKeyResource) Update(ctx context.Context, _ resource.UpdateRequest, response *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *wrappingKeyResource) Update(ctx context.Context, _ resource.UpdateRequest, response *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// wrapping keys cannot be updated, so we log an error.
 	core.LogAndAddError(ctx, &response.Diagnostics, "Error updating wrapping key", "Keys can't be updated")
 }
 
-func (w *wrappingKeyResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *wrappingKeyResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
@@ -309,10 +339,10 @@ func (w *wrappingKeyResource) Delete(ctx context.Context, request resource.Delet
 
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
-	region := w.providerData.GetRegionWithOverride(model.Region)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	wrappingKeyId := model.WrappingKeyId.ValueString()
 
-	err := w.client.DeleteWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
+	err := r.client.DeleteWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting wrapping key", fmt.Sprintf("Calling API: %v", err))
 	}
@@ -320,19 +350,24 @@ func (w *wrappingKeyResource) Delete(ctx context.Context, request resource.Delet
 	tflog.Info(ctx, "wrapping key deleted")
 }
 
-func (w *wrappingKeyResource) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	idParts := strings.Split(request.ID, core.Separator)
+func (r *wrappingKeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
-		core.LogAndAddError(ctx, &response.Diagnostics,
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing wrapping key",
-			fmt.Sprintf("Exptected import identifier with format: [proejct_id],[instance_id], got :%q", request.ID),
+			fmt.Sprintf("Exptected import identifier with format: [project_id],[region],[key_ring_id],[wrapping_key_id], got :%q", req.ID),
 		)
 		return
 	}
 
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("wrapping_key_id"), idParts[1])...)
+	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":      idParts[0],
+		"region":          idParts[1],
+		"key_ring_id":     idParts[2],
+		"wrapping_key_id": idParts[3],
+	})
+
 	tflog.Info(ctx, "wrapping key state imported")
 }
 
