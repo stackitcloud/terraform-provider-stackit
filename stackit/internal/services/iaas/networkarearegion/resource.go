@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -469,6 +471,7 @@ func (r *networkAreaRegionResource) ImportState(ctx context.Context, req resourc
 	tflog.Info(ctx, "Network area region state imported")
 }
 
+// TODO: tests
 // mapFields maps the API response values to the Terraform resource model fields
 func mapFields(ctx context.Context, networkAreaRegion *iaas.RegionalArea, model *Model, region string) error {
 	if networkAreaRegion == nil {
@@ -481,12 +484,114 @@ func mapFields(ctx context.Context, networkAreaRegion *iaas.RegionalArea, model 
 	model.Id = utils.BuildInternalTerraformId(model.OrganizationId.ValueString(), model.NetworkAreaId.ValueString(), region)
 	model.Region = types.StringValue(region)
 
-	// TODO: mapping of ipv4
+	ipv4Model := ipv4{}
+
+	// map default nameservers
+	if networkAreaRegion.Ipv4 == nil || networkAreaRegion.Ipv4.DefaultNameservers == nil {
+		ipv4Model.DefaultNameservers = types.ListNull(types.StringType)
+	} else {
+		respDefaultNameservers := *networkAreaRegion.Ipv4.DefaultNameservers
+		modelDefaultNameservers, err := utils.ListValuetoStringSlice(ipv4Model.DefaultNameservers)
+		if err != nil {
+			return fmt.Errorf("get current network area default nameservers from model: %w", err)
+		}
+
+		reconciledDefaultNameservers := utils.ReconcileStringSlices(modelDefaultNameservers, respDefaultNameservers)
+
+		defaultNameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledDefaultNameservers)
+		if diags.HasError() {
+			return fmt.Errorf("map network area default nameservers: %w", core.DiagsToError(diags))
+		}
+
+		ipv4Model.DefaultNameservers = defaultNameserversTF
+	}
+
+	// map network ranges
+	err := mapIpv4NetworkRanges(ctx, networkAreaRegion.Ipv4.NetworkRanges, model)
+	if err != nil {
+		return fmt.Errorf("mapping network ranges: %w", err)
+	}
+
+	// map remaining fields
+	if networkAreaRegion.Ipv4 != nil {
+		ipv4Model.TransferNetwork = types.StringPointerValue(networkAreaRegion.Ipv4.TransferNetwork)
+		ipv4Model.DefaultPrefixLength = types.Int64PointerValue(networkAreaRegion.Ipv4.DefaultPrefixLen)
+		ipv4Model.MaxPrefixLength = types.Int64PointerValue(networkAreaRegion.Ipv4.MaxPrefixLen)
+		ipv4Model.MinPrefixLength = types.Int64PointerValue(networkAreaRegion.Ipv4.MinPrefixLen)
+	}
+
+	model.Ipv4 = ipv4Model
 
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (iaas.CreateNetworkAreaRegionPayload, error) {
+// TODO: tests
+func mapIpv4NetworkRanges(ctx context.Context, networkAreaRangesList *[]iaas.NetworkRange, ipv4Model *ipv4) error {
+	var diags diag.Diagnostics
+
+	if networkAreaRangesList == nil {
+		return fmt.Errorf("nil network area ranges list")
+	}
+	if len(*networkAreaRangesList) == 0 {
+		ipv4Model.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
+		return nil
+	}
+
+	ranges := []networkRange{}
+	if !(ipv4Model.NetworkRanges.IsNull() || ipv4Model.NetworkRanges.IsUnknown()) {
+		diags = ipv4Model.NetworkRanges.ElementsAs(ctx, &ranges, false)
+		if diags.HasError() {
+			return fmt.Errorf("map network ranges: %w", core.DiagsToError(diags))
+		}
+	}
+
+	modelNetworkRangePrefixes := []string{}
+	for _, m := range ranges {
+		modelNetworkRangePrefixes = append(modelNetworkRangePrefixes, m.Prefix.ValueString())
+	}
+
+	apiNetworkRangePrefixes := []string{}
+	for _, n := range *networkAreaRangesList {
+		apiNetworkRangePrefixes = append(apiNetworkRangePrefixes, *n.Prefix)
+	}
+
+	reconciledRangePrefixes := utils.ReconcileStringSlices(modelNetworkRangePrefixes, apiNetworkRangePrefixes)
+
+	networkRangesList := []attr.Value{}
+	for i, prefix := range reconciledRangePrefixes {
+		var networkRangeId string
+		for _, networkRangeElement := range *networkAreaRangesList {
+			if *networkRangeElement.Prefix == prefix {
+				networkRangeId = *networkRangeElement.Id
+				break
+			}
+		}
+		networkRangeMap := map[string]attr.Value{
+			"prefix":           types.StringValue(prefix),
+			"network_range_id": types.StringValue(networkRangeId),
+		}
+
+		networkRangeTF, diags := types.ObjectValue(networkRangeTypes, networkRangeMap)
+		if diags.HasError() {
+			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
+		}
+
+		networkRangesList = append(networkRangesList, networkRangeTF)
+	}
+
+	networkRangesTF, diags := types.ListValue(
+		types.ObjectType{AttrTypes: networkRangeTypes},
+		networkRangesList,
+	)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	ipv4Model.NetworkRanges = networkRangesTF
+	return nil
+}
+
+func toCreatePayload(_ context.Context, model *Model) (iaas.CreateNetworkAreaRegionPayload, error) {
 	if model == nil {
 		return iaas.CreateNetworkAreaRegionPayload{}, fmt.Errorf("nil model")
 	}
@@ -509,7 +614,7 @@ func toCreatePayload(ctx context.Context, model *Model) (iaas.CreateNetworkAreaR
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model) (iaas.UpdateNetworkAreaRegionPayload, error) {
+func toUpdatePayload(_ context.Context, model *Model) (iaas.UpdateNetworkAreaRegionPayload, error) {
 	if model == nil {
 		return iaas.UpdateNetworkAreaRegionPayload{}, fmt.Errorf("nil model")
 	}

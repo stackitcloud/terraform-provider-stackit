@@ -28,9 +28,12 @@ type DatasourceModel struct {
 	ProjectId      types.String `tfsdk:"project_id"`
 	AreaId         types.String `tfsdk:"area_id"`
 	InternetAccess types.Bool   `tfsdk:"internet_access"`
-	State          types.String `tfsdk:"state"`
+	Status         types.String `tfsdk:"status"`
 	CreatedAt      types.String `tfsdk:"created_at"`
 	UpdatedAt      types.String `tfsdk:"updated_at"`
+
+	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
+	State types.String `tfsdk:"state"`
 }
 
 // NewProjectDataSource is a helper function to simplify the provider implementation.
@@ -98,9 +101,14 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Description: descriptions["internet_access"],
 				Computed:    true,
 			},
-			// TODO: state was renamed on API side to "status", should we also reflect this change here?
+			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
 			"state": schema.StringAttribute{
-				Description: descriptions["state"],
+				DeprecationMessage: "Deprecated: Will be removed in May 2026. Use the `status` field instead.",
+				Description:        descriptions["state"],
+				Computed:           true,
+			},
+			"status": schema.StringAttribute{
+				Description: descriptions["status"],
 				Computed:    true,
 			},
 			"created_at": schema.StringAttribute{
@@ -199,6 +207,7 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	model.AreaId = areaId
 	model.InternetAccess = types.BoolPointerValue(projectResp.InternetAccess)
 	model.State = types.StringPointerValue(projectResp.Status)
+	model.Status = types.StringPointerValue(projectResp.Status)
 	model.CreatedAt = createdAt
 	model.UpdatedAt = updatedAt
 	return nil

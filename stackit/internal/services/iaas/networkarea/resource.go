@@ -42,18 +42,25 @@ var (
 )
 
 type Model struct {
-	Id                  types.String `tfsdk:"id"` // needed by TF
-	OrganizationId      types.String `tfsdk:"organization_id"`
-	NetworkAreaId       types.String `tfsdk:"network_area_id"`
-	Name                types.String `tfsdk:"name"`
-	ProjectCount        types.Int64  `tfsdk:"project_count"`
-	DefaultNameservers  types.List   `tfsdk:"default_nameservers"`
-	NetworkRanges       types.List   `tfsdk:"network_ranges"`
-	TransferNetwork     types.String `tfsdk:"transfer_network"`
-	DefaultPrefixLength types.Int64  `tfsdk:"default_prefix_length"`
-	MaxPrefixLength     types.Int64  `tfsdk:"max_prefix_length"`
-	MinPrefixLength     types.Int64  `tfsdk:"min_prefix_length"`
-	Labels              types.Map    `tfsdk:"labels"`
+	Id             types.String `tfsdk:"id"` // needed by TF
+	OrganizationId types.String `tfsdk:"organization_id"`
+	NetworkAreaId  types.String `tfsdk:"network_area_id"`
+	Name           types.String `tfsdk:"name"`
+	ProjectCount   types.Int64  `tfsdk:"project_count"`
+	Labels         types.Map    `tfsdk:"labels"`
+
+	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
+	DefaultNameservers types.List `tfsdk:"default_nameservers"`
+	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
+	MaxPrefixLength types.Int64 `tfsdk:"max_prefix_length"`
+	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
+	NetworkRanges types.List `tfsdk:"network_ranges"`
+	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
+	TransferNetwork types.String `tfsdk:"transfer_network"`
+	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
+	DefaultPrefixLength types.Int64 `tfsdk:"default_prefix_length"`
+	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
+	MinPrefixLength types.Int64 `tfsdk:"min_prefix_length"`
 }
 
 // Struct corresponding to Model.NetworkRanges[i]
@@ -77,7 +84,6 @@ func NewNetworkAreaResource() resource.Resource {
 type networkAreaResource struct {
 	client                *iaas.APIClient
 	resourceManagerClient *resourcemanager.APIClient
-	providerData          core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -157,16 +163,18 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 					int64validator.AtLeast(0),
 				},
 			},
+			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
 			"default_nameservers": schema.ListAttribute{
 				Description:        "List of DNS Servers/Nameservers for configuration of network area for region `eu01`.",
-				Optional:           true,
 				DeprecationMessage: deprecationMsg,
+				Optional:           true,
 				ElementType:        types.StringType,
 			},
+			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
 			"network_ranges": schema.ListNestedAttribute{
 				Description:        "List of Network ranges for configuration of network area for region `eu01`.",
 				DeprecationMessage: deprecationMsg,
-				Required:           true,
+				Optional:           true,
 				// TODO : adjust examples
 				// TODO: adjust code? To recognize if not set
 				// TODO: show warning when switch to new resource is needed?
@@ -192,16 +200,18 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 					},
 				},
 			},
+			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
 			"transfer_network": schema.StringAttribute{
 				DeprecationMessage: deprecationMsg,
 				Description:        "Classless Inter-Domain Routing (CIDR) for configuration of network area for region `eu01`.",
-				Required:           true,
+				Optional:           true,
 				// TODO: mark required deprecated fields as optional
 				// TODO: show a warning when one of the deprecated fields is set
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
 			"default_prefix_length": schema.Int64Attribute{
 				DeprecationMessage: deprecationMsg,
 				Description:        "The default prefix length for networks in the network area for region `eu01`.",
@@ -213,6 +223,7 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 				Default: int64default.StaticInt64(25),
 			},
+			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
 			"max_prefix_length": schema.Int64Attribute{
 				DeprecationMessage: deprecationMsg,
 				Description:        "The maximal prefix length for networks in the network area for region `eu01`.",
@@ -224,6 +235,7 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 				Default: int64default.StaticInt64(29),
 			},
+			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
 			"min_prefix_length": schema.Int64Attribute{
 				DeprecationMessage: deprecationMsg,
 				Description:        "The minimal prefix length for networks in the network area for region `eu01`.",

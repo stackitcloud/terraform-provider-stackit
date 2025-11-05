@@ -51,11 +51,9 @@ func TestMapDataSourceFields(t *testing.T) {
 				AreaId:         utils.Ptr(iaas.AreaId{String: utils.Ptr("aid")}),
 				CreatedAt:      utils.Ptr(testTimestamp()),
 				InternetAccess: utils.Ptr(true),
-				// TODO
-				//OpenstackProjectId: utils.Ptr("oid"),
-				Id:        utils.Ptr(projectId),
-				Status:    utils.Ptr("CREATED"),
-				UpdatedAt: utils.Ptr(testTimestamp()),
+				Id:             utils.Ptr(projectId),
+				Status:         utils.Ptr("CREATED"),
+				UpdatedAt:      utils.Ptr(testTimestamp()),
 			},
 			expected: &DatasourceModel{
 				Id:             types.StringValue(projectId),

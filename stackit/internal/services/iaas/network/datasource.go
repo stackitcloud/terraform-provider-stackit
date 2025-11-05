@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
@@ -58,9 +57,7 @@ func NewNetworkDataSource() datasource.DataSource {
 
 // networkDataSource is the data source implementation.
 type networkDataSource struct {
-	client *iaas.APIClient
-	// alphaClient will be used in case the experimental flag "network" is set
-	alphaClient  *iaasalpha.APIClient
+	client       *iaas.APIClient
 	providerData core.ProviderData
 }
 
