@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 )
 
 func TestMapFields(t *testing.T) {
@@ -494,7 +493,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			"ipv6_nameserver_null",
-			&model.Model{
+			&Model{
 				Name:            types.StringValue("name"),
 				IPv6Nameservers: types.ListNull(types.StringType),
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
@@ -504,12 +503,12 @@ func TestToCreatePayload(t *testing.T) {
 				IPv6Gateway: types.StringValue("gateway"),
 				IPv6Prefix:  types.StringValue("prefix"),
 			},
-			&iaasalpha.CreateNetworkPayload{
+			&iaas.CreateNetworkPayload{
 				Name: utils.Ptr("name"),
-				Ipv6: &iaasalpha.CreateNetworkIPv6{
-					CreateNetworkIPv6WithPrefix: &iaasalpha.CreateNetworkIPv6WithPrefix{
+				Ipv6: &iaas.CreateNetworkIPv6{
+					CreateNetworkIPv6WithPrefix: &iaas.CreateNetworkIPv6WithPrefix{
 						Nameservers: nil,
-						Gateway:     iaasalpha.NewNullableString(utils.Ptr("gateway")),
+						Gateway:     iaas.NewNullableString(utils.Ptr("gateway")),
 						Prefix:      utils.Ptr("prefix"),
 					},
 				},
@@ -522,7 +521,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			"ipv6_nameserver_empty_list",
-			&model.Model{
+			&Model{
 				Name:            types.StringValue("name"),
 				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{}),
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
@@ -532,12 +531,12 @@ func TestToCreatePayload(t *testing.T) {
 				IPv6Gateway: types.StringValue("gateway"),
 				IPv6Prefix:  types.StringValue("prefix"),
 			},
-			&iaasalpha.CreateNetworkPayload{
+			&iaas.CreateNetworkPayload{
 				Name: utils.Ptr("name"),
-				Ipv6: &iaasalpha.CreateNetworkIPv6{
-					CreateNetworkIPv6WithPrefix: &iaasalpha.CreateNetworkIPv6WithPrefix{
+				Ipv6: &iaas.CreateNetworkIPv6{
+					CreateNetworkIPv6WithPrefix: &iaas.CreateNetworkIPv6WithPrefix{
 						Nameservers: utils.Ptr([]string{}),
-						Gateway:     iaasalpha.NewNullableString(utils.Ptr("gateway")),
+						Gateway:     iaas.NewNullableString(utils.Ptr("gateway")),
 						Prefix:      utils.Ptr("prefix"),
 					},
 				},
@@ -744,7 +743,7 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"ipv6_nameserver_null",
-			&model.Model{
+			&Model{
 				Name:            types.StringValue("name"),
 				IPv6Nameservers: types.ListNull(types.StringType),
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
@@ -753,16 +752,16 @@ func TestToUpdatePayload(t *testing.T) {
 				Routed:      types.BoolValue(true),
 				IPv6Gateway: types.StringValue("gateway"),
 			},
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Labels:    types.MapNull(types.StringType),
 			},
-			&iaasalpha.PartialUpdateNetworkPayload{
+			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
-				Ipv6: &iaasalpha.UpdateNetworkIPv6Body{
+				Ipv6: &iaas.UpdateNetworkIPv6Body{
 					Nameservers: nil,
-					Gateway:     iaasalpha.NewNullableString(utils.Ptr("gateway")),
+					Gateway:     iaas.NewNullableString(utils.Ptr("gateway")),
 				},
 				Labels: &map[string]interface{}{
 					"key": "value",
@@ -772,7 +771,7 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"ipv6_nameserver_empty_list",
-			&model.Model{
+			&Model{
 				Name:            types.StringValue("name"),
 				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{}),
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
@@ -781,16 +780,16 @@ func TestToUpdatePayload(t *testing.T) {
 				Routed:      types.BoolValue(true),
 				IPv6Gateway: types.StringValue("gateway"),
 			},
-			model.Model{
+			Model{
 				ProjectId: types.StringValue("pid"),
 				NetworkId: types.StringValue("nid"),
 				Labels:    types.MapNull(types.StringType),
 			},
-			&iaasalpha.PartialUpdateNetworkPayload{
+			&iaas.PartialUpdateNetworkPayload{
 				Name: utils.Ptr("name"),
-				Ipv6: &iaasalpha.UpdateNetworkIPv6Body{
+				Ipv6: &iaas.UpdateNetworkIPv6Body{
 					Nameservers: utils.Ptr([]string{}),
-					Gateway:     iaasalpha.NewNullableString(utils.Ptr("gateway")),
+					Gateway:     iaas.NewNullableString(utils.Ptr("gateway")),
 				},
 				Labels: &map[string]interface{}{
 					"key": "value",
