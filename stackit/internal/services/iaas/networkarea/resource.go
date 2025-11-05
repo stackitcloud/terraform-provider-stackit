@@ -175,7 +175,6 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Description:        "List of Network ranges for configuration of network area for region `eu01`.",
 				DeprecationMessage: deprecationMsg,
 				Optional:           true,
-				// TODO : adjust examples
 				// TODO: adjust code? To recognize if not set
 				// TODO: show warning when switch to new resource is needed?
 				Validators: []validator.List{
@@ -456,7 +455,7 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 	// Deprecated: Update network ranges. Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
 	err = updateNetworkRanges(ctx, organizationId, networkAreaId, ranges, r.client)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area", fmt.Sprintf("Updating Network ranges: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Updating Network ranges: %v", err))
 		return
 	}
 
@@ -788,6 +787,7 @@ func toRegionUpdatePayload(ctx context.Context, model *Model) (*iaas.UpdateNetwo
 	}, nil
 }
 
+// Deprecated: toDefaultNameserversPayload will be removed in May 2026. Implementation won't be needed anymore because of the IaaS API v1 -> v2 migration. Func was only introduced to circumvent breaking changes.
 func toDefaultNameserversPayload(_ context.Context, model *Model) ([]string, error) {
 	modelDefaultNameservers := []string{}
 	for _, ns := range model.DefaultNameservers.Elements() {
@@ -801,6 +801,7 @@ func toDefaultNameserversPayload(_ context.Context, model *Model) ([]string, err
 	return modelDefaultNameservers, nil
 }
 
+// Deprecated: toNetworkRangesPayload will be removed in May 2026. Implementation won't be needed anymore because of the IaaS API v1 -> v2 migration. Func was only introduced to circumvent breaking changes.
 func toNetworkRangesPayload(ctx context.Context, model *Model) (*[]iaas.NetworkRange, error) {
 	if model.NetworkRanges.IsNull() || model.NetworkRanges.IsUnknown() {
 		return nil, nil

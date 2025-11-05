@@ -61,6 +61,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				AreaId:         types.StringValue("aid"),
 				InternetAccess: types.BoolValue(true),
 				State:          types.StringValue("CREATED"),
+				Status:         types.StringValue("CREATED"),
 				CreatedAt:      types.StringValue(testTimestampValue),
 				UpdatedAt:      types.StringValue(testTimestampValue),
 			},
