@@ -342,31 +342,6 @@ func ResourceManagerProviderConfig() string {
 	)
 }
 
-func ResourceManagerProviderConfigBetaEnabled() string {
-	token := GetTestProjectServiceAccountToken("")
-	if ResourceManagerCustomEndpoint == "" || AuthorizationCustomEndpoint == "" {
-		return fmt.Sprintf(`
-		provider "stackit" {
-			service_account_token = "%s"
-			enable_beta_resources = true
-		}`,
-
-			token,
-		)
-	}
-	return fmt.Sprintf(`
-	provider "stackit" {
-		resourcemanager_custom_endpoint = "%s"
-		authorization_custom_endpoint = "%s"
-		service_account_token = "%s"
-		enable_beta_resources = true
-	}`,
-		ResourceManagerCustomEndpoint,
-		AuthorizationCustomEndpoint,
-		token,
-	)
-}
-
 func SecretsManagerProviderConfig() string {
 	if SecretsManagerCustomEndpoint == "" {
 		return `
