@@ -24,7 +24,7 @@ resource "stackit_volume" "volume_source" {
   name              = var.name
   description       = var.description
   performance_class = var.performance_class
-  size = var.size
+  size              = var.size
   source = {
     id   = stackit_volume.volume_size.volume_id
     type = "volume"

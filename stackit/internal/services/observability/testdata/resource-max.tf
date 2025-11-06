@@ -129,18 +129,18 @@ resource "stackit_observability_instance" "instance" {
         ]
         opsgenie_configs = [
           {
-            api_key  = var.opsgenie_api_key
-            tags     = var.opsgenie_api_tags
-            api_url  = var.opsgenie_api_url
-            priority = var.opsgenie_priority
+            api_key       = var.opsgenie_api_key
+            tags          = var.opsgenie_api_tags
+            api_url       = var.opsgenie_api_url
+            priority      = var.opsgenie_priority
             send_resolved = var.opsgenie_send_resolved
           }
         ]
         webhooks_configs = [
           {
-            url      = var.webhook_configs_url
-            ms_teams = var.ms_teams
-            google_chat = var.google_chat
+            url           = var.webhook_configs_url
+            ms_teams      = var.ms_teams
+            google_chat   = var.google_chat
             send_resolved = var.webhook_configs_send_resolved
           }
         ]

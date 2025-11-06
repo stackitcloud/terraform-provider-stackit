@@ -14,8 +14,8 @@ lint-golangci-lint:
 	@$(SCRIPTS_BASE)/lint-golangci-lint.sh
 
 lint-tf: 
-	@echo "Linting examples"
-	@terraform fmt -check -diff -recursive examples
+	@echo "Linting terraform files"
+	@terraform fmt -check -diff -recursive
 
 lint: lint-golangci-lint lint-tf
 
@@ -30,7 +30,7 @@ build:
 fmt:
 	@gofmt -s -w .
 	@go tool goimports -w .
-	@cd $(ROOT_DIR)/examples && terraform fmt -recursive && cd $(ROOT_DIR)
+	@terraform fmt -diff -recursive
 
 # TEST
 test:
