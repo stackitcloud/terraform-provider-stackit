@@ -45,4 +45,4 @@ data "stackit_volume" "example" {
 Read-Only:
 
 - `id` (String) The ID of the source, e.g. image ID
-- `type` (String) The type of the source. Supported values are: `volume`, `image`, `snapshot`, `backup`.
+- `type` (String) The type of the source. Possible values are: `volume`, `image`, `snapshot`, `backup`.

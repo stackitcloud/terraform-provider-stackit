@@ -126,7 +126,7 @@ func (d *networkInterfaceDataSource) Schema(_ context.Context, _ datasource.Sche
 				ElementType: types.StringType,
 			},
 			"type": schema.StringAttribute{
-				Description: "Type of network interface. Some of the possible values are: " + utils.SupportedValuesDocumentation(typeOptions),
+				Description: "Type of network interface. Some of the possible values are: " + utils.FormatPossibleValues(typeOptions...),
 				Computed:    true,
 			},
 		},

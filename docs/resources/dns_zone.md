@@ -53,7 +53,7 @@ import {
 - `primaries` (List of String) Primary name server for secondary zone. E.g. ["1.2.3.4"]
 - `refresh_time` (Number) Refresh time. E.g. 3600
 - `retry_time` (Number) Retry time. E.g. 600
-- `type` (String) Zone type. Defaults to `primary`. Supported values are: `primary`, `secondary`.
+- `type` (String) Zone type. Defaults to `primary`. Possible values are: `primary`, `secondary`.
 
 ### Read-Only
 

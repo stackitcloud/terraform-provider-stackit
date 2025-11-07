@@ -235,7 +235,7 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"type": schema.StringAttribute{
-				Description: "Zone type. Defaults to `primary`. " + utils.SupportedValuesDocumentation(primaryOptions),
+				Description: "Zone type. Defaults to `primary`. " + utils.FormatPossibleValues(primaryOptions...),
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("primary"),

@@ -61,7 +61,7 @@ Read-Only:
 - `geofencing` (Map of List of String) A map of URLs to a list of countries where content is allowed.
 - `origin_request_headers` (Map of String) The configured origin request headers for the backend
 - `origin_url` (String) The configured backend type for the distribution
-- `type` (String) The configured backend type. Supported values are: `http`.
+- `type` (String) The configured backend type. Possible values are: `http`.
 
 
 <a id="nestedatt--config--optimizer"></a>

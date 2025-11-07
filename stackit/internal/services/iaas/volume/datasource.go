@@ -118,7 +118,7 @@ func (r *volumeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						Description: "The type of the source. " + utils.SupportedValuesDocumentation(SupportedSourceTypes),
+						Description: "The type of the source. " + utils.FormatPossibleValues(SupportedSourceTypes...),
 						Computed:    true,
 					},
 					"id": schema.StringAttribute{

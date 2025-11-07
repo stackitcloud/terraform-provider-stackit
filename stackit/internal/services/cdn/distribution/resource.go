@@ -250,7 +250,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						Attributes: map[string]schema.Attribute{
 							"type": schema.StringAttribute{
 								Required:    true,
-								Description: schemaDescriptions["config_backend_type"] + utils.SupportedValuesDocumentation(backendOptions),
+								Description: schemaDescriptions["config_backend_type"] + utils.FormatPossibleValues(backendOptions...),
 								Validators:  []validator.String{stringvalidator.OneOf(backendOptions...)},
 							},
 							"origin_url": schema.StringAttribute{

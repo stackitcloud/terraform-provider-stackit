@@ -253,39 +253,6 @@ func TestSimplifyBackupSchedule(t *testing.T) {
 	}
 }
 
-func TestSupportedValuesDocumentation(t *testing.T) {
-	tests := []struct {
-		description string
-		values      []string
-		expected    string
-	}{
-		{
-			"empty values",
-			[]string{},
-			"",
-		},
-		{
-			"single value",
-			[]string{"value"},
-			"Supported values are: `value`.",
-		},
-		{
-			"multiple values",
-			[]string{"value1", "value2", "value3"},
-			"Supported values are: `value1`, `value2`, `value3`.",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.description, func(t *testing.T) {
-			output := SupportedValuesDocumentation(tt.values)
-			if output != tt.expected {
-				t.Fatalf("Data does not match: %s", output)
-			}
-		})
-	}
-}
-
 func TestIsLegacyProjectRole(t *testing.T) {
 	tests := []struct {
 		description string
