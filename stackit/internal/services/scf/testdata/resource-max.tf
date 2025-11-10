@@ -6,11 +6,11 @@ variable "suspended" {}
 variable "region" {}
 
 resource "stackit_scf_organization" "org" {
-  project_id  = var.project_id
-  name        = var.name
-  suspended   = var.suspended
-  quota_id    = var.quota_id
-  region      = var.region
+  project_id = var.project_id
+  name       = var.name
+  suspended  = var.suspended
+  quota_id   = var.quota_id
+  region     = var.region
 }
 
 resource "stackit_scf_organization_manager" "orgmanager" {
