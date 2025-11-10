@@ -3,7 +3,9 @@ package utils
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -639,6 +641,302 @@ func TestSetAndLogStateFields(t *testing.T) {
 			diff := cmp.Diff(tt.args.state, tt.want.state)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
+func TestSetModelFieldsToNull(t *testing.T) {
+	ctx := context.Background()
+
+	type TestModel struct {
+		StringField  types.String  `tfsdk:"string_field"`
+		BoolField    types.Bool    `tfsdk:"bool_field"`
+		Int64Field   types.Int64   `tfsdk:"int64_field"`
+		Float64Field types.Float64 `tfsdk:"float64_field"`
+		ListField    types.List    `tfsdk:"list_field"`
+		SetField     types.Set     `tfsdk:"set_field"`
+		MapField     types.Map     `tfsdk:"map_field"`
+		ObjectField  types.Object  `tfsdk:"object_field"`
+	}
+
+	tests := []struct {
+		name        string
+		input       *TestModel
+		expected    *TestModel
+		expectError bool
+	}{
+		{
+			name: "all unknown fields should be set to null",
+			input: &TestModel{
+				StringField:  types.StringUnknown(),
+				BoolField:    types.BoolUnknown(),
+				Int64Field:   types.Int64Unknown(),
+				Float64Field: types.Float64Unknown(),
+				ListField:    types.ListUnknown(types.StringType),
+				SetField:     types.SetUnknown(types.StringType),
+				MapField:     types.MapUnknown(types.StringType),
+				ObjectField:  types.ObjectUnknown(map[string]attr.Type{"field1": types.StringType}),
+			},
+			expected: &TestModel{
+				StringField:  types.StringNull(),
+				BoolField:    types.BoolNull(),
+				Int64Field:   types.Int64Null(),
+				Float64Field: types.Float64Null(),
+				ListField:    types.ListNull(types.StringType),
+				SetField:     types.SetNull(types.StringType),
+				MapField:     types.MapNull(types.StringType),
+				ObjectField:  types.ObjectNull(map[string]attr.Type{"field1": types.StringType}),
+			},
+			expectError: false,
+		},
+		{
+			name: "all null fields should remain null",
+			input: &TestModel{
+				StringField:  types.StringNull(),
+				BoolField:    types.BoolNull(),
+				Int64Field:   types.Int64Null(),
+				Float64Field: types.Float64Null(),
+				ListField:    types.ListNull(types.StringType),
+				SetField:     types.SetNull(types.StringType),
+				MapField:     types.MapNull(types.StringType),
+				ObjectField:  types.ObjectNull(map[string]attr.Type{"field1": types.StringType}),
+			},
+			expected: &TestModel{
+				StringField:  types.StringNull(),
+				BoolField:    types.BoolNull(),
+				Int64Field:   types.Int64Null(),
+				Float64Field: types.Float64Null(),
+				ListField:    types.ListNull(types.StringType),
+				SetField:     types.SetNull(types.StringType),
+				MapField:     types.MapNull(types.StringType),
+				ObjectField:  types.ObjectNull(map[string]attr.Type{"field1": types.StringType}),
+			},
+			expectError: false,
+		},
+		{
+			name: "known fields should not be modified",
+			input: &TestModel{
+				StringField:  types.StringValue("test"),
+				BoolField:    types.BoolValue(true),
+				Int64Field:   types.Int64Value(42),
+				Float64Field: types.Float64Value(3.14),
+				ListField:    types.ListValueMust(types.StringType, []attr.Value{types.StringValue("item")}),
+				SetField:     types.SetValueMust(types.StringType, []attr.Value{types.StringValue("item")}),
+				MapField:     types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+				ObjectField:  types.ObjectValueMust(map[string]attr.Type{"field1": types.StringType}, map[string]attr.Value{"field1": types.StringValue("value")}),
+			},
+			expected: &TestModel{
+				StringField:  types.StringValue("test"),
+				BoolField:    types.BoolValue(true),
+				Int64Field:   types.Int64Value(42),
+				Float64Field: types.Float64Value(3.14),
+				ListField:    types.ListValueMust(types.StringType, []attr.Value{types.StringValue("item")}),
+				SetField:     types.SetValueMust(types.StringType, []attr.Value{types.StringValue("item")}),
+				MapField:     types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+				ObjectField:  types.ObjectValueMust(map[string]attr.Type{"field1": types.StringType}, map[string]attr.Value{"field1": types.StringValue("value")}),
+			},
+			expectError: false,
+		},
+		{
+			name: "mixed fields - some unknown, some known",
+			input: &TestModel{
+				StringField:  types.StringUnknown(),
+				BoolField:    types.BoolValue(true),
+				Int64Field:   types.Int64Unknown(),
+				Float64Field: types.Float64Value(2.71),
+				ListField:    types.ListNull(types.StringType),
+				SetField:     types.SetValueMust(types.StringType, []attr.Value{types.StringValue("item")}),
+				MapField:     types.MapUnknown(types.StringType),
+				ObjectField:  types.ObjectValueMust(map[string]attr.Type{"field1": types.StringType}, map[string]attr.Value{"field1": types.StringValue("value")}),
+			},
+			expected: &TestModel{
+				StringField:  types.StringNull(),
+				BoolField:    types.BoolValue(true),
+				Int64Field:   types.Int64Null(),
+				Float64Field: types.Float64Value(2.71),
+				ListField:    types.ListNull(types.StringType),
+				SetField:     types.SetValueMust(types.StringType, []attr.Value{types.StringValue("item")}),
+				MapField:     types.MapNull(types.StringType),
+				ObjectField:  types.ObjectValueMust(map[string]attr.Type{"field1": types.StringType}, map[string]attr.Value{"field1": types.StringValue("value")}),
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := SetModelFieldsToNull(ctx, tt.input)
+
+			if tt.expectError {
+				if err == nil {
+					t.Fatal("expected error but got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			// Compare each field
+			if diff := cmp.Diff(tt.input.StringField, tt.expected.StringField); diff != "" {
+				t.Errorf("StringField mismatch (-got +want):\n%s", diff)
+			}
+			if diff := cmp.Diff(tt.input.BoolField, tt.expected.BoolField); diff != "" {
+				t.Errorf("BoolField mismatch (-got +want):\n%s", diff)
+			}
+			if diff := cmp.Diff(tt.input.Int64Field, tt.expected.Int64Field); diff != "" {
+				t.Errorf("Int64Field mismatch (-got +want):\n%s", diff)
+			}
+			if diff := cmp.Diff(tt.input.Float64Field, tt.expected.Float64Field); diff != "" {
+				t.Errorf("Float64Field mismatch (-got +want):\n%s", diff)
+			}
+			if diff := cmp.Diff(tt.input.ListField, tt.expected.ListField); diff != "" {
+				t.Errorf("ListField mismatch (-got +want):\n%s", diff)
+			}
+			if diff := cmp.Diff(tt.input.SetField, tt.expected.SetField); diff != "" {
+				t.Errorf("SetField mismatch (-got +want):\n%s", diff)
+			}
+			if diff := cmp.Diff(tt.input.MapField, tt.expected.MapField); diff != "" {
+				t.Errorf("MapField mismatch (-got +want):\n%s", diff)
+			}
+			if diff := cmp.Diff(tt.input.ObjectField, tt.expected.ObjectField); diff != "" {
+				t.Errorf("ObjectField mismatch (-got +want):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestSetModelFieldsToNull_Errors(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name      string
+		input     any
+		wantError string
+	}{
+		{
+			name:      "nil model",
+			input:     nil,
+			wantError: "model cannot be nil",
+		},
+		{
+			name:      "non-pointer",
+			input:     struct{}{},
+			wantError: "model must be a pointer",
+		},
+		{
+			name:      "pointer to non-struct",
+			input:     func() *string { s := "test"; return &s }(),
+			wantError: "model must point to a struct",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := SetModelFieldsToNull(ctx, tt.input)
+			if err == nil {
+				t.Fatal("expected error but got nil")
+			}
+			if !strings.Contains(err.Error(), tt.wantError) {
+				t.Errorf("expected error containing %q, got %q", tt.wantError, err.Error())
+			}
+		})
+	}
+}
+
+func TestShouldWait(t *testing.T) {
+	tests := []struct {
+		name     string
+		envValue string
+		setEnv   bool
+		expected bool
+	}{
+		{
+			name:     "env not set - should wait",
+			setEnv:   false,
+			expected: true,
+		},
+		{
+			name:     "env set to empty string - should wait",
+			envValue: "",
+			setEnv:   true,
+			expected: true,
+		},
+		{
+			name:     "env set to 'true' - should wait",
+			envValue: "true",
+			setEnv:   true,
+			expected: true,
+		},
+		{
+			name:     "env set to 'TRUE' - should wait (case insensitive)",
+			envValue: "TRUE",
+			setEnv:   true,
+			expected: true,
+		},
+		{
+			name:     "env set to 'True' - should wait (case insensitive)",
+			envValue: "True",
+			setEnv:   true,
+			expected: true,
+		},
+		{
+			name:     "env set to 'false' - should not wait",
+			envValue: "false",
+			setEnv:   true,
+			expected: false,
+		},
+		{
+			name:     "env set to 'FALSE' - should not wait",
+			envValue: "FALSE",
+			setEnv:   true,
+			expected: false,
+		},
+		{
+			name:     "env set to '0' - should not wait",
+			envValue: "0",
+			setEnv:   true,
+			expected: false,
+		},
+		{
+			name:     "env set to 'no' - should not wait",
+			envValue: "no",
+			setEnv:   true,
+			expected: false,
+		},
+		{
+			name:     "env set to random value - should not wait",
+			envValue: "random",
+			setEnv:   true,
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save original env value
+			originalValue, wasSet := os.LookupEnv("STACKIT_TF_WAIT_FOR_READY")
+			defer func() {
+				if wasSet {
+					os.Setenv("STACKIT_TF_WAIT_FOR_READY", originalValue)
+				} else {
+					os.Unsetenv("STACKIT_TF_WAIT_FOR_READY")
+				}
+			}()
+
+			// Set up test environment
+			if tt.setEnv {
+				os.Setenv("STACKIT_TF_WAIT_FOR_READY", tt.envValue)
+			} else {
+				os.Unsetenv("STACKIT_TF_WAIT_FOR_READY")
+			}
+
+			// Test
+			result := ShouldWait()
+			if result != tt.expected {
+				t.Errorf("ShouldWait() = %v, want %v", result, tt.expected)
 			}
 		})
 	}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -195,4 +197,111 @@ func SetAndLogStateFields(ctx context.Context, diags *diag.Diagnostics, state *t
 		ctx = tflog.SetField(ctx, key, val)
 		diags.Append(state.SetAttribute(ctx, path.Root(key), val)...)
 	}
+}
+
+// SetModelFieldsToNull sets all Unknown or Null fields in a model struct to their appropriate Null values.
+// This is useful when saving minimal state after API calls to ensure idempotency.
+// The model parameter must be a pointer to a struct containing Terraform framework types.
+func SetModelFieldsToNull(ctx context.Context, model any) error {
+	if model == nil {
+		return fmt.Errorf("model cannot be nil")
+	}
+
+	v := reflect.ValueOf(model)
+	if v.Kind() != reflect.Ptr {
+		return fmt.Errorf("model must be a pointer, got %v", v.Kind())
+	}
+
+	v = v.Elem()
+	if !v.IsValid() || v.Kind() != reflect.Struct {
+		return fmt.Errorf("model must point to a struct, got %v", v.Kind())
+	}
+
+	t := v.Type()
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		fieldType := t.Field(i)
+
+		if !field.CanInterface() || !field.CanSet() {
+			continue
+		}
+
+		fieldValue := field.Interface()
+
+		// Check if the field implements IsUnknown and IsNull
+		isUnknownMethod := field.MethodByName("IsUnknown")
+		isNullMethod := field.MethodByName("IsNull")
+
+		if !isUnknownMethod.IsValid() || !isNullMethod.IsValid() {
+			continue
+		}
+
+		// Call IsUnknown() and IsNull()
+		isUnknownResult := isUnknownMethod.Call(nil)
+		isNullResult := isNullMethod.Call(nil)
+
+		if len(isUnknownResult) == 0 || len(isNullResult) == 0 {
+			continue
+		}
+
+		isUnknown := isUnknownResult[0].Bool()
+		isNull := isNullResult[0].Bool()
+
+		if !isUnknown && !isNull {
+			continue
+		}
+
+		// Determine the type and set to appropriate Null value
+		switch fieldValue.(type) {
+		case basetypes.StringValue:
+			field.Set(reflect.ValueOf(types.StringNull()))
+
+		case basetypes.BoolValue:
+			field.Set(reflect.ValueOf(types.BoolNull()))
+
+		case basetypes.Int64Value:
+			field.Set(reflect.ValueOf(types.Int64Null()))
+
+		case basetypes.Float64Value:
+			field.Set(reflect.ValueOf(types.Float64Null()))
+
+		case basetypes.NumberValue:
+			field.Set(reflect.ValueOf(types.NumberNull()))
+
+		case basetypes.ListValue:
+			listVal := fieldValue.(basetypes.ListValue)
+			elemType := listVal.ElementType(ctx)
+			field.Set(reflect.ValueOf(types.ListNull(elemType)))
+
+		case basetypes.SetValue:
+			setVal := fieldValue.(basetypes.SetValue)
+			elemType := setVal.ElementType(ctx)
+			field.Set(reflect.ValueOf(types.SetNull(elemType)))
+
+		case basetypes.MapValue:
+			mapVal := fieldValue.(basetypes.MapValue)
+			elemType := mapVal.ElementType(ctx)
+			field.Set(reflect.ValueOf(types.MapNull(elemType)))
+
+		case basetypes.ObjectValue:
+			objVal := fieldValue.(basetypes.ObjectValue)
+			attrTypes := objVal.AttributeTypes(ctx)
+			field.Set(reflect.ValueOf(types.ObjectNull(attrTypes)))
+
+		default:
+			tflog.Debug(ctx, fmt.Sprintf("SetModelFieldsToNull: skipping field %s of unsupported type %T", fieldType.Name, fieldValue))
+		}
+	}
+
+	return nil
+}
+
+// ShouldWait checks the STACKIT_TF_WAIT_FOR_READY environment variable to determine
+// if the provider should wait for resources to be ready after creation/update.
+// Returns true if the variable is unset or set to "true" (case-insensitive).
+// Returns false if the variable is set to any other value.
+// This is typically used to skip waiting in async mode for Crossplane/Upjet.
+func ShouldWait() bool {
+	v := os.Getenv("STACKIT_TF_WAIT_FOR_READY")
+	return v == "" || strings.EqualFold(v, "true")
 }

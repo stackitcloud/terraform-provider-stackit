@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net/http"
 	"strings"
 
 	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
@@ -21,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -72,12 +74,20 @@ type zoneResource struct {
 }
 
 // Metadata returns the resource type name.
-func (r *zoneResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *zoneResource) Metadata(
+	_ context.Context,
+	req resource.MetadataRequest,
+	resp *resource.MetadataResponse,
+) {
 	resp.TypeName = req.ProviderTypeName + "_dns_zone"
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *zoneResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *zoneResource) Configure(
+	ctx context.Context,
+	req resource.ConfigureRequest,
+	resp *resource.ConfigureResponse,
+) {
 	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -92,7 +102,11 @@ func (r *zoneResource) Configure(ctx context.Context, req resource.ConfigureRequ
 }
 
 // Schema defines the schema for the resource.
-func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *zoneResource) Schema(
+	_ context.Context,
+	_ resource.SchemaRequest,
+	resp *resource.SchemaResponse,
+) {
 	primaryOptions := []string{"primary", "secondary"}
 
 	resp.Schema = schema.Schema{
@@ -235,10 +249,12 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"type": schema.StringAttribute{
-				Description: "Zone type. Defaults to `primary`. " + utils.SupportedValuesDocumentation(primaryOptions),
-				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString("primary"),
+				Description: "Zone type. Defaults to `primary`. " + utils.SupportedValuesDocumentation(
+					primaryOptions,
+				),
+				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString("primary"),
 				Validators: []validator.String{
 					stringvalidator.OneOf(primaryOptions...),
 				},
@@ -276,7 +292,11 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *zoneResource) Create(
+	ctx context.Context,
+	req resource.CreateRequest,
+	resp *resource.CreateResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
@@ -290,36 +310,72 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error creating zone",
+			fmt.Sprintf("Creating API payload: %v", err),
+		)
 		return
 	}
 	// Create new zone
 	createResp, err := r.client.CreateZone(ctx, projectId).CreateZonePayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error creating zone",
+			fmt.Sprintf("Calling API: %v", err),
+		)
 		return
 	}
 
-	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	// Save minimal state immediately after API call succeeds to ensure idempotency
 	zoneId := *createResp.Zone.Id
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
-		"project_id": projectId,
-		"zone_id":    zoneId,
-	})
-	if resp.Diagnostics.HasError() {
+	model.ZoneId = types.StringValue(zoneId)
+	model.Id = utils.BuildInternalTerraformId(projectId, zoneId)
+
+	// Set all unknown/null fields to null before saving state
+	if err := utils.SetModelFieldsToNull(ctx, &model); err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Setting model fields to null: %v", err))
 		return
 	}
 
-	waitResp, err := wait.CreateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
+	diags := resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if diags.HasError() {
+		return
+	}
+
+	if !utils.ShouldWait() {
+		tflog.Info(ctx, "Skipping wait; async mode for Crossplane/Upjet")
+		return
+	}
+
+	waitResp, err := wait.CreateZoneWaitHandler(ctx, r.client, projectId, zoneId).
+		WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Zone creation waiting: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error creating zone",
+			fmt.Sprintf(
+				"Zone creation waiting: %v. The zone was created but is not yet ready. You can check its status in the STACKIT Portal or run 'terraform refresh' to update the state once it's ready.",
+				err,
+			),
+		)
 		return
 	}
 
 	// Map response body to schema
 	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error creating zone",
+			fmt.Sprintf("Processing API payload: %v", err),
+		)
 		return
 	}
 	// Set state to fully populated data
@@ -331,7 +387,11 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *zoneResource) Read(
+	ctx context.Context,
+	req resource.ReadRequest,
+	resp *resource.ReadResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -343,12 +403,29 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 
-	zoneResp, err := r.client.GetZone(ctx, projectId, zoneId).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Calling API: %v", err))
+	if zoneId == "" {
+		tflog.Info(ctx, "Zone ID is empty, removing resource")
+		resp.State.RemoveResource(ctx)
 		return
 	}
-	if zoneResp != nil && zoneResp.Zone.State != nil && *zoneResp.Zone.State == dns.ZONESTATE_DELETE_SUCCEEDED {
+
+	zoneResp, err := r.client.GetZone(ctx, projectId, zoneId).Execute()
+	if err != nil {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error reading zone",
+			fmt.Sprintf("Calling API: %v", err),
+		)
+		return
+	}
+	if zoneResp != nil && zoneResp.Zone.State != nil &&
+		*zoneResp.Zone.State == dns.ZONESTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -356,7 +433,12 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	// Map response body to schema
 	err = mapFields(ctx, zoneResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error reading zone",
+			fmt.Sprintf("Processing API payload: %v", err),
+		)
 		return
 	}
 	// Set refreshed state
@@ -369,7 +451,11 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *zoneResource) Update(
+	ctx context.Context,
+	req resource.UpdateRequest,
+	resp *resource.UpdateResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -385,24 +471,56 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	// Generate API request body from model
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error updating zone",
+			fmt.Sprintf("Creating API payload: %v", err),
+		)
 		return
 	}
 	// Update existing zone
-	_, err = r.client.PartialUpdateZone(ctx, projectId, zoneId).PartialUpdateZonePayload(*payload).Execute()
+	_, err = r.client.PartialUpdateZone(ctx, projectId, zoneId).
+		PartialUpdateZonePayload(*payload).
+		Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error updating zone",
+			fmt.Sprintf("Calling API: %v", err),
+		)
 		return
 	}
-	waitResp, err := wait.PartialUpdateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
+
+	if !utils.ShouldWait() {
+		tflog.Info(ctx, "Skipping wait; async mode for Crossplane/Upjet")
+		return
+	}
+
+	waitResp, err := wait.PartialUpdateZoneWaitHandler(ctx, r.client, projectId, zoneId).
+		WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Zone update waiting: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error updating zone",
+			fmt.Sprintf(
+				"Zone update waiting: %v. The update was triggered but may not be complete. Run 'terraform refresh' to check the current state.",
+				err,
+			),
+		)
 		return
 	}
 
 	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error updating zone",
+			fmt.Sprintf("Processing API payload: %v", err),
+		)
 		return
 	}
 	diags = resp.State.Set(ctx, model)
@@ -414,7 +532,11 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *zoneResource) Delete(
+	ctx context.Context,
+	req resource.DeleteRequest,
+	resp *resource.DeleteResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
@@ -431,12 +553,38 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	// Delete existing zone
 	_, err := r.client.DeleteZone(ctx, projectId, zoneId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Calling API: %v", err))
+		// If resource is already gone (404 or 410), treat as success for idempotency
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok &&
+			(oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
+			tflog.Info(ctx, "DNS zone already deleted")
+			return
+		}
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error deleting zone",
+			fmt.Sprintf("Calling API: %v", err),
+		)
 		return
 	}
+
+	if !utils.ShouldWait() {
+		tflog.Info(ctx, "Skipping wait; async mode for Crossplane/Upjet")
+		return
+	}
+
 	_, err = wait.DeleteZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Zone deletion waiting: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error deleting zone",
+			fmt.Sprintf(
+				"Zone deletion waiting: %v. The zone deletion was triggered but confirmation timed out. The zone may still be deleting. Check the STACKIT Portal or retry the operation.",
+				err,
+			),
+		)
 		return
 	}
 
@@ -445,13 +593,22 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: project_id,zone_id
-func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *zoneResource) ImportState(
+	ctx context.Context,
+	req resource.ImportStateRequest,
+	resp *resource.ImportStateResponse,
+) {
 	idParts := strings.Split(req.ID, core.Separator)
 
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics,
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
 			"Error importing zone",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[zone_id]  Got: %q", req.ID),
+			fmt.Sprintf(
+				"Expected import identifier with format: [project_id],[zone_id]  Got: %q",
+				req.ID,
+			),
 		)
 		return
 	}
@@ -546,12 +703,14 @@ func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
 		modelPrimaries = append(modelPrimaries, primaryString.ValueString())
 	}
 	return &dns.CreateZonePayload{
-		Name:          conversion.StringValueToPointer(model.Name),
-		DnsName:       conversion.StringValueToPointer(model.DnsName),
-		ContactEmail:  conversion.StringValueToPointer(model.ContactEmail),
-		Description:   conversion.StringValueToPointer(model.Description),
-		Acl:           conversion.StringValueToPointer(model.Acl),
-		Type:          dns.CreateZonePayloadGetTypeAttributeType(conversion.StringValueToPointer(model.Type)),
+		Name:         conversion.StringValueToPointer(model.Name),
+		DnsName:      conversion.StringValueToPointer(model.DnsName),
+		ContactEmail: conversion.StringValueToPointer(model.ContactEmail),
+		Description:  conversion.StringValueToPointer(model.Description),
+		Acl:          conversion.StringValueToPointer(model.Acl),
+		Type: dns.CreateZonePayloadGetTypeAttributeType(
+			conversion.StringValueToPointer(model.Type),
+		),
 		DefaultTTL:    conversion.Int64ValueToPointer(model.DefaultTTL),
 		ExpireTime:    conversion.Int64ValueToPointer(model.ExpireTime),
 		RefreshTime:   conversion.Int64ValueToPointer(model.RefreshTime),
