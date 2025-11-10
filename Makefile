@@ -1,6 +1,10 @@
 ROOT_DIR              ?= $(shell git rev-parse --show-toplevel)
 SCRIPTS_BASE          ?= $(ROOT_DIR)/scripts
 
+# https://github.com/golangci/golangci-lint/releases
+GOLANGCI_VERSION      = 1.64.8
+GOLANGCI_LINT         = bin/golangci-lint-$(GOLANGCI_VERSION)
+
 # SETUP AND TOOL INITIALIZATION TASKS
 project-help:
 	@$(SCRIPTS_BASE)/project.sh help
@@ -8,10 +12,15 @@ project-help:
 project-tools:
 	@$(SCRIPTS_BASE)/project.sh tools
 
+# GOLANGCI-LINT INSTALLATION
+$(GOLANGCI_LINT):
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- -b bin v$(GOLANGCI_VERSION)
+	@mv bin/golangci-lint "$(@)"
+
 # LINT
-lint-golangci-lint:
+lint-golangci-lint: $(GOLANGCI_LINT)
 	@echo "Linting with golangci-lint"
-	@$(SCRIPTS_BASE)/lint-golangci-lint.sh
+	@$(SCRIPTS_BASE)/lint-golangci-lint.sh $(GOLANGCI_LINT)
 
 lint-tf: 
 	@echo "Linting terraform files"

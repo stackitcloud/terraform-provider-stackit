@@ -207,9 +207,9 @@ func (r *recordSetResource) Schema(
 // Create creates the resource and sets the initial Terraform state.
 func (r *recordSetResource) Create(
 	ctx context.Context,
-	req resource.CreateRequest,
+	req resource.CreateRequest, // nolint:gocritic // function signature required by Terraform
 	resp *resource.CreateResponse,
-) { // nolint:gocritic // function signature required by Terraform
+) {
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -308,9 +308,9 @@ func (r *recordSetResource) Create(
 // Read refreshes the Terraform state with the latest data.
 func (r *recordSetResource) Read(
 	ctx context.Context,
-	req resource.ReadRequest,
+	req resource.ReadRequest, // nolint:gocritic // function signature required by Terraform
 	resp *resource.ReadResponse,
-) { // nolint:gocritic // function signature required by Terraform
+) {
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -375,9 +375,9 @@ func (r *recordSetResource) Read(
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *recordSetResource) Update(
 	ctx context.Context,
-	req resource.UpdateRequest,
+	req resource.UpdateRequest, // nolint:gocritic // function signature required by Terraform
 	resp *resource.UpdateResponse,
-) { // nolint:gocritic // function signature required by Terraform
+) {
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -454,9 +454,9 @@ func (r *recordSetResource) Update(
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *recordSetResource) Delete(
 	ctx context.Context,
-	req resource.DeleteRequest,
+	req resource.DeleteRequest, // nolint:gocritic // function signature required by Terraform
 	resp *resource.DeleteResponse,
-) { // nolint:gocritic // function signature required by Terraform
+) {
 	// Retrieve values from plan
 	var model Model
 	diags := req.State.Get(ctx, &model)

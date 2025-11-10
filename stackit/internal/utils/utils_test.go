@@ -920,17 +920,17 @@ func TestShouldWait(t *testing.T) {
 			originalValue, wasSet := os.LookupEnv("STACKIT_TF_WAIT_FOR_READY")
 			defer func() {
 				if wasSet {
-					os.Setenv("STACKIT_TF_WAIT_FOR_READY", originalValue)
+					_ = os.Setenv("STACKIT_TF_WAIT_FOR_READY", originalValue)
 				} else {
-					os.Unsetenv("STACKIT_TF_WAIT_FOR_READY")
+					_ = os.Unsetenv("STACKIT_TF_WAIT_FOR_READY")
 				}
 			}()
 
 			// Set up test environment
 			if tt.setEnv {
-				os.Setenv("STACKIT_TF_WAIT_FOR_READY", tt.envValue)
+				_ = os.Setenv("STACKIT_TF_WAIT_FOR_READY", tt.envValue)
 			} else {
-				os.Unsetenv("STACKIT_TF_WAIT_FOR_READY")
+				_ = os.Unsetenv("STACKIT_TF_WAIT_FOR_READY")
 			}
 
 			// Test

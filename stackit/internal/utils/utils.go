@@ -252,7 +252,7 @@ func SetModelFieldsToNull(ctx context.Context, model any) error {
 		}
 
 		// Determine the type and set to appropriate Null value
-		switch fieldValue.(type) {
+		switch v := fieldValue.(type) {
 		case basetypes.StringValue:
 			field.Set(reflect.ValueOf(types.StringNull()))
 
@@ -269,23 +269,19 @@ func SetModelFieldsToNull(ctx context.Context, model any) error {
 			field.Set(reflect.ValueOf(types.NumberNull()))
 
 		case basetypes.ListValue:
-			listVal := fieldValue.(basetypes.ListValue)
-			elemType := listVal.ElementType(ctx)
+			elemType := v.ElementType(ctx)
 			field.Set(reflect.ValueOf(types.ListNull(elemType)))
 
 		case basetypes.SetValue:
-			setVal := fieldValue.(basetypes.SetValue)
-			elemType := setVal.ElementType(ctx)
+			elemType := v.ElementType(ctx)
 			field.Set(reflect.ValueOf(types.SetNull(elemType)))
 
 		case basetypes.MapValue:
-			mapVal := fieldValue.(basetypes.MapValue)
-			elemType := mapVal.ElementType(ctx)
+			elemType := v.ElementType(ctx)
 			field.Set(reflect.ValueOf(types.MapNull(elemType)))
 
 		case basetypes.ObjectValue:
-			objVal := fieldValue.(basetypes.ObjectValue)
-			attrTypes := objVal.AttributeTypes(ctx)
+			attrTypes := v.AttributeTypes(ctx)
 			field.Set(reflect.ValueOf(types.ObjectNull(attrTypes)))
 
 		default:
