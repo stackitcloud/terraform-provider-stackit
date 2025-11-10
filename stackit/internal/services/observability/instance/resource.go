@@ -672,6 +672,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 											"send_resolved": schema.BoolAttribute{
 												Description: "Whether to notify about resolved alerts.",
 												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(true),
 											},
 											"smart_host": schema.StringAttribute{
 												Description: "The SMTP host through which emails are sent.",
@@ -711,6 +713,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 											"send_resolved": schema.BoolAttribute{
 												Description: "Whether to notify about resolved alerts.",
 												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(true),
 											},
 										},
 									},
@@ -746,6 +750,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 											"send_resolved": schema.BoolAttribute{
 												Description: "Whether to notify about resolved alerts.",
 												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(true),
 											},
 										},
 									},
