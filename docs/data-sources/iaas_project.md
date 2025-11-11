@@ -3,12 +3,12 @@
 page_title: "stackit_iaas_project Data Source - stackit"
 subcategory: ""
 description: |-
-  Project details. Must have a region specified in the provider configuration.
+  Project details. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_iaas_project (Data Source)
 
-Project details. Must have a `region` specified in the provider configuration.
+Project details. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

@@ -82,7 +82,7 @@ func (d *serverDataSource) Configure(ctx context.Context, req datasource.Configu
 
 // Schema defines the schema for the datasource.
 func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	description := "Server datasource schema. Must have a `region` specified in the provider configuration."
+	description := "Server datasource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,

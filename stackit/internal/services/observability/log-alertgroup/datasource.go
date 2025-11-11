@@ -59,7 +59,7 @@ func (l *logAlertGroupDataSource) Metadata(_ context.Context, req datasource.Met
 // Schema defines the schema for the log alert group data source.
 func (l *logAlertGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Observability log alert group datasource schema. Used to create alerts based on logs (Loki). Must have a `region` specified in the provider configuration.",
+		Description: "Observability log alert group datasource schema. Used to create alerts based on logs (Loki). Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],

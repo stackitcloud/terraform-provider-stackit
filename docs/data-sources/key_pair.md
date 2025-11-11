@@ -3,12 +3,12 @@
 page_title: "stackit_key_pair Data Source - stackit"
 subcategory: ""
 description: |-
-  Key pair resource schema. Must have a region specified in the provider configuration.
+  Key pair resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_key_pair (Data Source)
 
-Key pair resource schema. Must have a `region` specified in the provider configuration.
+Key pair resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

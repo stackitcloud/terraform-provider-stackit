@@ -55,7 +55,7 @@ func (d *securityGroupRuleDataSource) Configure(ctx context.Context, req datasou
 // Schema defines the schema for the resource.
 func (r *securityGroupRuleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	directionOptions := []string{"ingress", "egress"}
-	description := "Security group datasource schema. Must have a `region` specified in the provider configuration."
+	description := "Security group datasource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level."
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,

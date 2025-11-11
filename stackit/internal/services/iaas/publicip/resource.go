@@ -73,7 +73,7 @@ func (r *publicIpResource) Configure(ctx context.Context, req resource.Configure
 
 // Schema defines the schema for the resource.
 func (r *publicIpResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	description := "Public IP resource schema. Must have a `region` specified in the provider configuration."
+	description := "Public IP resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,

@@ -3,12 +3,12 @@
 page_title: "stackit_opensearch_instance Resource - stackit"
 subcategory: ""
 description: |-
-  OpenSearch instance resource schema. Must have a region specified in the provider configuration.
+  OpenSearch instance resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_opensearch_instance (Resource)
 
-OpenSearch instance resource schema. Must have a `region` specified in the provider configuration.
+OpenSearch instance resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

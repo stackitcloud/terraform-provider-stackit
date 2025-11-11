@@ -3,12 +3,12 @@
 page_title: "stackit_image Resource - stackit"
 subcategory: ""
 description: |-
-  Image resource schema. Must have a region specified in the provider configuration.
+  Image resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_image (Resource)
 
-Image resource schema. Must have a `region` specified in the provider configuration.
+Image resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

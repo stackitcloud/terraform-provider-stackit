@@ -3,12 +3,12 @@
 page_title: "stackit_server_network_interface_attach Resource - stackit"
 subcategory: ""
 description: |-
-  Network interface attachment resource schema. Attaches a network interface to a server. Must have a region specified in the provider configuration. The attachment only takes full effect after server reboot.
+  Network interface attachment resource schema. Attaches a network interface to a server. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level. The attachment only takes full effect after server reboot.
 ---
 
 # stackit_server_network_interface_attach (Resource)
 
-Network interface attachment resource schema. Attaches a network interface to a server. Must have a `region` specified in the provider configuration. The attachment only takes full effect after server reboot.
+Network interface attachment resource schema. Attaches a network interface to a server. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level. The attachment only takes full effect after server reboot.
 
 ## Example Usage
 

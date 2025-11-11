@@ -3,12 +3,12 @@
 page_title: "stackit_scf_organization Data Source - stackit"
 subcategory: ""
 description: |-
-  STACKIT Cloud Foundry organization datasource schema. Must have a region specified in the provider configuration.
+  STACKIT Cloud Foundry organization datasource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_scf_organization (Data Source)
 
-STACKIT Cloud Foundry organization datasource schema. Must have a `region` specified in the provider configuration.
+STACKIT Cloud Foundry organization datasource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

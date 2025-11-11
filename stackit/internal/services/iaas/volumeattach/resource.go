@@ -73,7 +73,7 @@ func (r *volumeAttachResource) Configure(ctx context.Context, req resource.Confi
 
 // Schema defines the schema for the resource.
 func (r *volumeAttachResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	description := "Volume attachment resource schema. Attaches a volume to a server. Must have a `region` specified in the provider configuration."
+	description := "Volume attachment resource schema. Attaches a volume to a server. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,

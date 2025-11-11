@@ -3,12 +3,12 @@
 page_title: "stackit_ske_cluster Data Source - stackit"
 subcategory: ""
 description: |-
-  SKE Cluster data source schema. Must have a region specified in the provider configuration.
+  SKE Cluster data source schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_ske_cluster (Data Source)
 
-SKE Cluster data source schema. Must have a `region` specified in the provider configuration.
+SKE Cluster data source schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

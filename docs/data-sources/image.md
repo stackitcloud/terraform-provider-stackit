@@ -3,12 +3,12 @@
 page_title: "stackit_image Data Source - stackit"
 subcategory: ""
 description: |-
-  Image datasource schema. Must have a region specified in the provider configuration.
+  Image datasource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_image (Data Source)
 
-Image datasource schema. Must have a `region` specified in the provider configuration.
+Image datasource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

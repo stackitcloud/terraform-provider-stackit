@@ -3,12 +3,12 @@
 page_title: "stackit_objectstorage_credentials_group Resource - stackit"
 subcategory: ""
 description: |-
-  ObjectStorage credentials group resource schema. Must have a region specified in the provider configuration. If you are creating credentialsgroup and bucket resources simultaneously, please include the depends_on field so that they are created sequentially. This prevents errors from concurrent calls to the service enablement that is done in the background.
+  ObjectStorage credentials group resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level. If you are creating credentialsgroup and bucket resources simultaneously, please include the depends_on field so that they are created sequentially. This prevents errors from concurrent calls to the service enablement that is done in the background.
 ---
 
 # stackit_objectstorage_credentials_group (Resource)
 
-ObjectStorage credentials group resource schema. Must have a `region` specified in the provider configuration. If you are creating `credentialsgroup` and `bucket` resources simultaneously, please include the `depends_on` field so that they are created sequentially. This prevents errors from concurrent calls to the service enablement that is done in the background.
+ObjectStorage credentials group resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level. If you are creating `credentialsgroup` and `bucket` resources simultaneously, please include the `depends_on` field so that they are created sequentially. This prevents errors from concurrent calls to the service enablement that is done in the background.
 
 ## Example Usage
 

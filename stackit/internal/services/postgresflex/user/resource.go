@@ -118,7 +118,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 	rolesOptions := []string{"login", "createdb"}
 
 	descriptions := map[string]string{
-		"main":        "Postgres Flex user resource schema. Must have a `region` specified in the provider configuration.",
+		"main":        "Postgres Flex user resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the PostgresFlex instance.",

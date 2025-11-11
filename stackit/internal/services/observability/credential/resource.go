@@ -69,7 +69,7 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 
 func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Observability credential resource schema. Must have a `region` specified in the provider configuration.",
+		Description: "Observability credential resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`username`\".",

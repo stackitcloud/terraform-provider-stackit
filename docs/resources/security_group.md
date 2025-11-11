@@ -3,12 +3,12 @@
 page_title: "stackit_security_group Resource - stackit"
 subcategory: ""
 description: |-
-  Security group resource schema. Must have a region specified in the provider configuration.
+  Security group resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_security_group (Resource)
 
-Security group resource schema. Must have a `region` specified in the provider configuration.
+Security group resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

@@ -75,7 +75,7 @@ func (r *affinityGroupResource) Configure(ctx context.Context, req resource.Conf
 }
 
 func (r *affinityGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	description := "Affinity Group schema. Must have a `region` specified in the provider configuration."
+	description := "Affinity Group schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level."
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description + "\n\n" + exampleUsageWithServer + policies,

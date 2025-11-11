@@ -127,7 +127,7 @@ func (r *scfOrganizationResource) ModifyPlan(ctx context.Context, req resource.M
 
 func (s *scfOrganizationResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		Description: "STACKIT Cloud Foundry organization resource schema. Must have a `region` specified in the provider configuration.",
+		Description: "STACKIT Cloud Foundry organization resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],

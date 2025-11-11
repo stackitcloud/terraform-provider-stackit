@@ -115,7 +115,7 @@ func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRe
 // Schema defines the schema for the resource.
 func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "MongoDB Flex user resource schema. Must have a `region` specified in the provider configuration.",
+		"main":        "MongoDB Flex user resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the MongoDB Flex instance.",

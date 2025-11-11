@@ -3,12 +3,12 @@
 page_title: "stackit_secretsmanager_user Data Source - stackit"
 subcategory: ""
 description: |-
-  Secrets Manager user data source schema. Must have a region specified in the provider configuration.
+  Secrets Manager user data source schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_secretsmanager_user (Data Source)
 
-Secrets Manager user data source schema. Must have a `region` specified in the provider configuration.
+Secrets Manager user data source schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

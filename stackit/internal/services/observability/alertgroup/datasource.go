@@ -59,7 +59,7 @@ func (a *alertGroupDataSource) Metadata(_ context.Context, req datasource.Metada
 // Schema defines the schema for the alert group data source.
 func (a *alertGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Observability alert group datasource schema. Used to create alerts based on metrics (Thanos). Must have a `region` specified in the provider configuration.",
+		Description: "Observability alert group datasource schema. Used to create alerts based on metrics (Thanos). Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],

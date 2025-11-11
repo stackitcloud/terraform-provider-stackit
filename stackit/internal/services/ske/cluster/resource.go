@@ -316,7 +316,7 @@ func (r *clusterResource) Configure(ctx context.Context, req resource.ConfigureR
 // Schema defines the schema for the resource.
 func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main": "SKE Cluster Resource schema. Must have a `region` specified in the provider configuration.",
+		"main": "SKE Cluster Resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		"node_pools_plan_note": "When updating `node_pools` of a `stackit_ske_cluster`, the Terraform plan might appear incorrect as it matches the node pools by index rather than by name. " +
 			"However, the SKE API correctly identifies node pools by name and applies the intended changes. Please review your changes carefully to ensure the correct configuration will be applied.",
 		"max_surge":           "Maximum number of additional VMs that are created during an update.",

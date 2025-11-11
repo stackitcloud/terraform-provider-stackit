@@ -3,12 +3,12 @@
 page_title: "stackit_server_service_account_attach Resource - stackit"
 subcategory: ""
 description: |-
-  Service account attachment resource schema. Attaches a service account to a server. Must have a region specified in the provider configuration.
+  Service account attachment resource schema. Attaches a service account to a server. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_server_service_account_attach (Resource)
 
-Service account attachment resource schema. Attaches a service account to a server. Must have a `region` specified in the provider configuration.
+Service account attachment resource schema. Attaches a service account to a server. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

@@ -185,7 +185,7 @@ func (r *networkResource) ConfigValidators(_ context.Context) []resource.ConfigV
 
 // Schema defines the schema for the resource.
 func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	description := "Network resource schema. Must have a `region` specified in the provider configuration."
+	description := "Network resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level."
 	descriptionNote := fmt.Sprintf("~> %s. %s", ipv4BehaviorChangeTitle, ipv4BehaviorChangeDescription)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: fmt.Sprintf("%s\n%s", description, descriptionNote),

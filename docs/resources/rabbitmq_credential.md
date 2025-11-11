@@ -3,12 +3,12 @@
 page_title: "stackit_rabbitmq_credential Resource - stackit"
 subcategory: ""
 description: |-
-  RabbitMQ credential resource schema. Must have a region specified in the provider configuration.
+  RabbitMQ credential resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_rabbitmq_credential (Resource)
 
-RabbitMQ credential resource schema. Must have a `region` specified in the provider configuration.
+RabbitMQ credential resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

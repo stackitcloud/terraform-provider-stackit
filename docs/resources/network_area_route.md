@@ -3,12 +3,12 @@
 page_title: "stackit_network_area_route Resource - stackit"
 subcategory: ""
 description: |-
-  Network area route resource schema. Must have a region specified in the provider configuration.
+  Network area route resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_network_area_route (Resource)
 
-Network area route resource schema. Must have a `region` specified in the provider configuration.
+Network area route resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

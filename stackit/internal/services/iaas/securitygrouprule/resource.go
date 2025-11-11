@@ -171,7 +171,7 @@ func (r securityGroupRuleResource) ValidateConfig(ctx context.Context, req resou
 // Schema defines the schema for the resource.
 func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	directionOptions := []string{"ingress", "egress"}
-	description := "Security group rule resource schema. Must have a `region` specified in the provider configuration."
+	description := "Security group rule resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level."
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,

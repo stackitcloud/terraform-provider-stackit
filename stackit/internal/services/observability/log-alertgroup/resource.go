@@ -110,7 +110,7 @@ func (l *logAlertGroupResource) Configure(ctx context.Context, req resource.Conf
 // Schema defines the schema for the resource.
 func (l *logAlertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Observability log alert group resource schema. Used to create alerts based on logs (Loki). Must have a `region` specified in the provider configuration.",
+		Description: "Observability log alert group resource schema. Used to create alerts based on logs (Loki). Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],

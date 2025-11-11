@@ -3,12 +3,12 @@
 page_title: "stackit_loadbalancer_observability_credential Resource - stackit"
 subcategory: ""
 description: |-
-  Load balancer observability credential resource schema. Must have a region specified in the provider configuration. These contain the username and password for the observability service (e.g. Argus) where the load balancer logs/metrics will be pushed into
+  Load balancer observability credential resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level. These contain the username and password for the observability service (e.g. Argus) where the load balancer logs/metrics will be pushed into
 ---
 
 # stackit_loadbalancer_observability_credential (Resource)
 
-Load balancer observability credential resource schema. Must have a `region` specified in the provider configuration. These contain the username and password for the observability service (e.g. Argus) where the load balancer logs/metrics will be pushed into
+Load balancer observability credential resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level. These contain the username and password for the observability service (e.g. Argus) where the load balancer logs/metrics will be pushed into
 
 ## Example Usage
 

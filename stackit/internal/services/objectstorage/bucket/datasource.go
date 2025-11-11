@@ -59,7 +59,7 @@ func (r *bucketDataSource) Configure(ctx context.Context, req datasource.Configu
 // Schema defines the schema for the data source.
 func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                     "ObjectStorage bucket data source schema. Must have a `region` specified in the provider configuration.",
+		"main":                     "ObjectStorage bucket data source schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		"id":                       "Terraform's internal data source identifier. It is structured as \"`project_id`,`region`,`name`\".",
 		"name":                     "The bucket name. It must be DNS conform.",
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",

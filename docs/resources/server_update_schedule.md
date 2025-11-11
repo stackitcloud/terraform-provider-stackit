@@ -3,13 +3,13 @@
 page_title: "stackit_server_update_schedule Resource - stackit"
 subcategory: ""
 description: |-
-  Server update schedule resource schema. Must have a region specified in the provider configuration.
+  Server update schedule resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
   ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_server_update_schedule (Resource)
 
-Server update schedule resource schema. Must have a `region` specified in the provider configuration.
+Server update schedule resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 

@@ -108,7 +108,7 @@ func (r *observabilityCredentialResource) Configure(ctx context.Context, req res
 // Schema defines the schema for the resource.
 func (r *observabilityCredentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":            "Load balancer observability credential resource schema. Must have a `region` specified in the provider configuration. These contain the username and password for the observability service (e.g. Argus) where the load balancer logs/metrics will be pushed into",
+		"main":            "Load balancer observability credential resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level. These contain the username and password for the observability service (e.g. Argus) where the load balancer logs/metrics will be pushed into",
 		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`\",\"region\",\"`credentials_ref`\".",
 		"credentials_ref": "The credentials reference is used by the Load Balancer to define which credentials it will use.",
 		"project_id":      "STACKIT project ID to which the load balancer observability credential is associated.",

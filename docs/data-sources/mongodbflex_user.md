@@ -3,12 +3,12 @@
 page_title: "stackit_mongodbflex_user Data Source - stackit"
 subcategory: ""
 description: |-
-  MongoDB Flex user data source schema. Must have a region specified in the provider configuration.
+  MongoDB Flex user data source schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_mongodbflex_user (Data Source)
 
-MongoDB Flex user data source schema. Must have a `region` specified in the provider configuration.
+MongoDB Flex user data source schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

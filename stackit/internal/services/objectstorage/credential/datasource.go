@@ -69,7 +69,7 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 // Schema defines the schema for the datasource.
 func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                 "ObjectStorage credential data source schema. Must have a `region` specified in the provider configuration.",
+		"main":                 "ObjectStorage credential data source schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		"id":                   "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`credentials_group_id`,`credential_id`\".",
 		"credential_id":        "The credential ID.",
 		"credentials_group_id": "The credential group ID.",

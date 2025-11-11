@@ -3,13 +3,13 @@
 page_title: "stackit_routing_table Resource - stackit"
 subcategory: ""
 description: |-
-  Routing table resource schema. Must have a region specified in the provider configuration.
+  Routing table resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
   ~> This resource is part of the routing-tables experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_routing_table (Resource)
 
-Routing table resource schema. Must have a `region` specified in the provider configuration.
+Routing table resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ~> This resource is part of the routing-tables experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 
