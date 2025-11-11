@@ -40,7 +40,7 @@ import {
 
 ### Required
 
-- `direction` (String) The direction of the traffic which the rule should match. Some of the possible values are: Supported values are: `ingress`, `egress`.
+- `direction` (String) The direction of the traffic which the rule should match. Some of the possible values are: Possible values are: `ingress`, `egress`.
 - `project_id` (String) STACKIT project ID to which the security group rule is associated.
 - `security_group_id` (String) The security group ID.
 

@@ -40,4 +40,4 @@ data "stackit_network_interface" "example" {
 - `name` (String) The name of the network interface.
 - `security` (Boolean) The Network Interface Security. If set to false, then no security groups will apply to this network interface.
 - `security_group_ids` (List of String) The list of security group UUIDs. If security is set to false, setting this field will lead to an error.
-- `type` (String) Type of network interface. Some of the possible values are: Supported values are: `server`, `metadata`, `gateway`.
+- `type` (String) Type of network interface. Some of the possible values are: Possible values are: `server`, `metadata`, `gateway`.

@@ -90,7 +90,7 @@ func (r *securityGroupRuleDataSource) Schema(_ context.Context, _ datasource.Sch
 				},
 			},
 			"direction": schema.StringAttribute{
-				Description: "The direction of the traffic which the rule should match. Some of the possible values are: " + utils.SupportedValuesDocumentation(directionOptions),
+				Description: "The direction of the traffic which the rule should match. Some of the possible values are: " + utils.FormatPossibleValues(directionOptions...),
 				Computed:    true,
 			},
 			"description": schema.StringAttribute{

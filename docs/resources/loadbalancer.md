@@ -254,7 +254,7 @@ import {
 Required:
 
 - `port` (Number) Port number where we listen for traffic.
-- `protocol` (String) Protocol is the highest network protocol we understand to load balance. Supported values are: `PROTOCOL_UNSPECIFIED`, `PROTOCOL_TCP`, `PROTOCOL_UDP`, `PROTOCOL_TCP_PROXY`, `PROTOCOL_TLS_PASSTHROUGH`.
+- `protocol` (String) Protocol is the highest network protocol we understand to load balance. Possible values are: `PROTOCOL_UNSPECIFIED`, `PROTOCOL_TCP`, `PROTOCOL_UDP`, `PROTOCOL_TCP_PROXY`, `PROTOCOL_TLS_PASSTHROUGH`.
 - `target_pool` (String) Reference target pool by target pool name.
 
 Optional:
@@ -295,7 +295,7 @@ Optional:
 Required:
 
 - `network_id` (String) Openstack network ID.
-- `role` (String) The role defines how the load balancer is using the network. Supported values are: `ROLE_UNSPECIFIED`, `ROLE_LISTENERS_AND_TARGETS`, `ROLE_LISTENERS`, `ROLE_TARGETS`.
+- `role` (String) The role defines how the load balancer is using the network. Possible values are: `ROLE_UNSPECIFIED`, `ROLE_LISTENERS_AND_TARGETS`, `ROLE_LISTENERS`, `ROLE_TARGETS`.
 
 
 <a id="nestedatt--target_pools"></a>

@@ -50,4 +50,4 @@ import {
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`network_id`,`network_interface_id`".
 - `mac` (String) The MAC address of network interface.
 - `network_interface_id` (String) The network interface ID.
-- `type` (String) Type of network interface. Some of the possible values are: Supported values are: `server`, `metadata`, `gateway`.
+- `type` (String) Type of network interface. Some of the possible values are: Possible values are: `server`, `metadata`, `gateway`.

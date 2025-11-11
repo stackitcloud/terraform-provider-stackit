@@ -225,7 +225,7 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						Description: "The type of the source. " + utils.SupportedValuesDocumentation(SupportedSourceTypes),
+						Description: "The type of the source. " + utils.FormatPossibleValues(SupportedSourceTypes...),
 						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),

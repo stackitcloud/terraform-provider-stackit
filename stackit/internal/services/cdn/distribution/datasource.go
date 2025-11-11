@@ -131,7 +131,7 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						Attributes: map[string]schema.Attribute{
 							"type": schema.StringAttribute{
 								Computed:    true,
-								Description: schemaDescriptions["config_backend_type"] + utils.SupportedValuesDocumentation(backendOptions),
+								Description: schemaDescriptions["config_backend_type"] + utils.FormatPossibleValues(backendOptions...),
 							},
 							"origin_url": schema.StringAttribute{
 								Computed:    true,
