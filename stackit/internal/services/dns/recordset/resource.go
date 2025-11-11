@@ -425,11 +425,23 @@ func (r *recordSetResource) ImportState(ctx context.Context, req resource.Import
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
-		"project_id":    idParts[0],
-		"zone_id":       idParts[1],
-		"record_set_id": idParts[2],
-	})
+	var model Model
+	model.ProjectId = types.StringValue(idParts[0])
+	model.ZoneId = types.StringValue(idParts[1])
+	model.RecordSetId = types.StringValue(idParts[2])
+	model.Id = utils.BuildInternalTerraformId(idParts[0], idParts[1], idParts[2])
+
+	if err := utils.SetModelFieldsToNull(ctx, &model); err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing zone", fmt.Sprintf("Setting model fields to null: %v", err))
+		return
+	}
+
+	diags := resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if diags.HasError() {
+		return
+	}
+
 	tflog.Info(ctx, "DNS record set state imported")
 }
 

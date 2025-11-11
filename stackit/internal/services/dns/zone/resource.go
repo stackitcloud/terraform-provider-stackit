@@ -504,6 +504,7 @@ func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportState
 	var model Model
 	model.ProjectId = types.StringValue(idParts[0])
 	model.ZoneId = types.StringValue(idParts[1])
+	model.Id = utils.BuildInternalTerraformId(idParts[0], idParts[1])
 
 	if err := utils.SetModelFieldsToNull(ctx, &model); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing zone", fmt.Sprintf("Setting model fields to null: %v", err))
