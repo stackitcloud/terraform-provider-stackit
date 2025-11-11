@@ -302,12 +302,7 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 	// Map response body to schema
 	err = mapFields(ctx, recordSetResp, &model)
 	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error reading record set",
-			fmt.Sprintf("Processing API payload: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 

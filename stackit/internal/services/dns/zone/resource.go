@@ -292,18 +292,13 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 	// Create new zone
 	createResp, err := r.client.CreateZone(ctx, projectId).CreateZonePayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error creating zone",
-			fmt.Sprintf("Calling API: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
@@ -422,12 +417,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	// Update existing zone
 	_, err = r.client.PartialUpdateZone(ctx, projectId, zoneId).PartialUpdateZonePayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error updating zone",
-			fmt.Sprintf("Calling API: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
@@ -444,12 +434,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error updating zone",
-			fmt.Sprintf("Processing API payload: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
