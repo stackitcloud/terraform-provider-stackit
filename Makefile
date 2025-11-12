@@ -1,9 +1,10 @@
 ROOT_DIR              ?= $(shell git rev-parse --show-toplevel)
 SCRIPTS_BASE          ?= $(ROOT_DIR)/scripts
+BIN_DIR               ?= $(ROOT_DIR)/bin
 
 # https://github.com/golangci/golangci-lint/releases
-GOLANGCI_VERSION      = 1.64.8
-GOLANGCI_LINT         = bin/golangci-lint-$(GOLANGCI_VERSION)
+GOLANGCI_LINT_VERSION = 1.64.8
+GOLANGCI_LINT         = $(BIN_DIR)/golangci-lint
 
 # SETUP AND TOOL INITIALIZATION TASKS
 project-help:
@@ -14,8 +15,7 @@ project-tools:
 
 # GOLANGCI-LINT INSTALLATION
 $(GOLANGCI_LINT):
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- -b bin v$(GOLANGCI_VERSION)
-	@mv bin/golangci-lint "$(@)"
+	@GOLANGCI_LINT_VERSION=$(GOLANGCI_LINT_VERSION) $(SCRIPTS_BASE)/install-golangci-lint.sh
 
 # LINT
 lint-golangci-lint: $(GOLANGCI_LINT)

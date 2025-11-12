@@ -2,6 +2,7 @@ package dns
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -357,15 +358,10 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 
-	if zoneId == "" {
-		tflog.Info(ctx, "Zone ID is empty, removing resource")
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
 	zoneResp, err := r.client.GetZone(ctx, projectId, zoneId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
 		if ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
 			resp.State.RemoveResource(ctx)
 			return
@@ -464,7 +460,8 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	_, err := r.client.DeleteZone(ctx, projectId, zoneId).Execute()
 	if err != nil {
 		// If resource is already gone (404 or 410), treat as success for idempotency
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
 		if ok &&
 			(oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
 			tflog.Info(ctx, "DNS zone already deleted")

@@ -2,6 +2,7 @@ package dns
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -278,15 +279,10 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 	ctx = tflog.SetField(ctx, "record_set_id", recordSetId)
 
-	if recordSetId == "" || zoneId == "" || projectId == "" {
-		tflog.Info(ctx, "Record set ID, zone ID, or project ID is empty, removing resource")
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
 	recordSetResp, err := r.client.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
 		if ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
 			resp.State.RemoveResource(ctx)
 			return
@@ -390,9 +386,9 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 	_, err := r.client.DeleteRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
 		// If resource is already gone (404 or 410), treat as success for idempotency
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok &&
-			(oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
+		if ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
 			tflog.Info(ctx, "Record set already deleted")
 			return
 		}
