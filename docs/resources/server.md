@@ -406,7 +406,7 @@ import {
 - `affinity_group` (String) The affinity group the server is assigned to.
 - `availability_zone` (String) The availability zone of the server.
 - `boot_volume` (Attributes) The boot volume for the server (see [below for nested schema](#nestedatt--boot_volume))
-- `desired_status` (String) The desired status of the server resource. Supported values are: `active`, `inactive`, `deallocated`.
+- `desired_status` (String) The desired status of the server resource. Possible values are: `active`, `inactive`, `deallocated`.
 - `image_id` (String) The image ID to be used for an ephemeral disk on the server.
 - `keypair_name` (String) The name of the keypair used during server creation.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
@@ -427,7 +427,7 @@ import {
 Required:
 
 - `source_id` (String) The ID of the source, either image ID or volume ID
-- `source_type` (String) The type of the source. Supported values are: `volume`, `image`.
+- `source_type` (String) The type of the source. Possible values are: `volume`, `image`.
 
 Optional:
 

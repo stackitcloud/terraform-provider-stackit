@@ -123,7 +123,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 		"user_id":     "User ID.",
 		"instance_id": "ID of the PostgresFlex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"roles":       "Database access levels for the user. " + utils.SupportedValuesDocumentation(rolesOptions),
+		"roles":       "Database access levels for the user. " + utils.FormatPossibleValues(rolesOptions...),
 		"region":      "The resource region. If not defined, the provider region is used.",
 	}
 

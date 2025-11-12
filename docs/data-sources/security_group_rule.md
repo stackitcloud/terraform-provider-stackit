@@ -32,7 +32,7 @@ data "stackit_security_group_rule" "example" {
 ### Read-Only
 
 - `description` (String) The description of the security group rule.
-- `direction` (String) The direction of the traffic which the rule should match. Some of the possible values are: Supported values are: `ingress`, `egress`.
+- `direction` (String) The direction of the traffic which the rule should match. Some of the possible values are: Possible values are: `ingress`, `egress`.
 - `ether_type` (String) The ethertype which the rule should match.
 - `icmp_parameters` (Attributes) ICMP Parameters. (see [below for nested schema](#nestedatt--icmp_parameters))
 - `id` (String) Terraform's internal datasource ID. It is structured as "`project_id`,`security_group_id`,`security_group_rule_id`".

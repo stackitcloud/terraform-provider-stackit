@@ -86,7 +86,7 @@ Read-Only:
 Required:
 
 - `point_in_time_window_hours` (Number) The number of hours back in time the point-in-time recovery feature will be able to recover.
-- `type` (String) Type of the MongoDB Flex instance. Supported values are: `Replica`, `Sharded`, `Single`.
+- `type` (String) Type of the MongoDB Flex instance. Possible values are: `Replica`, `Sharded`, `Single`.
 
 Optional:
 

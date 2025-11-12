@@ -180,7 +180,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"acl":                               "The Access Control List (ACL) for the MongoDB Flex instance.",
 		"backup_schedule":                   `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
 		"options":                           "Custom parameters for the MongoDB Flex instance.",
-		"type":                              fmt.Sprintf("Type of the MongoDB Flex instance. %s", utils.SupportedValuesDocumentation(typeOptions)),
+		"type":                              fmt.Sprintf("Type of the MongoDB Flex instance. %s", utils.FormatPossibleValues(typeOptions...)),
 		"snapshot_retention_days":           "The number of days that continuous backups (controlled via the `backup_schedule`) will be retained.",
 		"daily_snapshot_retention_days":     "The number of days that daily backups will be retained.",
 		"weekly_snapshot_retention_weeks":   "The number of weeks that weekly backups will be retained.",

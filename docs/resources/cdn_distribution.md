@@ -79,7 +79,7 @@ Optional:
 Required:
 
 - `origin_url` (String) The configured backend type for the distribution
-- `type` (String) The configured backend type. Supported values are: `http`.
+- `type` (String) The configured backend type. Possible values are: `http`.
 
 Optional:
 

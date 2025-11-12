@@ -262,7 +262,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						},
 					},
 					"source_type": schema.StringAttribute{
-						Description: "The type of the source. " + utils.SupportedValuesDocumentation(supportedSourceTypes),
+						Description: "The type of the source. " + utils.FormatPossibleValues(supportedSourceTypes...),
 						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
@@ -366,7 +366,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Computed:    true,
 			},
 			"desired_status": schema.StringAttribute{
-				Description: "The desired status of the server resource. " + utils.SupportedValuesDocumentation(desiredStatusOptions),
+				Description: "The desired status of the server resource. " + utils.FormatPossibleValues(desiredStatusOptions...),
 				Optional:    true,
 				Validators: []validator.String{
 					stringvalidator.OneOf(desiredStatusOptions...),
