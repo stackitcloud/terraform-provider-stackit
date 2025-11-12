@@ -2,6 +2,7 @@ package kms
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -65,11 +66,12 @@ func (r *keyRingResource) Configure(ctx context.Context, request resource.Config
 		return
 	}
 
-	apiClient := kmsUtils.ConfigureClient(ctx, &r.providerData, &response.Diagnostics)
+	r.client = kmsUtils.ConfigureClient(ctx, &r.providerData, &response.Diagnostics)
 	if response.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+
+	tflog.Info(ctx, "KMS client configured")
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
@@ -103,7 +105,7 @@ func (r *keyRingResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 }
 
 func (r *keyRingResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
-	description := "KMS Keyring resource schema."
+	description := fmt.Sprintf("KMS Keyring resource schema. %s", core.ResourceRegionFallbackDocstring)
 
 	response.Schema = schema.Schema{
 		Description:         description,
@@ -193,6 +195,11 @@ func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	if createResponse == nil || createResponse.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating keyring", "API returned empty response")
+		return
+	}
+
 	keyRingId := *createResponse.Id
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
@@ -239,7 +246,8 @@ func (r *keyRingResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	keyRingResponse, err := r.client.GetKeyRing(ctx, projectId, region, keyRingId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return

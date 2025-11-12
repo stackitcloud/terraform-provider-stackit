@@ -47,12 +47,12 @@ func (k *keyRingDataSource) Configure(ctx context.Context, request datasource.Co
 	}
 
 	k.client = apiClient
-	tflog.Info(ctx, "Keyring configured")
+	tflog.Info(ctx, "KMS client configured")
 }
 
 func (k *keyRingDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		Description: "KMS Keyring resource schema.",
+		Description: fmt.Sprintf("KMS Keyring datasource schema. %s", core.DatasourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"description": schema.StringAttribute{
 				Description: "A user chosen description to distinguish multiple keyrings.",
@@ -64,7 +64,6 @@ func (k *keyRingDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			},
 			"keyring_id": schema.StringAttribute{
 				Description: "An auto generated unique id which identifies the keyring.",
-				Computed:    false,
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -84,6 +83,8 @@ func (k *keyRingDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				},
 			},
 			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
 				Computed:    true,
 				Description: "The resource region. If not defined, the provider region is used.",
 			},

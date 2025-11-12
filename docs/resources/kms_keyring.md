@@ -3,13 +3,13 @@
 page_title: "stackit_kms_keyring Resource - stackit"
 subcategory: ""
 description: |-
-  KMS Keyring resource schema.
+  KMS Keyring resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
   ~> Keyrings will not be destroyed by terraform during a terraform destroy. They will just be thrown out of the Terraform state and not deleted on API side. This way we can ensure no keyring setups are deleted by accident and it gives you the option to recover your keys within the grace period.
 ---
 
 # stackit_kms_keyring (Resource)
 
-KMS Keyring resource schema.
+KMS Keyring resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
  ~> Keyrings will **not** be destroyed by terraform during a `terraform destroy`. They will just be thrown out of the Terraform state and not deleted on API side. **This way we can ensure no keyring setups are deleted by accident and it gives you the option to recover your keys within the grace period.**
 

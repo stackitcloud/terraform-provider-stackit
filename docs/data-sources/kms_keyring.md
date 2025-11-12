@@ -3,12 +3,12 @@
 page_title: "stackit_kms_keyring Data Source - stackit"
 subcategory: ""
 description: |-
-  KMS Keyring resource schema.
+  KMS Keyring datasource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on datasource level.
 ---
 
 # stackit_kms_keyring (Data Source)
 
-KMS Keyring resource schema.
+KMS Keyring datasource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on datasource level.
 
 ## Example Usage
 
@@ -27,9 +27,12 @@ data "stackit_kms_keyring" "example" {
 - `keyring_id` (String) An auto generated unique id which identifies the keyring.
 - `project_id` (String) STACKIT project ID to which the keyring is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `description` (String) A user chosen description to distinguish multiple keyrings.
 - `display_name` (String) The display name to distinguish multiple keyrings.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`keyring_id`".
-- `region` (String) The resource region. If not defined, the provider region is used.
