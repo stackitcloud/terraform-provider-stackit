@@ -30,7 +30,7 @@ install() {
     download ${URL} | tar --extract --gzip --strip-components 1 --preserve-permissions -C ${BIN_DIR} -f-
 
     # Ensure the binary has the correct name
-    if [ -f "${BIN_DIR}/golangci-lint" ]; then
+    if [ -f "${BIN_DIR}/golangci-lint" ] && [ "${BIN_DIR}/golangci-lint" != "${INSTALL_TO}" ]; then
         mv "${BIN_DIR}/golangci-lint" "${INSTALL_TO}"
     fi
 }
