@@ -12,14 +12,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-// Separator used for concatenation of TF-internal resource ID
-const Separator = ","
-
 type ResourceType string
 
 const (
 	Resource   ResourceType = "resource"
 	Datasource ResourceType = "datasource"
+
+	// Separator used for concatenation of TF-internal resource ID
+	Separator = ","
+
+	ResourceRegionFallbackDocstring   = "Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level."
+	DatasourceRegionFallbackDocstring = "Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on datasource level."
 )
 
 type ProviderData struct {
@@ -33,6 +36,7 @@ type ProviderData struct {
 	DnsCustomEndpoint               string
 	GitCustomEndpoint               string
 	IaaSCustomEndpoint              string
+	KMSCustomEndpoint               string
 	LoadBalancerCustomEndpoint      string
 	LogMeCustomEndpoint             string
 	MariaDBCustomEndpoint           string
