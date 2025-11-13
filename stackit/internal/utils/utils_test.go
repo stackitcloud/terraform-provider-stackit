@@ -938,7 +938,10 @@ func TestSetModelFieldsToNull_ComplexStructures(t *testing.T) {
 		}
 
 		// Check first object - age should be null
-		obj1 := elements[0].(types.Object)
+		obj1, ok := elements[0].(types.Object)
+		if !ok {
+			t.Fatalf("expected element 0 to be types.Object, got %T", elements[0])
+		}
 		if !obj1.Attributes()["age"].IsNull() {
 			t.Error("first object's age field should be null")
 		}
@@ -947,7 +950,10 @@ func TestSetModelFieldsToNull_ComplexStructures(t *testing.T) {
 		}
 
 		// Check second object - name should be null
-		obj2 := elements[1].(types.Object)
+		obj2, ok := elements[1].(types.Object)
+		if !ok {
+			t.Fatalf("expected element 1 to be types.Object, got %T", elements[1])
+		}
 		if !obj2.Attributes()["name"].IsNull() {
 			t.Error("second object's name field should be null")
 		}
@@ -1005,8 +1011,14 @@ func TestSetModelFieldsToNull_ComplexStructures(t *testing.T) {
 		}
 
 		// Navigate to the deep field
-		level2 := input.Level1.Attributes()["level2"].(types.Object)
-		level3 := level2.Attributes()["level3"].(types.Object)
+		level2, ok := input.Level1.Attributes()["level2"].(types.Object)
+		if !ok {
+			t.Fatalf("expected level2 to be types.Object, got %T", input.Level1.Attributes()["level2"])
+		}
+		level3, ok := level2.Attributes()["level3"].(types.Object)
+		if !ok {
+			t.Fatalf("expected level3 to be types.Object, got %T", level2.Attributes()["level3"])
+		}
 		deepField := level3.Attributes()["deep_field"]
 
 		if !deepField.IsNull() {

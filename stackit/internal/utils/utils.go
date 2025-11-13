@@ -236,14 +236,14 @@ func SetModelFieldsToNull(ctx context.Context, model any) error {
 
 		// If the field is Unknown or Null at the top level, convert it to Null
 		if isUnknown || isNull {
-			if err := setFieldToNull(ctx, field, fieldValue, fieldType); err != nil {
+			if err := setFieldToNull(ctx, field, fieldValue, &fieldType); err != nil {
 				return err
 			}
 			continue
 		}
 
 		// If the field is Known and not Null, recursively process it
-		if err := processKnownField(ctx, field, fieldValue, fieldType); err != nil {
+		if err := processKnownField(ctx, field, fieldValue, &fieldType); err != nil {
 			return err
 		}
 	}
@@ -252,7 +252,7 @@ func SetModelFieldsToNull(ctx context.Context, model any) error {
 }
 
 // setFieldToNull sets a field to its appropriate Null value based on type
-func setFieldToNull(ctx context.Context, field reflect.Value, fieldValue any, fieldType reflect.StructField) error {
+func setFieldToNull(ctx context.Context, field reflect.Value, fieldValue any, fieldType *reflect.StructField) error {
 	switch v := fieldValue.(type) {
 	case basetypes.StringValue:
 		field.Set(reflect.ValueOf(types.StringNull()))
@@ -293,7 +293,7 @@ func setFieldToNull(ctx context.Context, field reflect.Value, fieldValue any, fi
 
 // processKnownField recursively processes known (non-null, non-unknown) fields
 // to handle nested structures like objects within lists, maps, etc.
-func processKnownField(ctx context.Context, field reflect.Value, fieldValue any, fieldType reflect.StructField) error {
+func processKnownField(ctx context.Context, field reflect.Value, fieldValue any, fieldType *reflect.StructField) error {
 	switch v := fieldValue.(type) {
 	case basetypes.ObjectValue:
 		// Recursively process object fields
@@ -318,7 +318,7 @@ func processKnownField(ctx context.Context, field reflect.Value, fieldValue any,
 }
 
 // processObjectValue recursively processes fields within an ObjectValue
-func processObjectValue(ctx context.Context, field reflect.Value, objValue basetypes.ObjectValue, fieldType reflect.StructField) error {
+func processObjectValue(ctx context.Context, field reflect.Value, objValue basetypes.ObjectValue, fieldType *reflect.StructField) error {
 	attrs := objValue.Attributes()
 	attrTypes := objValue.AttributeTypes(ctx)
 	modified := false
@@ -381,7 +381,7 @@ func processObjectValue(ctx context.Context, field reflect.Value, objValue baset
 }
 
 // processListValue recursively processes elements within a ListValue
-func processListValue(ctx context.Context, field reflect.Value, listValue basetypes.ListValue, fieldType reflect.StructField) error {
+func processListValue(ctx context.Context, field reflect.Value, listValue basetypes.ListValue, fieldType *reflect.StructField) error {
 	elements := listValue.Elements()
 	if len(elements) == 0 {
 		return nil
@@ -447,7 +447,7 @@ func processListValue(ctx context.Context, field reflect.Value, listValue basety
 }
 
 // processSetValue recursively processes elements within a SetValue
-func processSetValue(ctx context.Context, field reflect.Value, setValue basetypes.SetValue, fieldType reflect.StructField) error {
+func processSetValue(ctx context.Context, field reflect.Value, setValue basetypes.SetValue, fieldType *reflect.StructField) error {
 	elements := setValue.Elements()
 	if len(elements) == 0 {
 		return nil
@@ -510,7 +510,7 @@ func processSetValue(ctx context.Context, field reflect.Value, setValue basetype
 }
 
 // processMapValue recursively processes values within a MapValue
-func processMapValue(ctx context.Context, field reflect.Value, mapValue basetypes.MapValue, fieldType reflect.StructField) error {
+func processMapValue(ctx context.Context, field reflect.Value, mapValue basetypes.MapValue, fieldType *reflect.StructField) error {
 	elements := mapValue.Elements()
 	if len(elements) == 0 {
 		return nil
@@ -705,7 +705,7 @@ func processAttributeValueWithFlag(ctx context.Context, attrVal attr.Value, attr
 }
 
 // createNullValue creates a null value of the appropriate type
-func createNullValue(ctx context.Context, val attr.Value, attrType attr.Type) attr.Value {
+func createNullValue(_ context.Context, val attr.Value, attrType attr.Type) attr.Value {
 	switch val.(type) {
 	case basetypes.StringValue:
 		return types.StringNull()
