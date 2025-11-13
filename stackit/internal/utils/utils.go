@@ -188,6 +188,7 @@ func SetAndLogStateFields(ctx context.Context, diags *diag.Diagnostics, state *t
 // SetModelFieldsToNull sets all Unknown or Null fields in a model struct to their appropriate Null values.
 // This is useful when saving minimal state after API calls to ensure idempotency.
 // The model parameter must be a pointer to a struct containing Terraform framework types.
+// This function recursively processes nested objects, lists, sets, and maps.
 func SetModelFieldsToNull(ctx context.Context, model any) error {
 	if model == nil {
 		return fmt.Errorf("model cannot be nil")
@@ -233,49 +234,512 @@ func SetModelFieldsToNull(ctx context.Context, model any) error {
 		isUnknown := isUnknownResult[0].Bool()
 		isNull := isNullResult[0].Bool()
 
-		if !isUnknown && !isNull {
+		// If the field is Unknown or Null at the top level, convert it to Null
+		if isUnknown || isNull {
+			if err := setFieldToNull(ctx, field, fieldValue, fieldType); err != nil {
+				return err
+			}
 			continue
 		}
 
-		// Determine the type and set to appropriate Null value
-		switch v := fieldValue.(type) {
-		case basetypes.StringValue:
-			field.Set(reflect.ValueOf(types.StringNull()))
-
-		case basetypes.BoolValue:
-			field.Set(reflect.ValueOf(types.BoolNull()))
-
-		case basetypes.Int64Value:
-			field.Set(reflect.ValueOf(types.Int64Null()))
-
-		case basetypes.Float64Value:
-			field.Set(reflect.ValueOf(types.Float64Null()))
-
-		case basetypes.NumberValue:
-			field.Set(reflect.ValueOf(types.NumberNull()))
-
-		case basetypes.ListValue:
-			elemType := v.ElementType(ctx)
-			field.Set(reflect.ValueOf(types.ListNull(elemType)))
-
-		case basetypes.SetValue:
-			elemType := v.ElementType(ctx)
-			field.Set(reflect.ValueOf(types.SetNull(elemType)))
-
-		case basetypes.MapValue:
-			elemType := v.ElementType(ctx)
-			field.Set(reflect.ValueOf(types.MapNull(elemType)))
-
-		case basetypes.ObjectValue:
-			attrTypes := v.AttributeTypes(ctx)
-			field.Set(reflect.ValueOf(types.ObjectNull(attrTypes)))
-
-		default:
-			tflog.Debug(ctx, fmt.Sprintf("SetModelFieldsToNull: skipping field %s of unsupported type %T", fieldType.Name, fieldValue))
+		// If the field is Known and not Null, recursively process it
+		if err := processKnownField(ctx, field, fieldValue, fieldType); err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+// setFieldToNull sets a field to its appropriate Null value based on type
+func setFieldToNull(ctx context.Context, field reflect.Value, fieldValue any, fieldType reflect.StructField) error {
+	switch v := fieldValue.(type) {
+	case basetypes.StringValue:
+		field.Set(reflect.ValueOf(types.StringNull()))
+
+	case basetypes.BoolValue:
+		field.Set(reflect.ValueOf(types.BoolNull()))
+
+	case basetypes.Int64Value:
+		field.Set(reflect.ValueOf(types.Int64Null()))
+
+	case basetypes.Float64Value:
+		field.Set(reflect.ValueOf(types.Float64Null()))
+
+	case basetypes.NumberValue:
+		field.Set(reflect.ValueOf(types.NumberNull()))
+
+	case basetypes.ListValue:
+		elemType := v.ElementType(ctx)
+		field.Set(reflect.ValueOf(types.ListNull(elemType)))
+
+	case basetypes.SetValue:
+		elemType := v.ElementType(ctx)
+		field.Set(reflect.ValueOf(types.SetNull(elemType)))
+
+	case basetypes.MapValue:
+		elemType := v.ElementType(ctx)
+		field.Set(reflect.ValueOf(types.MapNull(elemType)))
+
+	case basetypes.ObjectValue:
+		attrTypes := v.AttributeTypes(ctx)
+		field.Set(reflect.ValueOf(types.ObjectNull(attrTypes)))
+
+	default:
+		tflog.Debug(ctx, fmt.Sprintf("SetModelFieldsToNull: skipping field %s of unsupported type %T", fieldType.Name, fieldValue))
+	}
+	return nil
+}
+
+// processKnownField recursively processes known (non-null, non-unknown) fields
+// to handle nested structures like objects within lists, maps, etc.
+func processKnownField(ctx context.Context, field reflect.Value, fieldValue any, fieldType reflect.StructField) error {
+	switch v := fieldValue.(type) {
+	case basetypes.ObjectValue:
+		// Recursively process object fields
+		return processObjectValue(ctx, field, v, fieldType)
+
+	case basetypes.ListValue:
+		// Recursively process list elements
+		return processListValue(ctx, field, v, fieldType)
+
+	case basetypes.SetValue:
+		// Recursively process set elements
+		return processSetValue(ctx, field, v, fieldType)
+
+	case basetypes.MapValue:
+		// Recursively process map values
+		return processMapValue(ctx, field, v, fieldType)
+
+	default:
+		// Primitive types (String, Bool, Int64, etc.) don't need recursion
+		return nil
+	}
+}
+
+// processObjectValue recursively processes fields within an ObjectValue
+func processObjectValue(ctx context.Context, field reflect.Value, objValue basetypes.ObjectValue, fieldType reflect.StructField) error {
+	attrs := objValue.Attributes()
+	attrTypes := objValue.AttributeTypes(ctx)
+	modified := false
+	newAttrs := make(map[string]attr.Value, len(attrs))
+
+	for key, attrVal := range attrs {
+		// Check if the attribute has IsUnknown and IsNull methods
+		attrValReflect := reflect.ValueOf(attrVal)
+		isUnknownMethod := attrValReflect.MethodByName("IsUnknown")
+		isNullMethod := attrValReflect.MethodByName("IsNull")
+
+		if !isUnknownMethod.IsValid() || !isNullMethod.IsValid() {
+			newAttrs[key] = attrVal
+			continue
+		}
+
+		isUnknownResult := isUnknownMethod.Call(nil)
+		isNullResult := isNullMethod.Call(nil)
+
+		if len(isUnknownResult) == 0 || len(isNullResult) == 0 {
+			newAttrs[key] = attrVal
+			continue
+		}
+
+		isUnknown := isUnknownResult[0].Bool()
+		isNull := isNullResult[0].Bool()
+
+		// Convert Unknown or Null attributes to Null
+		if isUnknown || isNull {
+			nullVal := createNullValue(ctx, attrVal, attrTypes[key])
+			if nullVal != nil {
+				newAttrs[key] = nullVal
+				modified = true
+			} else {
+				newAttrs[key] = attrVal
+			}
+		} else {
+			// Recursively process known attributes
+			processedVal, wasModified, err := processAttributeValueWithFlag(ctx, attrVal, attrTypes[key])
+			if err != nil {
+				return err
+			}
+			newAttrs[key] = processedVal
+			if wasModified {
+				modified = true
+			}
+		}
+	}
+
+	// Only update the field if something changed
+	if modified {
+		newObj, diags := types.ObjectValue(attrTypes, newAttrs)
+		if diags.HasError() {
+			return fmt.Errorf("creating new object value for field %s: %v", fieldType.Name, diags.Errors())
+		}
+		field.Set(reflect.ValueOf(newObj))
+	}
+
+	return nil
+}
+
+// processListValue recursively processes elements within a ListValue
+func processListValue(ctx context.Context, field reflect.Value, listValue basetypes.ListValue, fieldType reflect.StructField) error {
+	elements := listValue.Elements()
+	if len(elements) == 0 {
+		return nil
+	}
+
+	elemType := listValue.ElementType(ctx)
+	modified := false
+	newElements := make([]attr.Value, len(elements))
+
+	for i, elem := range elements {
+		// Check if element is Unknown or Null
+		elemReflect := reflect.ValueOf(elem)
+		isUnknownMethod := elemReflect.MethodByName("IsUnknown")
+		isNullMethod := elemReflect.MethodByName("IsNull")
+
+		if !isUnknownMethod.IsValid() || !isNullMethod.IsValid() {
+			newElements[i] = elem
+			continue
+		}
+
+		isUnknownResult := isUnknownMethod.Call(nil)
+		isNullResult := isNullMethod.Call(nil)
+
+		if len(isUnknownResult) == 0 || len(isNullResult) == 0 {
+			newElements[i] = elem
+			continue
+		}
+
+		isUnknown := isUnknownResult[0].Bool()
+		isNull := isNullResult[0].Bool()
+
+		if isUnknown || isNull {
+			nullVal := createNullValue(ctx, elem, elemType)
+			if nullVal != nil {
+				newElements[i] = nullVal
+				modified = true
+			} else {
+				newElements[i] = elem
+			}
+		} else {
+			// Recursively process known elements (objects, lists, etc.)
+			processedElem, wasModified, err := processAttributeValueWithFlag(ctx, elem, elemType)
+			if err != nil {
+				return err
+			}
+			newElements[i] = processedElem
+			if wasModified {
+				modified = true
+			}
+		}
+	}
+
+	// Only update if something changed
+	if modified {
+		newList, diags := types.ListValue(elemType, newElements)
+		if diags.HasError() {
+			return fmt.Errorf("creating new list value for field %s: %v", fieldType.Name, diags.Errors())
+		}
+		field.Set(reflect.ValueOf(newList))
+	}
+
+	return nil
+}
+
+// processSetValue recursively processes elements within a SetValue
+func processSetValue(ctx context.Context, field reflect.Value, setValue basetypes.SetValue, fieldType reflect.StructField) error {
+	elements := setValue.Elements()
+	if len(elements) == 0 {
+		return nil
+	}
+
+	elemType := setValue.ElementType(ctx)
+	modified := false
+	newElements := make([]attr.Value, len(elements))
+
+	for i, elem := range elements {
+		elemReflect := reflect.ValueOf(elem)
+		isUnknownMethod := elemReflect.MethodByName("IsUnknown")
+		isNullMethod := elemReflect.MethodByName("IsNull")
+
+		if !isUnknownMethod.IsValid() || !isNullMethod.IsValid() {
+			newElements[i] = elem
+			continue
+		}
+
+		isUnknownResult := isUnknownMethod.Call(nil)
+		isNullResult := isNullMethod.Call(nil)
+
+		if len(isUnknownResult) == 0 || len(isNullResult) == 0 {
+			newElements[i] = elem
+			continue
+		}
+
+		isUnknown := isUnknownResult[0].Bool()
+		isNull := isNullResult[0].Bool()
+
+		if isUnknown || isNull {
+			nullVal := createNullValue(ctx, elem, elemType)
+			if nullVal != nil {
+				newElements[i] = nullVal
+				modified = true
+			} else {
+				newElements[i] = elem
+			}
+		} else {
+			processedElem, wasModified, err := processAttributeValueWithFlag(ctx, elem, elemType)
+			if err != nil {
+				return err
+			}
+			newElements[i] = processedElem
+			if wasModified {
+				modified = true
+			}
+		}
+	}
+
+	if modified {
+		newSet, diags := types.SetValue(elemType, newElements)
+		if diags.HasError() {
+			return fmt.Errorf("creating new set value for field %s: %v", fieldType.Name, diags.Errors())
+		}
+		field.Set(reflect.ValueOf(newSet))
+	}
+
+	return nil
+}
+
+// processMapValue recursively processes values within a MapValue
+func processMapValue(ctx context.Context, field reflect.Value, mapValue basetypes.MapValue, fieldType reflect.StructField) error {
+	elements := mapValue.Elements()
+	if len(elements) == 0 {
+		return nil
+	}
+
+	elemType := mapValue.ElementType(ctx)
+	modified := false
+	newElements := make(map[string]attr.Value, len(elements))
+
+	for key, val := range elements {
+		valReflect := reflect.ValueOf(val)
+		isUnknownMethod := valReflect.MethodByName("IsUnknown")
+		isNullMethod := valReflect.MethodByName("IsNull")
+
+		if !isUnknownMethod.IsValid() || !isNullMethod.IsValid() {
+			newElements[key] = val
+			continue
+		}
+
+		isUnknownResult := isUnknownMethod.Call(nil)
+		isNullResult := isNullMethod.Call(nil)
+
+		if len(isUnknownResult) == 0 || len(isNullResult) == 0 {
+			newElements[key] = val
+			continue
+		}
+
+		isUnknown := isUnknownResult[0].Bool()
+		isNull := isNullResult[0].Bool()
+
+		if isUnknown || isNull {
+			nullVal := createNullValue(ctx, val, elemType)
+			if nullVal != nil {
+				newElements[key] = nullVal
+				modified = true
+			} else {
+				newElements[key] = val
+			}
+		} else {
+			processedVal, wasModified, err := processAttributeValueWithFlag(ctx, val, elemType)
+			if err != nil {
+				return err
+			}
+			newElements[key] = processedVal
+			if wasModified {
+				modified = true
+			}
+		}
+	}
+
+	if modified {
+		newMap, diags := types.MapValue(elemType, newElements)
+		if diags.HasError() {
+			return fmt.Errorf("creating new map value for field %s: %v", fieldType.Name, diags.Errors())
+		}
+		field.Set(reflect.ValueOf(newMap))
+	}
+
+	return nil
+}
+
+// processAttributeValueWithFlag recursively processes a single attribute value
+// Returns the processed value, a flag indicating if it was modified, and an error
+func processAttributeValueWithFlag(ctx context.Context, attrVal attr.Value, attrType attr.Type) (attr.Value, bool, error) {
+	switch v := attrVal.(type) {
+	case basetypes.ObjectValue:
+		// Recursively process object attributes
+		attrs := v.Attributes()
+		objType, ok := attrType.(types.ObjectType)
+		if !ok {
+			return attrVal, false, nil
+		}
+		attrTypes := objType.AttrTypes
+		modified := false
+		newAttrs := make(map[string]attr.Value, len(attrs))
+
+		for key, subAttr := range attrs {
+			subAttrReflect := reflect.ValueOf(subAttr)
+			isUnknownMethod := subAttrReflect.MethodByName("IsUnknown")
+			isNullMethod := subAttrReflect.MethodByName("IsNull")
+
+			if !isUnknownMethod.IsValid() || !isNullMethod.IsValid() {
+				newAttrs[key] = subAttr
+				continue
+			}
+
+			isUnknownResult := isUnknownMethod.Call(nil)
+			isNullResult := isNullMethod.Call(nil)
+
+			if len(isUnknownResult) == 0 || len(isNullResult) == 0 {
+				newAttrs[key] = subAttr
+				continue
+			}
+
+			isUnknown := isUnknownResult[0].Bool()
+			isNull := isNullResult[0].Bool()
+
+			if isUnknown || isNull {
+				nullVal := createNullValue(ctx, subAttr, attrTypes[key])
+				if nullVal != nil {
+					newAttrs[key] = nullVal
+					modified = true
+				} else {
+					newAttrs[key] = subAttr
+				}
+			} else {
+				processedSubAttr, wasModified, err := processAttributeValueWithFlag(ctx, subAttr, attrTypes[key])
+				if err != nil {
+					return attrVal, false, err
+				}
+				newAttrs[key] = processedSubAttr
+				if wasModified {
+					modified = true
+				}
+			}
+		}
+
+		if modified {
+			newObj, diags := types.ObjectValue(attrTypes, newAttrs)
+			if diags.HasError() {
+				return attrVal, false, fmt.Errorf("creating new object value: %v", diags.Errors())
+			}
+			return newObj, true, nil
+		}
+		return attrVal, false, nil
+
+	case basetypes.ListValue:
+		// Recursively process list elements
+		elements := v.Elements()
+		if len(elements) == 0 {
+			return attrVal, false, nil
+		}
+
+		elemType := v.ElementType(ctx)
+		modified := false
+		newElements := make([]attr.Value, len(elements))
+
+		for i, elem := range elements {
+			elemReflect := reflect.ValueOf(elem)
+			isUnknownMethod := elemReflect.MethodByName("IsUnknown")
+			isNullMethod := elemReflect.MethodByName("IsNull")
+
+			if !isUnknownMethod.IsValid() || !isNullMethod.IsValid() {
+				newElements[i] = elem
+				continue
+			}
+
+			isUnknownResult := isUnknownMethod.Call(nil)
+			isNullResult := isNullMethod.Call(nil)
+
+			if len(isUnknownResult) == 0 || len(isNullResult) == 0 {
+				newElements[i] = elem
+				continue
+			}
+
+			isUnknown := isUnknownResult[0].Bool()
+			isNull := isNullResult[0].Bool()
+
+			if isUnknown || isNull {
+				nullVal := createNullValue(ctx, elem, elemType)
+				if nullVal != nil {
+					newElements[i] = nullVal
+					modified = true
+				} else {
+					newElements[i] = elem
+				}
+			} else {
+				processedElem, wasModified, err := processAttributeValueWithFlag(ctx, elem, elemType)
+				if err != nil {
+					return attrVal, false, err
+				}
+				newElements[i] = processedElem
+				if wasModified {
+					modified = true
+				}
+			}
+		}
+
+		if modified {
+			newList, diags := types.ListValue(elemType, newElements)
+			if diags.HasError() {
+				return attrVal, false, fmt.Errorf("creating new list value: %v", diags.Errors())
+			}
+			return newList, true, nil
+		}
+		return attrVal, false, nil
+
+	default:
+		// Primitive types don't need further processing
+		return attrVal, false, nil
+	}
+}
+
+// createNullValue creates a null value of the appropriate type
+func createNullValue(ctx context.Context, val attr.Value, attrType attr.Type) attr.Value {
+	switch val.(type) {
+	case basetypes.StringValue:
+		return types.StringNull()
+	case basetypes.BoolValue:
+		return types.BoolNull()
+	case basetypes.Int64Value:
+		return types.Int64Null()
+	case basetypes.Float64Value:
+		return types.Float64Null()
+	case basetypes.NumberValue:
+		return types.NumberNull()
+	case basetypes.ListValue:
+		if listType, ok := attrType.(types.ListType); ok {
+			return types.ListNull(listType.ElemType)
+		}
+		return nil
+	case basetypes.SetValue:
+		if setType, ok := attrType.(types.SetType); ok {
+			return types.SetNull(setType.ElemType)
+		}
+		return nil
+	case basetypes.MapValue:
+		if mapType, ok := attrType.(types.MapType); ok {
+			return types.MapNull(mapType.ElemType)
+		}
+		return nil
+	case basetypes.ObjectValue:
+		if objType, ok := attrType.(types.ObjectType); ok {
+			return types.ObjectNull(objType.AttrTypes)
+		}
+		return nil
+	default:
+		return nil
+	}
 }
 
 // ShouldWait checks the STACKIT_TF_WAIT_FOR_READY environment variable to determine

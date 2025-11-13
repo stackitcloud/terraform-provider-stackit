@@ -813,6 +813,561 @@ func TestSetModelFieldsToNull_Errors(t *testing.T) {
 	}
 }
 
+func TestSetModelFieldsToNull_ComplexStructures(t *testing.T) {
+	ctx := context.Background()
+
+	// Test nested objects
+	t.Run("object with unknown fields inside known object", func(t *testing.T) {
+		type NestedModel struct {
+			NestedObject types.Object `tfsdk:"nested_object"`
+		}
+
+		input := &NestedModel{
+			NestedObject: types.ObjectValueMust(
+				map[string]attr.Type{
+					"field1": types.StringType,
+					"field2": types.Int64Type,
+				},
+				map[string]attr.Value{
+					"field1": types.StringUnknown(),
+					"field2": types.Int64Value(42),
+				},
+			),
+		}
+
+		err := SetModelFieldsToNull(ctx, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Verify the object was modified
+		attrs := input.NestedObject.Attributes()
+		if !attrs["field1"].IsNull() {
+			t.Error("field1 should be null after processing unknown field in nested object")
+		}
+		if attrs["field2"].IsNull() {
+			t.Error("field2 should remain non-null")
+		}
+	})
+
+	// Test list with unknown elements
+	t.Run("list with unknown and null elements", func(t *testing.T) {
+		type ListModel struct {
+			MyList types.List `tfsdk:"my_list"`
+		}
+
+		input := &ListModel{
+			MyList: types.ListValueMust(
+				types.StringType,
+				[]attr.Value{
+					types.StringValue("known"),
+					types.StringUnknown(),
+					types.StringNull(),
+					types.StringValue("another_known"),
+				},
+			),
+		}
+
+		err := SetModelFieldsToNull(ctx, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		elements := input.MyList.Elements()
+		if len(elements) != 4 {
+			t.Fatalf("expected 4 elements, got %d", len(elements))
+		}
+
+		// Check that unknown was converted to null
+		if !elements[1].IsNull() {
+			t.Error("element at index 1 (was unknown) should be null")
+		}
+		// Check that null remained null
+		if !elements[2].IsNull() {
+			t.Error("element at index 2 (was null) should remain null")
+		}
+		// Check known values remain unchanged
+		if elements[0].IsNull() || elements[3].IsNull() {
+			t.Error("known elements should not be null")
+		}
+	})
+
+	// Test list of objects with unknown fields
+	t.Run("list of objects with unknown fields", func(t *testing.T) {
+		type ListOfObjectsModel struct {
+			Objects types.List `tfsdk:"objects"`
+		}
+
+		objectType := types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"name": types.StringType,
+				"age":  types.Int64Type,
+			},
+		}
+
+		input := &ListOfObjectsModel{
+			Objects: types.ListValueMust(
+				objectType,
+				[]attr.Value{
+					types.ObjectValueMust(
+						objectType.AttrTypes,
+						map[string]attr.Value{
+							"name": types.StringValue("Alice"),
+							"age":  types.Int64Unknown(),
+						},
+					),
+					types.ObjectValueMust(
+						objectType.AttrTypes,
+						map[string]attr.Value{
+							"name": types.StringUnknown(),
+							"age":  types.Int64Value(30),
+						},
+					),
+				},
+			),
+		}
+
+		err := SetModelFieldsToNull(ctx, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		elements := input.Objects.Elements()
+		if len(elements) != 2 {
+			t.Fatalf("expected 2 elements, got %d", len(elements))
+		}
+
+		// Check first object - age should be null
+		obj1 := elements[0].(types.Object)
+		if !obj1.Attributes()["age"].IsNull() {
+			t.Error("first object's age field should be null")
+		}
+		if obj1.Attributes()["name"].IsNull() {
+			t.Error("first object's name field should not be null")
+		}
+
+		// Check second object - name should be null
+		obj2 := elements[1].(types.Object)
+		if !obj2.Attributes()["name"].IsNull() {
+			t.Error("second object's name field should be null")
+		}
+		if obj2.Attributes()["age"].IsNull() {
+			t.Error("second object's age field should not be null")
+		}
+	})
+
+	// Test deeply nested objects
+	t.Run("deeply nested objects", func(t *testing.T) {
+		type DeepModel struct {
+			Level1 types.Object `tfsdk:"level1"`
+		}
+
+		level3Type := types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"deep_field": types.StringType,
+			},
+		}
+
+		level2Type := types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"level3": level3Type,
+			},
+		}
+
+		level1Type := types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"level2": level2Type,
+			},
+		}
+
+		input := &DeepModel{
+			Level1: types.ObjectValueMust(
+				level1Type.AttrTypes,
+				map[string]attr.Value{
+					"level2": types.ObjectValueMust(
+						level2Type.AttrTypes,
+						map[string]attr.Value{
+							"level3": types.ObjectValueMust(
+								level3Type.AttrTypes,
+								map[string]attr.Value{
+									"deep_field": types.StringUnknown(),
+								},
+							),
+						},
+					),
+				},
+			),
+		}
+
+		err := SetModelFieldsToNull(ctx, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Navigate to the deep field
+		level2 := input.Level1.Attributes()["level2"].(types.Object)
+		level3 := level2.Attributes()["level3"].(types.Object)
+		deepField := level3.Attributes()["deep_field"]
+
+		if !deepField.IsNull() {
+			t.Error("deep_field should be null after processing")
+		}
+	})
+
+	// Test list of lists (nested lists)
+	t.Run("list of lists with unknown elements", func(t *testing.T) {
+		type NestedListModel struct {
+			OuterList types.List `tfsdk:"outer_list"`
+		}
+
+		innerListType := types.ListType{ElemType: types.StringType}
+
+		input := &NestedListModel{
+			OuterList: types.ListValueMust(
+				innerListType,
+				[]attr.Value{
+					types.ListValueMust(
+						types.StringType,
+						[]attr.Value{
+							types.StringValue("a"),
+							types.StringUnknown(),
+						},
+					),
+					types.ListValueMust(
+						types.StringType,
+						[]attr.Value{
+							types.StringUnknown(),
+							types.StringValue("b"),
+						},
+					),
+				},
+			),
+		}
+
+		err := SetModelFieldsToNull(ctx, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		outerElements := input.OuterList.Elements()
+
+		// Check first inner list
+		innerList1 := outerElements[0].(types.List)
+		innerElements1 := innerList1.Elements()
+		if !innerElements1[1].IsNull() {
+			t.Error("second element of first inner list should be null")
+		}
+
+		// Check second inner list
+		innerList2 := outerElements[1].(types.List)
+		innerElements2 := innerList2.Elements()
+		if !innerElements2[0].IsNull() {
+			t.Error("first element of second inner list should be null")
+		}
+	})
+
+	// Test map with object values containing unknown fields
+	t.Run("map with object values containing unknown fields", func(t *testing.T) {
+		type MapModel struct {
+			MyMap types.Map `tfsdk:"my_map"`
+		}
+
+		objectType := types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"field1": types.StringType,
+				"field2": types.BoolType,
+			},
+		}
+
+		input := &MapModel{
+			MyMap: types.MapValueMust(
+				objectType,
+				map[string]attr.Value{
+					"key1": types.ObjectValueMust(
+						objectType.AttrTypes,
+						map[string]attr.Value{
+							"field1": types.StringValue("known"),
+							"field2": types.BoolUnknown(),
+						},
+					),
+					"key2": types.ObjectValueMust(
+						objectType.AttrTypes,
+						map[string]attr.Value{
+							"field1": types.StringUnknown(),
+							"field2": types.BoolValue(true),
+						},
+					),
+				},
+			),
+		}
+
+		err := SetModelFieldsToNull(ctx, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		elements := input.MyMap.Elements()
+
+		// Check key1 object
+		obj1 := elements["key1"].(types.Object)
+		if !obj1.Attributes()["field2"].IsNull() {
+			t.Error("key1 object's field2 should be null")
+		}
+		if obj1.Attributes()["field1"].IsNull() {
+			t.Error("key1 object's field1 should not be null")
+		}
+
+		// Check key2 object
+		obj2 := elements["key2"].(types.Object)
+		if !obj2.Attributes()["field1"].IsNull() {
+			t.Error("key2 object's field1 should be null")
+		}
+		if obj2.Attributes()["field2"].IsNull() {
+			t.Error("key2 object's field2 should not be null")
+		}
+	})
+
+	// Test set with unknown elements
+	t.Run("set with unknown elements", func(t *testing.T) {
+		type SetModel struct {
+			MySet types.Set `tfsdk:"my_set"`
+		}
+
+		input := &SetModel{
+			MySet: types.SetValueMust(
+				types.StringType,
+				[]attr.Value{
+					types.StringValue("known"),
+					types.StringUnknown(),
+					types.StringNull(),
+				},
+			),
+		}
+
+		err := SetModelFieldsToNull(ctx, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		elements := input.MySet.Elements()
+
+		// Count null elements (should have at least 2: the original null and the converted unknown)
+		nullCount := 0
+		for _, elem := range elements {
+			if elem.IsNull() {
+				nullCount++
+			}
+		}
+
+		if nullCount < 2 {
+			t.Errorf("expected at least 2 null elements, got %d", nullCount)
+		}
+	})
+
+	// Test set of objects with unknown fields
+	t.Run("set of objects with unknown fields", func(t *testing.T) {
+		type SetOfObjectsModel struct {
+			Objects types.Set `tfsdk:"objects"`
+		}
+
+		objectType := types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"id":   types.StringType,
+				"name": types.StringType,
+			},
+		}
+
+		input := &SetOfObjectsModel{
+			Objects: types.SetValueMust(
+				objectType,
+				[]attr.Value{
+					types.ObjectValueMust(
+						objectType.AttrTypes,
+						map[string]attr.Value{
+							"id":   types.StringValue("1"),
+							"name": types.StringUnknown(),
+						},
+					),
+					types.ObjectValueMust(
+						objectType.AttrTypes,
+						map[string]attr.Value{
+							"id":   types.StringUnknown(),
+							"name": types.StringValue("Test"),
+						},
+					),
+				},
+			),
+		}
+
+		err := SetModelFieldsToNull(ctx, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		elements := input.Objects.Elements()
+		if len(elements) != 2 {
+			t.Fatalf("expected 2 elements, got %d", len(elements))
+		}
+
+		// Check that unknown fields within objects were converted to null
+		for _, elem := range elements {
+			obj := elem.(types.Object)
+			attrs := obj.Attributes()
+
+			// At least one field in each object should be null (the unknown one)
+			if !attrs["name"].IsNull() && !attrs["id"].IsNull() {
+				t.Error("expected at least one field to be null in each object")
+			}
+		}
+	})
+
+	// Test map with list values containing objects
+	t.Run("map with list values containing objects with unknown fields", func(t *testing.T) {
+		type ComplexMapModel struct {
+			MyMap types.Map `tfsdk:"my_map"`
+		}
+
+		objectType := types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"prop": types.StringType,
+			},
+		}
+		listOfObjectsType := types.ListType{ElemType: objectType}
+
+		input := &ComplexMapModel{
+			MyMap: types.MapValueMust(
+				listOfObjectsType,
+				map[string]attr.Value{
+					"key1": types.ListValueMust(
+						objectType,
+						[]attr.Value{
+							types.ObjectValueMust(
+								objectType.AttrTypes,
+								map[string]attr.Value{
+									"prop": types.StringUnknown(),
+								},
+							),
+						},
+					),
+				},
+			),
+		}
+
+		err := SetModelFieldsToNull(ctx, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		elements := input.MyMap.Elements()
+		list := elements["key1"].(types.List)
+		listElements := list.Elements()
+		obj := listElements[0].(types.Object)
+
+		if !obj.Attributes()["prop"].IsNull() {
+			t.Error("prop field should be null after processing")
+		}
+	})
+
+	// Test top-level null object (should remain null)
+	t.Run("top-level null object", func(t *testing.T) {
+		type NullObjectModel struct {
+			MyObject types.Object `tfsdk:"my_object"`
+		}
+
+		attrTypes := map[string]attr.Type{"field": types.StringType}
+		input := &NullObjectModel{
+			MyObject: types.ObjectNull(attrTypes),
+		}
+
+		err := SetModelFieldsToNull(ctx, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !input.MyObject.IsNull() {
+			t.Error("top-level null object should remain null")
+		}
+	})
+
+	// Test top-level unknown list (should be converted to null)
+	t.Run("top-level unknown list", func(t *testing.T) {
+		type UnknownListModel struct {
+			MyList types.List `tfsdk:"my_list"`
+		}
+
+		input := &UnknownListModel{
+			MyList: types.ListUnknown(types.StringType),
+		}
+
+		err := SetModelFieldsToNull(ctx, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !input.MyList.IsNull() {
+			t.Error("top-level unknown list should be converted to null")
+		}
+		if input.MyList.IsUnknown() {
+			t.Error("top-level list should no longer be unknown")
+		}
+	})
+
+	// Test empty list (should remain unchanged)
+	t.Run("empty list", func(t *testing.T) {
+		type EmptyListModel struct {
+			MyList types.List `tfsdk:"my_list"`
+		}
+
+		input := &EmptyListModel{
+			MyList: types.ListValueMust(types.StringType, []attr.Value{}),
+		}
+
+		err := SetModelFieldsToNull(ctx, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if input.MyList.IsNull() {
+			t.Error("empty list should not become null")
+		}
+		if len(input.MyList.Elements()) != 0 {
+			t.Error("list should remain empty")
+		}
+	})
+
+	// Test object with all null fields
+	t.Run("object with all null fields", func(t *testing.T) {
+		type AllNullFieldsModel struct {
+			MyObject types.Object `tfsdk:"my_object"`
+		}
+
+		attrTypes := map[string]attr.Type{
+			"field1": types.StringType,
+			"field2": types.Int64Type,
+		}
+
+		input := &AllNullFieldsModel{
+			MyObject: types.ObjectValueMust(
+				attrTypes,
+				map[string]attr.Value{
+					"field1": types.StringNull(),
+					"field2": types.Int64Null(),
+				},
+			),
+		}
+
+		err := SetModelFieldsToNull(ctx, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		attrs := input.MyObject.Attributes()
+		if !attrs["field1"].IsNull() || !attrs["field2"].IsNull() {
+			t.Error("all fields should remain null")
+		}
+	})
+}
+
 func TestShouldWait(t *testing.T) {
 	tests := []struct {
 		name     string
