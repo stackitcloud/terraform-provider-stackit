@@ -2,8 +2,10 @@ package dns
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
+	"net/http"
 	"strings"
 
 	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
@@ -21,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -300,19 +303,31 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	// Save minimal state immediately after API call succeeds to ensure idempotency
 	zoneId := *createResp.Zone.Id
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
-		"project_id": projectId,
-		"zone_id":    zoneId,
-	})
-	if resp.Diagnostics.HasError() {
+	model.ZoneId = types.StringValue(zoneId)
+	model.Id = utils.BuildInternalTerraformId(projectId, zoneId)
+
+	// Set all unknown/null fields to null before saving state
+	if err := utils.SetModelFieldsToNull(ctx, &model); err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Setting model fields to null: %v", err))
+		return
+	}
+
+	diags := resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if diags.HasError() {
+		return
+	}
+
+	if !utils.ShouldWait() {
+		tflog.Info(ctx, "Skipping wait; async mode for Crossplane/Upjet")
 		return
 	}
 
 	waitResp, err := wait.CreateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Zone creation waiting: %v", err))
+		tflog.Warn(ctx, fmt.Sprintf("Zone creation waiting failed: %v. The zone creation was triggered but waiting for completion was interrupted. The zone may still be creating.", err))
 		return
 	}
 
@@ -345,10 +360,17 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	zoneResp, err := r.client.GetZone(ctx, projectId, zoneId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
+		if ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	if zoneResp != nil && zoneResp.Zone.State != nil && *zoneResp.Zone.State == dns.ZONESTATE_DELETE_SUCCEEDED {
+	if zoneResp != nil && zoneResp.Zone.State != nil &&
+		*zoneResp.Zone.State == dns.ZONESTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -394,9 +416,15 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	if !utils.ShouldWait() {
+		tflog.Info(ctx, "Skipping wait; async mode for Crossplane/Upjet")
+		return
+	}
+
 	waitResp, err := wait.PartialUpdateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Zone update waiting: %v", err))
+		tflog.Warn(ctx, fmt.Sprintf("Zone update waiting failed: %v. The zone update was triggered but waiting for completion was interrupted. The zone may still be updating.", err))
 		return
 	}
 
@@ -431,12 +459,26 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	// Delete existing zone
 	_, err := r.client.DeleteZone(ctx, projectId, zoneId).Execute()
 	if err != nil {
+		// If resource is already gone (404 or 410), treat as success for idempotency
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
+		if ok &&
+			(oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
+			tflog.Info(ctx, "DNS zone already deleted")
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	if !utils.ShouldWait() {
+		tflog.Info(ctx, "Skipping wait; async mode for Crossplane/Upjet")
+		return
+	}
+
 	_, err = wait.DeleteZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Zone deletion waiting: %v", err))
+		tflog.Warn(ctx, fmt.Sprintf("Zone deletion waiting failed: %v. The zone deletion was triggered but waiting for completion was interrupted. The zone may still be deleting.", err))
 		return
 	}
 
@@ -456,10 +498,21 @@ func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportState
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
-		"project_id": idParts[0],
-		"zone_id":    idParts[1],
-	})
+	var model Model
+	model.ProjectId = types.StringValue(idParts[0])
+	model.ZoneId = types.StringValue(idParts[1])
+	model.Id = utils.BuildInternalTerraformId(idParts[0], idParts[1])
+
+	if err := utils.SetModelFieldsToNull(ctx, &model); err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing zone", fmt.Sprintf("Setting model fields to null: %v", err))
+		return
+	}
+
+	diags := resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if diags.HasError() {
+		return
+	}
 
 	tflog.Info(ctx, "DNS zone state imported")
 }
