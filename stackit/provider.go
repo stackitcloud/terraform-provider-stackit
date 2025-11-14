@@ -89,6 +89,7 @@ import (
 	serviceAccountToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/token"
 	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
+	skeProviderOptions "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
 )
@@ -533,6 +534,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		serverUpdateSchedule.NewSchedulesDataSource,
 		serviceAccount.NewServiceAccountDataSource,
 		skeCluster.NewClusterDataSource,
+		skeProviderOptions.NewOptionsDataSource,
 	}
 }
 

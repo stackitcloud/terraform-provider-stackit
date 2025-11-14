@@ -1,0 +1,1 @@
+data "stackit_ske_provider_options" "this" {}
