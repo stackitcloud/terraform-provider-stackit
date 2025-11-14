@@ -285,6 +285,7 @@ func mapFields(ctx context.Context, networkResp *iaasalpha.Network, model *netwo
 	if networkResp.Ipv4 == nil || networkResp.Ipv4.Prefixes == nil {
 		model.Prefixes = types.ListNull(types.StringType)
 		model.IPv4Prefixes = types.ListNull(types.StringType)
+		model.IPv4PrefixLength = types.Int64Null()
 	} else {
 		respPrefixes := *networkResp.Ipv4.Prefixes
 		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
@@ -341,6 +342,8 @@ func mapFields(ctx context.Context, networkResp *iaasalpha.Network, model *netwo
 		model.IPv6Nameservers = ipv6NameserversTF
 	}
 
+	model.IPv6PrefixLength = types.Int64Null()
+	model.IPv6Prefix = types.StringNull()
 	if networkResp.Ipv6 == nil || networkResp.Ipv6.Prefixes == nil {
 		model.IPv6Prefixes = types.ListNull(types.StringType)
 	} else {
@@ -354,7 +357,6 @@ func mapFields(ctx context.Context, networkResp *iaasalpha.Network, model *netwo
 			_, netmask, err := net.ParseCIDR(respPrefixesV6[0])
 			if err != nil {
 				// silently ignore parsing error for the netmask
-				model.IPv6PrefixLength = types.Int64Null()
 			} else {
 				ones, _ := netmask.Mask.Size()
 				model.IPv6PrefixLength = types.Int64Value(int64(ones))

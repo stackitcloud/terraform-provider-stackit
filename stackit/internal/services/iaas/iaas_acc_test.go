@@ -518,7 +518,7 @@ func TestAccNetworkV1Min(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMin["project_id"])),
 					resource.TestCheckResourceAttr("stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMin["name"])),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv4_prefixes.#"),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv6_prefixes.#"),
+					resource.TestCheckNoResourceAttr("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
 				),
 			},
@@ -541,7 +541,7 @@ func TestAccNetworkV1Min(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMin["project_id"])),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMin["name"])),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "ipv4_prefixes.#"),
-					resource.TestCheckResourceAttrSet("data.stackit_network.network", "ipv6_prefixes.#"),
+					resource.TestCheckNoResourceAttr("data.stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "public_ip"),
 				),
 			},
@@ -567,7 +567,7 @@ func TestAccNetworkV1Min(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMin["project_id"])),
 					resource.TestCheckResourceAttr("stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMin["name"])),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv4_prefixes.#"),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv6_prefixes.#"),
+					resource.TestCheckNoResourceAttr("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
 				),
 			},
@@ -599,7 +599,7 @@ func TestAccNetworkV1Max(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["ipv4_prefix_length"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefix", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["ipv4_prefix"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefixes.#", "1"),
-					resource.TestCheckResourceAttrSet("stackit_network.network_prefix", "ipv6_prefixes.#"),
+					resource.TestCheckNoResourceAttr("stackit_network.network_prefix", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "routed", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["routed"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["label"])),
 					resource.TestCheckNoResourceAttr("stackit_network.network_prefix", "public_ip"),
@@ -614,7 +614,7 @@ func TestAccNetworkV1Max(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_nameservers.1", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["ipv4_nameserver_1"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["ipv4_prefix_length"])),
 					resource.TestCheckResourceAttrSet("stackit_network.network_prefix_length", "ipv4_prefix"),
-					resource.TestCheckResourceAttrSet("stackit_network.network_prefix_length", "ipv6_prefixes.#"),
+					resource.TestCheckNoResourceAttr("stackit_network.network_prefix_length", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "routed", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["routed"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["label"])),
 					resource.TestCheckNoResourceAttr("stackit_network.network_prefix_length", "public_ip"),
@@ -650,7 +650,7 @@ func TestAccNetworkV1Max(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix", "ipv4_prefix", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["ipv4_prefix"])),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix", "ipv4_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["ipv4_prefix_length"])),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix", "ipv4_prefixes.#", "1"),
-					resource.TestCheckResourceAttrSet("data.stackit_network.network_prefix", "ipv6_prefixes.#"),
+					resource.TestCheckNoResourceAttr("data.stackit_network.network_prefix", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix", "routed", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["routed"])),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["label"])),
 
@@ -664,7 +664,7 @@ func TestAccNetworkV1Max(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix_length", "ipv4_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["ipv4_prefix_length"])),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix_length", "ipv4_prefixes.#", "1"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network_prefix_length", "ipv4_prefix"),
-					resource.TestCheckResourceAttrSet("data.stackit_network.network_prefix_length", "ipv6_prefixes.#"),
+					resource.TestCheckNoResourceAttr("data.stackit_network.network_prefix_length", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix_length", "routed", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["routed"])),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix_length", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMax["label"])),
 				),
@@ -745,7 +745,7 @@ func TestAccNetworkV1Max(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefix", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMaxUpdated["ipv4_prefix"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMaxUpdated["ipv4_prefix_length"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefixes.#", "1"),
-					resource.TestCheckResourceAttrSet("stackit_network.network_prefix", "ipv6_prefixes.#"),
+					resource.TestCheckNoResourceAttr("stackit_network.network_prefix", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "routed", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMaxUpdated["routed"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMaxUpdated["label"])),
 					resource.TestCheckNoResourceAttr("stackit_network.network_prefix", "public_ip"),
@@ -760,7 +760,7 @@ func TestAccNetworkV1Max(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_nameservers.1", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMaxUpdated["ipv4_nameserver_1"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMaxUpdated["ipv4_prefix_length"])),
 					resource.TestCheckResourceAttrSet("stackit_network.network_prefix_length", "ipv4_prefix"),
-					resource.TestCheckResourceAttrSet("stackit_network.network_prefix_length", "ipv6_prefixes.#"),
+					resource.TestCheckNoResourceAttr("stackit_network.network_prefix_length", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "routed", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMaxUpdated["routed"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkV1VarsMaxUpdated["label"])),
 					resource.TestCheckNoResourceAttr("stackit_network.network_prefix_length", "public_ip"),
@@ -3110,7 +3110,7 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_network_interface.network_interface", "name"),
 					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "ipv4"),
-					resource.TestCheckResourceAttrSet("stackit_network_interface.network_interface", "allowed_addresses.#"),
+					resource.TestCheckNoResourceAttr("stackit_network_interface.network_interface", "allowed_addresses.#"),
 					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "security", "true"),
 					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "labels.#", "0"),
 					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "security_group_ids.#", "0"),
@@ -3127,7 +3127,7 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["project_id"])),
 					resource.TestCheckResourceAttr("stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["name"])),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv4_prefixes.#"),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv6_prefixes.#"),
+					resource.TestCheckNoResourceAttr("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
 
 					// Public ip
@@ -3180,7 +3180,7 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["project_id"])),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["name"])),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "ipv4_prefixes.#"),
-					resource.TestCheckResourceAttrSet("data.stackit_network.network", "ipv6_prefixes.#"),
+					resource.TestCheckNoResourceAttr("data.stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "public_ip"),
 
 					// Public ip
@@ -3298,7 +3298,7 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["name"])),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv4_prefixes.#"),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv6_prefixes.#"),
+					resource.TestCheckNoResourceAttr("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
 
 					// Public ip
@@ -3407,7 +3407,7 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["name"])),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "ipv4_prefixes.#"),
-					resource.TestCheckResourceAttrSet("data.stackit_network.network", "ipv6_prefixes.#"),
+					resource.TestCheckNoResourceAttr("data.stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "public_ip"),
 
 					// Public ip
@@ -3603,7 +3603,7 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMaxUpdated["project_id"])),
 					resource.TestCheckResourceAttr("stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMaxUpdated["name"])),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv4_prefixes.#"),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv6_prefixes.#"),
+					resource.TestCheckNoResourceAttr("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
 
 					// Public ip
@@ -3629,10 +3629,10 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_public_ip.public_ip_simple", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMaxUpdated["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip_simple", "public_ip_id"),
 					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip_simple", "ip"),
-					resource.TestCheckResourceAttrPair(
-						"stackit_public_ip.public_ip_simple", "network_interface_id",
-						"stackit_network_interface.network_interface_simple", "network_interface_id",
-					),
+					// The network gets re-created, which triggers a re-create of the 'network_interface_simple' NIC, which leads the 'stackit_public_ip_associate' resource to update the
+					// networkInterfaceId of the public IP. All that without the public ip resource noticing. So the public ip resource will still hold the networkInterfaceId of the old NIC.
+					// So we can only check that *some* network interface ID is set here, but can't compare it with the networkInterfaceId of the NIC resource (old vs. new NIC id)
+					resource.TestCheckResourceAttrSet("stackit_public_ip.public_ip_simple", "network_interface_id"),
 					resource.TestCheckResourceAttr("stackit_public_ip.public_ip_simple", "labels.%", "0"),
 
 					// Nic and public ip attach
