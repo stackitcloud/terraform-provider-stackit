@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -11,6 +12,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
+// ConfigureClient configures an API-Client to communicate with the authorization API
 func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *authorization.APIClient {
 	apiClientConfigOptions := []config.ConfigurationOption{
 		config.WithCustomAuth(providerData.RoundTripper),
@@ -26,4 +28,18 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	}
 
 	return apiClient
+}
+
+// TypeConverter converts objects with equal JSON tags
+func TypeConverter[R any](data any) (*R, error) {
+	var result R
+	b, err := json.Marshal(&data)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(b, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, err
 }

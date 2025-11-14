@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	testUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -87,6 +88,60 @@ func TestConfigureClient(t *testing.T) {
 
 			if !reflect.DeepEqual(actual, tt.expected) {
 				t.Errorf("ConfigureClient() = %v, want %v", actual, tt.expected)
+			}
+		})
+	}
+}
+
+func TestTypeConverter(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       authorization.MembersResponse
+		expected    *authorization.ListMembersResponse
+		expectError bool
+	}{
+		{
+			name: "success - all fields populated",
+			input: authorization.MembersResponse{
+				Members: &[]authorization.Member{
+					{
+						Role:    testUtils.Ptr("editor"),
+						Subject: testUtils.Ptr("foo.bar@stackit.cloud"),
+					},
+				},
+				ResourceId:   testUtils.Ptr("project-123"),
+				ResourceType: testUtils.Ptr("project"),
+			},
+			expected: &authorization.ListMembersResponse{
+				Members: &[]authorization.Member{
+					{
+						Role:    testUtils.Ptr("editor"),
+						Subject: testUtils.Ptr("foo.bar@stackit.cloud"),
+					},
+				},
+				ResourceId:   testUtils.Ptr("project-123"),
+				ResourceType: testUtils.Ptr("project"),
+			},
+			expectError: false,
+		},
+		{
+			name:        "success - completely empty input",
+			input:       authorization.MembersResponse{},
+			expected:    &authorization.ListMembersResponse{},
+			expectError: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			actual, err := TypeConverter[authorization.ListMembersResponse](tc.input)
+
+			if (err != nil) != tc.expectError {
+				t.Fatalf("unexpected error: got error=%v, expectError=%v", err, tc.expectError)
+			}
+
+			if !tc.expectError && !reflect.DeepEqual(actual, tc.expected) {
+				t.Errorf("\nUnexpected result:\nactual:   %+v\nexpected: %+v", actual, tc.expected)
 			}
 		})
 	}
