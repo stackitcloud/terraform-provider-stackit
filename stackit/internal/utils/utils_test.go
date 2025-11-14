@@ -3,20 +3,20 @@ package utils
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"reflect"
 	"testing"
-
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
 
@@ -606,6 +606,72 @@ func TestSetAndLogStateFields(t *testing.T) {
 			diff := cmp.Diff(tt.args.state, tt.want.state)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
+func TestGetTraceId(t *testing.T) {
+	createHeader := func(key, value string) http.Header {
+		header := http.Header{}
+		header.Set(key, value)
+		return header
+	}
+
+	type args struct {
+		response *http.Response
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "success",
+			args: args{
+				response: &http.Response{
+					Header: createHeader(XTraceIdHeader, "my-trace-id"),
+				},
+			},
+			want: "my-trace-id",
+		},
+		{
+			name: "no trace-id",
+			args: args{
+				response: &http.Response{
+					Header: createHeader("", ""),
+				},
+			},
+			want: "",
+		},
+		{
+			name: "empty header",
+			args: args{
+				response: &http.Response{
+					Header: nil,
+				},
+			},
+			want: "",
+		},
+		{
+			name: "empty response",
+			args: args{
+				response: &http.Response{},
+			},
+			want: "",
+		},
+		{
+			name: "nil response",
+			args: args{
+				response: nil,
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetTraceId(tt.args.response); got != tt.want {
+				t.Errorf("GetTraceId() = %v, want %v", got, tt.want)
 			}
 		})
 	}

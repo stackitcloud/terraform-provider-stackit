@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/stackitcloud/stackit-sdk-go/core/runtime"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
@@ -121,21 +122,26 @@ func (d *affinityGroupDatasource) Read(ctx context.Context, req datasource.ReadR
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
 
+	// Capture http response to get trace-id
+	var httpResp *http.Response
+	ctx = runtime.WithCaptureHTTPResponse(ctx, &httpResp)
 	affinityGroupResp, err := d.client.GetAffinityGroupExecute(ctx, projectId, affinityGroupId)
+	traceId := utils.GetTraceId(httpResp)
 	if err != nil {
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
 			err,
 			"Reading affinity group",
-			fmt.Sprintf("Affinity group with ID %q does not exist in project %q.", affinityGroupId, projectId),
+			fmt.Sprintf("Affinity group with ID %q does not exist in project %q.\nTrace ID: %q", affinityGroupId, projectId, traceId),
 			map[int]string{
-				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access,\nTrace ID: %q", projectId, traceId),
 			},
 		)
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	ctx = tflog.SetField(ctx, utils.XTraceIdHeader, traceId)
 
 	err = mapFields(ctx, affinityGroupResp, &model)
 	if err != nil {

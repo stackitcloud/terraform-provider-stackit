@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/stackitcloud/stackit-sdk-go/core/runtime"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
@@ -162,11 +163,17 @@ func (r *affinityGroupResource) Create(ctx context.Context, req resource.CreateR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
+	// Capture http response to get trace-id
+	var httpResp *http.Response
+	ctx = runtime.WithCaptureHTTPResponse(ctx, &httpResp)
 	affinityGroupResp, err := r.client.CreateAffinityGroup(ctx, projectId).CreateAffinityGroupPayload(*payload).Execute()
+	// Read trace-id
+	traceId := utils.GetTraceId(httpResp)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Calling API: %v\nTrace ID: %q", err, traceId))
 		return
 	}
+	ctx = tflog.SetField(ctx, utils.XTraceIdHeader, traceId)
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupResp.Id)
 
 	// Map response body to schema
@@ -197,16 +204,21 @@ func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
 
+	// Capture http response to get trace-id
+	var httpResp *http.Response
+	ctx = runtime.WithCaptureHTTPResponse(ctx, &httpResp)
 	affinityGroupResp, err := r.client.GetAffinityGroupExecute(ctx, projectId, affinityGroupId)
+	traceId := utils.GetTraceId(httpResp)
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading affinity group", fmt.Sprintf("Call API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading affinity group", fmt.Sprintf("Call API: %v\nTrace ID: %q", err, traceId))
 		return
 	}
+	ctx = tflog.SetField(ctx, utils.XTraceIdHeader, traceId)
 
 	err = mapFields(ctx, affinityGroupResp, &model)
 	if err != nil {
@@ -240,12 +252,17 @@ func (r *affinityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
 
+	// Capture http response to get trace-id
+	var httpResp *http.Response
+	ctx = runtime.WithCaptureHTTPResponse(ctx, &httpResp)
 	// Delete existing affinity group
 	err := r.client.DeleteAffinityGroupExecute(ctx, projectId, affinityGroupId)
+	traceId := utils.GetTraceId(httpResp)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting affinity group", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting affinity group", fmt.Sprintf("Calling API: %v\nTrace ID: %q", err, traceId))
 		return
 	}
+	ctx = tflog.SetField(ctx, utils.XTraceIdHeader, traceId)
 
 	tflog.Info(ctx, "Affinity group deleted")
 }

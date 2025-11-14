@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 
@@ -24,6 +25,8 @@ import (
 const (
 	SKEServiceId          = "cloud.stackit.ske"
 	ModelServingServiceId = "cloud.stackit.model-serving"
+
+	XTraceIdHeader = "X-trace-id"
 )
 
 var (
@@ -181,4 +184,11 @@ func SetAndLogStateFields(ctx context.Context, diags *diag.Diagnostics, state *t
 		ctx = tflog.SetField(ctx, key, val)
 		diags.Append(state.SetAttribute(ctx, path.Root(key), val)...)
 	}
+}
+
+func GetTraceId(response *http.Response) string {
+	if response != nil {
+		return response.Header.Get(XTraceIdHeader)
+	}
+	return ""
 }
