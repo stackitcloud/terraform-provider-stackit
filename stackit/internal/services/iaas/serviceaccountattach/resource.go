@@ -71,7 +71,7 @@ func (r *networkInterfaceAttachResource) Configure(ctx context.Context, req reso
 
 // Schema defines the schema for the resource.
 func (r *networkInterfaceAttachResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	description := "Service account attachment resource schema. Attaches a service account to a server. Must have a `region` specified in the provider configuration."
+	description := "Service account attachment resource schema. Attaches a service account to a server. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,

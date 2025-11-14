@@ -77,7 +77,7 @@ func (d *networkDataSource) Configure(ctx context.Context, req datasource.Config
 // Schema defines the schema for the data source.
 func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Network resource schema. Must have a `region` specified in the provider configuration.",
+		Description: "Network resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`network_id`\".",

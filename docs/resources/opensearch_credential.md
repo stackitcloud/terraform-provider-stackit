@@ -3,12 +3,12 @@
 page_title: "stackit_opensearch_credential Resource - stackit"
 subcategory: ""
 description: |-
-  OpenSearch credential resource schema. Must have a region specified in the provider configuration.
+  OpenSearch credential resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_opensearch_credential (Resource)
 
-OpenSearch credential resource schema. Must have a `region` specified in the provider configuration.
+OpenSearch credential resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

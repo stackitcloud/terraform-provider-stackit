@@ -68,7 +68,7 @@ func (r *keyPairResource) Configure(ctx context.Context, req resource.ConfigureR
 
 // Schema defines the schema for the resource.
 func (r *keyPairResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	description := "Key pair resource schema. Must have a `region` specified in the provider configuration. Allows uploading an SSH public key to be used for server authentication."
+	description := "Key pair resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level. Allows uploading an SSH public key to be used for server authentication."
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description + "\n\n" + exampleUsageWithServer,

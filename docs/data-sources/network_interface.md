@@ -3,12 +3,12 @@
 page_title: "stackit_network_interface Data Source - stackit"
 subcategory: ""
 description: |-
-  Network interface datasource schema. Must have a region specified in the provider configuration.
+  Network interface datasource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_network_interface (Data Source)
 
-Network interface datasource schema. Must have a `region` specified in the provider configuration.
+Network interface datasource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

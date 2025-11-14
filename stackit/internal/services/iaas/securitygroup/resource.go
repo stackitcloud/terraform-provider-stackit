@@ -77,7 +77,7 @@ func (r *securityGroupResource) Configure(ctx context.Context, req resource.Conf
 
 // Schema defines the schema for the resource.
 func (r *securityGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	description := "Security group resource schema. Must have a `region` specified in the provider configuration."
+	description := "Security group resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,

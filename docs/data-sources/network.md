@@ -3,12 +3,12 @@
 page_title: "stackit_network Data Source - stackit"
 subcategory: ""
 description: |-
-  Network resource schema. Must have a region specified in the provider configuration.
+  Network resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_network (Data Source)
 
-Network resource schema. Must have a `region` specified in the provider configuration.
+Network resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

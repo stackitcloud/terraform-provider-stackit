@@ -106,7 +106,7 @@ func (r *networkAreaResource) Configure(ctx context.Context, req resource.Config
 
 // Schema defines the schema for the resource.
 func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	description := "Network area resource schema. Must have a `region` specified in the provider configuration."
+	description := "Network area resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level."
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description,

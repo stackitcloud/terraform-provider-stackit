@@ -3,12 +3,12 @@
 page_title: "stackit_observability_scrapeconfig Data Source - stackit"
 subcategory: ""
 description: |-
-  Observability scrape config data source schema. Must have a region specified in the provider configuration.
+  Observability scrape config data source schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_observability_scrapeconfig (Data Source)
 
-Observability scrape config data source schema. Must have a `region` specified in the provider configuration.
+Observability scrape config data source schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

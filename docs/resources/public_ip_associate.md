@@ -3,14 +3,14 @@
 page_title: "stackit_public_ip_associate Resource - stackit"
 subcategory: ""
 description: |-
-  Associates an existing public IP to a network interface. This is useful for situations where you have a pre-allocated public IP or unable to use the stackit_public_ip resource to create a new public IP. Must have a region specified in the provider configuration.
+  Associates an existing public IP to a network interface. This is useful for situations where you have a pre-allocated public IP or unable to use the stackit_public_ip resource to create a new public IP. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
   !> The stackit_public_ip_associate resource should not be used together with the stackit_public_ip resource for the same public IP or for the same network interface.
   Using both resources together for the same public IP or network interface WILL lead to conflicts, as they both have control of the public IP and network interface association.
 ---
 
 # stackit_public_ip_associate (Resource)
 
-Associates an existing public IP to a network interface. This is useful for situations where you have a pre-allocated public IP or unable to use the `stackit_public_ip` resource to create a new public IP. Must have a `region` specified in the provider configuration.
+Associates an existing public IP to a network interface. This is useful for situations where you have a pre-allocated public IP or unable to use the `stackit_public_ip` resource to create a new public IP. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 !> The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same public IP or for the same network interface. 
 Using both resources together for the same public IP or network interface WILL lead to conflicts, as they both have control of the public IP and network interface association.
