@@ -144,6 +144,7 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 	projectId := model.ProjectId.ValueString()
 	sortAscending := model.SortAscending.ValueBool()
 
+	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "filter_is_null", model.Filter.IsNull())
 	ctx = tflog.SetField(ctx, "filter_is_unknown", model.Filter.IsUnknown())
@@ -165,6 +166,7 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	if apiResp.Items == nil || len(*apiResp.Items) == 0 {
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "No machine types found", "No matching machine types.")

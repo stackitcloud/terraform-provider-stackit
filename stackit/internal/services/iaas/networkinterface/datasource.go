@@ -144,6 +144,7 @@ func (d *networkInterfaceDataSource) Read(ctx context.Context, req datasource.Re
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
+	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
@@ -163,6 +164,7 @@ func (d *networkInterfaceDataSource) Read(ctx context.Context, req datasource.Re
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, networkInterfaceResp, &model)
 	if err != nil {

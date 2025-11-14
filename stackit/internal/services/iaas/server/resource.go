@@ -428,6 +428,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	projectId := model.ProjectId.ValueString()
+	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	// Generate API request body from model
@@ -444,6 +445,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	serverId := *server.Id
 	_, err = wait.CreateServerWaitHandler(ctx, r.client, projectId, serverId).WaitWithContext(ctx)
@@ -603,6 +605,7 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
+	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
@@ -618,6 +621,7 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, serverResp, &model)
@@ -682,6 +686,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
+	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
@@ -700,6 +705,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if server, err = r.client.GetServer(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()).Execute(); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error retrieving server state", fmt.Sprintf("Getting server state: %v", err))
 	}
+	ctx = core.LogResponse(ctx)
 
 	if model.DesiredStatus.ValueString() == modelStateDeallocated {
 		// if the target state is "deallocated", we have to perform the server update first
@@ -763,6 +769,7 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
+	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
@@ -772,6 +779,7 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 	_, err = wait.DeleteServerWaitHandler(ctx, r.client, projectId, serverId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server", fmt.Sprintf("server deletion waiting: %v", err))
