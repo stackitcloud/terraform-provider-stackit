@@ -32,6 +32,7 @@ func Create(ctx context.Context, req resource.CreateRequest, resp *resource.Crea
 	}
 
 	projectId := model.ProjectId.ValueString()
+	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	// Generate API request body from model
@@ -48,6 +49,7 @@ func Create(ctx context.Context, req resource.CreateRequest, resp *resource.Crea
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	networkId := *network.NetworkId
 	network, err = wait.CreateNetworkWaitHandler(ctx, client, projectId, networkId).WaitWithContext(ctx)
@@ -82,6 +84,7 @@ func Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResp
 	}
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
+	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 
@@ -95,6 +98,7 @@ func Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResp
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, networkResp, &model)
@@ -121,6 +125,7 @@ func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.Upda
 	}
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
+	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 
@@ -149,6 +154,7 @@ func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.Upda
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Network update waiting: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
@@ -174,6 +180,7 @@ func Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.Dele
 
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
+	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 
@@ -183,6 +190,7 @@ func Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.Dele
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 	_, err = wait.DeleteNetworkWaitHandler(ctx, client, projectId, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network", fmt.Sprintf("Network deletion waiting: %v", err))

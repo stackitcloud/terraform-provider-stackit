@@ -130,6 +130,7 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	serverId := model.ServerId.ValueString()
@@ -143,6 +144,7 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching network interface to server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	model.Id = utils.BuildInternalTerraformId(projectId, serverId, networkInterfaceId)
 
@@ -163,6 +165,7 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	serverId := model.ServerId.ValueString()
@@ -180,6 +183,7 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface attachment", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	if nics == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface attachment", "List of network interfaces attached to the server is nil")
@@ -221,6 +225,7 @@ func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resourc
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	serverId := model.ServerId.ValueString()
@@ -234,6 +239,7 @@ func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resourc
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing network interface from server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Network interface attachment deleted")
 }

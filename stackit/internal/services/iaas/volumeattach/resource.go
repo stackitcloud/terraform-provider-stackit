@@ -132,6 +132,7 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	serverId := model.ServerId.ValueString()
@@ -149,6 +150,7 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	_, err = wait.AddVolumeToServerWaitHandler(ctx, r.client, projectId, serverId, volumeId).WaitWithContext(ctx)
 	if err != nil {
@@ -175,6 +177,7 @@ func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	serverId := model.ServerId.ValueString()
@@ -192,6 +195,7 @@ func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume attachment", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
@@ -217,6 +221,7 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	serverId := model.ServerId.ValueString()
@@ -230,6 +235,7 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing volume from server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	_, err = wait.RemoveVolumeFromServerWaitHandler(ctx, r.client, projectId, serverId, volumeId).WaitWithContext(ctx)
 	if err != nil {
