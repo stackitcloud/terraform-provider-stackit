@@ -462,9 +462,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Validators: []validator.String{
 					validate.UUID(),
 				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"parameters": schema.MapAttribute{
 				Description: "Additional parameters.",
