@@ -48,6 +48,7 @@ import (
 	iaasalphaRoutingTableRoutes "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/routes"
 	iaasalphaRoutingTable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/table"
 	iaasalphaRoutingTables "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/tables"
+	kmsKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/key"
 	kmsKeyRing "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/keyring"
 	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
@@ -494,6 +495,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasalphaRoutingTables.NewRoutingTablesDataSource,
 		iaasalphaRoutingTableRoutes.NewRoutingTableRoutesDataSource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
+		kmsKey.NewKeyDataSource,
 		kmsKeyRing.NewKeyRingDataSource,
 		loadBalancer.NewLoadBalancerDataSource,
 		logMeInstance.NewInstanceDataSource,
@@ -563,6 +565,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
 		iaasalphaRoutingTable.NewRoutingTableResource,
 		iaasalphaRoutingTableRoute.NewRoutingTableRouteResource,
+		kmsKey.NewKeyResource,
 		kmsKeyRing.NewKeyRingResource,
 		loadBalancer.NewLoadBalancerResource,
 		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
