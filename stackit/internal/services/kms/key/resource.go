@@ -192,7 +192,7 @@ func (r *keyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				},
 			},
 			"protection": schema.StringAttribute{
-				Description: "The underlying system that is responsible for protecting the key material. Currently only software is accepted.",
+				Description: fmt.Sprintf("The underlying system that is responsible for protecting the key material. %s", utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(kms.AllowedProtectionEnumValues)...)),
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -263,18 +263,29 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	keyId := *createResponse.Id
-	ctx = tflog.SetField(ctx, "key_id", keyId)
-
-	err = mapFields(createResponse, &model, region)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key", fmt.Sprintf("Processing API payload: %v", err))
+	if createResponse == nil || createResponse.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key", "API returned empty response")
 		return
 	}
 
-	_, err = wait.CreateOrUpdateKeyWaitHandler(ctx, r.client, projectId, region, keyRingId, keyId).WaitWithContext(ctx)
+	keyId := *createResponse.Id
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": projectId,
+		"region":     region,
+		"keyring_id": keyRingId,
+		"key_id":     keyId,
+	})
+
+	waitHandlerResp, err := wait.CreateOrUpdateKeyWaitHandler(ctx, r.client, projectId, region, keyRingId, keyId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error waiting for key creation", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	err = mapFields(waitHandlerResp, &model, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 

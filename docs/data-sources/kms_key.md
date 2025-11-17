@@ -39,7 +39,7 @@ data "stackit_kms_key" "key" {
 - `algorithm` (String) The encryption algorithm that the key will use to encrypt data. Possible values are: `aes_256_gcm`, `rsa_2048_oaep_sha256`, `rsa_3072_oaep_sha256`, `rsa_4096_oaep_sha256`, `rsa_4096_oaep_sha512`, `hmac_sha256`, `hmac_sha384`, `hmac_sha512`, `ecdsa_p256_sha256`, `ecdsa_p384_sha384`, `ecdsa_p521_sha512`.
 - `description` (String) A user chosen description to distinguish multiple keys
 - `display_name` (String) The display name to distinguish multiple keys
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`keyring_id,`key_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`keyring_id`,`key_id`".
 - `import_only` (Boolean) States whether versions can be created or only imported.
-- `protection` (String) The purpose for which the key will be used
+- `protection` (String) The underlying system that is responsible for protecting the key material. Possible values are: `software`.
 - `purpose` (String) The purpose for which the key will be used. Possible values are: `symmetric_encrypt_decrypt`, `asymmetric_encrypt_decrypt`, `message_authentication_code`, `asymmetric_sign_verify`.

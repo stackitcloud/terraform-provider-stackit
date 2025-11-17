@@ -310,6 +310,12 @@ func TestAccKeyMin(t *testing.T) {
 			{
 				ConfigVariables: testConfigKeyVarsMin,
 				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyMinConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction("stackit_kms_key.key", plancheck.ResourceActionCreate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_kms_key.key", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_kms_key.key", "region", testutil.Region),
@@ -342,6 +348,12 @@ func TestAccKeyMin(t *testing.T) {
 					`,
 					testutil.KMSProviderConfig(), resourceKeyMinConfig,
 				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionNoop),
+						plancheck.ExpectResourceAction("stackit_kms_key.key", plancheck.ResourceActionNoop),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.ComposeAggregateTestCheckFunc(
 						resource.TestCheckResourceAttr("data.stackit_kms_key.key", "project_id", testutil.ProjectId),
@@ -391,6 +403,12 @@ func TestAccKeyMin(t *testing.T) {
 			{
 				ConfigVariables: testConfigKeyVarsMinUpdated(),
 				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyMinConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionNoop),
+						plancheck.ExpectResourceAction("stackit_kms_key.key", plancheck.ResourceActionReplace),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_kms_key.key", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_kms_key.key", "region", testutil.Region),
@@ -422,6 +440,12 @@ func TestAccKeyMax(t *testing.T) {
 			{
 				ConfigVariables: testConfigKeyVarsMax,
 				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyMaxConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction("stackit_kms_key.key", plancheck.ResourceActionCreate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_kms_key.key", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_kms_key.key", "region", testutil.Region),
@@ -454,6 +478,12 @@ func TestAccKeyMax(t *testing.T) {
 					`,
 					testutil.KMSProviderConfig(), resourceKeyMaxConfig,
 				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionNoop),
+						plancheck.ExpectResourceAction("stackit_kms_key.key", plancheck.ResourceActionNoop),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.ComposeAggregateTestCheckFunc(
 						resource.TestCheckResourceAttr("data.stackit_kms_key.key", "project_id", testutil.ProjectId),
@@ -503,6 +533,12 @@ func TestAccKeyMax(t *testing.T) {
 			{
 				ConfigVariables: testConfigKeyVarsMaxUpdated(),
 				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyMaxConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionNoop),
+						plancheck.ExpectResourceAction("stackit_kms_key.key", plancheck.ResourceActionReplace),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_kms_key.key", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_kms_key.key", "region", testutil.Region),

@@ -35,7 +35,7 @@ resource "stackit_kms_key" "key" {
 - `display_name` (String) The display name to distinguish multiple keys
 - `keyring_id` (String) The ID of the associated keyring
 - `project_id` (String) STACKIT project ID to which the key is associated.
-- `protection` (String) The underlying system that is responsible for protecting the key material. Currently only software is accepted.
+- `protection` (String) The underlying system that is responsible for protecting the key material. Possible values are: `software`.
 - `purpose` (String) The purpose for which the key will be used. Possible values are: `symmetric_encrypt_decrypt`, `asymmetric_encrypt_decrypt`, `message_authentication_code`, `asymmetric_sign_verify`.
 
 ### Optional

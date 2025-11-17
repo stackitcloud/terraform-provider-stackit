@@ -84,7 +84,7 @@ func (k *keyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 				},
 			},
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`keyring_id,`key_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`keyring_id`,`key_id`\".",
 				Computed:    true,
 			},
 			"import_only": schema.BoolAttribute{
@@ -108,7 +108,7 @@ func (k *keyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 				},
 			},
 			"protection": schema.StringAttribute{
-				Description: "The purpose for which the key will be used",
+				Description: fmt.Sprintf("The underlying system that is responsible for protecting the key material. %s", utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(kms.AllowedProtectionEnumValues)...)),
 				Computed:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
