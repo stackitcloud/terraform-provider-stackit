@@ -245,6 +245,7 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	clusterName := model.ClusterName.ValueString()
 	kubeconfigUUID := uuid.New().String()
@@ -258,6 +259,7 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	ctx = tflog.SetField(ctx, "region", region)
 
 	err := r.createKubeconfig(ctx, &model)
+	ctx = core.LogResponse(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Creating kubeconfig: %v", err))
 		return
@@ -284,7 +286,7 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	clusterName := model.ClusterName.ValueString()
 	kubeconfigUUID := model.KubeconfigId.ValueString()
@@ -317,6 +319,7 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// check if kubeconfig has expired
 	hasExpired, err := checkHasExpired(&model, time.Now())

@@ -149,12 +149,12 @@ func Update(ctx context.Context, req resource.UpdateRequest, resp *resource.Upda
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 	waitResp, err := wait.UpdateNetworkWaitHandler(ctx, client, projectId, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Network update waiting: %v", err))
 		return
 	}
-	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, waitResp, &model)
 	if err != nil {

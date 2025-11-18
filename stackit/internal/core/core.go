@@ -112,6 +112,9 @@ func LogAndAddError(ctx context.Context, diags *diag.Diagnostics, summary, detai
 
 // LogAndAddWarning Logs the warning and adds it to the diags
 func LogAndAddWarning(ctx context.Context, diags *diag.Diagnostics, summary, detail string) {
+	if traceId := runtime.GetTraceId(ctx); traceId != "" {
+		detail = fmt.Sprintf("%s\nTrace ID: %q", detail, traceId)
+	}
 	tflog.Warn(ctx, fmt.Sprintf("%s | %s", summary, detail))
 	diags.AddWarning(summary, detail)
 }
@@ -140,6 +143,10 @@ func InitProviderContext(ctx context.Context) context.Context {
 
 func LogResponse(ctx context.Context) context.Context {
 	// Logs the trace-id of the request
-	ctx = tflog.SetField(ctx, "x-trace-id", runtime.GetTraceId(ctx))
+	traceId := runtime.GetTraceId(ctx)
+	ctx = tflog.SetField(ctx, "x-trace-id", traceId)
+	tflog.Info(ctx, "response data", map[string]interface{}{
+		"x-trace-id": traceId,
+	})
 	return ctx
 }

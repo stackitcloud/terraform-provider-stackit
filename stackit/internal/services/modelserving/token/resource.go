@@ -237,8 +237,8 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
-
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -298,6 +298,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	waitResp, err := wait.CreateModelServingWaitHandler(ctx, r.client, region, projectId, *createTokenResp.Token.Id).WaitWithContext(ctx)
 	if err != nil {
@@ -331,6 +332,7 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	tokenId := model.TokenId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -354,6 +356,7 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI model serving auth token", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	if getTokenResp != nil && getTokenResp.Token.State != nil &&
 		*getTokenResp.Token.State == inactiveState {
@@ -397,6 +400,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := state.ProjectId.ValueString()
 	tokenId := state.TokenId.ValueString()
 
@@ -439,6 +443,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	if updateTokenResp != nil && updateTokenResp.Token.State != nil &&
 		*updateTokenResp.Token.State == inactiveState {
@@ -480,6 +485,7 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	tokenId := model.TokenId.ValueString()
 
@@ -503,6 +509,7 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model serving auth token", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	_, err = wait.DeleteModelServingWaitHandler(ctx, r.client, region, projectId, tokenId).
 		WaitWithContext(ctx)

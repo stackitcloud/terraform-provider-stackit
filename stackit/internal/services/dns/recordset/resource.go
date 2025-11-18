@@ -200,6 +200,7 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -217,6 +218,7 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
@@ -257,6 +259,7 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	recordSetId := model.RecordSetId.ValueString()
@@ -273,6 +276,7 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, recordSetResp, &model)
@@ -300,6 +304,7 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	recordSetId := model.RecordSetId.ValueString()
@@ -319,6 +324,7 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", err.Error())
 		return
 	}
+	ctx = core.LogResponse(ctx)
 	waitResp, err := wait.PartialUpdateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Instance update waiting: %v", err))
@@ -348,6 +354,7 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	recordSetId := model.RecordSetId.ValueString()
@@ -360,6 +367,7 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Calling API: %v", err))
 	}
+	ctx = core.LogResponse(ctx)
 	_, err = wait.DeleteRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Instance deletion waiting: %v", err))

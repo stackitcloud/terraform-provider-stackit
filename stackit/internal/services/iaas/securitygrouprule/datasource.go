@@ -170,7 +170,6 @@ func (d *securityGroupRuleDataSource) Read(ctx context.Context, req datasource.R
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 	ctx = tflog.SetField(ctx, "security_group_rule_id", securityGroupRuleId)
-	ctx = core.LogResponse(ctx)
 
 	securityGroupRuleResp, err := d.client.GetSecurityGroupRule(ctx, projectId, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
@@ -187,6 +186,7 @@ func (d *securityGroupRuleDataSource) Read(ctx context.Context, req datasource.R
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(securityGroupRuleResp, &model)
 	if err != nil {

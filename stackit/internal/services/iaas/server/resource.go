@@ -705,7 +705,6 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if server, err = r.client.GetServer(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()).Execute(); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error retrieving server state", fmt.Sprintf("Getting server state: %v", err))
 	}
-	ctx = core.LogResponse(ctx)
 
 	if model.DesiredStatus.ValueString() == modelStateDeallocated {
 		// if the target state is "deallocated", we have to perform the server update first
@@ -715,6 +714,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
 		}
+		ctx = core.LogResponse(ctx)
 
 		if err := updateServerStatus(ctx, r.client, server.Status, &model); err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
@@ -732,6 +732,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
 		}
+		ctx = core.LogResponse(ctx)
 	}
 
 	// Re-fetch the server data, to get the details values.

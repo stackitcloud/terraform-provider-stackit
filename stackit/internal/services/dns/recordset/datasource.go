@@ -136,6 +136,7 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	recordSetId := model.RecordSetId.ValueString()
@@ -157,6 +158,7 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 	if recordSetResp != nil && recordSetResp.Rrset.State != nil && *recordSetResp.Rrset.State == dns.RECORDSETSTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", "Record set was deleted successfully")

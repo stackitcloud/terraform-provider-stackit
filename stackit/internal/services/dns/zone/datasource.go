@@ -179,6 +179,7 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	dnsName := model.DnsName.ValueString()
@@ -205,6 +206,7 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+		ctx = core.LogResponse(ctx)
 	} else {
 		listZoneResp, err := d.client.ListZones(ctx, projectId).
 			DnsNameEq(dnsName).
@@ -224,6 +226,7 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+		ctx = core.LogResponse(ctx)
 		if *listZoneResp.TotalItems != 1 {
 			utils.LogError(
 				ctx,

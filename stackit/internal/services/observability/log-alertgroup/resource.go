@@ -238,7 +238,7 @@ func (l *logAlertGroupResource) Create(ctx context.Context, req resource.CreateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
@@ -257,6 +257,7 @@ func (l *logAlertGroupResource) Create(ctx context.Context, req resource.CreateR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating alertgroup", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// all log alert groups are returned. We have to search the map for the one corresponding to our name
 	for _, alertGroup := range *createAlertGroupResp.Data {
@@ -288,7 +289,7 @@ func (l *logAlertGroupResource) Read(ctx context.Context, req resource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
@@ -307,6 +308,7 @@ func (l *logAlertGroupResource) Read(ctx context.Context, req resource.ReadReque
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading log alert group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, readAlertGroupResp.Data, &model)
 	if err != nil {
@@ -336,7 +338,7 @@ func (l *logAlertGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
@@ -349,6 +351,7 @@ func (l *logAlertGroupResource) Delete(ctx context.Context, req resource.DeleteR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting log alert group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "log alert group deleted")
 }
