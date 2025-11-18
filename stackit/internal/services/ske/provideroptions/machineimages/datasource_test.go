@@ -1,4 +1,4 @@
-package providerOptions
+package machineimages
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 )
 
+// TODO: fix tests
 func TestMapFields(t *testing.T) {
 	timestamp := time.Date(2025, 2, 5, 10, 20, 30, 0, time.UTC)
 	expDate := timestamp.Format(time.RFC3339)
@@ -66,42 +67,6 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			expected: &Model{
-				AvailabilityZones: types.ListValueMust(
-					types.StringType,
-					[]attr.Value{
-						types.StringValue("eu01-01"),
-						types.StringValue("eu01-02"),
-					},
-				),
-				VolumeTypes: types.ListValueMust(
-					types.StringType,
-					[]attr.Value{
-						types.StringValue("storage_premium_perf1"),
-						types.StringValue("storage_premium_perf2"),
-					},
-				),
-				KubernetesVersions: types.ListValueMust(
-					types.ObjectType{AttrTypes: kubernetesVersionType},
-					[]attr.Value{
-						types.ObjectValueMust(kubernetesVersionType, map[string]attr.Value{
-							"version":         types.StringValue("1.33.5"),
-							"state":           types.StringValue("supported"),
-							"expiration_date": types.StringValue(expDate),
-						}),
-					},
-				),
-				MachineTypes: types.ListValueMust(
-					types.ObjectType{AttrTypes: machineTypeAttributeType},
-					[]attr.Value{
-						types.ObjectValueMust(machineTypeAttributeType, map[string]attr.Value{
-							"name":         types.StringValue("n2.56d.g4"),
-							"architecture": types.StringValue("amd64"),
-							"cpu":          types.Int64Value(4),
-							"gpu":          types.Int64Value(1),
-							"memory":       types.Int64Value(16),
-						}),
-					},
-				),
 				MachineImages: types.ListValueMust(
 					types.ObjectType{AttrTypes: machineImageType},
 					[]attr.Value{
@@ -143,24 +108,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			expected: &Model{
-				AvailabilityZones: types.ListValueMust(types.StringType,
-					[]attr.Value{types.StringValue("eu01-01")},
-				),
-				VolumeTypes:        types.ListValueMust(types.StringType, []attr.Value{}),
-				KubernetesVersions: types.ListValueMust(types.ObjectType{AttrTypes: kubernetesVersionType}, []attr.Value{}),
-				MachineImages:      types.ListValueMust(types.ObjectType{AttrTypes: machineImageType}, []attr.Value{}),
-				MachineTypes: types.ListValueMust(
-					types.ObjectType{AttrTypes: machineTypeAttributeType},
-					[]attr.Value{
-						types.ObjectValueMust(machineTypeAttributeType, map[string]attr.Value{
-							"name":         types.StringValue("g1a.16d"),
-							"architecture": types.StringNull(),
-							"cpu":          types.Int64Value(2),
-							"gpu":          types.Int64Null(),
-							"memory":       types.Int64Null(),
-						}),
-					},
-				),
+				MachineImages: types.ListValueMust(types.ObjectType{AttrTypes: machineImageType}, []attr.Value{}),
 			},
 			isValid: true,
 		},
@@ -173,14 +121,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			expected: &Model{
-				AvailabilityZones: types.ListValueMust(
-					types.StringType,
-					[]attr.Value{types.StringValue("eu01-01")},
-				),
-				VolumeTypes:        types.ListValueMust(types.StringType, []attr.Value{}),
-				KubernetesVersions: types.ListValueMust(types.ObjectType{AttrTypes: kubernetesVersionType}, []attr.Value{}),
-				MachineTypes:       types.ListValueMust(types.ObjectType{AttrTypes: machineTypeAttributeType}, []attr.Value{}),
-				MachineImages:      types.ListValueMust(types.ObjectType{AttrTypes: machineImageType}, []attr.Value{}),
+				MachineImages: types.ListValueMust(types.ObjectType{AttrTypes: machineImageType}, []attr.Value{}),
 			},
 			isValid: true,
 		},
@@ -195,10 +136,6 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			expected: &Model{
-				AvailabilityZones:  types.ListValueMust(types.StringType, []attr.Value{}),
-				VolumeTypes:        types.ListValueMust(types.StringType, []attr.Value{}),
-				KubernetesVersions: types.ListValueMust(types.ObjectType{AttrTypes: kubernetesVersionType}, []attr.Value{}),
-				MachineTypes:       types.ListValueMust(types.ObjectType{AttrTypes: machineTypeAttributeType}, []attr.Value{}),
 				MachineImages: types.ListValueMust(types.ObjectType{AttrTypes: machineImageType},
 					[]attr.Value{
 						types.ObjectValueMust(machineImageType, map[string]attr.Value{
@@ -228,10 +165,6 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			expected: &Model{
-				AvailabilityZones:  types.ListValueMust(types.StringType, []attr.Value{}),
-				VolumeTypes:        types.ListValueMust(types.StringType, []attr.Value{}),
-				KubernetesVersions: types.ListValueMust(types.ObjectType{AttrTypes: kubernetesVersionType}, []attr.Value{}),
-				MachineTypes:       types.ListValueMust(types.ObjectType{AttrTypes: machineTypeAttributeType}, []attr.Value{}),
 				MachineImages: types.ListValueMust(
 					types.ObjectType{AttrTypes: machineImageType},
 					[]attr.Value{
@@ -260,19 +193,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			expected: &Model{
-				AvailabilityZones:  types.ListValueMust(types.StringType, []attr.Value{}),
-				VolumeTypes:        types.ListValueMust(types.StringType, []attr.Value{}),
-				KubernetesVersions: types.ListValueMust(types.ObjectType{AttrTypes: kubernetesVersionType}, []attr.Value{}),
-				MachineImages:      types.ListValueMust(types.ObjectType{AttrTypes: machineImageType}, []attr.Value{}),
-				MachineTypes: types.ListValueMust(types.ObjectType{AttrTypes: machineTypeAttributeType}, []attr.Value{
-					types.ObjectValueMust(machineTypeAttributeType, map[string]attr.Value{
-						"name":         types.StringNull(),
-						"architecture": types.StringNull(),
-						"cpu":          types.Int64Null(),
-						"gpu":          types.Int64Null(),
-						"memory":       types.Int64Null(),
-					}),
-				}),
+				MachineImages: types.ListValueMust(types.ObjectType{AttrTypes: machineImageType}, []attr.Value{}),
 			},
 			isValid: true,
 		},
@@ -286,11 +207,7 @@ func TestMapFields(t *testing.T) {
 				MachineTypes:       nil,
 			},
 			expected: &Model{
-				AvailabilityZones:  types.ListValueMust(types.StringType, []attr.Value{}),
-				VolumeTypes:        types.ListValueMust(types.StringType, []attr.Value{}),
-				KubernetesVersions: types.ListValueMust(types.ObjectType{AttrTypes: kubernetesVersionType}, []attr.Value{}),
-				MachineTypes:       types.ListValueMust(types.ObjectType{AttrTypes: machineTypeAttributeType}, []attr.Value{}),
-				MachineImages:      types.ListValueMust(types.ObjectType{AttrTypes: machineImageType}, []attr.Value{}),
+				MachineImages: types.ListValueMust(types.ObjectType{AttrTypes: machineImageType}, []attr.Value{}),
 			},
 			isValid: true,
 		},
@@ -304,11 +221,7 @@ func TestMapFields(t *testing.T) {
 				MachineTypes:       &[]ske.MachineType{},
 			},
 			expected: &Model{
-				AvailabilityZones:  types.ListValueMust(types.StringType, []attr.Value{}),
-				VolumeTypes:        types.ListValueMust(types.StringType, []attr.Value{}),
-				KubernetesVersions: types.ListValueMust(types.ObjectType{AttrTypes: kubernetesVersionType}, []attr.Value{}),
-				MachineTypes:       types.ListValueMust(types.ObjectType{AttrTypes: machineTypeAttributeType}, []attr.Value{}),
-				MachineImages:      types.ListValueMust(types.ObjectType{AttrTypes: machineImageType}, []attr.Value{}),
+				MachineImages: types.ListValueMust(types.ObjectType{AttrTypes: machineImageType}, []attr.Value{}),
 			},
 			isValid: true,
 		},

@@ -1,4 +1,4 @@
-package providerOptions
+package machineimages
 
 import (
 	"context"
@@ -20,29 +20,11 @@ import (
 
 // Model types for nested structures
 type Model struct {
-	Region             types.String `tfsdk:"region"`
-	AvailabilityZones  types.List   `tfsdk:"availability_zones"`
-	KubernetesVersions types.List   `tfsdk:"kubernetes_versions"`
-	MachineTypes       types.List   `tfsdk:"machine_types"`
-	MachineImages      types.List   `tfsdk:"machine_images"`
-	VolumeTypes        types.List   `tfsdk:"volume_types"`
+	Region        types.String `tfsdk:"region"`
+	MachineImages types.List   `tfsdk:"machine_images"`
 }
 
 var (
-	kubernetesVersionType = map[string]attr.Type{
-		"version":         types.StringType,
-		"expiration_date": types.StringType,
-		"state":           types.StringType,
-	}
-
-	machineTypeAttributeType = map[string]attr.Type{
-		"name":         types.StringType,
-		"architecture": types.StringType,
-		"cpu":          types.Int64Type,
-		"gpu":          types.Int64Type,
-		"memory":       types.Int64Type,
-	}
-
 	machineImageVersionType = map[string]attr.Type{
 		"version":         types.StringType,
 		"state":           types.StringType,
@@ -59,8 +41,8 @@ var (
 // Ensure implementation satisfies interface
 var _ datasource.DataSource = &optionsDataSource{}
 
-// NewOptionsDataSource creates the data source instance
-func NewOptionsDataSource() datasource.DataSource {
+// NewKubernetesMachineImageVersionDataSource creates the data source instance
+func NewKubernetesMachineImageVersionDataSource() datasource.DataSource {
 	return &optionsDataSource{}
 }
 
@@ -71,7 +53,7 @@ type optionsDataSource struct {
 
 // Metadata sets the data source type name
 func (d *optionsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_ske_provider_options"
+	resp.TypeName = req.ProviderTypeName + "_ske_machine_image_versions"
 }
 
 func (d *optionsDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -85,7 +67,7 @@ func (d *optionsDataSource) Configure(ctx context.Context, req datasource.Config
 }
 
 func (d *optionsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	description := "Returns a list of supported Kubernetes versions and a list of supported machine types for the cluster nodes."
+	description := "Returns a list of supported Kubernetes machine image versions for the cluster nodes."
 
 	resp.Schema = schema.Schema{
 		Description: description,
@@ -93,59 +75,6 @@ func (d *optionsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			"region": schema.StringAttribute{
 				Optional:    true,
 				Description: "Region override. If omitted, the provider’s region will be used.",
-			},
-			"availability_zones": schema.ListAttribute{
-				Computed:    true,
-				ElementType: types.StringType,
-				Description: "List of availability zones in the selected region.",
-			},
-			"kubernetes_versions": schema.ListNestedAttribute{
-				Computed:    true,
-				Description: "Supported Kubernetes versions.",
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"version": schema.StringAttribute{
-							Computed:    true,
-							Description: "Kubernetes version string (e.g., `1.33`).",
-						},
-						"expiration_date": schema.StringAttribute{
-							Computed:    true,
-							Description: "Expiration date of the version in RFC3339 format.",
-						},
-						"state": schema.StringAttribute{
-							Computed:    true,
-							Description: "Version state, such as `supported`, `preview`, or `deprecated`.",
-						},
-					},
-				},
-			},
-			"machine_types": schema.ListNestedAttribute{
-				Computed:    true,
-				Description: "List of machine types (node sizes) available in the region.",
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"name": schema.StringAttribute{
-							Computed:    true,
-							Description: "Machine type name (e.g., `c2i.2`).",
-						},
-						"architecture": schema.StringAttribute{
-							Computed:    true,
-							Description: "CPU architecture (e.g., `x86_64`, `arm64`).",
-						},
-						"cpu": schema.Int64Attribute{
-							Computed:    true,
-							Description: "Number of virtual CPUs.",
-						},
-						"gpu": schema.Int64Attribute{
-							Computed:    true,
-							Description: "Number of GPUs included.",
-						},
-						"memory": schema.Int64Attribute{
-							Computed:    true,
-							Description: "Memory size in GB.",
-						},
-					},
-				},
 			},
 			"machine_images": schema.ListNestedAttribute{
 				Computed:    true,
@@ -183,11 +112,6 @@ func (d *optionsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 						},
 					},
 				},
-			},
-			"volume_types": schema.ListAttribute{
-				Computed:    true,
-				ElementType: types.StringType,
-				Description: "Supported root volume types (e.g., `storage_premium_perf1`).",
 			},
 		},
 	}
@@ -240,86 +164,6 @@ func mapFields(ctx context.Context, optionsResp *ske.ProviderOptions, model *Mod
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-
-	// Availability Zones
-	azList := make([]types.String, 0)
-	if optionsResp.AvailabilityZones != nil {
-		for _, az := range *optionsResp.AvailabilityZones {
-			if az.Name != nil {
-				azList = append(azList, types.StringValue(*az.Name))
-			}
-		}
-	}
-	avZones, diags := types.ListValueFrom(ctx, types.StringType, azList)
-	if diags.HasError() {
-		return core.DiagsToError(diags)
-	}
-	model.AvailabilityZones = avZones
-
-	// Volume Types
-	volList := make([]types.String, 0)
-	if optionsResp.VolumeTypes != nil {
-		for _, vt := range *optionsResp.VolumeTypes {
-			if vt.Name != nil {
-				volList = append(volList, types.StringValue(*vt.Name))
-			}
-		}
-	}
-	volTypes, diags := types.ListValueFrom(ctx, types.StringType, volList)
-	if diags.HasError() {
-		return core.DiagsToError(diags)
-	}
-	model.VolumeTypes = volTypes
-
-	// Kubernetes Versions
-	kvList := make([]attr.Value, 0)
-	if optionsResp.KubernetesVersions != nil {
-		for _, kv := range *optionsResp.KubernetesVersions {
-			expDate := types.StringNull()
-			if kv.ExpirationDate != nil {
-				expDate = types.StringValue(kv.ExpirationDate.Format(time.RFC3339))
-			}
-
-			obj, diags := types.ObjectValue(kubernetesVersionType, map[string]attr.Value{
-				"version":         types.StringPointerValue(kv.Version),
-				"state":           types.StringPointerValue(kv.State),
-				"expiration_date": expDate,
-			})
-			if diags.HasError() {
-				return core.DiagsToError(diags)
-			}
-			kvList = append(kvList, obj)
-		}
-	}
-	kvs, diags := types.ListValue(types.ObjectType{AttrTypes: kubernetesVersionType}, kvList)
-	if diags.HasError() {
-		return core.DiagsToError(diags)
-	}
-	model.KubernetesVersions = kvs
-
-	// Machine Types
-	mtList := make([]attr.Value, 0)
-	if optionsResp.MachineTypes != nil {
-		for _, mt := range *optionsResp.MachineTypes {
-			vals := map[string]attr.Value{
-				"name":         types.StringPointerValue(mt.Name),
-				"architecture": types.StringPointerValue(mt.Architecture),
-				"cpu":          types.Int64PointerValue(mt.Cpu),
-				"gpu":          types.Int64PointerValue(mt.Gpu),
-				"memory":       types.Int64PointerValue(mt.Memory),
-			}
-			obj, diags := types.ObjectValue(machineTypeAttributeType, vals)
-			if diags.HasError() {
-				return core.DiagsToError(diags)
-			}
-			mtList = append(mtList, obj)
-		}
-	}
-	mts, diags := types.ListValue(types.ObjectType{AttrTypes: machineTypeAttributeType}, mtList)
-	if diags.HasError() {
-		return core.DiagsToError(diags)
-	}
-	model.MachineTypes = mts
 
 	// Machine Images
 	miList := make([]attr.Value, 0)
