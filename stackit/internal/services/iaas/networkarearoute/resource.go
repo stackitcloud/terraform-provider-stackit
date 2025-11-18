@@ -179,7 +179,7 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx)
 	if routes.Items == nil || len(*routes.Items) == 0 {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", "Empty response from API")
 		return

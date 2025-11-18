@@ -248,6 +248,7 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	keyRingId := model.KeyRingId.ValueString()
@@ -267,6 +268,7 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating wrapping key", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	if createWrappingKeyResp == nil || createWrappingKeyResp.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating wrapping key", "API returned empty response")
@@ -311,6 +313,7 @@ func (r *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -332,6 +335,7 @@ func (r *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading wrapping key", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(wrappingKeyResponse, &model, region)
 	if err != nil {
@@ -359,6 +363,7 @@ func (r *wrappingKeyResource) Delete(ctx context.Context, request resource.Delet
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -368,6 +373,7 @@ func (r *wrappingKeyResource) Delete(ctx context.Context, request resource.Delet
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting wrapping key", fmt.Sprintf("Calling API: %v", err))
 	}
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "wrapping key deleted")
 }

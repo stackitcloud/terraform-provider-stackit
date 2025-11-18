@@ -132,6 +132,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	credentialId := model.CredentialId.ValueString()
@@ -154,6 +155,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, recordSetResp, &model)

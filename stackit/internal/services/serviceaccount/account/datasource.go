@@ -101,6 +101,7 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 
 	// Extract the project ID from the model configuration
 	projectId := model.ProjectId.ValueString()
@@ -119,6 +120,7 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// Iterate over the service accounts returned by the API to find the one matching the email
 	serviceAccounts := *listSaResp.Items

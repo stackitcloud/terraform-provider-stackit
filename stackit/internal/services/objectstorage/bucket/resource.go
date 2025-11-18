@@ -178,6 +178,7 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	bucketName := model.Name.ValueString()
 	region := model.Region.ValueString()
@@ -199,6 +200,7 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	waitResp, err := wait.CreateBucketWaitHandler(ctx, r.client, projectId, region, bucketName).WaitWithContext(ctx)
 	if err != nil {
@@ -228,6 +230,7 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	bucketName := model.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -246,6 +249,7 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading bucket", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(bucketResp, &model, region)
@@ -277,6 +281,7 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	bucketName := model.Name.ValueString()
 	region := model.Region.ValueString()
@@ -297,6 +302,7 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", fmt.Sprintf("Calling API: %v", err))
 	}
+	ctx = core.LogResponse(ctx)
 	_, err = wait.DeleteBucketWaitHandler(ctx, r.client, projectId, region, bucketName).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", fmt.Sprintf("Bucket deletion waiting: %v", err))

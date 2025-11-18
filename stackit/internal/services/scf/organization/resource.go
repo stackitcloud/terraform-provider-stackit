@@ -231,6 +231,7 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 	if response.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 
 	// Set logging context with the project ID and instance ID.
 	region := model.Region.ValueString()
@@ -255,6 +256,7 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Calling API to create org: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 	orgId := *scfOrgCreateResponse.Guid
 
 	// Apply the org quota if provided
@@ -313,6 +315,7 @@ func (s *scfOrganizationResource) Read(ctx context.Context, request resource.Rea
 	if response.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 
 	// Extract the project ID and instance id of the model
 	projectId := model.ProjectId.ValueString()
@@ -334,6 +337,7 @@ func (s *scfOrganizationResource) Read(ctx context.Context, request resource.Rea
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading scf organization", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(scfOrgResponse, &model)
 	if err != nil {
@@ -356,6 +360,7 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 	if response.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	region := model.Region.ValueString()
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
@@ -385,6 +390,7 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 			return
 		}
 		org = updatedOrg
+		ctx = core.LogResponse(ctx)
 	}
 
 	// handle a quota change of the org
@@ -424,6 +430,7 @@ func (s *scfOrganizationResource) Delete(ctx context.Context, request resource.D
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
 
@@ -440,6 +447,7 @@ func (s *scfOrganizationResource) Delete(ctx context.Context, request resource.D
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting scf organization", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	_, err = wait.DeleteOrganizationWaitHandler(ctx, s.client, projectId, model.Region.ValueString(), orgId).WaitWithContext(ctx)
 	if err != nil {

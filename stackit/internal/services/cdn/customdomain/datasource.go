@@ -126,6 +126,7 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	distributionId := model.DistributionId.ValueString()
@@ -145,6 +146,7 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// Call the new data source mapping function
 	err = mapCustomDomainDataSourceFields(customDomainResp, &model, projectId, distributionId)

@@ -113,6 +113,7 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	bucketName := model.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -136,6 +137,7 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(bucketResp, &model, region)

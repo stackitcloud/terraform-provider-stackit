@@ -238,7 +238,7 @@ func (a *alertGroupResource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
@@ -257,6 +257,7 @@ func (a *alertGroupResource) Create(ctx context.Context, req resource.CreateRequ
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating alertgroup", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// all alert groups are returned. We have to search the map for the one corresponding to our name
 	for _, alertGroup := range *createAlertGroupResp.Data {
@@ -288,7 +289,7 @@ func (a *alertGroupResource) Read(ctx context.Context, req resource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
@@ -307,6 +308,7 @@ func (a *alertGroupResource) Read(ctx context.Context, req resource.ReadRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading alert group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, readAlertGroupResp.Data, &model)
 	if err != nil {
@@ -336,7 +338,7 @@ func (a *alertGroupResource) Delete(ctx context.Context, req resource.DeleteRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
@@ -349,6 +351,7 @@ func (a *alertGroupResource) Delete(ctx context.Context, req resource.DeleteRequ
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting alert group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Alert group deleted")
 }

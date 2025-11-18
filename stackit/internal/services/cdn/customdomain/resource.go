@@ -186,6 +186,7 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	distributionId := model.DistributionId.ValueString()
@@ -207,6 +208,8 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
+
 	_, err = wait.CreateCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Waiting for create: %v", err))
@@ -240,6 +243,7 @@ func (r *customDomainResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	distributionId := model.DistributionId.ValueString()
@@ -248,7 +252,6 @@ func (r *customDomainResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "name", name)
 
 	customDomainResp, err := r.client.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
-
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		// n.b. err is caught here if of type *oapierror.GenericOpenAPIError, which the stackit SDK client returns
@@ -261,6 +264,8 @@ func (r *customDomainResource) Read(ctx context.Context, req resource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
+
 	err = mapCustomDomainResourceFields(customDomainResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
@@ -283,6 +288,7 @@ func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	distributionId := model.DistributionId.ValueString()
@@ -305,6 +311,7 @@ func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	_, err = wait.CreateCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
@@ -338,6 +345,7 @@ func (r *customDomainResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	distributionId := model.DistributionId.ValueString()
@@ -349,6 +357,7 @@ func (r *customDomainResource) Delete(ctx context.Context, req resource.DeleteRe
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN custom domain", fmt.Sprintf("Delete custom domain: %v", err))
 	}
+	ctx = core.LogResponse(ctx)
 	_, err = wait.DeleteCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN custom domain", fmt.Sprintf("Waiting for deletion: %v", err))

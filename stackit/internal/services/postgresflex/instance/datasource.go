@@ -157,7 +157,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -179,6 +179,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 	if instanceResp != nil && instanceResp.Item != nil && instanceResp.Item.Status != nil && *instanceResp.Item.Status == wait.InstanceStateDeleted {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", "Instance was deleted successfully")

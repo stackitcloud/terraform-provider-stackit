@@ -163,6 +163,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -180,6 +181,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 	if userResp.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", "Got empty user id")
 		return
@@ -209,6 +211,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
@@ -226,6 +229,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(userResp, &model)
@@ -252,6 +256,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
@@ -271,6 +276,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", err.Error())
 		return
 	}
+	ctx = core.LogResponse(ctx)
 	user, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Calling API to get user's current state: %v", err))
@@ -305,7 +311,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
@@ -318,6 +324,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
 	}
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Secrets Manager user deleted")
 }

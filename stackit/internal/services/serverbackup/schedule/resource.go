@@ -244,6 +244,7 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -270,6 +271,7 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 	ctx = tflog.SetField(ctx, "backup_schedule_id", *scheduleResp.Id)
 
 	// Map response body to schema
@@ -294,6 +296,7 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
@@ -314,6 +317,7 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, scheduleResp, &model, region)
@@ -339,6 +343,7 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
@@ -361,6 +366,7 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, scheduleResp, &model, region)
@@ -384,6 +390,7 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
@@ -399,6 +406,7 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 	tflog.Info(ctx, "Server backup schedule deleted.")
 
 	// Disable backups service in case there are no backups and no backup schedules.

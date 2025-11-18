@@ -171,7 +171,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -193,6 +193,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	var flavor = &flavorModel{}
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
