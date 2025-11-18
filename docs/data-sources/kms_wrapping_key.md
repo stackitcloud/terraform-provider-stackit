@@ -37,8 +37,10 @@ data "stackit_kms_wrapping_key" "example" {
 
 - `access_scope` (String) The access scope of the key. Default is `PUBLIC`. Possible values are: `PUBLIC`, `SNA`.
 - `algorithm` (String) The wrapping algorithm used to wrap the key to import. Possible values are: `rsa_2048_oaep_sha256`, `rsa_3072_oaep_sha256`, `rsa_4096_oaep_sha256`, `rsa_4096_oaep_sha512`, `rsa_2048_oaep_sha256_aes_256_key_wrap`, `rsa_3072_oaep_sha256_aes_256_key_wrap`, `rsa_4096_oaep_sha256_aes_256_key_wrap`, `rsa_4096_oaep_sha512_aes_256_key_wrap`.
+- `created_at` (String) The date and time the creation of the wrapping key was triggered.
 - `description` (String) A user chosen description to distinguish multiple wrapping keys.
 - `display_name` (String) The display name to distinguish multiple wrapping keys.
+- `expires_at` (String) The date and time the wrapping key will expire.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`keyring_id`,`wrapping_key_id`".
 - `protection` (String) The underlying system that is responsible for protecting the key material. Possible values are: `software`.
 - `public_key` (String) The public key of the wrapping key.

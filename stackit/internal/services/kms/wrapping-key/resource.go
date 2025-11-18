@@ -2,9 +2,11 @@ package kms
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
@@ -48,6 +50,8 @@ type Model struct {
 	Region        types.String `tfsdk:"region"`
 	WrappingKeyId types.String `tfsdk:"wrapping_key_id"`
 	PublicKey     types.String `tfsdk:"public_key"`
+	ExpiresAt     types.String `tfsdk:"expires_at"`
+	CreatedAt     types.String `tfsdk:"created_at"`
 }
 
 func NewWrappingKeyResource() resource.Resource {
@@ -69,11 +73,13 @@ func (r *wrappingKeyResource) Configure(ctx context.Context, request resource.Co
 	if !ok {
 		return
 	}
-	apiClient := kmsUtils.ConfigureClient(ctx, &r.providerData, &response.Diagnostics)
+
+	r.client = kmsUtils.ConfigureClient(ctx, &r.providerData, &response.Diagnostics)
 	if response.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+
+	tflog.Info(ctx, "KMS client configured")
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
@@ -222,6 +228,14 @@ func (r *wrappingKeyResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Description: "The public key of the wrapping key.",
 				Computed:    true,
 			},
+			"expires_at": schema.StringAttribute{
+				Description: "The date and time the wrapping key will expire.",
+				Computed:    true,
+			},
+			"created_at": schema.StringAttribute{
+				Description: "The date and time the creation of the wrapping key was triggered.",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -309,7 +323,8 @@ func (r *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 
 	wrappingKeyResponse, err := r.client.GetWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			response.State.RemoveResource(ctx)
 			return
@@ -404,6 +419,16 @@ func mapFields(wrappingKey *kms.WrappingKey, model *Model, region string) error 
 	model.Algorithm = types.StringValue(string(wrappingKey.GetAlgorithm()))
 	model.Purpose = types.StringValue(string(wrappingKey.GetPurpose()))
 	model.Protection = types.StringValue(string(wrappingKey.GetProtection()))
+
+	model.CreatedAt = types.StringNull()
+	if wrappingKey.CreatedAt != nil {
+		model.CreatedAt = types.StringValue(wrappingKey.CreatedAt.Format(time.RFC3339))
+	}
+
+	model.ExpiresAt = types.StringNull()
+	if wrappingKey.ExpiresAt != nil {
+		model.ExpiresAt = types.StringValue(wrappingKey.ExpiresAt.Format(time.RFC3339))
+	}
 
 	// TODO: workaround - remove once STACKITKMS-377 is resolved (just write the return value from the API to the state then)
 	if !(model.Description.IsNull() && wrappingKey.Description != nil && *wrappingKey.Description == "") {

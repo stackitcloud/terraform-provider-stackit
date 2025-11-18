@@ -42,13 +42,12 @@ func (w *wrappingKeyDataSource) Configure(ctx context.Context, request datasourc
 		return
 	}
 
-	apiClient := kmsUtils.ConfigureClient(ctx, &w.providerData, &response.Diagnostics)
+	w.client = kmsUtils.ConfigureClient(ctx, &w.providerData, &response.Diagnostics)
 	if response.Diagnostics.HasError() {
 		return
 	}
 
-	w.client = apiClient
-	tflog.Info(ctx, "Wrapping key configured")
+	tflog.Info(ctx, "KMS client configured")
 }
 
 func (w *wrappingKeyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
@@ -114,6 +113,14 @@ func (w *wrappingKeyDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 			},
 			"public_key": schema.StringAttribute{
 				Description: "The public key of the wrapping key.",
+				Computed:    true,
+			},
+			"expires_at": schema.StringAttribute{
+				Description: "The date and time the wrapping key will expire.",
+				Computed:    true,
+			},
+			"created_at": schema.StringAttribute{
+				Description: "The date and time the creation of the wrapping key was triggered.",
 				Computed:    true,
 			},
 		},

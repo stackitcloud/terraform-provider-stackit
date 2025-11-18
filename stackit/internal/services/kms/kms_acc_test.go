@@ -640,6 +640,8 @@ func TestAccWrappingKeyMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_kms_wrapping_key.wrapping_key", "description"),
 					resource.TestCheckResourceAttr("stackit_kms_wrapping_key.wrapping_key", "access_scope", string(kms.ACCESSSCOPE_PUBLIC)),
 					resource.TestCheckResourceAttrSet("stackit_kms_wrapping_key.wrapping_key", "public_key"),
+					resource.TestCheckResourceAttrSet("stackit_kms_wrapping_key.wrapping_key", "expires_at"),
+					resource.TestCheckResourceAttrSet("stackit_kms_wrapping_key.wrapping_key", "created_at"),
 				),
 			},
 			// Data Source
@@ -682,6 +684,8 @@ func TestAccWrappingKeyMin(t *testing.T) {
 						resource.TestCheckNoResourceAttr("data.stackit_kms_wrapping_key.wrapping_key", "description"),
 						resource.TestCheckResourceAttr("data.stackit_kms_wrapping_key.wrapping_key", "access_scope", string(kms.ACCESSSCOPE_PUBLIC)),
 						resource.TestCheckResourceAttrSet("data.stackit_kms_wrapping_key.wrapping_key", "public_key"),
+						resource.TestCheckResourceAttrSet("data.stackit_kms_wrapping_key.wrapping_key", "expires_at"),
+						resource.TestCheckResourceAttrSet("data.stackit_kms_wrapping_key.wrapping_key", "created_at"),
 					),
 				),
 			},
@@ -733,6 +737,8 @@ func TestAccWrappingKeyMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_kms_wrapping_key.wrapping_key", "description"),
 					resource.TestCheckResourceAttr("stackit_kms_wrapping_key.wrapping_key", "access_scope", string(kms.ACCESSSCOPE_PUBLIC)),
 					resource.TestCheckResourceAttrSet("stackit_kms_wrapping_key.wrapping_key", "public_key"),
+					resource.TestCheckResourceAttrSet("stackit_kms_wrapping_key.wrapping_key", "expires_at"),
+					resource.TestCheckResourceAttrSet("stackit_kms_wrapping_key.wrapping_key", "created_at"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -770,6 +776,8 @@ func TestAccWrappingKeyMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_kms_wrapping_key.wrapping_key", "description", testutil.ConvertConfigVariable(testConfigWrappingKeyVarsMax["description"])),
 					resource.TestCheckResourceAttr("stackit_kms_wrapping_key.wrapping_key", "access_scope", testutil.ConvertConfigVariable(testConfigWrappingKeyVarsMax["access_scope"])),
 					resource.TestCheckResourceAttrSet("stackit_kms_wrapping_key.wrapping_key", "public_key"),
+					resource.TestCheckResourceAttrSet("stackit_kms_wrapping_key.wrapping_key", "expires_at"),
+					resource.TestCheckResourceAttrSet("stackit_kms_wrapping_key.wrapping_key", "created_at"),
 				),
 			},
 			// Data Source
@@ -812,6 +820,8 @@ func TestAccWrappingKeyMax(t *testing.T) {
 						resource.TestCheckResourceAttr("data.stackit_kms_wrapping_key.wrapping_key", "description", testutil.ConvertConfigVariable(testConfigWrappingKeyVarsMax["description"])),
 						resource.TestCheckResourceAttr("data.stackit_kms_wrapping_key.wrapping_key", "access_scope", testutil.ConvertConfigVariable(testConfigWrappingKeyVarsMax["access_scope"])),
 						resource.TestCheckResourceAttrSet("data.stackit_kms_wrapping_key.wrapping_key", "public_key"),
+						resource.TestCheckResourceAttrSet("data.stackit_kms_wrapping_key.wrapping_key", "expires_at"),
+						resource.TestCheckResourceAttrSet("data.stackit_kms_wrapping_key.wrapping_key", "created_at"),
 					),
 				),
 			},
@@ -863,6 +873,8 @@ func TestAccWrappingKeyMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_kms_wrapping_key.wrapping_key", "description", testutil.ConvertConfigVariable(testConfigWrappingKeyVarsMaxUpdated()["description"])),
 					resource.TestCheckResourceAttr("stackit_kms_wrapping_key.wrapping_key", "access_scope", testutil.ConvertConfigVariable(testConfigWrappingKeyVarsMaxUpdated()["access_scope"])),
 					resource.TestCheckResourceAttrSet("stackit_kms_wrapping_key.wrapping_key", "public_key"),
+					resource.TestCheckResourceAttrSet("stackit_kms_wrapping_key.wrapping_key", "expires_at"),
+					resource.TestCheckResourceAttrSet("stackit_kms_wrapping_key.wrapping_key", "created_at"),
 				),
 			},
 			// Deletion is done by the framework implicitly

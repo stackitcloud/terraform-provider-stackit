@@ -43,6 +43,8 @@ resource "stackit_kms_wrapping_key" "example" {
 
 ### Read-Only
 
+- `created_at` (String) The date and time the creation of the wrapping key was triggered.
+- `expires_at` (String) The date and time the wrapping key will expire.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`keyring_id`,`wrapping_key_id`".
 - `public_key` (String) The public key of the wrapping key.
 - `wrapping_key_id` (String) The ID of the wrapping key
