@@ -18,7 +18,7 @@ KMS Keyring resource schema. Uses the `default_region` specified in the provider
 ```terraform
 resource "stackit_kms_keyring" "example" {
   project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  display_name = "example name"
+  display_name = "example-name"
   description  = "example description"
 }
 ```
