@@ -74,11 +74,10 @@ func (r *observabilityCertCheckResource) Configure(ctx context.Context, req reso
 		return
 	}
 
-	apiClient := observabilityUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	r.client = observabilityUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
 	tflog.Info(ctx, "Observability client configured")
 }
 
