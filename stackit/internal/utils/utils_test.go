@@ -2,7 +2,9 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"reflect"
 	"strings"
@@ -19,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
 
@@ -1492,6 +1495,188 @@ func TestShouldWait(t *testing.T) {
 			result := ShouldWait()
 			if result != tt.expected {
 				t.Errorf("ShouldWait() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// mockNetError implements net.Error for testing
+type mockNetError struct {
+	err       string
+	isTimeout bool
+	isTemp    bool
+}
+
+func (e *mockNetError) Error() string   { return e.err }
+func (e *mockNetError) Timeout() bool   { return e.isTimeout }
+func (e *mockNetError) Temporary() bool { return e.isTemp }
+
+func TestShouldIgnoreWaitError(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "nil error - should not ignore",
+			err:      nil,
+			expected: false,
+		},
+		{
+			name:     "context deadline exceeded - should ignore",
+			err:      context.DeadlineExceeded,
+			expected: true,
+		},
+		{
+			name:     "context canceled - should ignore",
+			err:      context.Canceled,
+			expected: true,
+		},
+		{
+			name:     "wrapped context deadline exceeded - should ignore",
+			err:      fmt.Errorf("operation failed: %w", context.DeadlineExceeded),
+			expected: true,
+		},
+		{
+			name:     "wrapped context canceled - should ignore",
+			err:      fmt.Errorf("request canceled: %w", context.Canceled),
+			expected: true,
+		},
+		{
+			name: "network timeout error - should ignore",
+			err: &mockNetError{
+				err:       "network timeout",
+				isTimeout: true,
+				isTemp:    true,
+			},
+			expected: true,
+		},
+		{
+			name: "network temporary error - should ignore",
+			err: &mockNetError{
+				err:       "connection reset",
+				isTimeout: false,
+				isTemp:    true,
+			},
+			expected: true,
+		},
+		{
+			name: "wrapped network error - should ignore",
+			err: fmt.Errorf("failed to connect: %w", &mockNetError{
+				err:       "connection refused",
+				isTimeout: false,
+				isTemp:    true,
+			}),
+			expected: true,
+		},
+		{
+			name: "API 500 internal server error - should ignore",
+			err: &oapierror.GenericOpenAPIError{
+				StatusCode: http.StatusInternalServerError,
+			},
+			expected: true,
+		},
+		{
+			name: "API 502 bad gateway - should ignore",
+			err: &oapierror.GenericOpenAPIError{
+				StatusCode: http.StatusBadGateway,
+			},
+			expected: true,
+		},
+		{
+			name: "API 503 service unavailable - should ignore",
+			err: &oapierror.GenericOpenAPIError{
+				StatusCode: http.StatusServiceUnavailable,
+			},
+			expected: true,
+		},
+		{
+			name: "API 504 gateway timeout - should ignore",
+			err: &oapierror.GenericOpenAPIError{
+				StatusCode: http.StatusGatewayTimeout,
+			},
+			expected: true,
+		},
+		{
+			name: "API 404 not found - should ignore",
+			err: &oapierror.GenericOpenAPIError{
+				StatusCode: http.StatusNotFound,
+			},
+			expected: true,
+		},
+		{
+			name: "API 410 gone - should ignore",
+			err: &oapierror.GenericOpenAPIError{
+				StatusCode: http.StatusGone,
+			},
+			expected: true,
+		},
+		{
+			name: "wrapped API 500 error - should ignore",
+			err: fmt.Errorf("request failed: %w", &oapierror.GenericOpenAPIError{
+				StatusCode: http.StatusInternalServerError,
+			}),
+			expected: true,
+		},
+		{
+			name: "wrapped API 404 error - should ignore",
+			err: fmt.Errorf("resource not found: %w", &oapierror.GenericOpenAPIError{
+				StatusCode: http.StatusNotFound,
+			}),
+			expected: true,
+		},
+		{
+			name: "API 400 bad request - should not ignore",
+			err: &oapierror.GenericOpenAPIError{
+				StatusCode: http.StatusBadRequest,
+			},
+			expected: false,
+		},
+		{
+			name: "API 401 unauthorized - should not ignore",
+			err: &oapierror.GenericOpenAPIError{
+				StatusCode: http.StatusUnauthorized,
+			},
+			expected: false,
+		},
+		{
+			name: "API 403 forbidden - should not ignore",
+			err: &oapierror.GenericOpenAPIError{
+				StatusCode: http.StatusForbidden,
+			},
+			expected: false,
+		},
+		{
+			name: "API 409 conflict - should not ignore",
+			err: &oapierror.GenericOpenAPIError{
+				StatusCode: http.StatusConflict,
+			},
+			expected: false,
+		},
+		{
+			name: "API 422 unprocessable entity - should not ignore",
+			err: &oapierror.GenericOpenAPIError{
+				StatusCode: http.StatusUnprocessableEntity,
+			},
+			expected: false,
+		},
+		{
+			name:     "generic error - should not ignore",
+			err:      errors.New("some random error"),
+			expected: false,
+		},
+		{
+			name:     "wrapped generic error - should not ignore",
+			err:      fmt.Errorf("operation failed: %w", errors.New("some error")),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ShouldIgnoreWaitError(tt.err)
+			if result != tt.expected {
+				t.Errorf("ShouldIgnoreWaitError() = %v, want %v for error: %v", result, tt.expected, tt.err)
 			}
 		})
 	}

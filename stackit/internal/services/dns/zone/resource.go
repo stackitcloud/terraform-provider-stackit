@@ -287,6 +287,13 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
+	// Get a fresh copy from plan for minimal state
+	var minimalModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &minimalModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
@@ -305,16 +312,16 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	// Save minimal state immediately after API call succeeds to ensure idempotency
 	zoneId := *createResp.Zone.Id
-	model.ZoneId = types.StringValue(zoneId)
-	model.Id = utils.BuildInternalTerraformId(projectId, zoneId)
+	minimalModel.ZoneId = types.StringValue(zoneId)
+	minimalModel.Id = utils.BuildInternalTerraformId(projectId, zoneId)
 
 	// Set all unknown/null fields to null before saving state
-	if err := utils.SetModelFieldsToNull(ctx, &model); err != nil {
+	if err := utils.SetModelFieldsToNull(ctx, &minimalModel); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Setting model fields to null: %v", err))
 		return
 	}
 
-	diags := resp.State.Set(ctx, model)
+	diags := resp.State.Set(ctx, minimalModel)
 	resp.Diagnostics.Append(diags...)
 	if diags.HasError() {
 		return
@@ -327,7 +334,19 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	waitResp, err := wait.CreateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
-		tflog.Warn(ctx, fmt.Sprintf("Zone creation waiting failed: %v. The zone creation was triggered but waiting for completion was interrupted. The zone may still be creating.", err))
+		if utils.ShouldIgnoreWaitError(err) {
+			tflog.Warn(
+				ctx,
+				fmt.Sprintf(
+					"Zone creation waiting failed: %v. The zone creation was triggered but waiting for completion was interrupted. The zone may still be creating.",
+					err,
+				),
+			)
+			return
+		}
+
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Zone creation waiting: %v", err))
+
 		return
 	}
 
@@ -424,7 +443,19 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	waitResp, err := wait.PartialUpdateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
-		tflog.Warn(ctx, fmt.Sprintf("Zone update waiting failed: %v. The zone update was triggered but waiting for completion was interrupted. The zone may still be updating.", err))
+		if utils.ShouldIgnoreWaitError(err) {
+			tflog.Warn(
+				ctx,
+				fmt.Sprintf(
+					"Zone update waiting failed: %v. The zone update was triggered but waiting for completion was interrupted. The zone may still be updating.",
+					err,
+				),
+			)
+			return
+		}
+
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Zone update waiting: %v", err))
+
 		return
 	}
 
@@ -478,7 +509,19 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	_, err = wait.DeleteZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
-		tflog.Warn(ctx, fmt.Sprintf("Zone deletion waiting failed: %v. The zone deletion was triggered but waiting for completion was interrupted. The zone may still be deleting.", err))
+		if utils.ShouldIgnoreWaitError(err) {
+			tflog.Warn(
+				ctx,
+				fmt.Sprintf(
+					"Zone deletion waiting failed: %v. The zone deletion was triggered but waiting for completion was interrupted. The zone may still be deleting.",
+					err,
+				),
+			)
+			return
+		}
+
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Zone deletion waiting: %v", err))
+
 		return
 	}
 

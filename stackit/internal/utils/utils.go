@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"reflect"
 	"regexp"
@@ -750,4 +752,34 @@ func createNullValue(_ context.Context, val attr.Value, attrType attr.Type) attr
 func ShouldWait() bool {
 	v := os.Getenv("STACKIT_TF_WAIT_FOR_READY")
 	return v == "" || strings.EqualFold(v, "true")
+}
+
+// ShouldIgnoreWaitError determines if a wait error should be ignored.
+// Returns true for transient errors like context timeouts, network errors, and API 5xx errors.
+// These errors are considered recoverable and shouldn't fail the operation.
+func ShouldIgnoreWaitError(err error) bool {
+	// Context errors (deadline exceeded, canceled)
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		return true
+	}
+
+	// Network errors (timeout, connection refused, etc.)
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+
+	// API 5xx errors
+	var oapiErr *oapierror.GenericOpenAPIError
+	if errors.As(err, &oapiErr) {
+		if oapiErr.StatusCode >= http.StatusInternalServerError {
+			return true
+		}
+
+		if oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone {
+			return true
+		}
+	}
+
+	return false
 }

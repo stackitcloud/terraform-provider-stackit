@@ -203,6 +203,13 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
+	// Get a fresh copy from plan for minimal state
+	var minimalModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &minimalModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -223,16 +230,16 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	recordSetId := *recordSetResp.Rrset.Id
-	model.RecordSetId = types.StringValue(recordSetId)
-	model.Id = utils.BuildInternalTerraformId(projectId, zoneId, recordSetId)
+	minimalModel.RecordSetId = types.StringValue(recordSetId)
+	minimalModel.Id = utils.BuildInternalTerraformId(projectId, zoneId, recordSetId)
 
 	// Set all unknown/null fields to null before saving state
-	if err := utils.SetModelFieldsToNull(ctx, &model); err != nil {
+	if err := utils.SetModelFieldsToNull(ctx, &minimalModel); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Setting model fields to null: %v", err))
 		return
 	}
 
-	diags = resp.State.Set(ctx, model)
+	diags = resp.State.Set(ctx, minimalModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -245,7 +252,13 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 
 	waitResp, err := wait.CreateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, *recordSetResp.Rrset.Id).WaitWithContext(ctx)
 	if err != nil {
-		tflog.Warn(ctx, fmt.Sprintf("Record set creation waiting failed: %v. The record set creation was triggered but waiting for completion was interrupted. The record set may still be creating.", err))
+		if utils.ShouldIgnoreWaitError(err) {
+			tflog.Warn(ctx, fmt.Sprintf("Record set creation waiting failed: %v. The record set creation was triggered but waiting for completion was interrupted. The record set may still be creating.", err))
+			return
+		}
+
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Record set creation waiting: %v", err))
+
 		return
 	}
 
@@ -342,7 +355,13 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 	}
 
 	if !utils.ShouldWait() {
-		tflog.Info(ctx, "Skipping wait; async mode for Crossplane/Upjet")
+		if utils.ShouldIgnoreWaitError(err) {
+			tflog.Warn(ctx, fmt.Sprintf("Record set update waiting failed: %v. The record set update was triggered but waiting for completion was interrupted. The record set may still be updating.", err))
+			return
+		}
+
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Record set update waiting: %v", err))
+
 		return
 	}
 
@@ -403,7 +422,13 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 
 	_, err = wait.DeleteRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
 	if err != nil {
-		tflog.Warn(ctx, fmt.Sprintf("Record set deletion waiting failed: %v. The record set deletion was triggered but waiting for completion was interrupted. The record set may still be deleting.", err))
+		if utils.ShouldIgnoreWaitError(err) {
+			tflog.Warn(ctx, fmt.Sprintf("Record set deletion waiting failed: %v. The record set deletion was triggered but waiting for completion was interrupted. The record set may still be deleting.", err))
+			return
+		}
+
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Record set deletion waiting: %v", err))
+
 		return
 	}
 	tflog.Info(ctx, "DNS record set deleted")
