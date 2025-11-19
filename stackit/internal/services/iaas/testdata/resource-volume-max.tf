@@ -23,8 +23,9 @@ resource "stackit_volume" "volume_source" {
   availability_zone = var.availability_zone
   name              = var.name
   description       = var.description
-  performance_class = var.performance_class
-  size              = var.size
+  # TODO: commented out because bug on IaaS API side
+  #performance_class = var.performance_class
+  size = var.size
   source = {
     id   = stackit_volume.volume_size.volume_id
     type = "volume"
