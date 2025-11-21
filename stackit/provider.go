@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -18,6 +19,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
 	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
 	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
@@ -97,7 +99,8 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces
 var (
-	_ provider.Provider = &Provider{}
+	_ provider.Provider                       = &Provider{}
+	_ provider.ProviderWithEphemeralResources = &Provider{}
 )
 
 // Provider is the provider implementation.
@@ -464,6 +467,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	providerData.RoundTripper = roundTripper
 	resp.DataSourceData = providerData
 	resp.ResourceData = providerData
+	resp.EphemeralResourceData = providerData
 
 	providerData.Version = p.version
 }
@@ -614,4 +618,10 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 
 	return resources
+}
+
+func (p *Provider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
+	return []func() ephemeral.EphemeralResource{
+		access_token.NewAccessTokenEphemeralResource,
+	}
 }
