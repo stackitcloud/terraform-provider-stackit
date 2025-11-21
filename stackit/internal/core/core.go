@@ -29,6 +29,12 @@ const (
 type ProviderData struct {
 	RoundTripper        http.RoundTripper
 	ServiceAccountEmail string // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025.
+
+	PrivateKey            string
+	PrivateKeyPath        string
+	ServiceAccountKey     string
+	ServiceAccountKeyPath string
+
 	// Deprecated: Use DefaultRegion instead
 	Region                          string
 	DefaultRegion                   string
