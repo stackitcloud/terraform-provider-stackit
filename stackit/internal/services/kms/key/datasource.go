@@ -147,6 +147,7 @@ func (k *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := k.providerData.GetRegionWithOverride(model.Region)
@@ -172,6 +173,7 @@ func (k *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(keyResponse, &model, region)
 	if err != nil {

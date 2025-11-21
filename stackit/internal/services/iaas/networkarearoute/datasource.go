@@ -116,6 +116,7 @@ func (d *networkAreaRouteDataSource) Read(ctx context.Context, req datasource.Re
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	networkAreaRouteId := model.NetworkAreaRouteId.ValueString()
+	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
@@ -135,6 +136,7 @@ func (d *networkAreaRouteDataSource) Read(ctx context.Context, req datasource.Re
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, networkAreaRouteResp, &model)
 	if err != nil {

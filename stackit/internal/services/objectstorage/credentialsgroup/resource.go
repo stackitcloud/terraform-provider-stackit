@@ -176,6 +176,7 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupName := model.Name.ValueString()
 	region := model.Region.ValueString()
@@ -201,6 +202,7 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(got, &model, region)
@@ -224,6 +226,7 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -237,6 +240,7 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentialsGroup", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 	if !found {
 		resp.State.RemoveResource(ctx)
 		return
@@ -267,6 +271,7 @@ func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.Dele
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ctx = core.InitProviderContext(ctx)
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	region := model.Region.ValueString()
@@ -280,6 +285,7 @@ func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.Dele
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials group", fmt.Sprintf("Calling API: %v", err))
 	}
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "ObjectStorage credentials group deleted")
 }
