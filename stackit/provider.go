@@ -91,6 +91,11 @@ import (
 	serviceAccountToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/token"
 	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/availabilityzones"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/kubernetesversions"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/machineimages"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/machinetypes"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/volumetypes"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
 )
@@ -537,6 +542,12 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		serverUpdateSchedule.NewSchedulesDataSource,
 		serviceAccount.NewServiceAccountDataSource,
 		skeCluster.NewClusterDataSource,
+		// TODO: sort
+		availabilityzones.NewKubernetesAvailabilityZonesDataSource,
+		machinetypes.NewKubernetesMachineTypeDataSource,
+		machineimages.NewKubernetesMachineImageVersionDataSource,
+		kubernetesversions.NewKubernetesVersionsDataSource,
+		volumetypes.NewKubernetesVolumeTypesDataSource,
 	}
 }
 
