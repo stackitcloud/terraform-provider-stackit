@@ -57,7 +57,7 @@ func (r *clusterDataSource) Configure(ctx context.Context, req datasource.Config
 }
 func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "SKE Cluster data source schema. Must have a `region` specified in the provider configuration.",
+		Description: "SKE Cluster data source schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`name`\".",

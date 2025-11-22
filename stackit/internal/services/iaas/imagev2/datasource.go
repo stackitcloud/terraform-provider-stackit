@@ -161,7 +161,7 @@ func (d *imageDataV2Source) ConfigValidators(_ context.Context) []datasource.Con
 func (d *imageDataV2Source) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := features.AddBetaDescription(fmt.Sprintf(
 		"%s\n\n~> %s",
-		"Image datasource schema. Must have a `region` specified in the provider configuration.",
+		"Image datasource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		"Important: When using the `name`, `name_regex`, or `filter` attributes to select images dynamically, be aware that image IDs may change frequently. Each OS patch or update results in a new unique image ID. If this data source is used to populate fields like `boot_volume.source_id` in a server resource, it may cause Terraform to detect changes and recreate the associated resource.\n\n"+
 			"To avoid unintended updates or resource replacements:\n"+
 			" - Prefer using a static `image_id` to pin a specific image version.\n"+

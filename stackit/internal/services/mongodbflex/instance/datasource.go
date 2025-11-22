@@ -61,7 +61,7 @@ func (d *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 // Schema defines the schema for the data source.
 func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                              "MongoDB Flex instance data source schema. Must have a `region` specified in the provider configuration.",
+		"main":                              "MongoDB Flex instance data source schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		"id":                                "Terraform's internal data source ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"instance_id":                       "ID of the MongoDB Flex instance.",
 		"project_id":                        "STACKIT project ID to which the instance is associated.",

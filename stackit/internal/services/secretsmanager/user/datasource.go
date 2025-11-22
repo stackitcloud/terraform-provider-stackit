@@ -68,7 +68,7 @@ func (r *userDataSource) Configure(ctx context.Context, req datasource.Configure
 // Schema defines the schema for the data source.
 func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":          "Secrets Manager user data source schema. Must have a `region` specified in the provider configuration.",
+		"main":          "Secrets Manager user data source schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		"id":            "Terraform's internal data source identifier. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
 		"user_id":       "The user's ID.",
 		"instance_id":   "ID of the Secrets Manager instance.",

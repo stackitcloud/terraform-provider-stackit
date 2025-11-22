@@ -3,12 +3,12 @@
 page_title: "stackit_public_ip Data Source - stackit"
 subcategory: ""
 description: |-
-  Public IP resource schema. Must have a region specified in the provider configuration.
+  Public IP resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_public_ip (Data Source)
 
-Public IP resource schema. Must have a `region` specified in the provider configuration.
+Public IP resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 
