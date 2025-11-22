@@ -3,13 +3,13 @@
 page_title: "stackit_authorization_organization_role_assignment Resource - stackit"
 subcategory: ""
 description: |-
-  organization Role Assignment resource schema.
+  Organization Role Assignment resource schema.
   ~> This resource is part of the iam experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_authorization_organization_role_assignment (Resource)
 
-organization Role Assignment resource schema.
+Organization Role Assignment resource schema.
 
 ~> This resource is part of the iam experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 
@@ -35,9 +35,9 @@ import {
 ### Required
 
 - `resource_id` (String) organization Resource to assign the role to.
-- `role` (String) Role to be assigned
+- `role` (String) Role to be assigned. Available roles can be queried using stackit-cli: `stackit curl https://authorization.api.stackit.cloud/v2/permissions`
 - `subject` (String) Identifier of user, service account or client. Usually email address or name in case of clients
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource identifier. It is structured as "[resource_id],[role],[subject]".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`resource_id`,`role`,`subject`".
