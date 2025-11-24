@@ -26,14 +26,19 @@ const (
 	DatasourceRegionFallbackDocstring = "Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on datasource level."
 )
 
-type ProviderData struct {
-	RoundTripper        http.RoundTripper
-	ServiceAccountEmail string // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025.
+type EphemeralProviderData struct {
+	ProviderData
 
 	PrivateKey            string
 	PrivateKeyPath        string
 	ServiceAccountKey     string
 	ServiceAccountKeyPath string
+	TokenCustomEndpoint   string
+}
+
+type ProviderData struct {
+	RoundTripper        http.RoundTripper
+	ServiceAccountEmail string // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025.
 
 	// Deprecated: Use DefaultRegion instead
 	Region                          string
