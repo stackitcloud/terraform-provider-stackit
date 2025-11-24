@@ -27,8 +27,6 @@ const (
 )
 
 type EphemeralProviderData struct {
-	ProviderData
-
 	PrivateKey            string
 	PrivateKeyPath        string
 	ServiceAccountKey     string
@@ -39,7 +37,6 @@ type EphemeralProviderData struct {
 type ProviderData struct {
 	RoundTripper        http.RoundTripper
 	ServiceAccountEmail string // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025.
-
 	// Deprecated: Use DefaultRegion instead
 	Region                          string
 	DefaultRegion                   string

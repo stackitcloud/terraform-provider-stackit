@@ -184,7 +184,6 @@ func ParseProviderData(ctx context.Context, providerData any, diags *diag.Diagno
 	return stackitProviderData, true
 }
 
-// TODO: write tests
 func ParseEphemeralProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (core.EphemeralProviderData, bool) {
 	// Prevent panic if the provider has not been configured.
 	if providerData == nil {

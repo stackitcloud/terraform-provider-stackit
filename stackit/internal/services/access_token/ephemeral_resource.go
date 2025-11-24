@@ -24,11 +24,7 @@ func NewAccessTokenEphemeralResource() ephemeral.EphemeralResource {
 }
 
 type accessTokenEphemeralResource struct {
-	serviceAccountKeyPath string
-	serviceAccountKey     string
-	privateKeyPath        string
-	privateKey            string
-	tokenCustomEndpoint   string
+	keyAuthConfig config.Configuration
 }
 
 func (e *accessTokenEphemeralResource) Configure(ctx context.Context, req ephemeral.ConfigureRequest, resp *ephemeral.ConfigureResponse) {
@@ -37,11 +33,13 @@ func (e *accessTokenEphemeralResource) Configure(ctx context.Context, req epheme
 		return
 	}
 
-	e.serviceAccountKey = providerData.ServiceAccountKey
-	e.serviceAccountKeyPath = providerData.ServiceAccountKeyPath
-	e.privateKey = providerData.PrivateKey
-	e.privateKeyPath = providerData.PrivateKeyPath
-	e.tokenCustomEndpoint = providerData.TokenCustomEndpoint
+	e.keyAuthConfig = config.Configuration{
+		ServiceAccountKey:     providerData.ServiceAccountKey,
+		ServiceAccountKeyPath: providerData.ServiceAccountKeyPath,
+		PrivateKeyPath:        providerData.PrivateKey,
+		PrivateKey:            providerData.PrivateKeyPath,
+		TokenCustomUrl:        providerData.TokenCustomEndpoint,
+	}
 }
 
 type ephemeralTokenModel struct {
@@ -54,7 +52,11 @@ func (e *accessTokenEphemeralResource) Metadata(_ context.Context, req ephemeral
 
 func (e *accessTokenEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "STACKIT Access Token ephemeral resource schema.",
+		Description: "Ephemeral resource that generates a short-lived STACKIT access token (JWT) using a service account key. " +
+			"A new token is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation. " +
+			"If a private key is not explicitly provided, the provider attempts to extract it from the service account key instead. " +
+			"Token generation logic prioritizes environment variables first, followed by provider configuration. " +
+			"Access tokens generated from service account keys expire after 60 minutes.",
 		Attributes: map[string]schema.Attribute{
 			"access_token": schema.StringAttribute{
 				Description: "JWT access token for STACKIT API authentication.",
@@ -73,15 +75,7 @@ func (e *accessTokenEphemeralResource) Open(ctx context.Context, req ephemeral.O
 		return
 	}
 
-	cfg := config.Configuration{
-		ServiceAccountKey:     e.serviceAccountKey,
-		ServiceAccountKeyPath: e.serviceAccountKeyPath,
-		PrivateKeyPath:        e.privateKeyPath,
-		PrivateKey:            e.privateKey,
-		TokenCustomUrl:        e.tokenCustomEndpoint,
-	}
-
-	rt, err := auth.KeyAuth(&cfg)
+	rt, err := auth.KeyAuth(&e.keyAuthConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Access token generation failed", fmt.Sprintf("Failed to initialize authentication: %v", err))
 		return
@@ -97,12 +91,7 @@ func (e *accessTokenEphemeralResource) Open(ctx context.Context, req ephemeral.O
 	// Retrieve the access token
 	accessToken, err := client.GetAccessToken()
 	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Access token retrieval failed",
-			fmt.Sprintf("Error obtaining access token: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Access token retrieval failed", fmt.Sprintf("Error obtaining access token: %v", err))
 		return
 	}
 

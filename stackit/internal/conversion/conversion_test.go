@@ -304,3 +304,91 @@ func TestParseProviderData(t *testing.T) {
 		})
 	}
 }
+
+func TestParseEphemeralProviderData(t *testing.T) {
+	type args struct {
+		providerData any
+	}
+	type want struct {
+		ok           bool
+		providerData core.EphemeralProviderData
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    want
+		wantErr bool
+	}{
+		{
+			name: "provider has not been configured",
+			args: args{
+				providerData: nil,
+			},
+			want: want{
+				ok: false,
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid provider data",
+			args: args{
+				providerData: struct{}{},
+			},
+			want: want{
+				ok: false,
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid provider data 1",
+			args: args{
+				providerData: core.EphemeralProviderData{},
+			},
+			want: want{
+				ok:           true,
+				providerData: core.EphemeralProviderData{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid provider data 2",
+			args: args{
+				providerData: core.EphemeralProviderData{
+					PrivateKey:            "",
+					PrivateKeyPath:        "/home/dev/foo/private-key.json",
+					ServiceAccountKey:     "",
+					ServiceAccountKeyPath: "/home/dev/foo/key.json",
+					TokenCustomEndpoint:   "",
+				},
+			},
+			want: want{
+				ok: true,
+				providerData: core.EphemeralProviderData{
+					PrivateKey:            "",
+					PrivateKeyPath:        "/home/dev/foo/private-key.json",
+					ServiceAccountKey:     "",
+					ServiceAccountKeyPath: "/home/dev/foo/key.json",
+					TokenCustomEndpoint:   "",
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			diags := diag.Diagnostics{}
+
+			actual, ok := ParseEphemeralProviderData(ctx, tt.args.providerData, &diags)
+			if diags.HasError() != tt.wantErr {
+				t.Errorf("ConfigureClient() error = %v, want %v", diags.HasError(), tt.wantErr)
+			}
+			if ok != tt.want.ok {
+				t.Errorf("ParseProviderData() got = %v, want %v", ok, tt.want.ok)
+			}
+			if !reflect.DeepEqual(actual, tt.want.providerData) {
+				t.Errorf("ParseProviderData() got = %v, want %v", actual, tt.want)
+			}
+		})
+	}
+}
