@@ -1841,6 +1841,8 @@ func mapGlobalConfigToAttributes(respGlobalConfigs *observability.Global, global
 	smtpAuthIdentity := respGlobalConfigs.SmtpAuthIdentity
 	smtpAuthPassword := respGlobalConfigs.SmtpAuthPassword
 	smtpAuthUsername := respGlobalConfigs.SmtpAuthUsername
+	opsgenieApiKey := respGlobalConfigs.OpsgenieApiKey
+	opsgenieApiUrl := respGlobalConfigs.OpsgenieApiUrl
 	if globalConfigsTF != nil {
 		if respGlobalConfigs.SmtpSmarthost == nil &&
 			!globalConfigsTF.SmtpSmartHost.IsNull() && !globalConfigsTF.SmtpSmartHost.IsUnknown() {
@@ -1858,11 +1860,6 @@ func mapGlobalConfigToAttributes(respGlobalConfigs *observability.Global, global
 			!globalConfigsTF.SmtpAuthUsername.IsNull() && !globalConfigsTF.SmtpAuthUsername.IsUnknown() {
 			smtpAuthUsername = sdkUtils.Ptr(globalConfigsTF.SmtpAuthUsername.ValueString())
 		}
-	}
-	// handle nil value from api
-	opsgenieApiKey := respGlobalConfigs.OpsgenieApiKey
-	opsgenieApiUrl := respGlobalConfigs.OpsgenieApiUrl
-	if globalConfigsTF != nil {
 		if respGlobalConfigs.OpsgenieApiKey == nil {
 			opsgenieApiKey = sdkUtils.Ptr(globalConfigsTF.OpsgenieApiKey.ValueString())
 		}
