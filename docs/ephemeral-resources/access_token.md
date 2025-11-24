@@ -3,12 +3,12 @@
 page_title: "stackit_access_token Ephemeral Resource - stackit"
 subcategory: ""
 description: |-
-  STACKIT Access Token ephemeral resource schema.
+  Ephemeral resource that generates a short-lived STACKIT access token (JWT) using a service account key. A new token is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation. If a private key is not explicitly provided, the provider attempts to extract it from the service account key instead. Token generation logic prioritizes environment variables first, followed by provider configuration. Access tokens generated from service account keys expire after 60 minutes.
 ---
 
 # stackit_access_token (Ephemeral Resource)
 
-STACKIT Access Token ephemeral resource schema.
+Ephemeral resource that generates a short-lived STACKIT access token (JWT) using a service account key. A new token is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation. If a private key is not explicitly provided, the provider attempts to extract it from the service account key instead. Token generation logic prioritizes environment variables first, followed by provider configuration. Access tokens generated from service account keys expire after 60 minutes.
 
 ## Example Usage
 
@@ -17,17 +17,35 @@ ephemeral "stackit_access_token" "example" {}
 
 // https://registry.terraform.io/providers/Mastercard/restapi/latest/docs
 provider "restapi" {
-  alias                = "stackit_iaas"
-  uri                  = "https://iaas.api.eu01.stackit.cloud"
+  uri                  = "https://iaas.api.eu01.stackit.cloud/"
   write_returns_object = true
 
   headers = {
-    "Authorization" = "Bearer ${ephemeral.stackit_access_token.example.access_token}"
+    Authorization = "Bearer ${ephemeral.stackit_access_token.example.access_token}"
+    Content-Type  = "application/json"
   }
 
-  create_method  = "GET"
-  update_method  = "GET"
-  destroy_method = "GET"
+  create_method  = "POST"
+  update_method  = "PUT"
+  destroy_method = "DELETE"
+}
+
+resource "restapi_object" "iaas_keypair" {
+  path = "/v2/keypairs"
+
+  data = jsonencode({
+    labels = {
+      key = "testvalue"
+    }
+    name      = "test-keypair-123"
+    publicKey = file(chomp("~/.ssh/id_rsa.pub"))
+  })
+
+  id_attribute   = "name"
+  read_method    = "GET"
+  create_method  = "POST"
+  update_method  = "PATCH"
+  destroy_method = "DELETE"
 }
 ```
 
