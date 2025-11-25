@@ -482,9 +482,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkArea
 			{
 				Destination: &iaas.RouteDestination{
 					DestinationCIDRv4: &iaas.DestinationCIDRv4{
-						Type: sdkUtils.Ptr("cidrv4"),
-						// TODO: "prefix" was renamed to "destination" on API side
-						// TODO: allow all configurations, not only IPv4
+						Type:  sdkUtils.Ptr("cidrv4"),
 						Value: conversion.StringValueToPointer(model.Prefix),
 					},
 					DestinationCIDRv6: nil,
