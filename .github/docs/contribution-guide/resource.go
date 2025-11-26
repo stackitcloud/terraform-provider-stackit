@@ -184,7 +184,9 @@ func (r *barResource) Create(ctx context.Context, req resource.CreateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString() // not needed for global APIs
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -203,6 +205,7 @@ func (r *barResource) Create(ctx context.Context, req resource.CreateRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bar", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// only in case the create bar API call is asynchronous (Make sure to include *ALL* fields which are part of the
@@ -246,7 +249,9 @@ func (r *barResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	barId := model.BarId.ValueString()
@@ -259,6 +264,7 @@ func (r *barResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading bar", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
@@ -289,7 +295,9 @@ func (r *barResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	barId := model.BarId.ValueString()
@@ -302,6 +310,7 @@ func (r *barResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bar", fmt.Sprintf("Calling API: %v", err))
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// only in case the bar delete API endpoint is asynchronous: use a wait handler to wait for the delete operation to complete

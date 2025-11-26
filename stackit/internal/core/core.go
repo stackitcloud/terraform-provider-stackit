@@ -106,6 +106,7 @@ func LogAndAddError(ctx context.Context, diags *diag.Diagnostics, summary, detai
 	if traceId := runtime.GetTraceId(ctx); traceId != "" {
 		detail = fmt.Sprintf("%s\nTrace ID: %q", detail, traceId)
 	}
+
 	tflog.Error(ctx, fmt.Sprintf("%s | %s", summary, detail))
 	diags.AddError(summary, detail)
 }
@@ -115,6 +116,7 @@ func LogAndAddWarning(ctx context.Context, diags *diag.Diagnostics, summary, det
 	if traceId := runtime.GetTraceId(ctx); traceId != "" {
 		detail = fmt.Sprintf("%s\nTrace ID: %q", detail, traceId)
 	}
+
 	tflog.Warn(ctx, fmt.Sprintf("%s | %s", summary, detail))
 	diags.AddWarning(summary, detail)
 }
@@ -133,18 +135,19 @@ func LogAndAddErrorBeta(ctx context.Context, diags *diag.Diagnostics, name strin
 	diags.AddError(errTitle, errContent)
 }
 
+// InitProviderContext extends the context to capture the http response
 func InitProviderContext(ctx context.Context) context.Context {
 	// Capture http response to get trace-id
 	var httpResp *http.Response
-	ctx = runtime.WithCaptureHTTPResponse(ctx, &httpResp)
-
-	return ctx
+	return runtime.WithCaptureHTTPResponse(ctx, &httpResp)
 }
 
+// LogResponse logs the trace-id of the last request
 func LogResponse(ctx context.Context) context.Context {
 	// Logs the trace-id of the request
 	traceId := runtime.GetTraceId(ctx)
 	ctx = tflog.SetField(ctx, "x-trace-id", traceId)
+
 	tflog.Info(ctx, "response data", map[string]interface{}{
 		"x-trace-id": traceId,
 	})
