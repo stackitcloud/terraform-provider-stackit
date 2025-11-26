@@ -4,20 +4,40 @@ page_title: "stackit_access_token Ephemeral Resource - stackit"
 subcategory: ""
 description: |-
   Ephemeral resource that generates a short-lived STACKIT access token (JWT) using a service account key. A new token is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation. If a private key is not explicitly provided, the provider attempts to extract it from the service account key instead. Token generation logic prioritizes environment variables first, followed by provider configuration. Access tokens generated from service account keys expire after 60 minutes.
+  ~> This ephemeral-resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_access_token (Ephemeral Resource)
 
 Ephemeral resource that generates a short-lived STACKIT access token (JWT) using a service account key. A new token is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation. If a private key is not explicitly provided, the provider attempts to extract it from the service account key instead. Token generation logic prioritizes environment variables first, followed by provider configuration. Access tokens generated from service account keys expire after 60 minutes.
 
+~> This ephemeral-resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
+
 ## Example Usage
 
 ```terraform
+provider "stackit" {
+  default_region           = "eu01"
+  service_account_key_path = "/path/to/sa_key.json"
+  enable_beta_resources    = true
+}
+
 ephemeral "stackit_access_token" "example" {}
 
-// https://registry.terraform.io/providers/Mastercard/restapi/latest/docs
+locals {
+  stackit_api_base_url = "https://iaas.api.stackit.cloud"
+  public_ip_path       = "/v2/projects/${var.project_id}/regions/${var.region}/public-ips"
+
+  public_ip_payload = {
+    labels = {
+      key = "value"
+    }
+  }
+}
+
+# Docs: https://registry.terraform.io/providers/Mastercard/restapi/latest
 provider "restapi" {
-  uri                  = "https://iaas.api.eu01.stackit.cloud/"
+  uri                  = local.stackit_api_base_url
   write_returns_object = true
 
   headers = {
@@ -26,26 +46,43 @@ provider "restapi" {
   }
 
   create_method  = "POST"
-  update_method  = "PUT"
+  update_method  = "PATCH"
   destroy_method = "DELETE"
 }
 
-resource "restapi_object" "iaas_keypair" {
-  path = "/v2/keypairs"
+resource "restapi_object" "public_ip_restapi" {
+  path = local.public_ip_path
+  data = jsonencode(local.public_ip_payload)
 
-  data = jsonencode({
-    labels = {
-      key = "testvalue"
-    }
-    name      = "test-keypair-123"
-    publicKey = file(chomp("~/.ssh/id_rsa.pub"))
-  })
-
-  id_attribute   = "name"
+  id_attribute   = "id"
   read_method    = "GET"
   create_method  = "POST"
   update_method  = "PATCH"
   destroy_method = "DELETE"
+}
+
+# Docs: https://registry.terraform.io/providers/magodo/restful/latest
+provider "restful" {
+  base_url = local.stackit_api_base_url
+
+  security = {
+    http = {
+      token = {
+        token = ephemeral.stackit_access_token.example.access_token
+      }
+    }
+  }
+}
+
+resource "restful_resource" "public_ip_restful" {
+  path = local.public_ip_path
+  data = jsonencode(local.public_ip_payload)
+
+  read_path     = "$(path)/$(body.id)"
+  update_path   = "$(path)/$(body.id)"
+  update_method = "PATCH"
+  delete_path   = "$(path)/$(body.id)"
+  delete_method = "DELETE"
 }
 ```
 
