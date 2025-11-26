@@ -128,37 +128,40 @@ type providerModel struct {
 	PrivateKeyPath        types.String `tfsdk:"private_key_path"`
 	Token                 types.String `tfsdk:"service_account_token"`
 	// Deprecated: Use DefaultRegion instead
-	Region                          types.String `tfsdk:"region"`
-	DefaultRegion                   types.String `tfsdk:"default_region"`
+	Region        types.String `tfsdk:"region"`
+	DefaultRegion types.String `tfsdk:"default_region"`
+
+	// Custom endpoints
+	AuthorizationCustomEndpoint     types.String `tfsdk:"authorization_custom_endpoint"`
 	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
-	DNSCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
+	DnsCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
 	GitCustomEndpoint               types.String `tfsdk:"git_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
-	KMSCustomEndpoint               types.String `tfsdk:"kms_custom_endpoint"`
-	PostgresFlexCustomEndpoint      types.String `tfsdk:"postgresflex_custom_endpoint"`
-	MongoDBFlexCustomEndpoint       types.String `tfsdk:"mongodbflex_custom_endpoint"`
-	ModelServingCustomEndpoint      types.String `tfsdk:"modelserving_custom_endpoint"`
+	KmsCustomEndpoint               types.String `tfsdk:"kms_custom_endpoint"`
 	LoadBalancerCustomEndpoint      types.String `tfsdk:"loadbalancer_custom_endpoint"`
 	LogMeCustomEndpoint             types.String `tfsdk:"logme_custom_endpoint"`
-	RabbitMQCustomEndpoint          types.String `tfsdk:"rabbitmq_custom_endpoint"`
 	MariaDBCustomEndpoint           types.String `tfsdk:"mariadb_custom_endpoint"`
-	AuthorizationCustomEndpoint     types.String `tfsdk:"authorization_custom_endpoint"`
+	ModelServingCustomEndpoint      types.String `tfsdk:"modelserving_custom_endpoint"`
+	MongoDBFlexCustomEndpoint       types.String `tfsdk:"mongodbflex_custom_endpoint"`
 	ObjectStorageCustomEndpoint     types.String `tfsdk:"objectstorage_custom_endpoint"`
 	ObservabilityCustomEndpoint     types.String `tfsdk:"observability_custom_endpoint"`
 	OpenSearchCustomEndpoint        types.String `tfsdk:"opensearch_custom_endpoint"`
+	PostgresFlexCustomEndpoint      types.String `tfsdk:"postgresflex_custom_endpoint"`
+	RabbitMQCustomEndpoint          types.String `tfsdk:"rabbitmq_custom_endpoint"`
 	RedisCustomEndpoint             types.String `tfsdk:"redis_custom_endpoint"`
+	ResourceManagerCustomEndpoint   types.String `tfsdk:"resourcemanager_custom_endpoint"`
+	ScfCustomEndpoint               types.String `tfsdk:"scf_custom_endpoint"`
 	SecretsManagerCustomEndpoint    types.String `tfsdk:"secretsmanager_custom_endpoint"`
-	SQLServerFlexCustomEndpoint     types.String `tfsdk:"sqlserverflex_custom_endpoint"`
-	SKECustomEndpoint               types.String `tfsdk:"ske_custom_endpoint"`
 	ServerBackupCustomEndpoint      types.String `tfsdk:"server_backup_custom_endpoint"`
 	ServerUpdateCustomEndpoint      types.String `tfsdk:"server_update_custom_endpoint"`
 	ServiceAccountCustomEndpoint    types.String `tfsdk:"service_account_custom_endpoint"`
-	ResourceManagerCustomEndpoint   types.String `tfsdk:"resourcemanager_custom_endpoint"`
-	ScfCustomEndpoint               types.String `tfsdk:"scf_custom_endpoint"`
-	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
-	EnableBetaResources             types.Bool   `tfsdk:"enable_beta_resources"`
 	ServiceEnablementCustomEndpoint types.String `tfsdk:"service_enablement_custom_endpoint"`
-	Experiments                     types.List   `tfsdk:"experiments"`
+	SkeCustomEndpoint               types.String `tfsdk:"ske_custom_endpoint"`
+	SqlServerFlexCustomEndpoint     types.String `tfsdk:"sqlserverflex_custom_endpoint"`
+	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
+
+	EnableBetaResources types.Bool `tfsdk:"enable_beta_resources"`
+	Experiments         types.List `tfsdk:"experiments"`
 }
 
 // Schema defines the provider-level schema for configuration data.
@@ -253,6 +256,16 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 					stringvalidator.ConflictsWith(path.MatchRoot("region")),
 				},
 			},
+			"enable_beta_resources": schema.BoolAttribute{
+				Optional:    true,
+				Description: descriptions["enable_beta_resources"],
+			},
+			"experiments": schema.ListAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Description: descriptions["experiments"],
+			},
+			// Custom endpoints
 			"cdn_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["cdn_custom_endpoint"],
@@ -361,15 +374,6 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["token_custom_endpoint"],
 			},
-			"enable_beta_resources": schema.BoolAttribute{
-				Optional:    true,
-				Description: descriptions["enable_beta_resources"],
-			},
-			"experiments": schema.ListAttribute{
-				ElementType: types.StringType,
-				Optional:    true,
-				Description: descriptions["experiments"],
-			},
 		},
 	}
 }
@@ -418,31 +422,34 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Provider Data Configuration
 	setStringField(providerConfig.DefaultRegion, func(v string) { providerData.DefaultRegion = v })
 	setStringField(providerConfig.Region, func(v string) { providerData.Region = v }) // nolint:staticcheck // preliminary handling of deprecated attribute
+	setBoolField(providerConfig.EnableBetaResources, func(v bool) { providerData.EnableBetaResources = v })
+
+	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { providerData.AuthorizationCustomEndpoint = v })
 	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { providerData.CdnCustomEndpoint = v })
-	setStringField(providerConfig.DNSCustomEndpoint, func(v string) { providerData.DnsCustomEndpoint = v })
+	setStringField(providerConfig.DnsCustomEndpoint, func(v string) { providerData.DnsCustomEndpoint = v })
 	setStringField(providerConfig.GitCustomEndpoint, func(v string) { providerData.GitCustomEndpoint = v })
 	setStringField(providerConfig.IaaSCustomEndpoint, func(v string) { providerData.IaaSCustomEndpoint = v })
-	setStringField(providerConfig.PostgresFlexCustomEndpoint, func(v string) { providerData.PostgresFlexCustomEndpoint = v })
-	setStringField(providerConfig.KMSCustomEndpoint, func(v string) { providerData.KMSCustomEndpoint = v })
-	setStringField(providerConfig.ModelServingCustomEndpoint, func(v string) { providerData.ModelServingCustomEndpoint = v })
-	setStringField(providerConfig.MongoDBFlexCustomEndpoint, func(v string) { providerData.MongoDBFlexCustomEndpoint = v })
+	setStringField(providerConfig.KmsCustomEndpoint, func(v string) { providerData.KMSCustomEndpoint = v })
 	setStringField(providerConfig.LoadBalancerCustomEndpoint, func(v string) { providerData.LoadBalancerCustomEndpoint = v })
 	setStringField(providerConfig.LogMeCustomEndpoint, func(v string) { providerData.LogMeCustomEndpoint = v })
-	setStringField(providerConfig.RabbitMQCustomEndpoint, func(v string) { providerData.RabbitMQCustomEndpoint = v })
 	setStringField(providerConfig.MariaDBCustomEndpoint, func(v string) { providerData.MariaDBCustomEndpoint = v })
-	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { providerData.AuthorizationCustomEndpoint = v })
+	setStringField(providerConfig.ModelServingCustomEndpoint, func(v string) { providerData.ModelServingCustomEndpoint = v })
+	setStringField(providerConfig.MongoDBFlexCustomEndpoint, func(v string) { providerData.MongoDBFlexCustomEndpoint = v })
 	setStringField(providerConfig.ObjectStorageCustomEndpoint, func(v string) { providerData.ObjectStorageCustomEndpoint = v })
 	setStringField(providerConfig.ObservabilityCustomEndpoint, func(v string) { providerData.ObservabilityCustomEndpoint = v })
 	setStringField(providerConfig.OpenSearchCustomEndpoint, func(v string) { providerData.OpenSearchCustomEndpoint = v })
+	setStringField(providerConfig.PostgresFlexCustomEndpoint, func(v string) { providerData.PostgresFlexCustomEndpoint = v })
+	setStringField(providerConfig.RabbitMQCustomEndpoint, func(v string) { providerData.RabbitMQCustomEndpoint = v })
 	setStringField(providerConfig.RedisCustomEndpoint, func(v string) { providerData.RedisCustomEndpoint = v })
 	setStringField(providerConfig.ResourceManagerCustomEndpoint, func(v string) { providerData.ResourceManagerCustomEndpoint = v })
 	setStringField(providerConfig.ScfCustomEndpoint, func(v string) { providerData.ScfCustomEndpoint = v })
 	setStringField(providerConfig.SecretsManagerCustomEndpoint, func(v string) { providerData.SecretsManagerCustomEndpoint = v })
-	setStringField(providerConfig.SQLServerFlexCustomEndpoint, func(v string) { providerData.SQLServerFlexCustomEndpoint = v })
+	setStringField(providerConfig.ServerBackupCustomEndpoint, func(v string) { providerData.ServerBackupCustomEndpoint = v })
+	setStringField(providerConfig.ServerUpdateCustomEndpoint, func(v string) { providerData.ServerUpdateCustomEndpoint = v })
 	setStringField(providerConfig.ServiceAccountCustomEndpoint, func(v string) { providerData.ServiceAccountCustomEndpoint = v })
-	setStringField(providerConfig.SKECustomEndpoint, func(v string) { providerData.SKECustomEndpoint = v })
 	setStringField(providerConfig.ServiceEnablementCustomEndpoint, func(v string) { providerData.ServiceEnablementCustomEndpoint = v })
-	setBoolField(providerConfig.EnableBetaResources, func(v bool) { providerData.EnableBetaResources = v })
+	setStringField(providerConfig.SkeCustomEndpoint, func(v string) { providerData.SKECustomEndpoint = v })
+	setStringField(providerConfig.SqlServerFlexCustomEndpoint, func(v string) { providerData.SQLServerFlexCustomEndpoint = v })
 
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
 		var experimentValues []string
