@@ -34,7 +34,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue(projectId),
 			},
 			input: &iaas.Project{
-				ProjectId: utils.Ptr(projectId),
+				Id: utils.Ptr(projectId),
 			},
 			expected: &DatasourceModel{
 				Id:        types.StringValue(projectId),
@@ -48,13 +48,12 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue(projectId),
 			},
 			input: &iaas.Project{
-				AreaId:             utils.Ptr(iaas.AreaId{String: utils.Ptr("aid")}),
-				CreatedAt:          utils.Ptr(testTimestamp()),
-				InternetAccess:     utils.Ptr(true),
-				OpenstackProjectId: utils.Ptr("oid"),
-				ProjectId:          utils.Ptr(projectId),
-				State:              utils.Ptr("CREATED"),
-				UpdatedAt:          utils.Ptr(testTimestamp()),
+				AreaId:         utils.Ptr(iaas.AreaId{String: utils.Ptr("aid")}),
+				CreatedAt:      utils.Ptr(testTimestamp()),
+				InternetAccess: utils.Ptr(true),
+				Id:             utils.Ptr(projectId),
+				Status:         utils.Ptr("CREATED"),
+				UpdatedAt:      utils.Ptr(testTimestamp()),
 			},
 			expected: &DatasourceModel{
 				Id:             types.StringValue(projectId),
@@ -62,6 +61,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				AreaId:         types.StringValue("aid"),
 				InternetAccess: types.BoolValue(true),
 				State:          types.StringValue("CREATED"),
+				Status:         types.StringValue("CREATED"),
 				CreatedAt:      types.StringValue(testTimestampValue),
 				UpdatedAt:      types.StringValue(testTimestampValue),
 			},
@@ -76,7 +76,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				AreaId: utils.Ptr(iaas.AreaId{
 					StaticAreaID: iaas.STATICAREAID_PUBLIC.Ptr(),
 				}),
-				ProjectId: utils.Ptr(projectId),
+				Id: utils.Ptr(projectId),
 			},
 			expected: &DatasourceModel{
 				Id:        types.StringValue(projectId),

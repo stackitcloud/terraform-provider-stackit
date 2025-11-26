@@ -31,6 +31,7 @@ import (
 	machineType "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/machinetype"
 	iaasNetwork "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network"
 	iaasNetworkArea "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarea"
+	iaasNetworkAreaRegion "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearegion"
 	iaasNetworkAreaRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearoute"
 	iaasNetworkInterface "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterface"
 	iaasNetworkInterfaceAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterfaceattach"
@@ -489,6 +490,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasImageV2.NewImageV2DataSource,
 		iaasNetwork.NewNetworkDataSource,
 		iaasNetworkArea.NewNetworkAreaDataSource,
+		iaasNetworkAreaRegion.NewNetworkAreaRegionDataSource,
 		iaasNetworkAreaRoute.NewNetworkAreaRouteDataSource,
 		iaasNetworkInterface.NewNetworkInterfaceDataSource,
 		iaasVolume.NewVolumeDataSource,
@@ -560,6 +562,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasImage.NewImageResource,
 		iaasNetwork.NewNetworkResource,
 		iaasNetworkArea.NewNetworkAreaResource,
+		iaasNetworkAreaRegion.NewNetworkAreaRegionResource,
 		iaasNetworkAreaRoute.NewNetworkAreaRouteResource,
 		iaasNetworkInterface.NewNetworkInterfaceResource,
 		iaasVolume.NewVolumeResource,
