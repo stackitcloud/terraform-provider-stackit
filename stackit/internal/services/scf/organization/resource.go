@@ -399,7 +399,6 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 		org = updatedOrg
 
 		ctx = core.LogResponse(ctx)
-
 	}
 
 	// handle a quota change of the org

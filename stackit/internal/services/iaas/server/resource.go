@@ -743,7 +743,6 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 		}
 
 		ctx = core.LogResponse(ctx)
-
 	}
 
 	// Re-fetch the server data, to get the details values.

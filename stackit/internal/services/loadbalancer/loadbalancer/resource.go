@@ -889,7 +889,6 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 
 		ctx = core.LogResponse(ctx)
-
 	}
 	ctx = tflog.SetField(ctx, "target_pool_name", nil)
 

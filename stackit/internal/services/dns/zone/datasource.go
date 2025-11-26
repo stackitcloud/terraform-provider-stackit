@@ -210,7 +210,6 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		}
 
 		ctx = core.LogResponse(ctx)
-
 	} else {
 		listZoneResp, err := d.client.ListZones(ctx, projectId).
 			DnsNameEq(dnsName).

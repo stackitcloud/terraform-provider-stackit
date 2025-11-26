@@ -395,7 +395,6 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 		}
 
 		ctx = core.LogResponse(ctx)
-
 	} else {
 		// Case 2: Lookup by name or name_regex
 
