@@ -481,6 +481,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.PrivateKey, func(v string) { ephemeralProviderData.PrivateKey = v })
 	setStringField(providerConfig.PrivateKeyPath, func(v string) { ephemeralProviderData.PrivateKeyPath = v })
 	setStringField(providerConfig.TokenCustomEndpoint, func(v string) { ephemeralProviderData.TokenCustomEndpoint = v })
+	setBoolField(providerConfig.EnableBetaResources, func(v bool) { ephemeralProviderData.EnableBetaResources = v })
 	resp.EphemeralResourceData = ephemeralProviderData
 
 	providerData.Version = p.version

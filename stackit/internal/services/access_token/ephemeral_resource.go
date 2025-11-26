@@ -12,6 +12,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 )
 
 var (
@@ -28,17 +29,27 @@ type accessTokenEphemeralResource struct {
 }
 
 func (e *accessTokenEphemeralResource) Configure(ctx context.Context, req ephemeral.ConfigureRequest, resp *ephemeral.ConfigureResponse) {
-	providerData, ok := conversion.ParseEphemeralProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	ephemeralProviderData, ok := conversion.ParseEphemeralProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
+	features.CheckBetaResourcesEnabled(
+		ctx,
+		&core.ProviderData{EnableBetaResources: ephemeralProviderData.EnableBetaResources},
+		&resp.Diagnostics,
+		"stackit_access_token", "ephemeral_resource",
+	)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	e.keyAuthConfig = config.Configuration{
-		ServiceAccountKey:     providerData.ServiceAccountKey,
-		ServiceAccountKeyPath: providerData.ServiceAccountKeyPath,
-		PrivateKeyPath:        providerData.PrivateKey,
-		PrivateKey:            providerData.PrivateKeyPath,
-		TokenCustomUrl:        providerData.TokenCustomEndpoint,
+		ServiceAccountKey:     ephemeralProviderData.ServiceAccountKey,
+		ServiceAccountKeyPath: ephemeralProviderData.ServiceAccountKeyPath,
+		PrivateKeyPath:        ephemeralProviderData.PrivateKey,
+		PrivateKey:            ephemeralProviderData.PrivateKeyPath,
+		TokenCustomUrl:        ephemeralProviderData.TokenCustomEndpoint,
 	}
 }
 
@@ -52,11 +63,11 @@ func (e *accessTokenEphemeralResource) Metadata(_ context.Context, req ephemeral
 
 func (e *accessTokenEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Ephemeral resource that generates a short-lived STACKIT access token (JWT) using a service account key. " +
-			"A new token is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation. " +
-			"If a private key is not explicitly provided, the provider attempts to extract it from the service account key instead. " +
-			"Token generation logic prioritizes environment variables first, followed by provider configuration. " +
-			"Access tokens generated from service account keys expire after 60 minutes.",
+		Description: features.AddBetaDescription("Ephemeral resource that generates a short-lived STACKIT access token (JWT) using a service account key. "+
+			"A new token is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation. "+
+			"If a private key is not explicitly provided, the provider attempts to extract it from the service account key instead. "+
+			"Token generation logic prioritizes environment variables first, followed by provider configuration. "+
+			"Access tokens generated from service account keys expire after 60 minutes.", core.EphemeralResource),
 		Attributes: map[string]schema.Attribute{
 			"access_token": schema.StringAttribute{
 				Description: "JWT access token for STACKIT API authentication.",
@@ -75,26 +86,34 @@ func (e *accessTokenEphemeralResource) Open(ctx context.Context, req ephemeral.O
 		return
 	}
 
-	rt, err := auth.KeyAuth(&e.keyAuthConfig)
+	accessToken, err := getAccessToken(&e.keyAuthConfig)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Access token generation failed", fmt.Sprintf("Failed to initialize authentication: %v", err))
-		return
-	}
-
-	// Type assert to access token functionality
-	client, ok := rt.(*clients.KeyFlow)
-	if !ok {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Access token generation failed", "Internal error: expected *clients.KeyFlow, but received a different implementation of http.RoundTripper")
-		return
-	}
-
-	// Retrieve the access token
-	accessToken, err := client.GetAccessToken()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Access token retrieval failed", fmt.Sprintf("Error obtaining access token: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Access token generation failed", err.Error())
 		return
 	}
 
 	model.AccessToken = types.StringValue(accessToken)
 	resp.Diagnostics.Append(resp.Result.Set(ctx, model)...)
+}
+
+// getAccessToken initializes authentication using the provided config and returns an access token via the KeyFlow mechanism.
+func getAccessToken(keyAuthConfig *config.Configuration) (string, error) {
+	roundTripper, err := auth.KeyAuth(keyAuthConfig)
+	if err != nil {
+		return "", fmt.Errorf("failed to initialize authentication: %w", err)
+	}
+
+	// Type assert to access token functionality
+	client, ok := roundTripper.(*clients.KeyFlow)
+	if !ok {
+		return "", fmt.Errorf("internal error: expected *clients.KeyFlow, but received a different implementation of http.RoundTripper")
+	}
+
+	// Retrieve the access token
+	accessToken, err := client.GetAccessToken()
+	if err != nil {
+		return "", fmt.Errorf("error obtaining access token: %w", err)
+	}
+
+	return accessToken, nil
 }

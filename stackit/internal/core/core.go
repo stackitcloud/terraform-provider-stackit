@@ -16,8 +16,9 @@ import (
 type ResourceType string
 
 const (
-	Resource   ResourceType = "resource"
-	Datasource ResourceType = "datasource"
+	Resource          ResourceType = "resource"
+	Datasource        ResourceType = "datasource"
+	EphemeralResource ResourceType = "ephemeral-resource"
 
 	// Separator used for concatenation of TF-internal resource ID
 	Separator = ","
@@ -32,6 +33,7 @@ type EphemeralProviderData struct {
 	ServiceAccountKey     string
 	ServiceAccountKeyPath string
 	TokenCustomEndpoint   string
+	EnableBetaResources   bool
 }
 
 type ProviderData struct {
