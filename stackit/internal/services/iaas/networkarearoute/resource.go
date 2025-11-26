@@ -161,6 +161,7 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	organizationId := model.OrganizationId.ValueString()
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	networkAreaId := model.NetworkAreaId.ValueString()
@@ -179,7 +180,9 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
+
 	if routes.Items == nil || len(*routes.Items) == 0 {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", "Empty response from API")
 		return
@@ -223,7 +226,9 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	networkAreaRouteId := model.NetworkAreaRouteId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
@@ -238,6 +243,7 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area route.", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
@@ -268,7 +274,9 @@ func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.Dele
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	networkAreaRouteId := model.NetworkAreaRouteId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
@@ -279,6 +287,7 @@ func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.Dele
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area route", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Network area route deleted")
@@ -297,7 +306,9 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	networkAreaRouteId := model.NetworkAreaRouteId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
@@ -322,6 +333,7 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area route", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, networkAreaRouteResp, &model)

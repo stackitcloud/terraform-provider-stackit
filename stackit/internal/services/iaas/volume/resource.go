@@ -288,6 +288,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
@@ -314,6 +315,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	volumeId := *volume.Id
@@ -350,7 +352,9 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 	projectId := model.ProjectId.ValueString()
 	volumeId := model.VolumeId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
@@ -364,6 +368,7 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
@@ -390,7 +395,9 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	volumeId := model.VolumeId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -416,6 +423,7 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Resize existing volume
@@ -461,7 +469,9 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	projectId := model.ProjectId.ValueString()
 	volumeId := model.VolumeId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
@@ -471,7 +481,9 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting volume", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
+
 	_, err = wait.DeleteVolumeWaitHandler(ctx, r.client, projectId, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting volume", fmt.Sprintf("volume deletion waiting: %v", err))

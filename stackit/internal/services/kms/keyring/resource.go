@@ -179,6 +179,7 @@ func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
@@ -195,6 +196,7 @@ func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating keyring", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	if createResponse == nil || createResponse.Id == nil {
@@ -239,6 +241,7 @@ func (r *keyRingResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -258,6 +261,7 @@ func (r *keyRingResource) Read(ctx context.Context, req resource.ReadRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading keyring", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(keyRingResponse, &model, region)

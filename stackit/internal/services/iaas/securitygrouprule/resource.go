@@ -390,6 +390,7 @@ func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	securityGroupId := model.SecurityGroupId.ValueString()
@@ -438,6 +439,7 @@ func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group rule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	ctx = tflog.SetField(ctx, "security_group_rule_id", *securityGroupRule.Id)
@@ -468,7 +470,9 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 	projectId := model.ProjectId.ValueString()
 	securityGroupId := model.SecurityGroupId.ValueString()
 	securityGroupRuleId := model.SecurityGroupRuleId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 	ctx = tflog.SetField(ctx, "security_group_rule_id", securityGroupRuleId)
@@ -483,6 +487,7 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group rule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
@@ -519,7 +524,9 @@ func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.Del
 	projectId := model.ProjectId.ValueString()
 	securityGroupId := model.SecurityGroupId.ValueString()
 	securityGroupRuleId := model.SecurityGroupRuleId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 	ctx = tflog.SetField(ctx, "security_group_rule_id", securityGroupRuleId)
@@ -530,6 +537,7 @@ func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.Del
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting security group rule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "security group rule deleted")

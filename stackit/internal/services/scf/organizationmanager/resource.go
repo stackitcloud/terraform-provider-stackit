@@ -215,6 +215,7 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	// Set logging context with the project ID and username.
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
@@ -235,6 +236,7 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization manager", fmt.Sprintf("Calling API to create org manager: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFieldsCreate(scfOrgManagerCreateResponse, &model)
@@ -262,6 +264,7 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	// Extract the project ID, region and org id of the model
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
@@ -283,6 +286,7 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading scf organization manager", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFieldsRead(scfOrgManager, &model)
@@ -312,6 +316,7 @@ func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request res
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
 	region := model.Region.ValueString()
@@ -331,7 +336,9 @@ func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request res
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting scf organization manager", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
+
 	tflog.Info(ctx, "Scf organization manager deleted")
 }
 

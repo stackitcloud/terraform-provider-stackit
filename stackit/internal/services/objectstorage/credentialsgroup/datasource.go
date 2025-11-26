@@ -111,7 +111,9 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -125,7 +127,9 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials group", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
+
 	if !found {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials group", fmt.Sprintf("Credentials group with ID %q does not exists in project %q", credentialsGroupId, projectId))

@@ -258,6 +258,7 @@ func (r *networkInterfaceResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	networkId := model.NetworkId.ValueString()
@@ -276,6 +277,7 @@ func (r *networkInterfaceResource) Create(ctx context.Context, req resource.Crea
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network interface", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	networkInterfaceId := *networkInterface.Id
@@ -308,7 +310,9 @@ func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRe
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
@@ -323,6 +327,7 @@ func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
@@ -352,7 +357,9 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
@@ -377,6 +384,7 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network interface", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, nicResp, &model)
@@ -405,7 +413,9 @@ func (r *networkInterfaceResource) Delete(ctx context.Context, req resource.Dele
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
@@ -416,6 +426,7 @@ func (r *networkInterfaceResource) Delete(ctx context.Context, req resource.Dele
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network interface", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Network interface deleted")

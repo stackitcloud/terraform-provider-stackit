@@ -111,7 +111,9 @@ func (d *publicIpDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 	projectId := model.ProjectId.ValueString()
 	publicIpId := model.PublicIpId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 
@@ -130,6 +132,7 @@ func (d *publicIpDataSource) Read(ctx context.Context, req datasource.ReadReques
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, publicIpResp, &model)

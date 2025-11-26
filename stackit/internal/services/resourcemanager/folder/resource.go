@@ -192,6 +192,7 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	containerParentId := model.ContainerParentId.ValueString()
 	folderName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "container_parent_id", containerParentId)
@@ -209,6 +210,7 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	if folderCreateResp.ContainerId == nil || *folderCreateResp.ContainerId == "" {
@@ -245,6 +247,7 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	containerId := model.ContainerId.ValueString()
 	folderName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "folder_name", folderName)
@@ -260,6 +263,7 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading folder", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFolderFields(ctx, folderResp, &model.Model, &resp.State)
@@ -286,7 +290,9 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
+
 	containerId := model.ContainerId.ValueString()
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
@@ -302,6 +308,7 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Fetch updated folder
@@ -334,6 +341,7 @@ func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
 
 	containerId := model.ContainerId.ValueString()
@@ -350,6 +358,7 @@ func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Resource Manager folder deleted")

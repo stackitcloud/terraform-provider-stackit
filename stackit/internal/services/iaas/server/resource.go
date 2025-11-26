@@ -428,7 +428,9 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	projectId := model.ProjectId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	// Generate API request body from model
@@ -445,6 +447,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	serverId := *server.Id
@@ -605,7 +608,9 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
@@ -621,6 +626,7 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
@@ -686,7 +692,9 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
@@ -714,6 +722,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
 		}
+
 		ctx = core.LogResponse(ctx)
 
 		if err := updateServerStatus(ctx, r.client, server.Status, &model); err != nil {
@@ -732,7 +741,9 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
 		}
+
 		ctx = core.LogResponse(ctx)
+
 	}
 
 	// Re-fetch the server data, to get the details values.
@@ -770,7 +781,9 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
@@ -780,7 +793,9 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
+
 	_, err = wait.DeleteServerWaitHandler(ctx, r.client, projectId, serverId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server", fmt.Sprintf("server deletion waiting: %v", err))

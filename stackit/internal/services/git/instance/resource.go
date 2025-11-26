@@ -196,6 +196,7 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	// Set logging context with the project ID and instance ID.
 	projectId := model.ProjectId.ValueString()
 	instanceName := model.Name.ValueString()
@@ -216,6 +217,7 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating git instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	gitInstanceId := *gitInstanceResp.Id
@@ -251,6 +253,7 @@ func (g *gitResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	// Extract the project ID and instance id of the model
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
@@ -267,6 +270,7 @@ func (g *gitResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading git instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, gitInstanceResp, &model)
@@ -303,6 +307,7 @@ func (g *gitResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -314,6 +319,7 @@ func (g *gitResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting git instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	_, err = wait.DeleteGitInstanceWaitHandler(ctx, g.client, projectId, instanceId).WaitWithContext(ctx)

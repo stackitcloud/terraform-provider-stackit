@@ -371,6 +371,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectID)
 	ctx = tflog.SetField(ctx, "image_id", imageID)
 	ctx = tflog.SetField(ctx, "name", name)
@@ -392,7 +393,9 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		ctx = core.LogResponse(ctx)
+
 	} else {
 		// Case 2: Lookup by name or name_regex
 
@@ -412,6 +415,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 			utils.LogError(ctx, &resp.Diagnostics, err, "List images", "Unable to fetch images", nil)
 			return
 		}
+
 		ctx = core.LogResponse(ctx)
 
 		// Step 1: Match images by name or regular expression (name or name_regex, if provided)

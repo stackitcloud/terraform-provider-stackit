@@ -123,7 +123,9 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	projectResp, err := d.client.GetProjectDetailsExecute(ctx, projectId)
@@ -139,6 +141,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema

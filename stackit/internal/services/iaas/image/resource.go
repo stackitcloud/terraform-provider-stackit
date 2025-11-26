@@ -378,7 +378,9 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	projectId := model.ProjectId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	// Generate API request body from model
@@ -394,7 +396,9 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
+
 	ctx = tflog.SetField(ctx, "image_id", *imageCreateResp.Id)
 
 	// Get the image object, as the create response does not contain all fields
@@ -460,7 +464,9 @@ func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 	projectId := model.ProjectId.ValueString()
 	imageId := model.ImageId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "image_id", imageId)
 
@@ -474,6 +480,7 @@ func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading image", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
@@ -502,7 +509,9 @@ func (r *imageResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 	projectId := model.ProjectId.ValueString()
 	imageId := model.ImageId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "image_id", imageId)
 
@@ -526,6 +535,7 @@ func (r *imageResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating image", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, updatedImage, &model)
@@ -553,7 +563,9 @@ func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 	projectId := model.ProjectId.ValueString()
 	imageId := model.ImageId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "image_id", imageId)
 
@@ -563,7 +575,9 @@ func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting image", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
+
 	_, err = wait.DeleteImageWaitHandler(ctx, r.client, projectId, imageId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting image", fmt.Sprintf("image deletion waiting: %v", err))

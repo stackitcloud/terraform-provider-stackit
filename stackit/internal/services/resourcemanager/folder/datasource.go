@@ -146,6 +146,7 @@ func (d *folderDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	containerId := model.ContainerId.ValueString()
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
@@ -164,6 +165,7 @@ func (d *folderDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFolderFields(ctx, folderResp, &model, &resp.State)

@@ -127,6 +127,7 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	serverId := model.ServerId.ValueString()
@@ -140,6 +141,7 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching service account to server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	model.Id = utils.BuildInternalTerraformId(projectId, serverId, serviceAccountEmail)
@@ -161,7 +163,9 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	serverId := model.ServerId.ValueString()
@@ -179,6 +183,7 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account attachment", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	if serviceAccounts == nil {
@@ -222,6 +227,7 @@ func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resourc
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	serverId := model.ServerId.ValueString()
@@ -235,6 +241,7 @@ func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resourc
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing service account from server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Service account attachment deleted")

@@ -119,7 +119,9 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	credentialId := model.CredentialId.ValueString()
@@ -145,7 +147,9 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
+
 	if credentialsGroupResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading credentials", fmt.Sprintf("Response is nil: %v", err))
 		return

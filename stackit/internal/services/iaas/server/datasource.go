@@ -185,7 +185,9 @@ func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
@@ -206,6 +208,7 @@ func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema

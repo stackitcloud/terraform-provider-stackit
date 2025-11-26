@@ -136,6 +136,7 @@ func (w *wrappingKeyDataSource) Read(ctx context.Context, request datasource.Rea
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := w.providerData.GetRegionWithOverride(model.Region)
@@ -161,6 +162,7 @@ func (w *wrappingKeyDataSource) Read(ctx context.Context, request datasource.Rea
 		response.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(wrappingKeyResponse, &model, region)

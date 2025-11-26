@@ -142,6 +142,7 @@ func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request dat
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	// Extract the project ID and instance id of the model
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
@@ -166,6 +167,7 @@ func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request dat
 		response.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFieldsDataSource(ScfOrgManager, &model)

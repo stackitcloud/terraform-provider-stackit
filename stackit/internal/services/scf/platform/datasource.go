@@ -137,6 +137,7 @@ func (s *scfPlatformDataSource) Read(ctx context.Context, request datasource.Rea
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	// Extract the project ID region and platform id of the model
 	projectId := model.ProjectId.ValueString()
 	platformId := model.PlatformId.ValueString()
@@ -161,6 +162,7 @@ func (s *scfPlatformDataSource) Read(ctx context.Context, request datasource.Rea
 		response.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(scfPlatformResponse, &model)

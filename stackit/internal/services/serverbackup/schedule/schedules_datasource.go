@@ -171,7 +171,9 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -194,6 +196,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema

@@ -244,6 +244,7 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	keyRingId := model.KeyRingId.ValueString()
@@ -265,6 +266,7 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	ctx = core.LogResponse(ctx)
+
 	if createResponse == nil || createResponse.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key", "API returned empty response")
 		return
@@ -308,6 +310,7 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -329,6 +332,7 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading key", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(keyResponse, &model, region)
@@ -358,6 +362,7 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -367,6 +372,7 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting key", fmt.Sprintf("Calling API: %v", err))
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// The keys can't be deleted instantly by Terraform, they can only be scheduled for deletion via the API.

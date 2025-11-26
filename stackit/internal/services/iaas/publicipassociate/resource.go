@@ -153,7 +153,9 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 	projectId := model.ProjectId.ValueString()
 	publicIpId := model.PublicIpId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
@@ -170,6 +172,7 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error associating public IP to network interface", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(updatedPublicIp, &model)
@@ -196,7 +199,9 @@ func (r *publicIpAssociateResource) Read(ctx context.Context, req resource.ReadR
 	projectId := model.ProjectId.ValueString()
 	publicIpId := model.PublicIpId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
@@ -211,6 +216,7 @@ func (r *publicIpAssociateResource) Read(ctx context.Context, req resource.ReadR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP association", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
@@ -246,7 +252,9 @@ func (r *publicIpAssociateResource) Delete(ctx context.Context, req resource.Del
 	projectId := model.ProjectId.ValueString()
 	publicIpId := model.PublicIpId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
@@ -260,6 +268,7 @@ func (r *publicIpAssociateResource) Delete(ctx context.Context, req resource.Del
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting public IP association", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "public IP association deleted")

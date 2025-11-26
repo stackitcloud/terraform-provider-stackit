@@ -240,7 +240,9 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	organizationId := model.OrganizationId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 
 	// Generate API request body from model
@@ -256,6 +258,7 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	networkArea, err := wait.CreateNetworkAreaWaitHandler(ctx, r.client, organizationId, *area.AreaId).WaitWithContext(context.Background())
@@ -293,7 +296,9 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
@@ -307,6 +312,7 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	networkAreaRanges := networkAreaResp.Ipv4.NetworkRanges
@@ -337,7 +343,9 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
@@ -370,7 +378,9 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
+
 	waitResp, err := wait.UpdateNetworkAreaWaitHandler(ctx, r.client, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area", fmt.Sprintf("Network area update waiting: %v", err))
@@ -422,7 +432,9 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
@@ -438,7 +450,9 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
+
 	_, err = wait.DeleteNetworkAreaWaitHandler(ctx, r.client, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintf("Network area deletion waiting: %v", err))

@@ -329,7 +329,9 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := state.ProjectId.ValueString()
 	name := state.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(state.Region)
@@ -351,6 +353,7 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, clusterResp, &state, region)

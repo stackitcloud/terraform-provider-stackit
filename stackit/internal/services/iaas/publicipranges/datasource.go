@@ -115,7 +115,9 @@ func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.Read
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
+
 	publicIpRangeResp, err := d.client.ListPublicIPRangesExecute(ctx)
 	if err != nil {
 		utils.LogError(
@@ -131,6 +133,7 @@ func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.Read
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema

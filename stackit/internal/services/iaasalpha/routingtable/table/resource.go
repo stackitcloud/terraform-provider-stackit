@@ -229,6 +229,7 @@ func (r *routingTableResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -249,6 +250,7 @@ func (r *routingTableResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating routing table", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
@@ -276,6 +278,7 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	organizationId := model.OrganizationId.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
@@ -301,6 +304,7 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
@@ -329,6 +333,7 @@ func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	organizationId := model.OrganizationId.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
@@ -359,6 +364,7 @@ func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating routing table", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
@@ -387,6 +393,7 @@ func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	organizationId := model.OrganizationId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	routingTableId := model.RoutingTableId.ValueString()
@@ -402,6 +409,7 @@ func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting routing table", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Routing table deleted")

@@ -154,7 +154,9 @@ func (r *affinityGroupResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	// Create new affinityGroup
@@ -168,7 +170,9 @@ func (r *affinityGroupResource) Create(ctx context.Context, req resource.CreateR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
+
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupResp.Id)
 
 	// Map response body to schema
@@ -196,7 +200,9 @@ func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	}
 	projectId := model.ProjectId.ValueString()
 	affinityGroupId := model.AffinityGroupId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
 
@@ -210,6 +216,7 @@ func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadReque
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading affinity group", fmt.Sprintf("Call API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, affinityGroupResp, &model)
@@ -241,7 +248,9 @@ func (r *affinityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 
 	projectId := model.ProjectId.ValueString()
 	affinityGroupId := model.AffinityGroupId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
 
@@ -251,6 +260,7 @@ func (r *affinityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting affinity group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Affinity group deleted")

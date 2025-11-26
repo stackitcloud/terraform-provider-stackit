@@ -23,7 +23,9 @@ func DatasourceRead(ctx context.Context, req datasource.ReadRequest, resp *datas
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -44,6 +46,7 @@ func DatasourceRead(ctx context.Context, req datasource.ReadRequest, resp *datas
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapDataSourceFields(ctx, networkResp, &model)

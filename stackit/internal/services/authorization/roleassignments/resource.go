@@ -153,6 +153,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = r.annotateLogger(ctx, &model)
 
 	if err := r.checkDuplicate(ctx, model); err != nil {
@@ -171,6 +172,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.apiName), fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
@@ -197,6 +199,7 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = r.annotateLogger(ctx, &model)
 
 	listResp, err := r.authorizationClient.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
@@ -204,6 +207,7 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading authorizations", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
@@ -237,6 +241,7 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = r.annotateLogger(ctx, &model)
 
 	payload := authorization.RemoveMembersPayload{
@@ -251,6 +256,7 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error deleting %s role assignment", r.apiName), fmt.Sprintf("Calling API: %v", err))
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, fmt.Sprintf("%s role assignment deleted", r.apiName))

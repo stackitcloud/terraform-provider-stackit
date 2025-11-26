@@ -185,6 +185,7 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()
 	distributionResp, err := r.client.GetDistributionExecute(ctx, projectId, distributionId)
@@ -200,7 +201,9 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
+
 	err = mapFields(ctx, distributionResp.Distribution, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN distribution", fmt.Sprintf("Error processing API response: %v", err))

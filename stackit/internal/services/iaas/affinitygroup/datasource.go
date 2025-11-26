@@ -118,7 +118,9 @@ func (d *affinityGroupDatasource) Read(ctx context.Context, req datasource.ReadR
 	}
 	projectId := model.ProjectId.ValueString()
 	affinityGroupId := model.AffinityGroupId.ValueString()
+
 	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
 
@@ -137,6 +139,7 @@ func (d *affinityGroupDatasource) Read(ctx context.Context, req datasource.ReadR
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, affinityGroupResp, &model)
