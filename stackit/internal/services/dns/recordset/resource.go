@@ -2,7 +2,9 @@ package dns
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -16,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -200,6 +203,13 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
+	// Get a fresh copy from plan for minimal state
+	var minimalModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &minimalModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -219,18 +229,36 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-		"project_id":    projectId,
-		"zone_id":       zoneId,
-		"record_set_id": *recordSetResp.Rrset.Id,
-	})
+	recordSetId := *recordSetResp.Rrset.Id
+	minimalModel.RecordSetId = types.StringValue(recordSetId)
+	minimalModel.Id = utils.BuildInternalTerraformId(projectId, zoneId, recordSetId)
+
+	// Set all unknown/null fields to null before saving state
+	if err := utils.SetModelFieldsToNull(ctx, &minimalModel); err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Setting model fields to null: %v", err))
+		return
+	}
+
+	diags = resp.State.Set(ctx, minimalModel)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !utils.ShouldWait() {
+		tflog.Info(ctx, "Skipping wait; async mode for Crossplane/Upjet")
 		return
 	}
 
 	waitResp, err := wait.CreateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, *recordSetResp.Rrset.Id).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Instance creation waiting: %v", err))
+		if utils.ShouldIgnoreWaitError(err) {
+			tflog.Warn(ctx, fmt.Sprintf("Record set creation waiting failed: %v. The record set creation was triggered but waiting for completion was interrupted. The record set may still be creating.", err))
+			return
+		}
+
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Record set creation waiting: %v", err))
+
 		return
 	}
 
@@ -266,6 +294,12 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	recordSetResp, err := r.client.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
+		if ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
@@ -319,9 +353,21 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", err.Error())
 		return
 	}
+
+	if !utils.ShouldWait() {
+		if utils.ShouldIgnoreWaitError(err) {
+			tflog.Warn(ctx, fmt.Sprintf("Record set update waiting failed: %v. The record set update was triggered but waiting for completion was interrupted. The record set may still be updating.", err))
+			return
+		}
+
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Record set update waiting: %v", err))
+
+		return
+	}
+
 	waitResp, err := wait.PartialUpdateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Instance update waiting: %v", err))
+		tflog.Warn(ctx, fmt.Sprintf("Record set update waiting failed: %v. The record set update was triggered but waiting for completion was interrupted. The record set may still be updating.", err))
 		return
 	}
 
@@ -358,11 +404,31 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 	// Delete existing record set
 	_, err := r.client.DeleteRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
+		// If resource is already gone (404 or 410), treat as success for idempotency
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
+		if ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
+			tflog.Info(ctx, "Record set already deleted")
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Calling API: %v", err))
+		return
 	}
+
+	if !utils.ShouldWait() {
+		tflog.Info(ctx, "Skipping wait; async mode for Crossplane/Upjet")
+		return
+	}
+
 	_, err = wait.DeleteRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Instance deletion waiting: %v", err))
+		if utils.ShouldIgnoreWaitError(err) {
+			tflog.Warn(ctx, fmt.Sprintf("Record set deletion waiting failed: %v. The record set deletion was triggered but waiting for completion was interrupted. The record set may still be deleting.", err))
+			return
+		}
+
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Record set deletion waiting: %v", err))
+
 		return
 	}
 	tflog.Info(ctx, "DNS record set deleted")
@@ -380,11 +446,23 @@ func (r *recordSetResource) ImportState(ctx context.Context, req resource.Import
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
-		"project_id":    idParts[0],
-		"zone_id":       idParts[1],
-		"record_set_id": idParts[2],
-	})
+	var model Model
+	model.ProjectId = types.StringValue(idParts[0])
+	model.ZoneId = types.StringValue(idParts[1])
+	model.RecordSetId = types.StringValue(idParts[2])
+	model.Id = utils.BuildInternalTerraformId(idParts[0], idParts[1], idParts[2])
+
+	if err := utils.SetModelFieldsToNull(ctx, &model); err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing zone", fmt.Sprintf("Setting model fields to null: %v", err))
+		return
+	}
+
+	diags := resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if diags.HasError() {
+		return
+	}
+
 	tflog.Info(ctx, "DNS record set state imported")
 }
 
