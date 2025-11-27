@@ -92,6 +92,9 @@ func (r *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 	name := model.Name.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "name", name)
 
 	keypairResp, err := r.client.GetKeyPair(ctx, name).Execute()
@@ -107,6 +110,8 @@ func (r *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, keypairResp, &model)

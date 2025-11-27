@@ -141,6 +141,9 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 	projectId := model.ProjectId.ValueString()
 	volumeId := model.VolumeId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
@@ -159,6 +162,8 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, volumeResp, &model)
 	if err != nil {

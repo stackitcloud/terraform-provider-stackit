@@ -89,6 +89,8 @@ func (d *routingTableRoutesDataSource) Read(ctx context.Context, req datasource.
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	organizationId := model.OrganizationId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	networkAreaId := model.NetworkAreaId.ValueString()
@@ -113,6 +115,8 @@ func (d *routingTableRoutesDataSource) Read(ctx context.Context, req datasource.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapDataSourceRoutingTableRoutes(ctx, routesResp, &model, region)
 	if err != nil {

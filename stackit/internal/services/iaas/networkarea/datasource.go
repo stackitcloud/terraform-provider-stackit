@@ -172,6 +172,9 @@ func (d *networkAreaDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
@@ -190,6 +193,8 @@ func (d *networkAreaDataSource) Read(ctx context.Context, req datasource.ReadReq
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	networkAreaRanges := networkAreaResp.Ipv4.NetworkRanges
 

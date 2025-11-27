@@ -111,6 +111,9 @@ func (d *securityGroupDataSource) Read(ctx context.Context, req datasource.ReadR
 	}
 	projectId := model.ProjectId.ValueString()
 	securityGroupId := model.SecurityGroupId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 
@@ -129,6 +132,8 @@ func (d *securityGroupDataSource) Read(ctx context.Context, req datasource.ReadR
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, securityGroupResp, &model)
 	if err != nil {

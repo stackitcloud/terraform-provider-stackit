@@ -179,6 +179,8 @@ func (r *serviceAccountTokenResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	// Set logging context with the project ID and service account email.
 	projectId := model.ProjectId.ValueString()
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
@@ -194,11 +196,12 @@ func (r *serviceAccountTokenResource) Create(ctx context.Context, req resource.C
 
 	// Initialize the API request with the required parameters.
 	serviceAccountAccessTokenResp, err := r.client.CreateAccessToken(ctx, projectId, serviceAccountEmail).CreateAccessTokenPayload(*payload).Execute()
-
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Failed to create service account access token", fmt.Sprintf("API call error: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map the response to the resource schema.
 	err = mapCreateResponse(serviceAccountAccessTokenResp, &model)
@@ -227,6 +230,8 @@ func (r *serviceAccountTokenResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	// Extract the project ID and serviceAccountEmail for the service account.
 	projectId := model.ProjectId.ValueString()
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
@@ -244,6 +249,8 @@ func (r *serviceAccountTokenResource) Read(ctx context.Context, req resource.Rea
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account tokens", fmt.Sprintf("Error calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Iterate over the list of service account tokens to find the one that matches the ID from the state.
 	saTokens := *listSaTokensResp.Items
@@ -296,6 +303,8 @@ func (r *serviceAccountTokenResource) Delete(ctx context.Context, req resource.D
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
 	accessTokenId := model.AccessTokenId.ValueString()
@@ -309,6 +318,9 @@ func (r *serviceAccountTokenResource) Delete(ctx context.Context, req resource.D
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting service account token", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	tflog.Info(ctx, "Service account token deleted")
 }
 

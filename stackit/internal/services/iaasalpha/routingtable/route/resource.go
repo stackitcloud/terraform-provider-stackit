@@ -237,6 +237,8 @@ func (r *routeResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	organizationId := model.OrganizationId.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
@@ -259,6 +261,8 @@ func (r *routeResource) Create(ctx context.Context, req resource.CreateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating routing table route", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFieldsFromList(ctx, routeResp, &model, region)
@@ -284,6 +288,9 @@ func (r *routeResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	organizationId := model.OrganizationId.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
@@ -301,6 +308,8 @@ func (r *routeResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table route", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = shared.MapRouteModel(ctx, routeResp, &model, region)
@@ -327,6 +336,8 @@ func (r *routeResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
 
 	organizationId := model.OrganizationId.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
@@ -361,6 +372,8 @@ func (r *routeResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	// Map response body to schema
 	err = shared.MapRouteModel(ctx, route, &model, region)
 	if err != nil {
@@ -385,6 +398,8 @@ func (r *routeResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	organizationId := model.OrganizationId.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
@@ -402,6 +417,8 @@ func (r *routeResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error routing table route", fmt.Sprintf("Calling API: %v", err))
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Routing table route deleted")
 }

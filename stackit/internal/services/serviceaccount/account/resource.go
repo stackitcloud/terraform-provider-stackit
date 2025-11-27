@@ -128,6 +128,8 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	// Set logging context with the project ID and service account name.
 	projectId := model.ProjectId.ValueString()
 	serviceAccountName := model.Name.ValueString()
@@ -147,6 +149,8 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Set the service account name and map the response to the resource schema.
 	model.Name = types.StringValue(serviceAccountName)
@@ -178,6 +182,8 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	// Extract the project ID for the service account.
 	projectId := model.ProjectId.ValueString()
 
@@ -187,6 +193,8 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account", fmt.Sprintf("Error calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Iterate over the list of service accounts to find the one that matches the email from the state.
 	serviceAccounts := *listSaResp.Items
@@ -233,6 +241,8 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	serviceAccountName := model.Name.ValueString()
 	serviceAccountEmail := model.Email.ValueString()
@@ -245,6 +255,9 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting service account", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	tflog.Info(ctx, "Service account deleted")
 }
 

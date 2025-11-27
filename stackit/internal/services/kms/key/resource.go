@@ -243,6 +243,8 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	keyRingId := model.KeyRingId.ValueString()
@@ -262,6 +264,8 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	if createResponse == nil || createResponse.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key", "API returned empty response")
@@ -305,6 +309,8 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -326,6 +332,8 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading key", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(keyResponse, &model, region)
 	if err != nil {
@@ -353,6 +361,8 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -362,6 +372,8 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting key", fmt.Sprintf("Calling API: %v", err))
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// The keys can't be deleted instantly by Terraform, they can only be scheduled for deletion via the API.
 	core.LogAndAddWarning(ctx, &resp.Diagnostics, "Key scheduled for deletion on API side", deletionWarning)

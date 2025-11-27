@@ -146,6 +146,9 @@ func (r *keyPairResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	name := model.Name.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "name", name)
 
 	// Generate API request body from model
@@ -162,6 +165,8 @@ func (r *keyPairResource) Create(ctx context.Context, req resource.CreateRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key pair", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, keyPair, &model)
@@ -187,6 +192,9 @@ func (r *keyPairResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 	name := model.Name.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "name", name)
 
 	keyPairResp, err := r.client.GetKeyPair(ctx, name).Execute()
@@ -199,6 +207,8 @@ func (r *keyPairResource) Read(ctx context.Context, req resource.ReadRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading key pair", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, keyPairResp, &model)
@@ -225,6 +235,9 @@ func (r *keyPairResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 	name := model.Name.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "name", name)
 
 	// Retrieve values from state
@@ -247,6 +260,8 @@ func (r *keyPairResource) Update(ctx context.Context, req resource.UpdateRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating key pair", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, updatedKeyPair, &model)
 	if err != nil {
@@ -272,6 +287,9 @@ func (r *keyPairResource) Delete(ctx context.Context, req resource.DeleteRequest
 	}
 
 	name := model.Name.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "name", name)
 
 	// Delete existing key pair
@@ -280,6 +298,8 @@ func (r *keyPairResource) Delete(ctx context.Context, req resource.DeleteRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting key pair", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Key pair deleted")
 }

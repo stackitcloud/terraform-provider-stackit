@@ -162,6 +162,8 @@ func (r *securityGroupResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
@@ -179,6 +181,8 @@ func (r *securityGroupResource) Create(ctx context.Context, req resource.CreateR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	securityGroupId := *securityGroup.Id
 
@@ -209,6 +213,9 @@ func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	}
 	projectId := model.ProjectId.ValueString()
 	securityGroupId := model.SecurityGroupId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "security_id", securityGroupId)
 
@@ -222,6 +229,8 @@ func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadReque
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, securityGroupResp, &model)
@@ -249,6 +258,9 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 	}
 	projectId := model.ProjectId.ValueString()
 	securityGroupId := model.SecurityGroupId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 
@@ -272,6 +284,8 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating security group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, updatedSecurityGroup, &model)
 	if err != nil {
@@ -298,6 +312,9 @@ func (r *securityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 
 	projectId := model.ProjectId.ValueString()
 	securityGroupId := model.SecurityGroupId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 
@@ -307,6 +324,8 @@ func (r *securityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting security group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "security group deleted")
 }

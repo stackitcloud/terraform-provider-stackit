@@ -26,6 +26,9 @@ func DatasourceRead(ctx context.Context, req datasource.ReadRequest, resp *datas
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	region := providerData.GetRegionWithOverride(model.Region)
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 
@@ -44,6 +47,8 @@ func DatasourceRead(ctx context.Context, req datasource.ReadRequest, resp *datas
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapDataSourceFields(ctx, networkResp, &model, region)
 	if err != nil {

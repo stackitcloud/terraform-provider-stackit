@@ -78,6 +78,8 @@ func (d *routingTableRouteDataSource) Read(ctx context.Context, req datasource.R
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	organizationId := model.OrganizationId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	routingTableId := model.RoutingTableId.ValueString()
@@ -105,6 +107,8 @@ func (d *routingTableRouteDataSource) Read(ctx context.Context, req datasource.R
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = shared.MapRouteModel(ctx, routeResp, &model, region)
 	if err != nil {

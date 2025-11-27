@@ -145,6 +145,8 @@ func (r *publicIpResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
@@ -162,6 +164,8 @@ func (r *publicIpResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating public IP", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	ctx = tflog.SetField(ctx, "public_ip_id", *publicIp.Id)
 
@@ -190,6 +194,9 @@ func (r *publicIpResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 	projectId := model.ProjectId.ValueString()
 	publicIpId := model.PublicIpId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 
@@ -203,6 +210,8 @@ func (r *publicIpResource) Read(ctx context.Context, req resource.ReadRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, publicIpResp, &model)
@@ -230,6 +239,9 @@ func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 	projectId := model.ProjectId.ValueString()
 	publicIpId := model.PublicIpId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 
@@ -253,6 +265,8 @@ func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating public IP", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, updatedPublicIp, &model)
 	if err != nil {
@@ -279,6 +293,9 @@ func (r *publicIpResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	projectId := model.ProjectId.ValueString()
 	publicIpId := model.PublicIpId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 
@@ -288,6 +305,8 @@ func (r *publicIpResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting public IP", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "public IP deleted")
 }

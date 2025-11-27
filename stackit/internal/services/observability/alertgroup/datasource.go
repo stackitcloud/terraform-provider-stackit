@@ -138,6 +138,8 @@ func (a *alertGroupDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
@@ -156,6 +158,8 @@ func (a *alertGroupDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading alert group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, readAlertGroupResp.Data, &model)
 	if err != nil {

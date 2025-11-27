@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/stackitcloud/stackit-sdk-go/core/runtime"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -102,12 +103,20 @@ func DiagsToError(diags diag.Diagnostics) error {
 
 // LogAndAddError Logs the error and adds it to the diags
 func LogAndAddError(ctx context.Context, diags *diag.Diagnostics, summary, detail string) {
+	if traceId := runtime.GetTraceId(ctx); traceId != "" {
+		detail = fmt.Sprintf("%s\nTrace ID: %q", detail, traceId)
+	}
+
 	tflog.Error(ctx, fmt.Sprintf("%s | %s", summary, detail))
 	diags.AddError(summary, detail)
 }
 
 // LogAndAddWarning Logs the warning and adds it to the diags
 func LogAndAddWarning(ctx context.Context, diags *diag.Diagnostics, summary, detail string) {
+	if traceId := runtime.GetTraceId(ctx); traceId != "" {
+		detail = fmt.Sprintf("%s\nTrace ID: %q", detail, traceId)
+	}
+
 	tflog.Warn(ctx, fmt.Sprintf("%s | %s", summary, detail))
 	diags.AddWarning(summary, detail)
 }
@@ -124,4 +133,23 @@ func LogAndAddErrorBeta(ctx context.Context, diags *diag.Diagnostics, name strin
 	errContent := fmt.Sprintf(`The %s %q is in beta and the beta functionality is currently not enabled. To enable it, set the environment variable STACKIT_TF_ENABLE_BETA_RESOURCES to "true" or set the "enable_beta_resources" provider field to true.`, resourceType, name)
 	tflog.Error(ctx, fmt.Sprintf("%s | %s", errTitle, errContent))
 	diags.AddError(errTitle, errContent)
+}
+
+// InitProviderContext extends the context to capture the http response
+func InitProviderContext(ctx context.Context) context.Context {
+	// Capture http response to get trace-id
+	var httpResp *http.Response
+	return runtime.WithCaptureHTTPResponse(ctx, &httpResp)
+}
+
+// LogResponse logs the trace-id of the last request
+func LogResponse(ctx context.Context) context.Context {
+	// Logs the trace-id of the request
+	traceId := runtime.GetTraceId(ctx)
+	ctx = tflog.SetField(ctx, "x-trace-id", traceId)
+
+	tflog.Info(ctx, "response data", map[string]interface{}{
+		"x-trace-id": traceId,
+	})
+	return ctx
 }

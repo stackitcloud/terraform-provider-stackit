@@ -213,6 +213,9 @@ func (r *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	}
 	projectId := model.ProjectId.ValueString()
 	imageId := model.ImageId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "image_id", imageId)
 
@@ -231,6 +234,8 @@ func (r *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapDataSourceFields(ctx, imageResp, &model)
