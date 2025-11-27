@@ -121,8 +121,8 @@ func (r *scheduleResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         "Server update schedule resource schema. Must have a `region` specified in the provider configuration.",
-		MarkdownDescription: features.AddBetaDescription("Server update schedule resource schema. Must have a `region` specified in the provider configuration.", core.Resource),
+		Description:         "Server update schedule resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
+		MarkdownDescription: features.AddBetaDescription("Server update schedule resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.", core.Resource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`server_id`,`update_schedule_id`\".",

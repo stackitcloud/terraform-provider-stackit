@@ -3,7 +3,7 @@
 page_title: "stackit_key_pair Resource - stackit"
 subcategory: ""
 description: |-
-  Key pair resource schema. Must have a region specified in the provider configuration. Allows uploading an SSH public key to be used for server authentication.
+  Key pair resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level. Allows uploading an SSH public key to be used for server authentication.
   Usage with server
   
   resource "stackit_key_pair" "keypair" {
@@ -27,7 +27,7 @@ description: |-
 
 # stackit_key_pair (Resource)
 
-Key pair resource schema. Must have a `region` specified in the provider configuration. Allows uploading an SSH public key to be used for server authentication.
+Key pair resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level. Allows uploading an SSH public key to be used for server authentication.
 
 
 

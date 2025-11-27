@@ -3,12 +3,12 @@
 page_title: "stackit_scf_organization Resource - stackit"
 subcategory: ""
 description: |-
-  STACKIT Cloud Foundry organization resource schema. Must have a region specified in the provider configuration.
+  STACKIT Cloud Foundry organization resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_scf_organization (Resource)
 
-STACKIT Cloud Foundry organization resource schema. Must have a `region` specified in the provider configuration.
+STACKIT Cloud Foundry organization resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

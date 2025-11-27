@@ -3,12 +3,12 @@
 page_title: "stackit_rabbitmq_instance Resource - stackit"
 subcategory: ""
 description: |-
-  RabbitMQ instance resource schema. Must have a region specified in the provider configuration.
+  RabbitMQ instance resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_rabbitmq_instance (Resource)
 
-RabbitMQ instance resource schema. Must have a `region` specified in the provider configuration.
+RabbitMQ instance resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

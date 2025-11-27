@@ -73,7 +73,7 @@ func (d *imageDataSource) Configure(ctx context.Context, req datasource.Configur
 
 // Schema defines the schema for the datasource.
 func (r *imageDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	description := "Image datasource schema. Must have a `region` specified in the provider configuration."
+	description := "Image datasource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,

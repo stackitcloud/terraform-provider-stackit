@@ -3,12 +3,12 @@
 page_title: "stackit_sqlserverflex_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  SQLServer Flex instance data source schema. Must have a region specified in the provider configuration.
+  SQLServer Flex instance data source schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_sqlserverflex_instance (Data Source)
 
-SQLServer Flex instance data source schema. Must have a `region` specified in the provider configuration.
+SQLServer Flex instance data source schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 
