@@ -36,7 +36,7 @@ func (e *accessTokenEphemeralResource) Configure(ctx context.Context, req epheme
 
 	features.CheckBetaResourcesEnabled(
 		ctx,
-		&core.ProviderData{EnableBetaResources: ephemeralProviderData.EnableBetaResources},
+		&ephemeralProviderData.ProviderData,
 		&resp.Diagnostics,
 		"stackit_access_token", "ephemeral_resource",
 	)
@@ -62,12 +62,21 @@ func (e *accessTokenEphemeralResource) Metadata(_ context.Context, req ephemeral
 }
 
 func (e *accessTokenEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
+	description := features.AddBetaDescription(
+		fmt.Sprintf(
+			"%s\n\n%s",
+			"Ephemeral resource that generates a short-lived STACKIT access token (JWT) using a service account key. "+
+				"A new token is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation. "+
+				"If a private key is not explicitly provided, the provider attempts to extract it from the service account key instead. "+
+				"Access tokens generated from service account keys expire after 60 minutes.",
+			"~> Service account key credentials must be configured either in the STACKIT provider configuration or via environment variables (see example below). "+
+				"If any other authentication method is configured, this ephemeral resource generation will fail with an error.",
+		),
+		core.EphemeralResource,
+	)
+
 	resp.Schema = schema.Schema{
-		Description: features.AddBetaDescription("Ephemeral resource that generates a short-lived STACKIT access token (JWT) using a service account key. "+
-			"A new token is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation. "+
-			"If a private key is not explicitly provided, the provider attempts to extract it from the service account key instead. "+
-			"Token generation logic prioritizes environment variables first, followed by provider configuration. "+
-			"Access tokens generated from service account keys expire after 60 minutes.", core.EphemeralResource),
+		Description: description,
 		Attributes: map[string]schema.Attribute{
 			"access_token": schema.StringAttribute{
 				Description: "JWT access token for STACKIT API authentication.",
