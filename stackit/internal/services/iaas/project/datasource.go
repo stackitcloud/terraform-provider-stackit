@@ -73,7 +73,7 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 		"project_id":      "STACKIT project ID.",
 		"area_id":         "The area ID to which the project belongs to.",
 		"internet_access": "Specifies if the project has internet_access",
-		"state":           "Specifies the state of the project.",
+		"status":          "Specifies the status of the project.",
 		"created_at":      "Date-time when the project was created.",
 		"updated_at":      "Date-time when the project was last updated.",
 	}
@@ -104,7 +104,7 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
 			"state": schema.StringAttribute{
 				DeprecationMessage: "Deprecated: Will be removed in May 2026. Use the `status` field instead.",
-				Description:        descriptions["state"],
+				Description:        descriptions["status"],
 				Computed:           true,
 			},
 			"status": schema.StringAttribute{

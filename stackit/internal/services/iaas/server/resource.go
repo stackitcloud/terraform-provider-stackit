@@ -348,6 +348,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						validate.UUID(),
 						validate.NoSeparator(),
 					),
+					listvalidator.SizeAtLeast(1),
 				},
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.RequiresReplace(),
