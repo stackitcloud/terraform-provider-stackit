@@ -100,7 +100,11 @@ func (e *accessTokenEphemeralResource) Open(ctx context.Context, req ephemeral.O
 func getAccessToken(keyAuthConfig *config.Configuration) (string, error) {
 	roundTripper, err := auth.KeyAuth(keyAuthConfig)
 	if err != nil {
-		return "", fmt.Errorf("failed to initialize authentication: %w", err)
+		return "", fmt.Errorf(
+			"failed to initialize authentication: %w. "+
+				"Make sure service account credentials are configured either in the provider configuration or via environment variables",
+			err,
+		)
 	}
 
 	// Type assert to access token functionality

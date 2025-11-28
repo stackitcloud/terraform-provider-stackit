@@ -28,12 +28,13 @@ const (
 )
 
 type EphemeralProviderData struct {
+	ProviderData
+
 	PrivateKey            string
 	PrivateKeyPath        string
 	ServiceAccountKey     string
 	ServiceAccountKeyPath string
 	TokenCustomEndpoint   string
-	EnableBetaResources   bool
 }
 
 type ProviderData struct {
