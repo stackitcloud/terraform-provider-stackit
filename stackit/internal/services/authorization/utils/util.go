@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -26,4 +27,21 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	}
 
 	return apiClient
+}
+
+// TypeConverter Helper to convert objects with equal JSON tags.
+func TypeConverter[R any](data any) (*R, error) {
+	var result R
+
+	b, err := json.Marshal(&data)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(b, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, err
 }

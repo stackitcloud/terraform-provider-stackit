@@ -18,6 +18,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	customRole "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/customrole"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
 	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
 	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
@@ -477,7 +478,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 // DataSources defines the data sources implemented in the provider.
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
+	dataSources := []func() datasource.DataSource{
 		alertGroup.NewAlertGroupDataSource,
 		cdn.NewDistributionDataSource,
 		cdnCustomDomain.NewCustomDomainDataSource,
@@ -545,6 +546,9 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		serviceAccount.NewServiceAccountDataSource,
 		skeCluster.NewClusterDataSource,
 	}
+	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
+
+	return dataSources
 }
 
 // Resources defines the resources implemented in the provider.
@@ -619,6 +623,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		skeKubeconfig.NewKubeconfigResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
+	resources = append(resources, customRole.NewCustomRoleResources()...)
 
 	return resources
 }
