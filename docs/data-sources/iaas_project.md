@@ -31,6 +31,6 @@ data "stackit_iaas_project" "example" {
 - `created_at` (String) Date-time when the project was created.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`".
 - `internet_access` (Boolean) Specifies if the project has internet_access
-- `state` (String, Deprecated) Specifies the state of the project.
-- `status` (String)
+- `state` (String, Deprecated) Specifies the status of the project.
+- `status` (String) Specifies the status of the project.
 - `updated_at` (String) Date-time when the project was last updated.
