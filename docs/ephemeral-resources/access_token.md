@@ -4,7 +4,7 @@ page_title: "stackit_access_token Ephemeral Resource - stackit"
 subcategory: ""
 description: |-
   Ephemeral resource that generates a short-lived STACKIT access token (JWT) using a service account key. A new token is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation. If a private key is not explicitly provided, the provider attempts to extract it from the service account key instead. Access tokens generated from service account keys expire after 60 minutes.
-  ~> Service account key credentials must be configured either in the STACKIT provider configuration or via environment variables (see example below). If any other authentication method is configured, this ephemeral resource generation will fail with an error.
+  ~> Service account key credentials must be configured either in the STACKIT provider configuration or via environment variables (see example below). If any other authentication method is configured, this ephemeral resource will fail with an error.
   ~> This ephemeral-resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
@@ -12,7 +12,7 @@ description: |-
 
 Ephemeral resource that generates a short-lived STACKIT access token (JWT) using a service account key. A new token is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation. If a private key is not explicitly provided, the provider attempts to extract it from the service account key instead. Access tokens generated from service account keys expire after 60 minutes.
 
-~> Service account key credentials must be configured either in the STACKIT provider configuration or via environment variables (see example below). If any other authentication method is configured, this ephemeral resource generation will fail with an error.
+~> Service account key credentials must be configured either in the STACKIT provider configuration or via environment variables (see example below). If any other authentication method is configured, this ephemeral resource will fail with an error.
 
 ~> This ephemeral-resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 

@@ -476,12 +476,12 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	// Copy service account, private key credentials and custom-token endpoint to support ephemeral access token generation
 	var ephemeralProviderData core.EphemeralProviderData
+	ephemeralProviderData.ProviderData = providerData
 	setStringField(providerConfig.ServiceAccountKey, func(v string) { ephemeralProviderData.ServiceAccountKey = v })
 	setStringField(providerConfig.ServiceAccountKeyPath, func(v string) { ephemeralProviderData.ServiceAccountKeyPath = v })
 	setStringField(providerConfig.PrivateKey, func(v string) { ephemeralProviderData.PrivateKey = v })
 	setStringField(providerConfig.PrivateKeyPath, func(v string) { ephemeralProviderData.PrivateKeyPath = v })
 	setStringField(providerConfig.TokenCustomEndpoint, func(v string) { ephemeralProviderData.TokenCustomEndpoint = v })
-	setBoolField(providerConfig.EnableBetaResources, func(v bool) { ephemeralProviderData.EnableBetaResources = v })
 	resp.EphemeralResourceData = ephemeralProviderData
 
 	providerData.Version = p.version
