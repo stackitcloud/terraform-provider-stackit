@@ -88,7 +88,7 @@ func TestGetAccessToken(t *testing.T) {
 		expected    string
 	}{
 		{
-			description: "should_return_token_when_service_account_key_passed_by_value",
+			description: "should return token when service account key passed by value",
 			cfgFactory: func() *config.Configuration {
 				return &config.Configuration{
 					ServiceAccountKey: testServiceAccountKey,
@@ -100,7 +100,7 @@ func TestGetAccessToken(t *testing.T) {
 			expected:    "mock_access_token",
 		},
 		{
-			description: "should_return_token_when_service_account_key_is_loaded_from_file_path",
+			description: "should return token when service account key is loaded from file path",
 			cfgFactory: func() *config.Configuration {
 				return &config.Configuration{
 					ServiceAccountKeyPath: "testdata/service_account.json",
@@ -112,7 +112,7 @@ func TestGetAccessToken(t *testing.T) {
 			expected:    "mock_access_token",
 		},
 		{
-			description: "should_fail_when_private_key_is_invalid",
+			description: "should fail when private key is invalid",
 			cfgFactory: func() *config.Configuration {
 				return &config.Configuration{
 					ServiceAccountKey: "invalid-json",
@@ -124,7 +124,7 @@ func TestGetAccessToken(t *testing.T) {
 			expected:    "",
 		},
 		{
-			description: "should_return_token_when_service_account_key_is_set_via_env",
+			description: "should return token when service account key is set via env",
 			setupEnv: func() {
 				_ = os.Setenv("STACKIT_SERVICE_ACCOUNT_KEY", testServiceAccountKey)
 			},
@@ -141,7 +141,7 @@ func TestGetAccessToken(t *testing.T) {
 			expected:    "mock_access_token",
 		},
 		{
-			description: "should_return_token_when_service_account_key_path_is_set_via_env",
+			description: "should return token when service account key path is set via env",
 			setupEnv: func() {
 				_ = os.Setenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH", "testdata/service_account.json")
 			},
@@ -158,7 +158,7 @@ func TestGetAccessToken(t *testing.T) {
 			expected:    "mock_access_token",
 		},
 		{
-			description: "should_return_token_when_private_key_is_set_via_env",
+			description: "should return token when private key is set via env",
 			setupEnv: func() {
 				_ = os.Setenv("STACKIT_PRIVATE_KEY", privateKey)
 			},
@@ -175,7 +175,7 @@ func TestGetAccessToken(t *testing.T) {
 			expected:    "mock_access_token",
 		},
 		{
-			description: "should_return_token_when_private_key_path_is_set_via_env",
+			description: "should return token when private key path is set via env",
 			setupEnv: func() {
 				// Write temp file and set env
 				tmpFile := writeTempPEMFile(t, privateKey)
@@ -194,7 +194,7 @@ func TestGetAccessToken(t *testing.T) {
 			expected:    "mock_access_token",
 		},
 		{
-			description: "should_fail_when_no_service_account_key_or_private_key_is_set",
+			description: "should fail when no service account key or private key is set",
 			cfgFactory: func() *config.Configuration {
 				return &config.Configuration{
 					TokenCustomUrl: mockServer.URL,
@@ -204,7 +204,7 @@ func TestGetAccessToken(t *testing.T) {
 			expected:    "",
 		},
 		{
-			description: "should_fail_when_no_service_account_key_or_private_key_is_set_via_env",
+			description: "should fail when no service account key or private key is set via env",
 			setupEnv: func() {
 				_ = os.Unsetenv("STACKIT_SERVICE_ACCOUNT_KEY")
 				_ = os.Unsetenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH")
