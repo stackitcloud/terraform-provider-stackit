@@ -70,7 +70,7 @@ func (e *accessTokenEphemeralResource) Schema(_ context.Context, _ ephemeral.Sch
 				"If a private key is not explicitly provided, the provider attempts to extract it from the service account key instead. "+
 				"Access tokens generated from service account keys expire after 60 minutes.",
 			"~> Service account key credentials must be configured either in the STACKIT provider configuration or via environment variables (see example below). "+
-				"If any other authentication method is configured, this ephemeral resource generation will fail with an error.",
+				"If any other authentication method is configured, this ephemeral resource will fail with an error.",
 		),
 		core.EphemeralResource,
 	)
