@@ -3,6 +3,7 @@ module github.com/stackitcloud/terraform-provider-stackit
 go 1.24.0
 
 require (
+	dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/authorization v0.0.0-20251126130857-9f2211a4c524
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
