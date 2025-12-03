@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -18,6 +19,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
 	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
 	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
@@ -97,7 +99,8 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces
 var (
-	_ provider.Provider = &Provider{}
+	_ provider.Provider                       = &Provider{}
+	_ provider.ProviderWithEphemeralResources = &Provider{}
 )
 
 // Provider is the provider implementation.
@@ -419,7 +422,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.Token, func(v string) { sdkConfig.Token = v })
 	setStringField(providerConfig.TokenCustomEndpoint, func(v string) { sdkConfig.TokenCustomUrl = v })
 
-	// Provider Data Configuration
 	setStringField(providerConfig.DefaultRegion, func(v string) { providerData.DefaultRegion = v })
 	setStringField(providerConfig.Region, func(v string) { providerData.Region = v }) // nolint:staticcheck // preliminary handling of deprecated attribute
 	setBoolField(providerConfig.EnableBetaResources, func(v bool) { providerData.EnableBetaResources = v })
@@ -471,6 +473,16 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	providerData.RoundTripper = roundTripper
 	resp.DataSourceData = providerData
 	resp.ResourceData = providerData
+
+	// Copy service account, private key credentials and custom-token endpoint to support ephemeral access token generation
+	var ephemeralProviderData core.EphemeralProviderData
+	ephemeralProviderData.ProviderData = providerData
+	setStringField(providerConfig.ServiceAccountKey, func(v string) { ephemeralProviderData.ServiceAccountKey = v })
+	setStringField(providerConfig.ServiceAccountKeyPath, func(v string) { ephemeralProviderData.ServiceAccountKeyPath = v })
+	setStringField(providerConfig.PrivateKey, func(v string) { ephemeralProviderData.PrivateKey = v })
+	setStringField(providerConfig.PrivateKeyPath, func(v string) { ephemeralProviderData.PrivateKeyPath = v })
+	setStringField(providerConfig.TokenCustomEndpoint, func(v string) { ephemeralProviderData.TokenCustomEndpoint = v })
+	resp.EphemeralResourceData = ephemeralProviderData
 
 	providerData.Version = p.version
 }
@@ -621,4 +633,11 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 
 	return resources
+}
+
+// EphemeralResources defines the ephemeral resources implemented in the provider.
+func (p *Provider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
+	return []func() ephemeral.EphemeralResource{
+		access_token.NewAccessTokenEphemeralResource,
+	}
 }

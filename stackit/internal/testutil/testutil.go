@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit"
 )
@@ -27,6 +28,18 @@ var (
 	// reattach.
 	TestAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
 		"stackit": providerserver.NewProtocol6WithError(stackit.New("test-version")()),
+	}
+
+	// TestEphemeralAccProtoV6ProviderFactories is used to instantiate a provider during
+	// acceptance testing. The factory function will be invoked for every Terraform
+	// CLI command executed to create a provider server to which the CLI can
+	// reattach.
+	//
+	// See the Terraform acceptance test documentation on ephemeral resources for more information:
+	// https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests/ephemeral-resources
+	TestEphemeralAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
+		"stackit": providerserver.NewProtocol6WithError(stackit.New("test-version")()),
+		"echo":    echoprovider.NewProviderServer(),
 	}
 
 	// E2ETestsEnabled checks if end-to-end tests should be run.

@@ -178,8 +178,22 @@ func ParseProviderData(ctx context.Context, providerData any, diags *diag.Diagno
 
 	stackitProviderData, ok := providerData.(core.ProviderData)
 	if !ok {
-		core.LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Expected configure type stackit.ProviderData, got %T", providerData))
+		core.LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Expected configure type core.ProviderData, got %T", providerData))
 		return core.ProviderData{}, false
+	}
+	return stackitProviderData, true
+}
+
+func ParseEphemeralProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (core.EphemeralProviderData, bool) {
+	// Prevent panic if the provider has not been configured.
+	if providerData == nil {
+		return core.EphemeralProviderData{}, false
+	}
+
+	stackitProviderData, ok := providerData.(core.EphemeralProviderData)
+	if !ok {
+		core.LogAndAddError(ctx, diags, "Error configuring API client", "Expected configure type core.EphemeralProviderData")
+		return core.EphemeralProviderData{}, false
 	}
 	return stackitProviderData, true
 }

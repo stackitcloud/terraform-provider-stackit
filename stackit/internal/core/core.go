@@ -16,8 +16,9 @@ import (
 type ResourceType string
 
 const (
-	Resource   ResourceType = "resource"
-	Datasource ResourceType = "datasource"
+	Resource          ResourceType = "resource"
+	Datasource        ResourceType = "datasource"
+	EphemeralResource ResourceType = "ephemeral-resource"
 
 	// Separator used for concatenation of TF-internal resource ID
 	Separator = ","
@@ -25,6 +26,16 @@ const (
 	ResourceRegionFallbackDocstring   = "Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level."
 	DatasourceRegionFallbackDocstring = "Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on datasource level."
 )
+
+type EphemeralProviderData struct {
+	ProviderData
+
+	PrivateKey            string
+	PrivateKeyPath        string
+	ServiceAccountKey     string
+	ServiceAccountKeyPath string
+	TokenCustomEndpoint   string
+}
 
 type ProviderData struct {
 	RoundTripper        http.RoundTripper
