@@ -17,30 +17,6 @@ locals {
   }
 }
 
-# Docs: https://registry.terraform.io/providers/magodo/restful/latest
-provider "restful" {
-  base_url = local.stackit_api_base_url
-
-  security = {
-    http = {
-      token = {
-        token = ephemeral.stackit_access_token.example.access_token
-      }
-    }
-  }
-}
-
-resource "restful_resource" "public_ip_restful" {
-  path = local.public_ip_path
-  body = local.public_ip_payload
-
-  read_path     = "$(path)/$(body.id)"
-  update_path   = "$(path)/$(body.id)"
-  update_method = "PATCH"
-  delete_path   = "$(path)/$(body.id)"
-  delete_method = "DELETE"
-}
-
 # Docs: https://registry.terraform.io/providers/Mastercard/restapi/latest
 provider "restapi" {
   uri                  = local.stackit_api_base_url
