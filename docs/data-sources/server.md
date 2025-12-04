@@ -38,7 +38,7 @@ data "stackit_server" "example" {
 - `keypair_name` (String) The name of the keypair used during server creation.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `launched_at` (String) Date-time when the server was launched
-- `machine_type` (String) Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/stackit/en/virtual-machine-flavors-75137231.html)
+- `machine_type` (String) Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/products/compute-engine/server/basics/machine-types/)
 - `name` (String) The name of the server.
 - `network_interfaces` (List of String) The IDs of network interfaces which should be attached to the server. Updating it will recreate the server.
 - `updated_at` (String) Date-time when the server was updated

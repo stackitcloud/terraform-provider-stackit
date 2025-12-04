@@ -43,7 +43,7 @@ import {
 - `description` (String) The description of the volume.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `name` (String) The name of the volume.
-- `performance_class` (String) The performance class of the volume. Possible values are documented in [Service plans BlockStorage](https://docs.stackit.cloud/stackit/en/service-plans-blockstorage-75137974.html#ServiceplansBlockStorage-CurrentlyavailableServicePlans%28performanceclasses%29)
+- `performance_class` (String) The performance class of the volume. Possible values are documented in [Service plans BlockStorage](https://docs.stackit.cloud/products/storage/block-storage/basics/service-plans/#currently-available-service-plans-performance-classes)
 - `size` (Number) The size of the volume in GB. It can only be updated to a larger value than the current size. Either `size` or `source` must be provided
 - `source` (Attributes) The source of the volume. It can be either a volume, an image, a snapshot or a backup. Either `size` or `source` must be provided (see [below for nested schema](#nestedatt--source))
 

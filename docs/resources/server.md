@@ -397,7 +397,7 @@ import {
 
 ### Required
 
-- `machine_type` (String) Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/stackit/en/virtual-machine-flavors-75137231.html)
+- `machine_type` (String) Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/products/compute-engine/server/basics/machine-types/)
 - `name` (String) The name of the server.
 - `project_id` (String) STACKIT project ID to which the server is associated.
 
