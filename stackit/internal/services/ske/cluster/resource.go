@@ -369,7 +369,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. " + SKEUpdateDoc,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					utils.UseStateForUnknownIf(hasKubernetesMinChanged, "sets `UseStateForUnknown` only if `kubernetes_min_version` has not changes"),
+					utils.UseStateForUnknownIf(hasKubernetesMinChanged, "sets `UseStateForUnknown` only if `kubernetes_min_version` has not changed"),
 				},
 			},
 			"egress_address_ranges": schema.ListAttribute{
