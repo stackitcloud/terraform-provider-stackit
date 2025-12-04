@@ -3,12 +3,12 @@
 page_title: "stackit_rabbitmq_credential Data Source - stackit"
 subcategory: ""
 description: |-
-  RabbitMQ credential data source schema. Must have a region specified in the provider configuration.
+  RabbitMQ credential data source schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_rabbitmq_credential (Data Source)
 
-RabbitMQ credential data source schema. Must have a `region` specified in the provider configuration.
+RabbitMQ credential data source schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

@@ -83,7 +83,7 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 // Schema defines the schema for the resource.
 func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":          "RabbitMQ credential resource schema. Must have a `region` specified in the provider configuration.",
+		"main":          "RabbitMQ credential resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credential_id`\".",
 		"credential_id": "The credential's ID.",
 		"instance_id":   "ID of the RabbitMQ instance.",

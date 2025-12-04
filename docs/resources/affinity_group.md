@@ -3,7 +3,7 @@
 page_title: "stackit_affinity_group Resource - stackit"
 subcategory: ""
 description: |-
-  Affinity Group schema. Must have a region specified in the provider configuration.
+  Affinity Group schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
   Usage with server
   
   resource "stackit_affinity_group" "affinity-group" {
@@ -39,7 +39,7 @@ description: |-
 
 # stackit_affinity_group (Resource)
 
-Affinity Group schema. Must have a `region` specified in the provider configuration.
+Affinity Group schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 
 

@@ -65,7 +65,7 @@ func (d *projectDataSource) Metadata(_ context.Context, req datasource.MetadataR
 // Schema defines the schema for the datasource.
 func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":            "Project details. Must have a `region` specified in the provider configuration.",
+		"main":            "Project details. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`\".",
 		"project_id":      "STACKIT project ID.",
 		"area_id":         "The area ID to which the project belongs to.",

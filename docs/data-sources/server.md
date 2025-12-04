@@ -3,12 +3,12 @@
 page_title: "stackit_server Data Source - stackit"
 subcategory: ""
 description: |-
-  Server datasource schema. Must have a region specified in the provider configuration.
+  Server datasource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_server (Data Source)
 
-Server datasource schema. Must have a `region` specified in the provider configuration.
+Server datasource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

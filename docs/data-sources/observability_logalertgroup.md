@@ -3,12 +3,12 @@
 page_title: "stackit_observability_logalertgroup Data Source - stackit"
 subcategory: ""
 description: |-
-  Observability log alert group datasource schema. Used to create alerts based on logs (Loki). Must have a region specified in the provider configuration.
+  Observability log alert group datasource schema. Used to create alerts based on logs (Loki). Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_observability_logalertgroup (Data Source)
 
-Observability log alert group datasource schema. Used to create alerts based on logs (Loki). Must have a `region` specified in the provider configuration.
+Observability log alert group datasource schema. Used to create alerts based on logs (Loki). Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

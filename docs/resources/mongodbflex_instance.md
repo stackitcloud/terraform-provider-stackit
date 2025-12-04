@@ -3,12 +3,12 @@
 page_title: "stackit_mongodbflex_instance Resource - stackit"
 subcategory: ""
 description: |-
-  MongoDB Flex instance resource schema. Must have a region specified in the provider configuration.
+  MongoDB Flex instance resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_mongodbflex_instance (Resource)
 
-MongoDB Flex instance resource schema. Must have a `region` specified in the provider configuration.
+MongoDB Flex instance resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

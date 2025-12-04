@@ -109,7 +109,7 @@ func (r *databaseResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *databaseResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "Postgres Flex database resource schema. Must have a `region` specified in the provider configuration.",
+		"main":        "Postgres Flex database resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`,`database_id`\".",
 		"database_id": "Database ID.",
 		"instance_id": "ID of the Postgres Flex instance.",
