@@ -368,6 +368,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"kubernetes_version_used": schema.StringAttribute{
 				Description: "Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. " + SKEUpdateDoc,
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					utils.UseStateForUnknownIf(hasKubernetesMinChanged, "sets `UseStateForUnknown` only if `kubernetes_min_version` has not changed"),
+				},
 			},
 			"egress_address_ranges": schema.ListAttribute{
 				Description: "The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.",
@@ -454,6 +457,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						"os_version_used": schema.StringAttribute{
 							Description: "Full OS image version used. For example, if 3815.2 was set in `os_version_min`, this value may result to 3815.2.2. " + SKEUpdateDoc,
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								utils.UseStateForUnknownIf(hasOsVersionMinChanged, "sets `UseStateForUnknown` only if `os_version_min` has not changed"),
+							},
 						},
 						"volume_type": schema.StringAttribute{
 							Description: "Specifies the volume type. Defaults to `storage_premium_perf1`.",
@@ -2103,6 +2109,52 @@ func getLatestSupportedKubernetesVersion(versions []ske.KubernetesVersion) (*str
 		return nil, fmt.Errorf("no supported Kubernetes version found")
 	}
 	return latestVersion, nil
+}
+
+func hasKubernetesMinChanged(ctx context.Context, request planmodifier.StringRequest, response *utils.UseStateForUnknownFuncResponse) { // nolint:gocritic // function signature required by Terraform
+	dependencyPath := path.Root("kubernetes_version_min")
+
+	var minVersionPlan types.String
+	diags := request.Plan.GetAttribute(ctx, dependencyPath, &minVersionPlan)
+	response.Diagnostics.Append(diags...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	var minVersionState types.String
+	diags = request.State.GetAttribute(ctx, dependencyPath, &minVersionState)
+	response.Diagnostics.Append(diags...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	if minVersionState == minVersionPlan {
+		response.UseStateForUnknown = true
+		return
+	}
+}
+
+func hasOsVersionMinChanged(ctx context.Context, request planmodifier.StringRequest, response *utils.UseStateForUnknownFuncResponse) { // nolint:gocritic // function signature required by Terraform
+	dependencyPath := request.Path.ParentPath().AtName("os_version_min")
+
+	var minVersionPlan types.String
+	diags := request.Plan.GetAttribute(ctx, dependencyPath, &minVersionPlan)
+	response.Diagnostics.Append(diags...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	var minVersionState types.String
+	diags = request.State.GetAttribute(ctx, dependencyPath, &minVersionState)
+	response.Diagnostics.Append(diags...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	if minVersionState == minVersionPlan {
+		response.UseStateForUnknown = true
+		return
+	}
 }
 
 func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
