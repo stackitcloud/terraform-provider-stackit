@@ -16,7 +16,7 @@ Before you begin, make sure you have the following:
 
 * A **STACKIT project** and a user account with the necessary permissions for the CDN.
 * A **Service Account Key**: you can read about creating one here: [Create a Service Account Key
-](https://docs.stackit.cloud/stackit/en/create-a-service-account-key-175112456.html)
+](https://docs.stackit.cloud/platform/access-and-identity/service-accounts/how-tos/manage-service-account-keys/)
 
 ---
 
