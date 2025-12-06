@@ -31,6 +31,9 @@ var (
 
 	//go:embed testdata/resource-max.tf
 	resourceMax string
+
+	//go:embed testdata/provider-options.tf
+	dataSourceProviderOptions string
 )
 
 var skeProviderOptions = NewSkeProviderOptions("flatcar")
@@ -89,6 +92,10 @@ var testConfigVarsMax = config.Variables{
 	"refresh_before":                                   config.StringVariable("600"),
 	"dns_zone_name":                                    config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha)),
 	"dns_name":                                         config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha) + ".runs.onstackit.cloud"),
+}
+
+var testConfigDatasource = config.Variables{
+	"region": config.StringVariable(testutil.Region),
 }
 
 func configVarsMinUpdated() config.Variables {
@@ -451,6 +458,41 @@ func TestAccSKEMax(t *testing.T) {
 				),
 			},
 			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccProviderOption(t *testing.T) {
+	t.Logf("TestAccProviderOption")
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				ConfigVariables: testConfigDatasource,
+				Config:          testutil.SKEProviderConfig() + "\n" + dataSourceProviderOptions,
+				Check: resource.ComposeTestCheckFunc(
+					// Availability Zones
+					resource.TestCheckResourceAttrSet("data.stackit_ske_provider_options.this", "availability_zones.0"),
+
+					// Volume Types
+					resource.TestCheckResourceAttrSet("data.stackit_ske_provider_options.this", "volume_types.0"),
+
+					// Kubernetes Versions
+					resource.TestCheckResourceAttrSet("data.stackit_ske_provider_options.this", "kubernetes_versions.0.version"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_provider_options.this", "kubernetes_versions.0.state"),
+
+					// Machine Images
+					resource.TestCheckResourceAttrSet("data.stackit_ske_provider_options.this", "machine_images.0.name"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_provider_options.this", "machine_images.0.versions.0.state"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_provider_options.this", "machine_images.0.versions.0.version"),
+
+					// Machine Types
+					resource.TestCheckResourceAttrSet("data.stackit_ske_provider_options.this", "machine_types.0.name"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_provider_options.this", "machine_types.0.cpu"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_provider_options.this", "machine_types.0.gpu"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_provider_options.this", "machine_types.0.memory"),
+				),
+			},
 		},
 	})
 }
