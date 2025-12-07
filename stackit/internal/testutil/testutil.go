@@ -91,8 +91,9 @@ var (
 	ServerUpdateCustomEndpoint    = os.Getenv("TF_ACC_SERVER_UPDATE_CUSTOM_ENDPOINT")
 	SFSCustomEndpoint             = os.Getenv("TF_ACC_SFS_CUSTOM_ENDPOINT")
 	ServiceAccountCustomEndpoint  = os.Getenv("TF_ACC_SERVICE_ACCOUNT_CUSTOM_ENDPOINT")
-	TokenCustomEndpoint           = os.Getenv("TF_ACC_TOKEN_CUSTOM_ENDPOINT")
 	SKECustomEndpoint             = os.Getenv("TF_ACC_SKE_CUSTOM_ENDPOINT")
+	IntakeCustomEndpoint          = os.Getenv("TF_ACC_INTAKE_CUSTOM_ENDPOINT")
+	TokenCustomEndpoint           = os.Getenv("TF_ACC_TOKEN_CUSTOM_ENDPOINT")
 )
 
 // Provider config helper functions

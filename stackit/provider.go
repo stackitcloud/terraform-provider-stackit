@@ -57,6 +57,7 @@ import (
 	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
 	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
 	iaasVolumeAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volumeattach"
+	intakeRunner "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/intake/runner"
 	kmsKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/key"
 	kmsKeyRing "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/keyring"
 	kmsWrappingKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/wrapping-key"
@@ -155,6 +156,7 @@ type providerModel struct {
 	EdgeCloudCustomEndpoint         types.String `tfsdk:"edgecloud_custom_endpoint"`
 	GitCustomEndpoint               types.String `tfsdk:"git_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
+	IntakeCustomEndpoint            types.String `tfsdk:"intake_custom_endpoint"`
 	KmsCustomEndpoint               types.String `tfsdk:"kms_custom_endpoint"`
 	LoadBalancerCustomEndpoint      types.String `tfsdk:"loadbalancer_custom_endpoint"`
 	LogMeCustomEndpoint             types.String `tfsdk:"logme_custom_endpoint"`
@@ -308,6 +310,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"iaas_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["iaas_custom_endpoint"],
+			},
+			"intake_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["intake_custom_endpoint"],
 			},
 			"kms_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -464,6 +470,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.EdgeCloudCustomEndpoint, func(v string) { providerData.EdgeCloudCustomEndpoint = v })
 	setStringField(providerConfig.GitCustomEndpoint, func(v string) { providerData.GitCustomEndpoint = v })
 	setStringField(providerConfig.IaaSCustomEndpoint, func(v string) { providerData.IaaSCustomEndpoint = v })
+	setStringField(providerConfig.IntakeCustomEndpoint, func(v string) { providerData.IntakeCustomEndpoint = v })
 	setStringField(providerConfig.KmsCustomEndpoint, func(v string) { providerData.KMSCustomEndpoint = v })
 	setStringField(providerConfig.LoadBalancerCustomEndpoint, func(v string) { providerData.LoadBalancerCustomEndpoint = v })
 	setStringField(providerConfig.LogMeCustomEndpoint, func(v string) { providerData.LogMeCustomEndpoint = v })
@@ -639,6 +646,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
 		iaasRoutingTable.NewRoutingTableResource,
 		iaasRoutingTableRoute.NewRoutingTableRouteResource,
+		intakeRunner.NewRunnerResource,
 		kmsKey.NewKeyResource,
 		kmsKeyRing.NewKeyRingResource,
 		kmsWrappingKey.NewWrappingKeyResource,
