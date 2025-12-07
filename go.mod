@@ -17,6 +17,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v0.31.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.21-alpha
+	github.com/stackitcloud/stackit-sdk-go/services/intake v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.0.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.1
