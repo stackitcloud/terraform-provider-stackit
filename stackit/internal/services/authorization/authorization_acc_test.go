@@ -33,6 +33,9 @@ var invalidRole string
 //go:embed testfiles/organization-role.tf
 var organizationRole string
 
+//go:embed testfiles/folder-role.tf
+var folderRole string
+
 var testConfigVars = config.Variables{
 	"project_id":           config.StringVariable(testutil.ProjectId),
 	"test_service_account": config.StringVariable(testutil.TestProjectServiceAccountEmail),
@@ -72,6 +75,11 @@ func TestAccProjectRoleAssignmentResource(t *testing.T) {
 				// Assign a resource to an organization
 				ConfigVariables: testConfigVars,
 				Config:          testutil.AuthorizationProviderConfig() + prerequisites + organizationRole,
+			},
+			{
+				// Assign a resource to a folder
+				ConfigVariables: testConfigVars,
+				Config:          testutil.AuthorizationProviderConfig() + prerequisites + folderRole,
 			},
 			{
 				// The Service Account inherits owner permissions for the project from the organization. Check if you can still assign owner permissions on the project explicitly

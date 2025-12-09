@@ -30,6 +30,7 @@ import (
 var roleTargets = []string{
 	"project",
 	"organization",
+	"folder",
 }
 
 // Ensure the implementation satisfies the expected interfaces.
