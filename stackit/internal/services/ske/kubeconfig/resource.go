@@ -87,7 +87,7 @@ func (r *kubeconfigResource) Configure(ctx context.Context, req resource.Configu
 // Schema defines the schema for the resource.
 func (r *kubeconfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":           "SKE kubeconfig resource schema. Must have a `region` specified in the provider configuration.",
+		"main":           "SKE kubeconfig resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		"id":             "Terraform's internal resource ID. It is structured as \"`project_id`,`cluster_name`,`kube_config_id`\".",
 		"kube_config_id": "Internally generated UUID to identify a kubeconfig resource in Terraform, since the SKE API doesnt return a kubeconfig identifier",
 		"cluster_name":   "Name of the SKE cluster.",

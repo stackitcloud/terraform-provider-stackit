@@ -110,7 +110,7 @@ func (a *alertGroupResource) Configure(ctx context.Context, req resource.Configu
 // Schema defines the schema for the resource.
 func (a *alertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Observability alert group resource schema. Used to create alerts based on metrics (Thanos). Must have a `region` specified in the provider configuration.",
+		Description: "Observability alert group resource schema. Used to create alerts based on metrics (Thanos). Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],

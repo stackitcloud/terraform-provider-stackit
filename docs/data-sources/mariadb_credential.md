@@ -3,12 +3,12 @@
 page_title: "stackit_mariadb_credential Data Source - stackit"
 subcategory: ""
 description: |-
-  MariaDB credential data source schema. Must have a region specified in the provider configuration.
+  MariaDB credential data source schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_mariadb_credential (Data Source)
 
-MariaDB credential data source schema. Must have a `region` specified in the provider configuration.
+MariaDB credential data source schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

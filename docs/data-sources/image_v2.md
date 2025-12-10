@@ -3,7 +3,7 @@
 page_title: "stackit_image_v2 Data Source - stackit"
 subcategory: ""
 description: |-
-  Image datasource schema. Must have a region specified in the provider configuration.
+  Image datasource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
   ~> Important: When using the name, name_regex, or filter attributes to select images dynamically, be aware that image IDs may change frequently. Each OS patch or update results in a new unique image ID. If this data source is used to populate fields like boot_volume.source_id in a server resource, it may cause Terraform to detect changes and recreate the associated resource.
   To avoid unintended updates or resource replacements:
   Prefer using a static image_id to pin a specific image version.If you accept automatic image updates but wish to suppress resource changes, use a lifecycle block to ignore relevant changes. For example:
@@ -29,7 +29,7 @@ description: |-
 
 # stackit_image_v2 (Data Source)
 
-Image datasource schema. Must have a `region` specified in the provider configuration.
+Image datasource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ~> Important: When using the `name`, `name_regex`, or `filter` attributes to select images dynamically, be aware that image IDs may change frequently. Each OS patch or update results in a new unique image ID. If this data source is used to populate fields like `boot_volume.source_id` in a server resource, it may cause Terraform to detect changes and recreate the associated resource.
 

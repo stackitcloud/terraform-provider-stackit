@@ -3,13 +3,13 @@
 page_title: "stackit_ske_cluster Resource - stackit"
 subcategory: ""
 description: |-
-  SKE Cluster Resource schema. Must have a region specified in the provider configuration.
+  SKE Cluster Resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
   -> When updating node_pools of a stackit_ske_cluster, the Terraform plan might appear incorrect as it matches the node pools by index rather than by name. However, the SKE API correctly identifies node pools by name and applies the intended changes. Please review your changes carefully to ensure the correct configuration will be applied.
 ---
 
 # stackit_ske_cluster (Resource)
 
-SKE Cluster Resource schema. Must have a `region` specified in the provider configuration.
+SKE Cluster Resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 -> When updating `node_pools` of a `stackit_ske_cluster`, the Terraform plan might appear incorrect as it matches the node pools by index rather than by name. However, the SKE API correctly identifies node pools by name and applies the intended changes. Please review your changes carefully to ensure the correct configuration will be applied.
 

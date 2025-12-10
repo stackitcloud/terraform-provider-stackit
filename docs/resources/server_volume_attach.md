@@ -3,12 +3,12 @@
 page_title: "stackit_server_volume_attach Resource - stackit"
 subcategory: ""
 description: |-
-  Volume attachment resource schema. Attaches a volume to a server. Must have a region specified in the provider configuration.
+  Volume attachment resource schema. Attaches a volume to a server. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_server_volume_attach (Resource)
 
-Volume attachment resource schema. Attaches a volume to a server. Must have a `region` specified in the provider configuration.
+Volume attachment resource schema. Attaches a volume to a server. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

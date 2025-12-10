@@ -65,7 +65,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 	servicePlanOptions := []string{"p10", "p50", "p250", "p750"}
 
 	descriptions := map[string]string{
-		"main":                                  "Load Balancer data source schema. Must have a `region` specified in the provider configuration.",
+		"main":                                  "Load Balancer data source schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.",
 		"id":                                    "Terraform's internal resource ID. It is structured as \"`project_id`\",\"region\",\"`name`\".",
 		"project_id":                            "STACKIT project ID to which the Load Balancer is associated.",
 		"external_address":                      "External Load Balancer IP address where this Load Balancer is exposed.",

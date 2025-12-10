@@ -3,12 +3,12 @@
 page_title: "stackit_security_group_rule Data Source - stackit"
 subcategory: ""
 description: |-
-  Security group datasource schema. Must have a region specified in the provider configuration.
+  Security group datasource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_security_group_rule (Data Source)
 
-Security group datasource schema. Must have a `region` specified in the provider configuration.
+Security group datasource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 

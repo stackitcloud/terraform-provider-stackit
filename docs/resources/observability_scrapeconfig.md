@@ -3,12 +3,12 @@
 page_title: "stackit_observability_scrapeconfig Resource - stackit"
 subcategory: ""
 description: |-
-  Observability scrape config resource schema. Must have a region specified in the provider configuration.
+  Observability scrape config resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
 ---
 
 # stackit_observability_scrapeconfig (Resource)
 
-Observability scrape config resource schema. Must have a `region` specified in the provider configuration.
+Observability scrape config resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
 
 ## Example Usage
 
