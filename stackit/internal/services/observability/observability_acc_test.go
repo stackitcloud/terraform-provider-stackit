@@ -9,17 +9,15 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
-
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 )
 
 //go:embed testdata/resource-min.tf
@@ -47,6 +45,8 @@ var testConfigVarsMin = config.Variables{
 	"scrapeconfig_name":         config.StringVariable(fmt.Sprintf("tf-acc-sc%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"scrapeconfig_metrics_path": config.StringVariable("/metrics"),
 	"scrapeconfig_targets_url":  config.StringVariable("www.y97xyrrocx2gsxx.de"),
+	"http_check_url":            config.StringVariable("https://www.stackit.de"),
+	"cert_check_source":         config.StringVariable("tcp://stackit.de:443"),
 }
 
 var testConfigVarsMax = config.Variables{
@@ -123,12 +123,16 @@ var testConfigVarsMax = config.Variables{
 	"scrapeconfig_timeout":           config.StringVariable("2m"),
 	"scrapeconfig_auth_username":     config.StringVariable("username"),
 	"scrapeconfig_auth_password":     config.StringVariable("password"),
+	"http_check_url":                 config.StringVariable("https://www.stackit.de"),
+	"cert_check_source":              config.StringVariable("tcp://stackit.de:443"),
 }
 
 func configVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(tempConfig, testConfigVarsMin)
 	tempConfig["alert_rule_name"] = config.StringVariable("alert1-updated")
+	tempConfig["http_check_url"] = config.StringVariable("https://docs.api.stackit.cloud")
+	tempConfig["cert_check_source"] = config.StringVariable("tcp://docs.api.stackit.cloud:443")
 	return tempConfig
 }
 
@@ -144,6 +148,8 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig["ms_teams"] = config.StringVariable("false")
 	tempConfig["google_chat"] = config.StringVariable("true")
 	tempConfig["matchers"] = config.StringVariable("instance =~ \"my.*\"")
+	tempConfig["http_check_url"] = config.StringVariable("https://docs.api.stackit.cloud")
+	tempConfig["cert_check_source"] = config.StringVariable("tcp://docs.api.stackit.cloud:443")
 	return tempConfig
 }
 
@@ -155,7 +161,7 @@ func TestAccResourceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.ObservabilityProviderConfig() + resourceMinConfig,
+				Config:          testutil.ObservabilityProviderConfigBetaEnabled() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -222,6 +228,26 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "name", testutil.ConvertConfigVariable(testConfigVarsMin["logalertgroup_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "rules.0.alert", testutil.ConvertConfigVariable(testConfigVarsMin["logalertgroup_alert"])),
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "rules.0.expression", logalertgroup_expression),
+
+					// http_check
+					resource.TestCheckResourceAttrSet("stackit_observability_http_check.httpcheck", "http_check_id"),
+					resource.TestCheckResourceAttrSet("stackit_observability_http_check.httpcheck", "id"),
+					resource.TestCheckResourceAttr("stackit_observability_http_check.httpcheck", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_http_check.httpcheck", "instance_id",
+					),
+					resource.TestCheckResourceAttr("stackit_observability_http_check.httpcheck", "url", testutil.ConvertConfigVariable(testConfigVarsMin["http_check_url"])),
+
+					// cert_check
+					resource.TestCheckResourceAttrSet("stackit_observability_cert_check.certcheck", "cert_check_id"),
+					resource.TestCheckResourceAttrSet("stackit_observability_cert_check.certcheck", "id"),
+					resource.TestCheckResourceAttr("stackit_observability_cert_check.certcheck", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_cert_check.certcheck", "instance_id",
+					),
+					resource.TestCheckResourceAttr("stackit_observability_cert_check.certcheck", "source", testutil.ConvertConfigVariable(testConfigVarsMin["cert_check_source"])),
 				),
 			},
 			// Data source
@@ -252,8 +278,20 @@ func TestAccResourceMin(t *testing.T) {
 					  instance_id = stackit_observability_logalertgroup.logalertgroup.instance_id
 					  name        = stackit_observability_logalertgroup.logalertgroup.name
 					}
+
+					data "stackit_observability_http_check" "httpcheck" {
+					  project_id  = stackit_observability_http_check.httpcheck.project_id
+					  instance_id = stackit_observability_http_check.httpcheck.instance_id
+					  http_check_id = stackit_observability_http_check.httpcheck.http_check_id
+					}
+
+					data "stackit_observability_cert_check" "certcheck" {
+					  project_id  = stackit_observability_cert_check.certcheck.project_id
+					  instance_id = stackit_observability_cert_check.certcheck.instance_id
+					  cert_check_id = stackit_observability_cert_check.certcheck.cert_check_id
+					}
 					`,
-					testutil.ObservabilityProviderConfig()+resourceMinConfig,
+					testutil.ObservabilityProviderConfigBetaEnabled()+resourceMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -308,6 +346,26 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_observability_logalertgroup.logalertgroup", "name", testutil.ConvertConfigVariable(testConfigVarsMin["logalertgroup_name"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_logalertgroup.logalertgroup", "rules.0.alert", testutil.ConvertConfigVariable(testConfigVarsMin["logalertgroup_alert"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_logalertgroup.logalertgroup", "rules.0.expression", logalertgroup_expression),
+
+					// http_check
+					resource.TestCheckResourceAttrSet("data.stackit_observability_http_check.httpcheck", "http_check_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_http_check.httpcheck", "id"),
+					resource.TestCheckResourceAttr("data.stackit_observability_http_check.httpcheck", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"data.stackit_observability_http_check.httpcheck", "instance_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_observability_http_check.httpcheck", "url", testutil.ConvertConfigVariable(testConfigVarsMin["http_check_url"])),
+
+					// cert_check
+					resource.TestCheckResourceAttrSet("data.stackit_observability_cert_check.certcheck", "cert_check_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_cert_check.certcheck", "id"),
+					resource.TestCheckResourceAttr("data.stackit_observability_cert_check.certcheck", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"data.stackit_observability_cert_check.certcheck", "instance_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_observability_cert_check.certcheck", "source", testutil.ConvertConfigVariable(testConfigVarsMin["cert_check_source"])),
 				),
 			},
 			// Import 1
@@ -395,10 +453,54 @@ func TestAccResourceMin(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
+			// Import 5
+			{
+				ConfigVariables: testConfigVarsMin,
+				ResourceName:    "stackit_observability_http_check.httpcheck",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_observability_http_check.httpcheck"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_observability_http_check.httpcheck")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					httpCheckId, ok := r.Primary.Attributes["http_check_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, httpCheckId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Import 6
+			{
+				ConfigVariables: testConfigVarsMin,
+				ResourceName:    "stackit_observability_cert_check.certcheck",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_observability_cert_check.certcheck"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_observability_cert_check.certcheck")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					certCheckId, ok := r.Primary.Attributes["cert_check_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, certCheckId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 			// Update
 			{
 				ConfigVariables: configVarsMinUpdated(),
-				Config:          testutil.ObservabilityProviderConfig() + resourceMinConfig,
+				Config:          testutil.ObservabilityProviderConfigBetaEnabled() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -465,6 +567,26 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "name", testutil.ConvertConfigVariable(testConfigVarsMin["logalertgroup_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "rules.0.alert", testutil.ConvertConfigVariable(testConfigVarsMin["logalertgroup_alert"])),
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "rules.0.expression", logalertgroup_expression),
+
+					// http_check
+					resource.TestCheckResourceAttrSet("stackit_observability_http_check.httpcheck", "http_check_id"),
+					resource.TestCheckResourceAttrSet("stackit_observability_http_check.httpcheck", "id"),
+					resource.TestCheckResourceAttr("stackit_observability_http_check.httpcheck", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_http_check.httpcheck", "instance_id",
+					),
+					resource.TestCheckResourceAttr("stackit_observability_http_check.httpcheck", "url", testutil.ConvertConfigVariable(configVarsMinUpdated()["http_check_url"])),
+
+					// cert_check
+					resource.TestCheckResourceAttrSet("stackit_observability_cert_check.certcheck", "cert_check_id"),
+					resource.TestCheckResourceAttrSet("stackit_observability_cert_check.certcheck", "id"),
+					resource.TestCheckResourceAttr("stackit_observability_cert_check.certcheck", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_cert_check.certcheck", "instance_id",
+					),
+					resource.TestCheckResourceAttr("stackit_observability_cert_check.certcheck", "source", testutil.ConvertConfigVariable(configVarsMinUpdated()["cert_check_source"])),
 				),
 			},
 		},
@@ -479,7 +601,7 @@ func TestAccResourceMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          testutil.ObservabilityProviderConfig() + resourceMaxConfig,
+				Config:          testutil.ObservabilityProviderConfigBetaEnabled() + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -617,6 +739,26 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "rules.0.labels.label1", testutil.ConvertConfigVariable(testConfigVarsMax["logalertgroup_label"])),
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "rules.0.annotations.annotation1", testutil.ConvertConfigVariable(testConfigVarsMax["logalertgroup_annotation"])),
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "interval", testutil.ConvertConfigVariable(testConfigVarsMax["logalertgroup_interval"])),
+
+					// http_check
+					resource.TestCheckResourceAttrSet("stackit_observability_http_check.httpcheck", "http_check_id"),
+					resource.TestCheckResourceAttrSet("stackit_observability_http_check.httpcheck", "id"),
+					resource.TestCheckResourceAttr("stackit_observability_http_check.httpcheck", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_http_check.httpcheck", "instance_id",
+					),
+					resource.TestCheckResourceAttr("stackit_observability_http_check.httpcheck", "url", testutil.ConvertConfigVariable(testConfigVarsMax["http_check_url"])),
+
+					// cert_check
+					resource.TestCheckResourceAttrSet("stackit_observability_cert_check.certcheck", "cert_check_id"),
+					resource.TestCheckResourceAttrSet("stackit_observability_cert_check.certcheck", "id"),
+					resource.TestCheckResourceAttr("stackit_observability_cert_check.certcheck", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_cert_check.certcheck", "instance_id",
+					),
+					resource.TestCheckResourceAttr("stackit_observability_cert_check.certcheck", "source", testutil.ConvertConfigVariable(testConfigVarsMax["cert_check_source"])),
 				),
 			},
 			// Data source
@@ -647,8 +789,20 @@ func TestAccResourceMax(t *testing.T) {
 					  instance_id = stackit_observability_logalertgroup.logalertgroup.instance_id
 					  name        = stackit_observability_logalertgroup.logalertgroup.name
 					}
+
+					data "stackit_observability_http_check" "httpcheck" {
+					  project_id  = stackit_observability_http_check.httpcheck.project_id
+					  instance_id = stackit_observability_http_check.httpcheck.instance_id
+					  http_check_id = stackit_observability_http_check.httpcheck.http_check_id
+					}
+
+					data "stackit_observability_cert_check" "certcheck" {
+					  project_id  = stackit_observability_cert_check.certcheck.project_id
+					  instance_id = stackit_observability_cert_check.certcheck.instance_id
+					  cert_check_id = stackit_observability_cert_check.certcheck.cert_check_id
+					}
 					`,
-					testutil.ObservabilityProviderConfig()+resourceMaxConfig,
+					testutil.ObservabilityProviderConfigBetaEnabled()+resourceMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -783,6 +937,26 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "rules.0.labels.label1", testutil.ConvertConfigVariable(testConfigVarsMax["logalertgroup_label"])),
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "rules.0.annotations.annotation1", testutil.ConvertConfigVariable(testConfigVarsMax["logalertgroup_annotation"])),
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "interval", testutil.ConvertConfigVariable(testConfigVarsMax["logalertgroup_interval"])),
+
+					// http_check
+					resource.TestCheckResourceAttrSet("data.stackit_observability_http_check.httpcheck", "http_check_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_http_check.httpcheck", "id"),
+					resource.TestCheckResourceAttr("data.stackit_observability_http_check.httpcheck", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"data.stackit_observability_http_check.httpcheck", "instance_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_observability_http_check.httpcheck", "url", testutil.ConvertConfigVariable(testConfigVarsMax["http_check_url"])),
+
+					// cert_check
+					resource.TestCheckResourceAttrSet("data.stackit_observability_cert_check.certcheck", "cert_check_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_cert_check.certcheck", "id"),
+					resource.TestCheckResourceAttr("data.stackit_observability_cert_check.certcheck", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"data.stackit_observability_cert_check.certcheck", "instance_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_observability_cert_check.certcheck", "source", testutil.ConvertConfigVariable(testConfigVarsMax["cert_check_source"])),
 				),
 			},
 			// Import 1
@@ -874,10 +1048,54 @@ func TestAccResourceMax(t *testing.T) {
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"alert_config.global.smtp_auth_identity", "alert_config.global.smtp_auth_password", "alert_config.global.smtp_auth_username", "alert_config.global.smtp_smart_host"},
 			},
+			// Import 5
+			{
+				ConfigVariables: testConfigVarsMax,
+				ResourceName:    "stackit_observability_http_check.httpcheck",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_observability_http_check.httpcheck"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_observability_http_check.httpcheck")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					httpCheckId, ok := r.Primary.Attributes["http_check_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, httpCheckId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Import 6
+			{
+				ConfigVariables: testConfigVarsMax,
+				ResourceName:    "stackit_observability_cert_check.certcheck",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_observability_cert_check.certcheck"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_observability_cert_check.certcheck")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					certCheckId, ok := r.Primary.Attributes["cert_check_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, certCheckId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 			// Update
 			{
 				ConfigVariables: configVarsMaxUpdated(),
-				Config:          testutil.ObservabilityProviderConfig() + resourceMaxConfig,
+				Config:          testutil.ObservabilityProviderConfigBetaEnabled() + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -1015,6 +1233,26 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "rules.0.labels.label1", testutil.ConvertConfigVariable(testConfigVarsMax["logalertgroup_label"])),
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "rules.0.annotations.annotation1", testutil.ConvertConfigVariable(testConfigVarsMax["logalertgroup_annotation"])),
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "interval", testutil.ConvertConfigVariable(configVarsMaxUpdated()["logalertgroup_interval"])),
+
+					// http_check
+					resource.TestCheckResourceAttrSet("stackit_observability_http_check.httpcheck", "http_check_id"),
+					resource.TestCheckResourceAttrSet("stackit_observability_http_check.httpcheck", "id"),
+					resource.TestCheckResourceAttr("stackit_observability_http_check.httpcheck", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_http_check.httpcheck", "instance_id",
+					),
+					resource.TestCheckResourceAttr("stackit_observability_http_check.httpcheck", "url", testutil.ConvertConfigVariable(configVarsMaxUpdated()["http_check_url"])),
+
+					// cert_check
+					resource.TestCheckResourceAttrSet("stackit_observability_cert_check.certcheck", "cert_check_id"),
+					resource.TestCheckResourceAttrSet("stackit_observability_cert_check.certcheck", "id"),
+					resource.TestCheckResourceAttr("stackit_observability_cert_check.certcheck", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_cert_check.certcheck", "instance_id",
+					),
+					resource.TestCheckResourceAttr("stackit_observability_cert_check.certcheck", "source", testutil.ConvertConfigVariable(configVarsMaxUpdated()["cert_check_source"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
