@@ -25,7 +25,7 @@ generate-docs:
 	@$(SCRIPTS_BASE)/tfplugindocs.sh
 
 build:
-	@go build -o bin/terraform-provider-stackit
+	@go build -o bin/terraform-provider-stackitalpha
 
 fmt:
 	@gofmt -s -w .

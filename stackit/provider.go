@@ -75,6 +75,7 @@ import (
 	postgresFlexDatabase "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/database"
 	postgresFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/instance"
 	postgresFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/user"
+	postgresFlexAlphaInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflexa/instance"
 	rabbitMQCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/credential"
 	rabbitMQInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/instance"
 	redisCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/credential"
@@ -118,7 +119,7 @@ func New(version string) func() provider.Provider {
 }
 
 func (p *Provider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "stackit"
+	resp.TypeName = "stackitalpha"
 	resp.Version = p.version
 }
 
@@ -609,6 +610,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		openSearchCredential.NewCredentialResource,
 		postgresFlexDatabase.NewDatabaseResource,
 		postgresFlexInstance.NewInstanceResource,
+		postgresFlexAlphaInstance.NewInstanceResource,
 		postgresFlexUser.NewUserResource,
 		rabbitMQInstance.NewInstanceResource,
 		rabbitMQCredential.NewCredentialResource,
