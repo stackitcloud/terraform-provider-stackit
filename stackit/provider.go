@@ -75,7 +75,7 @@ import (
 	postgresFlexDatabase "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/database"
 	postgresFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/instance"
 	postgresFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/user"
-	postgresFlexAlphaInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflexa/instance"
+	postgresFlexAlphaInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflexalpha/instance"
 	rabbitMQCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/credential"
 	rabbitMQInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/instance"
 	redisCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/credential"

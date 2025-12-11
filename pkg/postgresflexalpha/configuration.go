@@ -18,7 +18,7 @@ import (
 func NewConfiguration() *config.Configuration {
 	cfg := &config.Configuration{
 		DefaultHeader: make(map[string]string),
-		UserAgent:     "stackit-sdk-go/postgresflexa",
+		UserAgent:     "stackit-sdk-go/postgresflexalpha",
 		Debug:         false,
 		Servers: config.ServerConfigurations{
 			{
