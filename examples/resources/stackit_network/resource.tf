@@ -29,5 +29,5 @@ resource "stackit_network" "example_non_routed_network" {
 # These attributes cannot be configured together: [ipv4_prefix,ipv4_prefix_length,ipv4_gateway]
 import {
   to = stackit_network.import-example
-  id = "${var.project_id},${var.network_id}"
+  id = "${var.project_id},${var.region},${var.network_id}"
 }

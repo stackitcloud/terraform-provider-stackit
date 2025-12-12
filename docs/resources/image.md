@@ -31,7 +31,7 @@ resource "stackit_image" "example_image" {
 #  }
 import {
   to = stackit_image.import-example
-  id = "${var.project_id},${var.image_id}"
+  id = "${var.project_id},${var.region},${var.image_id}"
 }
 ```
 

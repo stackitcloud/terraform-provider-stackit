@@ -344,9 +344,16 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 		}
 
 		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		_, err = r.client.CreateNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").CreateNetworkAreaRegionPayload(*regionCreatePayload).Execute()
+		networkAreaRegionCreateResp, err := r.client.CreateNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").CreateNetworkAreaRegionPayload(*regionCreatePayload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area region", fmt.Sprintf("Calling API: %v", err))
+			return
+		}
+
+		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
+		err = mapNetworkAreaRegionFields(ctx, networkAreaRegionCreateResp, &model) // map partial state - just in case anything goes wrong during the wait handler
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area region", fmt.Sprintf("Processing API payload: %v", err))
 			return
 		}
 
