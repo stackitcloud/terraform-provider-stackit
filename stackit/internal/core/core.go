@@ -51,6 +51,7 @@ type ProviderData struct {
 	KMSCustomEndpoint               string
 	LoadBalancerCustomEndpoint      string
 	LogMeCustomEndpoint             string
+	LogsCustomEndpoint              string
 	MariaDBCustomEndpoint           string
 	MongoDBFlexCustomEndpoint       string
 	ModelServingCustomEndpoint      string
