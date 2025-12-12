@@ -27,7 +27,7 @@ resource "stackit_public_ip_associate" "example" {
 # Only use the import statement, if you want to import an existing public ip associate
 import {
   to = stackit_public_ip_associate.import-example
-  id = "${var.project_id},${var.public_ip_id},${var.network_interface_id}"
+  id = "${var.project_id},${var.region},${var.public_ip_id},${var.network_interface_id}"
 }
 ```
 
@@ -40,7 +40,11 @@ import {
 - `project_id` (String) STACKIT project ID to which the public IP is associated.
 - `public_ip_id` (String) The public IP ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`public_ip_id`,`network_interface_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`public_ip_id`,`network_interface_id`".
 - `ip` (String) The IP address.

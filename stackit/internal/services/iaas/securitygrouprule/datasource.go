@@ -30,7 +30,8 @@ func NewSecurityGroupRuleDataSource() datasource.DataSource {
 
 // securityGroupRuleDataSource is the data source implementation.
 type securityGroupRuleDataSource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -39,12 +40,13 @@ func (d *securityGroupRuleDataSource) Metadata(_ context.Context, req datasource
 }
 
 func (d *securityGroupRuleDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -53,7 +55,7 @@ func (d *securityGroupRuleDataSource) Configure(ctx context.Context, req datasou
 }
 
 // Schema defines the schema for the resource.
-func (r *securityGroupRuleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *securityGroupRuleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	directionOptions := []string{"ingress", "egress"}
 	description := "Security group datasource schema. Must have a `region` specified in the provider configuration."
 
@@ -62,7 +64,7 @@ func (r *securityGroupRuleDataSource) Schema(_ context.Context, _ datasource.Sch
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal datasource ID. It is structured as \"`project_id`,`security_group_id`,`security_group_rule_id`\".",
+				Description: "Terraform's internal datasource ID. It is structured as \"`project_id`,`region`,`security_group_id`,`security_group_rule_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
@@ -88,6 +90,11 @@ func (r *securityGroupRuleDataSource) Schema(_ context.Context, _ datasource.Sch
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				// the region cannot be found, so it has to be passed
+				Optional: true,
 			},
 			"direction": schema.StringAttribute{
 				Description: "The direction of the traffic which the rule should match. Some of the possible values are: " + utils.FormatPossibleValues(directionOptions...),
@@ -164,16 +171,18 @@ func (d *securityGroupRuleDataSource) Read(ctx context.Context, req datasource.R
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
 	securityGroupRuleId := model.SecurityGroupRuleId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 	ctx = tflog.SetField(ctx, "security_group_rule_id", securityGroupRuleId)
 
-	securityGroupRuleResp, err := d.client.GetSecurityGroupRule(ctx, projectId, securityGroupId, securityGroupRuleId).Execute()
+	securityGroupRuleResp, err := d.client.GetSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -191,7 +200,7 @@ func (d *securityGroupRuleDataSource) Read(ctx context.Context, req datasource.R
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(securityGroupRuleResp, &model)
+	err = mapFields(securityGroupRuleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group rule", fmt.Sprintf("Processing API payload: %v", err))
 		return

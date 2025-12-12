@@ -23,5 +23,5 @@ resource "stackit_server" "example" {
 # }
 import {
   to = stackit_server.import-example
-  id = "${var.project_id},${var.server_id}"
+  id = "${var.project_id},${var.region},${var.server_id}"
 }

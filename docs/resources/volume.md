@@ -26,7 +26,7 @@ resource "stackit_volume" "example" {
 # Only use the import statement, if you want to import an existing volume
 import {
   to = stackit_volume.import-example
-  id = "${var.project_id},${var.volume_id}"
+  id = "${var.project_id},${var.region},${var.volume_id}"
 }
 ```
 
@@ -44,12 +44,13 @@ import {
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `name` (String) The name of the volume.
 - `performance_class` (String) The performance class of the volume. Possible values are documented in [Service plans BlockStorage](https://docs.stackit.cloud/products/storage/block-storage/basics/service-plans/#currently-available-service-plans-performance-classes)
+- `region` (String) The resource region. If not defined, the provider region is used.
 - `size` (Number) The size of the volume in GB. It can only be updated to a larger value than the current size. Either `size` or `source` must be provided
 - `source` (Attributes) The source of the volume. It can be either a volume, an image, a snapshot or a backup. Either `size` or `source` must be provided (see [below for nested schema](#nestedatt--source))
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`volume_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`volume_id`".
 - `server_id` (String) The server ID of the server to which the volume is attached to.
 - `volume_id` (String) The volume ID.
 

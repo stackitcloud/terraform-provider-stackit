@@ -24,14 +24,15 @@ var (
 	_ datasource.DataSource = &publicIpDataSource{}
 )
 
-// NewVolumeDataSource is a helper function to simplify the provider implementation.
+// NewPublicIpDataSource is a helper function to simplify the provider implementation.
 func NewPublicIpDataSource() datasource.DataSource {
 	return &publicIpDataSource{}
 }
 
 // publicIpDataSource is the data source implementation.
 type publicIpDataSource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -40,12 +41,13 @@ func (d *publicIpDataSource) Metadata(_ context.Context, req datasource.Metadata
 }
 
 func (d *publicIpDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -54,14 +56,14 @@ func (d *publicIpDataSource) Configure(ctx context.Context, req datasource.Confi
 }
 
 // Schema defines the schema for the resource.
-func (r *publicIpDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *publicIpDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Public IP resource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal datasource ID. It is structured as \"`project_id`,`public_ip_id`\".",
+				Description: "Terraform's internal datasource ID. It is structured as \"`project_id`,`region`,`public_ip_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
@@ -71,6 +73,11 @@ func (r *publicIpDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				// the region cannot be found, so it has to be passed
+				Optional: true,
 			},
 			"public_ip_id": schema.StringAttribute{
 				Description: "The public IP ID.",
@@ -110,14 +117,16 @@ func (d *publicIpDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	publicIpId := model.PublicIpId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 
-	publicIpResp, err := d.client.GetPublicIP(ctx, projectId, publicIpId).Execute()
+	publicIpResp, err := d.client.GetPublicIP(ctx, projectId, region, publicIpId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -135,7 +144,7 @@ func (d *publicIpDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, publicIpResp, &model)
+	err = mapFields(ctx, publicIpResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP", fmt.Sprintf("Processing API payload: %v", err))
 		return

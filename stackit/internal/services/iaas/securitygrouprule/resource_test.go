@@ -52,25 +52,32 @@ var fixtureCreateProtocol = iaas.CreateProtocol{
 }
 
 func TestMapFields(t *testing.T) {
+	type args struct {
+		state  Model
+		input  *iaas.SecurityGroupRule
+		region string
+	}
 	tests := []struct {
 		description string
-		state       Model
-		input       *iaas.SecurityGroupRule
+		args        args
 		expected    Model
 		isValid     bool
 	}{
 		{
-			"default_values",
-			Model{
-				ProjectId:           types.StringValue("pid"),
-				SecurityGroupId:     types.StringValue("sgid"),
-				SecurityGroupRuleId: types.StringValue("sgrid"),
+			description: "default_values",
+			args: args{
+				state: Model{
+					ProjectId:           types.StringValue("pid"),
+					SecurityGroupId:     types.StringValue("sgid"),
+					SecurityGroupRuleId: types.StringValue("sgrid"),
+				},
+				input: &iaas.SecurityGroupRule{
+					Id: utils.Ptr("sgrid"),
+				},
+				region: "eu01",
 			},
-			&iaas.SecurityGroupRule{
-				Id: utils.Ptr("sgrid"),
-			},
-			Model{
-				Id:                    types.StringValue("pid,sgid,sgrid"),
+			expected: Model{
+				Id:                    types.StringValue("pid,eu01,sgid,sgrid"),
 				ProjectId:             types.StringValue("pid"),
 				SecurityGroupId:       types.StringValue("sgid"),
 				SecurityGroupRuleId:   types.StringValue("sgrid"),
@@ -82,29 +89,34 @@ func TestMapFields(t *testing.T) {
 				IcmpParameters:        types.ObjectNull(icmpParametersTypes),
 				PortRange:             types.ObjectNull(portRangeTypes),
 				Protocol:              types.ObjectNull(protocolTypes),
+				Region:                types.StringValue("eu01"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"simple_values",
-			Model{
-				ProjectId:           types.StringValue("pid"),
-				SecurityGroupId:     types.StringValue("sgid"),
-				SecurityGroupRuleId: types.StringValue("sgrid"),
+			description: "simple_values",
+			args: args{
+				state: Model{
+					ProjectId:           types.StringValue("pid"),
+					SecurityGroupId:     types.StringValue("sgid"),
+					SecurityGroupRuleId: types.StringValue("sgrid"),
+					Region:              types.StringValue("eu01"),
+				},
+				input: &iaas.SecurityGroupRule{
+					Id:                    utils.Ptr("sgrid"),
+					Description:           utils.Ptr("desc"),
+					Direction:             utils.Ptr("ingress"),
+					Ethertype:             utils.Ptr("ether"),
+					IpRange:               utils.Ptr("iprange"),
+					RemoteSecurityGroupId: utils.Ptr("remote"),
+					IcmpParameters:        &fixtureIcmpParameters,
+					PortRange:             &fixturePortRange,
+					Protocol:              &fixtureProtocol,
+				},
+				region: "eu02",
 			},
-			&iaas.SecurityGroupRule{
-				Id:                    utils.Ptr("sgrid"),
-				Description:           utils.Ptr("desc"),
-				Direction:             utils.Ptr("ingress"),
-				Ethertype:             utils.Ptr("ether"),
-				IpRange:               utils.Ptr("iprange"),
-				RemoteSecurityGroupId: utils.Ptr("remote"),
-				IcmpParameters:        &fixtureIcmpParameters,
-				PortRange:             &fixturePortRange,
-				Protocol:              &fixtureProtocol,
-			},
-			Model{
-				Id:                    types.StringValue("pid,sgid,sgrid"),
+			expected: Model{
+				Id:                    types.StringValue("pid,eu02,sgid,sgrid"),
 				ProjectId:             types.StringValue("pid"),
 				SecurityGroupId:       types.StringValue("sgid"),
 				SecurityGroupRuleId:   types.StringValue("sgrid"),
@@ -116,26 +128,30 @@ func TestMapFields(t *testing.T) {
 				IcmpParameters:        fixtureModelIcmpParameters,
 				PortRange:             fixtureModelPortRange,
 				Protocol:              fixtureModelProtocol,
+				Region:                types.StringValue("eu02"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"protocol_only_with_name",
-			Model{
-				ProjectId:           types.StringValue("pid"),
-				SecurityGroupId:     types.StringValue("sgid"),
-				SecurityGroupRuleId: types.StringValue("sgrid"),
-				Protocol: types.ObjectValueMust(protocolTypes, map[string]attr.Value{
-					"name":   types.StringValue("name"),
-					"number": types.Int64Null(),
-				}),
+			description: "protocol_only_with_name",
+			args: args{
+				state: Model{
+					ProjectId:           types.StringValue("pid"),
+					SecurityGroupId:     types.StringValue("sgid"),
+					SecurityGroupRuleId: types.StringValue("sgrid"),
+					Protocol: types.ObjectValueMust(protocolTypes, map[string]attr.Value{
+						"name":   types.StringValue("name"),
+						"number": types.Int64Null(),
+					}),
+				},
+				input: &iaas.SecurityGroupRule{
+					Id:       utils.Ptr("sgrid"),
+					Protocol: &fixtureProtocol,
+				},
+				region: "eu01",
 			},
-			&iaas.SecurityGroupRule{
-				Id:       utils.Ptr("sgrid"),
-				Protocol: &fixtureProtocol,
-			},
-			Model{
-				Id:                    types.StringValue("pid,sgid,sgrid"),
+			expected: Model{
+				Id:                    types.StringValue("pid,eu01,sgid,sgrid"),
 				ProjectId:             types.StringValue("pid"),
 				SecurityGroupId:       types.StringValue("sgid"),
 				SecurityGroupRuleId:   types.StringValue("sgrid"),
@@ -147,26 +163,30 @@ func TestMapFields(t *testing.T) {
 				IcmpParameters:        types.ObjectNull(icmpParametersTypes),
 				PortRange:             types.ObjectNull(portRangeTypes),
 				Protocol:              fixtureModelProtocol,
+				Region:                types.StringValue("eu01"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"protocol_only_with_number",
-			Model{
-				ProjectId:           types.StringValue("pid"),
-				SecurityGroupId:     types.StringValue("sgid"),
-				SecurityGroupRuleId: types.StringValue("sgrid"),
-				Protocol: types.ObjectValueMust(protocolTypes, map[string]attr.Value{
-					"name":   types.StringNull(),
-					"number": types.Int64Value(1),
-				}),
+			description: "protocol_only_with_number",
+			args: args{
+				state: Model{
+					ProjectId:           types.StringValue("pid"),
+					SecurityGroupId:     types.StringValue("sgid"),
+					SecurityGroupRuleId: types.StringValue("sgrid"),
+					Protocol: types.ObjectValueMust(protocolTypes, map[string]attr.Value{
+						"name":   types.StringNull(),
+						"number": types.Int64Value(1),
+					}),
+				},
+				input: &iaas.SecurityGroupRule{
+					Id:       utils.Ptr("sgrid"),
+					Protocol: &fixtureProtocol,
+				},
+				region: "eu01",
 			},
-			&iaas.SecurityGroupRule{
-				Id:       utils.Ptr("sgrid"),
-				Protocol: &fixtureProtocol,
-			},
-			Model{
-				Id:                    types.StringValue("pid,sgid,sgrid"),
+			expected: Model{
+				Id:                    types.StringValue("pid,eu01,sgid,sgrid"),
 				ProjectId:             types.StringValue("pid"),
 				SecurityGroupId:       types.StringValue("sgid"),
 				SecurityGroupRuleId:   types.StringValue("sgrid"),
@@ -178,30 +198,27 @@ func TestMapFields(t *testing.T) {
 				IcmpParameters:        types.ObjectNull(icmpParametersTypes),
 				PortRange:             types.ObjectNull(portRangeTypes),
 				Protocol:              fixtureModelProtocol,
+				Region:                types.StringValue("eu01"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"response_nil_fail",
-			Model{},
-			nil,
-			Model{},
-			false,
+			description: "response_nil_fail",
 		},
 		{
-			"no_resource_id",
-			Model{
-				ProjectId:       types.StringValue("pid"),
-				SecurityGroupId: types.StringValue("sgid"),
+			description: "no_resource_id",
+			args: args{
+				state: Model{
+					ProjectId:       types.StringValue("pid"),
+					SecurityGroupId: types.StringValue("sgid"),
+				},
+				input: &iaas.SecurityGroupRule{},
 			},
-			&iaas.SecurityGroupRule{},
-			Model{},
-			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(tt.input, &tt.state)
+			err := mapFields(tt.args.input, &tt.args.state, tt.args.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -209,7 +226,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(tt.state, tt.expected)
+				diff := cmp.Diff(tt.args.state, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

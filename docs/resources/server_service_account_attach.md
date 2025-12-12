@@ -22,7 +22,7 @@ resource "stackit_server_service_account_attach" "attached_service_account" {
 # Only use the import statement, if you want to import an existing server service account attachment
 import {
   to = stackit_server_service_account_attach.import-example
-  id = "${var.project_id},${var.server_id},${var.service_account_email}"
+  id = "${var.project_id},${var.region},${var.server_id},${var.service_account_email}"
 }
 ```
 
@@ -34,6 +34,10 @@ import {
 - `project_id` (String) STACKIT project ID to which the service account attachment is associated.
 - `server_id` (String) The server ID.
 - `service_account_email` (String) The service account email.
+
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
 

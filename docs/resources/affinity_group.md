@@ -3,7 +3,7 @@
 page_title: "stackit_affinity_group Resource - stackit"
 subcategory: ""
 description: |-
-  Affinity Group schema. Must have a region specified in the provider configuration.
+  Affinity Group schema.
   Usage with server
   
   resource "stackit_affinity_group" "affinity-group" {
@@ -39,7 +39,7 @@ description: |-
 
 # stackit_affinity_group (Resource)
 
-Affinity Group schema. Must have a `region` specified in the provider configuration.
+Affinity Group schema.
 
 
 
@@ -91,7 +91,7 @@ resource "stackit_affinity_group" "example" {
 # Only use the import statement, if you want to import an existing affinity group
 import {
   to = stackit_affinity_group.import-example
-  id = "${var.project_id},${var.affinity_group_id}"
+  id = "${var.project_id},${var.region},${var.affinity_group_id}"
 }
 ```
 
@@ -104,8 +104,12 @@ import {
 - `policy` (String) The policy of the affinity group.
 - `project_id` (String) STACKIT Project ID to which the affinity group is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `affinity_group_id` (String) The affinity group ID.
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`affinity_group_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`affinity_group_id`".
 - `members` (List of String) The servers that are part of the affinity group.
