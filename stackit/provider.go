@@ -57,6 +57,7 @@ import (
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
 	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
 	logMeInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/instance"
+	logsInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/instance"
 	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
 	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
 	modelServingToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelserving/token"
@@ -143,6 +144,7 @@ type providerModel struct {
 	KmsCustomEndpoint               types.String `tfsdk:"kms_custom_endpoint"`
 	LoadBalancerCustomEndpoint      types.String `tfsdk:"loadbalancer_custom_endpoint"`
 	LogMeCustomEndpoint             types.String `tfsdk:"logme_custom_endpoint"`
+	LogsCustomEndpoint              types.String `tfsdk:"logs_custom_endpoint"`
 	MariaDBCustomEndpoint           types.String `tfsdk:"mariadb_custom_endpoint"`
 	ModelServingCustomEndpoint      types.String `tfsdk:"modelserving_custom_endpoint"`
 	MongoDBFlexCustomEndpoint       types.String `tfsdk:"mongodbflex_custom_endpoint"`
@@ -188,6 +190,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"modelserving_custom_endpoint":       "Custom endpoint for the AI Model Serving service",
 		"loadbalancer_custom_endpoint":       "Custom endpoint for the Load Balancer service",
 		"logme_custom_endpoint":              "Custom endpoint for the LogMe service",
+		"logs_custom_endpoint":               "Custom endpoint for the Logs service",
 		"rabbitmq_custom_endpoint":           "Custom endpoint for the RabbitMQ service",
 		"mariadb_custom_endpoint":            "Custom endpoint for the MariaDB service",
 		"authorization_custom_endpoint":      "Custom endpoint for the Membership service",
@@ -317,6 +320,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["logme_custom_endpoint"],
 			},
+			"logs_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["logs_custom_endpoint"],
+			},
 			"rabbitmq_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["rabbitmq_custom_endpoint"],
@@ -434,6 +441,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.KmsCustomEndpoint, func(v string) { providerData.KMSCustomEndpoint = v })
 	setStringField(providerConfig.LoadBalancerCustomEndpoint, func(v string) { providerData.LoadBalancerCustomEndpoint = v })
 	setStringField(providerConfig.LogMeCustomEndpoint, func(v string) { providerData.LogMeCustomEndpoint = v })
+	setStringField(providerConfig.LogsCustomEndpoint, func(v string) { providerData.LogsCustomEndpoint = v })
 	setStringField(providerConfig.MariaDBCustomEndpoint, func(v string) { providerData.MariaDBCustomEndpoint = v })
 	setStringField(providerConfig.ModelServingCustomEndpoint, func(v string) { providerData.ModelServingCustomEndpoint = v })
 	setStringField(providerConfig.MongoDBFlexCustomEndpoint, func(v string) { providerData.MongoDBFlexCustomEndpoint = v })
@@ -521,6 +529,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		loadBalancer.NewLoadBalancerDataSource,
 		logMeInstance.NewInstanceDataSource,
 		logMeCredential.NewCredentialDataSource,
+		logsInstance.NewLogsInstanceDataSource,
 		logAlertGroup.NewLogAlertGroupDataSource,
 		machineType.NewMachineTypeDataSource,
 		mariaDBInstance.NewInstanceDataSource,
@@ -594,6 +603,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		logMeInstance.NewInstanceResource,
 		logMeCredential.NewCredentialResource,
 		logAlertGroup.NewLogAlertGroupResource,
+		logsInstance.NewLogsInstanceResource,
 		mariaDBInstance.NewInstanceResource,
 		mariaDBCredential.NewCredentialResource,
 		modelServingToken.NewTokenResource,

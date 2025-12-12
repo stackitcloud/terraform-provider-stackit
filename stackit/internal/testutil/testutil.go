@@ -71,6 +71,7 @@ var (
 	KMSCustomEndpoint             = os.Getenv("TF_ACC_KMS_CUSTOM_ENDPOINT")
 	LoadBalancerCustomEndpoint    = os.Getenv("TF_ACC_LOADBALANCER_CUSTOM_ENDPOINT")
 	LogMeCustomEndpoint           = os.Getenv("TF_ACC_LOGME_CUSTOM_ENDPOINT")
+	LogsCustomEndpoint            = os.Getenv("TF_ACC_LOGS_CUSTOM_ENDPOINT")
 	MariaDBCustomEndpoint         = os.Getenv("TF_ACC_MARIADB_CUSTOM_ENDPOINT")
 	ModelServingCustomEndpoint    = os.Getenv("TF_ACC_MODELSERVING_CUSTOM_ENDPOINT")
 	AuthorizationCustomEndpoint   = os.Getenv("TF_ACC_authorization_custom_endpoint")
@@ -225,6 +226,23 @@ func LogMeProviderConfig() string {
 			logme_custom_endpoint = "%s"
 		}`,
 		LogMeCustomEndpoint,
+	)
+}
+
+func LogsProviderConfig() string {
+	if LogsCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			enable_beta_resources = true
+			default_region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			enable_beta_resources = true
+			logs_custom_endpoint = "%s"
+		}`,
+		LogsCustomEndpoint,
 	)
 }
 
