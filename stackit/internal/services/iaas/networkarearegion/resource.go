@@ -261,6 +261,8 @@ func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.Cre
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
@@ -269,11 +271,13 @@ func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	// Create new network area region configuration
-	keyPair, err := r.client.CreateNetworkAreaRegion(ctx, organizationId, networkAreaId, region).CreateNetworkAreaRegionPayload(*payload).Execute()
+	networkAreaRegion, err := r.client.CreateNetworkAreaRegion(ctx, organizationId, networkAreaId, region).CreateNetworkAreaRegionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area region", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
@@ -290,7 +294,7 @@ func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, keyPair, &model, region)
+	err = mapFields(ctx, networkAreaRegion, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area region", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -319,6 +323,8 @@ func (r *networkAreaRegionResource) Read(ctx context.Context, req resource.ReadR
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	networkAreaRegionResp, err := r.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -328,6 +334,8 @@ func (r *networkAreaRegionResource) Read(ctx context.Context, req resource.ReadR
 			return
 		}
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, networkAreaRegionResp, &model, region)
@@ -360,6 +368,8 @@ func (r *networkAreaRegionResource) Update(ctx context.Context, req resource.Upd
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	// Retrieve values from state
 	var stateModel Model
 	resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
@@ -380,6 +390,8 @@ func (r *networkAreaRegionResource) Update(ctx context.Context, req resource.Upd
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = updateIpv4NetworkRanges(ctx, organizationId, networkAreaId, model.Ipv4.NetworkRanges, r.client, region)
 	if err != nil {
@@ -422,12 +434,16 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	// Delete network area region configuration
 	err := r.client.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	_, err = wait.DeleteNetworkAreaRegionWaitHandler(ctx, r.client, organizationId, networkAreaId, region).WaitWithContext(ctx)
 	if err != nil {

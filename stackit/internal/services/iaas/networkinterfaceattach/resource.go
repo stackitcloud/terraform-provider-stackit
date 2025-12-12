@@ -193,6 +193,7 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 	ctx = core.LogResponse(ctx)
 
 	model.Id = utils.BuildInternalTerraformId(projectId, region, serverId, networkInterfaceId)
+	model.Region = types.StringValue(region)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
@@ -251,6 +252,10 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 			if resp.Diagnostics.HasError() {
 				return
 			}
+
+			model.Id = utils.BuildInternalTerraformId(projectId, region, serverId, networkInterfaceId)
+			model.Region = types.StringValue(region)
+
 			tflog.Info(ctx, "Network interface attachment read")
 			return
 		}
