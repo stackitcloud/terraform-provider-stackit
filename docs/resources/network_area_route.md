@@ -35,10 +35,10 @@ import {
 
 ### Required
 
+- `destination` (Attributes) Destination of the route. (see [below for nested schema](#nestedatt--destination))
 - `network_area_id` (String) The network area ID to which the network area route is associated.
-- `next_hop` (String) The IP address of the routing system, that will route the prefix configured. Should be a valid IPv4 address.
+- `next_hop` (Attributes) Next hop destination. (see [below for nested schema](#nestedatt--next_hop))
 - `organization_id` (String) STACKIT organization ID to which the network area is associated.
-- `prefix` (String) The network, that is reachable though the Next Hop. Should use CIDR notation.
 
 ### Optional
 
@@ -49,3 +49,23 @@ import {
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`organization_id`,`network_area_id`,`region`,`network_area_route_id`".
 - `network_area_route_id` (String) The network area route ID.
+
+<a id="nestedatt--destination"></a>
+### Nested Schema for `destination`
+
+Required:
+
+- `type` (String) CIDRV type. Possible values are: `cidrv4`, `cidrv6`. Only `cidrv4` is supported currently.
+- `value` (String) An CIDR string.
+
+
+<a id="nestedatt--next_hop"></a>
+### Nested Schema for `next_hop`
+
+Required:
+
+- `type` (String) Type of the next hop. Possible values are: `blackhole`, `internet`, `ipv4`, `ipv6`. Only `ipv4` supported currently.
+
+Optional:
+
+- `value` (String) Either IPv4 or IPv6 (not set for blackhole and internet). Only IPv4 supported currently.

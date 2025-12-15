@@ -2,6 +2,7 @@ package networkarearoute
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
@@ -40,10 +41,16 @@ func TestMapFields(t *testing.T) {
 				OrganizationId:     types.StringValue("oid"),
 				NetworkAreaId:      types.StringValue("naid"),
 				NetworkAreaRouteId: types.StringValue("narid"),
-				Prefix:             types.StringNull(),
-				NextHop:            types.StringNull(),
-				Labels:             types.MapNull(types.StringType),
-				Region:             types.StringValue("eu01"),
+				Destination: &DestinationModel{
+					Type:  types.StringNull(),
+					Value: types.StringNull(),
+				},
+				NextHop: &NexthopModel{
+					Type:  types.StringNull(),
+					Value: types.StringNull(),
+				},
+				Labels: types.MapNull(types.StringType),
+				Region: types.StringValue("eu01"),
 			},
 			isValid: true,
 		},
@@ -81,8 +88,14 @@ func TestMapFields(t *testing.T) {
 				OrganizationId:     types.StringValue("oid"),
 				NetworkAreaId:      types.StringValue("naid"),
 				NetworkAreaRouteId: types.StringValue("narid"),
-				Prefix:             types.StringValue("prefix"),
-				NextHop:            types.StringValue("hop"),
+				Destination: &DestinationModel{
+					Type:  types.StringValue("cidrv4"),
+					Value: types.StringValue("prefix"),
+				},
+				NextHop: &NexthopModel{
+					Type:  types.StringValue("ipv4"),
+					Value: types.StringValue("hop"),
+				},
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 					"key": types.StringValue("value"),
 				}),
@@ -142,8 +155,14 @@ func TestToCreatePayload(t *testing.T) {
 		{
 			description: "default_ok",
 			input: &Model{
-				Prefix:  types.StringValue("prefix"),
-				NextHop: types.StringValue("hop"),
+				Destination: &DestinationModel{
+					Type:  types.StringValue("cidrv4"),
+					Value: types.StringValue("prefix"),
+				},
+				NextHop: &NexthopModel{
+					Type:  types.StringValue("ipv4"),
+					Value: types.StringValue("hop"),
+				},
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 					"key": types.StringValue("value"),
 				}),
@@ -230,6 +249,374 @@ func TestToUpdatePayload(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
+			}
+		})
+	}
+}
+
+func TestToNextHopPayload(t *testing.T) {
+	type args struct {
+		model *Model
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *iaas.RouteNexthop
+		wantErr bool
+	}{
+		{
+			name: "ipv4",
+			args: args{
+				model: &Model{
+					NextHop: &NexthopModel{
+						Type:  types.StringValue("ipv4"),
+						Value: types.StringValue("10.20.30.40"),
+					},
+				},
+			},
+			want: &iaas.RouteNexthop{
+				NexthopIPv4: &iaas.NexthopIPv4{
+					Type:  utils.Ptr("ipv4"),
+					Value: utils.Ptr("10.20.30.40"),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "ipv6",
+			args: args{
+				model: &Model{
+					NextHop: &NexthopModel{
+						Type:  types.StringValue("ipv6"),
+						Value: types.StringValue("2001:db8:85a3:0:0:8a2e:370:7334"),
+					},
+				},
+			},
+			want: &iaas.RouteNexthop{
+				NexthopIPv6: &iaas.NexthopIPv6{
+					Type:  utils.Ptr("ipv6"),
+					Value: utils.Ptr("2001:db8:85a3:0:0:8a2e:370:7334"),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "internet",
+			args: args{
+				model: &Model{
+					NextHop: &NexthopModel{
+						Type: types.StringValue("internet"),
+					},
+				},
+			},
+			want: &iaas.RouteNexthop{
+				NexthopInternet: &iaas.NexthopInternet{
+					Type: utils.Ptr("internet"),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "blackhole",
+			args: args{
+				model: &Model{
+					NextHop: &NexthopModel{
+						Type: types.StringValue("blackhole"),
+					},
+				},
+			},
+			want: &iaas.RouteNexthop{
+				NexthopBlackhole: &iaas.NexthopBlackhole{
+					Type: utils.Ptr("blackhole"),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid type",
+			args: args{
+				model: &Model{
+					NextHop: &NexthopModel{
+						Type: types.StringValue("foobar"),
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "model is nil",
+			args: args{
+				model: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "nexthop in model is nil",
+			args: args{
+				model: &Model{
+					NextHop: nil,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := toNextHopPayload(tt.args.model)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("toNextHopPayload() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("toNextHopPayload() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToDestinationPayload(t *testing.T) {
+	type args struct {
+		model *Model
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *iaas.RouteDestination
+		wantErr bool
+	}{
+		{
+			name: "cidrv4",
+			args: args{
+				model: &Model{
+					Destination: &DestinationModel{
+						Type:  types.StringValue("cidrv4"),
+						Value: types.StringValue("192.168.1.0/24"),
+					},
+				},
+			},
+			want: &iaas.RouteDestination{
+				DestinationCIDRv4: &iaas.DestinationCIDRv4{
+					Type:  utils.Ptr("cidrv4"),
+					Value: utils.Ptr("192.168.1.0/24"),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "cidrv6",
+			args: args{
+				model: &Model{
+					Destination: &DestinationModel{
+						Type:  types.StringValue("cidrv6"),
+						Value: types.StringValue("2001:db8:1234::/48"),
+					},
+				},
+			},
+			want: &iaas.RouteDestination{
+				DestinationCIDRv6: &iaas.DestinationCIDRv6{
+					Type:  utils.Ptr("cidrv6"),
+					Value: utils.Ptr("2001:db8:1234::/48"),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid type",
+			args: args{
+				model: &Model{
+					Destination: &DestinationModel{
+						Type: types.StringValue("foobar"),
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "model is nil",
+			args: args{
+				model: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "destination in model is nil",
+			args: args{
+				model: &Model{
+					Destination: nil,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := toDestinationPayload(tt.args.model)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("toDestinationPayload() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("toDestinationPayload() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMapRouteNextHop(t *testing.T) {
+	type args struct {
+		routeResp *iaas.Route
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *NexthopModel
+		wantErr bool
+	}{
+		{
+			name: "ipv4",
+			args: args{
+				routeResp: &iaas.Route{
+					Nexthop: &iaas.RouteNexthop{
+						NexthopIPv4: &iaas.NexthopIPv4{
+							Type:  utils.Ptr("ipv4"),
+							Value: utils.Ptr("192.168.1.0/24"),
+						},
+					},
+				},
+			},
+			want: &NexthopModel{
+				Type:  types.StringValue("ipv4"),
+				Value: types.StringValue("192.168.1.0/24"),
+			},
+		},
+		{
+			name: "ipv6",
+			args: args{
+				routeResp: &iaas.Route{
+					Nexthop: &iaas.RouteNexthop{
+						NexthopIPv4: &iaas.NexthopIPv4{
+							Type:  utils.Ptr("ipv6"),
+							Value: utils.Ptr("2001:db8:85a3:0:0:8a2e:370:7334"),
+						},
+					},
+				},
+			},
+			want: &NexthopModel{
+				Type:  types.StringValue("ipv6"),
+				Value: types.StringValue("2001:db8:85a3:0:0:8a2e:370:7334"),
+			},
+		},
+		{
+			name: "blackhole",
+			args: args{
+				routeResp: &iaas.Route{
+					Nexthop: &iaas.RouteNexthop{
+						NexthopBlackhole: &iaas.NexthopBlackhole{
+							Type: utils.Ptr("blackhole"),
+						},
+					},
+				},
+			},
+			want: &NexthopModel{
+				Type: types.StringValue("blackhole"),
+			},
+		},
+		{
+			name: "internet",
+			args: args{
+				routeResp: &iaas.Route{
+					Nexthop: &iaas.RouteNexthop{
+						NexthopInternet: &iaas.NexthopInternet{
+							Type: utils.Ptr("internet"),
+						},
+					},
+				},
+			},
+			want: &NexthopModel{
+				Type: types.StringValue("internet"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := mapRouteNextHop(tt.args.routeResp)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("mapRouteNextHop() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("mapRouteNextHop() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMapRouteDestination(t *testing.T) {
+	type args struct {
+		routeResp *iaas.Route
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *DestinationModel
+		wantErr bool
+	}{
+		{
+			name: "cidrv4",
+			args: args{
+				routeResp: &iaas.Route{
+					Destination: &iaas.RouteDestination{
+						DestinationCIDRv4: &iaas.DestinationCIDRv4{
+							Type:  utils.Ptr("cidrv4"),
+							Value: utils.Ptr("192.168.1.0/24"),
+						},
+					},
+				},
+			},
+			want: &DestinationModel{
+				Type:  types.StringValue("cidrv4"),
+				Value: types.StringValue("192.168.1.0/24"),
+			},
+		},
+		{
+			name: "cidrv6",
+			args: args{
+				routeResp: &iaas.Route{
+					Destination: &iaas.RouteDestination{
+						DestinationCIDRv4: &iaas.DestinationCIDRv4{
+							Type:  utils.Ptr("cidrv6"),
+							Value: utils.Ptr("2001:db8:1234::/48"),
+						},
+					},
+				},
+			},
+			want: &DestinationModel{
+				Type:  types.StringValue("cidrv6"),
+				Value: types.StringValue("2001:db8:1234::/48"),
+			},
+		},
+		{
+			name: "destination in API response is nil",
+			args: args{
+				routeResp: &iaas.Route{
+					Destination: nil,
+				},
+			},
+			want: &DestinationModel{
+				Type:  types.StringNull(),
+				Value: types.StringNull(),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := mapRouteDestination(tt.args.routeResp)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("mapRouteDestination() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("mapRouteDestination() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

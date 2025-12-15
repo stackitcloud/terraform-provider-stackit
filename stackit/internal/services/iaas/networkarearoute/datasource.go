@@ -95,13 +95,33 @@ func (d *networkAreaRouteDataSource) Schema(_ context.Context, _ datasource.Sche
 					validate.NoSeparator(),
 				},
 			},
-			"next_hop": schema.StringAttribute{
-				Description: "The IP address of the routing system, that will route the prefix configured. Should be a valid IPv4 address.",
+			"destination": schema.SingleNestedAttribute{
+				Description: "Destination of the route.",
 				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						Description: fmt.Sprintf("CIDRV type. %s", utils.FormatPossibleValues("cidrv4", "cidrv6")),
+						Computed:    true,
+					},
+					"value": schema.StringAttribute{
+						Description: "An CIDR string.",
+						Computed:    true,
+					},
+				},
 			},
-			"prefix": schema.StringAttribute{
-				Description: "The network, that is reachable though the Next Hop. Should use CIDR notation.",
+			"next_hop": schema.SingleNestedAttribute{
+				Description: "Next hop destination.",
 				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						Description: "Type of the next hop. " + utils.FormatPossibleValues("blackhole", "internet", "ipv4", "ipv6"),
+						Computed:    true,
+					},
+					"value": schema.StringAttribute{
+						Description: "Either IPv4 or IPv6 (not set for blackhole and internet).",
+						Computed:    true,
+					},
+				},
 			},
 			"labels": schema.MapAttribute{
 				Description: "Labels are key-value string pairs which can be attached to a resource container",

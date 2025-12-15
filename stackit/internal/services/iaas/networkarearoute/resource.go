@@ -35,14 +35,26 @@ var (
 )
 
 type Model struct {
-	Id                 types.String `tfsdk:"id"` // needed by TF
-	OrganizationId     types.String `tfsdk:"organization_id"`
-	Region             types.String `tfsdk:"region"`
-	NetworkAreaId      types.String `tfsdk:"network_area_id"`
-	NetworkAreaRouteId types.String `tfsdk:"network_area_route_id"`
-	NextHop            types.String `tfsdk:"next_hop"`
-	Prefix             types.String `tfsdk:"prefix"`
-	Labels             types.Map    `tfsdk:"labels"`
+	Id                 types.String      `tfsdk:"id"` // needed by TF
+	OrganizationId     types.String      `tfsdk:"organization_id"`
+	Region             types.String      `tfsdk:"region"`
+	NetworkAreaId      types.String      `tfsdk:"network_area_id"`
+	NetworkAreaRouteId types.String      `tfsdk:"network_area_route_id"`
+	NextHop            *NexthopModel     `tfsdk:"next_hop"`
+	Destination        *DestinationModel `tfsdk:"destination"`
+	Labels             types.Map         `tfsdk:"labels"`
+}
+
+// DestinationModel maps the route destination data
+type DestinationModel struct {
+	Type  types.String `tfsdk:"type"`
+	Value types.String `tfsdk:"value"`
+}
+
+// NexthopModel maps the route nexthop data
+type NexthopModel struct {
+	Type  types.String `tfsdk:"type"`
+	Value types.String `tfsdk:"value"`
 }
 
 // NewNetworkAreaRouteResource is a helper function to simplify the provider implementation.
@@ -165,24 +177,50 @@ func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRe
 					validate.NoSeparator(),
 				},
 			},
-			"next_hop": schema.StringAttribute{
-				Description: "The IP address of the routing system, that will route the prefix configured. Should be a valid IPv4 address.",
+			"next_hop": schema.SingleNestedAttribute{
+				Description: "Next hop destination.",
 				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					validate.IP(false),
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						Description: fmt.Sprintf("Type of the next hop. %s %s", utils.FormatPossibleValues("blackhole", "internet", "ipv4", "ipv6"), "Only `ipv4` supported currently."),
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"value": schema.StringAttribute{
+						Description: "Either IPv4 or IPv6 (not set for blackhole and internet). Only IPv4 supported currently.",
+						Optional:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							validate.IP(false),
+						},
+					},
 				},
 			},
-			"prefix": schema.StringAttribute{
-				Description: "The network, that is reachable though the Next Hop. Should use CIDR notation.",
+			"destination": schema.SingleNestedAttribute{
+				Description: "Destination of the route.",
 				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					validate.CIDR(),
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						Description: fmt.Sprintf("CIDRV type. %s %s", utils.FormatPossibleValues("cidrv4", "cidrv6"), "Only `cidrv4` is supported currently."),
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"value": schema.StringAttribute{
+						Description: "An CIDR string.",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							validate.CIDR(),
+						},
+					},
 				},
 			},
 			"labels": schema.MapAttribute{
@@ -452,16 +490,14 @@ func mapFields(ctx context.Context, networkAreaRoute *iaas.Route, model *Model, 
 	model.NetworkAreaRouteId = types.StringValue(networkAreaRouteId)
 	model.Labels = labels
 
-	if networkAreaRoute.Nexthop != nil && networkAreaRoute.Nexthop.NexthopIPv4 != nil {
-		model.NextHop = types.StringPointerValue(networkAreaRoute.Nexthop.NexthopIPv4.Value)
-	} else {
-		model.NextHop = types.StringNull()
+	model.NextHop, err = mapRouteNextHop(networkAreaRoute)
+	if err != nil {
+		return err
 	}
 
-	if networkAreaRoute.Destination != nil && networkAreaRoute.Destination.DestinationCIDRv4 != nil {
-		model.Prefix = types.StringPointerValue(networkAreaRoute.Destination.DestinationCIDRv4.Value)
-	} else {
-		model.Prefix = types.StringNull()
+	model.Destination, err = mapRouteDestination(networkAreaRoute)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -477,23 +513,22 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkArea
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
+	nextHopPayload, err := toNextHopPayload(model)
+	if err != nil {
+		return nil, err
+	}
+
+	destinationPayload, err := toDestinationPayload(model)
+	if err != nil {
+		return nil, err
+	}
+
 	return &iaas.CreateNetworkAreaRoutePayload{
 		Items: &[]iaas.Route{
 			{
-				Destination: &iaas.RouteDestination{
-					DestinationCIDRv4: &iaas.DestinationCIDRv4{
-						Type:  sdkUtils.Ptr("cidrv4"),
-						Value: conversion.StringValueToPointer(model.Prefix),
-					},
-					DestinationCIDRv6: nil,
-				},
-				Labels: &labels,
-				Nexthop: &iaas.RouteNexthop{
-					NexthopIPv4: &iaas.NexthopIPv4{
-						Type:  sdkUtils.Ptr("ipv4"),
-						Value: conversion.StringValueToPointer(model.NextHop),
-					},
-				},
+				Destination: destinationPayload,
+				Labels:      &labels,
+				Nexthop:     nextHopPayload,
 			},
 		},
 	}, nil
@@ -512,4 +547,98 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	return &iaas.UpdateNetworkAreaRoutePayload{
 		Labels: &labels,
 	}, nil
+}
+
+func toNextHopPayload(model *Model) (*iaas.RouteNexthop, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	} else if model.NextHop == nil {
+		return nil, fmt.Errorf("nexthop is nil in model")
+	}
+
+	switch model.NextHop.Type.ValueString() {
+	case "blackhole":
+		return sdkUtils.Ptr(iaas.NexthopBlackholeAsRouteNexthop(iaas.NewNexthopBlackhole("blackhole"))), nil
+	case "internet":
+		return sdkUtils.Ptr(iaas.NexthopInternetAsRouteNexthop(iaas.NewNexthopInternet("internet"))), nil
+	case "ipv4":
+		return sdkUtils.Ptr(iaas.NexthopIPv4AsRouteNexthop(iaas.NewNexthopIPv4("ipv4", model.NextHop.Value.ValueString()))), nil
+	case "ipv6":
+		return sdkUtils.Ptr(iaas.NexthopIPv6AsRouteNexthop(iaas.NewNexthopIPv6("ipv6", model.NextHop.Value.ValueString()))), nil
+	}
+	return nil, fmt.Errorf("unknown nexthop type: %s", model.NextHop.Type.ValueString())
+}
+
+func toDestinationPayload(model *Model) (*iaas.RouteDestination, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	} else if model.Destination == nil {
+		return nil, fmt.Errorf("destination is nil in model")
+	}
+
+	switch model.Destination.Type.ValueString() {
+	case "cidrv4":
+		return sdkUtils.Ptr(iaas.DestinationCIDRv4AsRouteDestination(iaas.NewDestinationCIDRv4("cidrv4", model.Destination.Value.ValueString()))), nil
+	case "cidrv6":
+		return sdkUtils.Ptr(iaas.DestinationCIDRv6AsRouteDestination(iaas.NewDestinationCIDRv6("cidrv6", model.Destination.Value.ValueString()))), nil
+	}
+	return nil, fmt.Errorf("unknown destination type: %s", model.Destination.Type.ValueString())
+}
+
+func mapRouteNextHop(routeResp *iaas.Route) (*NexthopModel, error) {
+	if routeResp.Nexthop == nil {
+		return &NexthopModel{
+			Type:  types.StringNull(),
+			Value: types.StringNull(),
+		}, nil
+	}
+
+	switch i := routeResp.Nexthop.GetActualInstance().(type) {
+	case *iaas.NexthopIPv4:
+		return &NexthopModel{
+			Type:  types.StringPointerValue(i.Type),
+			Value: types.StringPointerValue(i.Value),
+		}, nil
+	case *iaas.NexthopIPv6:
+		return &NexthopModel{
+			Type:  types.StringPointerValue(i.Type),
+			Value: types.StringPointerValue(i.Value),
+		}, nil
+	case *iaas.NexthopBlackhole:
+		return &NexthopModel{
+			Type:  types.StringPointerValue(i.Type),
+			Value: types.StringNull(),
+		}, nil
+	case *iaas.NexthopInternet:
+		return &NexthopModel{
+			Type:  types.StringPointerValue(i.Type),
+			Value: types.StringNull(),
+		}, nil
+	default:
+		return nil, fmt.Errorf("unexpected nexthop type: %T", i)
+	}
+}
+
+func mapRouteDestination(routeResp *iaas.Route) (*DestinationModel, error) {
+	if routeResp.Destination == nil {
+		return &DestinationModel{
+			Type:  types.StringNull(),
+			Value: types.StringNull(),
+		}, nil
+	}
+
+	switch i := routeResp.Destination.GetActualInstance().(type) {
+	case *iaas.DestinationCIDRv4:
+		return &DestinationModel{
+			Type:  types.StringPointerValue(i.Type),
+			Value: types.StringPointerValue(i.Value),
+		}, nil
+	case *iaas.DestinationCIDRv6:
+		return &DestinationModel{
+			Type:  types.StringPointerValue(i.Type),
+			Value: types.StringPointerValue(i.Value),
+		}, nil
+	default:
+		return nil, fmt.Errorf("unexpected Destionation type: %T", i)
+	}
 }
