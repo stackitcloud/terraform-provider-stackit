@@ -110,7 +110,7 @@ func (r *serviceAccountAttachResource) Schema(_ context.Context, _ resource.Sche
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`server_id`,`service_account_email`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`server_id`,`service_account_email`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -188,7 +188,7 @@ func (r *serviceAccountAttachResource) Create(ctx context.Context, req resource.
 
 	ctx = core.LogResponse(ctx)
 
-	model.Id = utils.BuildInternalTerraformId(projectId, serverId, serviceAccountEmail)
+	model.Id = utils.BuildInternalTerraformId(projectId, region, serverId, serviceAccountEmail)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
@@ -242,6 +242,10 @@ func (r *serviceAccountAttachResource) Read(ctx context.Context, req resource.Re
 			if mail != serviceAccountEmail {
 				continue
 			}
+
+			model.Id = utils.BuildInternalTerraformId(projectId, region, serverId, serviceAccountEmail)
+			model.Region = types.StringValue(region)
+
 			// Set refreshed state
 			diags = resp.State.Set(ctx, model)
 			resp.Diagnostics.Append(diags...)

@@ -205,7 +205,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		Description:         "Server resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`server_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`server_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),

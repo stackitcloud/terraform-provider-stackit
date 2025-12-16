@@ -82,7 +82,7 @@ import {
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region``network_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`network_id`".
 - `ipv4_prefixes` (List of String) The IPv4 prefixes of the network.
 - `ipv6_prefixes` (List of String) The IPv6 prefixes of the network.
 - `network_id` (String) The network ID.

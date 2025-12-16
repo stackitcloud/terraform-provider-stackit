@@ -191,7 +191,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region``network_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`network_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),

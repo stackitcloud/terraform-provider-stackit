@@ -417,7 +417,7 @@ import {
 ### Read-Only
 
 - `created_at` (String) Date-time when the server was created
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`server_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`server_id`".
 - `launched_at` (String) Date-time when the server was launched
 - `server_id` (String) The server ID.
 - `updated_at` (String) Date-time when the server was updated

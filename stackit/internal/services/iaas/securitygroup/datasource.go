@@ -63,7 +63,7 @@ func (d *securityGroupDataSource) Schema(_ context.Context, _ datasource.SchemaR
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`security_group_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`security_group_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{

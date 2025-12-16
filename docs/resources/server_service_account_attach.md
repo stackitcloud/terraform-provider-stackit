@@ -41,4 +41,4 @@ import {
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`server_id`,`service_account_email`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`server_id`,`service_account_email`".
