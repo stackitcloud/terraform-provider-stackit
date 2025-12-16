@@ -189,6 +189,7 @@ func (r *serviceAccountAttachResource) Create(ctx context.Context, req resource.
 	ctx = core.LogResponse(ctx)
 
 	model.Id = utils.BuildInternalTerraformId(projectId, region, serverId, serviceAccountEmail)
+	model.Region = types.StringValue(region)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)

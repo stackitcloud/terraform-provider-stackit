@@ -246,15 +246,16 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 			if nic.Id == nil || (nic.Id != nil && *nic.Id != networkInterfaceId) {
 				continue
 			}
+
+			model.Id = utils.BuildInternalTerraformId(projectId, region, serverId, networkInterfaceId)
+			model.Region = types.StringValue(region)
+
 			// Set refreshed state
 			diags = resp.State.Set(ctx, model)
 			resp.Diagnostics.Append(diags...)
 			if resp.Diagnostics.HasError() {
 				return
 			}
-
-			model.Id = utils.BuildInternalTerraformId(projectId, region, serverId, networkInterfaceId)
-			model.Region = types.StringValue(region)
 
 			tflog.Info(ctx, "Network interface attachment read")
 			return
