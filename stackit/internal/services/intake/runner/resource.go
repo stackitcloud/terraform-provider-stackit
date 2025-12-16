@@ -115,7 +115,7 @@ func (r *runnerResource) ModifyPlan(ctx context.Context, req resource.ModifyPlan
 func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                  "Manages STACKIT Intake Runner.",
-		"id":                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`runner_id`\".",
+		"id":                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`runner_id`\".",
 		"project_id":            "STACKIT Project ID to which the runner is associated.",
 		"runner_id":             "The runner ID.",
 		"name":                  "The name of the runner.",
