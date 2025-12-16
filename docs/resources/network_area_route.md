@@ -3,7 +3,7 @@
 page_title: "stackit_network_area_route Resource - stackit"
 subcategory: ""
 description: |-
-  Network area route resource schema. Must have a region specified in the provider configuration.
+  Network area route resource schema. Must have a `region` specified in the provider configuration.
 ---
 
 # stackit_network_area_route (Resource)
@@ -33,6 +33,42 @@ resource "stackit_network_area_route" "example" {
 import {
   to = stackit_network_area_route.import-example
   id = "${var.organization_id},${var.network_area_id},${var.region},${var.network_area_route_id}"
+}
+```
+
+## Migration of IaaS resources from versions <= v0.73.0
+
+The release of the STACKIT IaaS API v2 provides a lot of new features, but also includes some breaking changes
+(when coming from v1 of the STACKIT IaaS API) which must be somehow represented on Terraform side. The 
+`stackit_network_area_route` resource did undergo some changes. See the example below how to migrate your resources.
+
+### Breaking change: Network area route resource (stackit_network_area_route)
+
+**Configuration for <= v0.73.0**
+
+```terraform
+resource "stackit_network_area_route" "example" {
+  organization_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  network_area_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  prefix          = "192.168.0.0/24" # prefix field got removed for provider versions > v0.73.0, use the new destination field instead
+  next_hop        = "192.168.0.0" # schema of the next_hop field changed, see below
+}
+```
+
+**Configuration for > v0.73.0**
+
+```terraform
+resource "stackit_network_area_route" "example" {
+  organization_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  network_area_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  destination = { # the new 'destination' field replaces the old 'prefix' field
+    type  = "cidrv4"
+    value = "192.168.0.0/24" # migration: put the value of the old 'prefix' field here
+  }
+  next_hop = {
+    type  = "ipv4"
+    value = "192.168.0.0" # migration: put the value of the old 'next_hop' field here
+  }
 }
 ```
 
@@ -75,3 +111,4 @@ Required:
 Optional:
 
 - `value` (String) Either IPv4 or IPv6 (not set for blackhole and internet). Only IPv4 supported currently.
+

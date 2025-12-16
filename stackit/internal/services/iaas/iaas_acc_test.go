@@ -102,8 +102,6 @@ var (
 
 const (
 	keypairPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIDsPd27M449akqCtdFg2+AmRVJz6eWio0oMP9dVg7XZ"
-	// TODO: create network area using terraform resource instead once it's out of experimental stage and GA
-	testNetworkAreaId = "25bbf23a-8134-4439-9f5e-1641caf8354e"
 )
 
 // SERVER - MIN
@@ -265,7 +263,6 @@ var testConfigNetworkVarsMinUpdated = func() config.Variables {
 // NETWORK - MAX
 
 var testConfigNetworkVarsMax = config.Variables{
-	//"project_id":         config.StringVariable(testutil.ProjectId),
 	"name":                 config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"ipv4_gateway":         config.StringVariable("10.2.2.1"),
 	"ipv4_nameserver_0":    config.StringVariable("10.2.2.2"),
@@ -276,7 +273,6 @@ var testConfigNetworkVarsMax = config.Variables{
 	"label":                config.StringVariable("label"),
 	"organization_id":      config.StringVariable(testutil.OrganizationId),
 	"service_account_mail": config.StringVariable(testutil.TestProjectServiceAccountEmail),
-	//"network_area_id":    config.StringVariable(testNetworkAreaId),
 }
 
 var testConfigNetworkVarsMaxUpdated = func() config.Variables {
@@ -335,11 +331,11 @@ var testConfigNetworkAreaVarsMaxUpdated = func() config.Variables {
 	updatedConfig["max_prefix_length"] = config.IntegerVariable(25)
 	updatedConfig["min_prefix_length"] = config.IntegerVariable(20)
 	// TODO: enable once the IaaS API supports IPv6
-	//updatedConfig["route_destination_type"] = config.StringVariable("cidrv6")
-	//updatedConfig["route_destination_value"] = config.StringVariable("2001:db8:3c4d:15::1a2b:3c4d/64")
-	//updatedConfig["route_next_hop_type"] = config.StringVariable("ipv6")
-	//updatedConfig["route_next_hop_value"] = config.StringVariable("2001:db8:3c4d:15::1a2b:3c4d")
-	//updatedConfig["label"] = config.StringVariable("updated")
+	// updatedConfig["route_destination_type"] = config.StringVariable("cidrv6")
+	// updatedConfig["route_destination_value"] = config.StringVariable("2001:db8:3c4d:15::1a2b:3c4d/64")
+	// updatedConfig["route_next_hop_type"] = config.StringVariable("ipv6")
+	// updatedConfig["route_next_hop_value"] = config.StringVariable("2001:db8:3c4d:15::1a2b:3c4d")
+	// updatedConfig["label"] = config.StringVariable("updated")
 	return updatedConfig
 }()
 
@@ -602,7 +598,7 @@ func TestAccNetworkMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("data.stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "public_ip"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "region"),
-					resource.TestCheckResourceAttrSet("data.stackit_network.network", "routing_table_id"),
+					resource.TestCheckNoResourceAttr("data.stackit_network.network", "routing_table_id"),
 				),
 			},
 
@@ -630,7 +626,7 @@ func TestAccNetworkMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "region"),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "routing_table_id"),
+					resource.TestCheckNoResourceAttr("stackit_network.network", "routing_table_id"),
 				),
 			},
 			// Update
@@ -645,7 +641,7 @@ func TestAccNetworkMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "region"),
-					resource.TestCheckResourceAttrSet("stackit_network.network", "routing_table_id"),
+					resource.TestCheckNoResourceAttr("stackit_network.network", "routing_table_id"),
 				),
 			},
 			// Deletion is done by the framework implicitly

@@ -162,6 +162,10 @@ func (r *serverResource) ValidateConfig(ctx context.Context, req resource.Valida
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring server", "You can only provide `delete_on_termination` for `source_type` `image`.")
 		}
 	}
+
+	if model.NetworkInterfaces.IsNull() || model.NetworkInterfaces.IsUnknown() || len(model.NetworkInterfaces.Elements()) < 1 {
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "No network interfaces configured", "You have no network interfaces configured for this server. This will be a problem when you want to (re-)create this server. Please note that modifying the network interfaces for an existing server will result in a replacement of the resource. We will provide a clear migration path soon.")
+	}
 }
 
 // ConfigValidators validates the resource configuration
@@ -340,15 +344,14 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 			},
 			"network_interfaces": schema.ListAttribute{
-				Description: "The IDs of network interfaces which should be attached to the server. Updating it will recreate the server.",
-				Required:    true,
+				Description: "The IDs of network interfaces which should be attached to the server. Updating it will recreate the server. **Required when (re-)creating servers. Still marked as optional in the schema to not introduce breaking changes. There will be a migration path for this field soon.**",
+				Optional:    true,
 				ElementType: types.StringType,
 				Validators: []validator.List{
 					listvalidator.ValueStringsAre(
 						validate.UUID(),
 						validate.NoSeparator(),
 					),
-					listvalidator.SizeAtLeast(1),
 				},
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.RequiresReplace(),

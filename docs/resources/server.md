@@ -399,7 +399,6 @@ import {
 
 - `machine_type` (String) Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/products/compute-engine/server/basics/machine-types/)
 - `name` (String) The name of the server.
-- `network_interfaces` (List of String) The IDs of network interfaces which should be attached to the server. Updating it will recreate the server.
 - `project_id` (String) STACKIT project ID to which the server is associated.
 
 ### Optional
@@ -411,6 +410,7 @@ import {
 - `image_id` (String) The image ID to be used for an ephemeral disk on the server.
 - `keypair_name` (String) The name of the keypair used during server creation.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
+- `network_interfaces` (List of String) The IDs of network interfaces which should be attached to the server. Updating it will recreate the server. **Required when (re-)creating servers. Still marked as optional in the schema to not introduce breaking changes. There will be a migration path for this field soon.**
 - `region` (String) The resource region. If not defined, the provider region is used.
 - `user_data` (String) User data that is passed via cloud-init to the server.
 
