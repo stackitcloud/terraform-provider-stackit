@@ -510,6 +510,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasalphaRoutingTables.NewRoutingTablesDataSource,
 		iaasalphaRoutingTableRoutes.NewRoutingTableRoutesDataSource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
+		intakeRunner.NewRunnerDataSource,
 		kmsKey.NewKeyDataSource,
 		kmsKeyRing.NewKeyRingDataSource,
 		kmsWrappingKey.NewWrappingKeyDataSource,
